@@ -107,10 +107,10 @@ class ManufacturingResource(Resource):
         self.env = env
         self.state = None
 
-    def process(self):
+    def process(self) -> None:
         pass
 
-    def setup(self):
+    def setup(self) -> None:
         pass
 
 
