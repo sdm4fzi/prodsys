@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from base2 import Resource
+from resource import Resource
 from dataclasses import Field, dataclass
 from uuid import UUID, uuid1
 from typing import List, Tuple, Optional
@@ -13,12 +13,13 @@ from collections.abc import Callable
 
 @dataclass
 class State(ABC):
-    resource : Resource
     env : simpy.Environment
     time_model : TimeModel
     active : simpy.Event
     start : float
     done_in : float
+    resource : Resource
+
 
     @abstractmethod
     def __post_init__(self):

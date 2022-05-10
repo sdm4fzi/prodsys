@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Tuple
-from hard_base import IDEntity
+from base import IDEntity
 import simpy
 from time_model import TimeModel
 from uuid import uuid1, UUID

@@ -1,4 +1,4 @@
-from base2 import Resource, Process, Material
+from resource import Resource, Process, Material
 from simpy.resources import resource
 from typing import List
 from dataclasses import dataclass

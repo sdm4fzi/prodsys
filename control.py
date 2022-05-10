@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 from collections.abc import Callable
-from base2 import Material, Resource
+from resource import Material, Resource
 
 class Controller(ABC):
     control_policy: Callable[List[Material], List[Material]]
