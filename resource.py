@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import Field, dataclass
+from dataclasses import Field, dataclass, field
+from email.policy import default
 from uuid import UUID, uuid1
 from typing import List, Tuple
 import simpy
@@ -10,7 +11,7 @@ from material import Material
 from state import State
 from time_model import TimeModel
 from collections.abc import Callable
-
+import base
 
 
 
@@ -20,12 +21,11 @@ from collections.abc import Callable
 
 
 @dataclass
-class Resource(ABC, simpy.Resource):
-    _id: UUID
-    states: List[State]
-    state : State
+class Resource(ABC, simpy.Resource, base.IDEntity):
     processes: List[Process]
-    parts_made: int = 0
+    parts_made: int = field(default=0, init=False)
+    avilable : simpy.Event
+    
 
     @abstractmethod
     def change_state(self, state: State) -> None:
