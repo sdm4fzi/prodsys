@@ -1,6 +1,5 @@
 
 import random
-
 import simpy
 
 
@@ -26,17 +25,35 @@ def time_to_failure():
     return random.expovariate(BREAK_MEAN)
 
 
-from base import State, Process
-from base import ValueCreatorAsset
+from test.base import State
+from test.base import ValueCreatorAsset
+from test.base import Job
+
+class ConcreteJob(Job):
+    def __init__(self, material, process_sequence):
+        self.material = material
+        self.process_sequence = process_sequence
+
+    def request_processing(self):
+        pass
+
+    def request_transport(self):
+        pass
+
+    def get_next_process(self):
+        pass
+
+    def get_material_for_process(self):
+        pass
 
 class ProductionState(State):
     def __init__(self, asset: ValueCreatorAsset) -> None:
         self.asset: ValueCreatorAsset = asset
-        self.env: env = self.asset.get_env()
-        self.active = simpy.Event(self.env)
+        self.env: env_object = self.asset.get_env()
+        self.active: simpy.Event = simpy.Event(self.env)
         self.done_in : float = 0.0
         self.start : float = 0.0
-        self.process = self.env.process(self.process())
+        self.process  = self.env.process_state(self.process())
 
 
     def process(self):
@@ -57,31 +74,35 @@ class ProductionState(State):
                     self.done_in = 0  # Set to 0 to exit while loop.
 
                 except simpy.Interrupt:
-                    yield self.env.process(self.interrupt())
+                    yield self.env.process_state(self.interrupt())
 
             # Part is done.
+            # TODO: parts made has to be moved to product or logger class
             self.asset.parts_made += 1
 
     def interrupt(self):
         self.done_in -= self.env.now - self.start  # How much time left?
         yield self.active
+
+    def activate(self):
+        self.active.succeed()
         self.active = simpy.Event(self.env)
 
 class BreakDownState(State):
     def __init__(self, asset: ValueCreatorAsset) -> None:
         self.asset: ValueCreatorAsset = asset
-        self.env: env = self.asset.get_env()
+        self.env: env_object = self.asset.get_env()
         self.active : simpy.Event = simpy.Event(self.env)
 
-        self.process = self.env.process(self.process())
-        self.env.process(self.interrupt())
+        self.process = self.env.process_state(self.process())
+        self.env.process_state(self.interrupt())
 
 
     def process(self):
         while True:
             yield self.active
-            self.active = simpy.Event(self.env)
             # Request a repairman. This will preempt its "other_job".
+            # TODO: this request has to be made in a controller
             with self.asset.repairman.request(priority=1) as req:
                 yield req
                 yield self.env.timeout(REPAIR_TIME)
@@ -95,12 +116,13 @@ class BreakDownState(State):
                 self.asset.interrupt_active_process()
                 self.asset.set_activate_state(self)
 
+    def activate(self):
+        self.active.succeed()
+        self.active = simpy.Event(self.env)
 
-class Machine(ValueCreatorAsset):
-    def start_process(self, process: Process) -> None:
-        pass
-
-    def __init__(self, env, name, repairman):
+class Machine(ValueCreatorAsset, simpy.PreemptiveResource):
+    def __init__(self, env, name, repairman, capacity=1):
+        super().__init__(env, capacity)
         self.env = env
         self.name = name
         self.parts_made = 0
@@ -115,7 +137,6 @@ class Machine(ValueCreatorAsset):
     def start_states(self):
         states = [ProductionState(self), BreakDownState(self)]
         self._state = states[0]
-        print(self.state)
         return states
 
     @property
@@ -130,7 +151,7 @@ class Machine(ValueCreatorAsset):
         pass
 
     def interrupt_active_process(self) -> None:
-        self.state.process.interrupt()
+        self.state.process_state.interrupt()
 
     def get_env(self):
         return self.env
@@ -139,73 +160,13 @@ class Machine(ValueCreatorAsset):
         return self.state
 
     def set_activate_state(self, state: State):
-        self._state = state
-        self._state.active.succeed()
+        self.state = state
+        self.state.activate()
 
     def reactivate(self):
-        self.set_activate_state(self.states[0])
-
-
-class Machine_old(object):
-    """A machine produces parts and my get broken every now and then.
-
-    If it breaks, it requests a *repairman* and continues the production
-    after the it is repaired.
-
-    A machine has a *name* and a numberof *parts_made* thus far.
-
-    """
-    def __init__(self, env, name, repairman):
-        self.env = env
-        self.name = name
-        self.parts_made = 0
-        self.broken = False
-
-        # Start "working" and "break_machine" processes for this machine.
-        self.process = env.process(self.working(repairman))
-        env.process(self.break_machine())
-
-    def working(self, repairman):
-        """Produce parts as long as the simulation runs.
-
-        While making a part, the machine may break multiple times.
-        Request a repairman when this happens.
-
-        """
-        while True:
-            # Start making a new part
-            done_in = time_per_part()
-            while done_in:
-                try:
-                    # Working on the part
-                    start = self.env.now
-                    yield self.env.timeout(done_in)
-                    done_in = 0  # Set to 0 to exit while loop.
-
-                except simpy.Interrupt:
-                    print(2)
-                    self.broken = True
-                    done_in -= self.env.now - start  # How much time left?
-
-                    # Request a repairman. This will preempt its "other_job".
-                    with repairman.request(priority=1) as req:
-                        yield req
-                        yield self.env.timeout(REPAIR_TIME)
-
-                    self.broken = False
-
-            # Part is done.
-            self.parts_made += 1
-
-    def break_machine(self):
-        """Break the machine every now and then."""
-        while True:
-            yield self.env.timeout(time_to_failure())
-            if not self.broken:
-                # Only break the machine if it is currently working.
-                print(1)
-                self.process.interrupt()
-                print(3)
+        for state in self.states:
+            if type(state) is ProductionState:
+                self.set_activate_state(state)
 
 
 def other_jobs(env, repairman):
@@ -225,23 +186,30 @@ def other_jobs(env, repairman):
                 except simpy.Interrupt:
                     done_in -= env.now - start
 
+if __name__ == '__main__':
+    # Setup and start the simulation
+    print('Machine shop')
+    random.seed(RANDOM_SEED)  # This helps reproducing the results
 
-# Setup and start the simulation
-print('Machine shop')
-random.seed(RANDOM_SEED)  # This helps reproducing the results
+    import time
 
-# Create an environment and start the setup process
-env = simpy.Environment()
-repairman = simpy.PreemptiveResource(env, capacity=1)
-machines = [Machine_old(env, 'Machine %d' % i, repairman)
-            for i in range(NUM_MACHINES)]
-env.process(other_jobs(env, repairman))
+    start = time.time()
+
+    for _ in range(1):
+        # Create an environment and start the setup process
+        env_object = simpy.Environment()
+        repairman_object = simpy.PreemptiveResource(env_object, capacity=1)
+        machine_objects = [Machine(env_object, 'Machine %d' % i, repairman_object)
+                           for i in range(NUM_MACHINES)]
+        env_object.process(other_jobs(env_object, repairman_object))
 
 
-# Execute!
-env.run(until=SIM_TIME)
+        # Execute!
+        env_object.run(until=SIM_TIME)
 
-# Analyis/results
-print('Machine shop results after %s weeks' % WEEKS)
-for machine in machines:
-    print('%s made %d parts.' % (machine.name, machine.parts_made))
+    # Analysis/results
+    print('Machine shop results after %s weeks' % WEEKS)
+    for machine in machine_objects:
+        print('%s made %d parts.' % (machine.name, machine.parts_made))
+
+    print(f"Took: {time.time() - start} seconds")

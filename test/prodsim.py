@@ -71,15 +71,15 @@ electronic_critical_stock = (8 / mean_ensam) * num_ensam * 2  # 1 day to deliver
 class Guitar_Factory:
     def __init__(self, env):
         self.wood = simpy.Container(env, capacity=wood_capacity, init=initial_wood)
-        self.wood_control = env.process(self.wood_stock_control(env))
+        self.wood_control = env.process_state(self.wood_stock_control(env))
         self.electronic = simpy.Container(env, capacity=electronic_capacity, init=initial_electronic)
-        self.electronic_control = env.process(self.electronic_stock_control(env))
+        self.electronic_control = env.process_state(self.electronic_stock_control(env))
         self.body_pre_paint = simpy.Container(env, capacity=body_pre_paint_capacity, init=0)
         self.neck_pre_paint = simpy.Container(env, capacity=neck_pre_paint_capacity, init=0)
         self.body_post_paint = simpy.Container(env, capacity=body_post_paint_capacity, init=0)
         self.neck_post_paint = simpy.Container(env, capacity=neck_post_paint_capacity, init=0)
         self.dispatch = simpy.Container(env, capacity=dispatch_capacity, init=0)
-        self.dispatch_control = env.process(self.dispatch_guitars_control(env))
+        self.dispatch_control = env.process_state(self.dispatch_guitars_control(env))
 
     def wood_stock_control(self, env):
         yield env.timeout(0)
@@ -178,25 +178,25 @@ def assembler(env, guitar_factory):
 
 def body_maker_gen(env, guitar_factory):
     for i in range(num_body):
-        env.process(body_maker(env, guitar_factory))
+        env.process_state(body_maker(env, guitar_factory))
         yield env.timeout(0)
 
 
 def neck_maker_gen(env, guitar_factory):
     for i in range(num_neck):
-        env.process(neck_maker(env, guitar_factory))
+        env.process_state(neck_maker(env, guitar_factory))
         yield env.timeout(0)
 
 
 def painter_maker_gen(env, guitar_factory):
     for i in range(num_paint):
-        env.process(painter(env, guitar_factory))
+        env.process_state(painter(env, guitar_factory))
         yield env.timeout(0)
 
 
 def assembler_maker_gen(env, guitar_factory):
     for i in range(num_ensam):
-        env.process(assembler(env, guitar_factory))
+        env.process_state(assembler(env, guitar_factory))
         yield env.timeout(0)
 
 

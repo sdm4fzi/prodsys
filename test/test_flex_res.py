@@ -19,7 +19,7 @@ import random
 
 import simpy
 
-from resource import FlexibleResource
+from test.resource import FlexibleResource
 
 
 RANDOM_SEED = 42
@@ -60,8 +60,8 @@ class Machine(object):
         self.broken = False
 
         # Start "working" and "break_machine" processes for this machine.
-        self.process = env.process(self.working(repairman))
-        env.process(self.break_machine())
+        self.process = env.process_state(self.working(repairman))
+        env.process_state(self.break_machine())
 
     def working(self, repairman):
         """Produce parts as long as the simulation runs.

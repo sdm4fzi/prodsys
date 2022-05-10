@@ -1,18 +1,24 @@
+from __future__ import annotations
+
 from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 
 
 class Controller(ABC):
-    asset = None
-    heuristic = None
+    def __init__(self, controlled_entity : Asset, heuristic : Heuristic) -> None:
+        self.controlled_entity = controlled_entity
+        self.heuristic = heuristic
 
-    @abstractmethod
     def change_state(self) -> None:
         pass
 
     @abstractmethod
     def get_decision(self) -> None:
+        pass
+
+    @abstractmethod
+    def request_asset(self):
         pass
 
 class Factory(ABC):
@@ -63,8 +69,7 @@ class Material(BaseMaterial):
 
 
 class Job(ABC):
-    material: Material = None
-
+    material: Material
 
 
 class State(ABC):
@@ -75,6 +80,10 @@ class State(ABC):
 
     @abstractmethod
     def interrupt(self):
+        pass
+
+    @abstractmethod
+    def activate(self):
         pass
 
 class ProductionState(State):
@@ -94,7 +103,10 @@ class Process(ABC):
     pass
 
 class Asset(ABC):
-    id = None
+    id : int
+    @abstractmethod
+    def get_id(self) -> int:
+        pass
 
 class ValueCreatorAsset(ABC):
 
@@ -117,10 +129,6 @@ class ValueCreatorAsset(ABC):
         pass
 
     @abstractmethod
-    def start_process(self, process: Process) -> None:
-        pass
-
-    @abstractmethod
     def get_env(self):
         pass
 
@@ -131,3 +139,7 @@ class ValueCreatorAsset(ABC):
     @abstractmethod
     def set_activate_state(self, state: State):
         self.state = state
+
+    @abstractmethod
+    def reactivate(self):
+        pass

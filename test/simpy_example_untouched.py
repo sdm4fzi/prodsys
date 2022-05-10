@@ -58,8 +58,8 @@ class Machine(object):
         self.broken = False
 
         # Start "working" and "break_machine" processes for this machine.
-        self.process = env.process(self.working(repairman))
-        env.process(self.break_machine())
+        self.process = env.process_state(self.working(repairman))
+        env.process_state(self.break_machine())
 
     def working(self, repairman):
         """Produce parts as long as the simulation runs.
@@ -123,7 +123,7 @@ def other_jobs(env, repairman):
 print('Machine shop')
 random.seed(RANDOM_SEED)  # This helps reproducing the results
 
-# Create an environment and start the setup process
+"""# Create an environment and start the setup process
 env = simpy.Environment()
 repairman = simpy.PreemptiveResource(env, capacity=1)
 machines = [Machine(env, 'Machine %d' % i, repairman)
@@ -131,9 +131,26 @@ machines = [Machine(env, 'Machine %d' % i, repairman)
 env.process(other_jobs(env, repairman))
 
 # Execute!
-env.run(until=SIM_TIME)
+env.run(until=SIM_TIME)"""
+
+import time
+
+start = time.time()
+
+for _ in range(1):
+    # Create an environment and start the setup process
+    env = simpy.Environment()
+    repairman = simpy.PreemptiveResource(env, capacity=1)
+    machines = [Machine(env, 'Machine %d' % i, repairman)
+                for i in range(NUM_MACHINES)]
+    env.process(other_jobs(env, repairman))
+
+    # Execute!
+    env.run(until=SIM_TIME)
 
 # Analyis/results
 print('Machine shop results after %s weeks' % WEEKS)
 for machine in machines:
     print('%s made %d parts.' % (machine.name, machine.parts_made))
+
+print(f"Took: {time.time() - start} seconds")
