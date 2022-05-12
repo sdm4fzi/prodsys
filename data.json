@@ -1,0 +1,28 @@
+{
+    "time_models": {
+        "time_model1": {
+            "parameters": [
+                20,
+                5
+            ],
+            "batch_size": 100,
+            "distribution_function": "normal"
+        },
+        "time_model2": {
+            "parameters": [
+                10,
+                5
+            ],
+            "batch_size": 100,
+            "distribution_function": "constant"
+        },
+        "time_model3": {
+            "parameters": [
+                30,
+                5
+            ],
+            "batch_size": 100,
+            "distribution_function": "exponential"
+        }
+    }
+}
