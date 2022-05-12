@@ -62,6 +62,8 @@ class ProductionState(InterruptState):
                """
         while True:
             # Start making a new part
+            # TODO: add here this logical request, which is created and updated by the controller class
+            yield req
             self.done_in = self.time_model.get_next_time()
             while self.done_in:
                 try:
