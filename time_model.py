@@ -1,9 +1,13 @@
+from abc import ABC, abstractmethod
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Tuple, List
+from util import get_class_from_str
+
 import numpy as np
 from numpy.random import exponential, normal
-from typing import Tuple, List
-from collections.abc import Callable
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+
+from base import IDEntity
 
 
 def get_constant_list(parameters: Tuple[float], size: int) -> List[float]:
@@ -24,7 +28,7 @@ FUNCTION_DICT: dict = {'normal': get_normal_list,
                        }
 
 
-class TimeModel(ABC):
+class TimeModel(ABC, IDEntity):
 
     @abstractmethod
     def get_next_time(self) -> float:
@@ -35,8 +39,12 @@ class TimeModel(ABC):
 class FunctionTimeModel(TimeModel):
     parameters: Tuple
     batch_size: int
-    distribution_function: Callable[[Tuple, int], List]
-    _statistics_buffer: List[float] = field(default_factory=list)
+    distribution_function: str
+    _distribution_function: Callable[[Tuple, int], List] = field(default=None, init=False)
+    _statistics_buffer: List[float] = field(default_factory=list, init=False)
+
+    def __post_init__(self):
+        self._distribution_function = FUNCTION_DICT[self.distribution_function]
 
     def get_next_time(self) -> float:
         try:
@@ -46,7 +54,7 @@ class FunctionTimeModel(TimeModel):
             return self._statistics_buffer.pop()
 
     def _fill_buffer(self):
-        self._statistics_buffer = self.distribution_function(self.parameters, self.batch_size)
+        self._statistics_buffer = self._distribution_function(self.parameters, self.batch_size)
 
 
 @dataclass
@@ -64,26 +72,27 @@ class MarkovTimeModel(TimeModel):
         pass
 
 
+TIME_MODEL_DICT: dict = {
+    'HistoryTimeModels': HistoryTimeModel,
+    'MarkovTimeModel': MarkovTimeModel,
+    'FunctionTimeModels': FunctionTimeModel,
+}
+
+
 @dataclass
 class TimeModelFactory:
     data: dict
     time_models: List[TimeModel] = field(default_factory=list)
-    time_model_ids: List[int] = field(default_factory=list)
 
     def create_time_models(self):
         time_models = self.data['time_models']
-        for _id, values in time_models.items():
-            self.add_time_model(_id, values)
+        for cls_name, items in time_models.items():
+            cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
+            for values in items.values():
+                self.add_time_model(cls, values)
 
-    def add_time_model(self, _id, values):
-        self.time_models.append(FunctionTimeModel(parameters=values['parameters'],
-                                                  batch_size=values['batch_size'],
-                                                  distribution_function=FUNCTION_DICT[values['distribution_function']]
-                                                  ))
-        self.time_model_ids.append(_id)
+    def add_time_model(self, cls, values):
+        self.time_models.append(cls(**values))
 
-    def get_time_model(self, _id):
-        if _id not in self.time_model_ids:
-            raise ValueError("The _id ist not available for time models.")
-        idx = self.time_model_ids.index(_id)
-        return self.time_models[idx]
+    def get_time_model(self, ID):
+        return [tm for tm in self.time_models if tm.ID == ID]

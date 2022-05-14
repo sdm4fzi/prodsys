@@ -3,8 +3,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 from base import IDEntity
-from env import Environment
-
+import env
 
 @dataclass
 class Material(ABC, IDEntity):
@@ -18,7 +17,6 @@ class ConcreteMaterial(Material):
 
 @dataclass
 class Order(ABC, IDEntity):
-    env: Environment
     target_materials: List[Material]
     release_time: float
     due_time: float

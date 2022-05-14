@@ -1,19 +1,54 @@
 from time_model import TimeModelFactory
+from state import StateFactory
+from env import Environment
+from process import ProcessFactory
+from resource import ConcreteResource
 
 import json
 
 if __name__ == '__main__':
 
+    env = Environment()
+
     with open('data.json', 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
     print(data)
 
-    fac = TimeModelFactory(data)
-    fac.create_time_models()
-    i = "time_model2"
-    tm = fac.get_time_model(i)
-    tm.get_next_time()
-    print(tm)
+    tm_fac = TimeModelFactory(data)
+
+    tm_fac.create_time_models()
+
+    print(tm_fac.time_models)
+
+    st_fac = StateFactory(data, env, tm_fac)
+    st_fac.create_states()
+
+    print(st_fac.states)
+
+    pr_fac = ProcessFactory(data, tm_fac)
+    pr_fac.create_processes()
+
+    r = ConcreteResource(ID="99", description="Machine 1", env=env, processes=[pr_fac.processes[0], pr_fac.processes[1]])
+    st = st_fac.states[0]
+    print(st)
+    r.add_state(st)
+    print(r)
+
+
+
+
+
+    # TODO: create resources and add states and processes
+
+    # TODO: add links of controller and resources in controller_registry
+
+    # TODO: create material
+
+    # TODO: add resources and material factories to environment
+
+    # TODO: create graph with resources, process and material
+
+    # TODO: create Router and Transformer class in environment
 
 
 """    screwing = ConcreteProcess(statistic=normal_list, description="This is a screwing process")

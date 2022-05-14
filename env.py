@@ -7,18 +7,30 @@ from typing import List, Tuple
 
 import simpy
 
-from material import Material
+import state
 from process import Process
 from resource import Resource
-from state import State
+from material import Material
 
 
 class Environment(ABC, simpy.Environment):
+    material_registry: MaterialRegistry
+    resource_process_registry: ResourceProcessRegistry
 
-    def __init__(self, resource_process_registry, material_registry) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.resource_proces_registry: ResourceProcessRegistry = resource_process_registry
-        self.material_registry: MaterialRegistry = material_registry
+
+    def add_material_registry(self, material_registry: MaterialRegistry) -> None:
+        self.material_registry = material_registry
+
+    def add_resource_process_registry(self, resource_process_registry: ResourceProcessRegistry) -> None:
+        self.resource_process_registry = resource_process_registry
+
+    def get_next_process(self, material: Material):
+        pass
+
+    def get_next_resource(self, resource: Resource):
+        pass
 
 
 @dataclass
@@ -55,10 +67,10 @@ class ResourceProcessRegistry:
 
 @dataclass
 class ManufacturingBOM(ABC):
-    materials: List[Material]
+    # materials: List[Material]
     processes: List[Process]
     connections: int
 
     @abstractmethod
-    def get_material_for_process(self, process: Process) -> State:
+    def get_material_for_process(self, process: Process) -> state.State:
         pass

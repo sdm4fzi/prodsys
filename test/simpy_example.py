@@ -11,7 +11,7 @@ BREAK_MEAN = 1 / MTTF  # Param. for expovariate distribution
 REPAIR_TIME = 30.0     # Time it takes to repair a machine in minutes
 JOB_DURATION = 30.0    # Duration of other jobs in minutes
 NUM_MACHINES = 10      # Number of machines in the machine shop
-WEEKS = 4              # Simulation time in weeks
+WEEKS = 400              # Simulation time in weeks
 SIM_TIME = WEEKS * 7 * 24 * 60  # Simulation time in minutes
 
 
@@ -25,9 +25,9 @@ def time_to_failure():
     return random.expovariate(BREAK_MEAN)
 
 
-from test.base import State
-from test.base import ValueCreatorAsset
-from test.base import Job
+from base import State
+from base import ValueCreatorAsset
+from base import Job
 
 class ConcreteJob(Job):
     def __init__(self, material, process_sequence):
@@ -51,9 +51,9 @@ class ProductionState(State):
         self.asset: ValueCreatorAsset = asset
         self.env: env_object = self.asset.get_env()
         self.active: simpy.Event = simpy.Event(self.env)
-        self.done_in : float = 0.0
-        self.start : float = 0.0
-        self.process  = self.env.process_state(self.process())
+        self.done_in: float = 0.0
+        self.start: float = 0.0
+        self.process = self.env.process(self.process())
 
 
     def process(self):
@@ -74,7 +74,7 @@ class ProductionState(State):
                     self.done_in = 0  # Set to 0 to exit while loop.
 
                 except simpy.Interrupt:
-                    yield self.env.process_state(self.interrupt())
+                    yield self.env.process(self.interrupt())
 
             # Part is done.
             # TODO: parts made has to be moved to product or logger class
@@ -94,8 +94,8 @@ class BreakDownState(State):
         self.env: env_object = self.asset.get_env()
         self.active : simpy.Event = simpy.Event(self.env)
 
-        self.process = self.env.process_state(self.process())
-        self.env.process_state(self.interrupt())
+        self.process = self.env.process(self.process())
+        self.env.process(self.interrupt())
 
 
     def process(self):
@@ -151,7 +151,7 @@ class Machine(ValueCreatorAsset, simpy.PreemptiveResource):
         pass
 
     def interrupt_active_process(self) -> None:
-        self.state.process_state.interrupt()
+        self.state.process.interrupt()
 
     def get_env(self):
         return self.env

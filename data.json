@@ -1,28 +1,72 @@
 {
     "time_models": {
-        "time_model1": {
-            "parameters": [
-                20,
-                5
-            ],
-            "batch_size": 100,
-            "distribution_function": "normal"
+        "FunctionTimeModels": {
+            "ft1": {
+                "ID": "7e41f696-d3c3-11ec-9d64-0242ac120002",
+                "description": "normal distribution time model with 20 minutes",
+                "parameters": [
+                    20,
+                    5
+                ],
+                "batch_size": 100,
+                "distribution_function": "normal"
+            },
+            "ft2": {
+                "ID": "7e41f8f8-d3c3-11ec-9d64-0242ac120002",
+                "description": "constant distribution time model with 10 minutes",
+                "parameters": [
+                    10,
+                    5
+                ],
+                "batch_size": 100,
+                "distribution_function": "constant"
+            }
         },
-        "time_model2": {
-            "parameters": [
-                10,
-                5
-            ],
-            "batch_size": 100,
-            "distribution_function": "constant"
+        "HistoryTimeModels": {
+            "ft3": {
+                "ID": "7e41fa2e-d3c3-11ec-9d64-0242ac120002",
+                "description": "history time model",
+                "history": [1,2,3,4,5,6,7,8,9]
+            }
+        }
+    },
+    "states": {
+        "ProductionStates": {
+            "PS1": {
+                "ID": "ade5cfd8-d3ca-11ec-9d64-0242ac120002",
+                "description": "Production state for product 1",
+                "time_model_id": "7e41fa2e-d3c3-11ec-9d64-0242ac120002"
+            },
+            "PS2": {
+                "ID": "ade5dbfe-d3ca-11ec-9d64-0242ac120002",
+                "description": "Production state for product 2",
+                "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
+            }
         },
-        "time_model3": {
-            "parameters": [
-                30,
-                5
-            ],
-            "batch_size": 100,
-            "distribution_function": "exponential"
+        "BreakDownStates": {
+            "BS1": {
+                "ID": "ade5d672-d3ca-11ec-9d64-0242ac120002",
+                "description": "Breakdown state machine 1",
+                "time_model_id": "7e41f8f8-d3c3-11ec-9d64-0242ac120002"
+            },
+            "BS2": {
+                "ID": "ade5e36a-d3ca-11ec-9d64-0242ac120002",
+                "description": "Breakdown state machine 2",
+                "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
+            }
+
+        }
+    },
+    "processes": {
+        "Process1": {
+            "ID": "ade5eb76-d3ca-11ec-9d64-0242ac120002",
+            "description": "Process 1",
+            "time_model_id": "7e41fa2e-d3c3-11ec-9d64-0242ac120002"
+            },
+        "BS1": {
+            "ID": "ade5ec98-d3ca-11ec-9d64-0242ac120002",
+            "description": "Process 2",
+            "time_model_id": "7e41f8f8-d3c3-11ec-9d64-0242ac120002"
         }
     }
 }
