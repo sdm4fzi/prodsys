@@ -1,46 +1,8 @@
-from process import ConcreteProcess
-from time_model import FunctionTimeModel, TimeModel
-from time_model import get_constant_list, get_normal_list, get_exponential_list
-from dataclasses import dataclass, field
-from typing import List
+from time_model import TimeModelFactory
 
 import json
 
-FUNCTION_DICT: dict = {'normal': get_normal_list,
-                       'constant': get_constant_list,
-                       'exponential': get_exponential_list
-                       }
-
-
-@dataclass
-class TimeModelFactory:
-    data: dict
-    time_models: List[TimeModel] = field(default_factory=lambda: [])
-
-    def create_time_models(self):
-        time_models = self.data['time_models']
-        for _id, values in time_models.items():
-            self.add_time_model(_id, values)
-
-    def add_time_model(self, _id, values):
-        self.time_models.append(FunctionTimeModel(parameters=values['parameters'],
-                                                  batch_size=values['batch_size'],
-                                                  distribution_function=FUNCTION_DICT[values['distribution_function']]
-                                                  ))
-
-
 if __name__ == '__main__':
-    """    
-    data = {
-            'time_models': {
-                'time_model1': {'parameters': (20, 5), 'batch_size': 100, 'distribution_function': 'normal'},
-                'time_model2': {'parameters': (10, 5), 'batch_size': 100, 'distribution_function': 'constant'},
-                'time_model3': {'parameters': (30, 5), 'batch_size': 100, 'distribution_function': 'exponential'},
-            }
-    }
-
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)"""
 
     with open('data.json', 'r', encoding='utf-8') as json_file:
         data = json.load(json_file)
@@ -48,6 +10,10 @@ if __name__ == '__main__':
 
     fac = TimeModelFactory(data)
     fac.create_time_models()
+    i = "time_model2"
+    tm = fac.get_time_model(i)
+    tm.get_next_time()
+    print(tm)
 
 
 """    screwing = ConcreteProcess(statistic=normal_list, description="This is a screwing process")

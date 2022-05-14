@@ -2,29 +2,29 @@ from __future__ import annotations
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import Field, dataclass, field
-from email.policy import default
-from uuid import UUID, uuid1
+from dataclasses import dataclass
 from typing import List, Tuple
+
 import simpy
-from process import Process
+
 from material import Material
-from state import State
-from time_model import TimeModel
-from collections.abc import Callable
-import base
+from process import Process
 from resource import Resource
+from state import State
+
 
 class Environment(ABC, simpy.Environment):
 
     def __init__(self, resource_process_registry, material_registry) -> None:
         super().__init__()
-        self.resource_proces_registry : ResourceProcessRegistry = resource_process_registry
-        self.material_registry : MaterialRegistry = material_registry
+        self.resource_proces_registry: ResourceProcessRegistry = resource_process_registry
+        self.material_registry: MaterialRegistry = material_registry
+
 
 @dataclass
 class MaterialRegistry(ABC):
     a: int
+
 
 @dataclass
 class ResourceProcessRegistry:

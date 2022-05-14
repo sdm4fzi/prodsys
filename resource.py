@@ -1,31 +1,23 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import Field, dataclass, field
-from email.policy import default
-from uuid import UUID, uuid1
-from typing import List, Tuple
+from dataclasses import dataclass, field
+from typing import List
+
 import simpy
-from process import Process
-from material import Material
-from state import State
-from time_model import TimeModel
-from collections.abc import Callable
+
 import base
-
-
-
-
-
-
+from material import Material
+from process import Process
+from state import State
 
 
 @dataclass
 class Resource(ABC, simpy.Resource, base.IDEntity):
     processes: List[Process]
     parts_made: int = field(default=0, init=False)
-    avilable : simpy.Event
-    
+    available: simpy.Event
+    states: List[State] = field(default_factory=list, init=False)
 
     @abstractmethod
     def change_state(self, state: State) -> None:
@@ -49,49 +41,6 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def get_active_states(self) -> List[State]:
         return self.states
 
-    @abstractmethod
-    def set_active_state(self, state: State):
-        self.state = state
-
-@dataclass
-class ResourceProcessRegistry:
-    resources: List[Resource]
-    processes: List[Process]
-    process_statistics: List
-    process_dict = dict()
-    resource_dict = dict()
-
-    def add_resource(self, resource: Resource, processes: List[Process]) -> None:
-        if resource in self.resource_dict:
-            print("Resource is already in Registry!")
-            return None
-        self.resource_dict[resource] = processes
-        for process in processes:
-            if process not in self.process_dict.keys() and resource not in self.process_dict[process]:
-                self.process_dict[process].append(resource)
-
-    def get_possible_resources(self, process: Process) -> Tuple:
-        pass
-
-    def get_next_resource_process_time(self, resource: Resource, process: Process) -> float:
-        pass
-
-    def get_next_process_time(self, process: Process) -> float:
-        pass
-
-
-
-
-@dataclass
-class ManufacturingBOM(ABC):
-    materials: List[Material]
-    processes: List[Process]
-    connections: int
-
-    @abstractmethod
-    def get_material_for_process(self, process: Process) -> State:
-        pass
-
 
 @dataclass
 class MaterialRegistry(ABC):
@@ -108,5 +57,3 @@ class Router(ABC):
     @abstractmethod
     def get_next_possible_resources(self, process: Process):
         pass
-
-
