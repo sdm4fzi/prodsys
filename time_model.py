@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Tuple, List
+from typing import Tuple, List, Set
 from util import get_class_from_str
 
 import numpy as np
@@ -62,7 +62,7 @@ class HistoryTimeModel(TimeModel):
     history: List[float]
 
     def get_next_time(self) -> float:
-        return np.random.choice(self.history, 1)
+        return np.random.choice(self.history, 1)[0]
 
 
 @dataclass
@@ -94,5 +94,8 @@ class TimeModelFactory:
     def add_time_model(self, cls, values):
         self.time_models.append(cls(**values))
 
-    def get_time_model(self, ID):
-        return [tm for tm in self.time_models if tm.ID == ID]
+    def get_time_models(self, IDs: List[str]) -> List[TimeModel]:
+        return [tm for tm in self.time_models if tm.ID in IDs]
+
+    def get_time_model(self, ID: str) -> TimeModel:
+        return [tm for tm in self.time_models if tm.ID == ID].pop()

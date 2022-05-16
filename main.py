@@ -2,7 +2,7 @@ from time_model import TimeModelFactory
 from state import StateFactory
 from env import Environment
 from process import ProcessFactory
-from resource import ConcreteResource
+from resource import ResourceFactory
 
 import json
 
@@ -23,22 +23,28 @@ if __name__ == '__main__':
     st_fac = StateFactory(data, env, tm_fac)
     st_fac.create_states()
 
-    print(st_fac.states)
+    print(len(st_fac.states))
 
     pr_fac = ProcessFactory(data, tm_fac)
     pr_fac.create_processes()
 
-    r = ConcreteResource(ID="99", description="Machine 1", env=env, processes=[pr_fac.processes[0], pr_fac.processes[1]])
-    st = st_fac.states[0]
-    print(st)
-    r.add_state(st)
-    print(r)
+    print(len(pr_fac.processes))
 
+    # r = ConcreteResource(ID="99", description="Machine 1", env=env, processes=[pr_fac.processes[0], pr_fac.processes[1]])
+    # st = st_fac.states[0]
+    # print(st)
+    # r.add_state(st)
+    # print(r)
+    #
+    r_fac = ResourceFactory(data, env, pr_fac, st_fac)
+    r_fac.create_resources()
+    print(r_fac)
 
-
-
-
-    # TODO: create resources and add states and processes
+    r3 = r_fac.resources[2]
+    print(r3.description)
+    r3.process_states()
+    env.run(1000)
+    print(r3.parts_made)
 
     # TODO: add links of controller and resources in controller_registry
 

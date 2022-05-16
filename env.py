@@ -13,7 +13,7 @@ from resource import Resource
 from material import Material
 
 
-class Environment(ABC, simpy.Environment):
+class Environment(simpy.Environment):
     material_registry: MaterialRegistry
     resource_process_registry: ResourceProcessRegistry
 

@@ -31,18 +31,6 @@
         }
     },
     "states": {
-        "ProductionStates": {
-            "PS1": {
-                "ID": "ade5cfd8-d3ca-11ec-9d64-0242ac120002",
-                "description": "Production state for product 1",
-                "time_model_id": "7e41fa2e-d3c3-11ec-9d64-0242ac120002"
-            },
-            "PS2": {
-                "ID": "ade5dbfe-d3ca-11ec-9d64-0242ac120002",
-                "description": "Production state for product 2",
-                "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
-            }
-        },
         "BreakDownStates": {
             "BS1": {
                 "ID": "ade5d672-d3ca-11ec-9d64-0242ac120002",
@@ -62,11 +50,35 @@
             "ID": "ade5eb76-d3ca-11ec-9d64-0242ac120002",
             "description": "Process 1",
             "time_model_id": "7e41fa2e-d3c3-11ec-9d64-0242ac120002"
-            },
-        "BS1": {
+        },
+        "Process2": {
             "ID": "ade5ec98-d3ca-11ec-9d64-0242ac120002",
             "description": "Process 2",
-            "time_model_id": "7e41f8f8-d3c3-11ec-9d64-0242ac120002"
+            "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
+        }
+    },
+    "resources": {
+        "Resource1": {
+            "ID": "5cf22b72-d450-11ec-9d64-0242ac120002",
+            "description": "Resource 1",
+            "capacity": 2,
+            "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002"],
+            "states": ["ade5d672-d3ca-11ec-9d64-0242ac120002"]
+        },
+
+        "Resource2": {
+            "ID": "5cf22a6e-d450-11ec-9d64-0242ac120002",
+            "description": "Resource 2",
+            "capacity": 1,
+            "processes": ["ade5ec98-d3ca-11ec-9d64-0242ac120002"],
+            "states": ["ade5e36a-d3ca-11ec-9d64-0242ac120002"]
+        },
+        "Resource3": {
+            "ID": "5cf22974-d450-11ec-9d64-0242ac120002",
+            "description": "Resource 3",
+            "capacity": 4,
+            "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002", "ade5ec98-d3ca-11ec-9d64-0242ac120002"],
+            "states": ["ade5d672-d3ca-11ec-9d64-0242ac120002", "ade5e36a-d3ca-11ec-9d64-0242ac120002"]
         }
     }
 }

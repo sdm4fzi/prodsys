@@ -11,15 +11,16 @@ from material import Material
 from state import State
 from time_model import TimeModel
 from collections.abc import Callable
-from resource import Resource
-from env import ResourceProcessRegistry, MaterialRegistry
+from resource import Resource, ResourceFactory
+from env import ResourceProcessRegistry, MaterialRegistry, Environment
 
 
 @dataclass
 class Router(ABC):
+    env: Environment
 
-    resource_process_registry : ResourceProcessRegistry
-    material_registry : MaterialRegistry
+    resource_process_registry: ResourceFactory
+    material_registry: MaterialRegistry
 
 
 
@@ -34,4 +35,8 @@ class Router(ABC):
 
     @abstractmethod
     def wait_for_routing_decision():
+        pass
+
+    @abstractmethod
+    def request_transport(self):
         pass

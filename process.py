@@ -37,6 +37,7 @@ class ProcessModel(ABC):
     def look_ahead(self, process: Process, look_ahead: int) -> List[Tuple[Process]]:
         pass
 
+
 @dataclass
 class ProcessFactory:
     data: dict
@@ -52,8 +53,8 @@ class ProcessFactory:
         time_model = self.time_model_factory.get_time_model(values['time_model_id'])
         self.processes.append(ConcreteProcess(time_model=time_model, ID=values['ID'], description=values['description']))
 
-    def get_time_model(self, ID):
-        return [st for st in self.processes if st.ID == ID]
+    def get_processes(self, IDs: List[str]) -> List[Process]:
+        return [pr for pr in self.processes if pr.ID in IDs]
 
 
 
