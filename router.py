@@ -7,34 +7,33 @@ from uuid import UUID, uuid1
 from typing import List, Tuple
 import simpy
 from process import Process
-from material import Material
-from state import State
-from time_model import TimeModel
+import material
+import state
+import time_model
 from collections.abc import Callable
-from resource import Resource, ResourceFactory
-from env import ResourceProcessRegistry, MaterialRegistry, Environment
+import resource
 
 
 @dataclass
 class Router(ABC):
-    env: Environment
+    env: env.Environment
 
-    resource_process_registry: ResourceFactory
-    material_registry: MaterialRegistry
+    resource_process_registry: resource.ResourceFactory
+    material_registry: env.MaterialRegistry
 
 
 
 
     @abstractmethod
-    def determine_next_processes(self, material: Material) -> List[Process]:
+    def determine_next_processes(self, material: material.Material) -> List[Process]:
         pass
 
     @abstractmethod
-    def get_next_possible_resources(self, process: Process) -> List[Resource]:
+    def get_next_possible_resources(self, process: Process) -> List[resource.Resource]:
         pass
 
     @abstractmethod
-    def wait_for_routing_decision():
+    def wait_for_routing_decision(self):
         pass
 
     @abstractmethod

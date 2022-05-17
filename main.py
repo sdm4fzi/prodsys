@@ -40,11 +40,11 @@ if __name__ == '__main__':
     r_fac.create_resources()
     print(r_fac)
 
-    r3 = r_fac.resources[2]
-    print(r3.description)
-    r3.process_states()
-    env.run(1000)
-    print(r3.parts_made)
+    # r3 = r_fac.resources[2]
+    # print(r3.description)
+    # r3.process_states()
+    # env.run(1000)
+    # print(r3.parts_made)
 
     # TODO: add links of controller and resources in controller_registry
 

@@ -4,10 +4,43 @@ from typing import List
 
 from base import IDEntity
 import env
+import simpy
+import resource
+import router
+import process
 
 @dataclass
 class Material(ABC, IDEntity):
-    quality: float
+    env: env.Environment
+    # TODO: here has to be a process model class that can be requested / the router
+    processes: List[process.Process]
+    process: simpy.Process = field(default=None, init=False)
+    next_process: process.Process = field(default=None, init=False)
+    next_resource: resource.Resource = field(default=None, init=False)
+    finished_process: simpy.Event = field(default=None, init=False)
+    router: router.Router = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.finished_process = simpy.Event(self.env)
+        self.set_next_process()
+
+    def process_material(self):
+        while self.next_process:
+            self.next_resource.request_process(self.next_process, self)
+            yield self.finished_process
+            self.finished_process = simpy.Event(self.env)
+
+            self.set_next_process()
+
+    def set_next_process(self):
+        # TODO: this method has also to be adjusted for the process model
+        if not self.processes:
+            self.next_process = None
+        else:
+            self.next_process = self.processes.pop()
+
+    def set_next_resource(self):
+        self.router.get_next_possible_resources(self.next_process)
 
 
 @dataclass

@@ -5,6 +5,8 @@ from typing import List
 from collections.abc import Callable
 from abc import ABC
 
+PROCESSED_MATERIAL = 0
+
 @dataclass
 class Resource(simpy.Resource):
     env: simpy.Environment
@@ -114,7 +116,6 @@ class State:
 
     def __post_init__(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
-        print(self.name, "the interrupt is initialized", self.interrupt_processed.triggered)
         self.active = simpy.Event(self.env)
 
     def process_state(self):
@@ -135,27 +136,17 @@ class State:
                 if done_in < 0:
                     done_in = 0
                 self.interrupt_processed = simpy.Event(self.env)
-                print("wait for interrupt end")
                 yield self.env.process(self.interrupt())
-                print(self.name, self.env.now, "end interrupt")
                 self.interrupt_processed.succeed()
-                print("continue process after interrupt, missing: ", done_in)
         print("finished_process")
 
     def interrupt_process(self):
-        print(self.name, "the interrupt is waiting", self.interrupt_processed.triggered)
         yield self.interrupt_processed
-        print(self.name, "the interrupt has waited ", self.interrupt_processed.triggered)
         self.interrupt_processed = simpy.Event(self.env)
-        print(self.name, "the interrupt ist happening", self.interrupt_processed.triggered)
         if self.process.is_alive:
-            print(self.name, "interrupt running process")
             self.process.interrupt()
-        else:
-            print(self.name, "is not interrupted as not alive")
 
     def interrupt(self):
-        print(self.name, "wait for interrupt end", self.env.now)
         yield self.resource.active
 
     def activate(self):
@@ -212,12 +203,13 @@ class Material:
             self.set_next_process()
             print("__________get next process", self.next_process)
         print("finished material at", self.env.now)
+        global PROCESSED_MATERIAL
+        PROCESSED_MATERIAL += 1
 
 
     def set_next_process(self):
         if not self.processes:
             self.next_process = None
-            print("material is finsihed at", self.env.now)
         else:
             self.next_process = self.processes.pop()
 
@@ -227,7 +219,7 @@ def generate_material(env: simpy.Environment, arrival_time: int, resource: Resou
     while True:
         yield env.timeout(arrival_time)
         print("create material")
-        m = Material(env, ['p1', 'p2', 'p2'])
+        m = Material(env, ['p1', 'p2', 'p2', 'p3', 'p2', 'p1', 'p4', 'p5'])
         m.next_resource = resource
         m.process = env.process(m.process_material())
 
@@ -235,12 +227,15 @@ def generate_material(env: simpy.Environment, arrival_time: int, resource: Resou
 env = simpy.Environment()
 p1 = State('p1', env, process_time=10)
 p2 = State('p2', env, process_time=13)
-s1 = BreakdownState('s1', env, process_time=8, repair_time=1)
-s2 = BreakdownState('s2', env, process_time=9, repair_time=2)
+p3 = State('p3', env, process_time=5)
+p4 = State('p4', env, process_time=10)
+p5 = State('p5', env, process_time=13)
+s1 = BreakdownState('s1', env, process_time=120, repair_time=10)
+s2 = BreakdownState('s2', env, process_time=130, repair_time=15)
 
 r = Resource(env)
 r.add_states([s1, s2])
-r.add_production_states([p1, p2])
+r.add_production_states([p1, p2, p3, p4, p5])
 r.start_states()
 
 c = SimpleController(FIFO_control_policy)
@@ -249,4 +244,5 @@ r.controller = c
 env.process(generate_material(env, 19, r))
 
 
-env.run(500)
+env.run(10000)
+print(PROCESSED_MATERIAL)

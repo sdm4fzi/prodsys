@@ -8,10 +8,9 @@ from typing import List, Tuple
 import simpy
 
 import state
-from process import Process
-from resource import Resource
-from material import Material
-
+import process
+import resource
+import material
 
 class Environment(simpy.Environment):
     material_registry: MaterialRegistry
@@ -26,10 +25,10 @@ class Environment(simpy.Environment):
     def add_resource_process_registry(self, resource_process_registry: ResourceProcessRegistry) -> None:
         self.resource_process_registry = resource_process_registry
 
-    def get_next_process(self, material: Material):
+    def get_next_process(self, material: material.Material):
         pass
 
-    def get_next_resource(self, resource: Resource):
+    def get_next_resource(self, resource: resource.Resource):
         pass
 
 
@@ -40,13 +39,13 @@ class MaterialRegistry(ABC):
 
 @dataclass
 class ResourceProcessRegistry:
-    resources: List[Resource]
-    processes: List[Process]
+    resources: List[resource.Resource]
+    processes: List[process.Process]
     process_statistics: List
     process_dict = dict()
     resource_dict = dict()
 
-    def add_resource(self, resource: Resource, processes: List[Process]) -> None:
+    def add_resource(self, resource: resource.Resource, processes: List[process.Process]) -> None:
         if resource in self.resource_dict:
             print("Resource is already in Registry!")
             return None
@@ -55,22 +54,22 @@ class ResourceProcessRegistry:
             if process not in self.process_dict.keys() and resource not in self.process_dict[process]:
                 self.process_dict[process].append(resource)
 
-    def get_possible_resources(self, process: Process) -> Tuple:
+    def get_possible_resources(self, process: process.Process) -> Tuple:
         pass
 
-    def get_next_resource_process_time(self, resource: Resource, process: Process) -> float:
+    def get_next_resource_process_time(self, resource: resource.Resource, process: process.Process) -> float:
         pass
 
-    def get_next_process_time(self, process: Process) -> float:
+    def get_next_process_time(self, process: process.Process) -> float:
         pass
 
 
 @dataclass
 class ManufacturingBOM(ABC):
     # materials: List[Material]
-    processes: List[Process]
+    processes: List[process.Process]
     connections: int
 
     @abstractmethod
-    def get_material_for_process(self, process: Process) -> state.State:
+    def get_material_for_process(self, process: process.Process) -> state.State:
         pass

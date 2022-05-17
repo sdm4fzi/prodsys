@@ -10,6 +10,24 @@ import base
 from process import Process, ProcessFactory
 import state
 import copy
+import material
+import control
+from time_model import TimeModel
+
+@dataclass
+class Source:
+    env: env.Environment
+    material_master: material.Material
+    time_model: TimeModel
+
+
+    def create_material(self):
+        while True:
+            yield self.env.timeout(self.time_model.get_next_time())
+            copy_material = copy.deepcopy(self.material_master)
+            copy_material.set_next_resource()
+            copy_material.process = self.env.process(copy_material.process_material())
+
 
 
 @dataclass
@@ -18,13 +36,16 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     processes: List[Process]
     capacity: int = field(default=1)
     parts_made: int = field(default=0, init=False)
-    req: simpy.Event = field(default=None, init=False)
     available: simpy.Event = field(default=None, init=False)
+    active: simpy.Event = field(default=None, init=False)
     states: List[state.State] = field(default_factory=list, init=False)
+    production_states: List[state.State] = field(default_factory=list, init=False)
+    controller: control.Controller = field(default=None, init=False)
 
     def __post_init__(self):
-        self.req = simpy.Event(self.env)
+        super(Resource, self).__init__(self.env)
         self.available = simpy.Event(self.env)
+        self.active = simpy.Event(self.env).succeed()
 
     @abstractmethod
     def change_state(self, input_state: state.State) -> None:
@@ -33,6 +54,14 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def add_state(self, input_state: state.State) -> None:
         self.states.append(input_state)
         input_state.resource = self
+
+    def add_production_state(self, input_state: state.ProductionState) -> None:
+        self.production_states.append(input_state)
+        input_state.resource = self
+
+    def start_states(self):
+        for actual_state in self.states:
+            actual_state.process = self.env.process(actual_state.process_state())
 
     @abstractmethod
     def process_states(self) -> None:
@@ -46,11 +75,37 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def interrupt_state(self):
         pass
 
-    def get_active_states(self) -> List[state.State]:
+    def interrupt_states(self):
+        for state in self.production_states:
+            if state.process:
+                self.env.process(state.interrupt_process())
+
+    def run_process(self, process: Process):
+        for input_state in self.production_states:
+            if input_state.description == process.description:
+                input_state.process = self.env.process(input_state.process_state())
+                return input_state.process
+
+    def get_process(self, process: Process):
+        for actual_state in self.production_states:
+            if actual_state.description == process.description:
+                return
+
+    def request_process(self, process: Process, requesting_material: material.Material):
+        self.env.process(self.controller.request(process, requesting_material, self))
+
+    def get_states(self) -> List[state.State]:
         return self.states
+
+    def activate(self):
+        self.active.succeed()
+        for actual_state in self.states:
+            actual_state.activate()
 
     def request_repair(self):
         pass
+
+
 
 
 class ConcreteResource(Resource):
@@ -117,15 +172,11 @@ class ResourceFactory:
     def create_resources(self):
         resources = self.data['resources']
         for values in resources.values():
-            print(values['description'], "____________")
             self.add_resource(values)
 
     def add_resource(self, values: dict):
-        print("Resource values: ", values)
         states = self.state_factory.get_states(values['states'])
-        print("Resource states: ",  [state.description for state in states])
         processes = self.process_factory.get_processes(values['processes'])
-        print("Resource processes: ", processes)
         resource = ConcreteResource(ID=values['ID'],
                              description=values['description'],
                              env=self.env,
@@ -135,6 +186,9 @@ class ResourceFactory:
         register_states(resource, states, self.env)
         register_production_states_for_processes(resource, self.state_factory, self.env)
         self.resources.append(resource)
+        resource.start_states()
+
+        resource.controller = control.Controller(control.FIFO_control_policy)
 
     def get_resource(self, ID):
         return [st for st in self.resources if st.ID == ID].pop()

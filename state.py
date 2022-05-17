@@ -50,86 +50,93 @@ class State(ABC, IDEntity):
 
 class ProductionState(State):
     interrupt_processed: simpy.Event
+    start: float
+    done_in: float
 
     def __post_init__(self):
-        self.active = simpy.Event(self.env).succeed()
         self.start = 0.0
         self.done_in = 0.0
         self.interrupt_processed = simpy.Event(self.env).succeed()
+        self.active = simpy.Event(self.env)
 
     def process_state(self):
-        """Produce parts as long as the simulation runs.
+        """Runs a single process of a resource.
 
                While making a part, the machine may break multiple times.
                Request a repairman when this happens.
 
                """
-        while True:
-            # Start making a new part
-            # TODO: add here this logical request, which is created and updated by the controller class
-            # yield self.resource.req
-            self.done_in = self.time_model.get_next_time()
-            print(self.resource.description, self.description, self.done_in)
-            while self.done_in:
-                try:
-                    # Working on the part
-                    self.start = self.env.now
-                    yield self.env.timeout(self.done_in)
-                    self.done_in = 0  # Set to 0 to exit while loop.
+        self.done_in = self.time_model.get_next_time()
+        yield self.resource.active
+        while self.done_in:
+            try:
+                self.start = self.env.now
+                yield self.env.timeout(self.done_in)
+                self.done_in = 0  # Set to 0 to exit while loop.
 
-                except simpy.Interrupt:
-                    print("Exception")
-                    self.interrupt_processed = simpy.Event(self.env)
-                    yield self.env.process(self.interrupt())
-                    self.interrupt_processed.succeed()
+            except simpy.Interrupt:
+                self.update_done_in()
+                self.interrupt_processed = simpy.Event(self.env)
+                yield self.env.process(self.interrupt())
+                self.interrupt_processed.succeed()
 
-            # Part is done.
-            # TODO: parts made has to be moved to product or logger class
-            self.resource.parts_made += 1
-            print(self.resource.description, self.resource.parts_made, self.env.now)
+        # TODO: parts made has to be moved to product or logger class
+        self.resource.parts_made += 1
+
+    def update_done_in(self):
+        self.done_in -= self.env.now - self.start  # How much time left?
+        if self.done_in < 0:
+            self.done_in = 0
 
     def interrupt(self):
-        print(self.description, "here", self.env.now)
-        self.done_in -= self.env.now - self.start  # How much time left?
-        print(self.description, "wait for actication", self.env.now)
         yield self.active
-        print(self.description, "activated", self.env.now)
 
     def interrupt_process(self):
-        print(self.description, "wait for interruptable process", self.interrupt_processed.triggered)
         yield self.interrupt_processed
-        print(self.description, "interrupt process")
-        self.process.interrupt()
+        self.interrupt_processed = simpy.Event(self.env)
+        if self.process.is_alive:
+            self.process.interrupt()
+
+    def activate(self):
+        try:
+            self.active.succeed()
+        except:
+            raise RuntimeError("state is allready succeded!!")
+        self.active = simpy.Event(self.env)
 
 
 class BreakDownState(State):
+
+    def process_state(self):
+        while True:
+            yield self.env.process(self.wait_for_breakdown())
+            self.resource.interrupt_state()
+            yield self.resource.active
+            self.resource.active = simpy.Event(self.env)
+            # TODO: Schedule here the maintainer! or a time model for a repair
+            yield self.env.timeout(3)
+            self.resource.activate()
+
+    def wait_for_breakdown(self):
+        yield self.env.timeout(self.time_model.get_next_time())
+
+    def interrupt_process(self):
+        pass
+
+class ScheduledState(State):
 
     def __post_init__(self):
         self.active = simpy.Event(self.env)
         # self.process = self.env.process(self.process_state())
 
     def process_state(self):
-        while True:
-            print(self.resource.description, self.description)
-            yield self.env.process(self.wait_for_schedule())
-            # Request a repairman. This will preempt its "other_job".
-            # TODO: this request has to be made in a controller
-            # with self.resource.request_repair() as req:
-            #     yield req
-            print("repair!")
-            yield self.env.timeout(10)
-            self.resource.reactivate()
+        pass
 
     def wait_for_schedule(self):
-        print(self.resource.description, self.description, "wait for schedule")
-        yield self.env.timeout(self.time_model.get_next_time())
-        print(self.resource.description, self.description, "interrupt")
-        # TODO: add that only the states, that are interruptable are interrupted
-        self.resource.interrupt_state()
-        yield self.active
+        pass
 
     def interrupt_process(self):
-        yield self.env.timeout(1)
+        pass
 
 
 STATE_DICT: dict = {
