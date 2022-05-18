@@ -48,6 +48,10 @@ class State(ABC, IDEntity):
     def interrupt_process(self):
         pass
 
+    def activate_state(self):
+        pass
+
+
 class ProductionState(State):
     interrupt_processed: simpy.Event
     start: float
@@ -56,6 +60,8 @@ class ProductionState(State):
     def __post_init__(self):
         self.start = 0.0
         self.done_in = 0.0
+
+    def activate_state(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
         self.active = simpy.Event(self.env)
 
@@ -107,6 +113,9 @@ class ProductionState(State):
 
 class BreakDownState(State):
 
+    def __post_init__(self):
+        self.active = simpy.Event(self.env)
+
     def process_state(self):
         while True:
             yield self.env.process(self.wait_for_breakdown())
@@ -122,6 +131,7 @@ class BreakDownState(State):
 
     def interrupt_process(self):
         pass
+
 
 class ScheduledState(State):
 

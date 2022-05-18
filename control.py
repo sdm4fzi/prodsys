@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import List
 from collections.abc import Callable
-from resource import Resource
+
+import process
+import resource
 from material import Material
 from process import Process
 from dataclasses import dataclass
@@ -11,39 +15,67 @@ class Controller(ABC):
     control_policy: Callable[List[Material], List[Material]]
 
     @abstractmethod
-    def wrap_request_function(self, resource: Resource):
+    def wrap_request_function(self, _resource: resource.Resource):
         pass
 
     @abstractmethod
-    def perform_setup(self, resource: Resource):
+    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
         pass
 
     @abstractmethod
-    def change_state(self, resource: Resource):
+    def change_state(self, _resource: resource.Resource):
         pass
 
     @abstractmethod
-    def get_next_material(self, resource: Resource) -> List[Material]:
+    def get_next_material(self, _resource: resource.Resource) -> List[Material]:
         pass
 
     @abstractmethod
     def wrap_wait_for_state_change(self) -> None:
         pass
 
-    def request(self, process: Process, material: Material, resource: Resource):
-        with resource.request() as req:
-            self.sort_queue(resource)
-            print("Controller requests resource")
+    @abstractmethod
+    def request(self, _process: Process, material: Material, _resource: resource.Resource):
+        pass
+
+    @abstractmethod
+    def sort_queue(self, _resource: resource.Resource):
+        pass
+
+    @abstractmethod
+    def check_resource_available(self):
+        pass
+
+
+class SimpleController(Controller):
+
+    def wrap_request_function(self, _resource: resource.Resource):
+        pass
+
+    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
+        _resource.setup(_process)
+
+    def change_state(self, _resource: resource.Resource):
+        pass
+
+    def get_next_material(self, _resource: resource.Resource) -> List[Material]:
+        pass
+
+    def wrap_wait_for_state_change(self) -> None:
+        pass
+
+    def request(self, _process: Process, material: Material, _resource: resource.Resource):
+        with _resource.request() as req:
+            self.sort_queue(_resource)
             yield req
-            print("Controller receicves resource and starts process")
-            yield resource.run_process(material.next_process)
-            state_process = resource.get_process(process)
-            print("delete process")
+            # TODO: implement setup of resources in case of a process change
+            yield _resource.setup(material.next_process)
+            yield _resource.run_process(material.next_process)
+            state_process = _resource.get_process(_process)
             del state_process.process
-            print("Controller finished process")
             material.finished_process.succeed()
 
-    def sort_queue(self, resource: Resource):
+    def sort_queue(self, _resource: resource.Resource):
         pass
 
     def check_resource_available(self):

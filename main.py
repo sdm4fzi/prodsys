@@ -38,13 +38,12 @@ if __name__ == '__main__':
     #
     r_fac = ResourceFactory(data, env, pr_fac, st_fac)
     r_fac.create_resources()
-    print(r_fac)
+    r_fac.start_resources()
+    env.run(10000)
+    for resource in r_fac.resources:
+        print(resource.description, resource.parts_made)
 
-    # r3 = r_fac.resources[2]
-    # print(r3.description)
-    # r3.process_states()
-    # env.run(1000)
-    # print(r3.parts_made)
+    # TODO: check, why there are parts made, although no material is scheduled
 
     # TODO: add links of controller and resources in controller_registry
 

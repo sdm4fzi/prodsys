@@ -61,6 +61,7 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
 
     def start_states(self):
         for actual_state in self.states:
+            actual_state.activate_state()
             actual_state.process = self.env.process(actual_state.process_state())
 
     @abstractmethod
@@ -105,12 +106,15 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def request_repair(self):
         pass
 
-
+    def setup(self, _process: Process):
+        pass
 
 
 class ConcreteResource(Resource):
 
     def __post_init__(self):
+        super(Resource, self).__init__(self.env)
+        self.active = simpy.Event(self.env).succeed()
         self.req = simpy.Event(self.env)
         self.available = simpy.Event(self.env)
 
@@ -133,7 +137,6 @@ class ConcreteResource(Resource):
     def interrupt_state(self):
         for actual_state in self.states:
             if type(actual_state) == state.ProductionState:
-                print("start interrupt at state", actual_state.description)
                 self.env.process(actual_state.interrupt_process())
                 # actual_state.interrupt_process()
 
@@ -156,7 +159,8 @@ def register_production_states_for_processes(resource: Resource, state_factory: 
     for process in resource.processes:
         values = {'ID': process.ID, 'description': process.description, 'time_model_id': process.time_model.ID}
         state_factory.add_states(cls=state.ProductionState, values=values)
-        states.append(state_factory.get_states(IDs=[values['ID']]).pop())
+        _state = state_factory.get_states(IDs=[values['ID']]).pop()
+        states.append(_state)
     register_states(resource, states, env)
 
 
@@ -178,17 +182,20 @@ class ResourceFactory:
         states = self.state_factory.get_states(values['states'])
         processes = self.process_factory.get_processes(values['processes'])
         resource = ConcreteResource(ID=values['ID'],
-                             description=values['description'],
-                             env=self.env,
-                             capacity=2,
-                             processes=processes,
-                             )
+                                    description=values['description'],
+                                    env=self.env,
+                                    capacity=2,
+                                    processes=processes,
+                                    )
         register_states(resource, states, self.env)
         register_production_states_for_processes(resource, self.state_factory, self.env)
         self.resources.append(resource)
-        resource.start_states()
 
-        resource.controller = control.Controller(control.FIFO_control_policy)
+        resource.controller = control.SimpleController(control.FIFO_control_policy)
+
+    def start_resources(self):
+        for _resource in self.resources:
+            _resource.start_states()
 
     def get_resource(self, ID):
         return [st for st in self.resources if st.ID == ID].pop()

@@ -48,10 +48,13 @@ class FunctionTimeModel(TimeModel):
 
     def get_next_time(self) -> float:
         try:
-            return self._statistics_buffer.pop()
+            value = self._statistics_buffer.pop()
+            if value < 0:
+                return 0
+            return value
         except IndexError:
             self._fill_buffer()
-            return self._statistics_buffer.pop()
+            return self.get_next_time()
 
     def _fill_buffer(self):
         self._statistics_buffer = self._distribution_function(self.parameters, self.batch_size)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import List
@@ -9,13 +11,14 @@ import resource
 import router
 import process
 
+
 @dataclass
 class Material(ABC, IDEntity):
     env: env.Environment
     # TODO: here has to be a process model class that can be requested / the router
     processes: List[process.Process]
-    process: simpy.Process = field(default=None, init=False)
     next_process: process.Process = field(default=None, init=False)
+    process: simpy.Process = field(default=None, init=False)
     next_resource: resource.Resource = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     router: router.Router = field(default=None, init=False)
