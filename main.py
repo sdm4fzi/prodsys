@@ -30,12 +30,6 @@ if __name__ == '__main__':
 
     print(len(pr_fac.processes))
 
-    # r = ConcreteResource(ID="99", description="Machine 1", env=env, processes=[pr_fac.processes[0], pr_fac.processes[1]])
-    # st = st_fac.states[0]
-    # print(st)
-    # r.add_state(st)
-    # print(r)
-    #
     r_fac = ResourceFactory(data, env, pr_fac, st_fac)
     r_fac.create_resources()
     r_fac.start_resources()
