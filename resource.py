@@ -14,6 +14,13 @@ import material
 import control
 from time_model import TimeModel
 
+
+class Queue(simpy.Store):
+
+    def __init__(self, __env: env.Environment, capacity: int):
+        super(Queue, self).__init__(__env, capacity)
+
+
 @dataclass
 class Source:
     env: env.Environment
@@ -33,6 +40,7 @@ class Source:
 @dataclass
 class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
+    queues: List[Queue]
     processes: List[Process]
     capacity: int = field(default=1)
     parts_made: int = field(default=0, init=False)

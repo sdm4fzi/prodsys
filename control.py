@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List
 from collections.abc import Callable
 
+import env
 import process
 import resource
 from material import Material
@@ -59,13 +60,29 @@ class SimpleController(Controller):
     def change_state(self, _resource: resource.Resource):
         pass
 
-    def get_next_material(self, _resource: resource.Resource) -> List[Material]:
-        pass
+    def get_next_material_for_process(self, _resource: resource.Resource, _process: Process):
+        events = []
+        for queue in _resource.queues:
+            _material_type = _process.get_raw_material_type()
+            # TODO: implement here a _resource.get_material_of_queues(material)
+            events.append(queue.get())
+        yield simpy.AllOf(_resource.env, events)
+        return _material
+
+
+    def put_material_to_queue(self, _resource: resource.Resource, _process: Process):
+        events = []
+        for queue in _resource.queues:
+            _material_type = _process.get_raw_material_type()
+            # TODO: implement here a _resource.put_material_of_queues(material)
+            events.append(queue.put(_material_type))
+        yield simpy.AllOf(_resource.env, events)
 
     def wrap_wait_for_state_change(self) -> None:
         pass
 
     def request(self, _process: Process, material: Material, _resource: resource.Resource):
+        yield self.get_next_material_for_process(_resource, _process)
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
@@ -74,6 +91,7 @@ class SimpleController(Controller):
             yield _resource.run_process(material.next_process)
             state_process = _resource.get_process(_process)
             del state_process.process
+            yield self.put_material_to_queue(_resource, _process)
             material.finished_process.succeed()
 
     def sort_queue(self, _resource: resource.Resource):
