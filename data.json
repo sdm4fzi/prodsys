@@ -20,6 +20,16 @@
                 ],
                 "batch_size": 100,
                 "distribution_function": "constant"
+            },
+                        "ft3": {
+                "ID": "ft3",
+                "description": "constant distribution time model with 17 minutes",
+                "parameters": [
+                    17,
+                    5
+                ],
+                "batch_size": 100,
+                "distribution_function": "constant"
             }
         },
         "HistoryTimeModels": {
@@ -47,19 +57,24 @@
     },
     "processes": {
         "Process1": {
-            "ID": "ade5eb76-d3ca-11ec-9d64-0242ac120002",
+            "ID": "P1",
             "description": "Process 1",
             "time_model_id": "7e41fa2e-d3c3-11ec-9d64-0242ac120002"
         },
         "Process2": {
-            "ID": "ade5ec98-d3ca-11ec-9d64-0242ac120002",
+            "ID": "P2",
             "description": "Process 2",
+            "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
+        },
+        "Process3": {
+            "ID": "P3",
+            "description": "Process 3",
             "time_model_id": "7e41f696-d3c3-11ec-9d64-0242ac120002"
         }
     },
     "resources": {
         "Resource1": {
-            "ID": "5cf22b72-d450-11ec-9d64-0242ac120002",
+            "ID": "R1",
             "description": "Resource 1",
             "capacity": 2,
             "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002"],
@@ -67,14 +82,14 @@
         },
 
         "Resource2": {
-            "ID": "5cf22a6e-d450-11ec-9d64-0242ac120002",
+            "ID": "R2",
             "description": "Resource 2",
             "capacity": 1,
             "processes": ["ade5ec98-d3ca-11ec-9d64-0242ac120002"],
             "states": ["ade5e36a-d3ca-11ec-9d64-0242ac120002"]
         },
         "Resource3": {
-            "ID": "5cf22974-d450-11ec-9d64-0242ac120002",
+            "ID": "R3",
             "description": "Resource 3",
             "capacity": 4,
             "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002", "ade5ec98-d3ca-11ec-9d64-0242ac120002"],

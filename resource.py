@@ -28,6 +28,8 @@ class Source:
     material_master: material.Material
     time_model: TimeModel
 
+    def start_source(self):
+        self.env.process(self.create_material())
 
     def create_material(self):
         while True:

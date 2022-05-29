@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import List, Type
 
 import simpy
-from env import Environment
+import env
 import resource
 from time_model import TimeModel
 from base import IDEntity
@@ -15,7 +15,7 @@ from time_model import TimeModelFactory
 
 @dataclass
 class State(ABC, IDEntity):
-    env: Environment
+    env: env.Environment
     time_model: TimeModel
     active: simpy.Event = field(default=None, init=False)
     _resource: resource.Resource = field(default=None, init=False)
@@ -158,7 +158,7 @@ STATE_DICT: dict = {
 @dataclass
 class StateFactory:
     data: dict
-    env: Environment
+    env: env.Environment
     time_model_factory: TimeModelFactory
 
     states: List[State] = field(default_factory=list)

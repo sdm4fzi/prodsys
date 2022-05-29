@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import material
 from time_model import TimeModelFactory
 from state import StateFactory
 from env import Environment
 from process import ProcessFactory
-from resource import ResourceFactory
+from resource import ResourceFactory, Source
 
 
 import json
@@ -36,15 +37,24 @@ if __name__ == '__main__':
     r_fac = ResourceFactory(data, env, pr_fac, st_fac)
     r_fac.create_resources()
     r_fac.start_resources()
+
+    # TODO: create material
+
+    processes = pr_fac.get_processes(["P1", "P2", "P3"])
+
+    m = material.Material(ID="M1", description="Material 1", env=env, processes=processes)
+    from router import Router
+
+
+    ft3 = tm_fac.get_time_model("ft3")
+
+    s = Source(env, m, ft3)
+    s.start_source()
+
+
     env.run(10000)
     for resource in r_fac.resources:
         print(resource.description, resource.parts_made)
-
-    # TODO: check, why there are parts made, although no material is scheduled
-
-    # TODO: add links of controller and resources in controller_registry
-
-    # TODO: create material
 
     # TODO: add resources and material factories to environment
 
