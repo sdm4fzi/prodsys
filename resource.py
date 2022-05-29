@@ -7,7 +7,8 @@ from typing import List
 import simpy
 import env
 import base
-from process import Process, ProcessFactory
+import process
+# from process import Process, ProcessFactory
 import state
 import copy
 import material
@@ -40,14 +41,16 @@ class Source:
 @dataclass
 class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
-    queues: List[Queue]
-    processes: List[Process]
+    processes: List[process.Process]
     capacity: int = field(default=1)
+    queues: List[Queue] = field(default=None, init=False)
+    output_queues: List[Queue] = field(default=None, init=False)
     parts_made: int = field(default=0, init=False)
     available: simpy.Event = field(default=None, init=False)
     active: simpy.Event = field(default=None, init=False)
     states: List[state.State] = field(default_factory=list, init=False)
     production_states: List[state.State] = field(default_factory=list, init=False)
+    setup_states: List[state.State] = field(default_factory=list, init=False)
     controller: control.Controller = field(default=None, init=False)
 
     def __post_init__(self):
@@ -63,7 +66,7 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
         self.states.append(input_state)
         input_state.resource = self
 
-    def add_production_state(self, input_state: state.ProductionState) -> None:
+    def add_production_state(self, input_state: state.State) -> None:
         self.production_states.append(input_state)
         input_state.resource = self
 
@@ -89,19 +92,19 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
             if state.process:
                 self.env.process(state.interrupt_process())
 
-    def run_process(self, process: Process):
+    def run_process(self, process: process.Process):
         for input_state in self.production_states:
             if input_state.description == process.description:
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
 
-    def get_process(self, process: Process):
+    def get_process(self, process: process.Process):
         for actual_state in self.production_states:
             if actual_state.description == process.description:
                 return
 
-    def request_process(self, process: Process, requesting_material: material.Material):
-        self.env.process(self.controller.request(process, requesting_material, self))
+    def request_process(self, process: process.Process):
+        self.env.process(self.controller.request(process, self))
 
     def get_states(self) -> List[state.State]:
         return self.states
@@ -114,8 +117,11 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def request_repair(self):
         pass
 
-    def setup(self, _process: Process):
-        pass
+    def setup(self, _process: process.Process):
+        for input_state in self.setup_states:
+            if input_state.description == _process.description:
+                input_state.process = self.env.process(input_state.process_state())
+                return input_state.process
 
 
 class ConcreteResource(Resource):
@@ -162,6 +168,13 @@ def register_states(resource: Resource, states: List[state.State], env: env.Envi
         resource.add_state(copy_state)
 
 
+def register_production_states(resource: Resource, states: List[state.State], env: env.Environment):
+    for actual_state in states:
+        copy_state = copy.deepcopy(actual_state)
+        copy_state.env = env
+        resource.add_production_state(copy_state)
+
+
 def register_production_states_for_processes(resource: Resource, state_factory: state.StateFactory, env: env.Environment):
     states: List[state.State] = []
     for process in resource.processes:
@@ -169,14 +182,14 @@ def register_production_states_for_processes(resource: Resource, state_factory: 
         state_factory.add_states(cls=state.ProductionState, values=values)
         _state = state_factory.get_states(IDs=[values['ID']]).pop()
         states.append(_state)
-    register_states(resource, states, env)
+    register_production_states(resource, states, env)
 
 
 @dataclass
 class ResourceFactory:
     data: dict
     env: env.Environment
-    process_factory: ProcessFactory
+    process_factory: process.ProcessFactory
     state_factory: state.StateFactory
 
     resources: List[Resource] = field(default_factory=list, init=False)
@@ -210,4 +223,7 @@ class ResourceFactory:
 
     def get_resources(self, IDs: List[str]) -> List[Resource]:
         return [r for r in self.resources if r.ID in IDs]
+
+    def get_resources_with_process(self, __process: process.Process):
+        return [r for r in self.resources if __process in r.processes]
 

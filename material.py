@@ -29,7 +29,7 @@ class Material(ABC, IDEntity):
 
     def process_material(self):
         while self.next_process:
-            self.next_resource.request_process(self.next_process, self)
+            self.next_resource.request_process(self.next_process)
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
 
@@ -41,9 +41,10 @@ class Material(ABC, IDEntity):
             self.next_process = None
         else:
             self.next_process = self.processes.pop()
+            self.set_next_resource()
 
     def set_next_resource(self):
-        self.router.get_next_possible_resources(self.next_process)
+        self.next_resource = self.router.get_next_resource(self.next_process)
 
 
 @dataclass

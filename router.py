@@ -6,7 +6,7 @@ from email.policy import default
 from uuid import UUID, uuid1
 from typing import List, Tuple
 import simpy
-from process import Process
+import process
 import material
 import state
 import time_model
@@ -17,25 +17,17 @@ import resource
 @dataclass
 class Router(ABC):
     env: env.Environment
-
     resource_process_registry: resource.ResourceFactory
-    material_registry: env.MaterialRegistry
+    routing_heuristic: Callable[List[resource], resource]
 
-
-
-
-    @abstractmethod
+    """@abstractmethod
     def determine_next_processes(self, material: material.Material) -> List[Process]:
-        pass
+        pass"""
 
-    @abstractmethod
-    def get_next_possible_resources(self, process: Process) -> List[resource.Resource]:
-        pass
+    def get_next_resource(self, _process: process.Process) -> resource.Resource:
+        possible_resources = self.resource_process_registry.get_resources_with_process(_process)
+        return self.routing_heuristic(possible_resources)
 
-    @abstractmethod
-    def wait_for_routing_decision(self):
-        pass
 
-    @abstractmethod
-    def request_transport(self):
-        pass
+def FIFO_router(possible_resources: List[resource.Resource]) -> resource.Resource:
+    return possible_resources.pop()

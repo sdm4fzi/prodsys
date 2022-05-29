@@ -13,15 +13,15 @@ class Process(ABC, IDEntity):
     Abstract process base class
     """
     time_model: TimeModel
-    raw_material: List[material.Material]
-    target_material: List[material.Material]
+    # raw_material: List[material.Material]
+    # target_material: List[material.Material]
 
     @abstractmethod
     def get_process_time(self) -> float:
         pass
 
-    def get_raw_material(self):
-        return self.raw_material
+    # def get_raw_material(self):
+    #     return self.raw_material
 
 
 class ConcreteProcess(Process):
