@@ -1,16 +1,21 @@
-processes = [3, 2, 1]
-next_process: int = processes.pop()
+import simpy
+from dataclasses import dataclass
 
 
-def set_next_process(processes):
-    # TODO: this method has also to be adjusted for the process model
-    global next_process
-    if not processes:
-        next_process = None
-    else:
-        next_process = processes.pop()
+@dataclass
+class A:
+    i: int
+
+a1 = A(2)
+a2 = A(3)
 
 
-while next_process:
-    print(next_process)
-    set_next_process(processes)
+env = simpy.Environment()
+s = simpy.FilterStore(env, capacity=2)
+
+s.put(a1)
+s.put(a2)
+
+a = s.get(filter=lambda s: s is a2)
+
+print(a.value)

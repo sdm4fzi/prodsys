@@ -51,6 +51,10 @@ class Controller(ABC):
 
 
 class SimpleController(Controller):
+    def __init__(self, _control_policy: Callable[List[material.Material]]):
+        self.control_policy = _control_policy
+        self.next_materials = None
+
 
     def wrap_request_function(self, _resource: resource.Resource):
         pass
@@ -61,14 +65,15 @@ class SimpleController(Controller):
     def change_state(self, _resource: resource.Resource):
         pass
 
-    def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process) -> material.Material:
+    def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process):
         events = []
-        for queue in _resource.queues:
+        print(_resource.ID, "__", id(_resource))
+        for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
             # TODO: here should be an advanced process model that controls, which material should be get from which queue
+            print("___", _resource.input_queues[0].items)
             events.append(queue.get())
-        yield simpy.AllOf(_resource.env, events)
-        return [event.value for event in events]
+        return events
 
     def put_material_to_output_queue(self, _resource: resource.Resource, _material: material.Material) -> None:
         events = []
@@ -76,23 +81,33 @@ class SimpleController(Controller):
             # _material_type = _process.get_raw_material_type()
             # TODO: implement here a _resource.put_material_of_queues(material)
             events.append(queue.put(_material))
-        yield simpy.AllOf(_resource.env, events)
 
     def wrap_wait_for_state_change(self) -> None:
         pass
 
     def request(self, _process: process.Process, _resource: resource.Resource):
-        _material = self.get_next_material_for_process(_resource, _process)
+        events = self.get_next_material_for_process(_resource, _process)
+        yield simpy.AllOf(_resource.env, events)
+
+        print(len(events))
+        print("received material: ")
+        next_materials = [event.value for event in events]
+        print(type(next_materials), next_materials)
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
             # TODO: implement setup of resources in case of a process change
             # yield _resource.setup(_material.next_process)
-            yield _resource.run_process(_material.next_process)
+            print("start processing")
+            yield _resource.run_process(_process)
+            print("finished processing")
             state_process = _resource.get_process(_process)
-            del state_process.process
-            self.put_material_to_output_queue(_resource, _material)
-            _material.finished_process.succeed()
+            state_process.process = None
+            self.put_material_to_output_queue(_resource, next_materials)
+            print("__________________________")
+            print(len(next_materials))
+            for next_material in next_materials:
+                next_material.finished_process.succeed()
 
     def sort_queue(self, _resource: resource.Resource):
         pass

@@ -73,10 +73,12 @@ class ProductionState(State):
 
                """
         self.done_in = self.time_model.get_next_time()
+        print("done_in", self.done_in)
         yield self.resource.active
         while self.done_in:
             try:
                 self.start = self.env.now
+                print("start production state process")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -85,7 +87,7 @@ class ProductionState(State):
                 self.interrupt_processed = simpy.Event(self.env)
                 yield self.env.process(self.interrupt())
                 self.interrupt_processed.succeed()
-
+        print("part finished")
         # TODO: parts made has to be moved to product or logger class
         self.resource.parts_made += 1
 

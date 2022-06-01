@@ -77,7 +77,7 @@
             "ID": "R1",
             "description": "Resource 1",
             "capacity": 2,
-            "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002"],
+            "processes": ["P1"],
             "states": ["ade5d672-d3ca-11ec-9d64-0242ac120002"]
         },
 
@@ -85,14 +85,14 @@
             "ID": "R2",
             "description": "Resource 2",
             "capacity": 1,
-            "processes": ["ade5ec98-d3ca-11ec-9d64-0242ac120002"],
+            "processes": ["P2"],
             "states": ["ade5e36a-d3ca-11ec-9d64-0242ac120002"]
         },
         "Resource3": {
             "ID": "R3",
             "description": "Resource 3",
             "capacity": 4,
-            "processes": ["ade5eb76-d3ca-11ec-9d64-0242ac120002", "ade5ec98-d3ca-11ec-9d64-0242ac120002"],
+            "processes": ["P2", "P3"],
             "states": ["ade5d672-d3ca-11ec-9d64-0242ac120002", "ade5e36a-d3ca-11ec-9d64-0242ac120002"]
         }
     }
