@@ -5,8 +5,8 @@ from time_model import TimeModelFactory
 from state import StateFactory
 from env import Environment
 from process import ProcessFactory
-from resource import ResourceFactory, Source
-
+from resource import ResourceFactory, Source, Queue
+from router import SimpleRouter, FIFO_router
 
 import json
 
@@ -36,19 +36,27 @@ if __name__ == '__main__':
 
     r_fac = ResourceFactory(data, env, pr_fac, st_fac)
     r_fac.create_resources()
-    r_fac.start_resources()
 
     # TODO: create material
 
     processes = pr_fac.get_processes(["P1", "P2", "P3"])
 
-    m = material.Material(ID="M1", description="Material 1", env=env, processes=processes)
-    from router import Router
+    router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=FIFO_router)
 
+    m = material.Material(ID="M1", description="Material 1", env=env, processes=processes, router=router)
+    print(m.processes)
 
     ft3 = tm_fac.get_time_model("ft3")
 
     s = Source(env, m, ft3)
+    resources = r_fac.get_resources(["R1", "R2", "R3"])
+    for r in resources:
+        r.queues.append(Queue(env, 20))
+        r.output_queues.append(Queue(env, 20))
+
+
+    r_fac.start_resources()
+
     s.start_source()
 
 

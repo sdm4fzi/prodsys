@@ -15,22 +15,22 @@ import process
 @dataclass
 class Material(ABC, IDEntity):
     env: env.Environment
-    # TODO: here has to be a process model class that can be requested / the router
     processes: List[process.Process]
+    router: router.SimpleRouter
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
     next_resource: resource.Resource = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
-    router: router.Router = field(default=None, init=False)
-
-    def __post_init__(self):
-        self.finished_process = simpy.Event(self.env)
-        self.set_next_process()
 
     def process_material(self):
+        self.finished_process = simpy.Event(self.env)
+        self.set_next_process()
+        print(self.description, "start process", self.next_process.description)
         while self.next_process:
             self.next_resource.request_process(self.next_process)
+            print("wait for process", self.next_process.description)
             yield self.finished_process
+            print("process", self.next_process.description, "finished")
             self.finished_process = simpy.Event(self.env)
 
             self.set_next_process()

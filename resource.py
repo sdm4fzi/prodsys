@@ -27,14 +27,28 @@ class Source:
     env: env.Environment
     material_master: material.Material
     time_model: TimeModel
+    router: router.SimpleRouter = field(default=None, init=False)
+
+    def __post_init__(self):
+        self.material_master.env = None
+        self.router = self.material_master.router
+        self.material_master.router = None
+
+    def set_material(self, __material: material.Material):
+        __material.env = self.env
+        __material.router = self.router
+        return __material
 
     def start_source(self):
         self.env.process(self.create_material())
 
     def create_material(self):
+        print("create material")
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             copy_material = copy.deepcopy(self.material_master)
+            copy_material = self.set_material(copy_material)
+            copy_material.set_next_process()
             copy_material.set_next_resource()
             copy_material.process = self.env.process(copy_material.process_material())
 
@@ -45,8 +59,8 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
     processes: List[process.Process]
     capacity: int = field(default=1)
-    queues: List[Queue] = field(default=None, init=False)
-    output_queues: List[Queue] = field(default=None, init=False)
+    queues: List[Queue] = field(default_factory=list, init=False)
+    output_queues: List[Queue] = field(default_factory=list, init=False)
     parts_made: int = field(default=0, init=False)
     available: simpy.Event = field(default=None, init=False)
     active: simpy.Event = field(default=None, init=False)

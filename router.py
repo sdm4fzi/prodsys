@@ -15,7 +15,7 @@ import resource
 
 
 @dataclass
-class Router(ABC):
+class SimpleRouter:
     env: env.Environment
     resource_process_registry: resource.ResourceFactory
     routing_heuristic: Callable[List[resource], resource]
@@ -26,6 +26,7 @@ class Router(ABC):
 
     def get_next_resource(self, _process: process.Process) -> resource.Resource:
         possible_resources = self.resource_process_registry.get_resources_with_process(_process)
+
         return self.routing_heuristic(possible_resources)
 
 
