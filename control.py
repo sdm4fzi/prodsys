@@ -67,11 +67,9 @@ class SimpleController(Controller):
 
     def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process):
         events = []
-        print(_resource.ID, "__", id(_resource))
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
             # TODO: here should be an advanced process model that controls, which material should be get from which queue
-            print("___", _resource.input_queues[0].items)
             events.append(queue.get())
         return events
 
@@ -92,7 +90,6 @@ class SimpleController(Controller):
         print(len(events))
         print("received material: ")
         next_materials = [event.value for event in events]
-        print(type(next_materials), next_materials)
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
@@ -104,8 +101,6 @@ class SimpleController(Controller):
             state_process = _resource.get_process(_process)
             state_process.process = None
             self.put_material_to_output_queue(_resource, next_materials)
-            print("__________________________")
-            print(len(next_materials))
             for next_material in next_materials:
                 next_material.finished_process.succeed()
 

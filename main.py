@@ -59,7 +59,7 @@ if __name__ == '__main__':
     r_fac.start_resources()
     s_fac.start_sources()
 
-    env.run(300)
+    env.run(120)
     for resource in r_fac.resources:
         print(resource.description, resource.parts_made)
 

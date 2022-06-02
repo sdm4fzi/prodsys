@@ -11,6 +11,16 @@ import resource
 import router
 import process
 
+from collections.abc import Iterable
+
+
+def flatten(xs):
+    for x in xs:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            yield from flatten(x)
+        else:
+            yield x
+
 
 @dataclass
 class Material(IDEntity):
@@ -26,7 +36,6 @@ class Material(IDEntity):
         self.finished_process = simpy.Event(self.env)
         yield self.env.process(self.initial_placement())
         while self.next_process:
-            print(self.ID, "request process", self.next_process.description, "at resource", self.next_resource.ID)
 
             self.next_resource.request_process(self.next_process)
             print(self.ID, "wait for process", self.next_process.description, "at resource", self.next_resource.ID)
@@ -35,7 +44,10 @@ class Material(IDEntity):
             self.finished_process = simpy.Event(self.env)
             print(self.ID, "transport to process", self.next_process.description)
             yield self.env.process(self.transport_to_queue_of_resource())
-            print(self.ID, "arrived at next process", self.next_process.description)
+            if self.next_process:
+                print(self.ID, "arrived at next process", self.next_process.description)
+            else:
+                print(self.ID, "finished!!")
 
 
     def set_next_process(self):
@@ -46,12 +58,22 @@ class Material(IDEntity):
             self.next_process = self.processes.pop()
             self.set_next_resource()
 
+    def filer_material(self, event: list):
+        for h in event:
+            if h is self:
+                print("_____________ found material", self.ID)
+                return True
+        return False
+
     def initial_placement(self):
         self.set_next_process()
         yield self.next_resource.input_queues[0].put(self)
         print("put into queue", len(self.next_resource.input_queues[0].items), id(self.next_resource))
+
     def transport_to_queue_of_resource(self):
-        yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
+        yield self.next_resource.output_queues[0].get(filter=self.filer_material)
+        # yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
+        print(self.ID, "reviced output queue for transport")
         self.set_next_process()
         print(self.next_process)
         # TODO: implement here the waiting for a transport
