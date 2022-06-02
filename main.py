@@ -89,11 +89,6 @@ if __name__ == '__main__':
     print(a)
     print("created material", len(m_fac.materials), "finished material", a, "wip", len(m_fac.materials) - a)
 
-
-    # TODO: fix Material_2object 18 and 19
-
-
-
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 
     # TODO: create graph with resources, process and material
