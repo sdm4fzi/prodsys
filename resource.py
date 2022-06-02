@@ -23,7 +23,7 @@ class Queue(simpy.FilterStore, base.IDEntity):
     capacity: int = field(default=1)
 
     def __post_init__(self):
-        super(Queue, self).__init__(self.env)
+        super(Queue, self).__init__(self.env, self.capacity)
 
 
 @dataclass
@@ -64,10 +64,10 @@ class Source(base.IDEntity):
         self.env.process(self.create_material())
 
     def create_material(self):
-        print("create material")
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
+            # print("create material", __material.ID, "at", self.env.now)
             __material.process = self.env.process(__material.process_material())
 
 
@@ -291,7 +291,7 @@ class ResourceFactory:
         resource = ConcreteResource(ID=values['ID'],
                                     description=values['description'],
                                     env=self.env,
-                                    capacity=2,
+                                    capacity=values['capacity'],
                                     processes=processes,
                                     )
         input_queues = self.queue_factory.get_queues(values['input_queues'])

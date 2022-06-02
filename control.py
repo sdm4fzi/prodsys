@@ -73,31 +73,27 @@ class SimpleController(Controller):
             events.append(queue.get())
         return events
 
-    def put_material_to_output_queue(self, _resource: resource.Resource, _material: material.Material) -> None:
+    def put_material_to_output_queue(self, _resource: resource.Resource, _materials: List[material.Material]) -> None:
         events = []
         for queue in _resource.output_queues:
             # _material_type = _process.get_raw_material_type()
             # TODO: implement here a _resource.put_material_of_queues(material)
-            events.append(queue.put(_material))
+            for material in _materials:
+                events.append(queue.put(material))
 
     def wrap_wait_for_state_change(self) -> None:
         pass
 
     def request(self, _process: process.Process, _resource: resource.Resource):
-        events = self.get_next_material_for_process(_resource, _process)
-        yield simpy.AllOf(_resource.env, events)
-
-        print(len(events))
-        print("received material: ")
-        next_materials = [event.value for event in events]
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
+            events = self.get_next_material_for_process(_resource, _process)
+            yield simpy.AllOf(_resource.env, events)
+            next_materials = [event.value for event in events]
             # TODO: implement setup of resources in case of a process change
             # yield _resource.setup(_material.next_process)
-            print("start processing")
             yield _resource.run_process(_process)
-            print("finished processing")
             state_process = _resource.get_process(_process)
             state_process.process = None
             self.put_material_to_output_queue(_resource, next_materials)

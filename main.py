@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 from material import MaterialFactory
 from time_model import TimeModelFactory
 from state import StateFactory
@@ -10,7 +12,12 @@ from router import SimpleRouter, FIFO_router, random_router
 
 import json
 
+import numpy as np
+
 if __name__ == '__main__':
+
+    np.random.seed(20)
+    random.seed(20)
 
     env = Environment()
 
@@ -59,60 +66,24 @@ if __name__ == '__main__':
     r_fac.start_resources()
     s_fac.start_sources()
 
-    env.run(120)
-    for resource in r_fac.resources:
-        print(resource.description, resource.parts_made)
+    import time
 
-    # TODO: add resources and material factories to environment
+    t_0 = time.perf_counter()
+
+    # env.run(10000)
+    env.run(500000)
+    for resource in r_fac.resources:
+        print("_________________")
+        print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
+        len(resource.output_queues[0].items), len(resource.users))
+        for m in resource.input_queues[0].items:
+            print("\t", m.ID, m.description)
+        print("\t", "_________________")
+        for m in resource.output_queues[0].items:
+            print("\t", m.ID, m.description)
+
+    print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 
     # TODO: create graph with resources, process and material
 
-    # TODO: create Router and Transformer class in environment
-
-
-"""    screwing = ConcreteProcess(statistic=normal_list, description="This is a screwing process")
-    gluing = ConcreteProcess(description="This is a gluing process", statistic=constant_list)
-    welding = ConcreteProcess(description="This is a welding process", statistic=exp_list)
-
-    wooden_plate = ConcreteMaterial(position = (1.0, 2.0), quality= 1.0, due_time = 60,
-                                    description="This is a wooden plate")
-
-    wooden_plate2 = ConcreteMaterial(position=(1.0, 2.5), quality=0.75, due_time=60,
-                                     description="This is another old wooden plate")
-
-    import math
-
-    wood_screw = ConcreteMaterial(position = (30.0, 20.0), quality= 1.0, due_time = math.inf,
-                                  description="This is a wood screw")
-
-    combined_wood = ConcreteMaterial(position=(1.0, 2.5), quality=1.0, due_time=60,
-                                     description="This is the combined wood")
-
-
-    wooden_plate_with_screw = ConcreteMaterial(position=(1.0, 2.5), quality=0.75, due_time=60,
-                                               description="This is the wood with screw")
-                                               )
-    finished_product = ConcreteMaterial(position=(1.0, 2.5), quality=0.75, due_time=60,
-                                        description="This is the finished product")
-
-    from igraph import Graph
-
-    g = Graph()
-    g.add_vertices(6)
-    g.vs["Material"] = [wooden_plate, wooden_plate2, wood_screw, combined_wood, wooden_plate_with_screw, finished_product]
-    g.add_edges([(0, 3), (1, 3), (0, 4), (2, 4), (3, 5), (4, 5)])
-    g.es["Processes"] = [gluing, gluing, screwing, screwing, screwing, gluing]
-    
-    print(g.vs[0].attributes())
-    a = g.vs.find(Material=wooden_plate)
-    b = g.successors(a)
-    print(a)
-    print("123")
-    print(g.vs[b[0]])
-    print(g.vs[b[1]])"""
-
-
-
-
-
-
+    # TODO: create Transformer class in environment

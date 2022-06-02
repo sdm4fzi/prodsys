@@ -38,17 +38,10 @@ class Material(IDEntity):
         while self.next_process:
 
             self.next_resource.request_process(self.next_process)
-            print(self.ID, "wait for process", self.next_process.description, "at resource", self.next_resource.ID)
             yield self.finished_process
-            print(self.ID, "finished process", self.next_process.description, "at resource", self.next_resource.ID)
             self.finished_process = simpy.Event(self.env)
-            print(self.ID, "transport to process", self.next_process.description)
             yield self.env.process(self.transport_to_queue_of_resource())
-            if self.next_process:
-                print(self.ID, "arrived at next process", self.next_process.description)
-            else:
-                print(self.ID, "finished!!")
-
+        # print(self.ID, "finished at", self.env.now)
 
     def set_next_process(self):
         # TODO: this method has also to be adjusted for the process model
@@ -58,29 +51,24 @@ class Material(IDEntity):
             self.next_process = self.processes.pop()
             self.set_next_resource()
 
-    def filer_material(self, event: list):
-        for h in event:
-            if h is self:
-                print("_____________ found material", self.ID)
-                return True
-        return False
-
     def initial_placement(self):
         self.set_next_process()
+        # print(self.ID, "put", self.next_resource.ID,  "before initial", len(self.next_resource.input_queues[0].items))
         yield self.next_resource.input_queues[0].put(self)
-        print("put into queue", len(self.next_resource.input_queues[0].items), id(self.next_resource))
+        # print(self.ID, "put", self.next_resource.ID,  "after initial", len(self.next_resource.input_queues[0].items))
 
     def transport_to_queue_of_resource(self):
-        yield self.next_resource.output_queues[0].get(filter=self.filer_material)
-        # yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
-        print(self.ID, "reviced output queue for transport")
+        # print(self.ID, "get ", self.next_resource.ID,  "before", len(self.next_resource.output_queues[0].items))
+        yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
+        # print(self.ID, "get ", self.next_resource.ID,  "after", len(self.next_resource.output_queues[0].items))
+
         self.set_next_process()
-        print(self.next_process)
-        # TODO: implement here the waiting for a transport
-        yield self.env.timeout(10)
-        print("timeout is over")
-        yield self.next_resource.input_queues[0].put(self)
-        print("put into queue", self.next_resource.input_queues[0])
+        if self.next_process is not None:
+            # TODO: implement here the waiting for a transport and yield the get after arrival of the transport unit
+            yield self.env.timeout(5)
+            # print(self.ID, "put ", self.next_resource.ID,  "before ", len(self.next_resource.input_queues[0].items))
+            yield self.next_resource.input_queues[0].put(self)
+            # print(self.ID, "put ", self.next_resource.ID,  "after ", len(self.next_resource.input_queues[0].items))
 
     def set_next_resource(self):
         self.next_resource = self.router.get_next_resource(self.next_process)
