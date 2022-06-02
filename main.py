@@ -71,7 +71,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(500000)
+    env.run(80000)
     for resource in r_fac.resources:
         print("_________________")
         print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
@@ -81,6 +81,18 @@ if __name__ == '__main__':
         print("\t", "_________________")
         for m in resource.output_queues[0].items:
             print("\t", m.ID, m.description)
+
+    print(len(m_fac.materials))
+    a = 0
+    for m in m_fac.materials:
+        if m.finished:
+            a += 1
+    print(a)
+    print(len(m_fac.materials) - a)
+
+    # TODO: fix Material_2object 18 and 19
+
+
 
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 
