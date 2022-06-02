@@ -69,8 +69,10 @@ class SimpleController(Controller):
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
-            # TODO: here should be an advanced process model that controls, which material should be get from which queue
-            events.append(queue.get())
+
+            # TODO: here should be an advanced process model that controls, which material should be get from which
+            #  queue
+            events.append(queue.get(filter=lambda x: x.next_resource is _resource))
         return events
 
     def put_material_to_output_queue(self, _resource: resource.Resource, _materials: List[material.Material]) -> None:

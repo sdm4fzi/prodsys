@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    445
+                    29.9
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
