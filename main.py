@@ -66,12 +66,22 @@ if __name__ == '__main__':
     r_fac.start_resources()
     s_fac.start_sources()
 
+    from logger_2 import Datacollector, post_monitor_resource
+
+    r1 = r_fac.get_resource(ID='R1')
+
+    dc = Datacollector()
+    # dc.register_patch(r1, attr=['put', 'get', 'request', 'release'],
+    for r in r_fac.resources:
+        dc.register_patch(r, attr=['release', 'request'],
+                              post=post_monitor_resource)
+
     import time
 
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(500000)
+    env.run(100000)
     for resource in r_fac.resources:
         print("_________________")
         print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
@@ -94,3 +104,6 @@ if __name__ == '__main__':
     # TODO: create graph with resources, process and material
 
     # TODO: create Transformer class in environment
+
+
+    # print(dc.data)

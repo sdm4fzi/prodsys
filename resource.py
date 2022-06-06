@@ -127,6 +127,7 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     active: simpy.Event = field(default=None, init=False)
     states: List[state.State] = field(default_factory=list, init=False)
     production_states: List[state.State] = field(default_factory=list, init=False)
+    current_process: state.ProductionState = field(default=None, init=False)
     setup_states: List[state.State] = field(default_factory=list, init=False)
     controller: control.Controller = field(default=None, init=False)
 
@@ -203,6 +204,7 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def setup(self, _process: process.Process):
         for input_state in self.setup_states:
             if input_state.description == _process.description:
+                self.current_process = input_state
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
 

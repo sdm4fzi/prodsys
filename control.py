@@ -87,14 +87,15 @@ class SimpleController(Controller):
         pass
 
     def request(self, _process: process.Process, _resource: resource.Resource):
+        # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
+        _resource.current_process = _process
+        # yield _resource.setup(_material.next_process)
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
             events = self.get_next_material_for_process(_resource, _process)
             yield simpy.AllOf(_resource.env, events)
             next_materials = [event.value for event in events]
-            # TODO: implement setup of resources in case of a process change
-            # yield _resource.setup(_material.next_process)
             yield _resource.run_process(_process)
             state_process = _resource.get_process(_process)
             state_process.process = None
@@ -143,16 +144,9 @@ class BatchController(Controller):
         pass
 
     def request(self, _process: process.Process, material: material.Material, _resource: resource.Resource):
-        with _resource.request() as req:
-            self.sort_queue(_resource)
-            # TODO: hier Logik integrieren, dass mehrere Request in einer Liste mit einer festen Länge, die der gewählten Batchsize entspricht geyielded werden
-            yield simpy.AllOf(self.registered_requests)
-            # TODO: implement setup of resources in case of a process change
-            yield _resource.setup(material.next_process)
-            yield _resource.run_process(material.next_process)
-            state_process = _resource.get_process(_process)
-            del state_process.process
-            material.finished_process.succeed()
+        pass
+        # TODO: hier Logik integrieren, dass mehrere Request in einer Liste mit einer festen Länge, die der gewählten Batchsize entspricht geyielded werden
+
 
     def sort_queue(self, _resource: resource.Resource):
         pass

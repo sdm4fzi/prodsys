@@ -67,11 +67,9 @@ class ProductionState(State):
 
     def process_state(self):
         """Runs a single process of a resource.
-
-               While making a part, the machine may break multiple times.
-               Request a repairman when this happens.
-
-               """
+        While making a part, the machine may break multiple times.
+        Request a repairman when this happens.
+        """
         self.done_in = self.time_model.get_next_time()
         yield self.resource.active
         while self.done_in:

@@ -1,12 +1,12 @@
 from functools import partial, wraps
 
-import state
+import resource
 
 
 class Datacollector:
-    data = {'States': []}
+    data = {'Resources': []}
 
-    def patch_state(self, __state, attr, pre=None, post=None):
+    def patch_state(self, __resource, attr, pre=None, post=None):
         """Patch *state* so that it calls the callable *pre* before each
         put/get/request/release operation and the callable *post* after each
         operation.  The only argument to these functions is the resource
@@ -18,48 +18,41 @@ class Datacollector:
                 # This is the actual wrapper
                 # Call "pre" callback
                 if pre:
-                    pre(__state)
+                    pre(__resource)
                 # Perform actual operation
                 ret = func(*args, **kwargs)
                 # Call "post" callback
                 if post:
-                    post(__state)
+                    post(__resource)
                 return ret
             return wrapper
         # Replace the original operations with our wrapper
         for name in attr:
-            if hasattr(__state, name):
-                setattr(__state, name, get_wrapper(getattr(__state, name)))
+            if hasattr(__resource, name):
+                setattr(__resource, name, get_wrapper(getattr(__resource, name)))
 
-    def register_patch(self, __state, attr, pre=None, post=None):
+    def register_patch(self, __resource, attr, pre=None, post=None):
         if pre is not None:
-            pre = self.register_monitor(pre, self.data['States'])
+            pre = self.register_monitor(pre, self.data['Resources'])
         if post is not None:
-            post = self.register_monitor(post, self.data['States'])
-        self.patch_state(__state, attr, pre, post)
+            post = self.register_monitor(post, self.data['Resources'])
+        self.patch_state(__resource, attr, pre, post)
 
     def register_monitor(self, monitor, data):
         partial_monitor = partial(monitor, data)
         return partial_monitor
 
-def pre_monitor_state(data, __state: state.State):
+def post_monitor_resource(data, __resource: resource.Resource):
     """This is our monitoring callback."""
+    if __resource.current_process:
+        process_ID = __resource.current_process.ID
+    else:
+        process_ID = None
     item = (
-        __state.resource.ID,
-        __state.ID,
-        'Start',
-        __state.env.now,
-    )
-    data.append(item)
-
-def post_monitor_state(data, __state: state.State):
-    """This is our monitoring callback."""
-    item = (
-        __state.resource.ID,
-        __state.ID,
-        'End',
-        __state.env.now,
-        __state.done_in
+        __resource.ID,
+        process_ID,
+        __resource.count,
+        __resource.env.now,
     )
     data.append(item)
 
