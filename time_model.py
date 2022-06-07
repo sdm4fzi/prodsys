@@ -28,6 +28,9 @@ FUNCTION_DICT: dict = {'normal': get_normal_list,
                        }
 
 
+# TODO: Time model zu model machen und alex puchta fragen wegen get next time für einen definierten Prozess der
+#  determinishh modelliert ist
+
 class TimeModel(ABC, IDEntity):
 
     @abstractmethod
