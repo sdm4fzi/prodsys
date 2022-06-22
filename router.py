@@ -29,6 +29,7 @@ class SimpleRouter:
 
     def get_next_resource(self, _process: process.Process) -> resource.Resource:
         possible_resources = self.resource_process_registry.get_resources_with_process(_process)
+        print(process.ID, [r.ID for r in possible_resources])
 
         return self.routing_heuristic(possible_resources)
 
