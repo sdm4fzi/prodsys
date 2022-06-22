@@ -81,7 +81,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(100000)
+    env.run(500000)
     for resource in r_fac.resources:
         print("_________________")
         print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
@@ -102,6 +102,12 @@ if __name__ == '__main__':
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 
     # TODO: create graph with resources, process and material
+
+    import pandas as pd
+
+    df = pd.DataFrame(dc.data['Resources'])
+
+    print(len(df))
 
     # TODO: create Transformer class in environment
 
