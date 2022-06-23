@@ -97,7 +97,6 @@ if __name__ == '__main__':
     for m in m_fac.materials:
         if m.finished:
             a += 1
-    print(a)
     print("created material", len(m_fac.materials), "finished material", a, "wip", len(m_fac.materials) - a)
 
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")

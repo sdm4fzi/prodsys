@@ -45,6 +45,7 @@ class Material(IDEntity):
             yield self.env.process(self.transport_to_queue_of_resource())
         # print(self.ID, "finished at", self.env.now)
         self.finished = True
+        yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
 
     def set_next_process(self):
         # TODO: this method has also to be adjusted for the process model

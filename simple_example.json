@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    29.9
+                    45
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -59,7 +59,7 @@
             "mdt1": {
                 "ID": "manhattan_time_model_1",
                 "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                "speed": 1500
+                "speed": 15000
             }
         }
     },
