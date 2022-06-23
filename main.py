@@ -86,6 +86,7 @@ if __name__ == '__main__':
         print("_________________")
         print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
         len(resource.output_queues[0].items), len(resource.users))
+        print("\t", "_________________")
         for m in resource.input_queues[0].items:
             print("\t", m.ID, m.description)
         print("\t", "_________________")

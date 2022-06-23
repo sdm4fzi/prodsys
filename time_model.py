@@ -34,7 +34,7 @@ FUNCTION_DICT: dict = {'normal': get_normal_list,
 class TimeModel(ABC, IDEntity):
 
     @abstractmethod
-    def get_next_time(self) -> float:
+    def get_next_time(self, originin, target) -> float:
         pass
 
 
@@ -49,7 +49,7 @@ class FunctionTimeModel(TimeModel):
     def __post_init__(self):
         self._distribution_function = FUNCTION_DICT[self.distribution_function]
 
-    def get_next_time(self) -> float:
+    def get_next_time(self, originin=None, target=None) -> float:
         try:
             value = self._statistics_buffer.pop()
             if value < 0:
@@ -67,9 +67,17 @@ class FunctionTimeModel(TimeModel):
 class HistoryTimeModel(TimeModel):
     history: List[float]
 
-    def get_next_time(self) -> float:
+    def get_next_time(self, originin=None, target=None) -> float:
         return np.random.choice(self.history, 1)[0]
 
+@dataclass
+class ManhattanDistanceTimeModel(TimeModel):
+    speed: float
+
+    def get_next_time(self, origin: Tuple[float], target: Tuple[float]) -> float:
+        x_distance = abs(origin[0] - target[0])
+        y_distance = abs(origin[1] - target[1])
+        return (x_distance + y_distance) / self.speed
 
 @dataclass
 class MarkovTimeModel(TimeModel):
@@ -82,6 +90,7 @@ TIME_MODEL_DICT: dict = {
     'HistoryTimeModels': HistoryTimeModel,
     'MarkovTimeModel': MarkovTimeModel,
     'FunctionTimeModels': FunctionTimeModel,
+    'ManhattanDistanceTimeModel': ManhattanDistanceTimeModel
 }
 
 

@@ -108,6 +108,63 @@ class ProductionState(State):
         self.active = simpy.Event(self.env)
 
 
+class TransportState(State):
+    interrupt_processed: simpy.Event
+    start: float
+    done_in: float
+
+    def __post_init__(self):
+        self.start = 0.0
+        self.done_in = 0.0
+
+    def activate_state(self):
+        self.interrupt_processed = simpy.Event(self.env).succeed()
+        self.active = simpy.Event(self.env)
+
+    def process_state(self, target: List[float]):
+        """Runs a single process of a resource.
+        While making a part, the machine may break multiple times.
+        Request a repairman when this happens.
+        """
+        self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
+        yield self.resource.active
+        while self.done_in:
+            try:
+                self.start = self.env.now
+                yield self.env.timeout(self.done_in)
+                self.done_in = 0  # Set to 0 to exit while loop.
+
+            except simpy.Interrupt:
+                self.update_done_in()
+                self.interrupt_processed = simpy.Event(self.env)
+                yield self.env.process(self.interrupt())
+                self.interrupt_processed.succeed()
+        # TODO: parts made has to be moved to product or logger class
+        self.resource.location = target
+        self.resource.parts_made += 1
+
+    def update_done_in(self):
+        self.done_in -= self.env.now - self.start  # How much time left?
+        if self.done_in < 0:
+            self.done_in = 0
+
+    def interrupt(self):
+        yield self.active
+
+    def interrupt_process(self):
+        yield self.interrupt_processed
+        self.interrupt_processed = simpy.Event(self.env)
+        if self.process.is_alive:
+            self.process.interrupt()
+
+    def activate(self):
+        try:
+            self.active.succeed()
+        except:
+            raise RuntimeError("state is allready succeded!!")
+        self.active = simpy.Event(self.env)
+
+
 class BreakDownState(State):
 
     def __post_init__(self):
@@ -148,6 +205,7 @@ class ScheduledState(State):
 
 STATE_DICT: dict = {
     'ProductionStates': ProductionState,
+    'TransportState': TransportState,
     'BreakDownStates': BreakDownState,
 }
 

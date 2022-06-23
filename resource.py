@@ -15,6 +15,7 @@ import material
 import control
 from time_model import TimeModelFactory, TimeModel
 import router
+from util import get_class_from_str
 
 
 @dataclass
@@ -56,6 +57,7 @@ class QueueFactory:
 class Source(base.IDEntity):
     env: env.Environment
     material_factory: material.MaterialFactory
+    location: List[int, int]
     material_type: str
     time_model: TimeModel
     router: router.SimpleRouter
@@ -69,6 +71,9 @@ class Source(base.IDEntity):
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
             # print("create material", __material.ID, "at", self.env.now)
             __material.process = self.env.process(__material.process_material())
+
+    def get_location(self) -> List[int, int]:
+        return self.location
 
 
 @dataclass
@@ -92,7 +97,7 @@ class SourceFactory:
     def add_source(self, values: dict):
         router = self.get_router(values['router'])
         time_model = self.time_model_factory.get_time_model(values['time_model_id'])
-        source = Source(ID=values['ID'], description=values['description'],
+        source = Source(ID=values['ID'], description=values['description'], location=values["location"],
                         env=self.env, material_factory=self.material_factory,
                         material_type=values['material_type'],
                         time_model=time_model,
@@ -119,6 +124,7 @@ class SourceFactory:
 class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
     processes: List[process.Process]
+    location: List[int, int]
     capacity: int = field(default=1)
     input_queues: List[Queue] = field(default_factory=list, init=False)
     output_queues: List[Queue] = field(default_factory=list, init=False)
@@ -182,13 +188,28 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
 
+    def run_transport(self, process: process.Process, target: List[float]):
+        for input_state in self.production_states:
+            if input_state.description == process.description:
+                input_state.process = self.env.process(input_state.process_state(target=target))
+                return input_state.process
+
     def get_process(self, process: process.Process):
         for actual_state in self.production_states:
             if actual_state.description == process.description:
                 return actual_state
 
+    def get_location(self) -> List[int, int]:
+        return self.location
+
+    def set_location(self, new_location: List[int, int]) -> None:
+        self.location = new_location
+
     def request_process(self, process: process.Process):
         self.env.process(self.controller.request(process, self))
+
+    def request_transport(self, process: process.Process, origin: Resource, target: Resource, _material: material.Material):
+        self.env.process(self.controller.request(process, self, origin, target, _material))
 
     def get_states(self) -> List[state.State]:
         return self.states
@@ -263,12 +284,22 @@ def register_production_states(resource: Resource, states: List[state.State], en
 def register_production_states_for_processes(resource: Resource, state_factory: state.StateFactory,
                                              _env: env.Environment):
     states: List[state.State] = []
-    for process in resource.processes:
-        values = {'ID': process.ID, 'description': process.description, 'time_model_id': process.time_model.ID}
-        state_factory.add_states(cls=state.ProductionState, values=values)
+    for _process in resource.processes:
+        values = {'ID': _process.ID, 'description': _process.description, 'time_model_id': _process.time_model.ID}
+        if isinstance(_process, process.ProductionProcess):
+            state_factory.add_states(cls=state.ProductionState, values=values)
+        if isinstance(_process, process.TransportProcess):
+            state_factory.add_states(cls=state.TransportState, values=values)
         _state = state_factory.get_states(IDs=[values['ID']]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)
+
+
+CONTROLLER_DICT: dict = {
+    'SimpleController': control.SimpleController,
+    'TransportController': control.TransportController,
+}
+
 
 
 @dataclass
@@ -292,6 +323,7 @@ class ResourceFactory:
 
         resource = ConcreteResource(ID=values['ID'],
                                     description=values['description'],
+                                    location=values['location'],
                                     env=self.env,
                                     capacity=values['capacity'],
                                     processes=processes,
@@ -304,7 +336,8 @@ class ResourceFactory:
 
         register_states(resource, states, self.env)
         register_production_states_for_processes(resource, self.state_factory, self.env)
-        resource.controller = control.SimpleController(control.FIFO_control_policy)
+        controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
+        resource.controller = controller_class(control.FIFO_control_policy)
 
         self.resources.append(resource)
 

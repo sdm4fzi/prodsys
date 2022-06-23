@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import Field, dataclass, field
 from email.policy import default
+from turtle import pos
 from uuid import UUID, uuid1
 from typing import List, Tuple
 import simpy
@@ -21,16 +22,14 @@ import random
 class SimpleRouter:
     env: env.Environment
     resource_process_registry: resource.ResourceFactory
-    routing_heuristic: Callable[List[resource], resource]
+    routing_heuristic: Callable[..., resource.Resource]
 
     """@abstractmethod
     def determine_next_processes(self, material: material.Material) -> List[Process]:
         pass"""
 
-    def get_next_resource(self, _process: process.Process) -> resource.Resource:
-        possible_resources = self.resource_process_registry.get_resources_with_process(_process)
-        print(process.ID, [r.ID for r in possible_resources])
-
+    def get_next_resource(self, __process: process.Process) -> resource.Resource:
+        possible_resources = self.resource_process_registry.get_resources_with_process(__process)
         return self.routing_heuristic(possible_resources)
 
 

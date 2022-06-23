@@ -109,6 +109,70 @@ class SimpleController(Controller):
     def check_resource_available(self):
         pass
 
+class TransportController(Controller):
+    def __init__(self, _control_policy: Callable[List[material.Material]]):
+        self.control_policy = _control_policy
+        self.next_materials = None
+
+
+    def wrap_request_function(self, _resource: resource.Resource):
+        pass
+
+    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
+        _resource.setup(_process)
+
+    def change_state(self, _resource: resource.Resource):
+        pass
+
+    def get_next_material_for_process(self, _resource: resource.Resource, _material: material.Material):
+        events = []
+        for queue in _resource.output_queues:
+            # _material_type = _process.get_raw_material_type()
+
+            # TODO: here should be an advanced process model that controls, which material should be get from which
+            #  queue
+            events.append(queue.get(filter=lambda x: x is _material))
+        return events
+
+    def put_material_to_input_queue(self, _resource: resource.Resource, _material: material.Material) -> None:
+        events = []
+        for queue in _resource.input_queues:
+            # _material_type = _process.get_raw_material_type()
+            # TODO: implement here a _resource.put_material_of_queues(material)
+            events.append(queue.put(_material))
+
+        return events
+
+    def wrap_wait_for_state_change(self) -> None:
+        pass
+
+    def request(self, _process: process.Process, _resource: resource.Resource, origin: resource.Resource, target: resource.Resource, 
+        _material: material.Material):
+        # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
+        _resource.current_process = _process
+        # yield _resource.setup(_material.next_process)
+        with _resource.request() as req:
+            self.sort_queue(_resource)
+            yield req
+            yield _resource.run_transport(process=_process, target=origin.get_location())
+            state_process = _resource.get_process(_process)
+            state_process.process = None
+            events = self.get_next_material_for_process(origin, _material)
+            yield simpy.AllOf(_resource.env, events)
+            yield _resource.run_transport(process=_process, target=target.get_location())
+            state_process = _resource.get_process(_process)
+            state_process.process = None
+            events = self.put_material_to_input_queue(target, _material)
+            yield simpy.AllOf(_resource.env, events)
+            _material.finished_process.succeed()
+
+
+    def sort_queue(self, _resource: resource.Resource):
+        pass
+
+    def check_resource_available(self):
+        pass
+
 
 def FIFO_control_policy(current: List[material.Material]) -> List[material.Material]:
     return current.copy()
