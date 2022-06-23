@@ -11,6 +11,7 @@ import resource
 # from process import Process
 from dataclasses import dataclass
 import simpy
+from numba import njit
 
 @dataclass
 class Controller(ABC):
@@ -123,7 +124,7 @@ class TransportController(Controller):
 
     def change_state(self, _resource: resource.Resource):
         pass
-
+    
     def get_next_material_for_process(self, _resource: resource.Resource, _material: material.Material):
         events = []
         for queue in _resource.output_queues:

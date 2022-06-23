@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    45
+                    40
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -133,7 +133,7 @@
             "description": "Resource 3",
             "controller": "SimpleController",
             "location": [20, 20],
-            "capacity": 1,
+            "capacity": 2,
             "processes": ["P1", "P3"],
             "states": ["Breakdownstate_1", "Breakdownstate_2"],
             "input_queues": ["IQ2"],
