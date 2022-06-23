@@ -109,6 +109,8 @@ if __name__ == '__main__':
 
     print(len(df))
 
+    df.to_csv('data.csv')
+
     # TODO: create Transformer class in environment
 
 
