@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from cmath import exp
 from dataclasses import dataclass, field
 from typing import List, Type
 
@@ -13,6 +14,36 @@ from util import get_class_from_str
 from time_model import TimeModelFactory
 
 
+
+
+@dataclass
+class StateInfo:
+    ID: str
+    _resource_ID: str
+    event_time: float  = field(default=None, init=False)
+    expected_end_time: float  = field(default=None, init=False)
+    activity: str  = field(default=None, init=False)
+    # TODO: also include the material in the logging
+    material: material.Material  = field(default=None, init=False)
+
+    def log_start_state(self, start_time: float, expected_end_time: float):
+        self.event_time = start_time
+        self.expected_end_time = expected_end_time
+        self.activity = "start state"
+
+    def log_start_interrupt_state(self, start_time: float):
+        self.event_time = start_time
+        self.activity = "start interrupt"
+
+    def log_end_interrupt_state(self, start_time: float, expected_end_time: float):
+        self.event_time = start_time
+        self.expected_end_time = expected_end_time
+        self.activity = "end interrupt"
+
+    def log_end_state(self, start_time: float):
+        self.event_time = start_time
+        self.activity = "end state"
+
 @dataclass
 class State(ABC, IDEntity):
     env: env.Environment
@@ -20,14 +51,18 @@ class State(ABC, IDEntity):
     active: simpy.Event = field(default=None, init=False)
     _resource: resource.Resource = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
+    state_info: StateInfo = field(default=None, init=False)
 
     @property
     def resource(self) -> resource.Resource:
         return self._resource
 
+
     @resource.setter
     def resource(self, resource_model: resource.Resource) -> None:
         self._resource = resource_model
+        self.state_info = StateInfo(self.ID, self._resource.ID)
+
 
     def activate(self):
         try:
@@ -71,6 +106,7 @@ class ProductionState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time()
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         yield self.resource.active
         while self.done_in:
             try:
@@ -79,12 +115,16 @@ class ProductionState(State):
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except simpy.Interrupt:
+                self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
                 self.interrupt_processed = simpy.Event(self.env)
                 yield self.env.process(self.interrupt())
                 self.interrupt_processed.succeed()
+                self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
         self.resource.parts_made += 1
+        self.state_info.log_end_state(self.env.now)
+
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?

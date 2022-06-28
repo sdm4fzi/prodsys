@@ -1,6 +1,7 @@
 from functools import partial, wraps
 
 import resource
+import state
 
 
 class Datacollector:
@@ -57,3 +58,45 @@ def post_monitor_resource(data, __resource: resource.Resource):
     data.append(item)
 
 
+def pre_monitor_state(data, __state: state.State):
+    __resource = __state.resource
+    if __resource.current_process:
+        process_ID = __resource.current_process.ID
+    else:
+        process_ID = None
+
+    item = (
+        __resource.ID,
+        process_ID,
+        __resource.env.now,
+        __state.done_in,
+        False
+    )
+    data.append(item)
+
+def post_monitor_state(data, __state: state.State):
+    __resource = __state.resource
+    if __resource.current_process:
+        process_ID = __resource.current_process.ID
+    else:
+        process_ID = None
+
+    item = (
+        __resource.ID,
+        process_ID,
+        __resource.env.now,
+        __state.done_in,
+        True
+    )
+    data.append(item)
+
+
+def post_monitor_state_info(data, state_info: state.StateInfo):
+    item = (
+        state_info.event_time,
+        state_info._resource_ID,
+        state_info.ID,
+        state_info.activity,
+        state_info.expected_end_time
+    )
+    data.append(item)

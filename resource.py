@@ -69,7 +69,6 @@ class Source(base.IDEntity):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
-            # print("create material", __material.ID, "at", self.env.now)
             __material.process = self.env.process(__material.process_material())
 
     def get_location(self) -> List[int, int]:
@@ -185,12 +184,14 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def run_process(self, process: process.Process):
         for input_state in self.production_states:
             if input_state.description == process.description:
+                input_state.activate_state()
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
 
     def run_transport(self, process: process.Process, target: List[float]):
         for input_state in self.production_states:
             if input_state.description == process.description:
+                input_state.activate_state()
                 input_state.process = self.env.process(input_state.process_state(target=target))
                 return input_state.process
 
@@ -216,8 +217,10 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
 
     def activate(self):
         self.active.succeed()
-        for actual_state in self.states:
-            actual_state.activate()
+        all_states = self.states + self.production_states
+        for actual_state in self.production_states:
+            if type(actual_state) == state.ProductionState and actual_state.process is not None:
+                actual_state.activate()
 
     def request_repair(self):
         pass
@@ -255,8 +258,8 @@ class ConcreteResource(Resource):
             _state.activate()
 
     def interrupt_state(self):
-        for actual_state in self.states:
-            if type(actual_state) == state.ProductionState:
+        for actual_state in self.production_states:
+            if type(actual_state) == state.ProductionState and actual_state.process is not None:
                 self.env.process(actual_state.interrupt_process())
                 # actual_state.interrupt_process()
 
