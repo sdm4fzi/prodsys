@@ -91,12 +91,22 @@ def post_monitor_state(data, __state: state.State):
     data.append(item)
 
 
+# def post_monitor_state_info(data, state_info: state.StateInfo):
+#     item = (
+#         state_info.event_time,
+#         state_info._resource_ID,
+#         state_info.ID,
+#         state_info.activity,
+#         state_info.expected_end_time
+#     )
+#     data.append(item)
+
 def post_monitor_state_info(data, state_info: state.StateInfo):
-    item = (
-        state_info.event_time,
-        state_info._resource_ID,
-        state_info.ID,
-        state_info.activity,
-        state_info.expected_end_time
-    )
+    item = {
+        'Time': state_info.event_time,
+        'Resource': state_info._resource_ID,
+        'State': state_info.ID,
+        'Activtiy': state_info.activity,
+        'Expected End Time': state_info.expected_end_time
+    }
     data.append(item)

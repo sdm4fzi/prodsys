@@ -16,7 +16,7 @@ from numba import njit
 @dataclass
 class Controller(ABC):
     # TODO: look at the Mesa package for the implementation of their controller or data_logger
-    control_policy: Callable[List[material.Material], List[material.Material]]
+    control_policy: Callable[[List[material.Material]], List[material.Material]]
 
     @abstractmethod
     def wrap_request_function(self, _resource: resource.Resource):
@@ -52,7 +52,7 @@ class Controller(ABC):
 
 
 class SimpleController(Controller):
-    def __init__(self, _control_policy: Callable[List[material.Material]]):
+    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]]):
         self.control_policy = _control_policy
         self.next_materials = None
 
@@ -111,7 +111,7 @@ class SimpleController(Controller):
         pass
 
 class TransportController(Controller):
-    def __init__(self, _control_policy: Callable[List[material.Material]]):
+    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]]):
         self.control_policy = _control_policy
         self.next_materials = None
 

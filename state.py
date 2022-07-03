@@ -106,10 +106,14 @@ class ProductionState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time()
-        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
-        yield self.resource.active
+        try:
+            yield self.resource.active
+        except simpy.Interrupt:
+            yield self.resource.active
+
         while self.done_in:
             try:
+                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 self.start = self.env.now
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
@@ -166,12 +170,16 @@ class TransportState(State):
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
         """
-        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
-        yield self.resource.active
+        try:
+            yield self.resource.active
+        except simpy.Interrupt:
+            yield self.resource.active
+        
         while self.done_in:
             try:
                 self.start = self.env.now
+                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -223,7 +231,7 @@ class BreakDownState(State):
             self.state_info.log_start_state(self.env.now, self.env.now + 3)
             self.resource.active = simpy.Event(self.env)
             # TODO: Schedule here the maintainer! or a time model for a repair
-            yield self.env.timeout(3)
+            yield self.env.timeout(30)
             self.resource.activate()
             self.state_info.log_end_state(self.env.now)
 
