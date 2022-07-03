@@ -76,7 +76,8 @@ if __name__ == '__main__':
     for r in r_fac.resources:
         # dc.register_patch(r, attr=['release', 'request'],
         #                       post=post_monitor_resource)
-        for __state in r.production_states:
+        all_states = r.states + r.production_states
+        for __state in all_states:
             # dc.register_patch(__state, attr=['process_state'], pre=pre_monitor_state, post=post_monitor_state)
              dc.register_patch(__state.state_info, attr=['log_start_state', 'log_start_interrupt_state', 'log_end_interrupt_state', 'log_end_state'], 
                                post=logger_2.post_monitor_state_info)
