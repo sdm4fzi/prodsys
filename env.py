@@ -31,6 +31,14 @@ class Environment(simpy.Environment):
     def get_next_resource(self, resource: resource.Resource):
         pass
 
+    def request_process_of_resource(self, _process: process.Process, _resource: resource.Resource, _material: material.Material) -> None:
+        __controller = _resource.get_controller()
+        self.process(__controller.request(_process, _resource, _material))
+
+    def request_transport_of_resource(self, transport_process: process.Process, transport_resource: resource.Resource, origin: resource.Resource, target: resource.Resource, _material: material.Material) -> None:
+        __controller = transport_resource.get_controller()
+        self.process(__controller.request(transport_process, transport_resource, origin, target, _material))
+
 
 @dataclass
 class MaterialRegistry(ABC):

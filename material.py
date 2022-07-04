@@ -39,11 +39,10 @@ class Material(IDEntity):
         self.finished_process = simpy.Event(self.env)
         yield self.env.process(self.initial_placement())
         while self.next_process:
-            self.next_resource.request_process(self.next_process)
+            self.env.request_process_of_resource(_process=self.next_process, _resource=self.next_resource, _material=self)
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
-        # print(self.ID, "finished at", self.env.now)
         self.finished = True
         yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
 
@@ -58,20 +57,15 @@ class Material(IDEntity):
 
     def initial_placement(self):
         self.set_next_process()
-        # print(self.ID, "put", self.next_resource.ID,  "before initial", len(self.next_resource.input_queues[0].items))
         yield self.next_resource.input_queues[0].put(self)
-        # print(self.ID, "put", self.next_resource.ID,  "after initial", len(self.next_resource.input_queues[0].items))
 
     def transport_to_queue_of_resource(self):
-        # print(self.ID, "get ", self.next_resource.ID,  "before", len(self.next_resource.output_queues[0].items))
-        # print(self.next_resource.ID, [i.ID for i in self.next_resource.output_queues[0].items])
-        # print(self.ID, "get ", self.next_resource.ID,  "after", len(self.next_resource.output_queues[0].items))
         origin_resource = self.next_resource
         self.set_next_process()
         if self.next_process is not None:
             # TODO: implement here the waiting for a transport and yield the get after arrival of the transport unit
             transport_resource = self.router.get_next_resource(self.transport_process)
-            transport_resource.request_transport(process=self.transport_process, origin=origin_resource, target=self.next_resource, _material=self)
+            self.env.request_transport_of_resource(transport_process=self.transport_process, transport_resource=transport_resource, origin=origin_resource, target=self.next_resource, _material=self)
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
 

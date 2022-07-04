@@ -1,6 +1,7 @@
 from functools import partial, wraps
 
 import resource
+from material import Material
 import state
 
 
@@ -107,6 +108,8 @@ def post_monitor_state_info(data, state_info: state.StateInfo):
         'Resource': state_info._resource_ID,
         'State': state_info.ID,
         'Activtiy': state_info.activity,
-        'Expected End Time': state_info.expected_end_time
+        'Expected End Time': state_info.expected_end_time,
+        'Material': state_info._material_ID,
+        'Target location': state_info._target_ID
     }
     data.append(item)

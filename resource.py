@@ -145,6 +145,9 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def change_state(self, input_state: state.State) -> None:
         pass
 
+    def get_controller(self) -> control.Controller:
+        return self.controller
+
     def add_input_queues(self, input_queues: List[Queue]):
         self.input_queues.extend(input_queues)
 
@@ -181,36 +184,16 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
             if state.process:
                 self.env.process(state.interrupt_process())
 
-    def run_process(self, process: process.Process):
-        for input_state in self.production_states:
-            if input_state.description == process.description:
-                input_state.activate_state()
-                input_state.process = self.env.process(input_state.process_state())
-                return input_state.process
-
-    def run_transport(self, process: process.Process, target: List[float]):
-        for input_state in self.production_states:
-            if input_state.description == process.description:
-                input_state.activate_state()
-                input_state.process = self.env.process(input_state.process_state(target=target))
-                return input_state.process
-
-    def get_process(self, process: process.Process):
+    def get_process(self, process: process.Process) -> state.State:
         for actual_state in self.production_states:
             if actual_state.description == process.description:
                 return actual_state
 
-    def get_location(self) -> List[int, int]:
+    def get_location(self) -> List[int]:
         return self.location
 
-    def set_location(self, new_location: List[int, int]) -> None:
+    def set_location(self, new_location: List[int]) -> None:
         self.location = new_location
-
-    def request_process(self, process: process.Process):
-        self.env.process(self.controller.request(process, self))
-
-    def request_transport(self, process: process.Process, origin: Resource, target: Resource, _material: material.Material):
-        self.env.process(self.controller.request(process, self, origin, target, _material))
 
     def get_states(self) -> List[state.State]:
         return self.states

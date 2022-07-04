@@ -11,6 +11,7 @@ import resource
 from time_model import TimeModel
 from base import IDEntity
 from util import get_class_from_str
+import material
 from time_model import TimeModelFactory
 
 
@@ -24,7 +25,15 @@ class StateInfo:
     expected_end_time: float  = field(default=None, init=False)
     activity: str  = field(default=None, init=False)
     # TODO: also include the material in the logging
-    material: material.Material  = field(default=None, init=False)
+    _material_ID: str  = field(default=None, init=False)
+    _target_ID: str = field(default=None, init=False)
+
+
+    def log_target_location(self, target: resource.Resource):
+        self._target_ID = target.ID
+
+    def log_material(self, _material: material.Material):
+        self._material_ID = _material.ID
 
     def log_start_state(self, start_time: float, expected_end_time: float):
         self.event_time = start_time
