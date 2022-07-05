@@ -74,9 +74,6 @@ class ProcessFactory:
         time_model = self.time_model_factory.get_time_model(values['time_model_id'])
         self.processes.append(cls(ID=values['ID'], description=values['description'], time_model=time_model))
 
-    def get_processes(self, IDs: List[str]) -> List[Process]:
-        return [pr for pr in self.processes if pr.ID in IDs]
-
     def get_processes_in_order(self, IDs: List[str]) -> List[Process]:
         processes = []
         for ID in IDs:

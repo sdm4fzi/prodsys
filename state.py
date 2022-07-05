@@ -24,7 +24,6 @@ class StateInfo:
     event_time: float  = field(default=None, init=False)
     expected_end_time: float  = field(default=None, init=False)
     activity: str  = field(default=None, init=False)
-    # TODO: also include the material in the logging
     _material_ID: str  = field(default=None, init=False)
     _target_ID: str = field(default=None, init=False)
 
@@ -58,6 +57,7 @@ class State(ABC, IDEntity):
     env: env.Environment
     time_model: TimeModel
     active: simpy.Event = field(default=None, init=False)
+    finished_process: simpy.Event = field(default=None, init=False)
     _resource: resource.Resource = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
     state_info: StateInfo = field(default=None, init=False)
@@ -70,6 +70,7 @@ class State(ABC, IDEntity):
     @resource.setter
     def resource(self, resource_model: resource.Resource) -> None:
         self._resource = resource_model
+        self.finished_process = simpy.Event(self.env).succeed()
         self.state_info = StateInfo(self.ID, self._resource.ID)
 
 
@@ -108,6 +109,7 @@ class ProductionState(State):
     def activate_state(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
         self.active = simpy.Event(self.env)
+        self.finished_process = simpy.Event(self.env)
 
     def process_state(self):
         """Runs a single process of a resource.
@@ -137,6 +139,7 @@ class ProductionState(State):
         # TODO: parts made has to be moved to product or logger class
         self.resource.parts_made += 1
         self.state_info.log_end_state(self.env.now)
+        self.finished_process.succeed()
 
 
     def update_done_in(self):
@@ -153,13 +156,6 @@ class ProductionState(State):
         if self.process.is_alive:
             self.process.interrupt()
 
-    def activate(self):
-        try:
-            self.active.succeed()
-        except:
-            raise RuntimeError("state is allready succeded!!")
-        self.active = simpy.Event(self.env)
-
 
 class TransportState(State):
     interrupt_processed: simpy.Event
@@ -173,6 +169,7 @@ class TransportState(State):
     def activate_state(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
         self.active = simpy.Event(self.env)
+        self.finished_process = simpy.Event(self.env)
 
     def process_state(self, target: List[float]):
         """Runs a single process of a resource.
@@ -203,6 +200,7 @@ class TransportState(State):
         self.resource.location = target
         self.resource.parts_made += 1
         self.state_info.log_end_state(self.env.now)
+        self.finished_process.succeed()
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
@@ -217,13 +215,6 @@ class TransportState(State):
         self.interrupt_processed = simpy.Event(self.env)
         if self.process.is_alive:
             self.process.interrupt()
-
-    def activate(self):
-        try:
-            self.active.succeed()
-        except:
-            raise RuntimeError("state is allready succeded!!")
-        self.active = simpy.Event(self.env)
 
 
 class BreakDownState(State):

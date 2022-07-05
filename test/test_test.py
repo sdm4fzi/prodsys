@@ -1,7 +1,10 @@
-class A:
-    def a(self):
-        print("this is it")
+processes = ["P1", "P2"]
+quantities = [2, 3]
 
-example_a = A()
-c = getattr(example_a, 'a')
-c()
+for process, q in zip(processes, quantities):
+    processes += [process]*(q - 1)
+    # for _ in range(q-1):
+    #     processes.append(process)
+
+print(processes)
+

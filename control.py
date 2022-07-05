@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from tracemalloc import start
 from typing import List, Tuple
 from collections.abc import Callable
 
@@ -73,10 +74,12 @@ class SimpleController(Controller):
             events = self.get_next_material_for_process(_resource, _process)
             yield simpy.AllOf(_resource.env, events)
             next_materials = [event.value for event in events]
-            production_state = _resource.get_process(_process)
+            production_state = _resource.get_free_process(_process)
+            if production_state is None:
+                production_state = _resource.get_process(_process)
+            yield production_state.finished_process
             yield self.run_process(production_state, _material)
-            state_process = _resource.get_process(_process)
-            state_process.process = None
+            production_state.process = None
             events = self.put_material_to_output_queue(_resource, next_materials)
             yield simpy.AllOf(_resource.env, events)
             for next_material in next_materials:
@@ -130,16 +133,15 @@ class TransportController(Controller):
             yield req
             if origin.get_location() != _resource.get_location():
                 transport_state = _resource.get_process(_process)
+                yield transport_state.finished_process
                 yield self.run_process(transport_state, _material, target=origin)
-                # yield _resource.run_transport(process=_process, target=origin.get_location())
-                state_process = _resource.get_process(_process)
-                state_process.process = None
+                transport_state.process = None
             events = self.get_next_material_for_process(origin, _material)
             yield simpy.AllOf(_resource.env, events)
             transport_state = _resource.get_process(_process)
+            yield transport_state.finished_process
             yield self.run_process(transport_state, _material, target=target)
-            state_process = _resource.get_process(_process)
-            state_process.process = None
+            transport_state.process = None
             events = self.put_material_to_input_queue(target, _material)
             yield simpy.AllOf(_resource.env, events)
             _material.finished_process.succeed()

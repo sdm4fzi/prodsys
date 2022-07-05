@@ -9,8 +9,8 @@ from env import Environment
 from process import ProcessFactory
 from resource import ResourceFactory, QueueFactory, SourceFactory
 from router import SimpleRouter, FIFO_router, random_router
-from logger_2 import Datacollector
-import logger_2
+from logger import Datacollector
+import logger
 
 
 import json
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     r_fac.start_resources()
     s_fac.start_sources()
 
-    from logger_2 import pre_monitor_state, post_monitor_state
+    from logger import pre_monitor_state, post_monitor_state
 
     dc = Datacollector()
     # dc.register_patch(r1, attr=['put', 'get', 'request', 'release'],
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         for __state in all_states:
             # dc.register_patch(__state, attr=['process_state'], pre=pre_monitor_state, post=post_monitor_state)
              dc.register_patch(__state.state_info, attr=['log_start_state', 'log_start_interrupt_state', 'log_end_interrupt_state', 'log_end_state'], 
-                               post=logger_2.post_monitor_state_info)
+                               post=logger.post_monitor_state_info)
 
     import time
 

@@ -112,6 +112,7 @@
             "location": [10, 10],
             "capacity": 2,
             "processes": ["P1", "P2"],
+            "process_capacity": [2, 1],
             "states": ["Breakdownstate_1"],
             "input_queues": ["IQ1"],
             "output_queues": ["OQ1"]
@@ -135,6 +136,7 @@
             "location": [20, 20],
             "capacity": 2,
             "processes": ["P1", "P3"],
+            "process_capacity": [1, 2],
             "states": ["Breakdownstate_1", "Breakdownstate_2"],
             "input_queues": ["IQ2"],
             "output_queues": ["OQ3"]
