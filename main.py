@@ -114,6 +114,7 @@ if __name__ == '__main__':
     df = pd.DataFrame(dc.data['Resources'])
 
     print(len(df))
+    df.sort_values(by=['Time'])
 
     df.to_csv('data.csv')
 
