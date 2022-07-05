@@ -121,6 +121,8 @@ class ProductionState(State):
             yield self.resource.active
         except simpy.Interrupt:
             yield self.resource.active
+            yield self.active
+            self.interrupt_processed.succeed()
 
         while self.done_in:
             try:
@@ -132,8 +134,7 @@ class ProductionState(State):
             except simpy.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
-                self.interrupt_processed = simpy.Event(self.env)
-                yield self.env.process(self.interrupt())
+                yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
@@ -146,9 +147,6 @@ class ProductionState(State):
         self.done_in -= self.env.now - self.start  # How much time left?
         if self.done_in < 0:
             self.done_in = 0
-
-    def interrupt(self):
-        yield self.active
 
     def interrupt_process(self):
         yield self.interrupt_processed
@@ -181,6 +179,7 @@ class TransportState(State):
             yield self.resource.active
         except simpy.Interrupt:
             yield self.resource.active
+            yield self.active
         
         while self.done_in:
             try:
@@ -192,8 +191,7 @@ class TransportState(State):
             except simpy.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
-                self.interrupt_processed = simpy.Event(self.env)
-                yield self.env.process(self.interrupt())
+                yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
@@ -206,9 +204,6 @@ class TransportState(State):
         self.done_in -= self.env.now - self.start  # How much time left?
         if self.done_in < 0:
             self.done_in = 0
-
-    def interrupt(self):
-        yield self.active
 
     def interrupt_process(self):
         yield self.interrupt_processed
@@ -225,11 +220,10 @@ class BreakDownState(State):
     def process_state(self):
         while True:
             yield self.env.process(self.wait_for_breakdown())
-            # TODO: fix the interrupt state
-            self.resource.interrupt_state()
             yield self.resource.active
-            self.state_info.log_start_state(self.env.now, self.env.now + 3)
             self.resource.active = simpy.Event(self.env)
+            yield self.env.process(self.resource.interrupt_state())
+            self.state_info.log_start_state(self.env.now, self.env.now + 30)
             # TODO: Schedule here the maintainer! or a time model for a repair
             yield self.env.timeout(30)
             self.resource.activate()

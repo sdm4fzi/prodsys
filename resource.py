@@ -202,9 +202,8 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
 
     def activate(self):
         self.active.succeed()
-        all_states = self.states + self.production_states
         for actual_state in self.production_states:
-            if type(actual_state) == state.ProductionState and actual_state.process is not None:
+            if (type(actual_state) == state.ProductionState or type(actual_state) == state.TransportState) and actual_state.process is not None:
                 actual_state.activate()
 
     def request_repair(self):
@@ -239,8 +238,8 @@ class ConcreteResource(Resource):
 
     def interrupt_state(self):
         for actual_state in self.production_states:
-            if type(actual_state) == state.ProductionState and actual_state.process is not None:
-                self.env.process(actual_state.interrupt_process())
+            if (type(actual_state) == state.ProductionState or type(actual_state) == state.TransportState) and actual_state.process is not None:
+                yield self.env.process(actual_state.interrupt_process())
                 # actual_state.interrupt_process()
 
     def get_active_states(self) -> List[state.State]:
