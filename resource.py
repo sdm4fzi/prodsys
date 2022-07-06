@@ -234,15 +234,9 @@ class ConcreteResource(Resource):
     def interrupt_states(self):
         events = []
         for state in self.production_states:
-            print(state.process)
             if state.process:
-                print(self.ID, state.ID, id(state), self.env.now, "wait for interrupt of state")
                 events.append(self.env.process(state.interrupt_process()))
-            else:
-                print(self.ID, state.ID, id(state), self.env.now, "has no process to interrupt")
-
         yield simpy.AllOf(self.env, events)
-        print(self.ID, state.ID, id(state), self.env.now, "interrupt of state")
         
 
     def get_active_states(self) -> List[state.State]:

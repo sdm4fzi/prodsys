@@ -78,10 +78,8 @@ class SimpleController(Controller):
             if production_state is None:
                 production_state = _resource.get_process(_process)
             yield production_state.finished_process
-            print(_resource.ID, production_state.ID, id(production_state), production_state.env.now, "controller wait for process", _material.ID)
             self.run_process(production_state, _material)
             yield production_state.finished_process
-            print(_resource.ID, production_state.ID, id(production_state), production_state.env.now, "controller set process to None", _material.ID)
             production_state.process = None
             events = self.put_material_to_output_queue(_resource, next_materials)
             yield simpy.AllOf(_resource.env, events)
@@ -90,11 +88,9 @@ class SimpleController(Controller):
 
     def run_process(self, input_state: state.State, target_material: material.Material):
         _env =  input_state.env
-        print(input_state.ID, id(input_state), input_state.env.now, "run process", target_material.ID)
         input_state.activate_state()
         input_state.state_info.log_material(target_material)
         input_state.process = _env.process(input_state.process_state())
-        print(input_state.ID, id(input_state), input_state.env.now, "set process of state", target_material.ID)
         # return input_state.process
 
 
@@ -139,19 +135,15 @@ class TransportController(Controller):
             if origin.get_location() != _resource.get_location():
                 transport_state = _resource.get_process(_process)
                 yield transport_state.finished_process
-                print(_resource.ID, transport_state.ID, id(transport_state), transport_state.env.now, "controller wait for process", _material.ID)
                 self.run_process(transport_state, _material, target=origin)
                 yield transport_state.finished_process
-                print(_resource.ID, transport_state.ID, id(transport_state), transport_state.env.now, "controller set process to None", _material.ID)
                 transport_state.process = None
             events = self.get_next_material_for_process(origin, _material)
             yield simpy.AllOf(_resource.env, events)
             transport_state = _resource.get_process(_process)
             yield transport_state.finished_process
-            print(_resource.ID, transport_state.ID, id(transport_state), transport_state.env.now, "controller wait for process", _material.ID)
             self.run_process(transport_state, _material, target=target)
             yield transport_state.finished_process
-            print(_resource.ID, transport_state.ID, id(transport_state), transport_state.env.now, "controller set process to None", _material.ID)            
             transport_state.process = None
             events = self.put_material_to_input_queue(target, _material)
             yield simpy.AllOf(_resource.env, events)
@@ -164,12 +156,11 @@ class TransportController(Controller):
     def run_process(self, input_state: state.State, _material: material.Material, target: resource.Resource):
         _env =  input_state.env
         target_location = target.get_location()
-        print(input_state.ID, id(input_state), input_state.env.now, "run process", _material.ID)
         input_state.activate_state()
         input_state.state_info.log_material(_material)
         input_state.state_info.log_target_location(target)
         input_state.process = _env.process(input_state.process_state(target=target_location))
-        print(input_state.ID, id(input_state), input_state.env.now, "set process of state", _material.ID)
+
         # return input_state.process
 
 

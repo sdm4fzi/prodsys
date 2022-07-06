@@ -87,23 +87,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(1000)
-    for resource in r_fac.resources:
-        print("_________________")
-        print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
-        len(resource.output_queues[0].items), len(resource.users))
-        print("\t", "_________________")
-        for m in resource.input_queues[0].items:
-            print("\t", m.ID, m.description)
-        print("\t", "_________________")
-        for m in resource.output_queues[0].items:
-            print("\t", m.ID, m.description)
-
-    a = 0
-    for m in m_fac.materials:
-        if m.finished:
-            a += 1
-    print("created material", len(m_fac.materials), "finished material", a, "wip", len(m_fac.materials) - a)
+    env.run(100000)
 
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 
@@ -113,7 +97,6 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(dc.data['Resources'])
 
-    print(len(df))
     df.sort_values(by=['Time'], inplace=True)
 
     df.to_csv('data.csv')
