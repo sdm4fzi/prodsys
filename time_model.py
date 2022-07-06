@@ -73,11 +73,12 @@ class HistoryTimeModel(TimeModel):
 @dataclass
 class ManhattanDistanceTimeModel(TimeModel):
     speed: float
+    reaction_time: float
 
     def get_next_time(self, origin: Tuple[float], target: Tuple[float]) -> float:
         x_distance = abs(origin[0] - target[0])
         y_distance = abs(origin[1] - target[1])
-        return (x_distance + y_distance) / self.speed
+        return (x_distance + y_distance) / self.speed + self.reaction_time
 
 @dataclass
 class MarkovTimeModel(TimeModel):

@@ -117,28 +117,27 @@ class ProductionState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time()
-        try:
-            yield self.resource.active
-        except simpy.Interrupt:
-            yield self.resource.active
-            yield self.active
-            self.interrupt_processed.succeed()
+        print(self.resource.ID, self.ID, id(self), self.env.now, "before process wait for active resource")
+        yield self.resource.active
 
         while self.done_in:
             try:
                 self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 self.start = self.env.now
+                print(self.resource.ID, self.ID, id(self), self.env.now, "wait for process")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except simpy.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
+                print(self.resource.ID, self.ID, id(self), self.env.now, "wait for active state after interrupt")
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
         self.resource.parts_made += 1
+        print(self.resource.ID, self.ID, id(self), self.env.now, "finished", self.state_info._material_ID)
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
 
@@ -175,28 +174,29 @@ class TransportState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
-        try:
-            yield self.resource.active
-        except simpy.Interrupt:
-            yield self.resource.active
-            yield self.active
-        
+
+        print(self.resource.ID, self.ID, id(self), self.env.now, "before process wait for active resource", self.done_in)
+        yield self.resource.active
+
         while self.done_in:
             try:
                 self.start = self.env.now
                 self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
+                print(self.resource.ID, self.ID, id(self), self.env.now, "wait for process")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except simpy.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
+                print(self.resource.ID, self.ID, id(self), self.env.now, "wait for active state after interrupt")
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
         self.resource.location = target
         self.resource.parts_made += 1
+        print(self.resource.ID, self.ID, id(self), self.env.now, "finished", self.state_info._material_ID)
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
 
@@ -219,12 +219,16 @@ class BreakDownState(State):
 
     def process_state(self):
         while True:
+            print(self.resource.ID, self.ID, id(self), self.env.now, "wait for breakdown")
             yield self.env.process(self.wait_for_breakdown())
+            print(self.resource.ID, self.ID, id(self), self.env.now, "wait for active resource")
             yield self.resource.active
             self.resource.active = simpy.Event(self.env)
-            yield self.env.process(self.resource.interrupt_state())
+            print(self.resource.ID, self.ID, id(self), self.env.now, "wait for interruption of states")
+            yield self.env.process(self.resource.interrupt_states())
             self.state_info.log_start_state(self.env.now, self.env.now + 30)
             # TODO: Schedule here the maintainer! or a time model for a repair
+            print(self.resource.ID, self.ID, id(self), self.env.now, "wait for repair of breakdown")
             yield self.env.timeout(30)
             self.resource.activate()
             self.state_info.log_end_state(self.env.now)

@@ -59,7 +59,8 @@
             "mdt1": {
                 "ID": "manhattan_time_model_1",
                 "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                "speed": 180
+                "speed": 90,
+                "reaction_time": 0.15
             }
         }
     },

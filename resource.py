@@ -172,13 +172,8 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
         pass
 
     @abstractmethod
-    def interrupt_state(self):
-        pass
-
     def interrupt_states(self):
-        for state in self.production_states:
-            if state.process:
-                self.env.process(state.interrupt_process())
+        pass
 
     def get_process(self, process: process.Process) -> state.State:
         for actual_state in self.production_states:
@@ -236,11 +231,19 @@ class ConcreteResource(Resource):
         for _state in self.states:
             _state.activate()
 
-    def interrupt_state(self):
-        for actual_state in self.production_states:
-            if (type(actual_state) == state.ProductionState or type(actual_state) == state.TransportState) and actual_state.process is not None:
-                yield self.env.process(actual_state.interrupt_process())
-                # actual_state.interrupt_process()
+    def interrupt_states(self):
+        events = []
+        for state in self.production_states:
+            print(state.process)
+            if state.process:
+                print(self.ID, state.ID, id(state), self.env.now, "wait for interrupt of state")
+                events.append(self.env.process(state.interrupt_process()))
+            else:
+                print(self.ID, state.ID, id(state), self.env.now, "has no process to interrupt")
+
+        yield simpy.AllOf(self.env, events)
+        print(self.ID, state.ID, id(state), self.env.now, "interrupt of state")
+        
 
     def get_active_states(self) -> List[state.State]:
         pass

@@ -87,7 +87,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(300000)
+    env.run(1000)
     for resource in r_fac.resources:
         print("_________________")
         print(resource.description, resource.parts_made, "items: ", len(resource.input_queues[0].items),
