@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from tracemalloc import start
-from typing import List, Tuple
+from typing import List
 from collections.abc import Callable
 
 import env
 import material
 import process
 import resource
+import request
 import state
 # from process import Process
 from dataclasses import dataclass
 import simpy
 @dataclass
 class Controller(ABC):
-    # TODO: look at the Mesa package for the implementation of their controller or data_logger
     control_policy: Callable[[List[material.Material]], List[material.Material]]
 
     @abstractmethod
@@ -39,7 +38,7 @@ class SimpleController(Controller):
     def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]]):
         self.control_policy = _control_policy
         self.next_materials = None
-        requests = None
+        self.requests = []
 
     def perform_setup(self, _resource: resource.Resource, _process: process.Process):
         _resource.setup(_process)
@@ -64,8 +63,15 @@ class SimpleController(Controller):
 
         return events
 
-    def request(self, _process: process.Process, _resource: resource.Resource, _material: material.Material):
+    def register_request(self, process_request: request.Request) -> None:
+        self.requests.append(process_request)
+
+    def request(self, process_request: request.Request):
         # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
+        _resource = process_request.get_resource()
+        _process = process_request.get_process()
+        _material = process_request.get_material()
+
         _resource.current_process = _process
         # yield _resource.setup(_material.next_process)
         with _resource.request() as req:
@@ -124,9 +130,16 @@ class TransportController(Controller):
 
         return events
 
-    def request(self, _process: process.Process, _resource: resource.Resource, origin: resource.Resource, target: resource.Resource, 
-        _material: material.Material):
+    # def request(self, _process: process.Process, _resource: resource.Resource, origin: resource.Resource, target: resource.Resource, 
+    #     _material: material.Material):
+    def request(self, process_request: request.TransportResquest):
         # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
+        _resource = process_request.get_resource()
+        _process = process_request.get_process()
+        _material = process_request.get_material()
+        origin = process_request.get_origin()
+        target = process_request.get_target()
+
         _resource.current_process = _process
         # yield _resource.setup(_material.next_process)
         with _resource.request() as req:
