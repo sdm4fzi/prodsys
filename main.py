@@ -87,7 +87,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(100000)
+    env.run(10000)
 
     print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
 

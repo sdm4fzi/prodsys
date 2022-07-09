@@ -21,6 +21,10 @@ class Process(ABC, IDEntity):
     def get_process_time(self, *args) -> float:
         pass
 
+    @abstractmethod
+    def get_expected_process_time(self, *args) -> float:
+        pass
+
     # def get_raw_material(self):
     #     return self.raw_material
 
@@ -30,10 +34,16 @@ class ProductionProcess(Process):
     def get_process_time(self) -> float:
         return self.time_model.get_next_time()
 
+    def get_expected_process_time(self) -> float:
+        return self.time_model.get_expected_time()
+
 class TransportProcess(Process):
 
     def get_process_time(self, origin: List[float], target: List[float]) -> float:
         return self.time_model.get_next_time(originin=origin, target=target)
+
+    def get_expected_process_time(self, *args) -> float:
+        return self.time_model.get_expected_time(*args)
 
 
 class ProcessModel(ABC):

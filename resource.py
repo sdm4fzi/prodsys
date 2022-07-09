@@ -148,6 +148,9 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def get_controller(self) -> control.Controller:
         return self.controller
 
+    def set_controller(self, controller: control.Controller) -> None:
+        self.controller = controller
+
     def add_input_queues(self, input_queues: List[Queue]):
         self.input_queues.extend(input_queues)
 
@@ -217,7 +220,6 @@ class ConcreteResource(Resource):
     def __post_init__(self):
         super(Resource, self).__init__(self.env)
         self.active = simpy.Event(self.env).succeed()
-        self.req = simpy.Event(self.env)
         self.available = simpy.Event(self.env)
 
     def change_state(self, input_state: state.State) -> None:
@@ -246,17 +248,17 @@ class ConcreteResource(Resource):
         pass
 
 
-def register_states(resource: Resource, states: List[state.State], env: env.Environment):
+def register_states(resource: Resource, states: List[state.State], _env: env.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
-        copy_state.env = env
+        copy_state.env = _env
         resource.add_state(copy_state)
 
 
-def register_production_states(resource: Resource, states: List[state.State], env: env.Environment):
+def register_production_states(resource: Resource, states: List[state.State], _env: env.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
-        copy_state.env = env
+        copy_state.env = _env
         resource.add_production_state(copy_state)
 
 
@@ -280,16 +282,17 @@ CONTROLLER_DICT: dict = {
 }
 
 
-
+from typing import Dict
 @dataclass
 class ResourceFactory:
     data: dict
-    env: env.Environment
+    _env: env.Environment
     process_factory: process.ProcessFactory
     state_factory: state.StateFactory
     queue_factory: QueueFactory
 
     resources: List[Resource] = field(default_factory=list, init=False)
+    controllers: List[control.Controller] = field(default_factory=list, init=False)
 
     def create_resources(self):
         resources = self.data['resources']
@@ -311,7 +314,7 @@ class ResourceFactory:
         resource = ConcreteResource(ID=values['ID'],
                                     description=values['description'],
                                     location=values['location'],
-                                    env=self.env,
+                                    env=self._env,
                                     capacity=values['capacity'],
                                     processes=processes,
                                     )
@@ -321,18 +324,38 @@ class ResourceFactory:
         resource.add_input_queues(input_queues)
         resource.add_output_queues(output_queues)
 
-        register_states(resource, states, self.env)
-        register_production_states_for_processes(resource, self.state_factory, self.env)
-        controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
-        resource.controller = controller_class(control.FIFO_control_policy)
+        register_states(resource, states, self._env)
+        register_production_states_for_processes(resource, self.state_factory, self._env)
         self.resources.append(resource)
+
+
+        controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
+        controller = controller_class(control.FIFO_control_policy, self._env)
+        # TODO: add control policy to the data_file
+        if type(controller) == control.SimpleController:
+            controller.control_policy = control.FIFO_control_policy
+        if type(controller) == control.TransportController:
+            controller.control_policy = control.SPT_transport_control_policy
+        controller.set_resource(resource)
+        self.controllers.append(controller)
+
+        resource.set_controller(controller)
+
 
     def start_resources(self):
         for _resource in self.resources:
             _resource.start_states()
+            
+        for controller in self.controllers:
+            self._env.process(controller.control_loop())
 
     def get_resource(self, ID):
         return [st for st in self.resources if st.ID == ID].pop()
+
+    def get_controller_of_resource(self, _resource: Resource) -> control.Controller:
+        for controller in self.controllers:
+            if controller._resource == _resource:
+                return controller
 
     def get_resources(self, IDs: List[str]) -> List[Resource]:
         return [r for r in self.resources if r.ID in IDs]

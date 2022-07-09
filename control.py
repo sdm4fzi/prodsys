@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from gc import callbacks
 from typing import List
 from collections.abc import Callable
+from dataclasses import dataclass, field
+
 
 import env
 import material
@@ -11,22 +14,29 @@ import resource
 import request
 import state
 # from process import Process
-from dataclasses import dataclass
 import simpy
 @dataclass
 class Controller(ABC):
-    control_policy: Callable[[List[material.Material]], List[material.Material]]
+    control_policy: Callable[[List[request.Request]], None]
+    _resource: resource.Resource = field(init=False)
+    _env: env.Environment = field(init=False)
+    requested: simpy.Event = field(init=False)
 
+    def set_resource(self, _resource: resource.Resource) -> None:
+        self._resource = _resource
+        self._env = _resource._env
+
+    def request(self, process_request: request.Request) -> None:
+        self.requests.append(process_request)
+        if not self.requested.triggered:
+            self.requested.succeed()
+    
     @abstractmethod
-    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
+    def perform_setup(self, _resource: resource.Resource, _process: process.Process) -> None:
         pass
 
     @abstractmethod
     def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process) -> List[material.Material]:
-        pass
-
-    @abstractmethod
-    def request(self, _process: process.Process, _resource: resource.Resource, _material: material.Material):
         pass
 
     @abstractmethod
@@ -35,22 +45,23 @@ class Controller(ABC):
 
 
 class SimpleController(Controller):
-    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]]):
+    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]], _env: env.Environment):
         self.control_policy = _control_policy
-        self.next_materials = None
-        self.requests = []
+        self.requests: List[request.Request] = []
+        self.running_processes: List[simpy.Event] = []
+        self.requested: simpy.Event = simpy.Event(_env)
 
     def perform_setup(self, _resource: resource.Resource, _process: process.Process):
         _resource.setup(_process)
 
-    def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process):
+    def get_next_material_for_process(self, _resource: resource.Resource, _material: material.Material):
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
 
             # TODO: here should be an advanced process model that controls, which material should be get from which
             #  queue
-            events.append(queue.get(filter=lambda x: x.next_resource is _resource))
+            events.append(queue.get(filter=lambda x: x is _material))
         return events
 
     def put_material_to_output_queue(self, _resource: resource.Resource, _materials: List[material.Material]) -> None:
@@ -63,21 +74,34 @@ class SimpleController(Controller):
 
         return events
 
-    def register_request(self, process_request: request.Request) -> None:
-        self.requests.append(process_request)
+    def control_loop(self) -> None:
+        while True:
+            yield simpy.AnyOf(env=self._env, events=self.running_processes + [self.requested])
+            if self.requested.triggered:
+                self.requested = simpy.Event(self._env)
+            else:
+                for process in self.running_processes:
+                    if process.triggered:
+                        self.running_processes.remove(process)
 
-    def request(self, process_request: request.Request):
-        # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
+            if len(self.running_processes) == self._resource.capacity or not self.requests:
+                continue
+
+            self.control_policy(self.requests)
+            process_request = self.requests.pop(0)
+            running_process = self._env.process(self.start_process(process_request))
+            self.running_processes.append(running_process)
+
+    def start_process(self, process_request: request.Request):
         _resource = process_request.get_resource()
         _process = process_request.get_process()
         _material = process_request.get_material()
 
-        _resource.current_process = _process
         # yield _resource.setup(_material.next_process)
         with _resource.request() as req:
             self.sort_queue(_resource)
             yield req
-            events = self.get_next_material_for_process(_resource, _process)
+            events = self.get_next_material_for_process(_resource, _material)
             yield simpy.AllOf(_resource.env, events)
             next_materials = [event.value for event in events]
             production_state = _resource.get_free_process(_process)
@@ -104,9 +128,11 @@ class SimpleController(Controller):
         pass
 
 class TransportController(Controller):
-    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]]):
+    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]], _env: env.Environment):
         self.control_policy = _control_policy
-        self.next_materials = None
+        self.requests: List[request.Request] = []
+        self.running_processes: List[request.Request] = []
+        self.requested: simpy.Event = simpy.Event(_env)
 
     def perform_setup(self, _resource: resource.Resource, _process: process.Process):
         _resource.setup(_process)
@@ -130,9 +156,28 @@ class TransportController(Controller):
 
         return events
 
+
+    def control_loop(self) -> None:
+        while True:
+            yield simpy.AnyOf(env=self._env, events=self.running_processes + [self.requested])
+            if self.requested.triggered:
+                self.requested = simpy.Event(self._env)
+            else:
+                for process in self.running_processes:
+                    if process.triggered:
+                        self.running_processes.remove(process)
+
+            if len(self.running_processes) == self._resource.capacity or not self.requests:
+                continue
+
+            self.control_policy(self.requests)
+            process_request = self.requests.pop(0)
+            running_process = self._env.process(self.start_process(process_request))
+            self.running_processes.append(running_process)
+
     # def request(self, _process: process.Process, _resource: resource.Resource, origin: resource.Resource, target: resource.Resource, 
     #     _material: material.Material):
-    def request(self, process_request: request.TransportResquest):
+    def start_process(self, process_request: request.TransportResquest):
         # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
         _resource = process_request.get_resource()
         _process = process_request.get_process()
@@ -177,17 +222,17 @@ class TransportController(Controller):
         # return input_state.process
 
 
-def FIFO_control_policy(current: List[material.Material]) -> List[material.Material]:
-    return current.copy()
+def FIFO_control_policy(requests: List[request.Request]) -> None:
+    pass
 
+def LIFO_control_policy(requests: List[request.Request]) -> None:
+    requests.reverse()
 
-def LIFO_control_policy(current: List[material.Material]) -> List[material.Material]:
-    return list(reversed(current))
+def SPT_control_policy(requests: List[request.Request]) -> None:
+    requests.sort(key=lambda x: x._process.get_expected_process_time())
 
-
-def SPT_control_policy(current: List[material.Material]) -> List[material.Material]:
-    current.sort(key=lambda x: x.process_time)
-    return list(current)
+def SPT_transport_control_policy(requests: List[request.Request]) -> None:
+    requests.sort(key=lambda x: x._process.get_expected_process_time(x.origin.get_location(), x.target.get_location()))
 
 
 class BatchController(Controller):

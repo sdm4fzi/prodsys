@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from sys import orig_argv
 from typing import Tuple, List, Set
 from util import get_class_from_str
 
@@ -37,6 +38,9 @@ class TimeModel(ABC, IDEntity):
     def get_next_time(self, originin, target) -> float:
         pass
 
+    def get_expected_time(self, origin, target) -> float:
+        pass
+
 
 @dataclass
 class FunctionTimeModel(TimeModel):
@@ -62,6 +66,9 @@ class FunctionTimeModel(TimeModel):
     def _fill_buffer(self):
         self._statistics_buffer = self._distribution_function(self.parameters, self.batch_size)
 
+    def get_expected_time(self, origin=None, target=None) -> float:
+        return self.parameters[0]
+
 
 @dataclass
 class HistoryTimeModel(TimeModel):
@@ -69,6 +76,9 @@ class HistoryTimeModel(TimeModel):
 
     def get_next_time(self, originin=None, target=None) -> float:
         return np.random.choice(self.history, 1)[0]
+
+    def get_expected_time(self, origin=None, target=None) -> float:
+        return sum(self.history) / len(self.history)
 
 @dataclass
 class ManhattanDistanceTimeModel(TimeModel):
@@ -79,11 +89,17 @@ class ManhattanDistanceTimeModel(TimeModel):
         x_distance = abs(origin[0] - target[0])
         y_distance = abs(origin[1] - target[1])
         return (x_distance + y_distance) / self.speed + self.reaction_time
+    
+    def get_expected_time(self, origin: Tuple[float], target: Tuple[float]) -> float:
+        return self.get_next_time(origin, target)
 
 @dataclass
 class MarkovTimeModel(TimeModel):
 
     def get_next_time(self) -> float:
+        pass
+
+    def get_expected_time(self, origin, target) -> float:
         pass
 
 
