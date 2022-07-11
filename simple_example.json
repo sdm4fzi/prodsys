@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    63
+                    41
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -110,6 +110,7 @@
             "ID": "R1",
             "description": "Resource 1",
             "controller": "SimpleController",
+            "control_policy": "FIFO",
             "location": [10, 10],
             "capacity": 2,
             "processes": ["P1", "P2"],
@@ -123,6 +124,7 @@
             "ID": "R2",
             "description": "Resource 2",
             "controller": "SimpleController",
+            "control_policy": "SPT",
             "location": [20, 10],
             "capacity": 1,
             "processes": ["P2", "P3"],
@@ -134,6 +136,7 @@
             "ID": "R3",
             "description": "Resource 3",
             "controller": "SimpleController",
+            "control_policy": "FIFO",
             "location": [20, 20],
             "capacity": 2,
             "processes": ["P1", "P3"],
@@ -146,12 +149,21 @@
             "ID": "TR1",
             "description": "Transport Resource 1",
             "controller": "TransportController",
+            "control_policy": "SPT_transport",
             "location": [15, 15],
             "capacity": 1,
             "processes": ["TP1"],
-            "states": ["Breakdownstate_1"],
-            "input_queues": ["TIQ1"],
-            "output_queues": ["TOQ1"]
+            "states": ["Breakdownstate_1"]
+        },
+        "TransportResource2": {
+            "ID": "TR2",
+            "description": "Transport Resource 2",
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "location": [15, 20],
+            "capacity": 1,
+            "processes": ["TP1"],
+            "states": ["Breakdownstate_1"]
         }
     },
     "queues": {
@@ -179,16 +191,6 @@
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
             "capacity": 25
-        },
-        "Queue6": {
-            "ID": "TIQ1",
-            "description": "Transport Input-queue 1 for TR1",
-            "capacity": 1
-        },
-        "Queue7": {
-            "ID": "TOQ1",
-            "description": "Transport Output-queue 1 for TR1",
-            "capacity": 1
         }
     },
     "sources": {

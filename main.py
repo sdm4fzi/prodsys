@@ -87,17 +87,24 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(10000)
+    env.run(40000)
 
-    print("simulated: ", env.now / 60 / 24, "days in:", time.perf_counter() - t_0, "seconds")
+    print("____________\n")
 
+    print("simulated", env.now / 60 / 24, "days in", time.perf_counter() - t_0, "seconds")
+    print(f"generated material: {m_fac.material_counter} finished material: {sum([1 for material in m_fac.materials if material.finished])} throughput: {sum([1 for material in m_fac.materials if material.finished]) / env.now * 60 * 24} products / day")
+    for m in r_fac.resources:
+        print(m.ID, m.parts_made, "processes executed")
     # TODO: create graph with resources, process and material
 
     import pandas as pd
 
     df = pd.DataFrame(dc.data['Resources'])
-
-    df.sort_values(by=['Time'], inplace=True)
+    df['Activity'] = pd.Categorical(df['Activity'], 
+                      categories=['end state', 'end interrupt', 'start state', 'start interrupt'],
+                      ordered=True)
+    # df['activity_index'] = 
+    df.sort_values(by=['Time', 'Activity'], inplace=True)
 
     df.to_csv('data.csv')
 

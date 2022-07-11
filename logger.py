@@ -107,7 +107,7 @@ def post_monitor_state_info(data, state_info: state.StateInfo):
         'Time': state_info.event_time,
         'Resource': state_info._resource_ID,
         'State': state_info.ID,
-        'Activtiy': state_info.activity,
+        'Activity': state_info.activity,
         'Expected End Time': state_info.expected_end_time,
         'Material': state_info._material_ID,
         'Target location': state_info._target_ID

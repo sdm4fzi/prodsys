@@ -281,6 +281,13 @@ CONTROLLER_DICT: dict = {
     'TransportController': control.TransportController,
 }
 
+CONTROL_POLICY_DICT: dict = {
+    'FIFO': control.FIFO_control_policy,
+    'LIFO': control.LIFO_control_policy,
+    'SPT': control.SPT_control_policy,
+    'SPT_transport': control.SPT_transport_control_policy,
+}
+
 
 from typing import Dict
 @dataclass
@@ -303,6 +310,14 @@ class ResourceFactory:
         for process, capacity in zip(values['processes'], values['process_capacity']):
             values['processes'] += [process]*(capacity - 1)
 
+    def add_queues_to_resource(self, _resource: Resource, values: dict):
+        if 'input_queues' in values.keys():
+            input_queues = self.queue_factory.get_queues(values['input_queues'])
+            _resource.add_input_queues(input_queues)
+        if 'output_queues' in values.keys():
+            output_queues = self.queue_factory.get_queues(values['output_queues'])
+            _resource.add_output_queues(output_queues)
+
 
     def add_resource(self, values: dict):
         states = self.state_factory.get_states(values['states'])
@@ -318,11 +333,7 @@ class ResourceFactory:
                                     capacity=values['capacity'],
                                     processes=processes,
                                     )
-        input_queues = self.queue_factory.get_queues(values['input_queues'])
-        output_queues = self.queue_factory.get_queues(values['output_queues'])
-
-        resource.add_input_queues(input_queues)
-        resource.add_output_queues(output_queues)
+        self.add_queues_to_resource(resource, values)
 
         register_states(resource, states, self._env)
         register_production_states_for_processes(resource, self.state_factory, self._env)
@@ -330,12 +341,8 @@ class ResourceFactory:
 
 
         controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
-        controller = controller_class(control.FIFO_control_policy, self._env)
-        # TODO: add control policy to the data_file
-        if type(controller) == control.SimpleController:
-            controller.control_policy = control.FIFO_control_policy
-        if type(controller) == control.TransportController:
-            controller.control_policy = control.SPT_transport_control_policy
+        control_policy = get_class_from_str(name=values['control_policy'], cls_dict=CONTROL_POLICY_DICT)
+        controller = controller_class(control_policy, self._env)
         controller.set_resource(resource)
         self.controllers.append(controller)
 

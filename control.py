@@ -175,10 +175,7 @@ class TransportController(Controller):
             running_process = self._env.process(self.start_process(process_request))
             self.running_processes.append(running_process)
 
-    # def request(self, _process: process.Process, _resource: resource.Resource, origin: resource.Resource, target: resource.Resource, 
-    #     _material: material.Material):
     def start_process(self, process_request: request.TransportResquest):
-        # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
         _resource = process_request.get_resource()
         _process = process_request.get_process()
         _material = process_request.get_material()
@@ -186,6 +183,7 @@ class TransportController(Controller):
         target = process_request.get_target()
 
         _resource.current_process = _process
+        # TODO: implement setup of resources in case of a process change instead of this overwriting of the setup
         # yield _resource.setup(_material.next_process)
         with _resource.request() as req:
             self.sort_queue(_resource)
