@@ -58,7 +58,7 @@ class Material(IDEntity):
         if not self.processes:
             self.next_process = None
         else:
-            self.next_process = self.processes.pop()
+            self.next_process = self.processes.pop(0)
             self.set_next_resource()
 
 

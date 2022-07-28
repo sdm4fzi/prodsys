@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    41
+                    43
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -145,6 +145,19 @@
             "input_queues": ["IQ2"],
             "output_queues": ["OQ3"]
         },
+        "Resource4": {
+            "ID": "R4",
+            "description": "Resource 3",
+            "controller": "SimpleController",
+            "control_policy": "FIFO",
+            "location": [10, 20],
+            "capacity": 2,
+            "processes": ["P3"],
+            "process_capacity": [2],
+            "states": ["Breakdownstate_1"],
+            "input_queues": ["IQ2"],
+            "output_queues": ["OQ3"]
+        },
         "TransportResource1": {
             "ID": "TR1",
             "description": "Transport Resource 1",
@@ -215,7 +228,7 @@
         "Material_1": {
             "ID": "Material_1",
             "description": "Material 1",
-            "processes": ["P1", "P2", "P1"],
+            "processes": ["P1", "P2", "P3"],
             "transport_process": "TP1"
         },
         "Material_2": {
