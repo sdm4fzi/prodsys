@@ -21,6 +21,10 @@ class Process(ABC, IDEntity):
     def get_process_time(self, *args) -> float:
         pass
 
+    @abstractmethod
+    def get_expected_process_time(self, *args) -> float:
+        pass
+
     # def get_raw_material(self):
     #     return self.raw_material
 
@@ -30,10 +34,16 @@ class ProductionProcess(Process):
     def get_process_time(self) -> float:
         return self.time_model.get_next_time()
 
+    def get_expected_process_time(self) -> float:
+        return self.time_model.get_expected_time()
+
 class TransportProcess(Process):
 
     def get_process_time(self, origin: List[float], target: List[float]) -> float:
         return self.time_model.get_next_time(originin=origin, target=target)
+
+    def get_expected_process_time(self, *args) -> float:
+        return self.time_model.get_expected_time(*args)
 
 
 class ProcessModel(ABC):
@@ -73,9 +83,6 @@ class ProcessFactory:
     def add_processes(self, cls: Type[Process],  values: dict):
         time_model = self.time_model_factory.get_time_model(values['time_model_id'])
         self.processes.append(cls(ID=values['ID'], description=values['description'], time_model=time_model))
-
-    def get_processes(self, IDs: List[str]) -> List[Process]:
-        return [pr for pr in self.processes if pr.ID in IDs]
 
     def get_processes_in_order(self, IDs: List[str]) -> List[Process]:
         processes = []

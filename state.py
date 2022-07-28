@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from cmath import exp
 from dataclasses import dataclass, field
 from typing import List, Type
 
@@ -10,24 +11,68 @@ import resource
 from time_model import TimeModel
 from base import IDEntity
 from util import get_class_from_str
+import material
 from time_model import TimeModelFactory
 
+
+
+
+@dataclass
+class StateInfo:
+    ID: str
+    _resource_ID: str
+    event_time: float  = field(default=None, init=False)
+    expected_end_time: float  = field(default=None, init=False)
+    activity: str  = field(default=None, init=False)
+    _material_ID: str  = field(default=None, init=False)
+    _target_ID: str = field(default=None, init=False)
+
+
+    def log_target_location(self, target: resource.Resource):
+        self._target_ID = target.ID
+
+    def log_material(self, _material: material.Material):
+        self._material_ID = _material.ID
+
+    def log_start_state(self, start_time: float, expected_end_time: float):
+        self.event_time = start_time
+        self.expected_end_time = expected_end_time
+        self.activity = "start state"
+
+    def log_start_interrupt_state(self, start_time: float):
+        self.event_time = start_time
+        self.activity = "start interrupt"
+
+    def log_end_interrupt_state(self, start_time: float, expected_end_time: float):
+        self.event_time = start_time
+        self.expected_end_time = expected_end_time
+        self.activity = "end interrupt"
+
+    def log_end_state(self, start_time: float):
+        self.event_time = start_time
+        self.activity = "end state"
 
 @dataclass
 class State(ABC, IDEntity):
     env: env.Environment
     time_model: TimeModel
     active: simpy.Event = field(default=None, init=False)
+    finished_process: simpy.Event = field(default=None, init=False)
     _resource: resource.Resource = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
+    state_info: StateInfo = field(default=None, init=False)
 
     @property
     def resource(self) -> resource.Resource:
         return self._resource
 
+
     @resource.setter
     def resource(self, resource_model: resource.Resource) -> None:
         self._resource = resource_model
+        self.finished_process = simpy.Event(self.env).succeed()
+        self.state_info = StateInfo(self.ID, self._resource.ID)
+
 
     def activate(self):
         try:
@@ -64,6 +109,7 @@ class ProductionState(State):
     def activate_state(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
         self.active = simpy.Event(self.env)
+        self.finished_process = simpy.Event(self.env)
 
     def process_state(self):
         """Runs a single process of a resource.
@@ -72,40 +118,36 @@ class ProductionState(State):
         """
         self.done_in = self.time_model.get_next_time()
         yield self.resource.active
+
         while self.done_in:
             try:
+                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 self.start = self.env.now
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except simpy.Interrupt:
+                self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
-                self.interrupt_processed = simpy.Event(self.env)
-                yield self.env.process(self.interrupt())
+                yield self.active
                 self.interrupt_processed.succeed()
+                self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
         self.resource.parts_made += 1
+        self.state_info.log_end_state(self.env.now)
+        self.finished_process.succeed()
+
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
         if self.done_in < 0:
             self.done_in = 0
 
-    def interrupt(self):
-        yield self.active
-
     def interrupt_process(self):
         yield self.interrupt_processed
         self.interrupt_processed = simpy.Event(self.env)
         if self.process.is_alive:
             self.process.interrupt()
-
-    def activate(self):
-        try:
-            self.active.succeed()
-        except:
-            raise RuntimeError("state is allready succeded!!")
-        self.active = simpy.Event(self.env)
 
 
 class TransportState(State):
@@ -120,6 +162,7 @@ class TransportState(State):
     def activate_state(self):
         self.interrupt_processed = simpy.Event(self.env).succeed()
         self.active = simpy.Event(self.env)
+        self.finished_process = simpy.Event(self.env)
 
     def process_state(self, target: List[float]):
         """Runs a single process of a resource.
@@ -128,41 +171,36 @@ class TransportState(State):
         """
         self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
         yield self.resource.active
+
         while self.done_in:
             try:
                 self.start = self.env.now
+                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except simpy.Interrupt:
+                self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
-                self.interrupt_processed = simpy.Event(self.env)
-                yield self.env.process(self.interrupt())
+                yield self.active
                 self.interrupt_processed.succeed()
+                self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
         # TODO: parts made has to be moved to product or logger class
         self.resource.location = target
         self.resource.parts_made += 1
+        self.state_info.log_end_state(self.env.now)
+        self.finished_process.succeed()
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
         if self.done_in < 0:
             self.done_in = 0
 
-    def interrupt(self):
-        yield self.active
-
     def interrupt_process(self):
         yield self.interrupt_processed
         self.interrupt_processed = simpy.Event(self.env)
         if self.process.is_alive:
             self.process.interrupt()
-
-    def activate(self):
-        try:
-            self.active.succeed()
-        except:
-            raise RuntimeError("state is allready succeded!!")
-        self.active = simpy.Event(self.env)
 
 
 class BreakDownState(State):
@@ -173,12 +211,14 @@ class BreakDownState(State):
     def process_state(self):
         while True:
             yield self.env.process(self.wait_for_breakdown())
-            self.resource.interrupt_state()
             yield self.resource.active
             self.resource.active = simpy.Event(self.env)
+            yield self.env.process(self.resource.interrupt_states())
+            self.state_info.log_start_state(self.env.now, self.env.now + 30)
             # TODO: Schedule here the maintainer! or a time model for a repair
-            yield self.env.timeout(3)
+            yield self.env.timeout(30)
             self.resource.activate()
+            self.state_info.log_end_state(self.env.now)
 
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())

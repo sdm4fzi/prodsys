@@ -9,6 +9,7 @@ from base import IDEntity
 import env
 import simpy
 import resource
+from request import Request, TransportResquest
 import router
 import process
 
@@ -39,39 +40,39 @@ class Material(IDEntity):
         self.finished_process = simpy.Event(self.env)
         yield self.env.process(self.initial_placement())
         while self.next_process:
-            self.next_resource.request_process(self.next_process)
+            self.request_process()
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
-        # print(self.ID, "finished at", self.env.now)
         self.finished = True
         yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
+
+    def request_process(self) -> None:
+        self.env.request_process_of_resource(Request(self.next_process, self, self.next_resource))
+    
+    def request_transport(self, transport_resource: resource.Resource, origin_resource: resource.Resource) -> None:
+        self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, self.next_resource))
 
     def set_next_process(self):
         # TODO: this method has also to be adjusted for the process model
         if not self.processes:
             self.next_process = None
         else:
-            self.next_process = self.processes.pop()
+            self.next_process = self.processes.pop(0)
             self.set_next_resource()
 
 
     def initial_placement(self):
         self.set_next_process()
-        # print(self.ID, "put", self.next_resource.ID,  "before initial", len(self.next_resource.input_queues[0].items))
         yield self.next_resource.input_queues[0].put(self)
-        # print(self.ID, "put", self.next_resource.ID,  "after initial", len(self.next_resource.input_queues[0].items))
 
     def transport_to_queue_of_resource(self):
-        # print(self.ID, "get ", self.next_resource.ID,  "before", len(self.next_resource.output_queues[0].items))
-        # print(self.next_resource.ID, [i.ID for i in self.next_resource.output_queues[0].items])
-        # print(self.ID, "get ", self.next_resource.ID,  "after", len(self.next_resource.output_queues[0].items))
         origin_resource = self.next_resource
         self.set_next_process()
         if self.next_process is not None:
             # TODO: implement here the waiting for a transport and yield the get after arrival of the transport unit
             transport_resource = self.router.get_next_resource(self.transport_process)
-            transport_resource.request_transport(process=self.transport_process, origin=origin_resource, target=self.next_resource, _material=self)
+            self.request_transport(transport_resource, origin_resource)
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
 

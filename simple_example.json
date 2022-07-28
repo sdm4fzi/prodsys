@@ -24,7 +24,7 @@
                 "ID": "function_time_model_3",
                 "description": "exponential distribution time model with 17 minutes",
                 "parameters": [
-                    25
+                    23
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -33,7 +33,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    40
+                    43
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -59,7 +59,8 @@
             "mdt1": {
                 "ID": "manhattan_time_model_1",
                 "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                "speed": 15000
+                "speed": 90,
+                "reaction_time": 0.15
             }
         }
     },
@@ -109,9 +110,11 @@
             "ID": "R1",
             "description": "Resource 1",
             "controller": "SimpleController",
+            "control_policy": "FIFO",
             "location": [10, 10],
             "capacity": 2,
             "processes": ["P1", "P2"],
+            "process_capacity": [2, 1],
             "states": ["Breakdownstate_1"],
             "input_queues": ["IQ1"],
             "output_queues": ["OQ1"]
@@ -121,6 +124,7 @@
             "ID": "R2",
             "description": "Resource 2",
             "controller": "SimpleController",
+            "control_policy": "SPT",
             "location": [20, 10],
             "capacity": 1,
             "processes": ["P2", "P3"],
@@ -132,10 +136,25 @@
             "ID": "R3",
             "description": "Resource 3",
             "controller": "SimpleController",
+            "control_policy": "FIFO",
             "location": [20, 20],
             "capacity": 2,
             "processes": ["P1", "P3"],
+            "process_capacity": [1, 2],
             "states": ["Breakdownstate_1", "Breakdownstate_2"],
+            "input_queues": ["IQ2"],
+            "output_queues": ["OQ3"]
+        },
+        "Resource4": {
+            "ID": "R4",
+            "description": "Resource 3",
+            "controller": "SimpleController",
+            "control_policy": "FIFO",
+            "location": [10, 20],
+            "capacity": 2,
+            "processes": ["P3"],
+            "process_capacity": [2],
+            "states": ["Breakdownstate_1"],
             "input_queues": ["IQ2"],
             "output_queues": ["OQ3"]
         },
@@ -143,12 +162,21 @@
             "ID": "TR1",
             "description": "Transport Resource 1",
             "controller": "TransportController",
+            "control_policy": "SPT_transport",
             "location": [15, 15],
             "capacity": 1,
             "processes": ["TP1"],
-            "states": ["Breakdownstate_1"],
-            "input_queues": ["TIQ1"],
-            "output_queues": ["TOQ1"]
+            "states": ["Breakdownstate_1"]
+        },
+        "TransportResource2": {
+            "ID": "TR2",
+            "description": "Transport Resource 2",
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "location": [15, 20],
+            "capacity": 1,
+            "processes": ["TP1"],
+            "states": ["Breakdownstate_1"]
         }
     },
     "queues": {
@@ -176,16 +204,6 @@
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
             "capacity": 25
-        },
-        "Queue6": {
-            "ID": "TIQ1",
-            "description": "Transport Input-queue 1 for TR1",
-            "capacity": 1
-        },
-        "Queue7": {
-            "ID": "TOQ1",
-            "description": "Transport Output-queue 1 for TR1",
-            "capacity": 1
         }
     },
     "sources": {
@@ -210,7 +228,7 @@
         "Material_1": {
             "ID": "Material_1",
             "description": "Material 1",
-            "processes": ["P1", "P2", "P1"],
+            "processes": ["P1", "P2", "P3"],
             "transport_process": "TP1"
         },
         "Material_2": {

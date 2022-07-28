@@ -69,7 +69,6 @@ class Source(base.IDEntity):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
-            # print("create material", __material.ID, "at", self.env.now)
             __material.process = self.env.process(__material.process_material())
 
     def get_location(self) -> List[int, int]:
@@ -146,6 +145,12 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def change_state(self, input_state: state.State) -> None:
         pass
 
+    def get_controller(self) -> control.Controller:
+        return self.controller
+
+    def set_controller(self, controller: control.Controller) -> None:
+        self.controller = controller
+
     def add_input_queues(self, input_queues: List[Queue]):
         self.input_queues.extend(input_queues)
 
@@ -166,58 +171,38 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
             actual_state.process = self.env.process(actual_state.process_state())
 
     @abstractmethod
-    def process_states(self) -> None:
-        pass
-
-    @abstractmethod
     def reactivate(self):
         pass
 
     @abstractmethod
-    def interrupt_state(self):
+    def interrupt_states(self):
         pass
 
-    def interrupt_states(self):
-        for state in self.production_states:
-            if state.process:
-                self.env.process(state.interrupt_process())
-
-    def run_process(self, process: process.Process):
-        for input_state in self.production_states:
-            if input_state.description == process.description:
-                input_state.process = self.env.process(input_state.process_state())
-                return input_state.process
-
-    def run_transport(self, process: process.Process, target: List[float]):
-        for input_state in self.production_states:
-            if input_state.description == process.description:
-                input_state.process = self.env.process(input_state.process_state(target=target))
-                return input_state.process
-
-    def get_process(self, process: process.Process):
+    def get_process(self, process: process.Process) -> state.State:
         for actual_state in self.production_states:
             if actual_state.description == process.description:
                 return actual_state
 
-    def get_location(self) -> List[int, int]:
+    def get_free_process(self, process: process.Process) -> state.State:
+        for actual_state in self.production_states:
+            if actual_state.description == process.description and actual_state.process is None:
+                return actual_state
+        return None
+
+    def get_location(self) -> List[int]:
         return self.location
 
-    def set_location(self, new_location: List[int, int]) -> None:
+    def set_location(self, new_location: List[int]) -> None:
         self.location = new_location
-
-    def request_process(self, process: process.Process):
-        self.env.process(self.controller.request(process, self))
-
-    def request_transport(self, process: process.Process, origin: Resource, target: Resource, _material: material.Material):
-        self.env.process(self.controller.request(process, self, origin, target, _material))
 
     def get_states(self) -> List[state.State]:
         return self.states
 
     def activate(self):
         self.active.succeed()
-        for actual_state in self.states:
-            actual_state.activate()
+        for actual_state in self.production_states:
+            if (type(actual_state) == state.ProductionState or type(actual_state) == state.TransportState) and actual_state.process is not None:
+                actual_state.activate()
 
     def request_repair(self):
         pass
@@ -235,7 +220,6 @@ class ConcreteResource(Resource):
     def __post_init__(self):
         super(Resource, self).__init__(self.env)
         self.active = simpy.Event(self.env).succeed()
-        self.req = simpy.Event(self.env)
         self.available = simpy.Event(self.env)
 
     def change_state(self, input_state: state.State) -> None:
@@ -245,20 +229,17 @@ class ConcreteResource(Resource):
         self.states.append(input_state)
         input_state.resource = self
 
-    def process_states(self) -> None:
-        for state in self.states:
-            process = self.env.process(state.process_state())
-            state.process = process
-
     def reactivate(self):
         for _state in self.states:
             _state.activate()
 
-    def interrupt_state(self):
-        for actual_state in self.states:
-            if type(actual_state) == state.ProductionState:
-                self.env.process(actual_state.interrupt_process())
-                # actual_state.interrupt_process()
+    def interrupt_states(self):
+        events = []
+        for state in self.production_states:
+            if state.process:
+                events.append(self.env.process(state.interrupt_process()))
+        yield simpy.AllOf(self.env, events)
+        
 
     def get_active_states(self) -> List[state.State]:
         pass
@@ -267,17 +248,17 @@ class ConcreteResource(Resource):
         pass
 
 
-def register_states(resource: Resource, states: List[state.State], env: env.Environment):
+def register_states(resource: Resource, states: List[state.State], _env: env.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
-        copy_state.env = env
+        copy_state.env = _env
         resource.add_state(copy_state)
 
 
-def register_production_states(resource: Resource, states: List[state.State], env: env.Environment):
+def register_production_states(resource: Resource, states: List[state.State], _env: env.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
-        copy_state.env = env
+        copy_state.env = _env
         resource.add_production_state(copy_state)
 
 
@@ -300,53 +281,88 @@ CONTROLLER_DICT: dict = {
     'TransportController': control.TransportController,
 }
 
+CONTROL_POLICY_DICT: dict = {
+    'FIFO': control.FIFO_control_policy,
+    'LIFO': control.LIFO_control_policy,
+    'SPT': control.SPT_control_policy,
+    'SPT_transport': control.SPT_transport_control_policy,
+}
 
 
+from typing import Dict
 @dataclass
 class ResourceFactory:
     data: dict
-    env: env.Environment
+    _env: env.Environment
     process_factory: process.ProcessFactory
     state_factory: state.StateFactory
     queue_factory: QueueFactory
 
     resources: List[Resource] = field(default_factory=list, init=False)
+    controllers: List[control.Controller] = field(default_factory=list, init=False)
 
     def create_resources(self):
         resources = self.data['resources']
         for values in resources.values():
             self.add_resource(values)
 
+    def adjust_process_capacities(self, values: dict):
+        for process, capacity in zip(values['processes'], values['process_capacity']):
+            values['processes'] += [process]*(capacity - 1)
+
+    def add_queues_to_resource(self, _resource: Resource, values: dict):
+        if 'input_queues' in values.keys():
+            input_queues = self.queue_factory.get_queues(values['input_queues'])
+            _resource.add_input_queues(input_queues)
+        if 'output_queues' in values.keys():
+            output_queues = self.queue_factory.get_queues(values['output_queues'])
+            _resource.add_output_queues(output_queues)
+
+
     def add_resource(self, values: dict):
         states = self.state_factory.get_states(values['states'])
-        processes = self.process_factory.get_processes(values['processes'])
+        if 'process_capacity' in values:
+            self.adjust_process_capacities(values)
+            
+        processes = self.process_factory.get_processes_in_order(values['processes'])
 
         resource = ConcreteResource(ID=values['ID'],
                                     description=values['description'],
                                     location=values['location'],
-                                    env=self.env,
+                                    env=self._env,
                                     capacity=values['capacity'],
                                     processes=processes,
                                     )
-        input_queues = self.queue_factory.get_queues(values['input_queues'])
-        output_queues = self.queue_factory.get_queues(values['output_queues'])
+        self.add_queues_to_resource(resource, values)
 
-        resource.add_input_queues(input_queues)
-        resource.add_output_queues(output_queues)
-
-        register_states(resource, states, self.env)
-        register_production_states_for_processes(resource, self.state_factory, self.env)
-        controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
-        resource.controller = controller_class(control.FIFO_control_policy)
-
+        register_states(resource, states, self._env)
+        register_production_states_for_processes(resource, self.state_factory, self._env)
         self.resources.append(resource)
+
+
+        controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
+        control_policy = get_class_from_str(name=values['control_policy'], cls_dict=CONTROL_POLICY_DICT)
+        controller = controller_class(control_policy, self._env)
+        controller.set_resource(resource)
+        self.controllers.append(controller)
+
+        resource.set_controller(controller)
+
 
     def start_resources(self):
         for _resource in self.resources:
             _resource.start_states()
+            
+        for controller in self.controllers:
+            self._env.process(controller.control_loop())
 
     def get_resource(self, ID):
         return [st for st in self.resources if st.ID == ID].pop()
+
+    def get_controller_of_resource(self, _resource: Resource) -> control.Controller:
+        for controller in self.controllers:
+            if controller._resource == _resource:
+                return controller
 
     def get_resources(self, IDs: List[str]) -> List[Resource]:
         return [r for r in self.resources if r.ID in IDs]

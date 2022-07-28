@@ -1,17 +1,37 @@
-from resource import Resource, Process, Material
-from simpy.resources import resource
-from typing import List
+from __future__ import annotations
+
+import simpy
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
 
-class Request(ABC, resource.Request):
-    process: Process
-    materials: List[Material]
-    resource: Resource
+import resource
+import process
+import material
 
-    @abstractmethod
-    def get_process_time(self):
-        return self.process.get_process_time()
+@dataclass
+class Request:
+    _process: process.Process
+    _material: material.Material
+    _resource: resource.Resource
+
+    def get_process(self) -> process.Process:
+        return self._process
+
+    def get_material(self) -> material.Material:
+        return self._material
+    
+    def get_resource(self) -> resource.Resource:
+        return self._resource
+
+@dataclass
+class TransportResquest(Request):
+    origin: resource.Resource
+    target: resource.Resource
+
+    def get_origin(self) -> resource.Resource:
+        return self.origin
+
+    def get_target(self) -> resource.Resource:
+        return self.target
 
 
 
