@@ -118,10 +118,9 @@ class ProductionState(State):
         """
         self.done_in = self.time_model.get_next_time()
         yield self.resource.active
-
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         while self.done_in:
             try:
-                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 self.start = self.env.now
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
@@ -171,11 +170,10 @@ class TransportState(State):
         """
         self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
         yield self.resource.active
-
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         while self.done_in:
             try:
                 self.start = self.env.now
-                self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 

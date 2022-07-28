@@ -22,18 +22,19 @@
             },
             "ft3": {
                 "ID": "function_time_model_3",
-                "description": "exponential distribution time model with 17 minutes",
+                "description": "normal distribution time model with 20 minutes",
                 "parameters": [
-                    23
+                    20,
+                    5
                 ],
                 "batch_size": 100,
-                "distribution_function": "exponential"
+                "distribution_function": "normal"
             },
             "ft4": {
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    43
+                    36
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -59,7 +60,7 @@
             "mdt1": {
                 "ID": "manhattan_time_model_1",
                 "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                "speed": 90,
+                "speed": 30,
                 "reaction_time": 0.15
             }
         }
@@ -124,7 +125,7 @@
             "ID": "R2",
             "description": "Resource 2",
             "controller": "SimpleController",
-            "control_policy": "SPT",
+            "control_policy": "FIFO",
             "location": [20, 10],
             "capacity": 1,
             "processes": ["P2", "P3"],
@@ -162,7 +163,7 @@
             "ID": "TR1",
             "description": "Transport Resource 1",
             "controller": "TransportController",
-            "control_policy": "SPT_transport",
+            "control_policy": "FIFO",
             "location": [15, 15],
             "capacity": 1,
             "processes": ["TP1"],

@@ -57,7 +57,7 @@ class FunctionTimeModel(TimeModel):
         try:
             value = self._statistics_buffer.pop()
             if value < 0:
-                return 0
+                return 0.1
             return value
         except IndexError:
             self._fill_buffer()
