@@ -1,5 +1,9 @@
 # Created by .ignore support plugin (hsz.mobi)
-test/tester.py
 *.xml
 *.png
 *.prof
+test/
+ini/
+.ipynb_checkpoints/
+.idea/
+__pycache__/
