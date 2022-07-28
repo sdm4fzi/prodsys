@@ -6,4 +6,5 @@ test/
 ini/
 .ipynb_checkpoints/
 .idea/
+.idea
 __pycache__/
