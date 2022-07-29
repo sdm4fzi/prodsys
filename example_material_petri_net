@@ -1,0 +1,98 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<pnml>
+  <net id="net1" type="http://www.pnml.org/version-2009/grammar/pnmlcoremodel">
+    <page id="n0">
+      <place id="Source">
+        <name>
+          <text>Source</text>
+        </name>
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>
+      <place id="State4">
+        <name>
+          <text>State4</text>
+        </name>
+      </place>
+      <place id="State5">
+        <name>
+          <text>State5</text>
+        </name>
+      </place>
+      <place id="State3">
+        <name>
+          <text>State3</text>
+        </name>
+      </place>
+      <place id="State2">
+        <name>
+          <text>State2</text>
+        </name>
+      </place>
+      <place id="State6">
+        <name>
+          <text>State6</text>
+        </name>
+      </place>
+      <place id="Sink">
+        <name>
+          <text>Sink</text>
+        </name>
+      </place>
+      <transition id="P3">
+        <name>
+          <text>P3</text>
+        </name>
+      </transition>
+      <transition id="skip_10">
+        <name>
+          <text>skip_10</text>
+        </name>
+        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="ab93ad3c-76a8-4ffc-bc34-f6054f20ba71"/>
+      </transition>
+      <transition id="P4">
+        <name>
+          <text>P1</text>
+        </name>
+      </transition>
+      <transition id="P2">
+        <name>
+          <text>P2</text>
+        </name>
+      </transition>
+      <transition id="P1">
+        <name>
+          <text>P1</text>
+        </name>
+      </transition>
+      <transition id="skip_11">
+        <name>
+          <text>skip_11</text>
+        </name>
+        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="e5bbf5f8-40f3-4da1-831e-5b23409f5bae"/>
+      </transition>
+      <arc id="1604933956608" source="P1" target="State4"/>
+      <arc id="1604933957376" source="skip_11" target="State2"/>
+      <arc id="1606196540224" source="skip_11" target="State3"/>
+      <arc id="1606196540320" source="State2" target="P2"/>
+      <arc id="1606196540416" source="State3" target="P3"/>
+      <arc id="1606196540512" source="P2" target="State5"/>
+      <arc id="1606196540608" source="P3" target="State6"/>
+      <arc id="1606196540704" source="State5" target="skip_10"/>
+      <arc id="1606196540800" source="State6" target="skip_10"/>
+      <arc id="1606196540896" source="skip_10" target="State4"/>
+      <arc id="1604933895024" source="Source" target="P1"/>
+      <arc id="1604933956560" source="Source" target="skip_11"/>
+      <arc id="1606196540992" source="State4" target="P4"/>
+      <arc id="1606196541088" source="P4" target="Sink"/>
+    </page>
+    <finalmarkings>
+      <marking>
+        <place idref="Sink">
+          <text>1</text>
+        </place>
+      </marking>
+    </finalmarkings>
+  </net>
+</pnml>
