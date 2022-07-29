@@ -32,7 +32,6 @@ class SimpleRouter:
         possible_resources = self.resource_process_registry.get_resources_with_process(__process)
         return self.routing_heuristic(possible_resources)
 
-
 def FIFO_router(possible_resources: List[resource.Resource]) -> resource.Resource:
     return possible_resources.pop()
 

@@ -27,7 +27,7 @@ def flatten(xs):
 @dataclass
 class Material(IDEntity):
     env: env.Environment
-    processes: List[process.Process]
+    process_model: process.ProcessModel
     transport_process: process.Process
     router: router.SimpleRouter
     next_process: process.Process = field(default=None, init=False)
@@ -55,10 +55,15 @@ class Material(IDEntity):
 
     def set_next_process(self):
         # TODO: this method has also to be adjusted for the process model
-        if not self.processes:
+        next_possible_processes = self.process_model.get_next_possible_processes()
+        if not next_possible_processes:
             self.next_process = None
         else:
-            self.next_process = self.processes.pop(0)
+            import random
+            self.next_process = random.choice(next_possible_processes)
+            self.process_model.update_marking_from_transition(self.next_process)
+            if self.next_process is None:
+                self.set_next_process()
             self.set_next_resource()
 
 
@@ -75,9 +80,6 @@ class Material(IDEntity):
             self.request_transport(transport_resource, origin_resource)
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
-
-            
-
 
     def set_next_resource(self):
         self.next_resource = self.router.get_next_resource(self.next_process)
@@ -98,15 +100,32 @@ class MaterialFactory:
 
     def create_material(self, type: str, router: router.SimpleRouter):
         material_data = self.data['materials'][type]
-        processes = self.process_factory.get_processes_in_order(material_data['processes'])
+        process_model = self.create_process_model(material_data)
+
         transport_processes = self.process_factory.get_process(material_data['transport_process'])
         material = Material(ID=material_data['ID'] + f" instance N.{self.material_counter}",
                             description=material_data['description'], env=self.env,
-                            router=router, processes=processes, transport_process=transport_processes)
+                            router=router, process_model=process_model, transport_process=transport_processes)
 
         self.material_counter += 1
         self.materials.append(material)
         return material
+
+    def create_process_model(self, material_data) -> process.ProcessModel:
+        data = material_data['processes']
+        if type(data) == list:
+            process_list = self.process_factory.get_processes_in_order(material_data['processes'])
+            return process.ListProcessModel(process_list=process_list)
+        if type(data) == str:
+            import pm4py
+            net, initial_marking, final_marking = pm4py.read_pnml(data)
+            for transition in net.transitions:
+                if not transition.label:
+                    transition_process = None
+                else:
+                    transition_process = self.process_factory.get_process(transition.label)
+                transition.properties['Process'] = transition_process
+            return process.PetriNetProcessModel(net, initial_marking, final_marking)
 
     def get_material(self, ID) -> Material:
         return [m for m in self.materials if m.ID == ID].pop()
