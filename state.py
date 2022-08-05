@@ -7,7 +7,7 @@ from typing import List, Type
 
 import simpy
 import env
-import resource
+import resources
 from time_model import TimeModel
 from base import IDEntity
 from util import get_class_from_str
@@ -28,7 +28,7 @@ class StateInfo:
     _target_ID: str = field(default=None, init=False)
 
 
-    def log_target_location(self, target: resource.Resource):
+    def log_target_location(self, target: resources.Resource):
         self._target_ID = target.ID
 
     def log_material(self, _material: material.Material):
@@ -63,12 +63,12 @@ class State(ABC, IDEntity):
     state_info: StateInfo = field(default=None, init=False)
 
     @property
-    def resource(self) -> resource.Resource:
+    def resource(self) -> resources.Resource:
         return self._resource
 
 
     @resource.setter
-    def resource(self, resource_model: resource.Resource) -> None:
+    def resource(self, resource_model: resources.Resource) -> None:
         self._resource = resource_model
         self.finished_process = simpy.Event(self.env).succeed()
         self.state_info = StateInfo(self.ID, self._resource.ID)

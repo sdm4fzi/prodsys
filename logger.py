@@ -1,8 +1,8 @@
 from functools import partial, wraps
 
-import resource
 from material import Material
 import state
+import resources
 
 
 class Datacollector:
@@ -44,7 +44,7 @@ class Datacollector:
         partial_monitor = partial(monitor, data)
         return partial_monitor
 
-def post_monitor_resource(data, __resource: resource.Resource):
+def post_monitor_resource(data, __resource: resources.Resource):
     """This is our monitoring callback."""
     if __resource.current_process:
         process_ID = __resource.current_process.ID

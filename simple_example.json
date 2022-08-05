@@ -184,27 +184,27 @@
         "Queue1": {
             "ID": "IQ1",
             "description": "Input-queue 1 for R1 and R2",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue2": {
             "ID": "OQ1",
             "description": "Output-queue 1 for R1",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue3": {
             "ID": "OQ2",
             "description": "Output-queue 2 for R2",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue4": {
             "ID": "IQ2",
             "description": "Input-queue 2 for R3",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue5": {
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
-            "capacity": 25
+            "capacity": 250
         }
     },
     "sources": {

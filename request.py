@@ -3,7 +3,7 @@ from __future__ import annotations
 import simpy
 from dataclasses import dataclass
 
-import resource
+import resources
 import process
 import material
 
@@ -11,7 +11,7 @@ import material
 class Request:
     _process: process.Process
     _material: material.Material
-    _resource: resource.Resource
+    _resource: resources.Resource
 
     def get_process(self) -> process.Process:
         return self._process
@@ -19,18 +19,18 @@ class Request:
     def get_material(self) -> material.Material:
         return self._material
     
-    def get_resource(self) -> resource.Resource:
+    def get_resource(self) -> resources.Resource:
         return self._resource
 
 @dataclass
 class TransportResquest(Request):
-    origin: resource.Resource
-    target: resource.Resource
+    origin: resources.Resource
+    target: resources.Resource
 
-    def get_origin(self) -> resource.Resource:
+    def get_origin(self) -> resources.Resource:
         return self.origin
 
-    def get_target(self) -> resource.Resource:
+    def get_target(self) -> resources.Resource:
         return self.target
 
 
@@ -52,7 +52,7 @@ class FlexibleRequest(simpy.resources.resource.Request):
     """
 
     def __init__(
-        self, resource: Resource, dispatch_criteria: list, preempt: bool = True, time_prio : int = None,
+        self, resource: resources.Resource, dispatch_criteria: list, preempt: bool = True, time_prio : int = None,
             preempt_prio: int = None
     ):
         self.preempt = preempt

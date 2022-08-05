@@ -7,7 +7,9 @@ from time_model import TimeModelFactory
 from state import StateFactory
 from env import Environment
 from process import ProcessFactory
-from resource import ResourceFactory, QueueFactory, SourceFactory
+from resources import ResourceFactory
+from store import QueueFactory
+from source import SourceFactory
 from router import SimpleRouter, FIFO_router, random_router
 from logger import Datacollector
 import logger
@@ -17,10 +19,11 @@ import json
 
 import numpy as np
 
+
 if __name__ == '__main__':
 
-    np.random.seed(20)
-    random.seed(20)
+    np.random.seed(21)
+    random.seed(21)
 
     env = Environment()
 
@@ -78,7 +81,6 @@ if __name__ == '__main__':
         #                       post=post_monitor_resource)
         all_states = r.states + r.production_states
         for __state in all_states:
-            # dc.register_patch(__state, attr=['process_state'], pre=pre_monitor_state, post=post_monitor_state)
              dc.register_patch(__state.state_info, attr=['log_start_state', 'log_start_interrupt_state', 'log_end_interrupt_state', 'log_end_state'], 
                                post=logger.post_monitor_state_info)
 
@@ -87,14 +89,22 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(40000)
+    env.run(4000)
 
     print("____________\n")
 
     print("simulated", env.now / 60 / 24, "days in", time.perf_counter() - t_0, "seconds")
     print(f"generated material: {m_fac.material_counter} finished material: {sum([1 for material in m_fac.materials if material.finished])} throughput: {sum([1 for material in m_fac.materials if material.finished]) / env.now * 60 * 24} products / day")
+    
+    print("____________\n")
+
     for m in r_fac.resources:
         print(m.ID, m.parts_made, "processes executed")
+
+    print("____________\n")
+
+    for q in q_fac.queues:
+        print(q.ID, len(q.items))
     # TODO: create graph with resources, process and material
 
     import pandas as pd
@@ -106,7 +116,7 @@ if __name__ == '__main__':
     # df['activity_index'] = 
     df.sort_values(by=['Time', 'Activity'], inplace=True)
 
-    df.to_csv('data.csv')
+    df.to_csv('data2.csv')
 
     # TODO: create Transformer class in environment
 

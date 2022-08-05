@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Tuple, Type
-import typing
 from copy import copy
 import pm4py
 
-import material
 from base import IDEntity
 from time_model import TimeModel, TimeModelFactory
 from util import get_class_from_str
@@ -111,7 +109,7 @@ class ListProcessModel(ProcessModel):
 
     def get_next_possible_processes(self) -> Tuple[Process]:
         if self.current_marking == len(self.process_list):
-            return tuple()
+            return None
         return self.process_list[self.current_marking], 
 
     def update_marking_from_transition(self, chosen_process: Process) -> None:
@@ -131,7 +129,7 @@ class PetriNetProcessModel(ProcessModel):
 
     def get_next_possible_processes(self) -> Tuple[Process]:
         if not self.semantics.enabled_transitions(self.net, self.current_marking):  # supports nets with possible deadlocks
-            return []
+            return None
         all_enabled_trans = self.semantics.enabled_transitions(self.net, self.current_marking)
         self.poss_trans = list(all_enabled_trans)        
         return [trans.properties['Process'] for trans in self.poss_trans]

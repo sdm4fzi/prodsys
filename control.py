@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import env
 import material
 import process
-import resource
+import resources
 import request
 import state
 # from process import Process
@@ -18,11 +18,11 @@ import simpy
 @dataclass
 class Controller(ABC):
     control_policy: Callable[[List[request.Request]], None]
-    _resource: resource.Resource = field(init=False)
+    _resource: resources.Resource = field(init=False)
     _env: env.Environment = field(init=False)
     requested: simpy.Event = field(init=False)
 
-    def set_resource(self, _resource: resource.Resource) -> None:
+    def set_resource(self, _resource: resources.Resource) -> None:
         self._resource = _resource
         self._env = _resource._env
 
@@ -30,17 +30,21 @@ class Controller(ABC):
         self.requests.append(process_request)
         if not self.requested.triggered:
             self.requested.succeed()
+
+    @abstractmethod
+    def control_loop(self) -> None:
+        pass
     
     @abstractmethod
-    def perform_setup(self, _resource: resource.Resource, _process: process.Process) -> None:
+    def perform_setup(self, _resource: resources.Resource, _process: process.Process) -> None:
         pass
 
     @abstractmethod
-    def get_next_material_for_process(self, _resource: resource.Resource, _process: process.Process) -> List[material.Material]:
+    def get_next_material_for_process(self, _resource: resources.Resource, _process: process.Process) -> List[material.Material]:
         pass
 
     @abstractmethod
-    def sort_queue(self, _resource: resource.Resource):
+    def sort_queue(self, _resource: resources.Resource):
         pass
 
 
@@ -51,10 +55,10 @@ class SimpleController(Controller):
         self.running_processes: List[simpy.Event] = []
         self.requested: simpy.Event = simpy.Event(_env)
 
-    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
+    def perform_setup(self, _resource: resources.Resource, _process: process.Process):
         _resource.setup(_process)
 
-    def get_next_material_for_process(self, _resource: resource.Resource, _material: material.Material):
+    def get_next_material_for_process(self, _resource: resources.Resource, _material: material.Material):
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
@@ -64,7 +68,7 @@ class SimpleController(Controller):
             events.append(queue.get(filter=lambda x: x is _material))
         return events
 
-    def put_material_to_output_queue(self, _resource: resource.Resource, _materials: List[material.Material]) -> None:
+    def put_material_to_output_queue(self, _resource: resources.Resource, _materials: List[material.Material]) -> None:
         events = []
         for queue in _resource.output_queues:
             # _material_type = _process.get_raw_material_type()
@@ -124,7 +128,7 @@ class SimpleController(Controller):
         # return input_state.process
 
 
-    def sort_queue(self, _resource: resource.Resource):
+    def sort_queue(self, _resource: resources.Resource):
         pass
 
 class TransportController(Controller):
@@ -134,10 +138,10 @@ class TransportController(Controller):
         self.running_processes: List[request.Request] = []
         self.requested: simpy.Event = simpy.Event(_env)
 
-    def perform_setup(self, _resource: resource.Resource, _process: process.Process):
+    def perform_setup(self, _resource: resources.Resource, _process: process.Process):
         _resource.setup(_process)
     
-    def get_next_material_for_process(self, _resource: resource.Resource, _material: material.Material):
+    def get_next_material_for_process(self, _resource: resources.Resource, _material: material.Material):
         events = []
         for queue in _resource.output_queues:
             # _material_type = _process.get_raw_material_type()
@@ -147,7 +151,7 @@ class TransportController(Controller):
             events.append(queue.get(filter=lambda x: x is _material))
         return events
 
-    def put_material_to_input_queue(self, _resource: resource.Resource, _material: material.Material) -> None:
+    def put_material_to_input_queue(self, _resource: resources.Resource, _material: material.Material) -> None:
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
@@ -206,10 +210,10 @@ class TransportController(Controller):
             _material.finished_process.succeed()
 
 
-    def sort_queue(self, _resource: resource.Resource):
+    def sort_queue(self, _resource: resources.Resource):
         pass
 
-    def run_process(self, input_state: state.State, _material: material.Material, target: resource.Resource):
+    def run_process(self, input_state: state.State, _material: material.Material, target: resources.Resource):
         _env =  input_state.env
         target_location = target.get_location()
         input_state.activate_state()

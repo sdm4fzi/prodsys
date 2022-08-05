@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from sys import orig_argv
-from typing import Tuple, List, Set
+from typing import Tuple, List, Set, Dict
 from util import get_class_from_str
 
 import numpy as np
@@ -113,11 +113,11 @@ TIME_MODEL_DICT: dict = {
 
 @dataclass
 class TimeModelFactory:
-    data: dict
+    data: Dict
     time_models: List[TimeModel] = field(default_factory=list)
 
     def create_time_models(self):
-        time_models = self.data['time_models']
+        time_models: Dict = self.data['time_models']
         for cls_name, items in time_models.items():
             cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
             for values in items.values():

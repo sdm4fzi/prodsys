@@ -8,13 +8,13 @@ from typing import List
 from base import IDEntity
 import env
 import simpy
-import resource
+import resources
 from request import Request, TransportResquest
 import router
 import process
 
 from collections.abc import Iterable
-
+import numpy as np
 
 def flatten(xs):
     for x in xs:
@@ -22,6 +22,24 @@ def flatten(xs):
             yield from flatten(x)
         else:
             yield x
+
+
+#TODO: add material logging add start and end to simplify postprocessing
+@dataclass
+class MaterialInfo:
+    ID: str = field(default=None, init=False)
+    event_time: float  = field(default=None, init=False)
+    activity: str  = field(default=None, init=False)
+
+    def log_material_release(self, ID:str, start_time: float):
+        self.ID = ID
+        self.event_time = start_time
+        self.activity = "released"
+
+    def log_material_release(self, ID:str, start_time: float):
+        self.ID = ID
+        self.event_time = start_time
+        self.activity = "released"
 
 
 @dataclass
@@ -32,7 +50,7 @@ class Material(IDEntity):
     router: router.SimpleRouter
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
-    next_resource: resource.Resource = field(default=None, init=False)
+    next_resource: resources.Resource = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     finished: bool = field(default=False, init=False)
 
@@ -50,7 +68,7 @@ class Material(IDEntity):
     def request_process(self) -> None:
         self.env.request_process_of_resource(Request(self.next_process, self, self.next_resource))
     
-    def request_transport(self, transport_resource: resource.Resource, origin_resource: resource.Resource) -> None:
+    def request_transport(self, transport_resource: resources.Resource, origin_resource: resources.Resource) -> None:
         self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, self.next_resource))
 
     def set_next_process(self):
@@ -59,10 +77,10 @@ class Material(IDEntity):
         if not next_possible_processes:
             self.next_process = None
         else:
-            import random
-            self.next_process = random.choice(next_possible_processes)
+            #TODO: fix deterministic problem of petri nets!!
+            self.next_process = np.random.choice(next_possible_processes)
             self.process_model.update_marking_from_transition(self.next_process)
-            if self.next_process is None:
+            if not self.next_process:
                 self.set_next_process()
             self.set_next_resource()
 

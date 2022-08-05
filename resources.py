@@ -2,131 +2,27 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 import simpy
 import env
 import base
 import process
-# from process import Process, ProcessFactory
 import state
 import copy
-import material
+import store
 import control
-from time_model import TimeModelFactory, TimeModel
-import router
 from util import get_class_from_str
-
-
-@dataclass
-class Queue(simpy.FilterStore, base.IDEntity):
-    env: env.Environment
-    capacity: int = field(default=1)
-
-    def __post_init__(self):
-        super(Queue, self).__init__(self.env, self.capacity)
-
-
-@dataclass
-class QueueFactory:
-    data: dict
-    env: env.Environment
-    queues: List[Queue] = field(default_factory=list, init=False)
-
-    def create_queues(self):
-        queues = self.data['queues']
-        for values in queues.values():
-            self.add_queue(values)
-
-    def add_queue(self, values: dict):
-        queue = Queue(ID=values['ID'],
-                      description=values['description'],
-                      env=self.env,
-                      capacity=values['capacity']
-                      )
-        self.queues.append(queue)
-
-    def get_queue(self, ID) -> Queue:
-        return [q for q in self.queues if q.ID == ID].pop()
-
-    def get_queues(self, IDs: List[str]) -> List[Queue]:
-        return [q for q in self.queues if q.ID in IDs]
-
-
-@dataclass
-class Source(base.IDEntity):
-    env: env.Environment
-    material_factory: material.MaterialFactory
-    location: List[int, int]
-    material_type: str
-    time_model: TimeModel
-    router: router.SimpleRouter
-
-    def start_source(self):
-        self.env.process(self.create_material())
-
-    def create_material(self):
-        while True:
-            yield self.env.timeout(self.time_model.get_next_time())
-            __material = self.material_factory.create_material(type=self.material_type, router=self.router)
-            __material.process = self.env.process(__material.process_material())
-
-    def get_location(self) -> List[int, int]:
-        return self.location
-
-
-@dataclass
-class SourceFactory:
-    data: dict
-    env: env.Environment
-    material_factory: material.MaterialFactory
-    time_model_factory: TimeModelFactory
-    routers: dict
-
-    sources: List[Source] = field(default_factory=list, init=False)
-
-    def create_sources(self):
-        sources = self.data['sources']
-        for values in sources.values():
-            self.add_source(values)
-
-    def get_router(self, router: str):
-        return self.routers[router]
-
-    def add_source(self, values: dict):
-        router = self.get_router(values['router'])
-        time_model = self.time_model_factory.get_time_model(values['time_model_id'])
-        source = Source(ID=values['ID'], description=values['description'], location=values["location"],
-                        env=self.env, material_factory=self.material_factory,
-                        material_type=values['material_type'],
-                        time_model=time_model,
-                        router=router
-                        )
-        self.sources.append(source)
-
-    def start_sources(self):
-        for _source in self.sources:
-            _source.start_source()
-
-    def get_source(self, ID) -> Source:
-        return [s for s in self.sources if s.ID == ID].pop()
-
-    def get_sources(self, IDs: List[str]) -> List[Source]:
-        return [s for s in self.sources if s.ID in IDs]
-
-    def get_sources_with_material_type(self, __material_type: str):
-        return [s for s in self.sources if __material_type == s.material_type]
-
 
 
 @dataclass
 class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
     processes: List[process.Process]
-    location: List[int, int]
+    location: List[int]
     capacity: int = field(default=1)
-    input_queues: List[Queue] = field(default_factory=list, init=False)
-    output_queues: List[Queue] = field(default_factory=list, init=False)
+    input_queues: List[store.Queue] = field(default_factory=list, init=False)
+    output_queues: List[store.Queue] = field(default_factory=list, init=False)
     parts_made: int = field(default=0, init=False)
     available: simpy.Event = field(default=None, init=False)
     active: simpy.Event = field(default=None, init=False)
@@ -151,10 +47,10 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
     def set_controller(self, controller: control.Controller) -> None:
         self.controller = controller
 
-    def add_input_queues(self, input_queues: List[Queue]):
+    def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
 
-    def add_output_queues(self, output_queues: List[Queue]):
+    def add_output_queues(self, output_queues: List[store.Queue]):
         self.output_queues.extend(output_queues)
 
     def add_state(self, input_state: state.State) -> None:
@@ -276,12 +172,12 @@ def register_production_states_for_processes(resource: Resource, state_factory: 
     register_production_states(resource, states, _env)
 
 
-CONTROLLER_DICT: dict = {
+CONTROLLER_DICT: Dict = {
     'SimpleController': control.SimpleController,
     'TransportController': control.TransportController,
 }
 
-CONTROL_POLICY_DICT: dict = {
+CONTROL_POLICY_DICT: Dict = {
     'FIFO': control.FIFO_control_policy,
     'LIFO': control.LIFO_control_policy,
     'SPT': control.SPT_control_policy,
@@ -289,28 +185,27 @@ CONTROL_POLICY_DICT: dict = {
 }
 
 
-from typing import Dict
 @dataclass
 class ResourceFactory:
-    data: dict
+    data: Dict
     _env: env.Environment
     process_factory: process.ProcessFactory
     state_factory: state.StateFactory
-    queue_factory: QueueFactory
+    queue_factory: store.QueueFactory
 
     resources: List[Resource] = field(default_factory=list, init=False)
     controllers: List[control.Controller] = field(default_factory=list, init=False)
 
     def create_resources(self):
-        resources = self.data['resources']
+        resources: Dict = self.data['resources']
         for values in resources.values():
             self.add_resource(values)
 
-    def adjust_process_capacities(self, values: dict):
+    def adjust_process_capacities(self, values: Dict):
         for process, capacity in zip(values['processes'], values['process_capacity']):
             values['processes'] += [process]*(capacity - 1)
 
-    def add_queues_to_resource(self, _resource: Resource, values: dict):
+    def add_queues_to_resource(self, _resource: Resource, values: Dict):
         if 'input_queues' in values.keys():
             input_queues = self.queue_factory.get_queues(values['input_queues'])
             _resource.add_input_queues(input_queues)
@@ -319,7 +214,7 @@ class ResourceFactory:
             _resource.add_output_queues(output_queues)
 
 
-    def add_resource(self, values: dict):
+    def add_resource(self, values: Dict):
         states = self.state_factory.get_states(values['states'])
         if 'process_capacity' in values:
             self.adjust_process_capacities(values)
@@ -342,7 +237,7 @@ class ResourceFactory:
 
         controller_class = get_class_from_str(name=values['controller'], cls_dict=CONTROLLER_DICT)
         control_policy = get_class_from_str(name=values['control_policy'], cls_dict=CONTROL_POLICY_DICT)
-        controller = controller_class(control_policy, self._env)
+        controller: control.Controller = controller_class(control_policy, self._env)
         controller.set_resource(resource)
         self.controllers.append(controller)
 
