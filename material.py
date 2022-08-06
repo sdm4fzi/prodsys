@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from asyncio import transports
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Union
 
 from base import IDEntity
 import env
@@ -12,6 +12,9 @@ import resources
 from request import Request, TransportResquest
 import router
 import process
+import sink
+import source
+import logger
 
 from collections.abc import Iterable
 import numpy as np
@@ -23,28 +26,34 @@ def flatten(xs):
         else:
             yield x
 
-
-#TODO: add material logging add start and end to simplify postprocessing
 @dataclass
 class MaterialInfo:
-    ID: str = field(default=None, init=False)
-    event_time: float  = field(default=None, init=False)
-    activity: str  = field(default=None, init=False)
+    resource_ID: str = field(init=False)
+    state_ID: str = field(init=False)
+    event_time: float = field(init=False)
+    activity: str = field(init=False)
+    _material_ID: str = field(init=False)
 
-    def log_material_release(self, ID:str, start_time: float):
-        self.ID = ID
-        self.event_time = start_time
-        self.activity = "released"
+    def log_finish_material(self, resource: Union(resources.Resource, sink.Sink, source.Source), _material: Material, event_time: float):
+        self.resource_ID = resource.ID
+        self.state_ID = resource.ID
+        self.event_time = event_time
+        self._material_ID = _material.ID
+        self.activity = "finished material"
 
-    def log_material_release(self, ID:str, start_time: float):
-        self.ID = ID
-        self.event_time = start_time
-        self.activity = "released"
+    def log_create_material(self, resource: Union(resources.Resource, sink.Sink, source.Source), _material: Material, event_time: float) -> None:
+        self.resource_ID = resource.ID
+        self.state_ID = resource.ID
+        self.event_time = event_time
+        self._material_ID = _material.ID
+        self.activity = "created material"
+
 
 
 @dataclass
 class Material(IDEntity):
     env: env.Environment
+    material_type: str
     process_model: process.ProcessModel
     transport_process: process.Process
     router: router.SimpleRouter
@@ -53,29 +62,31 @@ class Material(IDEntity):
     next_resource: resources.Resource = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     finished: bool = field(default=False, init=False)
+    material_info: MaterialInfo = field(default=MaterialInfo)
 
     def process_material(self):
         self.finished_process = simpy.Event(self.env)
-        yield self.env.process(self.initial_placement())
+        self.material_info.log_create_material(resource=self.next_resource, _material=self, event_time=self.env.now)
+        yield self.env.process(self.transport_to_queue_of_resource())
         while self.next_process:
             self.request_process()
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
+        self.material_info.log_finish_material(resource=self.next_resource, _material=self, event_time=self.env.now)
         self.finished = True
-        yield self.next_resource.output_queues[0].get(filter=lambda x: x is self)
 
     def request_process(self) -> None:
         self.env.request_process_of_resource(Request(self.next_process, self, self.next_resource))
     
-    def request_transport(self, transport_resource: resources.Resource, origin_resource: resources.Resource) -> None:
-        self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, self.next_resource))
+    def request_transport(self, transport_resource: resources.Resource, origin_resource: resources.Resource, target_resource: Union(resources.Resource, sink.Sink)) -> None:
+        self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, target_resource))
 
     def set_next_process(self):
-        # TODO: this method has also to be adjusted for the process model
         next_possible_processes = self.process_model.get_next_possible_processes()
         if not next_possible_processes:
             self.next_process = None
+            self.next_resource = self.router.get_sink(self.material_type)
         else:
             #TODO: fix deterministic problem of petri nets!!
             self.next_process = np.random.choice(next_possible_processes)
@@ -84,20 +95,14 @@ class Material(IDEntity):
                 self.set_next_process()
             self.set_next_resource()
 
-
-    def initial_placement(self):
-        self.set_next_process()
-        yield self.next_resource.input_queues[0].put(self)
-
     def transport_to_queue_of_resource(self):
         origin_resource = self.next_resource
+        transport_resource = self.router.get_next_resource(self.transport_process)
         self.set_next_process()
-        if self.next_process is not None:
-            # TODO: implement here the waiting for a transport and yield the get after arrival of the transport unit
-            transport_resource = self.router.get_next_resource(self.transport_process)
-            self.request_transport(transport_resource, origin_resource)
-            yield self.finished_process
-            self.finished_process = simpy.Event(self.env)
+        
+        self.request_transport(transport_resource, origin_resource, self.next_resource)
+        yield self.finished_process
+        self.finished_process = simpy.Event(self.env)
 
     def set_next_resource(self):
         self.next_resource = self.router.get_next_resource(self.next_process)
@@ -114,6 +119,7 @@ class MaterialFactory:
     env: env.Environment
     process_factory: process.ProcessFactory
     materials: List[Material] = field(default_factory=list, init=False)
+    data_collecter: logger.Datacollector = field(default=False, init=False)
     material_counter = 0
 
     def create_material(self, type: str, router: router.SimpleRouter):
@@ -123,7 +129,9 @@ class MaterialFactory:
         transport_processes = self.process_factory.get_process(material_data['transport_process'])
         material = Material(ID=material_data['ID'] + f" instance N.{self.material_counter}",
                             description=material_data['description'], env=self.env,
-                            router=router, process_model=process_model, transport_process=transport_processes)
+                            router=router, process_model=process_model, transport_process=transport_processes,
+                            material_type=type, material_info=MaterialInfo())
+        self.data_collecter.register_patch(material.material_info, attr=['log_create_material', 'log_finish_material'], post=logger.post_monitor_material_info)
 
         self.material_counter += 1
         self.materials.append(material)

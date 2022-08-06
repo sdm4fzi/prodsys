@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 
-from material import MaterialFactory
+from material import MaterialFactory, MaterialInfo
 from time_model import TimeModelFactory
 from state import StateFactory
 from env import Environment
@@ -10,6 +10,7 @@ from process import ProcessFactory
 from resources import ResourceFactory
 from store import QueueFactory
 from source import SourceFactory
+from sink import SinkFactory
 from router import SimpleRouter, FIFO_router, random_router
 from logger import Datacollector
 import logger
@@ -60,11 +61,16 @@ if __name__ == '__main__':
 
     m_fac = MaterialFactory(data, env, pr_fac)
 
-    router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=random_router)
+    sk_fac = SinkFactory(data, env, m_fac, q_fac)
+    sk_fac.create_sinks()
+
+    print("sources created")
+
+    router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=random_router, sink_registry=sk_fac)
     # router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=FIFO_router)
     router_dict = {'SimpleRouter': router}
 
-    s_fac = SourceFactory(data, env, m_fac, tm_fac, router_dict)
+    s_fac = SourceFactory(data, env, m_fac, tm_fac, q_fac, router_dict)
     s_fac.create_sources()
 
     print("sources created")
@@ -83,6 +89,8 @@ if __name__ == '__main__':
         for __state in all_states:
              dc.register_patch(__state.state_info, attr=['log_start_state', 'log_start_interrupt_state', 'log_end_interrupt_state', 'log_end_state'], 
                                post=logger.post_monitor_state_info)
+
+    m_fac.data_collecter = dc       
 
     import time
 
@@ -111,7 +119,7 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(dc.data['Resources'])
     df['Activity'] = pd.Categorical(df['Activity'], 
-                      categories=['end state', 'end interrupt', 'start state', 'start interrupt'],
+                      categories=['created material', 'end state', 'end interrupt', 'start state', 'start interrupt', 'finished material'],
                       ordered=True)
     # df['activity_index'] = 
     df.sort_values(by=['Time', 'Activity'], inplace=True)

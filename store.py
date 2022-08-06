@@ -29,6 +29,8 @@ class QueueFactory:
             self.add_queue(values)
 
     def add_queue(self, values: Dict):
+        if 'capacity' not in values.keys():
+            values['capacity'] = float('inf')
         queue = Queue(ID=values['ID'],
                       description=values['description'],
                       _env=self._env,

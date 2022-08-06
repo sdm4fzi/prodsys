@@ -1,4 +1,6 @@
-from typing import List
+from __future__ import annotations
+
+from typing import List, Dict
 from dataclasses import dataclass, field
 
 import base
@@ -6,8 +8,7 @@ import env
 import material
 import time_model
 import router
-
-
+import store
 
 @dataclass
 class Source(base.IDEntity):
@@ -17,15 +18,20 @@ class Source(base.IDEntity):
     material_type: str
     time_model: time_model.TimeModel
     router: router.SimpleRouter
+    output_queues: List[store.Queue] = field(default_factory=list, init=False)
+
+    def add_output_queues(self, output_queues: List[store.Queue]):
+        self.output_queues.extend(output_queues)
 
     def start_source(self):
-        self.env.process(self.create_material())
+        self.env.process(self.create_material_loop())
 
-    def create_material(self):
+    def create_material_loop(self):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
             __material.process = self.env.process(__material.process_material())
+            __material.next_resource = self
 
     def get_location(self) -> List[int]:
         return self.location
@@ -37,6 +43,7 @@ class SourceFactory:
     env: env.Environment
     material_factory: material.MaterialFactory
     time_model_factory: time_model.TimeModelFactory
+    queue_factory: store.QueueFactory
     routers: dict
 
     sources: List[Source] = field(default_factory=list, init=False)
@@ -58,7 +65,13 @@ class SourceFactory:
                         time_model=time_model,
                         router=router
                         )
+        self.add_queues_to_source(source, values)
         self.sources.append(source)
+
+    def add_queues_to_source(self, _source: Source, values: Dict):
+        if 'output_queues' in values.keys():
+            output_queues = self.queue_factory.get_queues(values['output_queues'])
+            _source.add_output_queues(output_queues)
 
     def start_sources(self):
         for _source in self.sources:

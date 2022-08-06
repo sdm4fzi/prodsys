@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from functools import partial, wraps
 
-from material import Material
+import material
 import state
 import resources
+import source
 
 
 class Datacollector:
@@ -91,17 +94,6 @@ def post_monitor_state(data, __state: state.State):
     )
     data.append(item)
 
-
-# def post_monitor_state_info(data, state_info: state.StateInfo):
-#     item = (
-#         state_info.event_time,
-#         state_info._resource_ID,
-#         state_info.ID,
-#         state_info.activity,
-#         state_info.expected_end_time
-#     )
-#     data.append(item)
-
 def post_monitor_state_info(data, state_info: state.StateInfo):
     item = {
         'Time': state_info.event_time,
@@ -111,5 +103,16 @@ def post_monitor_state_info(data, state_info: state.StateInfo):
         'Expected End Time': state_info.expected_end_time,
         'Material': state_info._material_ID,
         'Target location': state_info._target_ID
+    }
+    data.append(item)
+
+def post_monitor_material_info(data, material_info: material.MaterialInfo):
+
+    item = {
+        'Time': material_info.event_time,
+        'Resource': material_info.resource_ID,
+        'State': material_info.state_ID,
+        'Activity': material_info.activity,
+        'Material': material_info._material_ID
     }
     data.append(item)

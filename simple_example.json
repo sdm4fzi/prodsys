@@ -184,27 +184,35 @@
         "Queue1": {
             "ID": "IQ1",
             "description": "Input-queue 1 for R1 and R2",
-            "capacity": 250
+            "capacity": 25
         },
         "Queue2": {
             "ID": "OQ1",
             "description": "Output-queue 1 for R1",
-            "capacity": 250
+            "capacity": 25
         },
         "Queue3": {
             "ID": "OQ2",
             "description": "Output-queue 2 for R2",
-            "capacity": 250
+            "capacity": 25
         },
         "Queue4": {
             "ID": "IQ2",
             "description": "Input-queue 2 for R3",
-            "capacity": 250
+            "capacity": 25
         },
         "Queue5": {
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
-            "capacity": 250
+            "capacity": 25
+        },
+        "Queue6": {
+            "ID": "SourceQueue",
+            "description": "Output-Queue for all sources"
+        },
+        "Queue7": {
+            "ID": "SinkQueue",
+            "description": "Input-Queue for all sinks"
         }
     },
     "sources": {
@@ -214,7 +222,8 @@
             "location": [0, 0],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_1",
-            "router": "SimpleRouter"
+            "router": "SimpleRouter",
+            "output_queues": ["OQ6"]
         },
         "Source2": {
             "ID": "S2",
@@ -222,7 +231,8 @@
             "location": [30, 30],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_2",
-            "router": "SimpleRouter"
+            "router": "SimpleRouter",
+            "output_queues": ["OQ6"]
         },
         "Source3": {
             "ID": "S3",
@@ -230,7 +240,31 @@
             "location": [40, 30],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_3",
-            "router": "SimpleRouter"
+            "router": "SimpleRouter",
+            "output_queues": ["OQ6"]
+        }
+    },
+    "sinks": {
+        "Sink1": {
+            "ID": "SK1",
+            "description": "Sink 1",
+            "location": [50, 50],
+            "material_type": "Material_1",
+            "input_queues": ["OQ7"]
+        },
+        "Sink2": {
+            "ID": "SK2",
+            "description": "Sink 2",
+            "location": [55, 50],
+            "material_type": "Material_2",
+            "input_queues": ["OQ7"]
+        },
+        "Sink3": {
+            "ID": "S3",
+            "description": "Sink 3",
+            "location": [45, 50],
+            "material_type": "Material_3",
+            "input_queues": ["OQ7"]
         }
     },
     "materials": {
