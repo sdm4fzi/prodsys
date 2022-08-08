@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Tuple, Type
+from typing import List, Tuple, Type, Union
 from copy import copy
 import pm4py
 
@@ -134,7 +134,7 @@ class PetriNetProcessModel(ProcessModel):
         self.poss_trans = list(all_enabled_trans)        
         return [trans.properties['Process'] for trans in self.poss_trans]
 
-    def update_marking_from_transition(self, chosen_process: Process) -> None:
+    def update_marking_from_transition(self, chosen_process: Union[Process, str]) -> None:
         for trans in self.poss_trans:
             if trans.properties['Process'] == chosen_process:
                 self.current_marking = pm4py.objects.petri_net.semantics.ClassicSemantics().execute(trans, self.net, self.current_marking)

@@ -34,21 +34,21 @@ class MaterialInfo:
     activity: str = field(init=False)
     _material_ID: str = field(init=False)
 
-    def log_finish_material(self, resource: Union(resources.Resource, sink.Sink, source.Source), _material: Material, event_time: float):
+    def log_finish_material(self, resource: Union[resources.Resource, sink.Sink, source.Source], _material: Material, event_time: float):
         self.resource_ID = resource.ID
         self.state_ID = resource.ID
         self.event_time = event_time
         self._material_ID = _material.ID
         self.activity = "finished material"
 
-    def log_create_material(self, resource: Union(resources.Resource, sink.Sink, source.Source), _material: Material, event_time: float) -> None:
+    def log_create_material(self, resource: Union[resources.Resource, sink.Sink, source.Source], _material: Material, event_time: float) -> None:
         self.resource_ID = resource.ID
         self.state_ID = resource.ID
         self.event_time = event_time
         self._material_ID = _material.ID
         self.activity = "created material"
 
-
+Location = Union[resources.Resource, source.Source, sink.Sink]
 
 @dataclass
 class Material(IDEntity):
@@ -59,7 +59,7 @@ class Material(IDEntity):
     router: router.SimpleRouter
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
-    next_resource: resources.Resource = field(default=None, init=False)
+    next_resource: Location = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     finished: bool = field(default=False, init=False)
     material_info: MaterialInfo = field(default=MaterialInfo)
@@ -79,7 +79,7 @@ class Material(IDEntity):
     def request_process(self) -> None:
         self.env.request_process_of_resource(Request(self.next_process, self, self.next_resource))
     
-    def request_transport(self, transport_resource: resources.Resource, origin_resource: resources.Resource, target_resource: Union(resources.Resource, sink.Sink)) -> None:
+    def request_transport(self, transport_resource: resources.Resource, origin_resource: Location, target_resource: Location) -> None:
         self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, target_resource))
 
     def set_next_process(self):
@@ -90,9 +90,11 @@ class Material(IDEntity):
         else:
             #TODO: fix deterministic problem of petri nets!!
             self.next_process = np.random.choice(next_possible_processes)
+
             self.process_model.update_marking_from_transition(self.next_process)
-            if not self.next_process:
+            if self.next_process == SKIP_LABEL:
                 self.set_next_process()
+
             self.set_next_resource()
 
     def transport_to_queue_of_resource(self):
@@ -111,6 +113,9 @@ class Material(IDEntity):
 @dataclass
 class ConcreteMaterial(Material):
     due_time: float = None
+
+
+SKIP_LABEL = "skip"
 
 
 @dataclass
@@ -147,7 +152,7 @@ class MaterialFactory:
             net, initial_marking, final_marking = pm4py.read_pnml(data)
             for transition in net.transitions:
                 if not transition.label:
-                    transition_process = None
+                    transition_process = SKIP_LABEL
                 else:
                     transition_process = self.process_factory.get_process(transition.label)
                 transition.properties['Process'] = transition_process

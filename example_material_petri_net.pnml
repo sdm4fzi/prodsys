@@ -2,6 +2,31 @@
 <pnml>
   <net id="net1" type="http://www.pnml.org/version-2009/grammar/pnmlcoremodel">
     <page id="n0">
+      <place id="State5">
+        <name>
+          <text>State5</text>
+        </name>
+      </place>
+      <place id="Sink">
+        <name>
+          <text>Sink</text>
+        </name>
+      </place>
+      <place id="State2">
+        <name>
+          <text>State2</text>
+        </name>
+      </place>
+      <place id="State6">
+        <name>
+          <text>State6</text>
+        </name>
+      </place>
+      <place id="State4">
+        <name>
+          <text>State4</text>
+        </name>
+      </place>
       <place id="Source">
         <name>
           <text>Source</text>
@@ -13,31 +38,6 @@
       <place id="State3">
         <name>
           <text>State3</text>
-        </name>
-      </place>
-      <place id="State4">
-        <name>
-          <text>State4</text>
-        </name>
-      </place>
-      <place id="State2">
-        <name>
-          <text>State2</text>
-        </name>
-      </place>
-      <place id="State5">
-        <name>
-          <text>State5</text>
-        </name>
-      </place>
-      <place id="State6">
-        <name>
-          <text>State6</text>
-        </name>
-      </place>
-      <place id="Sink">
-        <name>
-          <text>Sink</text>
         </name>
       </place>
       <transition id="P1">
@@ -54,7 +54,7 @@
         <name>
           <text>skip_10</text>
         </name>
-        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="e7a09d8c-d66f-4cc7-b8d3-70d38d2f8545"/>
+        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="60caf662-7acf-4384-b652-6a31fa393026"/>
       </transition>
       <transition id="P2">
         <name>
@@ -65,27 +65,27 @@
         <name>
           <text>skip_11</text>
         </name>
-        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="49d6d0da-f20d-471c-b34b-5ae8af75b3f3"/>
+        <toolspecific tool="ProM" version="6.4" activity="$invisible$" localNodeID="2c2dc4bb-dddd-439c-88ca-512c835a50a3"/>
       </transition>
       <transition id="P4">
         <name>
           <text>P1</text>
         </name>
       </transition>
-      <arc id="1604325376736" source="Source" target="P1"/>
-      <arc id="1604325377024" source="skip_11" target="State2"/>
-      <arc id="1604325376832" source="Source" target="skip_11"/>
-      <arc id="1604325377120" source="skip_11" target="State3"/>
-      <arc id="1604325376928" source="P1" target="State4"/>
-      <arc id="1604325335104" source="P4" target="Sink"/>
-      <arc id="1604325221136" source="State2" target="P2"/>
-      <arc id="1604325221040" source="State3" target="P3"/>
-      <arc id="1604325220944" source="P2" target="State5"/>
-      <arc id="1604325220848" source="P3" target="State6"/>
-      <arc id="1604325220752" source="State5" target="skip_10"/>
-      <arc id="1604325220656" source="State6" target="skip_10"/>
-      <arc id="1604325220560" source="skip_10" target="State4"/>
-      <arc id="1604325220464" source="State4" target="P4"/>
+      <arc id="2943823494112" source="Source" target="P1"/>
+      <arc id="2943823493920" source="Source" target="skip_11"/>
+      <arc id="2943823493440" source="P1" target="State4"/>
+      <arc id="2943823468672" source="skip_11" target="State3"/>
+      <arc id="2943823493536" source="skip_11" target="State2"/>
+      <arc id="2942325599296" source="State6" target="skip_10"/>
+      <arc id="2942325599488" source="skip_10" target="State4"/>
+      <arc id="2942312010272" source="P4" target="Sink"/>
+      <arc id="2943823467856" source="State2" target="P2"/>
+      <arc id="2942325598960" source="State3" target="P3"/>
+      <arc id="2942325599536" source="P2" target="State5"/>
+      <arc id="2942325598864" source="P3" target="State6"/>
+      <arc id="2942325599728" source="State5" target="skip_10"/>
+      <arc id="2942325598480" source="State4" target="P4"/>
     </page>
     <finalmarkings>
       <marking>

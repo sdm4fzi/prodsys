@@ -16,8 +16,8 @@ class Sink(base.IDEntity):
     material_type: str
     input_queues: List[store.Queue] = field(default_factory=list, init=False)
 
-    def add_input_queues(self, output_queues: List[store.Queue]):
-        self.input_queues.extend(output_queues)
+    def add_input_queues(self, input_queues: List[store.Queue]):
+        self.input_queues.extend(input_queues)
 
     def get_location(self) -> List[int]:
         return self.location
@@ -42,11 +42,12 @@ class SinkFactory:
                         env=self.env, material_factory=self.material_factory,
                         material_type=values['material_type']
                         )
+        self.add_queues_to_sink(sink, values)
         self.sinks.append(sink)
 
-    def add_queues_to_ssink(self, _sink: Sink, values: Dict):
+    def add_queues_to_sink(self, _sink: Sink, values: Dict):
         if 'input_queues' in values.keys():
-            input_queues = self.queue_factory.get_queues(values['output_queues'])
+            input_queues = self.queue_factory.get_queues(values['input_queues'])
             _sink.add_input_queues(input_queues)
 
     def get_sink(self, ID) -> Sink:

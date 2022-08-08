@@ -34,7 +34,7 @@
                 "ID": "function_time_model_4",
                 "description": "exponential distribution time model with 100 minutes",
                 "parameters": [
-                    42
+                    46
                 ],
                 "batch_size": 100,
                 "distribution_function": "exponential"
@@ -223,7 +223,7 @@
             "time_model_id": "function_time_model_4",
             "material_type": "Material_1",
             "router": "SimpleRouter",
-            "output_queues": ["OQ6"]
+            "output_queues": ["SourceQueue"]
         },
         "Source2": {
             "ID": "S2",
@@ -232,7 +232,7 @@
             "time_model_id": "function_time_model_4",
             "material_type": "Material_2",
             "router": "SimpleRouter",
-            "output_queues": ["OQ6"]
+            "output_queues": ["SourceQueue"]
         },
         "Source3": {
             "ID": "S3",
@@ -241,7 +241,7 @@
             "time_model_id": "function_time_model_4",
             "material_type": "Material_3",
             "router": "SimpleRouter",
-            "output_queues": ["OQ6"]
+            "output_queues": ["SourceQueue"]
         }
     },
     "sinks": {
@@ -250,21 +250,21 @@
             "description": "Sink 1",
             "location": [50, 50],
             "material_type": "Material_1",
-            "input_queues": ["OQ7"]
+            "input_queues": ["SinkQueue"]
         },
         "Sink2": {
             "ID": "SK2",
             "description": "Sink 2",
             "location": [55, 50],
             "material_type": "Material_2",
-            "input_queues": ["OQ7"]
+            "input_queues": ["SinkQueue"]
         },
         "Sink3": {
-            "ID": "S3",
+            "ID": "SK3",
             "description": "Sink 3",
             "location": [45, 50],
             "material_type": "Material_3",
-            "input_queues": ["OQ7"]
+            "input_queues": ["SinkQueue"]
         }
     },
     "materials": {

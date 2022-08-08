@@ -64,7 +64,7 @@ if __name__ == '__main__':
     sk_fac = SinkFactory(data, env, m_fac, q_fac)
     sk_fac.create_sinks()
 
-    print("sources created")
+    print("sinks created")
 
     router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=random_router, sink_registry=sk_fac)
     # router = SimpleRouter(env=env, resource_process_registry=r_fac, routing_heuristic=FIFO_router)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     t_0 = time.perf_counter()
 
     # env.run(10000)
-    env.run(4000)
+    env.run(40000)
 
     print("____________\n")
 

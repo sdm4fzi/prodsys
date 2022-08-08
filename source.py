@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import List, Dict
 from dataclasses import dataclass, field
 
+import simpy
+
 import base
 import env
 import material
@@ -30,6 +32,11 @@ class Source(base.IDEntity):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
             __material = self.material_factory.create_material(type=self.material_type, router=self.router)
+            events = []
+            for queue in self.output_queues:
+                events.append(queue.put(__material))
+            yield simpy.AllOf(self.env, events)
+
             __material.process = self.env.process(__material.process_material())
             __material.next_resource = self
 
