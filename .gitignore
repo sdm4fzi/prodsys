@@ -2,6 +2,7 @@
 *.xml
 *.png
 *.prof
+*.csv
 test/
 ini/
 .ipynb_checkpoints/

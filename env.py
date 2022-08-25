@@ -16,9 +16,6 @@ class Environment(simpy.Environment):
     def __init__(self) -> None:
         super().__init__()
 
-    def set_resource_factory(self, resource_factory: resources.ResourceFactory) -> None:
-        self.resource_factory = resource_factory
-
     def get_next_process(self, material: material.Material):
         pass
 

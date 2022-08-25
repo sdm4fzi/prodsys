@@ -11,6 +11,24 @@ import source
 class Datacollector:
     data = {'Resources': []}
 
+    def log_data_to_csv(self, filepath: str):
+        import pandas as pd
+
+        df = pd.DataFrame(self.data['Resources'])
+        df['Activity'] = pd.Categorical(df['Activity'], 
+                            categories=[
+                                'created material', 
+                                'end state', 
+                                'end interrupt', 
+                                'start state', 
+                                'start interrupt', 
+                                'finished material'],
+                            ordered=True)
+        #TODO: maybe delete this line
+        df.sort_values(by=['Time', 'Activity'], inplace=True)
+
+        df.to_csv(filepath)
+
     def patch_state(self, __resource, attr, pre=None, post=None):
         """Patch *state* so that it calls the callable *pre* before each
         put/get/request/release operation and the callable *post* after each
