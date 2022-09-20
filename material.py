@@ -15,6 +15,8 @@ import process
 import sink
 import source
 import logger
+import logging
+logging.basicConfig(filename='example2.log', encoding='utf-8', level=logging.DEBUG)
 
 from collections.abc import Iterable
 import numpy as np

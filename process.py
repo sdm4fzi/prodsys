@@ -131,7 +131,12 @@ class PetriNetProcessModel(ProcessModel):
         if not self.semantics.enabled_transitions(self.net, self.current_marking):  # supports nets with possible deadlocks
             return None
         all_enabled_trans = self.semantics.enabled_transitions(self.net, self.current_marking)
-        self.poss_trans = list(all_enabled_trans)        
+        self.poss_trans = list(all_enabled_trans)   
+        before = [x for x in self.poss_trans]
+        self.poss_trans.sort(key=lambda x: x.name)
+        if before != self.poss_trans:
+            "________________________________________________"
+
         return [trans.properties['Process'] for trans in self.poss_trans]
 
     def update_marking_from_transition(self, chosen_process: Union[Process, str]) -> None:

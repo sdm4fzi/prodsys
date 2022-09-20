@@ -39,4 +39,8 @@ def FIFO_router(possible_resources: List[resources.Resource]) -> resources.Resou
     return possible_resources.pop()
 
 def random_router(possible_resources: List[resources.Resource]) -> resources.Resource:
+    before = [x for x in possible_resources]
+    possible_resources.sort(key=lambda x: x.ID)
+    if possible_resources != before:
+        print("###################################")
     return np.random.choice(possible_resources)

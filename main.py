@@ -24,8 +24,8 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    np.random.seed(22)
-    random.seed(22)
+    np.random.seed(23)
+    random.seed(23)
 
     env = Environment()
 
