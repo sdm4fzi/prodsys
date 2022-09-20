@@ -6,6 +6,9 @@ import plotly.figure_factory as ff
 import plotly.express as px
 import numpy as np
 from dataclasses import dataclass, field
+import math
+
+WARM_UP_CUT_OFF = 0.15
 
 @dataclass
 class PostProcessor:
@@ -73,7 +76,7 @@ class PostProcessor:
         pn_visualizer.save(gviz, "results/inductive_frequency.png")
 
 
-    def get_throughput_data_frame(self):
+    def get_throughput_data_frame(self) -> pd.DataFrame:
         df = self.get_prepared_df()
         df_finished_material = self.get_finished_material_df()
         min = df_finished_material.groupby(by='Material')['Time'].min()
@@ -85,8 +88,16 @@ class PostProcessor:
 
         df_tp = pd.merge(df[['Material_type', 'Material']].drop_duplicates(), tp.to_frame().reset_index())
         df_tp = pd.merge(df_tp, min.to_frame().reset_index())
+        df_tp = pd.merge(df_tp, max.to_frame().reset_index())
 
         return df_tp
+
+    def get_aggregated_throughput_data_frame(self) -> pd.DataFrame:
+        df = self.get_throughput_data_frame()
+        max_time = df['End_time'].max()
+        df = df.loc[df['Start_time'] >= max_time * WARM_UP_CUT_OFF]
+        df = df.groupby(by=['Material_type'])['Throughput_time'].mean()
+        return df
 
     def plot_throughput_time_distribution(self):
         df_tp = self.get_throughput_data_frame()
@@ -134,7 +145,7 @@ class PostProcessor:
 
         return df
 
-    def plot_time_per_state_of_resources(self):
+    def get_time_per_state_of_resources(self) -> pd.DataFrame:
         df = self.get_df_with_machine_states()
 
         df_time_per_state = df.groupby(['Resource', 'Time_type'])['time_increment'].sum()
@@ -145,13 +156,16 @@ class PostProcessor:
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time)
         df_time_per_state['percentage'] = df_time_per_state['time_increment'] / df_time_per_state['resource_time']
 
+        return df_time_per_state
+
+
+    def plot_time_per_state_of_resources(self):
+        df_time_per_state = self.get_time_per_state_of_resources()
 
         fig = px.bar(df_time_per_state, x="Resource", y="time_increment", color="Time_type", color_discrete_map={'PR': 'green', 'SB': 'yellow', 'UD': 'red' })
         fig.show()
 
-    def get_df_with_WIP(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states()
-
+    def get_WIP_KPI(self, df) -> pd.DataFrame:
         CREATED_CONDITION = df['Activity'] == "created material"
         FINISHED_CONDITION = df['Activity'] == "finished material"
 
@@ -160,22 +174,93 @@ class PostProcessor:
         df.loc[FINISHED_CONDITION, 'WIP_Increment'] = -1
 
         df['WIP'] = df['WIP_Increment'].cumsum()
+
+        return df
+
+
+    def get_df_with_WIP(self) -> pd.DataFrame:
+        df = self.get_df_with_machine_states()
+        return self.get_WIP_KPI(df)
+
+    def get_df_with_WIP_per_product(self) -> pd.DataFrame:
+        df = self.get_df_with_machine_states()
+        df = df.reset_index()
+        for material_type in df['Material_type'].unique():
+            if material_type != material_type:
+                continue
+            df_temp = df.loc[df['Material_type'] == material_type].copy()
+            df_temp = self.get_WIP_KPI(df_temp)
+            
+            df = df.combine_first(df_temp)
+
+        return df
+
+
+
+
+    def get_df_with_aggregated_WIP(self) -> pd.DataFrame:
+        df = self.get_df_with_WIP_per_product()
+        df_total_wip = self.get_df_with_WIP()
+        df_total_wip['Material_type'] = 'Total'
+        df = pd.concat([df, df_total_wip])
+
+        max_time = df['Time'].max()
+        
+        df = df[df['Time'] >= max_time * WARM_UP_CUT_OFF]
+        group = ['Material_type']
+        aggregation_column = ['WIP']
+
+        df = df.groupby(by=group)['WIP'].mean()
+
         return df
     
     def plot_WIP(self):
         df = self.get_df_with_WIP()
         fig = px.scatter(df, x="Time", y="WIP")
+        df['Material_type'] = 'Total'
+
+
+        df_per_material = self.get_df_with_WIP_per_product()
+
+        df = pd.concat([df, df_per_material])
+        fig = px.scatter(df, x='Time', y='WIP', color='Material_type')
 
         fig.show()
 
+    def print_aggregated_data(self):
+        print("WIP")
+        print("\t", self.get_df_with_aggregated_WIP())
+
+        print("\nThroughput time")
+        print("\t", self.get_aggregated_throughput_data_frame())
+
+        print("\nResource states")
+
+        print("\t", self.get_time_per_state_of_resources().set_index(['Resource', 'Time_type']))
+
 
 if __name__ == '__main__':
-    p = PostProcessor(filepath='data/data.csv')
+    p = PostProcessor(filepath='data/data22.csv')
 
-    p.plot_time_per_state_of_resources()
-    p.plot_WIP()
+
+    df = p.get_df_with_aggregated_WIP()
+
+    print(df)
+
+    # p.plot_WIP()
+    
+    df = p.get_time_per_state_of_resources()
+
+    print(df)
+
+    # p.plot_time_per_state_of_resources()
+
+    df = p.get_aggregated_throughput_data_frame()
+    print(df)
+
     p.plot_throughput_over_time()
-    p.plot_throughput_time_distribution()
-    p.plot_inductive_bpmn()
-    p.save_inductive_petri_net()
+
+    # p.plot_inductive_bpmn()
+    # p.save_inductive_petri_net()
+
 

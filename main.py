@@ -98,14 +98,15 @@ if __name__ == '__main__':
 
     print_util.print_simulation_info(env, m_fac, r_fac, q_fac, t_0, t_1)    
 
-    dc.log_data_to_csv(filepath="data/data22.csv")
+    dc.log_data_to_csv(filepath="data/data21.csv")
 
     from post_processing import PostProcessor
 
-    p = PostProcessor(filepath="data/data22.csv")
-    p.plot_time_per_state_of_resources()
-    p.plot_WIP()
-    p.plot_throughput_over_time()
-    p.plot_throughput_time_distribution()
-    p.plot_inductive_bpmn()
-    p.save_inductive_petri_net()
+    p = PostProcessor(filepath="data/data21.csv")
+    p.print_aggregated_data()
+    # p.plot_time_per_state_of_resources()
+    # p.plot_WIP()
+    # p.plot_throughput_over_time()
+    # p.plot_throughput_time_distribution()
+    # p.plot_inductive_bpmn()
+    # p.save_inductive_petri_net()
