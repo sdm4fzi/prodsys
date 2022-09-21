@@ -56,8 +56,7 @@ class SourceFactory:
     sources: List[Source] = field(default_factory=list, init=False)
 
     def create_sources(self):
-        sources = self.data['sources']
-        for values in sources.values():
+        for values in self.data.values():
             self.add_source(values)
 
     def get_router(self, router: str):

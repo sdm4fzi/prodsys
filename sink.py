@@ -33,8 +33,7 @@ class SinkFactory:
     sinks: List[Sink] = field(default_factory=list, init=False)
 
     def create_sinks(self):
-        sources = self.data['sinks']
-        for values in sources.values():
+        for values in self.data.values():
             self.add_sink(values)
 
     def add_sink(self, values: dict):

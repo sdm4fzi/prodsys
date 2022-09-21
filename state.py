@@ -8,11 +8,10 @@ from typing import List, Type
 import simpy
 import env
 import resources
-from time_model import TimeModel
-from base import IDEntity
+import time_model
+import base
 from util import get_class_from_str
 import material
-from time_model import TimeModelFactory
 
 
 
@@ -53,9 +52,9 @@ class StateInfo:
         self.activity = "end state"
 
 @dataclass
-class State(ABC, IDEntity):
+class State(ABC, base.IDEntity):
     env: env.Environment
-    time_model: TimeModel
+    time_model: time_model.TimeModel
     active: simpy.Event = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     _resource: resource.Resource = field(default=None, init=False)
@@ -252,13 +251,12 @@ STATE_DICT: dict = {
 class StateFactory:
     data: dict
     env: env.Environment
-    time_model_factory: TimeModelFactory
+    time_model_factory: time_model.TimeModelFactory
 
     states: List[State] = field(default_factory=list)
 
     def create_states(self):
-        states = self.data['states']
-        for cls_name, items in states.items():
+        for cls_name, items in self.data.items():
             cls: Type[State] = get_class_from_str(cls_name, STATE_DICT)
             for values in items.values():
                 self.add_states(cls, values)

@@ -197,8 +197,7 @@ class ResourceFactory:
     controllers: List[control.Controller] = field(default_factory=list, init=False)
 
     def create_resources(self):
-        resources: Dict = self.data['resources']
-        for values in resources.values():
+        for values in self.data.values():
             self.add_resource(values)
 
     def adjust_process_capacities(self, values: Dict):

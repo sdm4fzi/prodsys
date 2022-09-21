@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import List, Dict
 from dataclasses import dataclass, field
 
@@ -24,8 +25,7 @@ class QueueFactory:
     queues: List[Queue] = field(default_factory=list, init=False)
 
     def create_queues(self):
-        queues: Dict = self.data['queues']
-        for values in queues.values():
+        for values in self.data.values():
             self.add_queue(values)
 
     def add_queue(self, values: Dict):

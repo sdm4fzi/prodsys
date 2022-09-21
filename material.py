@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from abc import ABC
-from asyncio import transports
 from dataclasses import dataclass, field
 from typing import List, Union
 
-from base import IDEntity
+import base
 import env
 import simpy
 import resources
-from request import Request, TransportResquest
+import request
 import router
 import process
 import sink
@@ -50,10 +49,8 @@ class MaterialInfo:
         self._material_ID = _material.ID
         self.activity = "created material"
 
-Location = Union[resources.Resource, source.Source, sink.Sink]
-
 @dataclass
-class Material(IDEntity):
+class Material(base.IDEntity):
     env: env.Environment
     material_type: str
     process_model: process.ProcessModel
@@ -61,7 +58,7 @@ class Material(IDEntity):
     router: router.SimpleRouter
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
-    next_resource: Location = field(default=None, init=False)
+    next_resource: env.Location = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     finished: bool = field(default=False, init=False)
     material_info: MaterialInfo = field(default=MaterialInfo)
@@ -79,10 +76,10 @@ class Material(IDEntity):
         self.finished = True
 
     def request_process(self) -> None:
-        self.env.request_process_of_resource(Request(self.next_process, self, self.next_resource))
+        self.env.request_process_of_resource(request.Request(self.next_process, self, self.next_resource))
     
-    def request_transport(self, transport_resource: resources.Resource, origin_resource: Location, target_resource: Location) -> None:
-        self.env.request_process_of_resource(TransportResquest(self.transport_process, self, transport_resource, origin_resource, target_resource))
+    def request_transport(self, transport_resource: resources.Resource, origin_resource: env.Location, target_resource: env.Location) -> None:
+        self.env.request_process_of_resource(request.TransportResquest(self.transport_process, self, transport_resource, origin_resource, target_resource))
 
     def set_next_process(self):
         next_possible_processes = self.process_model.get_next_possible_processes()
@@ -130,7 +127,7 @@ class MaterialFactory:
     material_counter = 0
 
     def create_material(self, type: str, router: router.SimpleRouter):
-        material_data = self.data['materials'][type]
+        material_data = self.data[type]
         process_model = self.create_process_model(material_data)
 
         transport_processes = self.process_factory.get_process(material_data['transport_process'])
@@ -168,7 +165,7 @@ class MaterialFactory:
 
 
 @dataclass
-class Order(ABC, IDEntity):
+class Order(ABC, base.IDEntity):
     target_materials: List[Material]
     release_time: float
     due_time: float

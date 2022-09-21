@@ -1,20 +1,22 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Tuple, Type, Union
 from copy import copy
 import pm4py
 
-from base import IDEntity
-from time_model import TimeModel, TimeModelFactory
+import base
+import time_model
 from util import get_class_from_str
 
 
 @dataclass
-class Process(ABC, IDEntity):
+class Process(ABC, base.IDEntity):
     """
     Abstract process base class
     """
-    time_model: TimeModel
+    time_model: time_model.TimeModelFactory
     # raw_material: List[material.Material]
     # target_material: List[material.Material]
 
@@ -56,12 +58,11 @@ PROCESS_DICT: dict = {
 @dataclass
 class ProcessFactory:
     data: dict
-    time_model_factory: TimeModelFactory
+    time_model_factory: time_model.TimeModelFactory
     processes: List[Process] = field(default_factory=list)
 
     def create_processes(self):
-        processes = self.data['processes']
-        for cls_name, items in processes.items():
+        for cls_name, items in self.data.items():
             cls: Type[Process] = get_class_from_str(cls_name, PROCESS_DICT)
             for values in items.values():
                 self.add_processes(cls, values)

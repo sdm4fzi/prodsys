@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -8,8 +10,7 @@ from util import get_class_from_str
 import numpy as np
 from numpy.random import exponential, normal
 
-from base import IDEntity
-
+import base
 
 def get_constant_list(parameters: Tuple[float], size: int) -> List[float]:
     return [parameters[0]] * size
@@ -32,7 +33,7 @@ FUNCTION_DICT: dict = {'normal': get_normal_list,
 # TODO: Time model zu model machen und alex puchta fragen wegen get next time für einen definierten Prozess der
 #  determinishh modelliert ist
 
-class TimeModel(ABC, IDEntity):
+class TimeModel(ABC, base.IDEntity):
 
     @abstractmethod
     def get_next_time(self, originin, target) -> float:
@@ -117,8 +118,7 @@ class TimeModelFactory:
     time_models: List[TimeModel] = field(default_factory=list)
 
     def create_time_models(self):
-        time_models: Dict = self.data['time_models']
-        for cls_name, items in time_models.items():
+        for cls_name, items in self.data.items():
             cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
             for values in items.values():
                 self.add_time_model(cls, values)
