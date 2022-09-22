@@ -67,7 +67,7 @@
         }
     },
     "states": {
-        "BreakDownStates": {
+        "BreakDownState": {
             "BS1": {
                 "ID": "Breakdownstate_1",
                 "description": "Breakdown state machine 1",

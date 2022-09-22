@@ -127,7 +127,11 @@ class MaterialFactory:
     material_counter = 0
 
     def create_material(self, type: str, router: router.SimpleRouter):
-        material_data = self.data[type]
+        for _, material_type in self.data.items():
+            if material_type["ID"] == type:
+                material_data = material_type
+        if not material_data:
+            raise ValueError(f"Material {type} does not exist.")
         process_model = self.create_process_model(material_data)
 
         transport_processes = self.process_factory.get_process(material_data['transport_process'])

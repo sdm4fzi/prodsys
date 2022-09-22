@@ -213,7 +213,7 @@ class BreakDownState(State):
             yield self.env.process(self.resource.interrupt_states())
             self.state_info.log_start_state(self.env.now, self.env.now + 30)
             # TODO: Schedule here the maintainer! or a time model for a repair
-            yield self.env.timeout(30)
+            yield self.env.timeout(10)
             self.resource.activate()
             self.state_info.log_end_state(self.env.now)
 
@@ -241,9 +241,9 @@ class ScheduledState(State):
 
 
 STATE_DICT: dict = {
-    'ProductionStates': ProductionState,
+    'ProductionState': ProductionState,
     'TransportState': TransportState,
-    'BreakDownStates': BreakDownState,
+    'BreakDownState': BreakDownState,
 }
 
 

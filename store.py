@@ -29,7 +29,7 @@ class QueueFactory:
             self.add_queue(values)
 
     def add_queue(self, values: Dict):
-        if 'capacity' not in values.keys():
+        if 'capacity' not in values.keys() or values['capacity'] is None:
             values['capacity'] = float('inf')
         queue = Queue(ID=values['ID'],
                       description=values['description'],

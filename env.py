@@ -36,8 +36,6 @@ class Environment(simpy.Environment):
     material_factory: material.MaterialFactory = field(init=False)
     data_collector: logger.Datacollector = field(init=False)
 
-
-
     def __init__(self) -> None:
         super().__init__()
 
