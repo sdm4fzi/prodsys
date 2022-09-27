@@ -11,6 +11,9 @@ import material
 import time_model
 import router
 import store
+import resources
+import sink
+
 
 @dataclass
 class Source(base.IDEntity):
@@ -19,7 +22,7 @@ class Source(base.IDEntity):
     location: List[int]
     material_type: str
     time_model: time_model.TimeModel
-    router: router.SimpleRouter
+    router: router.Router
     output_queues: List[store.Queue] = field(default_factory=list, init=False)
 
     def add_output_queues(self, output_queues: List[store.Queue]):
@@ -31,7 +34,9 @@ class Source(base.IDEntity):
     def create_material_loop(self):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
-            __material = self.material_factory.create_material(type=self.material_type, router=self.router)
+            __material = self.material_factory.create_material(
+                type=self.material_type, router=self.router
+            )
             events = []
             for queue in self.output_queues:
                 events.append(queue.put(__material))
@@ -51,7 +56,8 @@ class SourceFactory:
     material_factory: material.MaterialFactory
     time_model_factory: time_model.TimeModelFactory
     queue_factory: store.QueueFactory
-    routers: dict
+    resource_factory: resources.ResourceFactory
+    sink_factory: sink.SinkFactory
 
     sources: List[Source] = field(default_factory=list, init=False)
 
@@ -59,24 +65,33 @@ class SourceFactory:
         for values in self.data.values():
             self.add_source(values)
 
-    def get_router(self, router: str):
-        return self.routers[router]
+    def get_router(self, router_type: str, routing_heuristic: str):
+        return router.ROUTERS[router_type](
+            self.resource_factory,
+            self.sink_factory,
+            router.ROUTING_HEURISTIC[routing_heuristic],
+        )
 
     def add_source(self, values: dict):
-        router = self.get_router(values['router'])
-        time_model = self.time_model_factory.get_time_model(values['time_model_id'])
-        source = Source(ID=values['ID'], description=values['description'], location=values["location"],
-                        env=self.env, material_factory=self.material_factory,
-                        material_type=values['material_type'],
-                        time_model=time_model,
-                        router=router
-                        )
+        router = self.get_router(values["router"], values["routing_heuristic"])
+
+        time_model = self.time_model_factory.get_time_model(values["time_model_id"])
+        source = Source(
+            ID=values["ID"],
+            description=values["description"],
+            location=values["location"],
+            env=self.env,
+            material_factory=self.material_factory,
+            material_type=values["material_type"],
+            time_model=time_model,
+            router=router,
+        )
         self.add_queues_to_source(source, values)
         self.sources.append(source)
 
     def add_queues_to_source(self, _source: Source, values: Dict):
-        if 'output_queues' in values.keys():
-            output_queues = self.queue_factory.get_queues(values['output_queues'])
+        if "output_queues" in values.keys():
+            output_queues = self.queue_factory.get_queues(values["output_queues"])
             _source.add_output_queues(output_queues)
 
     def start_sources(self):

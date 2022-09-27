@@ -99,8 +99,8 @@ class CustomLoader(Loader):
             resource_data.update({"output_queues": output_queues})
         self.add_entry_to_data(self.resource_data, resource_data, label="Resource")
 
-    def add_source(self, ID: str, description: str, location: List[int], time_model_id: str, material_type: str, router: str, output_queues: List[str]):
-        source_data = {"ID": ID, "description": description, "location": location, "time_model_id": time_model_id, "material_type": material_type, "router": router, output_queues: output_queues}
+    def add_source(self, ID: str, description: str, location: List[int], time_model_id: str, material_type: str, router: str, routing_heuristic: str, output_queues: List[str]):
+        source_data = {"ID": ID, "description": description, "location": location, "time_model_id": time_model_id, "material_type": material_type, "router": router, "routing_heuristic": routing_heuristic, "output_queues": output_queues}
         self.add_entry_to_data(self.source_data, source_data, label="Source")
 
     def add_sink(self, ID: str, description: str, location: List[int], material_type: str, input_queues: List[str]):

@@ -13,8 +13,11 @@ import process
 import resources
 import request
 import state
+
 # from process import Process
 import simpy
+
+
 @dataclass
 class Controller(ABC):
     control_policy: Callable[[List[request.Request]], None]
@@ -34,13 +37,17 @@ class Controller(ABC):
     @abstractmethod
     def control_loop(self) -> None:
         pass
-    
+
     @abstractmethod
-    def perform_setup(self, _resource: resources.Resource, _process: process.Process) -> None:
+    def perform_setup(
+        self, _resource: resources.Resource, _process: process.Process
+    ) -> None:
         pass
 
     @abstractmethod
-    def get_next_material_for_process(self, _resource: resources.Resource, _process: process.Process) -> List[material.Material]:
+    def get_next_material_for_process(
+        self, _resource: resources.Resource, _process: process.Process
+    ) -> List[material.Material]:
         pass
 
     @abstractmethod
@@ -49,7 +56,11 @@ class Controller(ABC):
 
 
 class SimpleController(Controller):
-    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]], _env: env.Environment):
+    def __init__(
+        self,
+        _control_policy: Callable[[List[material.Material]], List[material.Material]],
+        _env: env.Environment,
+    ):
         self.control_policy = _control_policy
         self.requests: List[request.Request] = []
         self.running_processes: List[simpy.Event] = []
@@ -58,7 +69,9 @@ class SimpleController(Controller):
     def perform_setup(self, _resource: resources.Resource, _process: process.Process):
         _resource.setup(_process)
 
-    def get_next_material_for_process(self, _resource: resources.Resource, _material: material.Material):
+    def get_next_material_for_process(
+        self, _resource: resources.Resource, _material: material.Material
+    ):
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
@@ -68,7 +81,9 @@ class SimpleController(Controller):
             events.append(queue.get(filter=lambda x: x is _material))
         return events
 
-    def put_material_to_output_queue(self, _resource: resources.Resource, _materials: List[material.Material]) -> None:
+    def put_material_to_output_queue(
+        self, _resource: resources.Resource, _materials: List[material.Material]
+    ) -> None:
         events = []
         for queue in _resource.output_queues:
             # _material_type = _process.get_raw_material_type()
@@ -80,7 +95,9 @@ class SimpleController(Controller):
 
     def control_loop(self) -> None:
         while True:
-            yield simpy.AnyOf(env=self._env, events=self.running_processes + [self.requested])
+            yield simpy.AnyOf(
+                env=self._env, events=self.running_processes + [self.requested]
+            )
             if self.requested.triggered:
                 self.requested = simpy.Event(self._env)
             else:
@@ -88,7 +105,10 @@ class SimpleController(Controller):
                     if process.triggered:
                         self.running_processes.remove(process)
 
-            if len(self.running_processes) == self._resource.capacity or not self.requests:
+            if (
+                len(self.running_processes) == self._resource.capacity
+                or not self.requests
+            ):
                 continue
 
             self.control_policy(self.requests)
@@ -121,18 +141,22 @@ class SimpleController(Controller):
                 next_material.finished_process.succeed()
 
     def run_process(self, input_state: state.State, target_material: material.Material):
-        _env =  input_state.env
+        _env = input_state.env
         input_state.activate_state()
         input_state.state_info.log_material(target_material)
         input_state.process = _env.process(input_state.process_state())
         # return input_state.process
 
-
     def sort_queue(self, _resource: resources.Resource):
         pass
 
+
 class TransportController(Controller):
-    def __init__(self, _control_policy: Callable[[List[material.Material]], List[material.Material]], _env: env.Environment):
+    def __init__(
+        self,
+        _control_policy: Callable[[List[material.Material]], List[material.Material]],
+        _env: env.Environment,
+    ):
         self.control_policy = _control_policy
         self.requests: List[request.Request] = []
         self.running_processes: List[request.Request] = []
@@ -140,8 +164,10 @@ class TransportController(Controller):
 
     def perform_setup(self, _resource: resources.Resource, _process: process.Process):
         _resource.setup(_process)
-    
-    def get_next_material_for_process(self, _resource: resources.Resource, _material: material.Material):
+
+    def get_next_material_for_process(
+        self, _resource: resources.Resource, _material: material.Material
+    ):
         events = []
         for queue in _resource.output_queues:
             # _material_type = _process.get_raw_material_type()
@@ -151,7 +177,9 @@ class TransportController(Controller):
             events.append(queue.get(filter=lambda x: x is _material))
         return events
 
-    def put_material_to_input_queue(self, _resource: resources.Resource, _material: material.Material) -> None:
+    def put_material_to_input_queue(
+        self, _resource: resources.Resource, _material: material.Material
+    ) -> None:
         events = []
         for queue in _resource.input_queues:
             # _material_type = _process.get_raw_material_type()
@@ -160,10 +188,11 @@ class TransportController(Controller):
 
         return events
 
-
     def control_loop(self) -> None:
         while True:
-            yield simpy.AnyOf(env=self._env, events=self.running_processes + [self.requested])
+            yield simpy.AnyOf(
+                env=self._env, events=self.running_processes + [self.requested]
+            )
             if self.requested.triggered:
                 self.requested = simpy.Event(self._env)
             else:
@@ -171,7 +200,10 @@ class TransportController(Controller):
                     if process.triggered:
                         self.running_processes.remove(process)
 
-            if len(self.running_processes) == self._resource.capacity or not self.requests:
+            if (
+                len(self.running_processes) == self._resource.capacity
+                or not self.requests
+            ):
                 continue
 
             self.control_policy(self.requests)
@@ -209,17 +241,23 @@ class TransportController(Controller):
             yield simpy.AllOf(_resource.env, events)
             _material.finished_process.succeed()
 
-
     def sort_queue(self, _resource: resources.Resource):
         pass
 
-    def run_process(self, input_state: state.State, _material: material.Material, target: resources.Resource):
-        _env =  input_state.env
+    def run_process(
+        self,
+        input_state: state.State,
+        _material: material.Material,
+        target: resources.Resource,
+    ):
+        _env = input_state.env
         target_location = target.get_location()
         input_state.activate_state()
         input_state.state_info.log_material(_material)
         input_state.state_info.log_target_location(target)
-        input_state.process = _env.process(input_state.process_state(target=target_location))
+        input_state.process = _env.process(
+            input_state.process_state(target=target_location)
+        )
 
         # return input_state.process
 
@@ -227,14 +265,21 @@ class TransportController(Controller):
 def FIFO_control_policy(requests: List[request.Request]) -> None:
     pass
 
+
 def LIFO_control_policy(requests: List[request.Request]) -> None:
     requests.reverse()
+
 
 def SPT_control_policy(requests: List[request.Request]) -> None:
     requests.sort(key=lambda x: x._process.get_expected_process_time())
 
+
 def SPT_transport_control_policy(requests: List[request.Request]) -> None:
-    requests.sort(key=lambda x: x._process.get_expected_process_time(x.origin.get_location(), x.target.get_location()))
+    requests.sort(
+        key=lambda x: x._process.get_expected_process_time(
+            x.origin.get_location(), x.target.get_location()
+        )
+    )
 
 
 class BatchController(Controller):

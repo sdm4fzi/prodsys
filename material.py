@@ -15,10 +15,12 @@ import sink
 import source
 import logger
 import logging
-logging.basicConfig(filename='example2.log', encoding='utf-8', level=logging.DEBUG)
+
+logging.basicConfig(filename="example2.log", encoding="utf-8", level=logging.DEBUG)
 
 from collections.abc import Iterable
 import numpy as np
+
 
 def flatten(xs):
     for x in xs:
@@ -26,6 +28,7 @@ def flatten(xs):
             yield from flatten(x)
         else:
             yield x
+
 
 @dataclass
 class MaterialInfo:
@@ -35,19 +38,30 @@ class MaterialInfo:
     activity: str = field(init=False)
     _material_ID: str = field(init=False)
 
-    def log_finish_material(self, resource: Union[resources.Resource, sink.Sink, source.Source], _material: Material, event_time: float):
+    def log_finish_material(
+        self,
+        resource: Union[resources.Resource, sink.Sink, source.Source],
+        _material: Material,
+        event_time: float,
+    ):
         self.resource_ID = resource.ID
         self.state_ID = resource.ID
         self.event_time = event_time
         self._material_ID = _material.ID
         self.activity = "finished material"
 
-    def log_create_material(self, resource: Union[resources.Resource, sink.Sink, source.Source], _material: Material, event_time: float) -> None:
+    def log_create_material(
+        self,
+        resource: Union[resources.Resource, sink.Sink, source.Source],
+        _material: Material,
+        event_time: float,
+    ) -> None:
         self.resource_ID = resource.ID
         self.state_ID = resource.ID
         self.event_time = event_time
         self._material_ID = _material.ID
         self.activity = "created material"
+
 
 @dataclass
 class Material(base.IDEntity):
@@ -55,7 +69,7 @@ class Material(base.IDEntity):
     material_type: str
     process_model: process.ProcessModel
     transport_process: process.Process
-    router: router.SimpleRouter
+    router: router.Router
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
     next_resource: env.Location = field(default=None, init=False)
@@ -65,21 +79,40 @@ class Material(base.IDEntity):
 
     def process_material(self):
         self.finished_process = simpy.Event(self.env)
-        self.material_info.log_create_material(resource=self.next_resource, _material=self, event_time=self.env.now)
+        self.material_info.log_create_material(
+            resource=self.next_resource, _material=self, event_time=self.env.now
+        )
         yield self.env.process(self.transport_to_queue_of_resource())
         while self.next_process:
             self.request_process()
             yield self.finished_process
             self.finished_process = simpy.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
-        self.material_info.log_finish_material(resource=self.next_resource, _material=self, event_time=self.env.now)
+        self.material_info.log_finish_material(
+            resource=self.next_resource, _material=self, event_time=self.env.now
+        )
         self.finished = True
 
     def request_process(self) -> None:
-        self.env.request_process_of_resource(request.Request(self.next_process, self, self.next_resource))
-    
-    def request_transport(self, transport_resource: resources.Resource, origin_resource: env.Location, target_resource: env.Location) -> None:
-        self.env.request_process_of_resource(request.TransportResquest(self.transport_process, self, transport_resource, origin_resource, target_resource))
+        self.env.request_process_of_resource(
+            request.Request(self.next_process, self, self.next_resource)
+        )
+
+    def request_transport(
+        self,
+        transport_resource: resources.Resource,
+        origin_resource: env.Location,
+        target_resource: env.Location,
+    ) -> None:
+        self.env.request_process_of_resource(
+            request.TransportResquest(
+                self.transport_process,
+                self,
+                transport_resource,
+                origin_resource,
+                target_resource,
+            )
+        )
 
     def set_next_process(self):
         next_possible_processes = self.process_model.get_next_possible_processes()
@@ -87,7 +120,7 @@ class Material(base.IDEntity):
             self.next_process = None
             self.next_resource = self.router.get_sink(self.material_type)
         else:
-            #TODO: fix deterministic problem of petri nets!!
+            # TODO: fix deterministic problem of petri nets!!
             self.next_process = np.random.choice(next_possible_processes)
 
             self.process_model.update_marking_from_transition(self.next_process)
@@ -100,7 +133,7 @@ class Material(base.IDEntity):
         origin_resource = self.next_resource
         transport_resource = self.router.get_next_resource(self.transport_process)
         self.set_next_process()
-        
+
         self.request_transport(transport_resource, origin_resource, self.next_resource)
         yield self.finished_process
         self.finished_process = simpy.Event(self.env)
@@ -134,31 +167,48 @@ class MaterialFactory:
             raise ValueError(f"Material {type} does not exist.")
         process_model = self.create_process_model(material_data)
 
-        transport_processes = self.process_factory.get_process(material_data['transport_process'])
-        material = Material(ID=material_data['ID'] + f" instance N.{self.material_counter}",
-                            description=material_data['description'], env=self.env,
-                            router=router, process_model=process_model, transport_process=transport_processes,
-                            material_type=type, material_info=MaterialInfo())
-        self.data_collecter.register_patch(material.material_info, attr=['log_create_material', 'log_finish_material'], post=logger.post_monitor_material_info)
+        transport_processes = self.process_factory.get_process(
+            material_data["transport_process"]
+        )
+        material = Material(
+            ID=material_data["ID"] + f" instance N.{self.material_counter}",
+            description=material_data["description"],
+            env=self.env,
+            router=router,
+            process_model=process_model,
+            transport_process=transport_processes,
+            material_type=type,
+            material_info=MaterialInfo(),
+        )
+        self.data_collecter.register_patch(
+            material.material_info,
+            attr=["log_create_material", "log_finish_material"],
+            post=logger.post_monitor_material_info,
+        )
 
         self.material_counter += 1
         self.materials.append(material)
         return material
 
     def create_process_model(self, material_data) -> process.ProcessModel:
-        data = material_data['processes']
+        data = material_data["processes"]
         if type(data) == list:
-            process_list = self.process_factory.get_processes_in_order(material_data['processes'])
+            process_list = self.process_factory.get_processes_in_order(
+                material_data["processes"]
+            )
             return process.ListProcessModel(process_list=process_list)
         if type(data) == str:
             import pm4py
+
             net, initial_marking, final_marking = pm4py.read_pnml(data)
             for transition in net.transitions:
                 if not transition.label:
                     transition_process = SKIP_LABEL
                 else:
-                    transition_process = self.process_factory.get_process(transition.label)
-                transition.properties['Process'] = transition_process
+                    transition_process = self.process_factory.get_process(
+                        transition.label
+                    )
+                transition.properties["Process"] = transition_process
             return process.PetriNetProcessModel(net, initial_marking, final_marking)
 
     def get_material(self, ID) -> Material:

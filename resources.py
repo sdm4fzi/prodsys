@@ -261,5 +261,5 @@ class ResourceFactory:
     def get_resources(self, IDs: List[str]) -> List[Resource]:
         return [r for r in self.resources if r.ID in IDs]
 
-    def get_resources_with_process(self, __process: process.Process):
+    def get_resources_with_process(self, __process: process.Process) -> List[Resource]:
         return [r for r in self.resources if __process in r.processes]

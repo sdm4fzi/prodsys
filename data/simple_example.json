@@ -223,7 +223,8 @@
             "location": [0, 0],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_1",
-            "router": "SimpleRouter",
+            "router": "SimpleRouter", 
+            "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         },
         "Source2": {
@@ -232,7 +233,8 @@
             "location": [30, 30],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_2",
-            "router": "SimpleRouter",
+            "router": "SimpleRouter", 
+           "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         },
         "Source3": {
@@ -242,6 +244,7 @@
             "time_model_id": "function_time_model_4",
             "material_type": "Material_3",
             "router": "SimpleRouter",
+            "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         }
     },

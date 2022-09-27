@@ -44,8 +44,8 @@ c.add_sink(ID="SK1", description="Sink 1 for material 1", location=[30, 30], mat
 c.add_sink(ID="SK2", description="Sink 2 for material 2", location=[35, 30], material_type="Material 2", input_queues=["SinkQueue"])
 
 
-c.add_source(ID="S1", description="Source 1 for material 1", location=[5, 5], time_model_id="ft5", material_type="Material 1", router="SimpleRouter", output_queues="SourceQueue")
-c.add_source(ID="S2", description="Source 2 for material 2", location=[8, 5], time_model_id="ft6", material_type="Material 2", router="SimpleRouter", output_queues="SourceQueue")
+c.add_source(ID="S1", description="Source 1 for material 1", location=[5, 5], time_model_id="ft5", material_type="Material 1", router="AvoidDeadlockRouter", output_queues="SourceQueue")
+c.add_source(ID="S2", description="Source 2 for material 2", location=[8, 5], time_model_id="ft6", material_type="Material 2", router="AvoidDeadlockRouter", output_queues="SourceQueue")
 
 c.to_json("data/result.json")
 

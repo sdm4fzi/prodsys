@@ -36,9 +36,19 @@ class PostProcessor:
         df.loc[df['State'].str.contains('P'), 'State_type'] = 'Process State'
         df.loc[df['State'].str.contains('Breakdown'), 'State_type'] = 'Breakdown State'
 
-        df_unique = df[['State_type', 'Activity']].drop_duplicates().sort_values(by=['State_type', 'Activity'])
-        df_unique['State_sorting_Index'] = [2, 7, 1, 8, 3, 4, 6, 5]
-        df_unique.sort_values(by='State_sorting_Index', inplace=True)
+        COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
+        STATE_SORTING_INDEX = {
+            "0": ["Interface State", "finished material", 1],
+            "1": ["Interface State", "created material", 2],
+            "2": ["Process State", "end interrupt", 3],
+            "3": ["Process State", "end state", 4],
+            "4": ["Process State", "start state", 5],
+            "5": ["Process State", "start interrupt", 6],
+            "6": ["Interface State", "end state", 7],
+            "7": ["Interface State", "start state", 8],
+        }
+
+        df_unique = pd.DataFrame.from_dict(data=STATE_SORTING_INDEX, orient='index', columns=COLUMNS)
 
         df = pd.merge(df, df_unique)
         df = df.sort_values(by=['Time', 'Resource', 'State_sorting_Index'])
@@ -133,9 +143,9 @@ class PostProcessor:
         df['next_Time'] = df.groupby('Resource')['Time'].shift(-1)
 
 
-        STANDBY_CONDITION = (df['State_sorting_Index'] == 2) | ((df['State_sorting_Index'] == 4) & (df['Used_Capacity'] == 0))
-        PRODUCTIVE_CONDITION = (df['State_sorting_Index'] == 5) | (df['State_sorting_Index'] == 3) | ((df['State_sorting_Index'] == 3) & df['Used_Capacity'] != 0)
-        DOWN_CONDITION = (df['State_sorting_Index'] == 6) | (df['State_sorting_Index'] == 7)
+        STANDBY_CONDITION = ((df['State_sorting_Index'] == 4) & (df['Used_Capacity'] == 0)) | (df['State_sorting_Index'] == 7)
+        PRODUCTIVE_CONDITION = (df['State_sorting_Index'] == 5) | (df['State_sorting_Index'] == 3) | ((df['State_sorting_Index'] == 4) & df['Used_Capacity'] != 0)
+        DOWN_CONDITION = (df['State_sorting_Index'] == 6) | (df['State_sorting_Index'] == 8)
 
         df['time_increment'] = df['next_Time'] - df['Time']
 
