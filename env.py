@@ -5,6 +5,7 @@ from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Tuple, Union
 from functools import partial
+from tqdm import tqdm
 
 import simpy
 
@@ -39,12 +40,22 @@ class Environment(simpy.Environment):
     material_factory: material.MaterialFactory = field(init=False)
     data_collector: logger.Datacollector = field(init=False)
 
+    pbar: tqdm = field(init=False)
+    last_update: int = field(init=False, default=0)
+
     def __init__(self) -> None:
         super().__init__()
 
     def load_json(self, file_path: str) -> None:
         self.loader = loader.JsonLoader()
         self.loader.read_data(file_path=file_path)
+
+    def run(self, time_range:int):
+        self.pbar = tqdm(total=time_range)
+
+        super().run(time_range)
+        self.pbar.update(time_range - self.last_update)
+        self.pbar.refresh()
 
     def initialize_simulation(self):
         util.set_seed(self.loader.seed)
@@ -122,6 +133,10 @@ class Environment(simpy.Environment):
         pass
 
     def request_process_of_resource(self, request: request.Request) -> None:
+        now = round(self.now)
+        if now > self.last_update:
+            self.pbar.update(now - self.last_update)
+            self.last_update = now
         _controller = request.get_resource().get_controller()
         # self.process(_controller.request(request))
         _controller.request(request)

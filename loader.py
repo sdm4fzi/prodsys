@@ -3,10 +3,16 @@ import time
 
 import simpy
 from dataclasses import dataclass, field
-from typing import List, Union
+from typing import List, Literal, Union
 from abc import ABC, abstractmethod
 import logging
 import json
+
+def load_json(file_path: str) -> dict:
+    with open(file_path, 'r', encoding='utf-8') as json_file:
+        data = json.load(json_file)
+    logging.info("data loaded")
+    return data
 
 
 @dataclass
@@ -29,9 +35,7 @@ class Loader(ABC):
 @dataclass
 class JsonLoader(Loader):
     def read_data(self, file_path: str):
-        with open(file_path, 'r', encoding='utf-8') as json_file:
-            data = json.load(json_file)
-        logging.info("data loaded")
+        data = load_json(file_path=file_path)
         self.seed = data['seed']
         self.time_model_data = data['time_models']
         self.state_data = data['states']
@@ -45,8 +49,30 @@ class JsonLoader(Loader):
 @dataclass
 class CustomLoader(Loader):
 
-    def read_data(self, file_path: str):
-        return super().read_data()
+    def read_data(self, file_path: str, type: Literal["json", "xml"]="json"):
+        if type == "json":
+            data = load_json(file_path=file_path)
+        elif type == "xml":
+            pass
+    
+        if 'seed' in data:
+            self.seed = data['seed']
+        if 'time_models' in data:
+            self.time_model_data = data['time_models']
+        if 'states' in data:
+            self.state_data = data['states']
+        if 'processes' in data:        
+            self.process_data = data['processes']
+        if 'queues' in data:        
+            self.queue_data = data['queues']
+        if 'resources' in data:
+            self.resource_data = data['resources']
+        if 'materials' in data:
+            self.material_data = data['materials']
+        if 'sinks' in data:
+            self.sink_data = data['sinks']
+        if 'sources' in data:
+            self.source_data = data['sources']
 
     def set_seed(self, seed: int):
         self.seed = seed
