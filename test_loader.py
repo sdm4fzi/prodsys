@@ -56,27 +56,14 @@ c.add_source(ID="S1", description="Source 1 for material 1", location=[-5, -5], 
 
 capacity = 100
 
-c.add_queue(ID="IQM1", description="Input queue 1", capacity=capacity)
-c.add_queue(ID="IQM2", description="Input queue 2", capacity=capacity)
-c.add_queue(ID="IQM3", description="Input queue 3", capacity=capacity)
-c.add_queue(ID="IQM4", description="Input queue 4", capacity=capacity)
-c.add_queue(ID="IQM5", description="Input queue 5", capacity=capacity)
-
-c.add_queue(ID="OQM1", description="Output queue 1", capacity=capacity)
-c.add_queue(ID="OQM2", description="Output queue 2", capacity=capacity)
-c.add_queue(ID="OQM3", description="Output queue 3", capacity=capacity)
-c.add_queue(ID="OQM4", description="Output queue 4", capacity=capacity)
-c.add_queue(ID="OQM5", description="Output queue 5", capacity=capacity)
-
-
-c.add_resource(ID="M1", description="Machine 1", controller="SimpleController", control_policy="FIFO", location=[0, 0], capacity=1, processes=["P1", "P3"], states="BS1", input_queues=["IQM1"], output_queues=["OQM1"])
-c.add_resource(ID="M2", description="Machine 2", controller="SimpleController", control_policy="SPT", location=[0, 5], capacity=1, processes=["P2", "P5"], states="BS1", input_queues=["IQM2"], output_queues=["OQM2"])
-c.add_resource(ID="M3", description="Machine 3", controller="SimpleController", control_policy="FIFO", location=[5, 0], capacity=1, processes=["P4"], states="BS1", input_queues=["IQM3"], output_queues=["OQM3"])
-c.add_resource(ID="M4", description="Machine 4", controller="SimpleController", control_policy="FIFO", location=[5, 5], capacity=1, processes=["P2"], states="BS1", input_queues=["IQM4"], output_queues=["OQM4"])
-
+c.add_resource_with_default_queue(ID="M1", description="Machine 1", controller="SimpleController", control_policy="FIFO", location=[0, 0], capacity=1, processes=["P1", "P3"], states="BS1", queue_capacity=capacity)
+c.add_resource_with_default_queue(ID="M2", description="Machine 2", controller="SimpleController", control_policy="SPT", location=[0, 5], capacity=1, processes=["P2", "P5"], states="BS1", queue_capacity=capacity)
+c.add_resource_with_default_queue(ID="M3", description="Machine 3", controller="SimpleController", control_policy="FIFO", location=[5, 0], capacity=1, processes=["P4"], states="BS1", queue_capacity=capacity)
+c.add_resource_with_default_queue(ID="M4", description="Machine 4", controller="SimpleController", control_policy="FIFO", location=[5, 5], capacity=1, processes=["P2"], states="BS1", queue_capacity=capacity)
 
 c.add_resource(ID="TR1", description="Transport Resource 1", controller="TransportController", control_policy="SPT_transport", location=[10, 20], capacity=1, processes=["TP1"], states="BS2")
 
+# c.to_json("data/base_scenario.json")
 c.to_json("data/example_configuration.json")
 
 

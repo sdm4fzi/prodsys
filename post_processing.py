@@ -248,6 +248,9 @@ class PostProcessor:
 
         print("\t", self.get_time_per_state_of_resources().set_index(['Resource', 'Time_type']))
 
+    def get_ea_data(self):
+        return self.get_aggregated_throughput_data_frame().values
+
 
 if __name__ == '__main__':
     p = PostProcessor(filepath='data/data22.csv')
