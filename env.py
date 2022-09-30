@@ -60,7 +60,7 @@ class Environment(simpy.Environment):
     def initialize_simulation(self):
         util.set_seed(self.loader.seed)
         self.time_model_factory = time_model.TimeModelFactory(
-            self.loader.time_model_data
+            configuration_data=self.loader.time_model_data
         )
         self.time_model_factory.create_time_models()
 

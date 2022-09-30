@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from sys import orig_argv
-from typing import Tuple, List, Set, Dict
+from pydantic import validator, parse_obj_as, BaseModel
+from typing import List, Optional, Tuple, Union, Callable, Literal
 from util import get_class_from_str
 
 import numpy as np
@@ -12,51 +10,65 @@ from numpy.random import exponential, normal
 
 import base
 
-def get_constant_list(parameters: Tuple[float], size: int) -> List[float]:
+
+def get_constant_list(parameters: List[float], size: int) -> List[float]:
     return [parameters[0]] * size
 
 
-def get_exponential_list(parameters: Tuple[float], size: int) -> List[float]:
+def get_exponential_list(parameters: List[float], size: int) -> List[float]:
     return list(exponential(parameters[0], size))
 
 
-def get_normal_list(parameters: Tuple[float], size: int) -> List[float]:
+def get_normal_list(parameters: List[float], size: int) -> List[float]:
     return list(normal(parameters[0], parameters[1], size))
 
 
-FUNCTION_DICT: dict = {'normal': get_normal_list,
-                       'constant': get_constant_list,
-                       'exponential': get_exponential_list
-                       }
+FUNCTION_DICT: dict = {
+    "normal": get_normal_list,
+    "constant": get_constant_list,
+    "exponential": get_exponential_list,
+}
 
 
-# TODO: Time model zu model machen und alex puchta fragen wegen get next time für einen definierten Prozess der
-#  determinishh modelliert ist
-
-class TimeModel(ABC, base.IDEntity):
+class TimeModel(base.BaseAsset, ABC):
+    type: str
 
     @abstractmethod
-    def get_next_time(self, originin, target) -> float:
+    def get_next_time(
+        self,
+        origin: Optional[Tuple[float, float]],
+        target: Optional[Tuple[float, float]],
+    ) -> float:
         pass
 
-    def get_expected_time(self, origin, target) -> float:
+    @abstractmethod
+    def get_expected_time(
+        self,
+        origin: Optional[Tuple[float, float]],
+        target: Optional[Tuple[float, float]],
+    ) -> float:
         pass
 
 
-@dataclass
 class FunctionTimeModel(TimeModel):
-    parameters: Tuple
+    type: Literal["FunctionTimeModels"]
+    distribution_function: Literal["normal", "exponential", "constant"]
+    parameters: List[float]
     batch_size: int
-    distribution_function: str
-    _distribution_function: Callable[[Tuple, int], List] = field(default=None, init=False)
-    _statistics_buffer: List[float] = field(default_factory=list, init=False)
+    statistics_buffer: List[float] = []
+    distribution_function_object: Callable[[List[float], int], List[float]] = None
 
-    def __post_init__(self):
-        self._distribution_function = FUNCTION_DICT[self.distribution_function]
+    @validator("distribution_function_object", always=True)
+    def initialize_distribution_function(cls, v, values):
+        return FUNCTION_DICT[values["distribution_function"]]
 
-    def get_next_time(self, originin=None, target=None) -> float:
+    def get_next_time(
+        self,
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
+    ) -> float:
         try:
-            value = self._statistics_buffer.pop()
+            value = self.statistics_buffer.pop()
             if value < 0:
                 return 0.1
             return value
@@ -65,37 +77,61 @@ class FunctionTimeModel(TimeModel):
             return self.get_next_time()
 
     def _fill_buffer(self):
-        self._statistics_buffer = self._distribution_function(self.parameters, self.batch_size)
+        self.statistics_buffer = self.distribution_function_object(
+            self.parameters, self.batch_size
+        )
 
-    def get_expected_time(self, origin=None, target=None) -> float:
+    def get_expected_time(
+        self,
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
+    ) -> float:
         return self.parameters[0]
 
 
-@dataclass
 class HistoryTimeModel(TimeModel):
+    type: Literal["HistoryTimeModels"]
     history: List[float]
 
-    def get_next_time(self, originin=None, target=None) -> float:
+    def get_next_time(
+        self,
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
+    ) -> float:
         return np.random.choice(self.history, 1)[0]
 
-    def get_expected_time(self, origin=None, target=None) -> float:
+    def get_expected_time(
+        self,
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
+    ) -> float:
         return sum(self.history) / len(self.history)
 
-@dataclass
+
 class ManhattanDistanceTimeModel(TimeModel):
+    type: Literal["ManhattanDistanceTimeModel"]
     speed: float
     reaction_time: float
 
-    def get_next_time(self, origin: Tuple[float], target: Tuple[float]) -> float:
+    def get_next_time(
+        self,
+        origin: Optional[Tuple[float, float]],
+        target: Optional[Tuple[float, float]],
+    ) -> float:
         x_distance = abs(origin[0] - target[0])
         y_distance = abs(origin[1] - target[1])
         return (x_distance + y_distance) / self.speed + self.reaction_time
-    
-    def get_expected_time(self, origin: Tuple[float], target: Tuple[float]) -> float:
+
+    def get_expected_time(
+        self,
+        origin: Optional[Tuple[float, float]],
+        target: Optional[Tuple[float, float]],
+    ) -> float:
         return self.get_next_time(origin, target)
 
-@dataclass
+
 class MarkovTimeModel(TimeModel):
+    type: Literal["MarkovTimeModel"]
 
     def get_next_time(self) -> float:
         pass
@@ -104,30 +140,55 @@ class MarkovTimeModel(TimeModel):
         pass
 
 
-TIME_MODEL_DICT: dict = {
-    'HistoryTimeModels': HistoryTimeModel,
-    'MarkovTimeModel': MarkovTimeModel,
-    'FunctionTimeModels': FunctionTimeModel,
-    'ManhattanDistanceTimeModel': ManhattanDistanceTimeModel
-}
+CONTEXT = Union[HistoryTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]
 
 
-@dataclass
-class TimeModelFactory:
-    data: Dict
-    time_models: List[TimeModel] = field(default_factory=list)
+class TimeModelFactory(BaseModel):
+    configuration_data: dict
+    time_models: Optional[List[TimeModel]] = []
 
     def create_time_models(self):
-        for cls_name, items in self.data.items():
-            cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
+        for cls_name, items in self.configuration_data.items():
+            # cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
             for values in items.values():
-                self.add_time_model(cls, values)
+                values.update({"type": cls_name})
+                self.add_time_model(values)
 
-    def add_time_model(self, cls, values):
-        self.time_models.append(cls(**values))
+    def add_time_model(self, values: dict):
+        self.time_models.append(parse_obj_as(CONTEXT, values))
 
     def get_time_models(self, IDs: List[str]) -> List[TimeModel]:
         return [tm for tm in self.time_models if tm.ID in IDs]
 
     def get_time_model(self, ID: str) -> TimeModel:
         return [tm for tm in self.time_models if tm.ID == ID].pop()
+
+
+if __name__ == "__main__":
+    kwargs = {
+        "ID": "F",
+        "description": "FTMO",
+        "type": "FunctionTimeModels",
+        "distribution_function": "normal",
+        "parameters": [1.3, 2.0],
+        "batch_size": 100,
+    }
+    kwargs2 = {
+        "ID": "H",
+        "description": "HTMO",
+        "type": "HistoryTimeModels",
+        "history": [1.3, 2.0],
+    }
+    kwargs3 = {
+        "ID": "MDT",
+        "description": "MDTMO",
+        "type": "ManhattanDistanceTimeModel",
+        "speed": 12,
+        "reaction_time": 1.1,
+    }
+    # a = FunctionTimeModel(**kwargs)
+    a = parse_obj_as(CONTEXT, kwargs3)
+    print(a)
+    print(a.get_expected_time([0, 0], [10, 10]))
+    for _ in range(5):
+        print(a.get_next_time([0, 0], [10, 10]))
