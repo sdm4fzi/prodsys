@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from cmath import exp
+from enum import Enum
+from pydantic import BaseModel, Extra
 from dataclasses import dataclass, field
-from typing import List, Type
+from typing import List, Type, Optional, Union, Literal
 
 import simpy
 import env
@@ -13,19 +14,20 @@ import base
 from util import get_class_from_str
 import material
 
+class StateEnum(str, Enum):
+    start_state: str = "start state"
+    start_interrupt: str = "start interrupt"
+    end_interrupt: str = "end interrupt"
+    end_state: str = "end state"
 
-
-
-@dataclass
-class StateInfo:
+class StateInfo(BaseModel, extra=Extra.allow):
     ID: str
-    _resource_ID: str
-    event_time: float  = field(default=None, init=False)
-    expected_end_time: float  = field(default=None, init=False)
-    activity: str  = field(default=None, init=False)
-    _material_ID: str  = field(default=None, init=False)
-    _target_ID: str = field(default=None, init=False)
-
+    resource_ID: str
+    _event_time: float = None
+    _expected_end_time: float  = None
+    _activity: StateEnum = None
+    _material_ID: str  = None
+    _target_ID: str = None
 
     def log_target_location(self, target: resources.Resource):
         self._target_ID = target.ID
@@ -34,22 +36,22 @@ class StateInfo:
         self._material_ID = _material.ID
 
     def log_start_state(self, start_time: float, expected_end_time: float):
-        self.event_time = start_time
-        self.expected_end_time = expected_end_time
-        self.activity = "start state"
+        self._event_time = start_time
+        self._expected_end_time = expected_end_time
+        self._activity = StateEnum.start_state
 
     def log_start_interrupt_state(self, start_time: float):
-        self.event_time = start_time
-        self.activity = "start interrupt"
+        self._event_time = start_time
+        self._activity = StateEnum.start_interrupt
 
     def log_end_interrupt_state(self, start_time: float, expected_end_time: float):
-        self.event_time = start_time
-        self.expected_end_time = expected_end_time
-        self.activity = "end interrupt"
+        self._event_time = start_time
+        self._expected_end_time = expected_end_time
+        self._activity = StateEnum.end_interrupt
 
     def log_end_state(self, start_time: float):
-        self.event_time = start_time
-        self.activity = "end state"
+        self._event_time = start_time
+        self._activity = StateEnum.end_state
 
 @dataclass
 class State(ABC, base.IDEntity):
@@ -57,7 +59,7 @@ class State(ABC, base.IDEntity):
     time_model: time_model.TimeModel
     active: simpy.Event = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
-    _resource: resource.Resource = field(default=None, init=False)
+    _resource: resources.Resource = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
     state_info: StateInfo = field(default=None, init=False)
 
@@ -70,7 +72,7 @@ class State(ABC, base.IDEntity):
     def resource(self, resource_model: resources.Resource) -> None:
         self._resource = resource_model
         self.finished_process = simpy.Event(self.env).succeed()
-        self.state_info = StateInfo(self.ID, self._resource.ID)
+        self.state_info = StateInfo(ID=self.ID, resource_ID=self._resource.ID)
 
 
     def activate(self):
