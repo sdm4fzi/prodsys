@@ -146,10 +146,11 @@ def remove_process_module(loader_object: loader.CustomLoader, scenario_dict: dic
 
 def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
-    machine = random.choice(possible_machines)
-    current_location = loader_object.resource_data[machine]['location']
+    if possible_machines:
+        machine = random.choice(possible_machines)
+        current_location = loader_object.resource_data[machine]['location']
 
-    new_location = random.choice(scenario_dict["options"]["positions"])
+        new_location = random.choice(scenario_dict["options"]["positions"])
 
     # scenario_dict["options"]["positions"].remove(new_location)
     # scenario_dict["options"]["positions"].append(current_location)
@@ -158,14 +159,15 @@ def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> Non
 
 def change_control_policy(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     resource = random.choice(list(loader_object.resource_data.keys()))
-    if resource in loader_object.get_machines():
-        possible_control_policies = copy(scenario_dict["options"]["machine_controllers"])
-    else:
-        possible_control_policies = copy(scenario_dict["options"]["transport_controllers"])
-    
-    possible_control_policies.remove(loader_object.resource_data[resource]["control_policy"])
-    new_control_policy = random.choice(possible_control_policies)
-    loader_object.resource_data[resource]["control_policy"] = new_control_policy
+    if resource:
+        if resource in loader_object.get_machines():
+            possible_control_policies = copy(scenario_dict["options"]["machine_controllers"])
+        else:
+            possible_control_policies = copy(scenario_dict["options"]["transport_controllers"])
+        
+        possible_control_policies.remove(loader_object.resource_data[resource]["control_policy"])
+        new_control_policy = random.choice(possible_control_policies)
+        loader_object.resource_data[resource]["control_policy"] = new_control_policy
 
 def calculate_reconfiguration_cost(
     scenario_dict: dict,

@@ -36,7 +36,7 @@ toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.ran
 
 # Startpopulation erzeugen
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-population = toolbox.population(n=150)
+population = toolbox.population(n=20)
 
 toolbox.register('evaluate', evaluate, scenario_dict, base_scenario)
 
@@ -46,7 +46,7 @@ toolbox.register('mutate', mutation, scenario_dict)
 toolbox.register('select', tools.selTournament, tournsize=3)
 # toolbox.register('select', tools.selNSGA2)
 
-NGEN = 100
+NGEN = 2
 
 # pool = multiprocessing.Pool(multiprocessing.cpu_count())
 # toolbox.register("map", pool.map)
@@ -61,17 +61,17 @@ for g in range(NGEN):
     # Clone the selected individuals
 
     generation_performances = []
-
+    performances[str(g)] = {}
     for counter, fit in enumerate(fits):
         agg_fit = 0
         for value, weight in zip(fit, weights):
             agg_fit += value*weight
-
+        agg_fit = float(agg_fit)
         generation_performances.append(agg_fit)
-        performances[g] = {}
-        performances[g][counter] = {'agg_fitness': agg_fit, 'fitness': fit, 'configuration': offspring[counter]}
 
-    performances[g]['aggregated'] = {'best': min(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
+        performances[str(g)][str(counter)] = {'agg_fitness': agg_fit, 'fitness': [float(value) for value in fit]}
+
+    performances[str(g)]['aggregated'] = {'best': min(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
     print("Best Performance: ", min(generation_performances))
     print("Average Performance: ", sum(generation_performances) / len(generation_performances))
     
@@ -82,7 +82,7 @@ for g in range(NGEN):
     population = toolbox.select(offspring, k=len(population))
 
 for g in range(NGEN):
-    print("Generation:", g, "best: ", performances[g]['aggregated']['best'], "average: ", performances[g]['aggregated']['avg'])
+    print("Generation:", g, "best: ", performances[str(g)]['aggregated']['best'], "average: ", performances[str(g)]['aggregated']['avg'])
 
-with open("data/ea_results.json") as json_file:
+with open("data/ea_results.json", "w") as json_file:
     json.dump(performances, json_file)
