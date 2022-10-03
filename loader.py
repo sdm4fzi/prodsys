@@ -1,4 +1,5 @@
 from __future__ import annotations
+from platform import machine
 import time
 
 import simpy
@@ -228,6 +229,27 @@ class CustomLoader(Loader):
         if output_queues:
             resource_data.update({"output_queues": output_queues})
         self.add_entry_to_data(self.resource_data, resource_data, label="Resource")
+
+    def add_default_queues(self, queue_capacity: int):
+        # new_queue_data = {}
+        # for queue_key, queue_values in self.queue_data.items():
+        #     print(queue_key, queue_values["ID"])
+        #     if queue_values["ID"] in ["SourceQueue", "SinkQueue"]:
+        #         new_queue_data[queue_key] = queue_values
+        # self.queue_data = new_queue_data
+        self.queue_data = {}
+        self.add_queue(ID="SourceQueue", description="Output queue for all sources", capacity=None)
+        self.add_queue(ID="SinkQueue", description="Input queue for all sinks", capacity=None)
+        for machine_ID in self.get_machines():
+            self.add_queue(
+                ID="IQ" + machine_ID, description="Input queue of" + machine_ID, capacity=queue_capacity
+            )
+            self.resource_data[machine_ID]["input_queues"] = ["IQ" + machine_ID]
+            self.add_queue(
+                ID="OQ" + machine_ID, description="Output queue of" + machine_ID, capacity=queue_capacity
+            )
+            self.resource_data[machine_ID]["output_queues"] = ["IQ" + machine_ID]
+
 
     def add_resource_with_default_queue(
         self,

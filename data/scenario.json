@@ -12,7 +12,12 @@
       [5, 0],
       [5, 5],
       [10, 5],
-      [5, 10]
+      [5, 10],
+      [20, 20],
+      [25, 20],
+      [15, 20],
+      [20, 15],
+      [25, 25]
     ],
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
     "transport_controllers": ["FIFO", "SPT_transport"]

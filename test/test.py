@@ -21,17 +21,12 @@
 # with open("data/scenario.json", "w") as wirter:
 #     json.dump(scenario_dict, wirter)
 
-machine_dict = {
-    "1": {"ID": "M1", "c": 2},
-    "2": {"ID": "M2", "c": 3},
-    "4": {"ID": "M4", "c": 3},
-    }
+loc1 = [0, 5]
+locations = [[0, 5], [5, 0], [0, 0]]
 
-machines_1_keys = ["1", "2"]
-
-b = {key: data for key, data in machine_dict.items() if key in machines_1_keys}
-
-print(b)
-
-del b["1"]
-print(b)
+if loc1 in locations:
+    locations.remove(loc1)
+    print(locations)
+    print("gleich")
+else:
+    print("ungleich")

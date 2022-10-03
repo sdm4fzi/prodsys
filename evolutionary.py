@@ -1,5 +1,5 @@
-from copy import copy
-from dataclasses import dataclass
+from copy import copy, deepcopy
+from dataclasses import dataclass, replace
 import json
 from turtle import pos
 from typing import List
@@ -9,11 +9,6 @@ import print_util
 from post_processing import PostProcessor
 
 import random
-
-
-def evaluate(options_dict, dict_results):
-    # Do Simulation runs of all options and return dict_results
-    pass
 
 
 def crossover(ind1, ind2):
@@ -53,6 +48,9 @@ def crossover(ind1, ind2):
             del ind2[0].resource_data[key]
         ind1[0].resource_data.update(tr2_data)
 
+    ind1[0].add_default_queues(queue_capacity=100)
+    ind2[0].add_default_queues(queue_capacity=100)
+
     return ind1, ind2
 
 
@@ -71,7 +69,7 @@ def mutation(scenario_dict, individual):
     )
     loader_object = individual[0]
     mutation_operation(loader_object, scenario_dict)
-
+    individual[0].add_default_queues(queue_capacity=100)
 
     return (individual,)
 
@@ -84,7 +82,10 @@ def add_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None
     process_module_list = random.sample(possible_processes, num_process_modules)
 
     control_policy = random.choice(scenario_dict["options"]["machine_controllers"])
-    location = random.choice(scenario_dict["options"]["positions"])
+    possible_positions = deepcopy(scenario_dict["options"]["positions"])
+    for machine_key in loader_object.get_machines():
+        possible_positions.remove(loader_object.resource_data[machine_key]["location"])
+    location = random.choice(possible_positions)
 
     loader_object.add_resource_with_default_queue(
         ID="M" + str(machine_index),
@@ -116,10 +117,11 @@ def add_transport_resource(loader_object: loader.CustomLoader, scenario_dict: di
 
 def add_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
-    possible_processes = loader_object.get_processes()
-    machine = random.choice(possible_machines)
-    process_module_to_add = random.choice(possible_processes)
-    loader_object.resource_data[machine]['processes'].append(process_module_to_add)
+    if possible_machines:
+        possible_processes = loader_object.get_processes()
+        machine = random.choice(possible_machines)
+        process_module_to_add = random.choice(possible_processes)
+        loader_object.resource_data[machine]['processes'].append(process_module_to_add)
 
 
 def remove_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
@@ -148,18 +150,16 @@ def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> Non
     possible_machines = loader_object.get_machines()
     if possible_machines:
         machine = random.choice(possible_machines)
-        current_location = loader_object.resource_data[machine]['location']
 
-        new_location = random.choice(scenario_dict["options"]["positions"])
-
-    # scenario_dict["options"]["positions"].remove(new_location)
-    # scenario_dict["options"]["positions"].append(current_location)
-
-    loader_object.resource_data[machine]['location'] = new_location
+        possible_positions = deepcopy(scenario_dict["options"]["positions"])
+        for machine_key in loader_object.get_machines():
+            possible_positions.remove(loader_object.resource_data[machine_key]["location"])
+        
+        loader_object.resource_data[machine]['location'] = random.choice(possible_positions)
 
 def change_control_policy(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
-    resource = random.choice(list(loader_object.resource_data.keys()))
-    if resource:
+    if loader_object.resource_data.keys():
+        resource = random.choice(list(loader_object.resource_data.keys()))
         if resource in loader_object.get_machines():
             possible_control_policies = copy(scenario_dict["options"]["machine_controllers"])
         else:
@@ -212,7 +212,7 @@ def calculate_reconfiguration_cost(
 
 def random_configuration(
     scenario_dict: dict, base_scenario: str, reconfiguration=False
-):
+) -> loader.CustomLoader:
 
     loader_object = get_base_configuration(base_scenario)
 
@@ -244,10 +244,12 @@ def random_configuration(
     loader_object.resource_data = {}
     loader_object.queue_data = {}
 
+    possible_locations = deepcopy(scenario_dict["options"]["positions"])
+
     for machine_index, processes in enumerate(process_module_list):
         control_policy = random.choice(scenario_dict["options"]["machine_controllers"])
-        location = random.choice(scenario_dict["options"]["positions"])
-        # scenario_dict["options"]["positions"].remove(location)
+        location = random.choice(possible_locations)
+        possible_locations.remove(location)
 
         loader_object.add_resource_with_default_queue(
             ID="M" + str(machine_index),
@@ -260,6 +262,7 @@ def random_configuration(
             states="BS1",
             queue_capacity=capacity,
         )
+        loader_object.add_default_queues(queue_capacity=100)
 
     for transport_resource_index in range(num_transport_resources):
         control_policy = random.choice(
@@ -326,7 +329,6 @@ def get_base_configuration(filepath: str) -> loader.CustomLoader:
     loader_object.read_data(filepath, "json")
     return loader_object
 
-
 def evaluate(scenario_dict: dict, base_scenario: str, individual) -> List[float]:
     loader_object: loader.CustomLoader = individual[0]
     base_configuration = get_base_configuration(base_scenario)
@@ -334,6 +336,7 @@ def evaluate(scenario_dict: dict, base_scenario: str, individual) -> List[float]
         # print("Invalid Configuration!")
         return [100000, 100000, -100000, 100000]
 
+    loader_object.to_json("data/ea_configuration.json")
     e = Environment()
     e.loader = loader_object
     e.initialize_simulation()

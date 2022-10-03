@@ -91,3 +91,7 @@ print(p.get_aggregated_throughput_time_data())
 p.plot_WIP()
 p.plot_throughput_over_time()
 p.plot_time_per_state_of_resources()
+
+print(p.get_aggregated_throughput_data())
+print(p.get_aggregated_throughput_time_data())
+print(p.get_aggregated_wip_data())
