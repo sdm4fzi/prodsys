@@ -25,10 +25,10 @@ if __name__ == '__main__':
 
     print_util.print_simulation_info(env, t_0, t_1)    
 
-    env.data_collector.log_data_to_csv(filepath="data/data21.csv")
+    env.data_collector.log_data_to_csv(filepath="data/data22.csv")
 
 
-    p = PostProcessor(filepath="data/data21.csv")
+    p = PostProcessor(filepath="data/data22.csv")
     p.print_aggregated_data()
     # p.plot_time_per_state_of_resources()
     # p.plot_WIP()

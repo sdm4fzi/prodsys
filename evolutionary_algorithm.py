@@ -11,49 +11,78 @@ from deap import base, creator, tools, algorithms
 from evolutionary import random_configuration, evaluate, mutation, crossover
 import json
 
+from util import set_seed
+
 
 base_scenario = 'data/base_scenario.json'
 with open('data/scenario.json') as json_file:
         scenario_dict = json.load(json_file)
 
+set_seed(21)
+
 #weights für: (logging_time, total_costs, OEE_ges, wip, AOET,)
-creator.create('FitnessMin', base.Fitness, weights=(-1.0, -1.0)) # als Tupel
+weights = (1.0, 1.0, -1.0, 1.0)
+creator.create('FitnessMin', base.Fitness, weights=weights) # als Tupel
 creator.create('Individual', list, fitness=creator.FitnessMin)
 
 
 
 
 toolbox = base.Toolbox()
-toolbox.register("random_configuration", random_configuration, base_scenario, scenario_dict) 
+toolbox.register("random_configuration", random_configuration, scenario_dict, base_scenario) 
 toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.random_configuration, n=1)
 # options_dict = {}
 
 
 # Startpopulation erzeugen
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-population = toolbox.population(n=20)
+population = toolbox.population(n=150)
 
-toolbox.register('evaluate', evaluate)
+toolbox.register('evaluate', evaluate, scenario_dict, base_scenario)
 
 
 toolbox.register('mate', crossover) #pass
-toolbox.register('mutate', mutation)
+toolbox.register('mutate', mutation, scenario_dict)
 toolbox.register('select', tools.selTournament, tournsize=3)
 # toolbox.register('select', tools.selNSGA2)
 
-NGEN = 10
+NGEN = 100
 
 # pool = multiprocessing.Pool(multiprocessing.cpu_count())
 # toolbox.register("map", pool.map)
 
+performances = {}
+
 for g in range(NGEN):
+    print("Generation", g, "________________")
     # Select the next generation individuals
-    offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
+    offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.25)
     fits = toolbox.map(toolbox.evaluate, offspring)
     # Clone the selected individuals
 
+    generation_performances = []
+
+    for counter, fit in enumerate(fits):
+        agg_fit = 0
+        for value, weight in zip(fit, weights):
+            agg_fit += value*weight
+
+        generation_performances.append(agg_fit)
+        performances[g] = {}
+        performances[g][counter] = {'agg_fitness': agg_fit, 'fitness': fit, 'configuration': offspring[counter]}
+
+    performances[g]['aggregated'] = {'best': min(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
+    print("Best Performance: ", min(generation_performances))
+    print("Average Performance: ", sum(generation_performances) / len(generation_performances))
+    
     for fit, ind in zip(fits, offspring):
         # print('>> ', fit, ' / ', ind)
         ind.fitness.values = fit
 
     population = toolbox.select(offspring, k=len(population))
+
+for g in range(NGEN):
+    print("Generation:", g, "best: ", performances[g]['aggregated']['best'], "average: ", performances[g]['aggregated']['avg'])
+
+with open("data/ea_results.json") as json_file:
+    json.dump(performances, json_file)

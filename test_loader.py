@@ -86,7 +86,8 @@ e.data_collector.log_data_to_csv(filepath="data/data21.csv")
 
 
 p = PostProcessor(filepath="data/data21.csv")
-p.print_aggregated_data()
-# p.plot_WIP()
-# p.plot_throughput_over_time()
-# p.plot_time_per_state_of_resources()
+# p.print_aggregated_data()
+print(p.get_aggregated_throughput_time_data())
+p.plot_WIP()
+p.plot_throughput_over_time()
+p.plot_time_per_state_of_resources()

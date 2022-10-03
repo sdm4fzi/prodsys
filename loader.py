@@ -28,7 +28,8 @@ class Loader(ABC):
     sink_data: dict = field(init=False, default_factory=dict)
     material_data: dict = field(init=False, default_factory=dict)
 
-    valid_configuration: bool = field(init=False, default=False)
+    valid_configuration: bool = field(init=False, default=True)
+    reconfiguration_cost: float = field(init=False, default=0)
 
     @abstractmethod
     def read_data(self, file_path: str):
@@ -41,6 +42,23 @@ class Loader(ABC):
                 i += 1
 
         return i
+
+    def get_machines(self) -> List[str]:
+        machines = []
+        for resource_key, resource_data in self.resource_data.items():
+            if 'input_queues' in resource_data.keys():
+                machines.append(resource_key)
+
+        return machines
+
+    def get_transport_resources(self) -> List[str]:
+        transport_resources = []
+        for resource_key, resource_data in self.resource_data.items():
+            if not 'input_queues' in resource_data.keys():
+                transport_resources.append(resource_key)
+
+        return transport_resources
+ 
     
     def get_num_transport_resources(self) -> int:
         return len(self.resource_data.keys()) - self.get_num_machines()
