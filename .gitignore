@@ -10,4 +10,5 @@ ini/
 .idea
 __pycache__/
 changeability_pack/
-data/ea_results
+data/ea_results/
+data/ea_results copy/

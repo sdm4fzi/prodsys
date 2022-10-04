@@ -64,6 +64,7 @@ def mutation(scenario_dict, individual):
             remove_transport_resource,
             remove_process_module,
             move_machine,
+            move_process_module,
             change_control_policy,
         ]
     )
@@ -145,6 +146,18 @@ def remove_process_module(loader_object: loader.CustomLoader, scenario_dict: dic
         if process_modules:
             process_module_to_delete = random.choice(process_modules)
             loader_object.resource_data[machine]['processes'].remove(process_module_to_delete)
+
+def move_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+    possible_machines = loader_object.get_machines()
+    if possible_machines and len(possible_machines) > 1:
+        from_machine = random.choice(possible_machines)
+        possible_machines.remove(from_machine)
+        to_machine = random.choice(possible_machines)
+        process_modules = loader_object.resource_data[from_machine]['processes']
+        if process_modules:
+            process_module_to_move = random.choice(process_modules)
+            loader_object.resource_data[from_machine]['processes'].remove(process_module_to_move)
+            loader_object.resource_data[to_machine]['processes'].append(process_module_to_move)
 
 def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
@@ -314,6 +327,8 @@ def check_valid_configuration(configuration: loader.CustomLoader, base_configura
 def get_objective_values(environment: Environment, pp: PostProcessor) -> List[float]:
     reconfiguration_cost = environment.loader.reconfiguration_cost
     throughput_time = pp.get_aggregated_throughput_time_data()
+    if not throughput_time:
+        throughput_time = [100000]
     throughput = pp.get_aggregated_throughput_data()
     wip = pp.get_aggregated_wip_data()
 

@@ -15,7 +15,7 @@ from util import set_seed
 
 SEED=21
 NGEN = 100
-POPULATION_SIZE = 20
+POPULATION_SIZE = 250
 
 
 
@@ -44,8 +44,9 @@ population = toolbox.population(n=POPULATION_SIZE)
 toolbox.register('evaluate', evaluate, scenario_dict, base_scenario)
 toolbox.register('mate', crossover) #pass
 toolbox.register('mutate', mutation, scenario_dict)
-toolbox.register('select', tools.selTournament, tournsize=3)
-# toolbox.register('select', tools.selNSGA2)
+# toolbox.register('select', tools.selTournament, tournsize=3)
+toolbox.register('select', tools.selNSGA2)
+toolbox.register('select', tools.selNSGA3)
 
 
 # pool = multiprocessing.Pool(multiprocessing.cpu_count())
@@ -87,7 +88,7 @@ for g in range(NGEN):
 
     population = toolbox.select(population, len(population))
     population = [toolbox.clone(ind) for ind in population]
-    population = algorithms.varAnd(population, toolbox, cxpb=0.1, mutpb=0.1)
+    population = algorithms.varAnd(population, toolbox, cxpb=0.1, mutpb=0.15)
 
 for g in range(NGEN):
     print("Generation:", g, "best: ", performances[str(g)]['aggregated']['best'], "average: ", performances[str(g)]['aggregated']['avg'])
