@@ -318,10 +318,10 @@ def get_objective_values(environment: Environment, pp: PostProcessor) -> List[fl
     wip = pp.get_aggregated_wip_data()
 
     return [
-        reconfiguration_cost,
-        sum(throughput_time) / len(throughput_time),
         sum(throughput),
         sum(wip),
+        sum(throughput_time) / len(throughput_time),
+        reconfiguration_cost
     ]
 
 def get_base_configuration(filepath: str) -> loader.CustomLoader:
@@ -334,7 +334,7 @@ def evaluate(scenario_dict: dict, base_scenario: str, individual) -> List[float]
     base_configuration = get_base_configuration(base_scenario)
     if not check_valid_configuration(loader_object, base_configuration, scenario_dict):
         # print("Invalid Configuration!")
-        return [100000, 100000, -100000, 100000]
+        return [-100000, 100000, 100000, 100000]
 
     loader_object.to_json("data/ea_configuration.json")
     e = Environment()

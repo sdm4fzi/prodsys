@@ -13,7 +13,7 @@ if __name__ == '__main__':
     env = env.Environment()
 
     # env.load_json('data/simple_example.json')
-    env.load_json('data/ea_results/f1_205.json')
+    env.load_json('data/ea_results/f0_403.json')
     env.initialize_simulation()
 
     import time

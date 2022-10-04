@@ -13,14 +13,16 @@ c.add_time_model(type="FunctionTimeModels", ID="ftmp4", description="function ti
 c.add_time_model(type="FunctionTimeModels", ID="ftmp5", description="function time model process 5", parameters=[40/60, 4/60], batch_size=100, distribution_function="normal")
 
 
-c.add_time_model(type="FunctionTimeModels", ID="ftbs1", description="function time model breakdwon state 1", parameters=[2000, 4], batch_size=100, distribution_function="exponential")
-c.add_time_model(type="FunctionTimeModels", ID="ftbs2", description="function time model breakdwon state 2", parameters=[3500, 4], batch_size=100, distribution_function="exponential")
+c.add_time_model(type="FunctionTimeModels", ID="ftbs1", description="function time model breakdwon state 1", parameters=[700, 4], batch_size=100, distribution_function="exponential")
+c.add_time_model(type="FunctionTimeModels", ID="ftbs2", description="function time model breakdwon state 2", parameters=[1100, 4], batch_size=100, distribution_function="exponential")
 
-c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[183.6 / 60, 5], batch_size=100, distribution_function="exponential")
+# c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[183.6 / 60, 5], batch_size=100, distribution_function="exponential")
+# c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[200 / 60, 5], batch_size=100, distribution_function="exponential")
+c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[150 / 60, 5], batch_size=100, distribution_function="exponential")
 # c.add_time_model(type="FunctionTimeModels", ID="ftm2", description="function time model material 2", parameters=[50, 5], batch_size=100, distribution_function="normal")
 
 
-c.add_time_model(type="ManhattanDistanceTimeModel", ID="md1", description="manhattan time model 1", speed=5 * 60, reaction_time=5 / 60)
+c.add_time_model(type="ManhattanDistanceTimeModel", ID="md1", description="manhattan time model 1", speed=4 * 60, reaction_time=2 / 60)
 
 
 c.add_state(type="BreakDownState", ID="BS1", description="Breakdownstate for machine", time_model_ID="ftbs1")
@@ -87,11 +89,6 @@ e.data_collector.log_data_to_csv(filepath="data/data21.csv")
 
 p = PostProcessor(filepath="data/data21.csv")
 # p.print_aggregated_data()
-print(p.get_aggregated_throughput_time_data())
 p.plot_WIP()
 p.plot_throughput_over_time()
 p.plot_time_per_state_of_resources()
-
-print(p.get_aggregated_throughput_data())
-print(p.get_aggregated_throughput_time_data())
-print(p.get_aggregated_wip_data())

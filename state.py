@@ -213,9 +213,9 @@ class BreakDownState(State):
             yield self.resource.active
             self.resource.active = simpy.Event(self.env)
             yield self.env.process(self.resource.interrupt_states())
-            self.state_info.log_start_state(self.env.now, self.env.now + 30)
+            self.state_info.log_start_state(self.env.now, self.env.now + 15)
             # TODO: Schedule here the maintainer! or a time model for a repair
-            yield self.env.timeout(10)
+            yield self.env.timeout(15)
             self.resource.activate()
             self.state_info.log_end_state(self.env.now)
 

@@ -14,8 +14,8 @@ import json
 from util import set_seed
 
 SEED=21
-NGEN = 1000
-POPULATION_SIZE = 600
+NGEN = 100
+POPULATION_SIZE = 20
 
 
 
@@ -25,12 +25,10 @@ with open('data/scenario.json') as json_file:
 
 set_seed(SEED)
 
-#weights für: (logging_time, total_costs, OEE_ges, wip, AOET,)
-weights = (300/100000, 1.0, -1.0, 1.0)
-creator.create('FitnessMin', base.Fitness, weights=weights) # als Tupel
-creator.create('Individual', list, fitness=creator.FitnessMin)
-
-
+#weights für: (throughput, wip, throughput_time, cost)
+weights = (0.1, -1.0, -1.0, -0.005)
+creator.create('FitnessMax', base.Fitness, weights=weights) # als Tupel
+creator.create('Individual', list, fitness=creator.FitnessMax)
 
 
 toolbox = base.Toolbox()
@@ -46,7 +44,7 @@ population = toolbox.population(n=POPULATION_SIZE)
 toolbox.register('evaluate', evaluate, scenario_dict, base_scenario)
 toolbox.register('mate', crossover) #pass
 toolbox.register('mutate', mutation, scenario_dict)
-toolbox.register('select', tools.selTournament, tournsize=125)
+toolbox.register('select', tools.selTournament, tournsize=3)
 # toolbox.register('select', tools.selNSGA2)
 
 
@@ -62,30 +60,30 @@ for g in range(NGEN):
     fits = list(toolbox.map(toolbox.evaluate, invalid_ind))
     # Clone the selected individuals
 
-    generation_performances = []
-    performances[str(g)] = {}
-    for counter, fit in enumerate(fits):
-        agg_fit = 0
-        for value, weight in zip(fit, weights):
-            agg_fit += value*weight
-        agg_fit = float(agg_fit)
-        generation_performances.append(agg_fit)
-        if agg_fit < 100000:
-            performances[str(g)][str(counter)] = {'agg_fitness': agg_fit, 'fitness': [float(value) for value in fit]}
-            invalid_ind[counter][0].to_json(f"data/ea_results/f{str(g)}_{str(counter)}.json")
-    if not generation_performances:
-        generation_performances.append(400000)
-    performances[str(g)]['aggregated'] = {'best': min(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
-
-
-    with open("data/ea_results.json", "w") as json_file:
-        json.dump(performances, json_file)
-    print("Best Performance: ", min(generation_performances))
-    print("Average Performance: ", sum(generation_performances) / len(generation_performances))
-
     for fit, ind in zip(fits, invalid_ind):
         # print('>> ', fit, ' / ', ind)
         ind.fitness.values = fit
+
+
+    generation_performances = []
+    performances[str(g)] = {}
+    for counter, ind in enumerate(invalid_ind):
+            ind[0].to_json(f"data/ea_results/f{str(g)}_{str(counter)}.json")
+
+    
+    generation_performances = []
+    for counter, ind in enumerate(population):
+        fitness = ind.fitness.values
+        aggregated_fitness = sum(ind.fitness.wvalues)
+        generation_performances.append(aggregated_fitness)
+        performances[str(g)][str(counter)] = {'agg_fitness': aggregated_fitness, 'fitness': [float(value) for value in fitness]}
+
+    performances[str(g)]['aggregated'] = {'best': max(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
+    print("Best Performance: ", max(generation_performances))
+    print("Average Performance: ", sum(generation_performances) / len(generation_performances))
+
+    with open("data/ea_results.json", "w") as json_file:
+        json.dump(performances, json_file)
 
     population = toolbox.select(population, len(population))
     population = [toolbox.clone(ind) for ind in population]
