@@ -86,19 +86,22 @@ def add_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None
     possible_positions = deepcopy(scenario_dict["options"]["positions"])
     for machine_key in loader_object.get_machines():
         possible_positions.remove(loader_object.resource_data[machine_key]["location"])
-    location = random.choice(possible_positions)
+    if possible_positions:
+        location = random.choice(possible_positions)
 
-    loader_object.add_resource_with_default_queue(
-        ID="M" + str(machine_index),
-        description="Machine " + str(machine_index),
-        controller="SimpleController",
-        control_policy=control_policy,
-        location=location,
-        capacity=1,
-        processes=process_module_list,
-        states="BS1",
-        queue_capacity=100,
-    )
+        loader_object.add_resource_with_default_queue(
+            ID="M" + str(machine_index),
+            description="Machine " + str(machine_index),
+            controller="SimpleController",
+            control_policy=control_policy,
+            location=location,
+            capacity=1,
+            processes=process_module_list,
+            states="BS1",
+            queue_capacity=100,
+        )
+    else:
+        remove_machine(loader_object, scenario_dict)
 
 
 def add_transport_resource(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
@@ -167,8 +170,10 @@ def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> Non
         possible_positions = deepcopy(scenario_dict["options"]["positions"])
         for machine_key in loader_object.get_machines():
             possible_positions.remove(loader_object.resource_data[machine_key]["location"])
-        
-        loader_object.resource_data[machine]['location'] = random.choice(possible_positions)
+        if possible_positions:
+            loader_object.resource_data[machine]['location'] = random.choice(possible_positions)
+        else:
+            remove_machine(loader_object, scenario_dict)
 
 def change_control_policy(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     if loader_object.resource_data.keys():

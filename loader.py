@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import deepcopy
 from platform import machine
 import time
 
@@ -322,6 +323,21 @@ class CustomLoader(Loader):
             "input_queues": input_queues,
         }
         self.add_entry_to_data(self.sink_data, sink_data, label="Sink")
+
+    def to_dict(self) -> dict:
+        save_dict = {}
+        save_dict.update({"seed": self.seed})
+        save_dict.update({"time_models": self.time_model_data})
+        save_dict.update({"states": self.state_data})
+        save_dict.update({"processes": self.process_data})
+        save_dict.update({"queues": self.queue_data})
+        save_dict.update({"resources": self.resource_data})
+        save_dict.update({"materials": self.material_data})
+        save_dict.update({"sinks": self.sink_data})
+        save_dict.update({"sources": self.source_data})
+
+        save_dict = deepcopy(save_dict)
+        return save_dict
 
     def to_json(self, file_path) -> None:
         save_dict = {}

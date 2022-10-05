@@ -11,4 +11,5 @@ ini/
 __pycache__/
 changeability_pack/
 data/ea_results/
+data/anneal_results/
 data/ea_results copy/

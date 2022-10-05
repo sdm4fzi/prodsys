@@ -13,7 +13,7 @@ if __name__ == '__main__':
     env = env.Environment()
 
     # env.load_json('data/simple_example.json')
-    env.load_json('data/ea_results/f6_2.json')
+    env.load_json('data/ea_results/f19_106.json')
     env.initialize_simulation()
 
     import time
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     p = PostProcessor(filepath="data/data23.csv")
     p.print_aggregated_data()
     # p.plot_time_per_state_of_resources()
-    p.plot_WIP()
+    # p.plot_WIP()
     p.plot_throughput_over_time()
     p.plot_throughput_time_distribution()
     p.plot_time_per_state_of_resources()
