@@ -14,10 +14,10 @@ import json
 from util import set_seed
 
 SEED=21
-NGEN = 100
-POPULATION_SIZE = 250
+NGEN = 40
+POPULATION_SIZE = 400
 
-
+SAVE_FOLDER = "data/ea_results"
 
 base_scenario = 'data/base_scenario.json'
 with open('data/scenario.json') as json_file:
@@ -39,41 +39,64 @@ toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.ran
 
 # Startpopulation erzeugen
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-population = toolbox.population(n=POPULATION_SIZE)
-
 toolbox.register('evaluate', evaluate, scenario_dict, base_scenario)
 toolbox.register('mate', crossover) #pass
 toolbox.register('mutate', mutation, scenario_dict)
 # toolbox.register('select', tools.selTournament, tournsize=3)
 toolbox.register('select', tools.selNSGA2)
-toolbox.register('select', tools.selNSGA3)
+# toolbox.register('select', tools.selNSGA3)
 
 
 # pool = multiprocessing.Pool(multiprocessing.cpu_count())
 # toolbox.register("map", pool.map)
 
+population = toolbox.population(n=POPULATION_SIZE)
+invalid_ind = [ind for ind in population if not ind.fitness.valid]
+fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+for ind, fit in zip(invalid_ind, fitnesses):
+    ind.fitness.values = fit
+
 performances = {}
+performances["00"] = {}
+for counter, ind in enumerate(invalid_ind):
+        ind[0].to_json(f"{SAVE_FOLDER}/f00_{str(counter)}.json")
+
+generation_performances = []
+for counter, ind in enumerate(population):
+    fitness = ind.fitness.values
+    aggregated_fitness = sum(ind.fitness.wvalues)
+    generation_performances.append(aggregated_fitness)
+    performances["00"][str(counter)] = {'agg_fitness': aggregated_fitness, 'fitness': [float(value) for value in fitness]}
+
+performances["00"]['aggregated'] = {'best': max(generation_performances), 'avg': sum(generation_performances) / len(generation_performances)}
+print("Best Performance: ", max(generation_performances))
+print("Average Performance: ", sum(generation_performances) / len(generation_performances))
+
+population = toolbox.select(population, len(population))
 
 for g in range(NGEN):
     print("Generation", g, "________________")
-    # Select the next generation individuals
-    invalid_ind = [ind for ind in population if not ind.fitness.valid]
+
+    # Vary population
+    offspring = tools.selTournamentDCD(population, len(population))
+    offspring = [toolbox.clone(ind) for ind in offspring]
+    offspring = algorithms.varAnd(offspring, toolbox, cxpb=0.1, mutpb=0.15)
+
+    # Evaluate the individuals
+    invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
     fits = list(toolbox.map(toolbox.evaluate, invalid_ind))
-    # Clone the selected individuals
 
     for fit, ind in zip(fits, invalid_ind):
-        # print('>> ', fit, ' / ', ind)
         ind.fitness.values = fit
 
 
     generation_performances = []
     performances[str(g)] = {}
-    for counter, ind in enumerate(invalid_ind):
-            ind[0].to_json(f"data/ea_results/f{str(g)}_{str(counter)}.json")
+    for counter, ind in enumerate(offspring):
+        if ind in invalid_ind:
+            ind[0].to_json(f"{SAVE_FOLDER}/f{str(g)}_{str(counter)}.json")
 
-    
-    generation_performances = []
-    for counter, ind in enumerate(population):
+    for counter, ind in enumerate(offspring):
         fitness = ind.fitness.values
         aggregated_fitness = sum(ind.fitness.wvalues)
         generation_performances.append(aggregated_fitness)
@@ -83,12 +106,11 @@ for g in range(NGEN):
     print("Best Performance: ", max(generation_performances))
     print("Average Performance: ", sum(generation_performances) / len(generation_performances))
 
+
+    population = toolbox.select(population + offspring, POPULATION_SIZE)
+
     with open("data/ea_results.json", "w") as json_file:
         json.dump(performances, json_file)
-
-    population = toolbox.select(population, len(population))
-    population = [toolbox.clone(ind) for ind in population]
-    population = algorithms.varAnd(population, toolbox, cxpb=0.1, mutpb=0.15)
 
 for g in range(NGEN):
     print("Generation:", g, "best: ", performances[str(g)]['aggregated']['best'], "average: ", performances[str(g)]['aggregated']['avg'])

@@ -24,7 +24,6 @@ class PostProcessor:
     df_raw: pd.DataFrame = field(default=None, init=False)
 
     def __post_init__(self):
-        os.environ["PATH"] += os.pathsep + "C:/Program Files/Graphviz/bin"
         if self.filepath:
             self.read_df_from_csv()
 
@@ -95,6 +94,7 @@ class PostProcessor:
         return log
 
     def plot_inductive_bpmn(self):
+        os.environ["PATH"] += os.pathsep + "C:/Program Files/Graphviz/bin"
         log = self.get_eventlog_for_material()
         process_tree = pm4py.discover_process_tree_inductive(log)
         bpmn_model = pm4py.convert_to_bpmn(process_tree)
