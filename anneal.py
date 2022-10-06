@@ -45,7 +45,7 @@ class ProductionSystemOptimization(Annealer):
     def move(self):
         while True:
             # print("Move")
-            configuration = mutation(scenario_dict=scenario_dict, individual=[self.state])[0][0]
+            configuration = mutation(scenario_dict=scenario_dict, individual=[deepcopy(self.state)])[0][0]
             base_configuration = loader.CustomLoader()
             base_configuration.read_data(base_scenario, "json")
             if check_valid_configuration(configuration=configuration, base_configuration=base_configuration, scenario_dict=scenario_dict) and configuration.to_dict() not in solutions:
