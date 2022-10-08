@@ -214,7 +214,7 @@ class CustomLoader(Loader):
         states: List[str],
         input_queues: List[str] = None,
         output_queues: List[str] = None,
-    ):
+    ):           
         resource_data = {
             "ID": ID,
             "description": description,
@@ -232,12 +232,6 @@ class CustomLoader(Loader):
         self.add_entry_to_data(self.resource_data, resource_data, label="Resource")
 
     def add_default_queues(self, queue_capacity: int):
-        # new_queue_data = {}
-        # for queue_key, queue_values in self.queue_data.items():
-        #     print(queue_key, queue_values["ID"])
-        #     if queue_values["ID"] in ["SourceQueue", "SinkQueue"]:
-        #         new_queue_data[queue_key] = queue_values
-        # self.queue_data = new_queue_data
         self.queue_data = {}
         self.add_queue(ID="SourceQueue", description="Output queue for all sources", capacity=None)
         self.add_queue(ID="SinkQueue", description="Input queue for all sinks", capacity=None)
@@ -283,6 +277,41 @@ class CustomLoader(Loader):
             ID="OQ" + ID, description="Output queue of" + ID, capacity=queue_capacity
         )
         self.add_entry_to_data(self.resource_data, resource_data, label="Resource")
+
+    def add_machine(self, control_policy: str, location: List[int], processes: List[str], states: List[str]):
+        machine_indices = self.get_machines()
+        for counter, machine_index in enumerate(machine_indices):
+            self.resource_data[machine_index]["ID"] = "M" + str(counter + 1)
+            self.resource_data[machine_index]["description"] = "Machine " + str(counter + 1)
+        new_machine_index = self.get_num_machines() + 1
+        self.add_resource_with_default_queue(
+            ID="M" + str(new_machine_index),
+            description="Machine " + str(new_machine_index),
+            controller="SimpleController",
+            control_policy=control_policy,
+            location=location,
+            capacity=1,
+            processes=processes,
+            states=states,
+            queue_capacity=100,
+        )
+
+    def add_transport_resource(self, control_policy: str, location: List[int], processes: List[str], states: List[str]):
+        tr_indices = self.get_transport_resources()
+        for counter, tr_index in enumerate(tr_indices):
+            self.resource_data[tr_index]["ID"] = "TR" + str(counter + 1)
+            self.resource_data[tr_index]["description"] = "Transport resource " + str(counter + 1)
+        new_tr_index = self.get_num_transport_resources() + 1
+        self.add_resource(
+            ID="TR" + str(new_tr_index),
+            description="Transport resource " + str(new_tr_index),
+            controller="TransportController",
+            control_policy=control_policy,
+            location=location,
+            capacity=1,
+            processes=processes,
+            states=states,
+        )
 
     def add_source(
         self,

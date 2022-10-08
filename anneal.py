@@ -1,7 +1,7 @@
 from imp import source_from_cache
 from json import tool
 from random import random
-from env import Environment
+from env import Environment, VERBOSE
 import loader
 import print_util
 from post_processing import PostProcessor
@@ -9,7 +9,7 @@ from post_processing import PostProcessor
 from copy import deepcopy
 
 
-from evolutionary import check_valid_configuration, random_configuration, evaluate, mutation, crossover
+from optimization_util import check_valid_configuration, random_configuration, evaluate, mutation, crossover
 from simanneal import Annealer
 
 
@@ -18,6 +18,7 @@ import json
 from util import set_seed
 
 SEED=22
+VERBOSE = 0
 
 SAVE_FOLDER = "data/anneal_results"
 
@@ -76,6 +77,9 @@ class ProductionSystemOptimization(Annealer):
 initial_state = loader.CustomLoader()
 initial_state.read_data(base_scenario, "json")
 pso = ProductionSystemOptimization(initial_state=initial_state)
+# pso.Tmax = 10000
+# pso.steps = 20000
+# internary, performance = pso.anneal()
 
-internary, performance = pso.anneal()
+pso.auto(minutes=120, steps=100)
 

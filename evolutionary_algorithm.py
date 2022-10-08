@@ -8,7 +8,7 @@ from post_processing import PostProcessor
 import multiprocessing
 from deap import base, creator, tools, algorithms
 
-from evolutionary import random_configuration, evaluate, mutation, crossover
+from optimization_util import random_configuration, evaluate, mutation, crossover
 import json
 
 from util import set_seed
