@@ -13,24 +13,24 @@ import random
 
 import simpy
 
-import loader
-import process
-import resources
-import material
-import sink
-import source
-import store
-import time_model
-import state
-import router
-import request
+from . import loader
+from . import process
+from . import resources
+from . import material
+from . import sink
+from . import source
+from . import store
+from . import time_model
+from . import state
+from . import router
+from . import request
 
-import util
-import logger
+from . import util
+from . import logger
 
 Location = Union[resources.Resource, source.Source, sink.Sink]
 
-VERBOSE = 0
+VERBOSE = 1
 
 @contextlib.contextmanager
 def temp_seed(seed):
@@ -57,7 +57,7 @@ class Environment(simpy.Environment):
     material_factory: material.MaterialFactory = field(init=False)
     data_collector: logger.Datacollector = field(init=False)
 
-    pbar: tqdm = field(init=False)
+    pbar: tqdm = field(init=False, default=False)
     last_update: int = field(init=False, default=0)
 
     def __init__(self) -> None:

@@ -5,14 +5,14 @@ from dataclasses import dataclass, field
 
 import simpy
 
-import base
-import env
-import material
-import time_model
-import router
-import store
-import resources
-import sink
+from . import base
+from . import env
+from . import material
+from . import time_model
+from . import router
+from . import store
+from . import resources
+from . import sink
 
 
 @dataclass

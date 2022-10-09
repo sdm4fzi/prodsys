@@ -8,11 +8,11 @@ from uuid import UUID, uuid1
 from typing import List, Tuple
 import simpy
 
-import base
-import process
+from . import base
+from . import process
 from collections.abc import Callable
-import resources
-import sink
+from . import resources
+from . import sink
 import numpy as np
 
 

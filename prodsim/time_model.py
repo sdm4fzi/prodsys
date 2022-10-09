@@ -3,12 +3,12 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pydantic import validator, parse_obj_as, BaseModel
 from typing import List, Optional, Tuple, Union, Callable, Literal
-from util import get_class_from_str
+from .util import get_class_from_str
 
 import numpy as np
 from numpy.random import exponential, normal
 
-import base
+from . import base
 
 
 def get_constant_list(parameters: List[float], size: int) -> List[float]:

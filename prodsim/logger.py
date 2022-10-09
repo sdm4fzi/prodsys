@@ -7,10 +7,10 @@ import functools
 from pydantic import BaseModel
 from typing import Callable, List, Union
 
-import material
-import state
-import resources
-import source
+from . import material
+from . import state
+from . import resources
+from . import source
 
 
 class Datacollector(BaseModel):

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-import env
-import logger
+from . import env
+from . import logger
 
 
 class Visualizer(ABC):

@@ -1,12 +1,11 @@
 from copy import copy, deepcopy
 from dataclasses import dataclass, replace
 import json
-from turtle import pos
 from typing import List
-from env import Environment
-import loader
-import print_util
-from post_processing import PostProcessor
+from .env import Environment
+from . import loader
+from . import print_util
+from .post_processing import PostProcessor
 
 import random
 
@@ -290,7 +289,7 @@ def check_valid_configuration(configuration: loader.CustomLoader, base_configura
 
 
     possibles_processes = set(base_configuration.get_processes())
-    available_processes = set(configuration.get_num_process_modules().keys())
+    available_processes = configuration.get_num_process_modules().keys()
 
     if available_processes < possibles_processes:
         return False

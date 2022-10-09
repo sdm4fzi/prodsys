@@ -6,9 +6,9 @@ from typing import List, Tuple, Type, Union
 from copy import copy
 import pm4py
 
-import base
-import time_model
-from util import get_class_from_str
+from . import base
+from . import time_model
+from .util import get_class_from_str
 
 
 @dataclass

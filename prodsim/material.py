@@ -4,16 +4,16 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import List, Union
 
-import base
-import env
+from . import base
+from . import env
 import simpy
-import resources
-import request
-import router
-import process
-import sink
-import source
-import logger
+from . import resources
+from . import request
+from . import router
+from . import process
+from . import sink
+from . import source
+from . import logger
 import logging
 
 logging.basicConfig(filename="example2.log", encoding="utf-8", level=logging.DEBUG)

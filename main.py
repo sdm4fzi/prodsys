@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import env
-import print_util
+from prodsim import env
+from prodsim import print_util
 import time
-from post_processing import PostProcessor
+from prodsim.post_processing import PostProcessor
 
 
 if __name__ == '__main__':

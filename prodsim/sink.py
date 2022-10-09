@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import List, Dict
 from dataclasses import dataclass, field
 
-import base
-import env
-import material
-import store
+from . import base
+from . import env
+from . import material
+from . import store
 
 @dataclass
 class Sink(base.IDEntity):

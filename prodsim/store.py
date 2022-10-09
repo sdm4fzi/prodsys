@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 
 import simpy
 
-import base
-import env
+from . import base
+from . import env
 
 
 @dataclass

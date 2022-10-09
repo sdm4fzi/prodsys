@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 from typing import List, Type, Optional, Union, Literal
 
 import simpy
-import env
-import resources
-import time_model
-import base
-from util import get_class_from_str
-import material
+from . import env
+from . import resources
+from . import time_model
+from . import base
+from .util import get_class_from_str
+from . import material
 
 class StateEnum(str, Enum):
     start_state: str = "start state"

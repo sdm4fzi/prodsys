@@ -63,7 +63,11 @@ class Loader(ABC):
  
     
     def get_num_transport_resources(self) -> int:
-        return len(self.resource_data.keys()) - self.get_num_machines()
+        i = 0
+        for resource in self.resource_data.values():
+            if 'input_queues' not in resource.keys():
+                i += 1
+        return i
 
     def get_num_process_modules(self) -> dict:
         num_process_modules_dict = {}
@@ -124,9 +128,22 @@ class CustomLoader(Loader):
     def set_seed(self, seed: int):
         self.seed = seed
 
+    def add_entry_to_data_with_lowest_possible_index(self, data, entry, label):
+        counter = 1
+        while True:
+            key_string = f"{label}_{counter}"
+            if not key_string in data.keys():
+                data.update({key_string: entry})
+                break
+            counter += 1
+
     def add_entry_to_data(self, data, entry, label):
         length = len(data) + 1
-        data.update({f"{label}_{length}": entry})
+        key_string = f"{label}_{length}"
+        if not key_string in data.keys():
+            data.update({key_string: entry})
+        else: 
+            self.add_entry_to_data_with_lowest_possible_index(data, entry, label)
 
     def add_typed_entry_to_data(self, data, entry, type):
         if type not in data:
@@ -243,7 +260,7 @@ class CustomLoader(Loader):
             self.add_queue(
                 ID="OQ" + machine_ID, description="Output queue of" + machine_ID, capacity=queue_capacity
             )
-            self.resource_data[machine_ID]["output_queues"] = ["IQ" + machine_ID]
+            self.resource_data[machine_ID]["output_queues"] = ["OQ" + machine_ID]
 
 
     def add_resource_with_default_queue(

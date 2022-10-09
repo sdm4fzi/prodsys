@@ -1,32 +1,7 @@
-# scenario_dict = {
-#     "constraints": {
-#         "max_reconfiguration_cost": 100000,
-#         "max_num_machines": 5,
-#         "max_num_processes_per_machine": 2,
-#         "max_num_transport_resources": 3,
-#     },
-#     "options": {
-#         "positions": ((0, 0), (0, 5), (5, 0), (5, 5), (10, 5), (5, 10)),
-#         "machine_controllers": ["FIFO", "SPT", "LIFO"],
-#         "transport_controllers": ["FIFO", "SPT_transport"],
-#     },
-#     "target": {
-#         "quantity_material_1": 1300,
-#     },
-#     "costs": {"machine": 50000, "transport_resource": 20000, "process_module": 3000},
-# }
+a = {'a': 1, 'b': 2}
+d = set(['a', 'b'])
 
-# import json
-
-# with open("data/scenario.json", "w") as wirter:
-#     json.dump(scenario_dict, wirter)
-
-loc1 = [0, 5]
-locations = [[0, 5], [5, 0], [0, 0]]
-
-if loc1 in locations:
-    locations.remove(loc1)
-    print(locations)
-    print("gleich")
+if a.keys() < d:
+    print("smaller")
 else:
-    print("ungleich")
+    print("not smaller")

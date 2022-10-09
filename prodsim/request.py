@@ -3,9 +3,9 @@ from __future__ import annotations
 import simpy
 from dataclasses import dataclass
 
-import resources
-import process
-import material
+from . import resources
+from . import process
+from . import material
 
 @dataclass
 class Request:

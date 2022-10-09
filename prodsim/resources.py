@@ -5,14 +5,14 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 
 import simpy
-import env
-import base
-import process
-import state
+from . import env
+from . import base
+from . import process
+from . import state
 import copy
-import store
-import control
-from util import get_class_from_str
+from . import store
+from . import control
+from .util import get_class_from_str
 
 
 @dataclass

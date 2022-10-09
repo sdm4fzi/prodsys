@@ -7,12 +7,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 
-import env
-import material
-import process
-import resources
-import request
-import state
+from . import env
+from . import material
+from . import process
+from . import resources
+from . import request
+from . import state
 
 # from process import Process
 import simpy
