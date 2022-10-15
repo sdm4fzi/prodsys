@@ -5,6 +5,7 @@ from random import random
 
 from deap import algorithms, base, creator, tools
 
+from prodsim import env
 from prodsim.optimization_util import (crossover, evaluate, mutation,
                                        random_configuration)
 from prodsim.util import set_seed
@@ -14,6 +15,7 @@ multiprocessing.freeze_support()
 SEED=21
 NGEN = 40
 POPULATION_SIZE = 400
+env.VERBOSE = 0
 
 SAVE_FOLDER = "data/ea_results"
 
