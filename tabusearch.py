@@ -10,7 +10,7 @@ from prodsim.optimization_util import (check_valid_configuration, crossover,
 from prodsim.util import set_seed
 
 SEED = 22
-env.VERBOSE = 1
+env.VERBOSE = 0
 
 SAVE_FOLDER = "data/tabu_results"
 
@@ -44,6 +44,7 @@ class Algorithm(TabuSearch):
         performance = sum([value * weight for value, weight in zip(values, weights)])
         # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(performances["00"]) - 1
+        print(counter, performance)
         performances["00"][str(counter)] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],

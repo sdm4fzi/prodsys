@@ -12,7 +12,7 @@ from prodsim.util import set_seed
 
 multiprocessing.freeze_support()
 
-SEED=21
+SEED=22
 NGEN = 40
 POPULATION_SIZE = 400
 env.VERBOSE = 0
