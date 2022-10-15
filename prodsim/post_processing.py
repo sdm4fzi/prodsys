@@ -1,14 +1,15 @@
+import math
+import os
+from dataclasses import dataclass, field
 from typing import List
+
+import numpy as np
 import pandas as pd
+import plotly.express as px
+import plotly.figure_factory as ff
+import plotly.graph_objects as go
 import pm4py
 from pm4py.visualization.petri_net import visualizer as pn_visualizer
-import os
-import plotly.figure_factory as ff
-import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
-from dataclasses import dataclass, field
-import math
 
 WARM_UP_CUT_OFF = 0.15
 
@@ -21,7 +22,7 @@ def hex_to_rgba(h, alpha):
 @dataclass
 class PostProcessor:
     filepath: str = field(default="")
-    df_raw: pd.DataFrame = field(default=None, init=False)
+    df_raw: pd.DataFrame = field(default=None)
 
     def __post_init__(self):
         if self.filepath:

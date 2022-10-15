@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from gc import callbacks
-from typing import List
 from collections.abc import Callable
 from dataclasses import dataclass, field
-
-
-from . import env
-from . import material
-from . import process
-from . import resources
-from . import request
-from . import state
+from gc import callbacks
+from typing import List
 
 # from process import Process
 import simpy
+
+from . import env, material, process, request, resources, state
 
 
 @dataclass

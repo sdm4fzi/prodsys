@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import simpy
 from dataclasses import dataclass
 
-from . import resources
-from . import process
-from . import material
+import simpy
+
+from . import material, process, resources
+
 
 @dataclass
 class Request:

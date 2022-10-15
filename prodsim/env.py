@@ -1,32 +1,19 @@
 from __future__ import annotations
 
+import contextlib
+import random
 from abc import ABC, abstractmethod
 from copy import copy
 from dataclasses import dataclass, field
-from typing import List, Tuple, Union
 from functools import partial
+from typing import List, Tuple, Union
+
+import numpy as np
+import simpy
 from tqdm import tqdm
 
-import contextlib
-import numpy as np
-import random
-
-import simpy
-
-from . import loader
-from . import process
-from . import resources
-from . import material
-from . import sink
-from . import source
-from . import store
-from . import time_model
-from . import state
-from . import router
-from . import request
-
-from . import util
-from . import logger
+from . import (loader, logger, material, process, request, resources, router,
+               sink, source, state, store, time_model, util)
 
 Location = Union[resources.Resource, source.Source, sink.Sink]
 

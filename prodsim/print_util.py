@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from . import env
 
+
 def print_simulation_info(_env: env.Environment, start_time: float, end_time: float):
     print("____________\n")
 

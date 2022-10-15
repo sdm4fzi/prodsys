@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
-from pydantic import BaseModel, Extra
 from dataclasses import dataclass, field
-from typing import List, Type, Optional, Union, Literal
+from enum import Enum
+from typing import List, Literal, Optional, Type, Union
 
 import simpy
-from . import env
-from . import resources
-from . import time_model
-from . import base
+from pydantic import BaseModel, Extra
+
+from . import base, env, material, resources, time_model
 from .util import get_class_from_str
-from . import material
+
 
 class StateEnum(str, Enum):
     start_state: str = "start state"

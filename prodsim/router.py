@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import Field, dataclass, field
 from random import random
 from turtle import pos
-from uuid import UUID, uuid1
 from typing import List, Tuple
+from uuid import UUID, uuid1
+
+import numpy as np
 import simpy
 
-from . import base
-from . import process
-from collections.abc import Callable
-from . import resources
-from . import sink
-import numpy as np
+from . import base, process, resources, sink
 
 
 @dataclass

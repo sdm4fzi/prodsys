@@ -1,17 +1,12 @@
 import json
 from copy import deepcopy
+
 from simanneal import Annealer
 
-
-from prodsim import env
-from prodsim import loader
-from prodsim.optimization_util import (
-    check_valid_configuration,
-    random_configuration,
-    evaluate,
-    mutation,
-    crossover,
-)
+from prodsim import env, loader
+from prodsim.optimization_util import (check_valid_configuration, crossover,
+                                       evaluate, mutation,
+                                       random_configuration)
 from prodsim.util import set_seed
 
 SEED = 22
@@ -31,7 +26,7 @@ weights = (-0.1, 1.0, 1.0, 0.005)
 
 performances = {}
 performances["00"] = {}
-solutions = []
+solution_dict = {"current_generation": "00", "00": []}
 
 
 class ProductionSystemOptimization(Annealer):
@@ -58,24 +53,20 @@ class ProductionSystemOptimization(Annealer):
                 break
 
     def energy(self):
-        if self.state.to_dict() in solutions:
-            index = solutions.index(self.state.to_dict())
-            print("\n\t########## Evaluted ind", self.counter, "for value:", performances["00"][str(index)]["agg_fitness"])
-            print("\talready simulated")
-            return performances["00"][str(index)]["agg_fitness"]
-
-        solutions.append(self.state.to_dict())
-        self.state.to_json(f"{SAVE_FOLDER}/f_{str(self.counter)}.json")
-        # print("Found valid Move", self.counter)
 
         values = evaluate(
             scenario_dict=scenario_dict,
             base_scenario=base_scenario,
+            performances=performances,
+            solution_dict=solution_dict, 
+            save_folder=SAVE_FOLDER,
             individual=[self.state],
         )
+
         performance = sum([value * weight for value, weight in zip(values, weights)])
-        print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
-        performances["00"][str(self.counter)] = {
+        # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
+        counter = len(performances["00"]) - 1
+        performances["00"][str(counter)] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
         }
@@ -90,8 +81,15 @@ class ProductionSystemOptimization(Annealer):
 initial_state = loader.CustomLoader()
 initial_state.read_data(base_scenario, "json")
 pso = ProductionSystemOptimization(initial_state=initial_state)
-# pso.Tmax = 10000
-# pso.steps = 20000
-# internary, performance = pso.anneal()
 
-pso.auto(minutes=120, steps=100)
+# pso.auto(minutes=120, steps=100)
+# {'tmax': 7500.0, 'tmin': 0.67, 'steps': 1500, 'updates': 100} 64:27:53ä'
+
+
+pso.Tmax = 10000
+pso.Tmin = 0.67
+pso.steps = 2500
+pso.updates = 200
+
+internary, performance = pso.anneal()
+

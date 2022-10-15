@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Dict
 from dataclasses import dataclass, field
+from typing import Dict, List
 
 import simpy
 
-from . import base
-from . import env
-from . import material
-from . import time_model
-from . import router
-from . import store
-from . import resources
-from . import sink
+from . import base, env, material, resources, router, sink, store, time_model
 
 
 @dataclass

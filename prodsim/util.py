@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import random
+
 import numpy as np
+
 
 def get_class_from_str(name: str, cls_dict: dict):
     if name not in cls_dict.keys():

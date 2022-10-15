@@ -1,17 +1,17 @@
+import json
+import random
 from copy import copy, deepcopy
 from dataclasses import dataclass, replace
-import json
-from typing import List
-from .env import Environment
-from . import loader
-from . import print_util
-from .post_processing import PostProcessor
+from datetime import datetime
+from typing import Dict, List, Union
 
-import random
+from . import loader, print_util
+from .env import Environment
+from .post_processing import PostProcessor
 
 
 def crossover(ind1, ind2):
-    crossover_type = random.choice(['machine', 'partial_machine', 'transport_resource'])
+    crossover_type = random.choice(["machine", "partial_machine", "transport_resource"])
     if "machine " in crossover_type:
         machines_1_keys = ind1[0].get_machines()
         machines_2_keys = ind2[0].get_machines()
@@ -20,8 +20,16 @@ def crossover(ind1, ind2):
             machines_1_keys = machines_1_keys[:min_length]
             machines_2_keys = machines_2_keys[:min_length]
 
-        machines_1_data = {key: data for key, data in ind1[0].resource_data.items() if key in machines_1_keys}
-        machines_2_data = {key: data for key, data in ind2[0].resource_data.items() if key in machines_2_keys}
+        machines_1_data = {
+            key: data
+            for key, data in ind1[0].resource_data.items()
+            if key in machines_1_keys
+        }
+        machines_2_data = {
+            key: data
+            for key, data in ind2[0].resource_data.items()
+            if key in machines_2_keys
+        }
 
         for key in machines_1_keys:
             del ind1[0].resource_data[key]
@@ -35,9 +43,12 @@ def crossover(ind1, ind2):
         tr1_keys = ind1[0].get_transport_resources()
         tr2_keys = ind2[0].get_transport_resources()
 
-
-        tr1_data = {key: data for key, data in ind1[0].resource_data.items() if key in tr1_keys}
-        tr2_data = {key: data for key, data in ind2[0].resource_data.items() if key in tr2_keys}
+        tr1_data = {
+            key: data for key, data in ind1[0].resource_data.items() if key in tr1_keys
+        }
+        tr2_data = {
+            key: data for key, data in ind2[0].resource_data.items() if key in tr2_keys
+        }
 
         for key in tr1_keys:
             del ind1[0].resource_data[key]
@@ -75,7 +86,12 @@ def mutation(scenario_dict, individual):
 
 
 def add_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
-    num_process_modules = random.choice(range(scenario_dict["constraints"]["max_num_processes_per_machine"])) + 1
+    num_process_modules = (
+        random.choice(
+            range(scenario_dict["constraints"]["max_num_processes_per_machine"])
+        )
+        + 1
+    )
     possible_processes = loader_object.get_processes()
     process_module_list = random.sample(possible_processes, num_process_modules)
 
@@ -93,7 +109,9 @@ def add_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None
         )
 
 
-def add_transport_resource(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+def add_transport_resource(
+    loader_object: loader.CustomLoader, scenario_dict: dict
+) -> None:
     control_policy = random.choice(scenario_dict["options"]["transport_controllers"])
     loader_object.add_transport_resource(
         control_policy=control_policy,
@@ -102,13 +120,15 @@ def add_transport_resource(loader_object: loader.CustomLoader, scenario_dict: di
         states=["BS2"],
     )
 
+
 def add_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
     if possible_machines:
         possible_processes = loader_object.get_processes()
         machine = random.choice(possible_machines)
         process_module_to_add = random.choice(possible_processes)
-        loader_object.resource_data[machine]['processes'].append(process_module_to_add)
+        loader_object.resource_data[machine]["processes"].append(process_module_to_add)
+
 
 def remove_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
@@ -116,33 +136,48 @@ def remove_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> N
         machine = random.choice(possible_machines)
         del loader_object.resource_data[machine]
 
-def remove_transport_resource(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+
+def remove_transport_resource(
+    loader_object: loader.CustomLoader, scenario_dict: dict
+) -> None:
     transport_resources = loader_object.get_transport_resources()
     if transport_resources:
         transport_resource = random.choice(transport_resources)
         del loader_object.resource_data[transport_resource]
 
 
-def remove_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+def remove_process_module(
+    loader_object: loader.CustomLoader, scenario_dict: dict
+) -> None:
     possible_machines = loader_object.get_machines()
     if possible_machines:
         machine = random.choice(possible_machines)
-        process_modules = loader_object.resource_data[machine]['processes']
+        process_modules = loader_object.resource_data[machine]["processes"]
         if process_modules:
             process_module_to_delete = random.choice(process_modules)
-            loader_object.resource_data[machine]['processes'].remove(process_module_to_delete)
+            loader_object.resource_data[machine]["processes"].remove(
+                process_module_to_delete
+            )
 
-def move_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+
+def move_process_module(
+    loader_object: loader.CustomLoader, scenario_dict: dict
+) -> None:
     possible_machines = loader_object.get_machines()
     if possible_machines and len(possible_machines) > 1:
         from_machine = random.choice(possible_machines)
         possible_machines.remove(from_machine)
         to_machine = random.choice(possible_machines)
-        process_modules = loader_object.resource_data[from_machine]['processes']
+        process_modules = loader_object.resource_data[from_machine]["processes"]
         if process_modules:
             process_module_to_move = random.choice(process_modules)
-            loader_object.resource_data[from_machine]['processes'].remove(process_module_to_move)
-            loader_object.resource_data[to_machine]['processes'].append(process_module_to_move)
+            loader_object.resource_data[from_machine]["processes"].remove(
+                process_module_to_move
+            )
+            loader_object.resource_data[to_machine]["processes"].append(
+                process_module_to_move
+            )
+
 
 def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
     possible_machines = loader_object.get_machines()
@@ -151,23 +186,37 @@ def move_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> Non
 
         possible_positions = deepcopy(scenario_dict["options"]["positions"])
         for machine_key in loader_object.get_machines():
-            possible_positions.remove(loader_object.resource_data[machine_key]["location"])
+            possible_positions.remove(
+                loader_object.resource_data[machine_key]["location"]
+            )
         if possible_positions:
-            loader_object.resource_data[machine]['location'] = random.choice(possible_positions)
+            loader_object.resource_data[machine]["location"] = random.choice(
+                possible_positions
+            )
         # else:
         #     remove_machine(loader_object, scenario_dict)
 
-def change_control_policy(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+
+def change_control_policy(
+    loader_object: loader.CustomLoader, scenario_dict: dict
+) -> None:
     if loader_object.resource_data.keys():
         resource = random.choice(list(loader_object.resource_data.keys()))
         if resource in loader_object.get_machines():
-            possible_control_policies = copy(scenario_dict["options"]["machine_controllers"])
+            possible_control_policies = copy(
+                scenario_dict["options"]["machine_controllers"]
+            )
         else:
-            possible_control_policies = copy(scenario_dict["options"]["transport_controllers"])
-        
-        possible_control_policies.remove(loader_object.resource_data[resource]["control_policy"])
+            possible_control_policies = copy(
+                scenario_dict["options"]["transport_controllers"]
+            )
+
+        possible_control_policies.remove(
+            loader_object.resource_data[resource]["control_policy"]
+        )
         new_control_policy = random.choice(possible_control_policies)
         loader_object.resource_data[resource]["control_policy"] = new_control_policy
+
 
 def calculate_reconfiguration_cost(
     scenario_dict: dict,
@@ -270,23 +319,39 @@ def random_configuration(
     return loader_object
 
 
-def check_valid_configuration(configuration: loader.CustomLoader, base_configuration: loader.CustomLoader, scenario_dict: dict) -> bool:
-    if configuration.get_num_machines() > scenario_dict["constraints"]["max_num_machines"]:
-        return False
-    
-    if (configuration.get_num_transport_resources() > scenario_dict["constraints"]["max_num_transport_resources"]) or (configuration.get_num_transport_resources() == 0):
-        return False
-    
-    for resource in configuration.resource_data.values():
-        if len(resource["processes"]) > scenario_dict["constraints"]["max_num_processes_per_machine"]:
-            return False
-    
-    reconfiguration_cost = calculate_reconfiguration_cost(scenario_dict=scenario_dict, configuration=configuration, baseline=base_configuration)
-    configuration.reconfiguration_cost = reconfiguration_cost
-    
-    if reconfiguration_cost > scenario_dict["constraints"]["max_reconfiguration_cost"]:
+def check_valid_configuration(
+    configuration: loader.CustomLoader,
+    base_configuration: loader.CustomLoader,
+    scenario_dict: dict,
+) -> bool:
+    if (
+        configuration.get_num_machines()
+        > scenario_dict["constraints"]["max_num_machines"]
+    ):
         return False
 
+    if (
+        configuration.get_num_transport_resources()
+        > scenario_dict["constraints"]["max_num_transport_resources"]
+    ) or (configuration.get_num_transport_resources() == 0):
+        return False
+
+    for resource in configuration.resource_data.values():
+        if (
+            len(resource["processes"])
+            > scenario_dict["constraints"]["max_num_processes_per_machine"]
+        ):
+            return False
+
+    reconfiguration_cost = calculate_reconfiguration_cost(
+        scenario_dict=scenario_dict,
+        configuration=configuration,
+        baseline=base_configuration,
+    )
+    configuration.reconfiguration_cost = reconfiguration_cost
+
+    if reconfiguration_cost > scenario_dict["constraints"]["max_reconfiguration_cost"]:
+        return False
 
     possibles_processes = set(base_configuration.get_processes())
     available_processes = configuration.get_num_process_modules().keys()
@@ -311,28 +376,53 @@ def get_objective_values(environment: Environment, pp: PostProcessor) -> List[fl
         sum(throughput),
         sum(wip),
         sum(throughput_time) / len(throughput_time),
-        reconfiguration_cost
+        reconfiguration_cost,
     ]
+
 
 def get_base_configuration(filepath: str) -> loader.CustomLoader:
     loader_object = loader.CustomLoader()
     loader_object.read_data(filepath, "json")
     return loader_object
 
-def evaluate(scenario_dict: dict, base_scenario: str, individual) -> List[float]:
+
+def evaluate(
+    scenario_dict: dict,
+    base_scenario: str,
+    solution_dict: Dict[str, Union[list, str]],
+    performances: dict,
+    save_folder: str,
+    individual,
+) -> List[float]:
     loader_object: loader.CustomLoader = individual[0]
+    current_generation = solution_dict["current_generation"]
+
+    counter = len(performances[current_generation])
+    performances[current_generation][str(counter)] = {}
+
+    loader_object.to_json(f"{save_folder}/f_{current_generation}_{str(counter)}.json")
+
+    for generation in solution_dict.keys():
+        if (
+            generation != "current_generation"
+            and loader_object.to_dict() in solution_dict[generation]
+        ):
+            index = solution_dict[generation].index(loader_object.to_dict())
+            return performances[generation][str(index)]["fitness"]
+
+    solution_dict[current_generation].append(loader_object.to_dict())
+
     base_configuration = get_base_configuration(base_scenario)
     if not check_valid_configuration(loader_object, base_configuration, scenario_dict):
         return [-100000, 100000, 100000, 100000]
 
-    loader_object.to_json("data/ea_configuration.json")
     e = Environment()
     e.loader = loader_object
     e.initialize_simulation()
     e.run(10000)
 
-    e.data_collector.log_data_to_csv(filepath="data/data21.csv")
-    p = PostProcessor(filepath="data/data21.csv")
+    df = e.data_collector.get_data()
+    p = PostProcessor(df_raw=df)
     return get_objective_values(e, p)
 
 

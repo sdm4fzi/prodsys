@@ -1,24 +1,19 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC
 from dataclasses import dataclass, field
 from typing import List, Union
 
-from . import base
-from . import env
 import simpy
-from . import resources
-from . import request
-from . import router
-from . import process
-from . import sink
-from . import source
-from . import logger
-import logging
+
+from . import (base, env, logger, process, request, resources, router, sink,
+               source)
 
 logging.basicConfig(filename="example2.log", encoding="utf-8", level=logging.DEBUG)
 
 from collections.abc import Iterable
+
 import numpy as np
 
 

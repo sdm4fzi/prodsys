@@ -1,38 +1,36 @@
 from __future__ import annotations
-from ast import Call
 
-from functools import partial, wraps
 import functools
-
-from pydantic import BaseModel
+from ast import Call
+from functools import partial, wraps
 from typing import Callable, List, Union
 
-from . import material
-from . import state
-from . import resources
-from . import source
+import pandas as pd
+from pydantic import BaseModel
+
+from . import material, resources, source, state
 
 
 class Datacollector(BaseModel):
     data: dict = {'Resources': []}
 
     def log_data_to_csv(self, filepath: str):
-        import pandas as pd
 
-        df = pd.DataFrame(self.data['Resources'])
+        df = self.get_data()
         df['Activity'] = pd.Categorical(df['Activity'], 
-                            categories=[
-                                'created material', 
-                                'end state', 
-                                'end interrupt', 
-                                'start state', 
-                                'start interrupt', 
-                                'finished material'],
-                            ordered=True)
-        #TODO: maybe delete this line
-        df.sort_values(by=['Time', 'Activity'], inplace=True)
-
+                    categories=[
+                        'created material', 
+                        'end state', 
+                        'end interrupt', 
+                        'start state', 
+                        'start interrupt', 
+                        'finished material'],
+                    ordered=True)
         df.to_csv(filepath)
+    
+    def get_data(self) -> pd.DataFrame:
+        df = pd.DataFrame(self.data['Resources'])
+        return df
 
     def patch_state(self, __resource: Union[state.StateInfo, material.MaterialInfo], attr: List[str], pre: functools.partial=None, post: functools.partial=None):
         """Patch *state* so that it calls the callable *pre* before each

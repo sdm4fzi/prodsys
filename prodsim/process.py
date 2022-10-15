@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Tuple, Type, Union
-from copy import copy
+
 import pm4py
 
-from . import base
-from . import time_model
+from . import base, time_model
 from .util import get_class_from_str
 
 

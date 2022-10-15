@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Dict
 from dataclasses import dataclass, field
+from typing import Dict, List
 
 import simpy
 
-from . import base
-from . import env
+from . import base, env
 
 
 @dataclass

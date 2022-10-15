@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from pydantic import validator, parse_obj_as, BaseModel
-from typing import List, Optional, Tuple, Union, Callable, Literal
-from .util import get_class_from_str
+from typing import Callable, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 from numpy.random import exponential, normal
+from pydantic import BaseModel, parse_obj_as, validator
 
 from . import base
+from .util import get_class_from_str
 
 
 def get_constant_list(parameters: List[float], size: int) -> List[float]:
