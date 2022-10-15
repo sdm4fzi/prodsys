@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import List, Union
 
+import numpy as np
 import simpy
 
 from . import (base, env, logger, process, request, resources, router, sink,
                source)
-
-logging.basicConfig(filename="example2.log", encoding="utf-8", level=logging.DEBUG)
-
-from collections.abc import Iterable
-
-import numpy as np
 
 
 def flatten(xs):

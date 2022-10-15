@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+import time
 
 from simanneal import Annealer
 
@@ -27,6 +28,7 @@ weights = (-0.1, 1.0, 1.0, 0.005)
 performances = {}
 performances["00"] = {}
 solution_dict = {"current_generation": "00", "00": []}
+start = time.perf_counter()
 
 
 class ProductionSystemOptimization(Annealer):
@@ -68,6 +70,7 @@ class ProductionSystemOptimization(Annealer):
         performances["00"][str(counter)] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
+            "time_stamp": time.perf_counter() - start
         }
         with open("data/anneal_results.json", "w") as json_file:
             json.dump(performances, json_file)

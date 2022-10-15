@@ -1,5 +1,6 @@
 import json
 from copy import deepcopy
+import time
 
 from Solid.TabuSearch import TabuSearch
 
@@ -27,6 +28,7 @@ weights = (0.1, -1.0, -1.0, -0.005)
 performances = {}
 performances["00"] = {}
 solution_dict = {"current_generation": "00", "00": []}
+start = time.perf_counter()
 
 
 class Algorithm(TabuSearch):
@@ -48,6 +50,7 @@ class Algorithm(TabuSearch):
         performances["00"][str(counter)] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
+            "time_stamp": time.perf_counter() - start
         }
         with open("data/tabu_results.json", "w") as json_file:
             json.dump(performances, json_file)
@@ -56,7 +59,7 @@ class Algorithm(TabuSearch):
 
     def _neighborhood(self):
         neighboarhood = []
-        for _ in range(500):
+        for _ in range(10):
             configuration = mutation(
                 scenario_dict=scenario_dict, individual=[deepcopy(self.current)]
             )[0][0]
@@ -78,7 +81,7 @@ initial_state = loader.CustomLoader()
 initial_state.read_data(base_scenario, "json")
 
 
-alg = Algorithm(initial_state=initial_state, tabu_size=20, max_steps=3000, max_score=500)
+alg = Algorithm(initial_state=initial_state, tabu_size=10, max_steps=300, max_score=500)
 best_solution, best_objective_value = alg.run()
-print("Best solution: ", best_solution)
+print("Best solution: ", best_objective_value)
 

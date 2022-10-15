@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -15,7 +14,6 @@ import simpy
 def load_json(file_path: str) -> dict:
     with open(file_path, "r", encoding="utf-8") as json_file:
         data = json.load(json_file)
-    logging.info("data loaded")
     return data
 
 
@@ -82,12 +80,8 @@ class Loader(ABC):
 
     def get_processes(self) -> list:
         return [process['ID'] for process in self.process_data['ProductionProcesses'].values()]
-
-
-@dataclass
-class JsonLoader(Loader):
-    def read_data(self, file_path: str):
-        data = load_json(file_path=file_path)
+    
+    def set_values(self, data: dict):
         self.seed = data["seed"]
         self.time_model_data = data["time_models"]
         self.state_data = data["states"]
@@ -97,6 +91,13 @@ class JsonLoader(Loader):
         self.material_data = data["materials"]
         self.sink_data = data["sinks"]
         self.source_data = data["sources"]
+
+
+@dataclass
+class JsonLoader(Loader):
+    def read_data(self, file_path: str):
+        data = load_json(file_path=file_path)
+        self.set_values(data)
 
 
 @dataclass
@@ -401,4 +402,3 @@ class CustomLoader(Loader):
         with open(file_path, "w", encoding="utf-8") as json_file:
             json.dump(save_dict, json_file)
 
-        logging.info(f"saved data to {file_path}")
