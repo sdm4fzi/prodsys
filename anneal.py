@@ -1,6 +1,6 @@
 import json
-from copy import deepcopy
 import time
+from copy import deepcopy
 
 from simanneal import Annealer
 

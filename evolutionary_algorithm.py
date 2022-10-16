@@ -12,7 +12,7 @@ from prodsim.util import set_seed
 SEED = 22
 NGEN = 40
 POPULATION_SIZE = 400
-env.VERBOSE = 0
+env.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
 
@@ -68,19 +68,16 @@ if __name__ == "__main__":
 
 
     population = toolbox.population(n=POPULATION_SIZE)
-    invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-    for ind, fit in zip(invalid_ind, fitnesses):
-        ind.fitness.values = fit
-
+    fitnesses = toolbox.map(toolbox.evaluate, population)
     generation_performances = []
-    for counter, ind in enumerate(population):
-        fitness = ind.fitness.values
+
+    for counter, (ind, fit) in enumerate(zip(population, fitnesses)):
+        ind.fitness.values = fit
         aggregated_fitness = sum(ind.fitness.wvalues)
         generation_performances.append(aggregated_fitness)
         performances["00"][str(counter)] = {
             "agg_fitness": aggregated_fitness,
-            "fitness": [float(value) for value in fitness],
+            "fitness": [float(value) for value in ind.fitness.values],
             "time_stamp": time.perf_counter() - start
         }
 
@@ -104,21 +101,16 @@ if __name__ == "__main__":
 
         # Evaluate the individuals
         # invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        invalid_ind = offspring
-        fits = list(toolbox.map(toolbox.evaluate, invalid_ind))
-
-        for fit, ind in zip(fits, invalid_ind):
-            ind.fitness.values = fit
-
+        fits = toolbox.map(toolbox.evaluate, offspring)
         generation_performances = []
 
-        for counter, ind in enumerate(offspring):
-            fitness = ind.fitness.values
+        for counter, (fit, ind) in enumerate(zip(fits, offspring)):
+            ind.fitness.values = fit
             aggregated_fitness = sum(ind.fitness.wvalues)
             generation_performances.append(aggregated_fitness)
             performances[str(g)][str(counter)] = {
                 "agg_fitness": aggregated_fitness,
-                "fitness": [float(value) for value in fitness],
+                "fitness": [float(value) for value in ind.fitness.values],
                 "time_stamp": time.perf_counter() - start
             }
 
@@ -132,4 +124,3 @@ if __name__ == "__main__":
 
         with open("data/ea_results.json", "w") as json_file:
             json.dump(performances, json_file)
-    pool.close()
