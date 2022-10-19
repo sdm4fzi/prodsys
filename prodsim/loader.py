@@ -290,10 +290,10 @@ class CustomLoader(Loader):
             "output_queues": ["OQ" + ID],
         }
         self.add_queue(
-            ID="IQ" + ID, description="Input queue of" + ID, capacity=queue_capacity
+            ID="IQ" + ID, description="Input queue of " + ID, capacity=queue_capacity
         )
         self.add_queue(
-            ID="OQ" + ID, description="Output queue of" + ID, capacity=queue_capacity
+            ID="OQ" + ID, description="Output queue of " + ID, capacity=queue_capacity
         )
         self.add_entry_to_data(self.resource_data, resource_data, label="Resource")
 

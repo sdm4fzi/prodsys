@@ -44,22 +44,11 @@ class AvoidDeadlockRouter(Router):
         possible_resources = self.resource_process_registry.get_resources_with_process(
             __process
         )
-        if len(possible_resources) > 1:
-            for resource in possible_resources:
-                not_full = False
-                for input_queue in resource.input_queues:
-                    if not len(input_queue.items) == input_queue.capacity:
-                        print(
-                            f"resource {resource.ID}, input queue length {len(input_queue.items)}"
-                        )
-                        not_full = True
-                        break
-                    else:
-                        print(f"resource {resource.ID} is full")
-                        print(len(possible_resources))
-                        possible_resources.remove(resource)
-                        print(len(possible_resources))
-
+        for resource in possible_resources:
+            for input_queue in resource.input_queues:
+                if len(possible_resources) > 1 and len(input_queue.items) >= input_queue.capacity - 3:
+                    possible_resources.remove(resource)
+        
         return self.routing_heuristic(possible_resources)
 
 
@@ -82,8 +71,10 @@ def get_shortest_quueue_router(
                 queue_list.append((q, resource))
     if queue_list:
         queue_list.sort(key=lambda x: len(x[0].items))
-        return queue_list.pop(0)[1]
-    return FIFO_router(possible_resources=possible_resources)
+        min_length = len(queue_list[0][0].items)
+        resource_list = [queue[1] for queue in queue_list if len(queue[0].items) <= min_length]
+        return resource_list.pop(0)
+    return random_router(possible_resources=possible_resources)
 
 
 ROUTING_HEURISTIC = {

@@ -131,42 +131,42 @@
     },
     "Queue_3": {
       "ID": "IQM1",
-      "description": "Input queue ofM1",
+      "description": "Input queue of M1",
       "capacity": 100
     },
     "Queue_4": {
       "ID": "OQM1",
-      "description": "Output queue ofM1",
+      "description": "Output queue of M1",
       "capacity": 100
     },
     "Queue_5": {
       "ID": "IQM2",
-      "description": "Input queue ofM2",
+      "description": "Input queue of M2",
       "capacity": 100
     },
     "Queue_6": {
       "ID": "OQM2",
-      "description": "Output queue ofM2",
+      "description": "Output queue of M2",
       "capacity": 100
     },
     "Queue_7": {
       "ID": "IQM3",
-      "description": "Input queue ofM3",
+      "description": "Input queue of M3",
       "capacity": 100
     },
     "Queue_8": {
       "ID": "OQM3",
-      "description": "Output queue ofM3",
+      "description": "Output queue of M3",
       "capacity": 100
     },
     "Queue_9": {
       "ID": "IQM4",
-      "description": "Input queue ofM4",
+      "description": "Input queue of M4",
       "capacity": 100
     },
     "Queue_10": {
       "ID": "OQM4",
-      "description": "Output queue ofM4",
+      "description": "Output queue of M4",
       "capacity": 100
     }
   },
@@ -224,7 +224,7 @@
       "description": "Transport Resource 1",
       "controller": "TransportController",
       "control_policy": "SPT_transport",
-      "location": [10, 20],
+      "location": [0, 10],
       "capacity": 1,
       "processes": ["TP1"],
       "states": "BS2"
@@ -254,7 +254,7 @@
       "location": [-5, -5],
       "time_model_id": "ftm1",
       "material_type": "Material 1",
-      "router": "SimpleRouter",
+      "router": "AvoidDeadlockRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": "SourceQueue"
     }

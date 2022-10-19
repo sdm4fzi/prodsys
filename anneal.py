@@ -23,7 +23,8 @@ with open("data/scenario.json") as json_file:
 set_seed(SEED)
 
 # weights für: (throughput, wip, cost)
-weights = (-0.004, 1.0, 0.0003)
+# weights = (-0.004, 1.0, 0.0003)
+weights = (-0.01, 1.0, 0.001)
 
 performances = {}
 performances["00"] = {}
@@ -89,7 +90,7 @@ pso = ProductionSystemOptimization(initial_state=initial_state)
 
 pso.Tmax = 10000
 pso.Tmin = 0.67
-pso.steps = 2500
+pso.steps = 3500
 pso.updates = 200
 
 internary, performance = pso.anneal()

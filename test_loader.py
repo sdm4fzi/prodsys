@@ -48,7 +48,7 @@ c.add_sink(ID="SK1", description="Sink 1 for material 1", location=[30, 30], mat
 # c.add_sink(ID="SK2", description="Sink 2 for material 2", location=[35, 30], material_type="Material 2", input_queues=["SinkQueue"])
 
 
-c.add_source(ID="S1", description="Source 1 for material 1", location=[-5, -5], time_model_id="ftm1", material_type="Material 1", router="SimpleRouter", routing_heuristic="shortest_queue", output_queues="SourceQueue")
+c.add_source(ID="S1", description="Source 1 for material 1", location=[-5, -5], time_model_id="ftm1", material_type="Material 1", router="AvoidDeadlockRouter", routing_heuristic="shortest_queue", output_queues="SourceQueue")
 # c.add_source(ID="S2", description="Source 2 for material 2", location=[8, 5], time_model_id="ft6", material_type="Material 2", router="SimpleRouter", output_queues="SourceQueue")
 
 
@@ -61,7 +61,7 @@ c.add_resource_with_default_queue(ID="M2", description="Machine 2", controller="
 c.add_resource_with_default_queue(ID="M3", description="Machine 3", controller="SimpleController", control_policy="FIFO", location=[5, 0], capacity=1, processes=["P4"], states="BS1", queue_capacity=capacity)
 c.add_resource_with_default_queue(ID="M4", description="Machine 4", controller="SimpleController", control_policy="FIFO", location=[5, 5], capacity=1, processes=["P2"], states="BS1", queue_capacity=capacity)
 
-c.add_resource(ID="TR1", description="Transport Resource 1", controller="TransportController", control_policy="SPT_transport", location=[10, 20], capacity=1, processes=["TP1"], states="BS2")
+c.add_resource(ID="TR1", description="Transport Resource 1", controller="TransportController", control_policy="SPT_transport", location=[0, 10], capacity=1, processes=["TP1"], states="BS2")
 
 # c.to_json("data/base_scenario.json")
 c.to_json("data/example_configuration.json")
@@ -76,7 +76,7 @@ import time
 
 t_0 = time.perf_counter()
 
-e.run(4000)
+e.run(10000)
 
 t_1 = time.perf_counter()
 
