@@ -375,7 +375,6 @@ def get_objective_values(environment: Environment, pp: PostProcessor) -> List[fl
     return [
         sum(throughput),
         sum(wip),
-        sum(throughput_time) / len(throughput_time),
         reconfiguration_cost,
     ]
 
@@ -414,7 +413,7 @@ def evaluate(
 
     base_configuration = get_base_configuration(base_scenario)
     if not check_valid_configuration(loader_object, base_configuration, scenario_dict):
-        return [-100000, 100000, 100000, 100000]
+        return [-100000, 100000, 100000]
 
     e = Environment()
     e.loader = loader_object

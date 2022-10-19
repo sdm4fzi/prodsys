@@ -24,8 +24,8 @@
   },
   "target": { "quantity_material_1": 1300 },
   "costs": {
-    "machine": 35000,
-    "transport_resource": 20000,
+    "machine": 30000,
+    "transport_resource": 15000,
     "process_module": 5000
   }
 }

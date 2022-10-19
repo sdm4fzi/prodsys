@@ -22,8 +22,8 @@ with open("data/scenario.json") as json_file:
 
 set_seed(SEED)
 
-# weights für: (throughput, wip, throughput_time, cost)
-weights = (0.1, -1.0, -1.0, -0.005)
+# weights für: (throughput, wip, cost)
+weights = (0.004, -1.0, -0.0003)
 
 performances = {}
 performances["00"] = {}

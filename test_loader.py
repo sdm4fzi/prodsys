@@ -1,8 +1,6 @@
-from env import Environment
-import loader
-import print_util
-from post_processing import PostProcessor
-
+from prodsim import loader, print_util
+from prodsim.env import Environment
+from prodsim.post_processing import PostProcessor
 
 c = loader.CustomLoader()
 
@@ -22,7 +20,7 @@ c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function tim
 # c.add_time_model(type="FunctionTimeModels", ID="ftm2", description="function time model material 2", parameters=[50, 5], batch_size=100, distribution_function="normal")
 
 
-c.add_time_model(type="ManhattanDistanceTimeModel", ID="md1", description="manhattan time model 1", speed=4 * 60, reaction_time=2 / 60)
+c.add_time_model(type="ManhattanDistanceTimeModel", ID="md1", description="manhattan time model 1", speed=60, reaction_time=2 / 60)
 
 
 c.add_state(type="BreakDownState", ID="BS1", description="Breakdownstate for machine", time_model_ID="ftbs1")

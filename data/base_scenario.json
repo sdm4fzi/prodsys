@@ -63,7 +63,7 @@
       "ManhattanDistanceTimeModel_1": {
         "ID": "md1",
         "description": "manhattan time model 1",
-        "speed": 240,
+        "speed": 60,
         "reaction_time": 0.03333333333333333
       }
     }
