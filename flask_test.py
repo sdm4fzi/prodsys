@@ -7,8 +7,8 @@ from prodsim.post_processing import PostProcessor
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET"])
-def hello_world():
+@app.route("/simulate", methods=["GET"])
+def home():
     env1 = env.Environment()
     loader = CustomLoader()
     data = request.json
@@ -29,10 +29,15 @@ def hello_world():
     p = PostProcessor(df_raw=df)
     l1 = get_objective_values(env1, p)
     l1 = [float(value) for value in l1]
-
-    return l1
+    results = {
+            'throughput': l1[0],
+            'wip': l1[1],
+            'throughput_time': l1[2],
+            'cost': l1[3]
+        }
+    return results
 
 @app.route("/test", methods=["GET"])
-def dkekd():
+def test():
     return {"hallo": [1,2, 3]}
 
