@@ -24,7 +24,7 @@ set_seed(SEED)
 
 # weights für: (throughput, wip, cost)
 # weights = (-0.004, 1.0, 0.0003)
-weights = (-0.01, 1.0, 0.001)
+weights = (-0.025, 1.0, 0.001)
 
 performances = {}
 performances["00"] = {}

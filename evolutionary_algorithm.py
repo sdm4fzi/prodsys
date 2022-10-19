@@ -25,7 +25,9 @@ if __name__ == "__main__":
     set_seed(SEED)
 
     # weights für: (throughput, wip, cost)
-    weights = (0.004, -1.0, -0.0003)
+    # weights = (0.004, -1.0, -0.0003)
+    weights = (0.025, -1.0, -0.001)
+
     solution_dict = {"current_generation": "00", "00": []}
     performances = {}
     performances["00"] = {}
