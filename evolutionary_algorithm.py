@@ -10,8 +10,8 @@ from prodsim.optimization_util import (crossover, evaluate, mutation,
 from prodsim.util import set_seed
 
 SEED = 22
-NGEN = 40
-POPULATION_SIZE = 400
+NGEN = 50
+POPULATION_SIZE = 600
 env.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"

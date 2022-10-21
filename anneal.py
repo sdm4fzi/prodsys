@@ -88,9 +88,9 @@ pso = ProductionSystemOptimization(initial_state=initial_state)
 # {'tmax': 7500.0, 'tmin': 0.67, 'steps': 1500, 'updates': 100} 64:27:53ä'
 
 
-pso.Tmax = 10000
+pso.Tmax = 15000
 pso.Tmin = 0.67
-pso.steps = 3500
+pso.steps = 4000
 pso.updates = 200
 
 internary, performance = pso.anneal()
