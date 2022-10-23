@@ -84,14 +84,14 @@ initial_state = loader.CustomLoader()
 initial_state.read_data(base_scenario, "json")
 pso = ProductionSystemOptimization(initial_state=initial_state)
 
-# pso.auto(minutes=120, steps=100)
+# pso.auto(minutes=240)
 # {'tmax': 7500.0, 'tmin': 0.67, 'steps': 1500, 'updates': 100} 64:27:53ä'
 
 
-pso.Tmax = 15000
+pso.Tmax = 10000
 pso.Tmin = 0.67
 pso.steps = 4000
-pso.updates = 200
+pso.updates = 300
 
 internary, performance = pso.anneal()
 
