@@ -2,8 +2,6 @@ import json
 import time
 from copy import deepcopy
 
-from simanneal import Annealer
-
 from prodsim import env, loader
 from prodsim.optimization_util import (check_valid_configuration, crossover,
                                        evaluate, mutation,

@@ -15,8 +15,6 @@ from tqdm import tqdm
 from . import (loader, logger, material, process, request, resources, router,
                sink, source, state, store, time_model, util)
 
-Location = Union[resources.Resource, source.Source, sink.Sink]
-
 VERBOSE = 1
 
 @contextlib.contextmanager

@@ -5,7 +5,6 @@ from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Tuple, Type, Union
 
-import pm4py
 
 from . import base, time_model
 from .util import get_class_from_str
@@ -118,6 +117,7 @@ class ListProcessModel(ProcessModel):
 
 @dataclass
 class PetriNetProcessModel(ProcessModel):
+    import pm4py
     net: pm4py.objects.petri_net.obj.PetriNet
     initial_marking: pm4py.objects.petri_net.obj.Marking
     final_marking: pm4py.objects.petri_net.obj.Marking
@@ -141,6 +141,7 @@ class PetriNetProcessModel(ProcessModel):
         return [trans.properties['Process'] for trans in self.poss_trans]
 
     def update_marking_from_transition(self, chosen_process: Union[Process, str]) -> None:
+        import pm4py
         for trans in self.poss_trans:
             if trans.properties['Process'] == chosen_process:
                 self.current_marking = pm4py.objects.petri_net.semantics.ClassicSemantics().execute(trans, self.net, self.current_marking)

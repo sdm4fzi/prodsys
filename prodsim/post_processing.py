@@ -8,8 +8,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
-import pm4py
-from pm4py.visualization.petri_net import visualizer as pn_visualizer
 
 WARM_UP_CUT_OFF = 0.15
 
@@ -74,6 +72,7 @@ class PostProcessor:
         return df_finished_material
 
     def get_eventlog_for_material(self, material_type: str = "Material_1"):
+        import pm4py
         df_finished_material = self.get_finished_material_df()
         df_for_pm4py = df_finished_material.loc[
             df_finished_material["Material"].notnull()
@@ -95,6 +94,8 @@ class PostProcessor:
         return log
 
     def plot_inductive_bpmn(self):
+        import pm4py
+
         os.environ["PATH"] += os.pathsep + "C:/Program Files/Graphviz/bin"
         log = self.get_eventlog_for_material()
         process_tree = pm4py.discover_process_tree_inductive(log)
@@ -102,6 +103,8 @@ class PostProcessor:
         pm4py.view_bpmn(bpmn_model, format="png")
 
     def save_inductive_petri_net(self):
+        import pm4py
+        from pm4py.visualization.petri_net import visualizer as pn_visualizer
         log = self.get_eventlog_for_material()
         net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(log)
         # pm4py.view_petri_net(net, initial_marking, final_marking)

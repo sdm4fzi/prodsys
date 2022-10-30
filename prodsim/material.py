@@ -53,6 +53,9 @@ class MaterialInfo:
         self.activity = "created material"
 
 
+Location = Union[resources.Resource, source.Source, sink.Sink]
+
+
 @dataclass
 class Material(base.IDEntity):
     env: env.Environment
@@ -62,7 +65,7 @@ class Material(base.IDEntity):
     router: router.Router
     next_process: process.Process = field(default=None, init=False)
     process: simpy.Process = field(default=None, init=False)
-    next_resource: env.Location = field(default=None, init=False)
+    next_resource: Location = field(default=None, init=False)
     finished_process: simpy.Event = field(default=None, init=False)
     finished: bool = field(default=False, init=False)
     material_info: MaterialInfo = field(default=MaterialInfo)
@@ -91,8 +94,8 @@ class Material(base.IDEntity):
     def request_transport(
         self,
         transport_resource: resources.Resource,
-        origin_resource: env.Location,
-        target_resource: env.Location,
+        origin_resource: Location,
+        target_resource: Location,
     ) -> None:
         self.env.request_process_of_resource(
             request.TransportResquest(
