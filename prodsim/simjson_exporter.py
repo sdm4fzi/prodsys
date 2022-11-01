@@ -85,6 +85,15 @@ class SimJSONExorter:
         }
         return node_dict
     
+    def get_transport_node(self) -> dict:
+        return {}
+    
+    def get_source_node(self) -> dict:
+        return {}
+    
+    def get_drain_node(self) -> dict:
+        return {}
+    
     def get_link(self) -> dict:
         link_dict = {
             "category": "item",
