@@ -1,0 +1,492 @@
+{
+  "alternatives": [
+    {
+      "model": {
+        "class": "GraphLinksModel",
+        "copiesArrays": true,
+        "copiesArrayObjects": true,
+        "linkFromPortIdProperty": "fromPort",
+        "linkToPortIdProperty": "toPort",
+        "nodeDataArray": [
+          {
+            "category": "item",
+            "class": "source",
+            "parameters": [
+              { "class": "v_tiCycleTime", "type": "time", "value": 60 },
+              {
+                "class": "v_sDistrCycleTime",
+                "type": "enum",
+                "value": "const"
+              },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -1,
+            "loc": "-300 -250",
+            "nodeName": "TeileQuelle",
+            "photoNames": [],
+            "imageClass": "default",
+            "imageTransform": { "scale": 1 }
+          },
+          {
+            "category": "item",
+            "class": "drain",
+            "parameters": [{ "class": "comment", "type": "string" }],
+            "key": -2,
+            "loc": "450 -250",
+            "nodeName": "TeileSenke",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "ca3sarCell",
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 98.5 },
+              { "class": "v_tiMTTR", "type": "time", "value": 300 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -4,
+            "loc": "-50 -250",
+            "nodeName": "Ca3sar_Zelle",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "virtualCell",
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 99 },
+              { "class": "v_tiMTTR", "type": "time", "value": 120 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -5,
+            "loc": "200 -250",
+            "nodeName": "Virtuelle_Zelle",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "agvPool",
+            "parameters": [
+              { "class": "amount", "type": "number", "value": 3 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -3,
+            "loc": "-550 -450",
+            "nodeName": "FTF_Pool",
+            "photoNames": [],
+            "parameterTableLayout": { "valueColumnWidth": 67.35 }
+          },
+          {
+            "key": -6,
+            "loc": "-50 -400",
+            "category": "item",
+            "class": "ca3sarCell",
+            "nodeName": "Ca3sar_Zelle_2",
+            "photoNames": [],
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 98.5 },
+              { "class": "v_tiMTTR", "type": "time", "value": 300 },
+              { "class": "comment", "type": "string" }
+            ]
+          },
+          {
+            "key": -7,
+            "loc": "-300 -450",
+            "category": "item",
+            "class": "source",
+            "nodeName": "TeileQuelle_2",
+            "photoNames": [],
+            "parameters": [
+              { "class": "v_tiCycleTime", "type": "time", "value": 120 },
+              {
+                "class": "v_sDistrCycleTime",
+                "type": "enum",
+                "value": "negexp"
+              },
+              { "class": "comment", "type": "string" }
+            ]
+          },
+          {
+            "key": -8,
+            "loc": "200 -500",
+            "category": "item",
+            "class": "virtualCell",
+            "nodeName": "Virtuelle_Zelle_2",
+            "photoNames": [],
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 99 },
+              { "class": "v_tiMTTR", "type": "time", "value": 120 },
+              { "class": "comment", "type": "string" }
+            ]
+          }
+        ],
+        "linkDataArray": [
+          {
+            "category": "item",
+            "from": -1,
+            "to": -4,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-273, -250, -263, -250, -87, -250, -77, -250]
+          },
+          {
+            "category": "item",
+            "from": -4,
+            "to": -5,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-23, -250, -13, -250, 163, -250, 173, -250]
+          },
+          {
+            "category": "item",
+            "from": -5,
+            "to": -2,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [227, -250, 237, -250, 413, -250, 423, -250]
+          },
+          {
+            "category": "item",
+            "from": -1,
+            "to": -6,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-273, -250, -263, -250, -87, -400, -77, -400]
+          },
+          {
+            "category": "item",
+            "from": -6,
+            "to": -5,
+            "fromPort": "R",
+            "toPort": "T",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-23, -400, -13, -400, 200, -287, 200, -277]
+          },
+          {
+            "category": "item",
+            "from": -7,
+            "to": -6,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-273, -450, -263, -450, -87, -400, -77, -400]
+          },
+          {
+            "category": "item",
+            "from": -6,
+            "to": -8,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-23, -400, -13, -400, 163, -500, 173, -500]
+          },
+          {
+            "category": "item",
+            "from": -8,
+            "to": -2,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [227, -500, 237, -500, 413, -250, 423, -250]
+          }
+        ]
+      },
+      "modificationTime": "2022-11-01T16:56:03.569Z",
+      "name": "Standard-Wertstrom_1",
+      "resultData": [],
+      "lastOpenDate": "2022-11-01T16:59:13.584Z"
+    },
+    {
+      "model": {
+        "class": "GraphLinksModel",
+        "copiesArrays": true,
+        "copiesArrayObjects": true,
+        "linkFromPortIdProperty": "fromPort",
+        "linkToPortIdProperty": "toPort",
+        "nodeDataArray": [
+          {
+            "category": "item",
+            "class": "source",
+            "parameters": [
+              { "class": "v_tiCycleTime", "type": "time", "value": 60 },
+              {
+                "class": "v_sDistrCycleTime",
+                "type": "enum",
+                "value": "negexp"
+              },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -1,
+            "loc": "-300 -250",
+            "nodeName": "TeileQuelle",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "drain",
+            "parameters": [{ "class": "comment", "type": "string" }],
+            "key": -2,
+            "loc": "450 -250",
+            "nodeName": "TeileSenke",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "ca3sarCell",
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 98.5 },
+              { "class": "v_tiMTTR", "type": "time", "value": 300 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -4,
+            "loc": "-50 -250",
+            "nodeName": "Ca3sar_Zelle",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "virtualCell",
+            "parameters": [
+              { "class": "v_tiProcTime", "type": "time", "value": 60 },
+              { "class": "v_rAvailability", "type": "number", "value": 99 },
+              { "class": "v_tiMTTR", "type": "time", "value": 120 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -5,
+            "loc": "200 -250",
+            "nodeName": "Virtuelle_Zelle",
+            "photoNames": []
+          },
+          {
+            "category": "item",
+            "class": "agvPool",
+            "parameters": [
+              { "class": "amount", "type": "number", "value": 1 },
+              { "class": "comment", "type": "string" }
+            ],
+            "key": -3,
+            "loc": "-300 -500",
+            "nodeName": "FTF_Pool",
+            "photoNames": []
+          }
+        ],
+        "linkDataArray": [
+          {
+            "category": "item",
+            "from": -1,
+            "to": -4,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-273, -250, -263, -250, -87, -250, -77, -250]
+          },
+          {
+            "category": "item",
+            "from": -4,
+            "to": -5,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [-23, -250, -13, -250, 163, -250, 173, -250]
+          },
+          {
+            "category": "item",
+            "from": -5,
+            "to": -2,
+            "fromPort": "R",
+            "toPort": "L",
+            "class": "connection",
+            "routingBehaviour": "direct",
+            "points": [227, -250, 237, -250, 413, -250, 423, -250]
+          }
+        ]
+      },
+      "modificationTime": "2022-05-23T08:51:27.986Z",
+      "name": "Standard-Wertstrom",
+      "resultData": [],
+      "lastOpenDate": "2022-11-01T16:57:36.860Z"
+    }
+  ],
+  "createdWithVersion": "2.3.0-pre.2",
+  "mainVersion": "0.1.2",
+  "name": "TestExample",
+  "description": null,
+  "settings": {
+    "shiftCalendars": [],
+    "simulation": {
+      "simulationStartDate": "2022-11-01T00:00:00Z",
+      "simulationEndDate": "2022-11-21T00:00:00Z",
+      "initialStatsOffsetInHours": 0,
+      "randomNumbersVariant": 1
+    }
+  },
+  "resultView": {
+    "sections": [
+      {
+        "class": "SimulationOverview",
+        "i18nTitle": {
+          "en": "Simulation Overview",
+          "de": "Simulations&shy;überblick",
+          "it": null,
+          "ru": null
+        },
+        "widgets": [
+          {
+            "class": "Simulation_Overview",
+            "type": "dataGrid",
+            "nodeName": "SimulationOverview",
+            "showFromBeginning": false,
+            "i18nTitle": {
+              "en": "Simulation Overview",
+              "de": "Simulationsüberblick",
+              "it": "Panoramica Simulazione",
+              "ru": "Обзор симуляции"
+            },
+            "seriesColumn": "",
+            "xAxisColumn": "",
+            "yAxisColumn": "",
+            "seriesOptions": [{}],
+            "options": "",
+            "xAxisSorting": ""
+          }
+        ],
+        "i18nText": {
+          "en": "Overview of simulation time data",
+          "de": "Überblick Simulationszeitdaten",
+          "it": null,
+          "ru": null
+        },
+        "showFromBeginning": false
+      },
+      {
+        "class": "ThroughputDrains_hr",
+        "i18nTitle": {
+          "en": "Throughput Drains",
+          "de": "Durchsatz Senken",
+          "it": null,
+          "ru": null
+        },
+        "widgets": [
+          {
+            "class": "",
+            "type": "",
+            "nodeName": "",
+            "showFromBeginning": false,
+            "i18nTitle": null,
+            "seriesColumn": "",
+            "xAxisColumn": "",
+            "yAxisColumn": "",
+            "seriesOptions": [{}],
+            "options": "",
+            "xAxisSorting": ""
+          }
+        ],
+        "i18nText": {
+          "en": "Throughput at all system drains or sinks.",
+          "de": "Durchsatz aller System-Senken.",
+          "it": null,
+          "ru": null
+        },
+        "showFromBeginning": false
+      },
+      {
+        "class": "ThroughputCells_hr",
+        "i18nTitle": {
+          "en": "Throughput Cells",
+          "de": "Durchsatz Zellen",
+          "it": null,
+          "ru": null
+        },
+        "widgets": [
+          {
+            "class": "TP_parts_h",
+            "type": "bar",
+            "nodeName": "ThroughputCells_hr",
+            "showFromBeginning": false,
+            "i18nTitle": {
+              "en": "ThroughputCells_hr",
+              "de": "ThroughputCells_hr",
+              "it": "ThroughputCells_hr",
+              "ru": "ThroughputCells_hr"
+            },
+            "seriesColumn": "dataSeries",
+            "xAxisColumn": "time",
+            "yAxisColumn": "value",
+            "seriesOptions": [{}],
+            "options": "{\"valueAxis\":{\"title\":\"[parts]\"}, \"tooltip\": {\"enabled\": true}}",
+            "xAxisSorting": ""
+          },
+          {
+            "class": "",
+            "type": "",
+            "nodeName": "",
+            "showFromBeginning": false,
+            "i18nTitle": null,
+            "seriesColumn": "",
+            "xAxisColumn": "",
+            "yAxisColumn": "",
+            "seriesOptions": [{}],
+            "options": "",
+            "xAxisSorting": ""
+          }
+        ],
+        "i18nText": {
+          "en": "Throughput at all Ca3sar or Virtual Cells.",
+          "de": "Durchsatz aller Ca3sar- und virtuellen Zellen.",
+          "it": null,
+          "ru": null
+        },
+        "showFromBeginning": false
+      },
+      {
+        "class": "UtilizationAGVs",
+        "i18nTitle": {
+          "en": "Utilization of AGVs",
+          "de": "Auslastung der FTF",
+          "it": null,
+          "ru": null
+        },
+        "widgets": [
+          {
+            "class": "",
+            "type": "",
+            "nodeName": "",
+            "showFromBeginning": false,
+            "i18nTitle": null,
+            "seriesColumn": "",
+            "xAxisColumn": "",
+            "yAxisColumn": "",
+            "seriesOptions": [{}],
+            "options": "",
+            "xAxisSorting": ""
+          }
+        ],
+        "i18nText": {
+          "en": "Utilization of all AGVs.",
+          "de": "Auslastung aller FTF.",
+          "it": null,
+          "ru": null
+        },
+        "showFromBeginning": false
+      }
+    ]
+  }
+}

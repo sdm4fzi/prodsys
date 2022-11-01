@@ -16,7 +16,7 @@ c.add_time_model(type="FunctionTimeModels", ID="ftbs2", description="function ti
 
 # c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[183.6 / 60, 5], batch_size=100, distribution_function="exponential")
 # c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[200 / 60, 5], batch_size=100, distribution_function="exponential")
-c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[150 / 60, 5], batch_size=100, distribution_function="exponential")
+c.add_time_model(type="FunctionTimeModels", ID="ftm1", description="function time model material 1", parameters=[200 / 60, 5], batch_size=100, distribution_function="exponential")
 # c.add_time_model(type="FunctionTimeModels", ID="ftm2", description="function time model material 2", parameters=[50, 5], batch_size=100, distribution_function="normal")
 
 
