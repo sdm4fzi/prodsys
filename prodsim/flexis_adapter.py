@@ -51,6 +51,11 @@ def get_default_variant(variant_name: str) -> dict:
 
     return variant
 
+@dataclass
+class ProcessTime:
+    machineDurationGroup: str
+    taskDurationGroup: str
+    duration: float
 
 @dataclass
 class FlexisData:

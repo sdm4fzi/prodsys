@@ -6,7 +6,9 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
 from platform import machine
-from typing import List, Literal, Tuple, Union
+from typing import List, Literal, Tuple, Union, Optional
+from pydantic import BaseModel, Extra
+
 
 import simpy
 
@@ -15,6 +17,36 @@ def load_json(file_path: str) -> dict:
     with open(file_path, "r", encoding="utf-8") as json_file:
         data = json.load(json_file)
     return data
+
+class BaseClass(BaseModel, extra=Extra.allow):
+    ID: str
+    description: Optional[str] = None
+
+class Capabilities(BaseClass):
+    pass
+    
+class Customer(BaseClass):
+    pass
+    
+    
+class HistoryTimeModelData(BaseClass):
+    type: Literal["HistoryTimeModel"]
+    history: List[float]
+
+class FunctionTimeModelData(BaseClass):
+    type: Literal["FunctionTimeModel"]
+    distribution_function: Literal["normal", "exponential", "constant"]
+    parameters: List[float]
+    batch_size: int
+
+class ManhattanDistanceTimeModelData(BaseClass):
+    type: Literal["ManualTimeModel"]
+    speed: float
+    reaction_time: float
+
+class Product(BaseClass):
+    pass
+
 
 
 @dataclass
@@ -31,6 +63,8 @@ class Loader(ABC):
 
     valid_configuration: bool = field(init=False, default=True)
     reconfiguration_cost: float = field(init=False, default=0)
+
+    time_model_data2: List[Union[HistoryTimeModelData, FunctionTimeModelData, ManhattanDistanceTimeModelData]] = field(init=False, default_factory=list)
 
     @abstractmethod
     def read_data(self, file_path: str):

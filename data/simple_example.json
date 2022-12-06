@@ -1,7 +1,7 @@
 {
     "seed": 21,    
     "time_models": {
-        "FunctionTimeModels": {
+        "FunctionTimeModel": {
             "ft1": {
                 "ID": "function_time_model_1",
                 "description": "normal distribution time model with 20 minutes",
@@ -50,7 +50,7 @@
                 "distribution_function": "exponential"
             }
         },
-        "HistoryTimeModels": {
+        "HistoryTimeModel": {
             "ht1": {
                 "ID": "history_time_model_1",
                 "description": "history time model",
