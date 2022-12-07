@@ -1,31 +1,32 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import field
 from enum import Enum
-from typing import List, Literal, Optional, Type, Union
+from typing import List, Optional, Union
 
-import simpy
-from pydantic import BaseModel, Extra
+from simpy import events
+from simpy import exceptions
+from pydantic import BaseModel, Extra, root_validator, Field
 
-from . import base, env, material, resources, time_model
-from .util import get_class_from_str
+from . import time_model, env, material, resources
+from .data_structures.state_data import StateData, BreakDownStateData, ProductionStateData, TransportStateData
 
 
 class StateEnum(str, Enum):
-    start_state: str = "start state"
-    start_interrupt: str = "start interrupt"
-    end_interrupt: str = "end interrupt"
-    end_state: str = "end state"
+    start_state = "start state"
+    start_interrupt = "start interrupt"
+    end_interrupt = "end interrupt"
+    end_state = "end state"
 
 class StateInfo(BaseModel, extra=Extra.allow):
     ID: str
     resource_ID: str
-    _event_time: float = None
-    _expected_end_time: float  = None
-    _activity: StateEnum = None
-    _material_ID: str  = None
-    _target_ID: str = None
+    _event_time: Optional[float] = 0.0
+    _expected_end_time: Optional[float]  = 0.0
+    _activity: Optional[StateEnum] = None
+    _material_ID: str  = ""
+    _target_ID: str = ""
 
     def log_target_location(self, target: resources.Resource):
         self._target_ID = target.ID
@@ -51,15 +52,20 @@ class StateInfo(BaseModel, extra=Extra.allow):
         self._event_time = start_time
         self._activity = StateEnum.end_state
 
-@dataclass
-class State(ABC, base.IDEntity):
-    env: env.Environment
+STATE_DATA_UNION = Union[BreakDownStateData, ProductionStateData, TransportStateData]
+
+class State(ABC, BaseModel):
+    state_data: StateData
     time_model: time_model.TimeModel
-    active: simpy.Event = field(default=None, init=False)
-    finished_process: simpy.Event = field(default=None, init=False)
-    _resource: resources.Resource = field(default=None, init=False)
-    process: simpy.Process = field(default=None, init=False)
-    state_info: StateInfo = field(default=None, init=False)
+    env: env.Environment
+    active: Optional[events.Event] = Field(description='active')
+    finished_process: Optional[events.Event] = Field(description='finished_process')
+    _resource: resources.Resource = Field(None, description='_resource')
+    process: events.Process = Field(None, description='process')
+    state_info: StateInfo = Field(None, description='state_info')
+
+    class Config:
+        arbitrary_types_allowed = True
 
     @property
     def resource(self) -> resources.Resource:
@@ -69,8 +75,8 @@ class State(ABC, base.IDEntity):
     @resource.setter
     def resource(self, resource_model: resources.Resource) -> None:
         self._resource = resource_model
-        self.finished_process = simpy.Event(self.env).succeed()
-        self.state_info = StateInfo(ID=self.ID, resource_ID=self._resource.ID)
+        self.finished_process = events.Event(self.env).succeed()
+        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self._resource.ID)
 
 
     def activate(self):
@@ -78,11 +84,7 @@ class State(ABC, base.IDEntity):
             self.active.succeed()
         except:
             raise RuntimeError("state is allready succeded!!")
-        self.active = simpy.Event(self.env)
-
-    @abstractmethod
-    def __post_init__(self):
-        pass
+        self.active = events.Event(self.env)
 
     @abstractmethod
     def process_state(self):
@@ -97,18 +99,21 @@ class State(ABC, base.IDEntity):
 
 
 class ProductionState(State):
-    interrupt_processed: simpy.Event
+    state_data: ProductionStateData
+    interrupt_processed: events.Event
     start: float
     done_in: float
 
-    def __post_init__(self):
-        self.start = 0.0
-        self.done_in = 0.0
+    @root_validator
+    def post_init(cls, values):
+        values["start"] = 0.0
+        values["done_in"] = 0.0
+        return values
 
     def activate_state(self):
-        self.interrupt_processed = simpy.Event(self.env).succeed()
-        self.active = simpy.Event(self.env)
-        self.finished_process = simpy.Event(self.env)
+        self.interrupt_processed = events.Event(self.env).succeed()
+        self.active = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
 
     def process_state(self):
         """Runs a single process of a resource.
@@ -124,7 +129,7 @@ class ProductionState(State):
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
-            except simpy.Interrupt:
+            except exceptions.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
                 yield self.active
@@ -143,31 +148,34 @@ class ProductionState(State):
 
     def interrupt_process(self):
         yield self.interrupt_processed
-        self.interrupt_processed = simpy.Event(self.env)
+        self.interrupt_processed = events.Event(self.env)
         if self.process.is_alive:
             self.process.interrupt()
 
 
 class TransportState(State):
-    interrupt_processed: simpy.Event
+    state_data: TransportStateData
+    interrupt_processed: events.Event
     start: float
     done_in: float
 
-    def __post_init__(self):
-        self.start = 0.0
-        self.done_in = 0.0
+    @root_validator
+    def post_init(cls, values):
+        values["start"] = 0.0
+        values["done_in"] = 0.0
+        return values
 
     def activate_state(self):
-        self.interrupt_processed = simpy.Event(self.env).succeed()
-        self.active = simpy.Event(self.env)
-        self.finished_process = simpy.Event(self.env)
+        self.interrupt_processed = events.Event(self.env).succeed()
+        self.active = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
 
     def process_state(self, target: List[float]):
         """Runs a single process of a resource.
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
         """
-        self.done_in = self.time_model.get_next_time(origin=self.resource.get_location(), target=target)
+        self.done_in = self.time_model.get_next_time(origin=tuple(self.resource.get_location()), target=tuple(target))
         yield self.resource.active
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         while self.done_in:
@@ -176,7 +184,7 @@ class TransportState(State):
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
-            except simpy.Interrupt:
+            except exceptions.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now)
                 self.update_done_in()
                 yield self.active
@@ -195,21 +203,27 @@ class TransportState(State):
 
     def interrupt_process(self):
         yield self.interrupt_processed
-        self.interrupt_processed = simpy.Event(self.env)
+        self.interrupt_processed = events.Event(self.env)
         if self.process.is_alive:
             self.process.interrupt()
 
 
 class BreakDownState(State):
+    state_data: BreakDownStateData
 
     def __post_init__(self):
-        self.active = simpy.Event(self.env)
+        self.active = events.Event(self.env)
+
+    @root_validator
+    def post_init(cls, values):
+        values["active"] = events.Event(values["env"])
+        return values
 
     def process_state(self):
         while True:
             yield self.env.process(self.wait_for_breakdown())
             yield self.resource.active
-            self.resource.active = simpy.Event(self.env)
+            self.resource.active = events.Event(self.env)
             yield self.env.process(self.resource.interrupt_states())
             self.state_info.log_start_state(self.env.now, self.env.now + 15)
             # TODO: Schedule here the maintainer! or a time model for a repair
@@ -227,7 +241,7 @@ class BreakDownState(State):
 class ScheduledState(State):
 
     def __post_init__(self):
-        self.active = simpy.Event(self.env)
+        self.active = events.Event(self.env)
         # self.process = self.env.process(self.process_state())
 
     def process_state(self):
@@ -240,35 +254,5 @@ class ScheduledState(State):
         pass
 
 
-STATE_DICT: dict = {
-    'ProductionState': ProductionState,
-    'TransportState': TransportState,
-    'BreakDownState': BreakDownState,
-}
-
-
-@dataclass
-class StateFactory:
-    data: dict
-    env: env.Environment
-    time_model_factory: time_model.TimeModelFactory
-
-    states: List[State] = field(default_factory=list)
-
-    def create_states(self):
-        for cls_name, items in self.data.items():
-            cls: Type[State] = get_class_from_str(cls_name, STATE_DICT)
-            for values in items.values():
-                self.add_states(cls, values)
-
-    def add_states(self, cls: Type[State], values):
-        time_model = self.time_model_factory.get_time_model(values['time_model_id'])
-        self.states.append(cls(env=self.env,
-                               time_model=time_model,
-                               ID=values['ID'],
-                               description=values['description']
-                               ))
-
-    def get_states(self, IDs: List[str]) -> List[State]:
-        return [st for st in self.states if st.ID in IDs]
+STATE_UNION = Union[BreakDownState, ProductionState, TransportState]
 

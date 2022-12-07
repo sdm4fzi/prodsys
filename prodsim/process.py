@@ -7,7 +7,7 @@ from typing import List, Tuple, Type, Union
 
 
 from . import base, time_model
-from .util import get_class_from_str
+from .util_temp import get_class_from_str
 
 
 @dataclass

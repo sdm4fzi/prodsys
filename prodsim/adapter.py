@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import json
-import time
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from dataclasses import dataclass, field
-from platform import machine
-from typing import List, Literal, Tuple, Union, Optional
-from pydantic import BaseModel, Extra, parse_obj_as
+from typing import List
+from pydantic import parse_obj_as, BaseModel, Field
 
 from . import time_model
+from . import state
+# from . import state
 
 
 def load_json(file_path: str) -> dict:
@@ -17,29 +16,17 @@ def load_json(file_path: str) -> dict:
         data = json.load(json_file)
     return data
 
-class BaseClass(BaseModel, extra=Extra.allow):
-    ID: str
-    description: Optional[str] = None
-
-class Capabilities(BaseClass):
-    pass
-    
-class Customer(BaseClass):
-    pass
-    
-
-class Product(BaseClass):
-    pass
 
 
+class Adapter(ABC, BaseModel):
 
-@dataclass
-class Adapter(ABC):
+    valid_configuration: bool = True
+    reconfiguration_cost: float = 0
 
-    valid_configuration: bool = field(init=False, default=True)
-    reconfiguration_cost: float = field(init=False, default=0)
+    time_model_data: List[time_model.TIME_MODEL_DATA] = []
+    state_data: List[state.STATE_DATA_UNION] = []
+    seed: int = 21
 
-    time_model_data: List[time_model.TIME_MODEL_DATA] = field(init=False, default_factory=list)
 
     @abstractmethod
     def read_data(self, file_path: str):
@@ -51,20 +38,26 @@ class Adapter(ABC):
 
 
 
-@dataclass
 class JsonAdapter(Adapter):
 
     def read_data(self, file_path: str):
         data = load_json(file_path=file_path)
         self.create_time_model_data_object_from_configuration_data(data["time_models"])
+        self.create_state_data_object_from_configuration_data(data["states"])
 
 
     def create_time_model_data_object_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
-            # cls = get_class_from_str(cls_name, TIME_MODEL_DICT)
             for values in items.values():
                 values.update({"type": cls_name})
                 self.time_model_data.append(parse_obj_as(time_model.TIME_MODEL_DATA, values))
+
+
+    def create_state_data_object_from_configuration_data(self, configuration_data: dict):
+        for cls_name, items in configuration_data.items():
+            for values in items.values():
+                values.update({"type": cls_name})
+                self.state_data.append(parse_obj_as(state.STATE_DATA_UNION, values))
 
     def write_data(self, file_path: str):
         pass

@@ -1,21 +1,26 @@
 from __future__ import annotations
 
-from prodsim import adapter
+from prodsim import adapter, runner
+# from prodsim import loader
 
 
 if __name__ == '__main__':
 
-    adapter = adapter.JsonAdapter()
+    adapter_object = adapter.JsonAdapter()
 
-    adapter.read_data('data/simple_example.json')
-    for time_model_data in adapter.time_model_data:
+    adapter_object.read_data('data/simple_example.json')
+    for time_model_data in adapter_object.time_model_data:
         print(time_model_data)
 
-    from prodsim.time_model import TimeModelFactory
+    print("----------------------------------")
 
-    time_model_factory = TimeModelFactory()
-    time_model_factory.create_time_model_from_adapter(adapter)
-        
+    for state_data in adapter_object.state_data:
+        print(state_data)
+
+    print("----------------------------------")
+    runner_object = runner.Runner(adapter=adapter_object)
+    runner_object.initialize_simulation()
+
 
     # # env.load_json('data/simple_example.json')
     # env.load_json('data/base_scenario.json')

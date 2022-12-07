@@ -3,19 +3,19 @@ from __future__ import annotations
 import copy
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Generator
 
 import simpy
 
 from . import base, control, env, process, state, store
-from .util import get_class_from_str
+from .util_temp import get_class_from_str
 
 
 @dataclass
 class Resource(ABC, simpy.Resource, base.IDEntity):
     env: env.Environment
     processes: List[process.Process]
-    location: List[int]
+    location: List[float]
     capacity: int = field(default=1)
     input_queues: List[store.Queue] = field(default_factory=list, init=False)
     output_queues: List[store.Queue] = field(default_factory=list, init=False)
@@ -67,7 +67,7 @@ class Resource(ABC, simpy.Resource, base.IDEntity):
         pass
 
     @abstractmethod
-    def interrupt_states(self):
+    def interrupt_states(self) -> Generator:
         pass
 
     def get_process(self, process: process.Process) -> state.State:
@@ -125,7 +125,7 @@ class ConcreteResource(Resource):
         for _state in self.states:
             _state.activate()
 
-    def interrupt_states(self):
+    def interrupt_states(self) -> Generator:
         events = []
         for state in self.production_states:
             if state.process:
@@ -160,9 +160,9 @@ def register_production_states_for_processes(resource: Resource, state_factory: 
     for _process in resource.processes:
         values = {'ID': _process.ID, 'description': _process.description, 'time_model_id': _process.time_model.ID}
         if isinstance(_process, process.ProductionProcess):
-            state_factory.add_states(cls=state.ProductionState, values=values)
+            state_factory.add_state(cls=state.ProductionState, values=values)
         if isinstance(_process, process.TransportProcess):
-            state_factory.add_states(cls=state.TransportState, values=values)
+            state_factory.add_state(cls=state.TransportState, values=values)
         _state = state_factory.get_states(IDs=[values['ID']]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)
