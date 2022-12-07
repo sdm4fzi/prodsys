@@ -8,7 +8,7 @@ import numpy as np
 
 
 from .adapter import Adapter
-from .factories import state_factory, time_model_factory
+from .factories import state_factory, time_model_factory, process_factory
 from .env import Environment
 
 VERBOSE = 1
@@ -53,9 +53,6 @@ class Runner(BaseModel):
 
             for time_model in time_model_factory_object.time_models:
                 print(time_model)
-                origin = (10, 0)
-                target = (10, 10)
-                print(time_model.get_next_time(origin, target))
 
             print("----------------------------------")
 
@@ -63,6 +60,17 @@ class Runner(BaseModel):
 
             state_factory_object = state_factory.StateFactory(env=self.env, time_model_factory=time_model_factory_object)
             state_factory_object.create_states_from_adapter(self.adapter)
+
+            for state in state_factory_object.states:
+                print(state)
+
+            print("----------------------------------")
+
+            process_factory_object = process_factory.ProcessFactory(time_model_factory=time_model_factory_object)
+            process_factory_object.create_processes_from_adapter(self.adapter)
+
+            for process in process_factory_object.processes:
+                print(process)
 
             # self.time_model_factory = time_model_factory.TimeModelFactory()
             # self.time_model_factory.create_time_model_from_configuration_data(self.loader.time_model_data)

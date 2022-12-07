@@ -6,9 +6,7 @@ from dataclasses import dataclass, field
 from typing import List
 from pydantic import parse_obj_as, BaseModel, Field
 
-from . import time_model
-from . import state
-# from . import state
+from . import time_model, state, process
 
 
 def load_json(file_path: str) -> dict:
@@ -25,6 +23,7 @@ class Adapter(ABC, BaseModel):
 
     time_model_data: List[time_model.TIME_MODEL_DATA] = []
     state_data: List[state.STATE_DATA_UNION] = []
+    process_data: List[process.PROCESS_DATA_UNION] = []
     seed: int = 21
 
 
@@ -44,6 +43,7 @@ class JsonAdapter(Adapter):
         data = load_json(file_path=file_path)
         self.create_time_model_data_object_from_configuration_data(data["time_models"])
         self.create_state_data_object_from_configuration_data(data["states"])
+        self.create_process_data_object_from_configuration_data(data["processes"])
 
 
     def create_time_model_data_object_from_configuration_data(self, configuration_data: dict):
@@ -58,6 +58,12 @@ class JsonAdapter(Adapter):
             for values in items.values():
                 values.update({"type": cls_name})
                 self.state_data.append(parse_obj_as(state.STATE_DATA_UNION, values))
+
+    def create_process_data_object_from_configuration_data(self, configuration_data: dict):
+        for cls_name, items in configuration_data.items():
+            for values in items.values():
+                values.update({"type": cls_name})
+                self.process_data.append(parse_obj_as(process.PROCESS_DATA_UNION, values))
 
     def write_data(self, file_path: str):
         pass

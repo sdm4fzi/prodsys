@@ -18,6 +18,14 @@ if __name__ == '__main__':
         print(state_data)
 
     print("----------------------------------")
+
+
+    for process_data in adapter_object.process_data:
+        print(process_data)
+
+    print("----------------------------------")
+
+    
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
 

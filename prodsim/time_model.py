@@ -26,8 +26,8 @@ class TimeModel(ABC, BaseModel):
     @abstractmethod
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]],
-        target: Optional[Tuple[float, float]],
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
     ) -> float:
         pass
 
@@ -93,8 +93,8 @@ class ManhattanDistanceTimeModel(TimeModel):
 
     def get_next_time(
         self,
-        origin: Optional[Tuple[float, float]],
-        target: Optional[Tuple[float, float]],
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
     ) -> float:
         if origin is None or target is None:
             raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
@@ -106,8 +106,8 @@ class ManhattanDistanceTimeModel(TimeModel):
 
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]],
-        target: Optional[Tuple[float, float]],
+        origin: Optional[Tuple[float, float]] = None,
+        target: Optional[Tuple[float, float]] = None,
     ) -> float:
         if origin is None or target is None:
             raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
