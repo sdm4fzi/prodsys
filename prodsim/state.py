@@ -3,15 +3,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import field
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional, Union, TYPE_CHECKING
 
 from simpy import events
 from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
 
-from . import time_model, env, material, resources
+from . import time_model, env
 from .data_structures.state_data import StateData, BreakDownStateData, ProductionStateData, TransportStateData
 
+if TYPE_CHECKING:
+    from . import material, resources
 
 class StateEnum(str, Enum):
     start_state = "start state"
@@ -58,8 +60,8 @@ class State(ABC, BaseModel):
     state_data: StateData
     time_model: time_model.TimeModel
     env: env.Environment
-    active: Optional[events.Event] = Field(description='active')
-    finished_process: Optional[events.Event] = Field(description='finished_process')
+    active: events.Event = Field(None, description='active', init=False)
+    finished_process: events.Event = Field(None, description='finished_process', init=False)
     _resource: resources.Resource = Field(None, description='_resource')
     process: events.Process = Field(None, description='process')
     state_info: StateInfo = Field(None, description='state_info')

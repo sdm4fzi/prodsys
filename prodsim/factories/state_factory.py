@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from pydantic import parse_obj_as, BaseModel
 
-from .. import env, adapter
+from .. import state, env
 from . import time_model_factory
 
-from .. import state
+
+if TYPE_CHECKING:
+    from .. import adapter
+
 
 class StateFactory(BaseModel):
     env: env.Environment

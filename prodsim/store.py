@@ -1,44 +1,24 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import TYPE_CHECKING
 
-import simpy
+from pydantic import BaseModel, root_validator
 
-from . import base, env
+from simpy.resources import store
 
+from .data_structures import queue_data
 
-@dataclass
-class Queue(simpy.FilterStore, base.IDEntity):
-    _env: env.Environment
-    capacity: int = field(default=1)
-
-    def __post_init__(self):
-        super(Queue, self).__init__(self._env, self.capacity)
+from . import env
 
 
-@dataclass
-class QueueFactory:
-    data: Dict
-    _env: env.Environment
-    queues: List[Queue] = field(default_factory=list, init=False)
+class Queue(BaseModel, store.FilterStore):
+    env: env.Environment
+    queue_data: queue_data.QueueData
 
-    def create_queues(self):
-        for values in self.data.values():
-            self.add_queue(values)
+    class Config:
+        arbitrary_types_allowed = True
 
-    def add_queue(self, values: Dict):
-        if 'capacity' not in values.keys() or values['capacity'] is None:
-            values['capacity'] = float('inf')
-        queue = Queue(ID=values['ID'],
-                      description=values['description'],
-                      _env=self._env,
-                      capacity=values['capacity']
-                      )
-        self.queues.append(queue)
+    def post_init(self):
+        super().__init__(env=self.env, capacity=self.queue_data.capacity)
 
-    def get_queue(self, ID) -> Queue:
-        return [q for q in self.queues if q.ID == ID].pop()
 
-    def get_queues(self, IDs: List[str]) -> List[Queue]:
-        return [q for q in self.queues if q.ID in IDs]

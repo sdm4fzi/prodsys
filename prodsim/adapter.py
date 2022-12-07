@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from typing import List
 from pydantic import parse_obj_as, BaseModel, Field
 
 from . import time_model, state, process
+from .data_structures import queue_data
 
 
 def load_json(file_path: str) -> dict:
@@ -24,6 +24,7 @@ class Adapter(ABC, BaseModel):
     time_model_data: List[time_model.TIME_MODEL_DATA] = []
     state_data: List[state.STATE_DATA_UNION] = []
     process_data: List[process.PROCESS_DATA_UNION] = []
+    queue_data: List[queue_data.QueueData] = []
     seed: int = 21
 
 
@@ -44,6 +45,7 @@ class JsonAdapter(Adapter):
         self.create_time_model_data_object_from_configuration_data(data["time_models"])
         self.create_state_data_object_from_configuration_data(data["states"])
         self.create_process_data_object_from_configuration_data(data["processes"])
+        self.create_queue_data_object_from_configuration_data(data["queues"])
 
 
     def create_time_model_data_object_from_configuration_data(self, configuration_data: dict):
@@ -64,6 +66,11 @@ class JsonAdapter(Adapter):
             for values in items.values():
                 values.update({"type": cls_name})
                 self.process_data.append(parse_obj_as(process.PROCESS_DATA_UNION, values))
+
+    def create_queue_data_object_from_configuration_data(self, configuration_data: dict):
+        for values in configuration_data.values():
+            print(values)
+            self.queue_data.append(parse_obj_as(queue_data.QueueData, values))
 
     def write_data(self, file_path: str):
         pass

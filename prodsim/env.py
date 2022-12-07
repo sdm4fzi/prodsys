@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import contextlib
 import random
-from abc import ABC, abstractmethod
-from copy import copy
 from dataclasses import dataclass, field
-from functools import partial
-from typing import List, Tuple, Union, Any
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
-import simpy
 from simpy import core
 from tqdm import tqdm
 
 # from .factories import state_factory, time_model_factory
 
-from . import (loader, logger, material, process, request, resources, router,
-               sink, source, state, store, time_model)
+if TYPE_CHECKING:
+    from . import request
 
 
 VERBOSE = 1

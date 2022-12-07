@@ -8,8 +8,8 @@ import numpy as np
 
 
 from .adapter import Adapter
-from .factories import state_factory, time_model_factory, process_factory
-from .env import Environment
+from .factories import state_factory, time_model_factory, process_factory, queue_factory
+from . import env
 
 VERBOSE = 1
 
@@ -27,7 +27,7 @@ def temp_seed(seed):
 
 class Runner(BaseModel):
     adapter: Adapter
-    env: Environment = Field(None, description="The environment to run the simulation in", init=False)
+    env: env.Environment = Field(None, description="The environment to run the simulation in", init=False)
     # loader: loader.Loader = field(init=False, default=None)
     # time_model_factory: time_model_factory.TimeModelFactory = field(init=False, default=None)
     # state_factory: state_factory.StateFactory = field(init=False, default=None)
@@ -56,7 +56,7 @@ class Runner(BaseModel):
 
             print("----------------------------------")
 
-            self.env = Environment(seed=self.adapter.seed)
+            self.env = env.Environment(seed=self.adapter.seed)
 
             state_factory_object = state_factory.StateFactory(env=self.env, time_model_factory=time_model_factory_object)
             state_factory_object.create_states_from_adapter(self.adapter)
@@ -72,16 +72,13 @@ class Runner(BaseModel):
             for process in process_factory_object.processes:
                 print(process)
 
-            # self.time_model_factory = time_model_factory.TimeModelFactory()
-            # self.time_model_factory.create_time_model_from_configuration_data(self.loader.time_model_data)
+            print("----------------------------------q")
 
-            # self.state_factory = state_factory.StateFactory(env=self, time_model_factory=self.time_model_factory)
-            # self.state_factory.create_states_from_configuration_data(self.loader.state_data)
+            queue_factory_object = queue_factory.QueueFactory(env=self.env)
+            queue_factory_object.create_queues_from_adapter(self.adapter)
 
-            # self.process_factory = process.ProcessFactory(
-            #     self.loader.process_data, self.time_model_factory
-            # )
-            # self.process_factory.create_processes()
+            for queue in queue_factory_object.queues:
+                print(queue)
 
             # self.queue_factory = store.QueueFactory(self.loader.queue_data, self)
             # self.queue_factory.create_queues()

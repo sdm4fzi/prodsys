@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
 from .. import time_model
-from .. import adapter
+
+if TYPE_CHECKING:
+    from .. import adapter
 
 class TimeModelFactory(BaseModel):
     time_model_data: List[time_model.TIME_MODEL_DATA] = []

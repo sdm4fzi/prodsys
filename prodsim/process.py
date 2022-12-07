@@ -131,7 +131,7 @@ class PetriNetProcessModel(ProcessModel):
     )
 
     @validator("current_marking")
-    def passwords_match(cls, v, values):
+    def set_current_marking_initially(cls, v, values):
         return values["initial_marking"]
 
     def get_next_possible_processes(self) -> Optional[Tuple[Process]]:

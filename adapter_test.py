@@ -25,9 +25,18 @@ if __name__ == '__main__':
 
     print("----------------------------------")
 
+    for queue_data in adapter_object.queue_data:
+        print(queue_data)
+
     
+    print("----------------------------------")
+
+
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
+
+
+
 
 
     # # env.load_json('data/simple_example.json')

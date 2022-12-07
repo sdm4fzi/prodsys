@@ -18,7 +18,7 @@ class ProcessFactory(BaseModel):
             for values in items.values():
                 values.update({"type": cls_name})
                 self.process_data.append(parse_obj_as(process.PROCESS_DATA_UNION, values))
-                self.add_processes(values)
+                self.add_processes(self.process_data[-1])
 
     def create_processes_from_adapter(self, adapter: adapter.Adapter):
         for process_data in adapter.process_data:
