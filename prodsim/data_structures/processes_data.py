@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, Union
 
 from .core_asset import CoreAsset
 
@@ -18,3 +18,7 @@ class ProductionProcessData(ProcessData):
 
 class TransportProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.TransportProcesses]
+
+PROCESS_DATA_UNION = Union[
+    ProductionProcessData, TransportProcessData
+]

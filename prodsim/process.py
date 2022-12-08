@@ -13,6 +13,7 @@ class Process(ABC, BaseModel):
     """
     Abstract process base class
     """
+
     # process_data: processes_data.ProcessData
     time_model: time_model.TimeModel
 
@@ -47,43 +48,7 @@ class TransportProcess(Process):
         return self.time_model.get_expected_time(*args)
 
 
-PROCESS_DATA_UNION = Union[
-    processes_data.ProductionProcessData, processes_data.TransportProcessData
-]
-
 PROCESS_UNION = Union[ProductionProcess, TransportProcess]
-
-# @dataclass
-# class ProcessFactory:
-#     data: dict
-#     time_model_factory: time_model.TimeModelFactory
-#     processes: List[Process] = field(default_factory=list)
-
-#     def create_processes(self):
-#         for cls_name, items in self.data.items():
-#             cls: Type[Process] = get_class_from_str(cls_name, PROCESS_DICT)
-#             for values in items.values():
-#                 self.add_processes(cls, values)
-
-#     def add_processes(self, cls: Type[Process],  values: dict):
-#         time_model = self.time_model_factory.get_time_model(values['time_model_id'])
-#         self.processes.append(cls(ID=values['ID'], description=values['description'], time_model=time_model))
-
-#     def get_processes_in_order(self, IDs: List[str]) -> List[Process]:
-#         processes = []
-#         for ID in IDs:
-#             for _process in self.processes:
-#                 if _process.ID == ID:
-#                     processes.append(_process)
-
-#         return processes
-
-
-#     def get_process(self, ID: str) -> Process:
-#         pr = [pr for pr in self.processes if pr.ID in ID]
-#         if not pr:
-#             return None
-#         return pr.pop()
 
 
 class ProcessModel(ABC, BaseModel):
@@ -113,7 +78,6 @@ class ListProcessModel(ProcessModel):
 
 
 class PetriNetProcessModel(ProcessModel):
-
     class Config:
         arbitrary_types_allowed = True
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import List, Literal, Union
 
 from enum import Enum
 from .core_asset import CoreAsset
@@ -33,3 +33,7 @@ class ManhattanDistanceTimeModelData(CoreAsset):
     type: Literal[TimeModelEnum.ManhattanDistanceTimeModel]
     speed: float
     reaction_time: float
+
+TIME_MODEL_DATA = Union[
+    HistoryTimeModelData, ManhattanDistanceTimeModelData, FunctionTimeModelData
+]

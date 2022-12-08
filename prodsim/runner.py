@@ -8,7 +8,7 @@ import numpy as np
 
 
 from .adapter import Adapter
-from .factories import state_factory, time_model_factory, process_factory, queue_factory
+from .factories import state_factory, time_model_factory, process_factory, queue_factory, resource_factory
 from . import env
 
 VERBOSE = 1
@@ -80,9 +80,15 @@ class Runner(BaseModel):
             for queue in queue_factory_object.queues:
                 print(queue)
 
-            # self.queue_factory = store.QueueFactory(self.loader.queue_data, self)
-            # self.queue_factory.create_queues()
+            
+            print("----------------------------------q")
 
+
+            resource_factory_object = resource_factory.ResourceFactory(envir=self.env, process_factory=process_factory_object , state_factory=state_factory_object, queue_factory=queue_factory_object)
+            resource_factory_object.create_resources_from_adapter(self.adapter)
+
+            for resource in resource_factory_object.resources:
+                print(resource)
             # self.resource_factory = resources.ResourceFactory(
             #     self.loader.resource_data,
             #     self,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import field
 from enum import Enum
-from typing import List, Optional, Union, TYPE_CHECKING
+from typing import List, Optional, Union, TYPE_CHECKING, Generator
 
 from simpy import events
 from simpy import exceptions
@@ -30,8 +30,8 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _material_ID: str  = ""
     _target_ID: str = ""
 
-    def log_target_location(self, target: resources.Resource):
-        self._target_ID = target.ID
+    def log_target_location(self, target: resources.Resourcex):
+        self._target_ID = target.resource_data.ID
 
     def log_material(self, _material: material.Material):
         self._material_ID = _material.ID
@@ -54,31 +54,23 @@ class StateInfo(BaseModel, extra=Extra.allow):
         self._event_time = start_time
         self._activity = StateEnum.end_state
 
-STATE_DATA_UNION = Union[BreakDownStateData, ProductionStateData, TransportStateData]
-
 class State(ABC, BaseModel):
     state_data: StateData
     time_model: time_model.TimeModel
     env: env.Environment
     active: events.Event = Field(None, description='active', init=False)
     finished_process: events.Event = Field(None, description='finished_process', init=False)
-    _resource: resources.Resource = Field(None, description='_resource')
+    resource: resources.Resourcex = Field(init=False, default=None, description='_resource')
     process: events.Process = Field(None, description='process')
     state_info: StateInfo = Field(None, description='state_info')
 
     class Config:
         arbitrary_types_allowed = True
 
-    @property
-    def resource(self) -> resources.Resource:
-        return self._resource
-
-
-    @resource.setter
-    def resource(self, resource_model: resources.Resource) -> None:
-        self._resource = resource_model
+    def set_resource(self, resource_model: resources.Resourcex) -> None:
+        self.resource = resource_model
         self.finished_process = events.Event(self.env).succeed()
-        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self._resource.ID)
+        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self.resource.resource_data.ID)
 
 
     def activate(self):
@@ -89,11 +81,11 @@ class State(ABC, BaseModel):
         self.active = events.Event(self.env)
 
     @abstractmethod
-    def process_state(self):
+    def process_state(self) -> Generator:
         pass
 
     @abstractmethod
-    def interrupt_process(self):
+    def interrupt_process(self) -> Generator:
         pass
 
     def activate_state(self):
@@ -102,22 +94,16 @@ class State(ABC, BaseModel):
 
 class ProductionState(State):
     state_data: ProductionStateData
-    interrupt_processed: events.Event
-    start: float
-    done_in: float
-
-    @root_validator
-    def post_init(cls, values):
-        values["start"] = 0.0
-        values["done_in"] = 0.0
-        return values
+    interrupt_processed: events.Event = Field(None, description='interrupt_processed', init=False)
+    start: float = 0.0 
+    done_in: float = 0.0
 
     def activate_state(self):
         self.interrupt_processed = events.Event(self.env).succeed()
         self.active = events.Event(self.env)
         self.finished_process = events.Event(self.env)
 
-    def process_state(self):
+    def process_state(self) -> Generator:
         """Runs a single process of a resource.
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
@@ -137,8 +123,6 @@ class ProductionState(State):
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
-        # TODO: parts made has to be moved to product or logger class
-        self.resource.parts_made += 1
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
 
@@ -148,7 +132,7 @@ class ProductionState(State):
         if self.done_in < 0:
             self.done_in = 0
 
-    def interrupt_process(self):
+    def interrupt_process(self) -> Generator:
         yield self.interrupt_processed
         self.interrupt_processed = events.Event(self.env)
         if self.process.is_alive:
@@ -157,22 +141,16 @@ class ProductionState(State):
 
 class TransportState(State):
     state_data: TransportStateData
-    interrupt_processed: events.Event
-    start: float
-    done_in: float
-
-    @root_validator
-    def post_init(cls, values):
-        values["start"] = 0.0
-        values["done_in"] = 0.0
-        return values
+    interrupt_processed: events.Event = Field(None, description='interrupt_processed', init=False)
+    start: float = 0.0
+    done_in: float = 0.0
 
     def activate_state(self):
         self.interrupt_processed = events.Event(self.env).succeed()
         self.active = events.Event(self.env)
         self.finished_process = events.Event(self.env)
 
-    def process_state(self, target: List[float]):
+    def process_state(self, target: List[float]) -> Generator:
         """Runs a single process of a resource.
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
@@ -192,9 +170,7 @@ class TransportState(State):
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
-        # TODO: parts made has to be moved to product or logger class
         self.resource.location = target
-        self.resource.parts_made += 1
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
 
@@ -203,7 +179,7 @@ class TransportState(State):
         if self.done_in < 0:
             self.done_in = 0
 
-    def interrupt_process(self):
+    def interrupt_process(self) -> Generator:
         yield self.interrupt_processed
         self.interrupt_processed = events.Event(self.env)
         if self.process.is_alive:
@@ -221,7 +197,7 @@ class BreakDownState(State):
         values["active"] = events.Event(values["env"])
         return values
 
-    def process_state(self):
+    def process_state(self) -> Generator:
         while True:
             yield self.env.process(self.wait_for_breakdown())
             yield self.resource.active
@@ -236,8 +212,9 @@ class BreakDownState(State):
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())
 
-    def interrupt_process(self):
-        pass
+    def interrupt_process(self) -> Generator:
+        while True:
+            yield None
 
 
 class ScheduledState(State):
@@ -246,14 +223,33 @@ class ScheduledState(State):
         self.active = events.Event(self.env)
         # self.process = self.env.process(self.process_state())
 
-    def process_state(self):
-        pass
+    def process_state(self) -> Generator:
+        while True:
+            yield None
 
     def wait_for_schedule(self):
         pass
 
-    def interrupt_process(self):
+    def interrupt_process(self) -> Generator:
+        while True:
+            yield None
+
+class SetupState(ScheduledState):
+
+    def __post_init__(self):
+        self.active = events.Event(self.env)
+        # self.process = self.env.process(self.process_state())
+
+    def process_state(self) -> Generator:
+        while True:
+            yield None
+
+    def wait_for_schedule(self):
         pass
+
+    def interrupt_process(self) -> Generator:
+        while True:
+            yield None
 
 
 STATE_UNION = Union[BreakDownState, ProductionState, TransportState]

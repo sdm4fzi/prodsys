@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, Union
 
 from .core_asset import CoreAsset
 
@@ -22,3 +22,5 @@ class ProductionStateData(StateData):
 
 class TransportStateData(StateData):
     type: Literal[StateTypeEnum.TransportState]
+
+STATE_DATA_UNION = Union[BreakDownStateData, ProductionStateData, TransportStateData]

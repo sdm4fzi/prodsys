@@ -1,36 +1,38 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import simpy
 
-from . import material, process, resources
+if TYPE_CHECKING:
+    from . import material, process, resources
 
 
 @dataclass
 class Request:
-    _process: process.Process
+    _process: process.PROCESS_UNION
     _material: material.Material
-    _resource: resources.Resource
+    _resource: resources.RESOURCE_UNION
 
-    def get_process(self) -> process.Process:
+    def get_process(self) -> process.PROCESS_UNION:
         return self._process
 
     def get_material(self) -> material.Material:
         return self._material
     
-    def get_resource(self) -> resources.Resource:
+    def get_resource(self) -> resources.RESOURCE_UNION:
         return self._resource
 
 @dataclass
 class TransportResquest(Request):
-    origin: resources.Resource
-    target: resources.Resource
+    origin: resources.Resourcex
+    target: resources.Resourcex
 
-    def get_origin(self) -> resources.Resource:
+    def get_origin(self) -> resources.Resourcex:
         return self.origin
 
-    def get_target(self) -> resources.Resource:
+    def get_target(self) -> resources.Resourcex:
         return self.target
 
 
@@ -52,7 +54,7 @@ class FlexibleRequest(simpy.resources.resource.Request):
     """
 
     def __init__(
-        self, resource: resources.Resource, dispatch_criteria: list, preempt: bool = True, time_prio : int = None,
+        self, resource: resources.Resourcex, dispatch_criteria: list, preempt: bool = True, time_prio : int = None,
             preempt_prio: int = None
     ):
         self.preempt = preempt

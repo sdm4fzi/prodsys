@@ -18,10 +18,10 @@ from . import base, process, resources, sink
 class Router(ABC):
     resource_process_registry: resources.ResourceFactory
     sink_registry: sink.SinkFactory
-    routing_heuristic: Callable[..., resources.Resource]
+    routing_heuristic: Callable[..., resources.Resourcex]
 
     @abstractmethod
-    def get_next_resource(self, __process: process.Process) -> resources.Resource:
+    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         pass
 
     def get_sink(self, _material_type: str) -> sink.Sink:
@@ -31,7 +31,7 @@ class Router(ABC):
 
 @dataclass
 class SimpleRouter(Router):
-    def get_next_resource(self, __process: process.Process) -> resources.Resource:
+    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_process_registry.get_resources_with_process(
             __process
         )
@@ -40,7 +40,7 @@ class SimpleRouter(Router):
 
 @dataclass
 class AvoidDeadlockRouter(Router):
-    def get_next_resource(self, __process: process.Process) -> resources.Resource:
+    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_process_registry.get_resources_with_process(
             __process
         )
@@ -52,18 +52,18 @@ class AvoidDeadlockRouter(Router):
         return self.routing_heuristic(possible_resources)
 
 
-def FIFO_router(possible_resources: List[resources.Resource]) -> resources.Resource:
+def FIFO_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
     return possible_resources.pop(0)
 
 
-def random_router(possible_resources: List[resources.Resource]) -> resources.Resource:
+def random_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
     possible_resources.sort(key=lambda x: x.ID)
     return np.random.choice(possible_resources)
 
 
 def get_shortest_quueue_router(
-    possible_resources: List[resources.Resource],
-) -> resources.Resource:
+    possible_resources: List[resources.Resourcex],
+) -> resources.Resourcex:
     queue_list = []
     for resource in possible_resources:
         if resource.input_queues:

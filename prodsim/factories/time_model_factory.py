@@ -4,13 +4,14 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
+from ..data_structures import time_model_data
 from .. import time_model
 
 if TYPE_CHECKING:
     from .. import adapter
 
 class TimeModelFactory(BaseModel):
-    time_model_data: List[time_model.TIME_MODEL_DATA] = []
+    time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
     time_models: List[time_model.TIME_MODEL] = []
 
     def create_time_model_from_configuration_data(self, configuration_data: dict):
@@ -26,12 +27,12 @@ class TimeModelFactory(BaseModel):
                 parse_obj_as(time_model.TIME_MODEL, {"time_model_data": time_model_data})
             )
 
-    def create_time_models_from_objects(self, time_model_data: List[time_model.TIME_MODEL_DATA]):
+    def create_time_models_from_objects(self, time_model_data: List[time_model_data.TIME_MODEL_DATA]):
         for values in time_model_data:
             self.time_model_data.append(values)
 
     def add_time_model(self, values: dict):
-        self.time_model_data.append(parse_obj_as(time_model.TIME_MODEL_DATA, values))
+        self.time_model_data.append(parse_obj_as(time_model_data.TIME_MODEL_DATA, values))
         self.time_models.append(
             parse_obj_as(time_model.TIME_MODEL, {"time_model_data": self.time_model_data[-1]})
         )

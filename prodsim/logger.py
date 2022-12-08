@@ -68,7 +68,7 @@ class Datacollector(BaseModel):
         partial_monitor = partial(monitor, data)
         return partial_monitor
 
-def post_monitor_resource(data: List[tuple], __resource: resources.Resource):
+def post_monitor_resource(data: List[tuple], __resource: resources.Resourcex):
     """This is our monitoring callback."""
     if __resource.current_process:
         process_ID = __resource.current_process.ID

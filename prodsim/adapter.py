@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from typing import List
-from pydantic import parse_obj_as, BaseModel, Field
+from pydantic import parse_obj_as, BaseModel
 
-from . import time_model, state, process
-from .data_structures import queue_data
+from .data_structures import (
+    queue_data,
+    resource_data,
+    time_model_data,
+    state_data,
+    processes_data,
+)
 
 
 def load_json(file_path: str) -> dict:
@@ -15,18 +20,17 @@ def load_json(file_path: str) -> dict:
     return data
 
 
-
 class Adapter(ABC, BaseModel):
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
-    time_model_data: List[time_model.TIME_MODEL_DATA] = []
-    state_data: List[state.STATE_DATA_UNION] = []
-    process_data: List[process.PROCESS_DATA_UNION] = []
+    time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
+    state_data: List[state_data.STATE_DATA_UNION] = []
+    process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
+    resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     seed: int = 21
-
 
     @abstractmethod
     def read_data(self, file_path: str):
@@ -37,44 +41,61 @@ class Adapter(ABC, BaseModel):
         pass
 
 
-
 class JsonAdapter(Adapter):
-
     def read_data(self, file_path: str):
         data = load_json(file_path=file_path)
         self.create_time_model_data_object_from_configuration_data(data["time_models"])
         self.create_state_data_object_from_configuration_data(data["states"])
         self.create_process_data_object_from_configuration_data(data["processes"])
         self.create_queue_data_object_from_configuration_data(data["queues"])
+        self.create_resource_data_object_from_configuration_data(data["resources"])
 
-
-    def create_time_model_data_object_from_configuration_data(self, configuration_data: dict):
+    def create_time_model_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
         for cls_name, items in configuration_data.items():
             for values in items.values():
                 values.update({"type": cls_name})
-                self.time_model_data.append(parse_obj_as(time_model.TIME_MODEL_DATA, values))
+                self.time_model_data.append(
+                    parse_obj_as(time_model_data.TIME_MODEL_DATA, values)
+                )
 
-
-    def create_state_data_object_from_configuration_data(self, configuration_data: dict):
+    def create_state_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
         for cls_name, items in configuration_data.items():
             for values in items.values():
                 values.update({"type": cls_name})
-                self.state_data.append(parse_obj_as(state.STATE_DATA_UNION, values))
+                self.state_data.append(
+                    parse_obj_as(state_data.STATE_DATA_UNION, values)
+                )
 
-    def create_process_data_object_from_configuration_data(self, configuration_data: dict):
+    def create_process_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
         for cls_name, items in configuration_data.items():
             for values in items.values():
                 values.update({"type": cls_name})
-                self.process_data.append(parse_obj_as(process.PROCESS_DATA_UNION, values))
+                self.process_data.append(
+                    parse_obj_as(processes_data.PROCESS_DATA_UNION, values)
+                )
 
-    def create_queue_data_object_from_configuration_data(self, configuration_data: dict):
+    def create_queue_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
         for values in configuration_data.values():
-            print(values)
             self.queue_data.append(parse_obj_as(queue_data.QueueData, values))
+
+    def create_resource_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
+        for values in configuration_data.values():
+            self.resource_data.append(
+                parse_obj_as(resource_data.RESOURCE_DATA_UNION, values)
+            )
 
     def write_data(self, file_path: str):
         pass
-
 
 
 # @dataclass
@@ -121,7 +142,7 @@ class JsonAdapter(Adapter):
 #         key_string = f"{label}_{length}"
 #         if not key_string in data.keys():
 #             data.update({key_string: entry})
-#         else: 
+#         else:
 #             self.add_entry_to_data_with_lowest_possible_index(data, entry, label)
 
 #     def add_typed_entry_to_data(self, data, entry, type):
@@ -210,7 +231,7 @@ class JsonAdapter(Adapter):
 #         states: List[str],
 #         input_queues: List[str] = None,
 #         output_queues: List[str] = None,
-#     ):           
+#     ):
 #         resource_data = {
 #             "ID": ID,
 #             "description": description,
@@ -378,4 +399,3 @@ class JsonAdapter(Adapter):
 
 #         with open(file_path, "w", encoding="utf-8") as json_file:
 #             json.dump(save_dict, json_file)
-

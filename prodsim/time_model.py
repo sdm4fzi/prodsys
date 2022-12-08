@@ -124,7 +124,4 @@ class MarkovTimeModel(TimeModel):
         return 0.0
 
 
-TIME_MODEL_DATA = Union[
-    HistoryTimeModelData, ManhattanDistanceTimeModelData, FunctionTimeModelData
-]
 TIME_MODEL = Union[HistoryTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]

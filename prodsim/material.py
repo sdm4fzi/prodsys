@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import List, Union
+from typing import List, Union, TYPE_CHECKING
 
 import numpy as np
 import simpy
@@ -30,7 +30,7 @@ class MaterialInfo:
 
     def log_finish_material(
         self,
-        resource: Union[resources.Resource, sink.Sink, source.Source],
+        resource: Union[resources.Resourcex, sink.Sink, source.Source],
         _material: Material,
         event_time: float,
     ):
@@ -42,7 +42,7 @@ class MaterialInfo:
 
     def log_create_material(
         self,
-        resource: Union[resources.Resource, sink.Sink, source.Source],
+        resource: Union[resources.Resourcex, sink.Sink, source.Source],
         _material: Material,
         event_time: float,
     ) -> None:
@@ -53,7 +53,7 @@ class MaterialInfo:
         self.activity = "created material"
 
 
-Location = Union[resources.Resource, source.Source, sink.Sink]
+# Location = Union[resources.Resourcex, source.Source, sink.Sink]
 
 
 @dataclass
@@ -93,7 +93,7 @@ class Material(base.IDEntity):
 
     def request_transport(
         self,
-        transport_resource: resources.Resource,
+        transport_resource: resources.Resourcex,
         origin_resource: Location,
         target_resource: Location,
     ) -> None:

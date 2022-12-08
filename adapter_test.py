@@ -31,6 +31,12 @@ if __name__ == '__main__':
     
     print("----------------------------------")
 
+    for resource_data in adapter_object.resource_data:
+        print(type(resource_data))
+        print(resource_data)
+
+    print("----------------------------------")
+
 
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
