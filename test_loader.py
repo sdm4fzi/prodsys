@@ -1,5 +1,5 @@
 from prodsim import loader, print_util
-from prodsim.env import Environment
+from prodsim.sim import Environment
 from prodsim.post_processing import PostProcessor
 
 c = loader.CustomLoader()

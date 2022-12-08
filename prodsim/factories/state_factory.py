@@ -5,7 +5,7 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import parse_obj_as, BaseModel
 
-from .. import state, env
+from .. import sim, state
 from . import time_model_factory
 from ..data_structures import state_data
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class StateFactory(BaseModel):
-    env: env.Environment
+    env: sim.Environment
     time_model_factory: time_model_factory.TimeModelFactory
 
     state_data: List[state_data.STATE_DATA_UNION] = []

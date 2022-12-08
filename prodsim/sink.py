@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List
 
-from . import base, env, material, store
+from . import base, material, sim, store
 
 
 @dataclass
 class Sink(base.IDEntity):
-    env: env.Environment
+    env: sim.Environment
     material_factory: material.MaterialFactory
     location: List[int]
     material_type: str
@@ -24,7 +24,7 @@ class Sink(base.IDEntity):
 @dataclass
 class SinkFactory:
     data: dict
-    env: env.Environment
+    env: sim.Environment
     material_factory: material.MaterialFactory
     queue_factory: store.QueueFactory
 

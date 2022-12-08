@@ -1,6 +1,6 @@
 from flask import Flask, request
 
-from prodsim import env
+from prodsim import sim
 from prodsim.loader import CustomLoader
 from prodsim.optimization_util import get_objective_values
 from prodsim.post_processing import PostProcessor
@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 @app.route("/simulate", methods=["GET"])
 def home():
-    env1 = env.Environment()
+    env1 = sim.Environment()
     loader = CustomLoader()
     data = request.json
     loader.set_values(data)

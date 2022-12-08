@@ -8,17 +8,18 @@ from pydantic import BaseModel, Field
 
 from simpy.resources import resource
 from simpy import events
-from . import env, process, store
+from . import process, sim, store
 
 from .data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
+from . import control
 
 if TYPE_CHECKING:
-    from . import state, control
+    from . import state
 	
 
 
 class Resourcex(BaseModel, ABC, resource.Resource):
-    env: env.Environment
+    env: sim.Environment
     resource_data: RESOURCE_DATA_UNION    
     processes: List[process.PROCESS_UNION]
     controller: control.Controller
@@ -29,7 +30,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
 
     available: events.Event = Field(default=None, init=False)
     active: events.Event = Field(default=None, init=False)
-    current_process: Union[state.ProductionState, state.SetupState] = Field(default=None, init=False)
+    current_process: process.PROCESS_UNION = Field(default=None, init=False)
 
     class Config:
         arbitrary_types_allowed = True
@@ -52,21 +53,23 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         input_state.set_resource(self)
 
     def start_states(self):
-        super(Resourcex, self).__init__(self.env)
+        super(Resourcex, self).__init__(env=self.env)
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         for actual_state in self.states:
             actual_state.activate_state()
             actual_state.process = self.env.process(actual_state.process_state())
 
-    def get_process(self, process: process.PROCESS_UNION) -> Optional[state.State]:
+    def get_process(self, process: process.PROCESS_UNION) -> state.State:
         for actual_state in self.production_states:
-            if actual_state.state_data.description == process.process_data.description:
+            if actual_state.state_data.ID == process.process_data.ID:
                 return actual_state
+        else:
+            raise ValueError(f"Process {process.process_data.ID} not found in resource {self.resource_data.ID}")
 
     def get_free_process(self, process: process.PROCESS_UNION) -> Optional[state.State]:
         for actual_state in self.production_states:
-            if actual_state.state_data.description == process.process_data.description and actual_state.process is None:
+            if actual_state.state_data.ID == process.process_data.ID and actual_state.process is None:
                 return actual_state
         return None
 
@@ -101,15 +104,17 @@ class Resourcex(BaseModel, ABC, resource.Resource):
 
     def setup(self, _process: process.PROCESS_UNION):
         for input_state in self.setup_states:
-            if input_state.state_data.description == _process.process_data.description:
-                self.current_process = input_state
+            if input_state.state_data.ID == _process.process_data.ID:
+                self.current_process = _process
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
+        else:
+            raise ValueError(f"Process {_process.process_data.ID} not found in resource {self.resource_data.ID} for setup")
 
 
 class ProductionResource(Resourcex):
     resource_data: ProductionResourceData
-    controller: control.SimpleController
+    controller: control.ProductionController
 
     input_queues: List[store.Queue] = []
     output_queues: List[store.Queue] = []
@@ -123,6 +128,7 @@ class ProductionResource(Resourcex):
 class TransportResource(Resourcex):
     resource_data: TransportResourceData
     controller: control.TransportController
+    
 
 
     # def __post_init__(self):

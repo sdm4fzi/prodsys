@@ -4,14 +4,14 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from .. import env, store
+from .. import sim, store
 
 if TYPE_CHECKING:
     from .. import adapter
     from ..data_structures import queue_data
 
 class QueueFactory(BaseModel):
-    env: env.Environment
+    env: sim.Environment
 
     queues: List[store.Queue] = []
     queues_data: List[queue_data.QueueData] = []

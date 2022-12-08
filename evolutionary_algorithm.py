@@ -4,7 +4,7 @@ from random import random
 
 from deap import algorithms, base, creator, tools
 
-from prodsim import env
+from prodsim import sim
 from prodsim.optimization_util import (crossover, evaluate, mutation,
                                        random_configuration)
 from prodsim.util import set_seed
@@ -12,7 +12,7 @@ from prodsim.util import set_seed
 SEED = 22
 NGEN = 50
 POPULATION_SIZE = 600
-env.VERBOSE = 1
+sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
 

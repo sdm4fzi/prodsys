@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field
 import numpy as np
 
 
-from .adapter import Adapter
+from . import adapter
 from .factories import state_factory, time_model_factory, process_factory, queue_factory, resource_factory
-from . import env
+from . import sim
 
 VERBOSE = 1
 
@@ -26,8 +26,8 @@ def temp_seed(seed):
         random.setstate(p_state)
 
 class Runner(BaseModel):
-    adapter: Adapter
-    env: env.Environment = Field(None, description="The environment to run the simulation in", init=False)
+    adapter: adapter.Adapter
+    env: sim.Environment = Field(None, description="The environment to run the simulation in", init=False)
     # loader: loader.Loader = field(init=False, default=None)
     # time_model_factory: time_model_factory.TimeModelFactory = field(init=False, default=None)
     # state_factory: state_factory.StateFactory = field(init=False, default=None)
@@ -56,7 +56,7 @@ class Runner(BaseModel):
 
             print("----------------------------------")
 
-            self.env = env.Environment(seed=self.adapter.seed)
+            self.env = sim.Environment(seed=self.adapter.seed)
 
             state_factory_object = state_factory.StateFactory(env=self.env, time_model_factory=time_model_factory_object)
             state_factory_object.create_states_from_adapter(self.adapter)
@@ -81,14 +81,14 @@ class Runner(BaseModel):
                 print(queue)
 
             
-            print("----------------------------------q")
+            print("----------------------------------r")
 
 
-            resource_factory_object = resource_factory.ResourceFactory(envir=self.env, process_factory=process_factory_object , state_factory=state_factory_object, queue_factory=queue_factory_object)
+            resource_factory_object = resource_factory.ResourceFactory(env=self.env, process_factory=process_factory_object , state_factory=state_factory_object, queue_factory=queue_factory_object)
             resource_factory_object.create_resources_from_adapter(self.adapter)
 
             for resource in resource_factory_object.resources:
-                print(resource)
+                print(resource.resource_data)
             # self.resource_factory = resources.ResourceFactory(
             #     self.loader.resource_data,
             #     self,

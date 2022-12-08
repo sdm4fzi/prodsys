@@ -3,13 +3,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import field
 from enum import Enum
-from typing import List, Optional, Union, TYPE_CHECKING, Generator
+from typing import List, Optional, Union, TYPE_CHECKING, Generator, Tuple
 
 from simpy import events
 from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
 
-from . import time_model, env
+from . import sim, time_model
 from .data_structures.state_data import StateData, BreakDownStateData, ProductionStateData, TransportStateData
 
 if TYPE_CHECKING:
@@ -57,11 +57,11 @@ class StateInfo(BaseModel, extra=Extra.allow):
 class State(ABC, BaseModel):
     state_data: StateData
     time_model: time_model.TimeModel
-    env: env.Environment
+    env: sim.Environment
     active: events.Event = Field(None, description='active', init=False)
     finished_process: events.Event = Field(None, description='finished_process', init=False)
     resource: resources.Resourcex = Field(init=False, default=None, description='_resource')
-    process: events.Process = Field(None, description='process')
+    process: Optional[events.Process] = Field(None, description='process')
     state_info: StateInfo = Field(None, description='state_info')
 
     class Config:
@@ -135,7 +135,7 @@ class ProductionState(State):
     def interrupt_process(self) -> Generator:
         yield self.interrupt_processed
         self.interrupt_processed = events.Event(self.env)
-        if self.process.is_alive:
+        if self.process and self.process.is_alive:
             self.process.interrupt()
 
 
@@ -150,7 +150,7 @@ class TransportState(State):
         self.active = events.Event(self.env)
         self.finished_process = events.Event(self.env)
 
-    def process_state(self, target: List[float]) -> Generator:
+    def process_state(self, target: Tuple[float, float]) -> Generator:
         """Runs a single process of a resource.
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
@@ -182,7 +182,7 @@ class TransportState(State):
     def interrupt_process(self) -> Generator:
         yield self.interrupt_processed
         self.interrupt_processed = events.Event(self.env)
-        if self.process.is_alive:
+        if self.process and self.process.is_alive:
             self.process.interrupt()
 
 

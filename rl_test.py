@@ -11,7 +11,7 @@ import ray
 from ray.rllib.algorithms import ppo
 from ray import rllib
 
-from prodsim import loader, env, control
+from prodsim import loader, control, sim
 from prodsim.util import set_seed
 
 @dataclass
@@ -163,7 +163,7 @@ class RLReconfigurator(gym.Env):
 if __name__ == "__main__":
 
     SEED = 22
-    env.VERBOSE = 0
+    sim.VERBOSE = 0
 
     base_scenario = "data/base_scenario.json"
 

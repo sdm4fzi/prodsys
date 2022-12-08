@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from . import env, logger
+from . import logger, sim
 
 
 class Visualizer(ABC):

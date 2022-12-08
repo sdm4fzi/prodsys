@@ -5,12 +5,12 @@ from typing import Dict, List
 
 import simpy
 
-from . import base, env, material, resources, router, sink, store, time_model
+from . import base, material, resources, router, sim, sink, store, time_model
 
 
 @dataclass
 class Source(base.IDEntity):
-    env: env.Environment
+    env: sim.Environment
     material_factory: material.MaterialFactory
     location: List[int]
     material_type: str
@@ -45,7 +45,7 @@ class Source(base.IDEntity):
 @dataclass
 class SourceFactory:
     data: dict
-    env: env.Environment
+    env: sim.Environment
     material_factory: material.MaterialFactory
     time_model_factory: time_model.TimeModelFactory
     queue_factory: store.QueueFactory

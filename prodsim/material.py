@@ -8,7 +8,7 @@ from typing import List, Union, TYPE_CHECKING
 import numpy as np
 import simpy
 
-from . import (base, env, logger, process, request, resources, router, sink,
+from . import (base, logger, process, request, resources, router, sim, sink,
                source)
 
 
@@ -58,7 +58,7 @@ class MaterialInfo:
 
 @dataclass
 class Material(base.IDEntity):
-    env: env.Environment
+    env: sim.Environment
     material_type: str
     process_model: process.ProcessModel
     transport_process: process.Process
@@ -146,7 +146,7 @@ SKIP_LABEL = "skip"
 @dataclass
 class MaterialFactory:
     data: dict
-    env: env.Environment
+    env: sim.Environment
     process_factory: process.ProcessFactory
     materials: List[Material] = field(default_factory=list, init=False)
     data_collecter: logger.Datacollector = field(default=False, init=False)

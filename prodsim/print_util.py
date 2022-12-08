@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from . import env
+from . import sim
 
 
-def print_simulation_info(_env: env.Environment, start_time: float, end_time: float):
+def print_simulation_info(_env: sim.Environment, start_time: float, end_time: float):
     print("____________\n")
 
     print("simulated", _env.now / 60 / 24, "days in", end_time - start_time, "seconds")

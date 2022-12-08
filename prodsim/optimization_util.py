@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, List, Union
 
 from . import loader, print_util
-from .env import Environment
+from .sim import Environment
 from .post_processing import PostProcessor
 
 

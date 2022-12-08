@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from .. import env
+from .. import sim
 from ..util_temp import get_class_from_str
 
 
@@ -13,7 +13,7 @@ from ..data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResou
 from ..data_structures import state_data
 from ..factories import process_factory, state_factory, queue_factory
 
-from .. import resources, control, process
+from .. import control, resources, process
 
 if TYPE_CHECKING:
     from .. import adapter
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 CONTROLLER_DICT: Dict = {
-    'SimpleController': control.SimpleController,
+    'SimpleController': control.ProductionController,
     'TransportController': control.TransportController,
 }
 
@@ -35,14 +35,14 @@ CONTROL_POLICY_DICT: Dict = {
     'SPT_transport': control.SPT_transport_control_policy,
 }
 
-def register_states(resource: resources.Resourcex, states: List[state.State], _env: env.Environment):
+def register_states(resource: resources.Resourcex, states: List[state.State], _env: sim.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
         copy_state.env = _env
         resource.add_state(copy_state)
 
 
-def register_production_states(resource: resources.Resourcex, states: List[state.State], _env: env.Environment):
+def register_production_states(resource: resources.Resourcex, states: List[state.State], _env: sim.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
         copy_state.env = _env
@@ -50,7 +50,7 @@ def register_production_states(resource: resources.Resourcex, states: List[state
 
 
 def register_production_states_for_processes(resource: resources.Resourcex, state_factory: state_factory.StateFactory,
-                                             _env: env.Environment):
+                                             _env: sim.Environment):
     states: List[state.State] = []
     for process_instance in resource.processes:
         values = {"new_state": {'ID': process_instance.process_data.ID, 'description': process_instance.process_data.description, 
@@ -69,14 +69,14 @@ def register_production_states_for_processes(resource: resources.Resourcex, stat
 
 
 class ResourceFactory(BaseModel):
-    envir: env.Environment
+    env: sim.Environment
     process_factory: process_factory.ProcessFactory
     state_factory: state_factory.StateFactory
     queue_factory: queue_factory.QueueFactory
 
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[resources.RESOURCE_UNION] = []
-    controllers: List[Union[control.SimpleController, control.TransportController]] = []
+    controllers: List[Union[control.ProductionController, control.TransportController]] = []
 
     class Config:
         arbitrary_types_allowed = True
@@ -111,37 +111,29 @@ class ResourceFactory(BaseModel):
 
 
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
-        values = {"env": self.envir, "resource_data": resource_data}
+        values = {"env": self.env, "resource_data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.processes)
         values.update({"processes": processes})
 
         if resource_data.process_capacity:
             self.adjust_process_capacities(resource_data)
 
-        # controllers = Union[control.TransportController, control.SimpleController]
-
-        # controller = parse_obj_as(controllers, {"control_policy": resource_data.control_policy,})
-
         controller_class = get_class_from_str(name=resource_data.controller, cls_dict=CONTROLLER_DICT)
         control_policy = get_class_from_str(name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT)
-        print(controller_class, control_policy)
-        controller: Union[control.SimpleController, control.TransportController] = controller_class(
-                control_policy=control_policy, envir=self.envir)
+        controller: Union[control.ProductionController, control.TransportController] = controller_class(
+                control_policy=control_policy, env=self.env)
         self.controllers.append(controller)
         values.update({"controller": controller})
 
         if isinstance(resource_data, ProductionResourceData):
             input_queues, output_queues = self.get_queues_for_resource(resource_data)
             values.update({"input_queues": input_queues, "output_queues": output_queues})
-
-        print(values.keys())
-        print(values["resource_data"])
         resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
         controller.set_resource(resource_object)
 
         states = self.state_factory.get_states(resource_data.states)
-        register_states(resource_object, states, self.envir)
-        register_production_states_for_processes(resource_object, self.state_factory, self.envir)
+        register_states(resource_object, states, self.env)
+        register_production_states_for_processes(resource_object, self.state_factory, self.env)
         self.resources.append(resource_object)
 
     def start_resources(self):
@@ -149,12 +141,12 @@ class ResourceFactory(BaseModel):
             _resource.start_states()
             
         for controller in self.controllers:
-            self.envir.process(controller.control_loop())
+            self.env.process(controller.control_loop()) # type: ignore
 
     def get_resource(self, ID):
         return [r for r in self.resources if r.resource_data.ID == ID].pop()
 
-    def get_controller_of_resource(self, _resource: resources.Resourcex) -> Optional[Union[control.SimpleController, control.TransportController]]:
+    def get_controller_of_resource(self, _resource: resources.Resourcex) -> Optional[Union[control.ProductionController, control.TransportController]]:
         for controller in self.controllers:
             if controller.resource == _resource:
                 return controller

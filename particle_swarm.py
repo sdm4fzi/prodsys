@@ -3,14 +3,14 @@ from copy import deepcopy
 
 from Solid.ParticleSwarm import ParticleSwarm
 
-from prodsim import env, loader
+from prodsim import loader, sim
 from prodsim.optimization_util import (check_valid_configuration, crossover,
                                        evaluate, mutation,
                                        random_configuration)
 from prodsim.util import set_seed
 
 SEED = 22
-env.VERBOSE = 0
+sim.VERBOSE = 0
 
 SAVE_FOLDER = "data/tabu_results"
 

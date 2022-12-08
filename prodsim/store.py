@@ -8,11 +8,11 @@ from simpy.resources import store
 
 from .data_structures import queue_data
 
-from . import env
+from . import sim
 
 
 class Queue(BaseModel, store.FilterStore):
-    env: env.Environment
+    env: sim.Environment
     queue_data: queue_data.QueueData
 
     class Config:
