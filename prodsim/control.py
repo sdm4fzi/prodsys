@@ -176,7 +176,7 @@ class TransportController(Controller):
                 #  queue
                 events.append(queue.get(filter=lambda x: x is material))
         else:
-            raise ValueError(f"Resource {resource.resource_data.ID} is not a ProductionResource")
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
         return events
 
     def put_material_to_input_queue(
@@ -189,7 +189,7 @@ class TransportController(Controller):
                 # TODO: implement here a _resource.put_material_of_queues(material)
                 events.append(queue.put(material))
         else:
-            raise ValueError(f"Resource {resource.resource_data.ID} is not a ProductionResource")
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
 
         return events
 
@@ -291,3 +291,4 @@ class BatchController(Controller):
 
 from . import resources
 ProductionController.update_forward_refs()
+TransportController.update_forward_refs()

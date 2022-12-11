@@ -37,7 +37,7 @@ class ProcessFactory(BaseModel):
         values.update({"time_model": time_model, "process_data": process_data})
         self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
-    def get_processes_in_order(self, IDs: List[str]) -> List[process.Process]:
+    def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         processes = []
         for ID in IDs:
             for _process in self.processes:
@@ -46,7 +46,7 @@ class ProcessFactory(BaseModel):
 
         return processes
 
-    def get_process(self, ID: str) -> Optional[process.Process]:
+    def get_process(self, ID: str) -> Optional[process.PROCESS_UNION]:
         pr = [pr for pr in self.processes if pr.process_data.ID in ID]
         if not pr:
             return None

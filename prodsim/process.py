@@ -53,11 +53,11 @@ PROCESS_UNION = Union[ProductionProcess, TransportProcess]
 
 class ProcessModel(ABC, BaseModel):
     @abstractmethod
-    def get_next_possible_processes(self) -> Optional[Tuple[Process]]:
+    def get_next_possible_processes(self) -> Optional[List[PROCESS_UNION]]:
         pass
 
     @abstractmethod
-    def update_marking_from_transition(self, chosen_process: Process) -> None:
+    def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
         pass
 
     # def look_ahead(self, process: Process, look_ahead: int) -> List[Tuple[Process]]:
@@ -65,22 +65,19 @@ class ProcessModel(ABC, BaseModel):
 
 
 class ListProcessModel(ProcessModel):
-    process_list: List[Process]
+    process_list: List[PROCESS_UNION]
     current_marking: int = Field(default=0, init=False)
 
-    def get_next_possible_processes(self) -> Optional[Tuple[Process]]:
+    def get_next_possible_processes(self) -> Optional[List[PROCESS_UNION]]:
         if self.current_marking == len(self.process_list):
             return None
-        return (self.process_list[self.current_marking],)
+        return [self.process_list[self.current_marking]]
 
-    def update_marking_from_transition(self, chosen_process: Process) -> None:
+    def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
         self.current_marking += 1
 
 
 class PetriNetProcessModel(ProcessModel):
-    class Config:
-        arbitrary_types_allowed = True
-
     import pm4py
 
     net: pm4py.objects.petri_net.obj.PetriNet
@@ -94,13 +91,15 @@ class PetriNetProcessModel(ProcessModel):
         default=pm4py.objects.petri_net.semantics.ClassicSemantics(), init=False
     )
 
+    class Config:
+        arbitrary_types_allowed = True
+
     @validator("current_marking")
     def set_current_marking_initially(cls, v, values):
         return values["initial_marking"]
 
-    def get_next_possible_processes(self) -> Optional[Tuple[Process]]:
-        if not self.semantics.enabled_transitions(
-            self.net, self.current_marking
+    def get_next_possible_processes(self) -> Optional[List[PROCESS_UNION]]:
+        if not self.semantics.enabled_transitions(# type: ignore            self.net, self.current_marking
         ):  # supports nets with possible deadlocks
             return None
         all_enabled_trans = self.semantics.enabled_transitions(
@@ -112,13 +111,14 @@ class PetriNetProcessModel(ProcessModel):
         if before != self.poss_trans:
             "________________________________________________"
 
-        return tuple([trans.properties["Process"] for trans in self.poss_trans])
+        return list([trans.properties["Process"] for trans in self.poss_trans])
 
     def update_marking_from_transition(
-        self, chosen_process: Union[Process, str]
+        self, chosen_process: Union[PROCESS_UNION, str]
     ) -> None:
         import pm4py
 
         for trans in self.poss_trans:
             if trans.properties["Process"] == chosen_process:
                 self.current_marking = pm4py.objects.petri_net.semantics.ClassicSemantics().execute(trans, self.net, self.current_marking)  # type: ignore
+

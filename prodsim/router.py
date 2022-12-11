@@ -12,11 +12,12 @@ import numpy as np
 import simpy
 
 from . import base, process, resources, sink
+from .factories import resource_factory
 
 
 @dataclass
 class Router(ABC):
-    resource_process_registry: resources.ResourceFactory
+    resource_process_registry: resource_factory.ResourceFactory
     sink_registry: sink.SinkFactory
     routing_heuristic: Callable[..., resources.Resourcex]
 

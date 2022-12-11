@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Any, TYPE_CHECKING
 
 import simpy
 
-from . import base, material, resources, router, sim, sink, store, time_model
+from . import base, router, sim, sink, store, time_model
 
+if TYPE_CHECKING:
+    from .factories import material_factory, resource_factory, queue_factory, time_model_factory
 
 @dataclass
 class Source(base.IDEntity):
     env: sim.Environment
-    material_factory: material.MaterialFactory
+    data: Any
+    material_factory: material_factory.MaterialFactory
     location: List[int]
     material_type: str
     time_model: time_model.TimeModel
@@ -46,10 +49,10 @@ class Source(base.IDEntity):
 class SourceFactory:
     data: dict
     env: sim.Environment
-    material_factory: material.MaterialFactory
-    time_model_factory: time_model.TimeModelFactory
-    queue_factory: store.QueueFactory
-    resource_factory: resources.ResourceFactory
+    material_factory: material_factory.MaterialFactory
+    time_model_factory: time_model_factory.TimeModelFactory
+    queue_factory: queue_factory.QueueFactory
+    resource_factory: resource_factory.ResourceFactory
     sink_factory: sink.SinkFactory
 
     sources: List[Source] = field(default_factory=list, init=False)

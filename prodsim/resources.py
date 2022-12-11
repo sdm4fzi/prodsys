@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 class Resourcex(BaseModel, ABC, resource.Resource):
     env: sim.Environment
-    resource_data: RESOURCE_DATA_UNION    
+    data: RESOURCE_DATA_UNION    
     processes: List[process.PROCESS_UNION]
     controller: control.Controller
 
@@ -65,7 +65,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
             if actual_state.state_data.ID == process.process_data.ID:
                 return actual_state
         else:
-            raise ValueError(f"Process {process.process_data.ID} not found in resource {self.resource_data.ID}")
+            raise ValueError(f"Process {process.process_data.ID} not found in resource {self.data.ID}")
 
     def get_free_process(self, process: process.PROCESS_UNION) -> Optional[state.State]:
         for actual_state in self.production_states:
@@ -109,11 +109,11 @@ class Resourcex(BaseModel, ABC, resource.Resource):
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
         else:
-            raise ValueError(f"Process {_process.process_data.ID} not found in resource {self.resource_data.ID} for setup")
+            raise ValueError(f"Process {_process.process_data.ID} not found in resource {self.data.ID} for setup")
 
 
 class ProductionResource(Resourcex):
-    resource_data: ProductionResourceData
+    data: ProductionResourceData
     controller: control.ProductionController
 
     input_queues: List[store.Queue] = []
@@ -126,7 +126,7 @@ class ProductionResource(Resourcex):
         self.output_queues.extend(output_queues)
 
 class TransportResource(Resourcex):
-    resource_data: TransportResourceData
+    data: TransportResourceData
     controller: control.TransportController
     
 

@@ -26,7 +26,7 @@ class FunctionTimeModelData(CoreAsset):
         FunctionTimeModelEnum.Normal,
     ]
     parameters: List[float]
-    batch_size: int
+    batch_size: int = 100
 
 
 class ManhattanDistanceTimeModelData(CoreAsset):

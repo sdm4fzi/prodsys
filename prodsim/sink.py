@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Any, TYPE_CHECKING
 
-from . import base, material, sim, store
+from pydantic import BaseModel, Field
+
+from . import base, sim, store
+if TYPE_CHECKING:
+    from .factories import material_factory, queue_factory
 
 
 @dataclass
 class Sink(base.IDEntity):
     env: sim.Environment
-    material_factory: material.MaterialFactory
+    data: Any
+    material_factory: material_factory.MaterialFactory
     location: List[int]
     material_type: str
     input_queues: List[store.Queue] = field(default_factory=list, init=False)
@@ -21,14 +26,13 @@ class Sink(base.IDEntity):
         return self.location
 
 
-@dataclass
-class SinkFactory:
+class SinkFactory(BaseModel):
     data: dict
     env: sim.Environment
-    material_factory: material.MaterialFactory
-    queue_factory: store.QueueFactory
+    material_factory: material_factory.MaterialFactory
+    queue_factory: queue_factory.QueueFactory
 
-    sinks: List[Sink] = field(default_factory=list, init=False)
+    sinks: List[Sink] = Field(default_factory=list, init=False)
 
     def create_sinks(self):
         for values in self.data.values():
@@ -55,3 +59,5 @@ class SinkFactory:
 
     def get_sinks_with_material_type(self, __material_type: str):
         return [s for s in self.sinks if __material_type == s.material_type]
+    
+from . factories import material_factory

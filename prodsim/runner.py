@@ -8,10 +8,18 @@ import numpy as np
 
 
 from . import adapter
-from .factories import state_factory, time_model_factory, process_factory, queue_factory, resource_factory
+from .factories import (
+    state_factory,
+    time_model_factory,
+    process_factory,
+    queue_factory,
+    resource_factory,
+    material_factory,
+)
 from . import sim
 
 VERBOSE = 1
+
 
 @contextlib.contextmanager
 def temp_seed(seed):
@@ -25,9 +33,12 @@ def temp_seed(seed):
         np.random.set_state(np_state)
         random.setstate(p_state)
 
+
 class Runner(BaseModel):
     adapter: adapter.Adapter
-    env: sim.Environment = Field(None, description="The environment to run the simulation in", init=False)
+    env: sim.Environment = Field(
+        None, description="The environment to run the simulation in", init=False
+    )
     # loader: loader.Loader = field(init=False, default=None)
     # time_model_factory: time_model_factory.TimeModelFactory = field(init=False, default=None)
     # state_factory: state_factory.StateFactory = field(init=False, default=None)
@@ -39,14 +50,13 @@ class Runner(BaseModel):
     # material_factory: material.MaterialFactory = field(init=False, default=None)
     # data_collector: logger.Datacollector = field(init=False, default=None)
 
-    def run(self, time_range:int):
+    def run(self, time_range: int):
         self.env.run(time_range)
-    
+
     def initialize_simulation(self):
         with temp_seed(self.adapter.seed):
 
             print("----------------------------------")
-
 
             time_model_factory_object = time_model_factory.TimeModelFactory()
             time_model_factory_object.create_time_model_from_adapter(self.adapter)
@@ -58,7 +68,9 @@ class Runner(BaseModel):
 
             self.env = sim.Environment(seed=self.adapter.seed)
 
-            state_factory_object = state_factory.StateFactory(env=self.env, time_model_factory=time_model_factory_object)
+            state_factory_object = state_factory.StateFactory(
+                env=self.env, time_model_factory=time_model_factory_object
+            )
             state_factory_object.create_states_from_adapter(self.adapter)
 
             for state in state_factory_object.states:
@@ -66,7 +78,9 @@ class Runner(BaseModel):
 
             print("----------------------------------")
 
-            process_factory_object = process_factory.ProcessFactory(time_model_factory=time_model_factory_object)
+            process_factory_object = process_factory.ProcessFactory(
+                time_model_factory=time_model_factory_object
+            )
             process_factory_object.create_processes_from_adapter(self.adapter)
 
             for process in process_factory_object.processes:
@@ -80,15 +94,38 @@ class Runner(BaseModel):
             for queue in queue_factory_object.queues:
                 print(queue)
 
-            
             print("----------------------------------r")
 
-
-            resource_factory_object = resource_factory.ResourceFactory(env=self.env, process_factory=process_factory_object , state_factory=state_factory_object, queue_factory=queue_factory_object)
+            resource_factory_object = resource_factory.ResourceFactory(
+                env=self.env,
+                process_factory=process_factory_object,
+                state_factory=state_factory_object,
+                queue_factory=queue_factory_object,
+            )
             resource_factory_object.create_resources_from_adapter(self.adapter)
 
             for resource in resource_factory_object.resources:
-                print(resource.resource_data)
+                print(resource.data)
+
+            print("----------------------------------")
+
+            material_factory_object = material_factory.MaterialFactory(
+                env=self.env, process_factory=process_factory_object
+            )
+            from . import router
+            from . import sink
+            
+            sink_factory_object = sink.SinkFactory(data=dict(), env=self.env, material_factory=material_factory_object, queue_factory=queue_factory_object)
+
+            router_object = router.SimpleRouter(
+                resource_process_registry=resource_factory_object,
+                sink_registry=sink_factory_object,
+                routing_heuristic=router.ROUTING_HEURISTIC["random"],
+            )
+
+
+            for material_d in self.adapter.material_data:
+                material = material_factory_object.create_material(material_d, router_object)
             # self.resource_factory = resources.ResourceFactory(
             #     self.loader.resource_data,
             #     self,

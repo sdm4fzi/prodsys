@@ -43,5 +43,5 @@ class StateFactory(BaseModel):
         for state_data in adapter.state_data:
             self.add_state(state_data)
 
-    def get_states(self, IDs: List[str]) -> List[state.State]:
+    def get_states(self, IDs: List[str]) -> List[state.STATE_UNION]:
         return [st for st in self.states if st.state_data.ID in IDs]

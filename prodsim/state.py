@@ -31,7 +31,7 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _target_ID: str = ""
 
     def log_target_location(self, target: resources.Resourcex):
-        self._target_ID = target.resource_data.ID
+        self._target_ID = target.data.ID
 
     def log_material(self, _material: material.Material):
         self._material_ID = _material.ID
@@ -70,7 +70,7 @@ class State(ABC, BaseModel):
     def set_resource(self, resource_model: resources.Resourcex) -> None:
         self.resource = resource_model
         self.finished_process = events.Event(self.env).succeed()
-        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self.resource.resource_data.ID)
+        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self.resource.data.ID)
 
 
     def activate(self):

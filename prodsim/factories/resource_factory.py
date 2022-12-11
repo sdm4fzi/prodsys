@@ -35,14 +35,14 @@ CONTROL_POLICY_DICT: Dict = {
     'SPT_transport': control.SPT_transport_control_policy,
 }
 
-def register_states(resource: resources.Resourcex, states: List[state.State], _env: sim.Environment):
+def register_states(resource: resources.Resourcex, states: List[state.STATE_UNION], _env: sim.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
         copy_state.env = _env
         resource.add_state(copy_state)
 
 
-def register_production_states(resource: resources.Resourcex, states: List[state.State], _env: sim.Environment):
+def register_production_states(resource: resources.Resourcex, states: List[state.ProductionState], _env: sim.Environment):
     for actual_state in states:
         copy_state = copy.deepcopy(actual_state)
         copy_state.env = _env
@@ -63,8 +63,7 @@ def register_production_states_for_processes(resource: resources.Resourcex, stat
             state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
-    register_production_states(resource, states, _env)
-
+    register_production_states(resource, states, _env) # type: ignore
 
 
 
@@ -92,8 +91,9 @@ class ResourceFactory(BaseModel):
 
 
     def adjust_process_capacities(self, resource_data: RESOURCE_DATA_UNION):
-        for process, capacity in zip(resource_data.processes, resource_data.process_capacity):
-            resource_data.processes += [process]*(capacity - 1)
+        if resource_data.process_capacity:
+            for process, capacity in zip(resource_data.processes, resource_data.process_capacity):
+                resource_data.processes += [process]*(capacity - 1)
 
     def get_queues_for_resource(self, resource_data: ProductionResourceData) -> Tuple[List[store.Queue], List[store.Queue]]:
         input_queues = []
@@ -111,12 +111,11 @@ class ResourceFactory(BaseModel):
 
 
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
-        values = {"env": self.env, "resource_data": resource_data}
+        values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.processes)
         values.update({"processes": processes})
 
-        if resource_data.process_capacity:
-            self.adjust_process_capacities(resource_data)
+        self.adjust_process_capacities(resource_data)
 
         controller_class = get_class_from_str(name=resource_data.controller, cls_dict=CONTROLLER_DICT)
         control_policy = get_class_from_str(name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT)
@@ -128,6 +127,7 @@ class ResourceFactory(BaseModel):
         if isinstance(resource_data, ProductionResourceData):
             input_queues, output_queues = self.get_queues_for_resource(resource_data)
             values.update({"input_queues": input_queues, "output_queues": output_queues})
+        print(values)
         resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
         controller.set_resource(resource_object)
 
@@ -144,7 +144,7 @@ class ResourceFactory(BaseModel):
             self.env.process(controller.control_loop()) # type: ignore
 
     def get_resource(self, ID):
-        return [r for r in self.resources if r.resource_data.ID == ID].pop()
+        return [r for r in self.resources if r.data.ID == ID].pop()
 
     def get_controller_of_resource(self, _resource: resources.Resourcex) -> Optional[Union[control.ProductionController, control.TransportController]]:
         for controller in self.controllers:
@@ -152,7 +152,7 @@ class ResourceFactory(BaseModel):
                 return controller
 
     def get_resources(self, IDs: List[str]) -> List[resources.Resourcex]:
-        return [r for r in self.resources if r.resource_data.ID in IDs]
+        return [r for r in self.resources if r.data.ID in IDs]
 
     def get_resources_with_process(self, __process: process.Process) -> List[resources.Resourcex]:
         return [r for r in self.resources if __process in r.processes]

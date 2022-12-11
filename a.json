@@ -1,0 +1,27 @@
+{
+  "idShort": "hallo",
+  "modelType": { "name": "AssetAdministrationShell" },
+  "identification": { "id": "Simple_AAS", "idType": "Custom" },
+  "asset": {
+    "keys": [
+      {
+        "type": "Asset",
+        "idType": "Custom",
+        "value": "Simple_Asset",
+        "local": true
+      }
+    ]
+  },
+  "submodels": [
+    {
+      "keys": [
+        {
+          "type": "Submodel",
+          "idType": "Custom",
+          "value": "Simple_Submodel2",
+          "local": true
+        }
+      ]
+    }
+  ]
+}

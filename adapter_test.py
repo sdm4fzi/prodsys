@@ -37,6 +37,11 @@ if __name__ == '__main__':
 
     print("----------------------------------")
 
+    for material_data in adapter_object.material_data:
+        print(material_data)
+
+    print("----------------------------------")
+
 
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()

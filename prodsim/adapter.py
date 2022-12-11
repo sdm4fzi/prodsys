@@ -11,6 +11,7 @@ from .data_structures import (
     time_model_data,
     state_data,
     processes_data,
+    material_data,
 )
 
 
@@ -30,6 +31,7 @@ class Adapter(ABC, BaseModel):
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
+    material_data: List[material_data.MaterialData] = []
     seed: int = 21
 
     @abstractmethod
@@ -49,6 +51,7 @@ class JsonAdapter(Adapter):
         self.create_process_data_object_from_configuration_data(data["processes"])
         self.create_queue_data_object_from_configuration_data(data["queues"])
         self.create_resource_data_object_from_configuration_data(data["resources"])
+        self.create_material_data_object_from_configuration_data(data["materials"])
 
     def create_time_model_data_object_from_configuration_data(
         self, configuration_data: dict
@@ -93,6 +96,13 @@ class JsonAdapter(Adapter):
             self.resource_data.append(
                 parse_obj_as(resource_data.RESOURCE_DATA_UNION, values)
             )
+
+    def create_material_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
+        for key, values in configuration_data.items():
+            values.update({"material_type": values["ID"]})
+            self.material_data.append(parse_obj_as(material_data.MaterialData, values))
 
     def write_data(self, file_path: str):
         pass
