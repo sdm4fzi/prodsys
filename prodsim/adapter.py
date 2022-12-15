@@ -5,13 +5,14 @@ from abc import ABC, abstractmethod
 from typing import List
 from pydantic import parse_obj_as, BaseModel
 
-from .data_structures import (
+from prodsim.data_structures import (
     queue_data,
     resource_data,
     time_model_data,
     state_data,
     processes_data,
     material_data,
+    sink_data
 )
 
 
@@ -32,6 +33,7 @@ class Adapter(ABC, BaseModel):
     queue_data: List[queue_data.QueueData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     material_data: List[material_data.MaterialData] = []
+    sink_data: List[sink_data.SinkData] = []
     seed: int = 21
 
     @abstractmethod
@@ -52,6 +54,7 @@ class JsonAdapter(Adapter):
         self.create_queue_data_object_from_configuration_data(data["queues"])
         self.create_resource_data_object_from_configuration_data(data["resources"])
         self.create_material_data_object_from_configuration_data(data["materials"])
+        self.create_sink_data_object_from_configuration_data(data["sinks"])
 
     def create_time_model_data_object_from_configuration_data(
         self, configuration_data: dict
@@ -104,6 +107,14 @@ class JsonAdapter(Adapter):
             values.update({"material_type": values["ID"]})
             self.material_data.append(parse_obj_as(material_data.MaterialData, values))
 
+    
+    def create_sink_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
+        for values in configuration_data.values():
+            self.sink_data.append(parse_obj_as(sink_data.SinkData, values))
+            
+            
     def write_data(self, file_path: str):
         pass
 

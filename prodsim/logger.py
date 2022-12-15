@@ -7,10 +7,11 @@ from typing import Callable, List, Union, TYPE_CHECKING
 import pandas as pd
 from pydantic import BaseModel
 
-from . import resources, state
 
 if TYPE_CHECKING:
     from . import material
+    from prodsim import resources, state
+
 
 
 
@@ -138,6 +139,6 @@ def post_monitor_material_info(data: List[tuple], material_info: material.Materi
         'Resource': material_info.resource_ID,
         'State': material_info.state_ID,
         'Activity': material_info.activity,
-        'Material': material_info._material_ID
+        'Material': material_info.material_ID
     }
     data.append(item)

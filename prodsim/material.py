@@ -4,7 +4,7 @@ from abc import ABC
 from collections.abc import Iterable
 from typing import List, Union, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Extra
 
 import numpy as np
 from simpy import events
@@ -24,12 +24,12 @@ def flatten(xs):
 
 SKIP_LABEL = "skip"
 
-class MaterialInfo(BaseModel):
+class MaterialInfo(BaseModel, extra=Extra.allow):
     resource_ID: str = Field(init=False, default=None)
     state_ID: str = Field(init=False, default=None)
     event_time: float = Field(init=False, default=None)
     activity: str = Field(init=False, default=None)
-    _material_ID: str = Field(init=False, default=None)
+    material_ID: str = Field(init=False, default=None)
 
     def log_finish_material(
         self,
@@ -40,7 +40,7 @@ class MaterialInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self._material_ID = _material.material_data.ID
+        self.material_ID = _material.material_data.ID
         self.activity = "finished material"
 
     def log_create_material(
@@ -52,7 +52,7 @@ class MaterialInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self._material_ID = _material.material_data.ID
+        self.material_ID = _material.material_data.ID
         self.activity = "created material"
 
 

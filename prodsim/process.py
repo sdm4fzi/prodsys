@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, validator
 
 from . import time_model
 from .data_structures import processes_data
+import pm4py
 
 
 class Process(ABC, BaseModel):
@@ -78,14 +79,12 @@ class ListProcessModel(ProcessModel):
 
 
 class PetriNetProcessModel(ProcessModel):
-    import pm4py
-
     net: pm4py.objects.petri_net.obj.PetriNet
     initial_marking: pm4py.objects.petri_net.obj.Marking
     final_marking: pm4py.objects.petri_net.obj.Marking
-    current_marking: pm4py.objects.petri_net.obj.Marking = Field(init=False)
+    current_marking: Optional[pm4py.objects.petri_net.obj.Marking] = Field(init=False)
     poss_trans: List[pm4py.objects.petri_net.obj.PetriNet.Transition] = Field(
-        init=False
+        init=False, default_factory=list
     )
     semantics: pm4py.objects.petri_net.semantics.ClassicSemantics = Field(
         default=pm4py.objects.petri_net.semantics.ClassicSemantics(), init=False

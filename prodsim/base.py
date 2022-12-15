@@ -7,8 +7,3 @@ from pydantic import BaseModel
 class IDEntity:
     ID: str
     description: str
-
-
-class BaseAsset(BaseModel):
-    ID: str
-    description: str
