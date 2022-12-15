@@ -7,16 +7,16 @@ from pydantic import BaseModel, Field
 import numpy as np
 
 
-from . import adapter
-from .factories import (
+from prodsim import adapter, sim, logger
+from prodsim.factories import (
     state_factory,
     time_model_factory,
     process_factory,
     queue_factory,
     resource_factory,
     material_factory,
+    sink_factory,
 )
-from . import sim
 
 VERBOSE = 1
 
@@ -112,20 +112,39 @@ class Runner(BaseModel):
             material_factory_object = material_factory.MaterialFactory(
                 env=self.env, process_factory=process_factory_object
             )
-            # from . import router
-            # from . import sink
-            
-            # sink_factory_object = sink.SinkFactory(data=dict(), env=self.env, material_factory=material_factory_object, queue_factory=queue_factory_object)
 
-            # router_object = router.SimpleRouter(
-            #     resource_process_registry=resource_factory_object,
-            #     sink_registry=sink_factory_object,
-            #     routing_heuristic=router.ROUTING_HEURISTIC["random"],
-            # )
+            sink_factory_object = sink_factory.SinkFactory(
+                env=self.env, material_factory=material_factory_object, queue_factory=queue_factory_object
+            )
 
+            from . import router
 
-            # for material_d in self.adapter.material_data:
-            #     material = material_factory_object.create_material(material_d, router_object)
+            router_object = router.SimpleRouter(
+                resource_factory=resource_factory_object,
+                sink_factory=sink_factory_object,
+                routing_heuristic=router.ROUTING_HEURISTIC["random"],
+            )
+
+            data_collector = logger.Datacollector()
+            for r in resource_factory_object.resources:
+                all_states = r.states + r.production_states
+                for __state in all_states:
+                    data_collector.register_patch(
+                        __state.state_info,
+                        attr=[
+                            "log_start_state",
+                            "log_start_interrupt_state",
+                            "log_end_interrupt_state",
+                            "log_end_state",
+                        ],
+                        post=logger.post_monitor_state_info,
+                    )
+
+            material_factory_object.data_collecter = data_collector
+
+            for material_d in self.adapter.material_data:
+                material = material_factory_object.create_material(material_d, router_object)
+                print(material)	
             # self.resource_factory = resources.ResourceFactory(
             #     self.loader.resource_data,
             #     self,

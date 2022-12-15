@@ -33,7 +33,7 @@ class StateInfo(BaseModel, extra=Extra.allow):
         self._target_ID = target.data.ID
 
     def log_material(self, _material: material.Material):
-        self._material_ID = _material.ID
+        self._material_ID = _material.material_data.ID
 
     def log_start_state(self, start_time: float, expected_end_time: float):
         self._event_time = start_time

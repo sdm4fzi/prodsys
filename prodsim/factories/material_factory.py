@@ -5,10 +5,9 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 
-from .. import (logger, process, router, sim)
-
-from ..data_structures import material_data
-from . import process_factory
+from prodsim import (logger, process, router, sim)
+from prodsim.data_structures import material_data
+from prodsim.factories import process_factory
 
 # if TYPE_CHECKING:
 #     from .. import material
@@ -17,7 +16,6 @@ from . import process_factory
 
 
 class MaterialFactory(BaseModel):
-    # data: dict
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     materials: List[material.Material] = []
@@ -38,11 +36,12 @@ class MaterialFactory(BaseModel):
             process_model=process_model,
             transport_process=transport_processes
         )
-        self.data_collecter.register_patch(
-            material_object.material_info,
-            attr=["log_create_material", "log_finish_material"],
-            post=logger.post_monitor_material_info,
-        )
+        if self.data_collecter:
+            self.data_collecter.register_patch(
+                material_object.material_info,
+                attr=["log_create_material", "log_finish_material"],
+                post=logger.post_monitor_material_info,
+            )
 
         self.material_counter += 1
         self.materials.append(material_object)
@@ -53,6 +52,7 @@ class MaterialFactory(BaseModel):
             process_list = self.process_factory.get_processes_in_order(
                 material_data.processes
             )
+            print("''''''''''''''''''''''''''##################")
             return process.ListProcessModel(process_list=process_list)
         if isinstance(material_data.processes, str):
             import pm4py

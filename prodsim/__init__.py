@@ -1,2 +1,2 @@
-from . import runner
-from . import adapter
+from prodsim import runner
+from prodsim import adapter
