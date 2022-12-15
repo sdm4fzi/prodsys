@@ -1,10 +1,8 @@
 from typing import Dict, Union
-import json
 from dataclasses import dataclass
 
 
 import pandas as pd
-import numpy as np
 
 from . import loader
 

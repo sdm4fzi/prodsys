@@ -3,11 +3,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, Field, validator
-from gc import callbacks
 from typing import List, Generator, TYPE_CHECKING
 
 # from process import Process
-import simpy
 from simpy import events
 
 from . import request, sim

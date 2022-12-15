@@ -112,20 +112,20 @@ class Runner(BaseModel):
             material_factory_object = material_factory.MaterialFactory(
                 env=self.env, process_factory=process_factory_object
             )
-            from . import router
-            from . import sink
+            # from . import router
+            # from . import sink
             
-            sink_factory_object = sink.SinkFactory(data=dict(), env=self.env, material_factory=material_factory_object, queue_factory=queue_factory_object)
+            # sink_factory_object = sink.SinkFactory(data=dict(), env=self.env, material_factory=material_factory_object, queue_factory=queue_factory_object)
 
-            router_object = router.SimpleRouter(
-                resource_process_registry=resource_factory_object,
-                sink_registry=sink_factory_object,
-                routing_heuristic=router.ROUTING_HEURISTIC["random"],
-            )
+            # router_object = router.SimpleRouter(
+            #     resource_process_registry=resource_factory_object,
+            #     sink_registry=sink_factory_object,
+            #     routing_heuristic=router.ROUTING_HEURISTIC["random"],
+            # )
 
 
-            for material_d in self.adapter.material_data:
-                material = material_factory_object.create_material(material_d, router_object)
+            # for material_d in self.adapter.material_data:
+            #     material = material_factory_object.create_material(material_d, router_object)
             # self.resource_factory = resources.ResourceFactory(
             #     self.loader.resource_data,
             #     self,

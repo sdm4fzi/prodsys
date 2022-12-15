@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from prodsim import adapter, runner
+import prodsim
 # from prodsim import loader
 
 
 if __name__ == '__main__':
 
-    adapter_object = adapter.JsonAdapter()
+    adapter_object = prodsim.adapter.JsonAdapter()
 
     adapter_object.read_data('data/simple_example.json')
     for time_model_data in adapter_object.time_model_data:
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     print("----------------------------------")
 
 
-    runner_object = runner.Runner(adapter=adapter_object)
+    runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
 
 

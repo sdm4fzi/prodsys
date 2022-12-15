@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from dataclasses import Field, dataclass, field
-from random import random
-from turtle import pos
-from typing import List, Tuple
-from uuid import UUID, uuid1
+from dataclasses import dataclass
+from typing import List, TYPE_CHECKING
 
 import numpy as np
-import simpy
+from pydantic import BaseModel
 
-from . import base, process, resources, sink
-from .factories import resource_factory
+from . import process
+
+if TYPE_CHECKING:
+    from . import sink, resources
+    from .factories import resource_factory
 
 
-@dataclass
-class Router(ABC):
+
+class Router(BaseModel):
     resource_process_registry: resource_factory.ResourceFactory
     sink_registry: sink.SinkFactory
     routing_heuristic: Callable[..., resources.Resourcex]
@@ -30,7 +30,6 @@ class Router(ABC):
         return self.routing_heuristic(possible_sinks)
 
 
-@dataclass
 class SimpleRouter(Router):
     def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_process_registry.get_resources_with_process(
@@ -39,7 +38,6 @@ class SimpleRouter(Router):
         return self.routing_heuristic(possible_resources)
 
 
-@dataclass
 class AvoidDeadlockRouter(Router):
     def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_process_registry.get_resources_with_process(
@@ -85,3 +83,7 @@ ROUTING_HEURISTIC = {
 }
 
 ROUTERS = {"SimpleRouter": SimpleRouter, "AvoidDeadlockRouter": AvoidDeadlockRouter}
+
+from .factories import resource_factory
+from . import sink
+# SimpleRouter.update_forward_refs()

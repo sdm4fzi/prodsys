@@ -76,6 +76,6 @@ class MaterialFactory(BaseModel):
     def get_queues(self, IDs: List[str]) -> List[material.Material]:
         return [m for m in self.materials if m.material_data.ID in IDs]
     
-from .. import material
+from prodsim import material
 material.Material.update_forward_refs()
 

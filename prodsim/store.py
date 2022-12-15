@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel
 
 from simpy.resources import store
 

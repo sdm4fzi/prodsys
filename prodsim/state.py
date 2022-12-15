@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import field
 from enum import Enum
-from typing import List, Optional, Union, TYPE_CHECKING, Generator, Tuple
+from typing import Optional, Union, TYPE_CHECKING, Generator, Tuple
 
 from simpy import events
 from simpy import exceptions

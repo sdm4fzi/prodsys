@@ -10,14 +10,15 @@ if TYPE_CHECKING:
     from .factories import material_factory, queue_factory
 
 
+
 @dataclass
-class Sink(base.IDEntity):
+class Sink(BaseModel):
     env: sim.Environment
     data: Any
     material_factory: material_factory.MaterialFactory
     location: List[int]
     material_type: str
-    input_queues: List[store.Queue] = field(default_factory=list, init=False)
+    input_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
@@ -60,4 +61,9 @@ class SinkFactory(BaseModel):
     def get_sinks_with_material_type(self, __material_type: str):
         return [s for s in self.sinks if __material_type == s.material_type]
     
-from . factories import material_factory
+# from .factories.material_factory import MaterialFactory
+# MaterialFactory.update_forward_refs()
+# from .factories import material_factory
+# SinkFactory.update_forward_refs()
+from .factories import material_factory, queue_factory
+# SinkFactory.update_forward_refs()

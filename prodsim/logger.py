@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import functools
-from ast import Call
 from functools import partial, wraps
-from typing import Callable, List, Union
+from typing import Callable, List, Union, TYPE_CHECKING
 
 import pandas as pd
 from pydantic import BaseModel
 
-from . import material, resources, source, state
+from . import resources, state
+
+if TYPE_CHECKING:
+    from . import material
+
+
 
 
 class Datacollector(BaseModel):
