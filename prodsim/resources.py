@@ -14,7 +14,6 @@ from prodsim import control
 
 if TYPE_CHECKING:
     from prodsim import state
-	
 
 
 class Resourcex(BaseModel, ABC, resource.Resource):
@@ -52,7 +51,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         input_state.set_resource(self)
 
     def start_states(self):
-        super(Resourcex, self).__init__(env=self.env)
+        # resource.Resource.__init__(self, self.env, capacity=1)
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         for actual_state in self.states:
@@ -127,18 +126,6 @@ class ProductionResource(Resourcex):
 class TransportResource(Resourcex):
     data: TransportResourceData
     controller: control.TransportController
-    
-
-
-    # def __post_init__(self):
-    #     super(Resource, self).__init__(self.env)
-    #     self.active = events.Event(self.env).succeed()
-    #     self.available = events.Event(self.env)
-
-
-
-    def request_repair(self):
-        pass
 
 
 RESOURCE_UNION = Union[ProductionResource, TransportResource]

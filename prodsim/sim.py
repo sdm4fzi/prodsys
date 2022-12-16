@@ -44,7 +44,7 @@ class Environment(core.Environment):
             if VERBOSE == 1:
                 self.pbar = tqdm(total=time_range)
 
-            super().run(time_range)
+            self.run(time_range)
             if VERBOSE == 1:
                 self.pbar.update(time_range - self.last_update)
                 self.pbar.refresh()

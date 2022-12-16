@@ -12,6 +12,9 @@ if __name__ == '__main__':
 
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
+    runner_object.run(10000)
+
+
 
     # # env.load_json('data/simple_example.json')
     # env.load_json('data/base_scenario.json')

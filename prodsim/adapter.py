@@ -12,7 +12,8 @@ from prodsim.data_structures import (
     state_data,
     processes_data,
     material_data,
-    sink_data
+    sink_data, 
+    source_data
 )
 
 
@@ -34,6 +35,7 @@ class Adapter(ABC, BaseModel):
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     material_data: List[material_data.MaterialData] = []
     sink_data: List[sink_data.SinkData] = []
+    source_data: List[source_data.SourceData] = []
     seed: int = 21
 
     @abstractmethod
@@ -55,6 +57,7 @@ class JsonAdapter(Adapter):
         self.create_resource_data_object_from_configuration_data(data["resources"])
         self.create_material_data_object_from_configuration_data(data["materials"])
         self.create_sink_data_object_from_configuration_data(data["sinks"])
+        self.create_source_data_object_from_configuration_data(data["sources"])
 
     def create_time_model_data_object_from_configuration_data(
         self, configuration_data: dict
@@ -113,6 +116,12 @@ class JsonAdapter(Adapter):
     ):
         for values in configuration_data.values():
             self.sink_data.append(parse_obj_as(sink_data.SinkData, values))
+
+    def create_source_data_object_from_configuration_data(
+        self, configuration_data: dict
+    ):
+        for values in configuration_data.values():
+            self.source_data.append(parse_obj_as(source_data.SourceData, values))
             
             
     def write_data(self, file_path: str):
