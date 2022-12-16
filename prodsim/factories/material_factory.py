@@ -52,7 +52,6 @@ class MaterialFactory(BaseModel):
             process_list = self.process_factory.get_processes_in_order(
                 material_data.processes
             )
-            print("''''''''''''''''''''''''''##################")
             return process.ListProcessModel(process_list=process_list)
         if isinstance(material_data.processes, str):
             import pm4py

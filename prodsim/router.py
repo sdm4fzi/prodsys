@@ -91,5 +91,3 @@ ROUTING_HEURISTIC = {
 }
 
 ROUTERS = {"SimpleRouter": SimpleRouter, "AvoidDeadlockRouter": AvoidDeadlockRouter}
-
-# from prodsim.factories import resource_factory, sink_factory

@@ -9,46 +9,9 @@ if __name__ == '__main__':
     adapter_object = prodsim.adapter.JsonAdapter()
 
     adapter_object.read_data('data/simple_example.json')
-    for time_model_data in adapter_object.time_model_data:
-        print(time_model_data)
-
-    print("----------------------------------")
-
-    for state_data in adapter_object.state_data:
-        print(state_data)
-
-    print("----------------------------------")
-
-
-    for process_data in adapter_object.process_data:
-        print(process_data)
-
-    print("----------------------------------")
-
-    for queue_data in adapter_object.queue_data:
-        print(queue_data)
-
-    
-    print("----------------------------------")
-
-    for resource_data in adapter_object.resource_data:
-        print(type(resource_data))
-        print(resource_data)
-
-    print("----------------------------------")
-
-    for material_data in adapter_object.material_data:
-        print(material_data)
-
-    print("----------------------------------")
-
 
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
-
-
-
-
 
     # # env.load_json('data/simple_example.json')
     # env.load_json('data/base_scenario.json')

@@ -8,10 +8,10 @@ from typing import List, Generator, TYPE_CHECKING
 # from process import Process
 from simpy import events
 
-from . import request, sim
+from prodsim import request, sim
 
 if TYPE_CHECKING:
-    from . import material, process, state, resources
+    from prodsim import material, process, state, resources
 
 
 class Controller(ABC, BaseModel):
@@ -273,12 +273,12 @@ def LIFO_control_policy(requests: List[request.Request]) -> None:
 
 
 def SPT_control_policy(requests: List[request.Request]) -> None:
-    requests.sort(key=lambda x: x._process.get_expected_process_time())
+    requests.sort(key=lambda x: x.process.get_expected_process_time())
 
 
 def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> None:
     requests.sort(
-        key=lambda x: x._process.get_expected_process_time(
+        key=lambda x: x.process.get_expected_process_time(
             x.origin.get_location(), x.target.get_location()
         )
     )
@@ -287,6 +287,6 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
 class BatchController(Controller):
     pass
 
-from . import resources
+from prodsim import resources
 ProductionController.update_forward_refs()
 TransportController.update_forward_refs()
