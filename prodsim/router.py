@@ -33,9 +33,9 @@ class Router:
         
 
 class SimpleRouter(Router):
-    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
+    def get_next_resource(self, target_process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_factory.get_resources_with_process(
-            __process
+            target_process
         )
         return self.routing_heuristic(possible_resources)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List, Generator, Optional, Union, Tuple, TYPE_CHECKING	
+from typing import List, Generator, Optional, Union, Tuple, TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -14,6 +14,7 @@ from prodsim import control, state
 
 
 class Resourcex(BaseModel, ABC, resource.Resource):
+    _env: Any
     env: sim.Environment
     data: RESOURCE_DATA_UNION    
     processes: List[process.PROCESS_UNION]
@@ -48,7 +49,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         input_state.set_resource(self)
 
     def start_states(self):
-        # resource.Resource.__init__(self, self.env, capacity=1)
+        resource.Resource.__init__(self, self.env, capacity=1)
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         for actual_state in self.states:

@@ -15,7 +15,7 @@ class Process(ABC, BaseModel):
     Abstract process base class
     """
 
-    # process_data: processes_data.ProcessData
+    process_data: processes_data.PROCESS_DATA_UNION
     time_model: time_model.TimeModel
 
     @abstractmethod

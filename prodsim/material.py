@@ -83,6 +83,7 @@ class Material(BaseModel):
             resource=self.next_resource, _material=self, event_time=self.env.now
         )
         yield self.env.process(self.transport_to_queue_of_resource())
+        print("finished transport")
         while self.next_process:
             self.request_process()
             yield self.finished_process
@@ -108,15 +109,14 @@ class Material(BaseModel):
         origin_resource: Location,
         target_resource: Location,
     ) -> None:
-        if isinstance(origin_resource, resources.Resourcex) and isinstance(target_resource, resources.Resourcex):
-            self.env.request_process_of_resource(
-                request.TransportResquest(
-                    process=self.transport_process,
-                    material=self,
-                    resource=transport_resource,
-                    origin=origin_resource,
-                    target=target_resource,
-                )
+        self.env.request_process_of_resource(
+            request.TransportResquest(
+                process=self.transport_process,
+                material=self,
+                resource=transport_resource,
+                origin=origin_resource,
+                target=target_resource,
+            )
         )
 
     def set_next_process(self):
@@ -139,6 +139,7 @@ class Material(BaseModel):
         transport_resource = self.router.get_next_resource(self.transport_process)
         self.set_next_process()
         if isinstance(transport_resource, resources.TransportResource):
+            print("request transport")
             self.request_transport(transport_resource, origin_resource, self.next_resource)
             yield self.finished_process
         self.finished_process = events.Event(self.env)

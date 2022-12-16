@@ -8,10 +8,11 @@ if TYPE_CHECKING:
     from prodsim import material, process, resources
 
 
-class Request(BaseModel):
-    process: process.PROCESS_UNION
-    material: material.Material
-    resource: resources.Resourcex
+class Request:
+    def __init__(self, process: process.PROCESS_UNION, material: material.Material, resource: resources.Resourcex):
+        self.process = process
+        self.material = material
+        self.resource = resource
 
     def get_process(self) -> process.PROCESS_UNION:
         return self.process
@@ -23,11 +24,13 @@ class Request(BaseModel):
         return self.resource
 
 class TransportResquest(Request):
-    process: process.TransportProcess
-    resource: resources.TransportResource
-
-    origin: resources.Resourcex
-    target: resources.Resourcex
+    def __init__(self, process: process.TransportProcess, material: material.Material, resource: resources.TransportResource,
+        origin: material.Location, target: material.Location):
+        self.process: process.TransportProcess = process
+        self.material: material.Material = material
+        self.resource: resources.TransportResource = resource
+        self.origin: material.Location = origin
+        self.target: material.Location = target
 
     def get_process(self) -> process.TransportProcess:
         return self.process
@@ -35,8 +38,8 @@ class TransportResquest(Request):
     def get_resource(self) -> resources.TransportResource:
         return self.resource
 
-    def get_origin(self) -> resources.Resourcex:
+    def get_origin(self) -> material.Location:
         return self.origin
 
-    def get_target(self) -> resources.Resourcex:
+    def get_target(self) -> material.Location:
         return self.target

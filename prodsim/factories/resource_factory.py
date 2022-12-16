@@ -133,6 +133,9 @@ class ResourceFactory(BaseModel):
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.processes)
+        
+        ids = [proc.process_data.ID for proc in processes]
+        print(resource_data.ID, ids)
         values.update({"processes": processes})
 
         self.adjust_process_capacities(resource_data)
@@ -186,6 +189,6 @@ class ResourceFactory(BaseModel):
         return [r for r in self.resources if r.data.ID in IDs]
 
     def get_resources_with_process(
-        self, __process: process.Process
+        self, target_process: process.Process
     ) -> List[resources.Resourcex]:
-        return [r for r in self.resources if __process in r.processes]
+        return [res for res in self.resources if target_process.process_data.ID in res.data.processes]
