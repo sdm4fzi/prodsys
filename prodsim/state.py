@@ -8,11 +8,17 @@ from simpy import events
 from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
 
-from . import sim, time_model
-from .data_structures.state_data import StateData, BreakDownStateData, ProductionStateData, TransportStateData
+from prodsim import sim, time_model
+from prodsim.data_structures.state_data import (
+    StateData,
+    BreakDownStateData,
+    ProductionStateData,
+    TransportStateData,
+)
 
 if TYPE_CHECKING:
     from . import material, resources
+
 
 class StateEnum(str, Enum):
     start_state = "start state"
@@ -20,13 +26,14 @@ class StateEnum(str, Enum):
     end_interrupt = "end interrupt"
     end_state = "end state"
 
+
 class StateInfo(BaseModel, extra=Extra.allow):
     ID: str
     resource_ID: str
     _event_time: Optional[float] = 0.0
-    _expected_end_time: Optional[float]  = 0.0
+    _expected_end_time: Optional[float] = 0.0
     _activity: Optional[StateEnum] = None
-    _material_ID: str  = ""
+    _material_ID: str = ""
     _target_ID: str = ""
 
     def log_target_location(self, target: resources.Resourcex):
@@ -53,15 +60,20 @@ class StateInfo(BaseModel, extra=Extra.allow):
         self._event_time = start_time
         self._activity = StateEnum.end_state
 
+
 class State(ABC, BaseModel):
     state_data: StateData
     time_model: time_model.TimeModel
     env: sim.Environment
-    active: events.Event = Field(None, description='active', init=False)
-    finished_process: events.Event = Field(None, description='finished_process', init=False)
-    resource: resources.Resourcex = Field(init=False, default=None, description='_resource')
-    process: Optional[events.Process] = Field(None, description='process')
-    state_info: StateInfo = Field(None, description='state_info')
+    active: events.Event = Field(None, description="active", init=False)
+    finished_process: events.Event = Field(
+        None, description="finished_process", init=False
+    )
+    resource: resources.Resourcex = Field(
+        init=False, default=None, description="_resource"
+    )
+    process: Optional[events.Process] = Field(None, description="process")
+    state_info: StateInfo = Field(None, description="state_info")
 
     class Config:
         arbitrary_types_allowed = True
@@ -69,8 +81,9 @@ class State(ABC, BaseModel):
     def set_resource(self, resource_model: resources.Resourcex) -> None:
         self.resource = resource_model
         self.finished_process = events.Event(self.env).succeed()
-        self.state_info = StateInfo(ID=self.state_data.ID, resource_ID=self.resource.data.ID)
-
+        self.state_info = StateInfo(
+            ID=self.state_data.ID, resource_ID=self.resource.data.ID
+        )
 
     def activate(self):
         try:
@@ -93,8 +106,10 @@ class State(ABC, BaseModel):
 
 class ProductionState(State):
     state_data: ProductionStateData
-    interrupt_processed: events.Event = Field(None, description='interrupt_processed', init=False)
-    start: float = 0.0 
+    interrupt_processed: events.Event = Field(
+        None, description="interrupt_processed", init=False
+    )
+    start: float = 0.0
     done_in: float = 0.0
 
     def activate_state(self):
@@ -121,10 +136,11 @@ class ProductionState(State):
                 self.update_done_in()
                 yield self.active
                 self.interrupt_processed.succeed()
-                self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
+                self.state_info.log_end_interrupt_state(
+                    self.env.now, self.env.now + self.done_in
+                )
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
-
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
@@ -140,7 +156,9 @@ class ProductionState(State):
 
 class TransportState(State):
     state_data: TransportStateData
-    interrupt_processed: events.Event = Field(None, description='interrupt_processed', init=False)
+    interrupt_processed: events.Event = Field(
+        None, description="interrupt_processed", init=False
+    )
     start: float = 0.0
     done_in: float = 0.0
 
@@ -154,7 +172,9 @@ class TransportState(State):
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
         """
-        self.done_in = self.time_model.get_next_time(origin=tuple(self.resource.get_location()), target=tuple(target))
+        self.done_in = self.time_model.get_next_time(
+            origin=tuple(self.resource.get_location()), target=tuple(target)
+        )
         yield self.resource.active
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
         while self.done_in:
@@ -168,7 +188,9 @@ class TransportState(State):
                 self.update_done_in()
                 yield self.active
                 self.interrupt_processed.succeed()
-                self.state_info.log_end_interrupt_state(self.env.now, self.env.now + self.done_in)
+                self.state_info.log_end_interrupt_state(
+                    self.env.now, self.env.now + self.done_in
+                )
         self.resource.location = target
         self.state_info.log_end_state(self.env.now)
         self.finished_process.succeed()
@@ -217,7 +239,6 @@ class BreakDownState(State):
 
 
 class ScheduledState(State):
-
     def __post_init__(self):
         self.active = events.Event(self.env)
         # self.process = self.env.process(self.process_state())
@@ -233,8 +254,8 @@ class ScheduledState(State):
         while True:
             yield None
 
-class SetupState(ScheduledState):
 
+class SetupState(ScheduledState):
     def __post_init__(self):
         self.active = events.Event(self.env)
         # self.process = self.env.process(self.process_state())
@@ -252,4 +273,3 @@ class SetupState(ScheduledState):
 
 
 STATE_UNION = Union[BreakDownState, ProductionState, TransportState]
-

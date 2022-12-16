@@ -4,7 +4,7 @@ from typing import Literal, Union, List, Tuple, Optional
 
 from pydantic import validator
 
-from .core_asset import CoreAsset
+from prodsim.data_structures.core_asset import CoreAsset
 
 
 class MaterialData(CoreAsset):

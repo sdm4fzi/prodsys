@@ -5,8 +5,8 @@ from typing import List, Tuple, Union, Optional
 
 from pydantic import BaseModel, Field, validator
 
-from . import time_model
-from .data_structures import processes_data
+from prodsim import time_model
+from prodsim.data_structures import processes_data
 import pm4py
 
 

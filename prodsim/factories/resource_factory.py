@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from .. import sim
-from ..util_temp import get_class_from_str
+from prodsim import sim
+from prodsim.util_temp import get_class_from_str
 
 
 from prodsim.data_structures.resource_data import (

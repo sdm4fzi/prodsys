@@ -4,12 +4,12 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from ..factories import time_model_factory
-from .. import process
-from ..data_structures import processes_data
+from prodsim.factories import time_model_factory
+from prodsim import process
+from prodsim.data_structures import processes_data
 
 if TYPE_CHECKING:
-    from .. import adapter
+    from prodsim import adapter
 
 
 class ProcessFactory(BaseModel):

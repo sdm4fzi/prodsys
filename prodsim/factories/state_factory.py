@@ -5,9 +5,9 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import parse_obj_as, BaseModel
 
-from .. import sim, state
-from . import time_model_factory
-from ..data_structures import state_data
+from prodsim import sim, state
+from prodsim.factories import time_model_factory
+from prodsim.data_structures import state_data
 
 
 if TYPE_CHECKING:

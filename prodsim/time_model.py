@@ -6,12 +6,12 @@ from typing import Callable, List, Optional, Tuple, Union
 import numpy as np
 from pydantic import BaseModel, validator
 
-from .data_structures.time_model_data import (
+from prodsim.data_structures.time_model_data import (
     FunctionTimeModelData,
     HistoryTimeModelData,
     ManhattanDistanceTimeModelData,
 )
-from .util.statistical_functions import FUNCTION_DICT, FunctionTimeModelEnum
+from prodsim.util.statistical_functions import FUNCTION_DICT, FunctionTimeModelEnum
 
 
 class TimeModel(ABC, BaseModel):

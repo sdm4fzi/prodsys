@@ -1,7 +1,7 @@
 from typing import Dict, Union
 import json
 
-from . import loader
+from prodsim import loader
 
 
 def get_minimum_simjson_structure() -> Dict[str, Union[str, list, dict]]:

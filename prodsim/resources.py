@@ -7,13 +7,13 @@ from pydantic import BaseModel, Field
 
 from simpy.resources import resource
 from simpy import events
-from . import process, sim, store
+from prodsim import process, sim, store
 
-from .data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
-from . import control
+from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
+from prodsim import control
 
 if TYPE_CHECKING:
-    from . import state
+    from prodsim import state
 	
 
 

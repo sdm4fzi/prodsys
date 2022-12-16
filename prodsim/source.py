@@ -5,7 +5,7 @@ from typing import Dict, List, Any, TYPE_CHECKING
 
 import simpy
 
-from . import base, router, sim, sink, store, time_model
+from prodsim import base, router, sim, sink, store, time_model
 
 if TYPE_CHECKING:
     from .factories import material_factory, resource_factory, queue_factory, time_model_factory

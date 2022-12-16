@@ -6,11 +6,8 @@ from dataclasses import dataclass
 from typing import List, TYPE_CHECKING
 import numpy as np
 
-from . import process
-
-
 if TYPE_CHECKING:
-    from prodsim import resources
+    from prodsim import resources, process
     from prodsim import sink
     from prodsim.factories import resource_factory, sink_factory
 

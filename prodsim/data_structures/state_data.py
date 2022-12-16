@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Union
 
-from .core_asset import CoreAsset
+from prodsim.data_structures.core_asset import CoreAsset
 
 class StateTypeEnum(str, Enum):
     BreakDownState = "BreakDownState"

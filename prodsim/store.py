@@ -5,9 +5,9 @@ from pydantic import BaseModel
 
 from simpy.resources import store
 
-from .data_structures import queue_data
+from prodsim.data_structures import queue_data
 
-from . import sim
+from prodsim import sim
 
 
 class Queue(BaseModel, store.FilterStore):

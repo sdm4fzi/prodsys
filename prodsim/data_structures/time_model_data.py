@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import List, Literal, Union
 
 from enum import Enum
-from .core_asset import CoreAsset
-from ..util.statistical_functions import FunctionTimeModelEnum
+from prodsim.data_structures.core_asset import CoreAsset
+from prodsim.util.statistical_functions import FunctionTimeModelEnum
 
 class TimeModelEnum(str, Enum):
     HistoryTimeModel = "HistoryTimeModel"

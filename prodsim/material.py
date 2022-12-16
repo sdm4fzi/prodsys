@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from abc import ABC
 from collections.abc import Iterable
-from typing import List, Union, Optional
+from typing import List, Union, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, Extra
 
 import numpy as np
 from simpy import events
 
-from . import (process, request, resources, router, sim, sink,
+from prodsim import (process, request, router, resources, sim, sink,
                source)
 
-from .data_structures import material_data
+from prodsim.data_structures import material_data
+
 
 
 def flatten(xs):
@@ -96,7 +97,7 @@ class Material(BaseModel):
         if isinstance(self.next_resource, resources.Resourcex):
             if self.next_process:
                 self.env.request_process_of_resource(
-                    request.Request(self.next_process, self, self.next_resource)
+                    request.Request(process=self.next_process, material=self, resource=self.next_resource)
                 )
         else:
             raise TypeError("Only requests to resources are allowed!")
@@ -110,11 +111,11 @@ class Material(BaseModel):
         if isinstance(origin_resource, resources.Resourcex) and isinstance(target_resource, resources.Resourcex):
             self.env.request_process_of_resource(
                 request.TransportResquest(
-                    self.transport_process,
-                    self,
-                    transport_resource,
-                    origin_resource,
-                    target_resource,
+                    process=self.transport_process,
+                    material=self,
+                    resource=transport_resource,
+                    origin=origin_resource,
+                    target=target_resource,
                 )
         )
 

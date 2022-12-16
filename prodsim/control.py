@@ -11,7 +11,7 @@ from simpy import events
 from prodsim import request, sim
 
 if TYPE_CHECKING:
-    from prodsim import material, process, state, resources
+    from prodsim import material, process, state, resources, request
 
 
 class Controller(ABC, BaseModel):
