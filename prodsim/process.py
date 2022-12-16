@@ -93,13 +93,12 @@ class PetriNetProcessModel(ProcessModel):
     class Config:
         arbitrary_types_allowed = True
 
-    @validator("current_marking")
+    @validator("current_marking", pre=True, always=True)
     def set_current_marking_initially(cls, v, values):
         return values["initial_marking"]
 
     def get_next_possible_processes(self) -> Optional[List[PROCESS_UNION]]:
-        if not self.semantics.enabled_transitions(# type: ignore            self.net, self.current_marking
-        ):  # supports nets with possible deadlocks
+        if not self.semantics.enabled_transitions(self.net, self.current_marking):  # supports nets with possible deadlocks
             return None
         all_enabled_trans = self.semantics.enabled_transitions(
             self.net, self.current_marking
@@ -119,5 +118,5 @@ class PetriNetProcessModel(ProcessModel):
 
         for trans in self.poss_trans:
             if trans.properties["Process"] == chosen_process:
-                self.current_marking = pm4py.objects.petri_net.semantics.ClassicSemantics().execute(trans, self.net, self.current_marking)  # type: ignore
+                self.current_marking = pm4py.objects.petri_net.semantics.ClassicSemantics().execute(t=trans, pn=self.net, m=self.current_marking)  # type: ignore
 

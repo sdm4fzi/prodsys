@@ -25,7 +25,6 @@ class Controller(ABC, BaseModel):
 
     @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
-        print("__________________________________")
         return events.Event(values["env"])
     
     class Config:

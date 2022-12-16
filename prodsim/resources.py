@@ -10,10 +10,7 @@ from simpy import events
 from prodsim import process, sim, store
 
 from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
-from prodsim import control
-
-if TYPE_CHECKING:
-    from prodsim import state
+from prodsim import control, state
 
 
 class Resourcex(BaseModel, ABC, resource.Resource):
@@ -83,7 +80,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
     def activate(self):
         self.active.succeed()
         for actual_state in self.production_states:
-            if (type(actual_state) == state.ProductionState or type(actual_state) == state.TransportState) and actual_state.process is not None:
+            if (isinstance(actual_state, state.ProductionState) or isinstance(actual_state, state.TransportState)) and actual_state.process is not None:
                 actual_state.activate()
 
     def request_repair(self):

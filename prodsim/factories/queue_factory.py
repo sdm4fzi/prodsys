@@ -31,7 +31,10 @@ class QueueFactory(BaseModel):
     def add_queue(self, queue_data: queue_data.QueueData):
         values = {}
         values.update({"env": self.env, "queue_data": queue_data})
-        self.queues.append(parse_obj_as(store.Queue, values))
+        # self.queues.append(parse_obj_as(store.Queue, values))
+        q = store.Queue(self.env, queue_data)
+        self.queues.append(q)
+        # self.queues.append(parse_obj_as(store.Queue, values))
         # self.queues[-1].post_init()
 
     def get_queue(self, ID) -> store.Queue:
