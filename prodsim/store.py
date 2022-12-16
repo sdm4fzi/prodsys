@@ -19,5 +19,6 @@ class Queue(BaseModel, store.FilterStore):
 
     def post_init(self):
         super().__init__(env=self.env, capacity=self.queue_data.capacity)
+        # store.FilterStore.__init__(self, env=self.env, capacity=self.queue_data.capacity)
 
 

@@ -18,6 +18,9 @@ class SinkFactory(BaseModel):
 
     sinks: List[sink.Sink] = Field(default_factory=list, init=False)
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def create_sinks_from_configuration_data(self, configuration_data: Dict[str, Any]):
         for values in configuration_data.values():
             self.add_sink(values)

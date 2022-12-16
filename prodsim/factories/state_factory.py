@@ -21,6 +21,9 @@ class StateFactory(BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     states: List[state.STATE_UNION] = []
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
             for values in items.values():

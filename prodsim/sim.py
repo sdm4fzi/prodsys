@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import random
-from dataclasses import dataclass, field
 from typing import Any, TYPE_CHECKING
 
 import numpy as np
@@ -29,22 +28,19 @@ def temp_seed(seed):
         np.random.set_state(np_state)
         random.setstate(p_state)
 
-@dataclass
 class Environment(core.Environment):
-    seed: int = 21
-    pbar: Any = None
-    last_update: int = field(init=False, default=0)
-
-    def __init__(self, seed) -> None:
+    def __init__(self, seed: int=21) -> None:
         super().__init__()
         self.seed: int = seed
+        self.pbar: Any = None
+        self.last_update = 0
 
     def run(self, time_range:int):
         with temp_seed(self.seed):
             if VERBOSE == 1:
                 self.pbar = tqdm(total=time_range)
 
-            self.run(time_range)
+            super().run(time_range)
             if VERBOSE == 1:
                 self.pbar.update(time_range - self.last_update)
                 self.pbar.refresh()

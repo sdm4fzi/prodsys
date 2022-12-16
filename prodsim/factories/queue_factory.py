@@ -16,6 +16,9 @@ class QueueFactory(BaseModel):
     queues: List[store.Queue] = []
     queues_data: List[queue_data.QueueData] = []
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def create_queues_from_configuration_data(self, configuration_data: dict):
         for values in configuration_data.values():
             self.queues_data.append(parse_obj_as(queue_data.QueueData, values))

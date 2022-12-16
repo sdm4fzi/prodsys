@@ -17,6 +17,9 @@ class Sink(BaseModel):
     material_factory: material_factory.MaterialFactory
     input_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
 

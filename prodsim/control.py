@@ -23,8 +23,9 @@ class Controller(ABC, BaseModel):
     requests: List[request.Request] = Field(init=False, default_factory=list)
     running_processes: List[events.Event] = []
 
-    @validator("requested")
+    @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
+        print("__________________________________")
         return events.Event(values["env"])
     
     class Config:

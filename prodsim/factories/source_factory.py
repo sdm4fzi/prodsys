@@ -34,6 +34,9 @@ class SourceFactory(BaseModel):
     )
     sources: List[source.Source] = Field(default_factory=list, init=False)
 
+    class Config:
+        arbitrary_types_allowed = True
+
     # def create_sources(self):
     #     for values in self.data.values():
     #         self.add_source(values)

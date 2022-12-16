@@ -49,6 +49,9 @@ class Runner(BaseModel):
     source_factory: source_factory.SourceFactory = Field(init=False, default=None)
     material_factory: material_factory.MaterialFactory = Field(init=False, default=None)
     data_collector: logger.Datacollector = Field(init=False, default=None)
+
+    class Config:
+        arbitrary_types_allowed = True
     
     def initialize_simulation(self):
         with temp_seed(self.adapter.seed):

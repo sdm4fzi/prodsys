@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
 
 
-    # # env.load_json('data/simple_example.json')
+    # # env.load_jsoan('data/simple_example.json')
     # env.load_json('data/base_scenario.json')
     # env.initialize_simulation()
 

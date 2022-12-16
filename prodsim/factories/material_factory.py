@@ -22,6 +22,9 @@ class MaterialFactory(BaseModel):
     data_collecter: logger.Datacollector = Field(default=False, init=False)
     material_counter = 0
 
+    class Config:
+        arbitrary_types_allowed = True
+
     def create_material(self, material_data: material_data.MaterialData, router: router.Router):
         process_model = self.create_process_model(material_data)
         transport_processes = self.process_factory.get_process(
