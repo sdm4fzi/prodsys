@@ -83,7 +83,6 @@ class Material(BaseModel):
             resource=self.next_resource, _material=self, event_time=self.env.now
         )
         yield self.env.process(self.transport_to_queue_of_resource())
-        print("finished transport")
         while self.next_process:
             self.request_process()
             yield self.finished_process
@@ -95,13 +94,10 @@ class Material(BaseModel):
         self.finished = True
 
     def request_process(self) -> None:
-        if isinstance(self.next_resource, resources.Resourcex):
-            if self.next_process:
-                self.env.request_process_of_resource(
-                    request.Request(process=self.next_process, material=self, resource=self.next_resource)
-                )
-        else:
-            raise TypeError("Only requests to resources are allowed!")
+        if self.next_process:
+            self.env.request_process_of_resource(
+                request.Request(process=self.next_process, material=self, resource=self.next_resource)
+            )
 
     def request_transport(
         self,
@@ -125,23 +121,18 @@ class Material(BaseModel):
             self.next_process = None
             self.next_resource = self.router.get_sink(self.material_data.material_type)
         else:
-            # TODO: fix deterministic problem of petri nets!!
-            if next_possible_processes:
-                self.next_process = np.random.choice(next_possible_processes) # type: ignore
+            self.next_process = np.random.choice(next_possible_processes) # type: ignore
             self.process_model.update_marking_from_transition(self.next_process) # type: ignore
             if self.next_process == SKIP_LABEL:
                 self.set_next_process()
-
             self.set_next_resource()
 
     def transport_to_queue_of_resource(self):
         origin_resource = self.next_resource
         transport_resource = self.router.get_next_resource(self.transport_process)
         self.set_next_process()
-        if isinstance(transport_resource, resources.TransportResource):
-            print("request transport")
-            self.request_transport(transport_resource, origin_resource, self.next_resource)
-            yield self.finished_process
+        self.request_transport(transport_resource, origin_resource, self.next_resource) # type: ignore False
+        yield self.finished_process
         self.finished_process = events.Event(self.env)
 
     def set_next_resource(self):

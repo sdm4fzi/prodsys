@@ -26,6 +26,8 @@ class MaterialFactory(BaseModel):
         arbitrary_types_allowed = True
 
     def create_material(self, material_data: material_data.MaterialData, router: router.Router):
+        material_data = material_data.copy()
+        material_data.ID = str(material_data.material_type) + "_" + str(self.material_counter)
         process_model = self.create_process_model(material_data)
         transport_processes = self.process_factory.get_process(
             material_data.transport_process
@@ -74,9 +76,6 @@ class MaterialFactory(BaseModel):
 
     def get_material(self, ID) -> material.Material:
         return [m for m in self.materials if m.material_data.ID == ID].pop()
-
-    def get_queues(self, IDs: List[str]) -> List[material.Material]:
-        return [m for m in self.materials if m.material_data.ID in IDs]
     
 from prodsim import material
 material.Material.update_forward_refs()

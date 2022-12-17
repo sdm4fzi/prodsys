@@ -3,18 +3,19 @@ from __future__ import annotations
 from abc import ABC
 from typing import List, Generator, Optional, Union, Tuple, TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Extra
+import random
 
 from simpy.resources import resource
 from simpy import events
 from prodsim import process, sim, store
 
+
 from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
 from prodsim import control, state
 
-
+# TODO: Need to fix the multi inheritance problem and instantiation of simpy resource super class
 class Resourcex(BaseModel, ABC, resource.Resource):
-    _env: Any
     env: sim.Environment
     data: RESOURCE_DATA_UNION    
     processes: List[process.PROCESS_UNION]
@@ -30,6 +31,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
 
     class Config:
         arbitrary_types_allowed = True
+        extra=Extra.allow
 
     # def __post_init__(self):
     #     super(Resource, self).__init__(self.env)
@@ -49,7 +51,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         input_state.set_resource(self)
 
     def start_states(self):
-        resource.Resource.__init__(self, self.env, capacity=1)
+        resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         for actual_state in self.states:
@@ -57,11 +59,10 @@ class Resourcex(BaseModel, ABC, resource.Resource):
             actual_state.process = self.env.process(actual_state.process_state())
 
     def get_process(self, process: process.PROCESS_UNION) -> state.State:
-        for actual_state in self.production_states:
-            if actual_state.state_data.ID == process.process_data.ID:
-                return actual_state
-        else:
+        possible_states = [actual_state for actual_state in self.production_states if actual_state.state_data.ID == process.process_data.ID]
+        if not possible_states:
             raise ValueError(f"Process {process.process_data.ID} not found in resource {self.data.ID}")
+        return random.choice(possible_states)
 
     def get_free_process(self, process: process.PROCESS_UNION) -> Optional[state.State]:
         for actual_state in self.production_states:
@@ -70,10 +71,10 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         return None
 
     def get_location(self) -> Tuple[float, float]:
-        return self.location
+        return self.data.location
 
     def set_location(self, new_location: Tuple[float, float]) -> None:
-        self.location = new_location
+        self.data.location = new_location
 
     def get_states(self) -> List[state.State]:
         return self.states

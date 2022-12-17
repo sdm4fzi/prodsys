@@ -9,6 +9,7 @@ from prodsim import sim, sink
 from prodsim.data_structures import sink_data
 if TYPE_CHECKING:
     from prodsim.factories import material_factory, queue_factory
+    from prodsim import adapter
 
 
 class SinkFactory(BaseModel):
@@ -25,8 +26,8 @@ class SinkFactory(BaseModel):
         for values in configuration_data.values():
             self.add_sink(values)
 
-    def create_sinks_from_sink_data(self, sink_data: List[sink_data.SinkData]):
-        for data in sink_data:
+    def create_sinks_from_adapter(self, adapter: adapter.Adapter):
+        for data in adapter.sink_data:
             self.add_sink(data)
 
     def add_sink(self, sink_data: sink_data.SinkData):

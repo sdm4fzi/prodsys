@@ -6,9 +6,7 @@ from typing import Dict, List, Any, TYPE_CHECKING, Tuple
 from pydantic import BaseModel, Field
 
 from prodsim import sim, store
-if TYPE_CHECKING:
-    from prodsim.factories import material_factory
-    from prodsim.data_structures import sink_data
+from prodsim.data_structures import sink_data
 
 
 class Sink(BaseModel):
@@ -25,5 +23,8 @@ class Sink(BaseModel):
 
     def get_location(self) -> Tuple[float, float]:
         return self.data.location
+    
+from prodsim.factories import material_factory
+Sink.update_forward_refs()
     
 

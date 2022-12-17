@@ -38,7 +38,7 @@ class Source(BaseModel):
             )
             available_events_events = []
             for queue in self.output_queues:
-                available_events_events.append(queue.put(material))
+                available_events_events.append(queue.put(material.material_data))
             yield events.AllOf(self.env, available_events_events)
 
             material.process = self.env.process(material.process_material())

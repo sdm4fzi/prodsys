@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 import numpy as np
 import time
 
-from prodsim import adapter, sim, logger, router
+from prodsim import adapter, sim, logger, post_processing
 from prodsim.factories import (
     state_factory,
     time_model_factory,
@@ -92,6 +92,8 @@ class Runner(BaseModel):
                 queue_factory=self.queue_factory,
             )
 
+            self.sink_factory.create_sinks_from_adapter(self.adapter)
+
             self.data_collector = logger.Datacollector()
             for r in self.resource_factory.resources:
                 all_states = r.states + r.production_states
@@ -109,7 +111,7 @@ class Runner(BaseModel):
 
             self.material_factory.data_collecter = self.data_collector
 
-            source_factory_object = source_factory.SourceFactory(
+            self.source_factory = source_factory.SourceFactory(
                 env=self.env,
                 material_factory=self.material_factory,
                 time_model_factory=self.time_model_factory,
@@ -117,10 +119,10 @@ class Runner(BaseModel):
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
             )
-            source_factory_object.create_sources_from_adapter(self.adapter)
+            self.source_factory.create_sources_from_adapter(self.adapter)
 
             self.resource_factory.start_resources()
-            source_factory_object.start_sources()
+            self.source_factory.start_sources()
 
     def run(self, time_range: int):
 
@@ -132,13 +134,14 @@ class Runner(BaseModel):
         time_stamp = time.strftime("%Y%m%d-%H%M%S")	
 
         # print_util.print_simulation_info(env, t_0, t_1)
+        print("\n\n###############  run finished  ###############\n")
 
         self.data_collector.log_data_to_csv(filepath=f"data/{time_stamp}.csv")
 
-        # p = PostProcessor(filepath="data/data23.csv")
-        # p.print_aggregated_data()
-        # # p.plot_time_per_state_of_resources()
-        # # p.plot_WIP()
+        p = post_processing.PostProcessor(filepath=f"data/{time_stamp}.csv")
+        p.print_aggregated_data()
+        # p.plot_time_per_state_of_resources()
+        # p.plot_WIP()
         # p.plot_throughput_over_time()
         # p.plot_throughput_time_distribution()
         # p.plot_time_per_state_of_resources()

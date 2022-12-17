@@ -135,7 +135,6 @@ class ResourceFactory(BaseModel):
         processes = self.process_factory.get_processes_in_order(resource_data.processes)
         
         ids = [proc.process_data.ID for proc in processes]
-        print(resource_data.ID, ids)
         values.update({"processes": processes})
 
         self.adjust_process_capacities(resource_data)

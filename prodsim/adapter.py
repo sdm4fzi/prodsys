@@ -50,6 +50,7 @@ class Adapter(ABC, BaseModel):
 class JsonAdapter(Adapter):
     def read_data(self, file_path: str):
         data = load_json(file_path=file_path)
+        self.seed = data["seed"]
         self.create_time_model_data_object_from_configuration_data(data["time_models"])
         self.create_state_data_object_from_configuration_data(data["states"])
         self.create_process_data_object_from_configuration_data(data["processes"])

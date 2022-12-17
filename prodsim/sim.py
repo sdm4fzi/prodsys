@@ -51,6 +51,6 @@ class Environment(core.Environment):
             if now > self.last_update:
                 self.pbar.update(now - self.last_update)
                 self.last_update = now
-        _controller = request.get_resource().get_controller()
+        controller = request.get_resource().get_controller()
         # self.process(_controller.request(request))
-        _controller.request(request)
+        controller.request(request)

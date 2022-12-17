@@ -49,5 +49,5 @@ class ProcessFactory(BaseModel):
     def get_process(self, ID: str) -> Optional[process.PROCESS_UNION]:
         pr = [pr for pr in self.processes if pr.process_data.ID in ID]
         if not pr:
-            return None
+            raise ValueError(f"Process with ID {ID} not found")
         return pr.pop()

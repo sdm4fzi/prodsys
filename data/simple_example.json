@@ -1,5 +1,5 @@
 {
-    "seed": 21,    
+    "seed": 24,    
     "time_models": {
         "FunctionTimeModel": {
             "ft1": {
@@ -185,27 +185,27 @@
         "Queue1": {
             "ID": "IQ1",
             "description": "Input-queue 1 for R1 and R2",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue2": {
             "ID": "OQ1",
             "description": "Output-queue 1 for R1",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue3": {
             "ID": "OQ2",
             "description": "Output-queue 2 for R2",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue4": {
             "ID": "IQ2",
             "description": "Input-queue 2 for R3",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue5": {
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
-            "capacity": 25
+            "capacity": 250
         },
         "Queue6": {
             "ID": "SourceQueue",
@@ -223,7 +223,7 @@
             "location": [0, 0],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_1",
-            "router": "SimpleRouter", 
+            "router": "AvoidDeadlockRouter", 
             "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         },
@@ -233,7 +233,7 @@
             "location": [30, 30],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_2",
-            "router": "SimpleRouter", 
+            "router": "AvoidDeadlockRouter", 
            "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         },
@@ -243,7 +243,7 @@
             "location": [40, 30],
             "time_model_id": "function_time_model_4",
             "material_type": "Material_3",
-            "router": "SimpleRouter",
+            "router": "AvoidDeadlockRouter",
             "routing_heuristic": "random", 
             "output_queues": ["SourceQueue"]
         }

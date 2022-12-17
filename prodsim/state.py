@@ -36,7 +36,7 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _material_ID: str = ""
     _target_ID: str = ""
 
-    def log_target_location(self, target: resources.Resourcex):
+    def log_target_location(self, target: material.Location):
         self._target_ID = target.data.ID
 
     def log_material(self, _material: material.Material):
@@ -173,7 +173,7 @@ class TransportState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time(
-            origin=tuple(self.resource.get_location()), target=tuple(target)
+            origin=self.resource.get_location(), target=target
         )
         yield self.resource.active
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
