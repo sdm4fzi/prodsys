@@ -9,6 +9,7 @@ from prodsim import sim, sink
 from prodsim.data_structures import sink_data
 if TYPE_CHECKING:
     from prodsim.factories import material_factory, queue_factory
+    from prodsim import adapter
 
 
 class SinkFactory(BaseModel):
@@ -18,19 +19,14 @@ class SinkFactory(BaseModel):
 
     sinks: List[sink.Sink] = Field(default_factory=list, init=False)
 
-    def create_sinks_from_configuration_data(self, configuration_data: Dict[str, Any]):
-        for values in configuration_data.values():
-            self.add_sink(values)
+    class Config:
+        arbitrary_types_allowed = True
 
-    def create_sinks_from_sink_data(self, sink_data: List[sink_data.SinkData]):
-        for data in sink_data:
+    def create_sinks(self, adapter: adapter.Adapter):
+        for data in adapter.sink_data:
             self.add_sink(data)
 
     def add_sink(self, sink_data: sink_data.SinkData):
-        # sink_object = sink.Sink(ID=values['ID'], description=values['description'], location=values["location"],
-        #                 env=self.env, material_factory=self.material_factory,
-        #                 material_type=values['material_type']
-        #                 )
         values = {
             "env": self.env,
             "data": sink_data,
@@ -39,14 +35,6 @@ class SinkFactory(BaseModel):
         sink_object = parse_obj_as(sink.Sink, values)
         self.add_queues_to_sink(sink_object)
         self.sinks.append(sink_object)
-
-    # def add_sink(self, values: dict):
-    #     sink_object = sink.Sink(ID=values['ID'], description=values['description'], location=values["location"],
-    #                     env=self.env, material_factory=self.material_factory,
-    #                     material_type=values['material_type']
-    #                     )
-    #     self.add_queues_to_sink(sink_object, values)
-    #     self.sinks.append(sink_object)
 
     def add_queues_to_sink(self, _sink: sink.Sink):
         input_queues = self.queue_factory.get_queues(_sink.data.input_queues)

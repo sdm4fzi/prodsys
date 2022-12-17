@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import random
-from dataclasses import dataclass, field
 from typing import Any, TYPE_CHECKING
 
 import numpy as np
@@ -12,7 +11,7 @@ from tqdm import tqdm
 # from .factories import state_factory, time_model_factory
 
 if TYPE_CHECKING:
-    from . import request
+    from prodsim import request
 
 
 VERBOSE = 1
@@ -29,15 +28,12 @@ def temp_seed(seed):
         np.random.set_state(np_state)
         random.setstate(p_state)
 
-@dataclass
 class Environment(core.Environment):
-    seed: int = 21
-    pbar: Any = None
-    last_update: int = field(init=False, default=0)
-
-    def __init__(self, seed) -> None:
+    def __init__(self, seed: int=21) -> None:
         super().__init__()
         self.seed: int = seed
+        self.pbar: Any = None
+        self.last_update = 0
 
     def run(self, time_range:int):
         with temp_seed(self.seed):
@@ -55,6 +51,6 @@ class Environment(core.Environment):
             if now > self.last_update:
                 self.pbar.update(now - self.last_update)
                 self.last_update = now
-        _controller = request.get_resource().get_controller()
+        controller = request.get_resource().get_controller()
         # self.process(_controller.request(request))
-        _controller.request(request)
+        controller.request(request)

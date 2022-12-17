@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from abc import ABC
 from collections.abc import Iterable
-from typing import List, Union, Optional
+from typing import List, Union, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, Extra
 
 import numpy as np
 from simpy import events
 
-from . import (process, request, resources, router, sim, sink,
-               source)
+from prodsim import (process, request, router, resources, sim, sink,
+               source, proces_models)
 
-from .data_structures import material_data
+from prodsim.data_structures import material_data
+
 
 
 def flatten(xs):
@@ -62,7 +63,7 @@ Location = Union[resources.Resourcex, source.Source, sink.Sink]
 class Material(BaseModel):
     env: sim.Environment
     material_data: material_data.MaterialData
-    process_model: process.ProcessModel
+    process_model: proces_models.ProcessModel
     transport_process: process.TransportProcess
     router: router.Router
 
@@ -93,13 +94,10 @@ class Material(BaseModel):
         self.finished = True
 
     def request_process(self) -> None:
-        if isinstance(self.next_resource, resources.Resourcex):
-            if self.next_process:
-                self.env.request_process_of_resource(
-                    request.Request(self.next_process, self, self.next_resource)
-                )
-        else:
-            raise TypeError("Only requests to resources are allowed!")
+        if self.next_process:
+            self.env.request_process_of_resource(
+                request.Request(process=self.next_process, material=self, resource=self.next_resource)
+            )
 
     def request_transport(
         self,
@@ -107,15 +105,14 @@ class Material(BaseModel):
         origin_resource: Location,
         target_resource: Location,
     ) -> None:
-        if isinstance(origin_resource, resources.Resourcex) and isinstance(target_resource, resources.Resourcex):
-            self.env.request_process_of_resource(
-                request.TransportResquest(
-                    self.transport_process,
-                    self,
-                    transport_resource,
-                    origin_resource,
-                    target_resource,
-                )
+        self.env.request_process_of_resource(
+            request.TransportResquest(
+                process=self.transport_process,
+                material=self,
+                resource=transport_resource,
+                origin=origin_resource,
+                target=target_resource,
+            )
         )
 
     def set_next_process(self):
@@ -124,32 +121,23 @@ class Material(BaseModel):
             self.next_process = None
             self.next_resource = self.router.get_sink(self.material_data.material_type)
         else:
-            # TODO: fix deterministic problem of petri nets!!
-            if next_possible_processes:
-                self.next_process = np.random.choice(next_possible_processes) # type: ignore
+            self.next_process = np.random.choice(next_possible_processes) # type: ignore
             self.process_model.update_marking_from_transition(self.next_process) # type: ignore
             if self.next_process == SKIP_LABEL:
                 self.set_next_process()
-
             self.set_next_resource()
 
     def transport_to_queue_of_resource(self):
         origin_resource = self.next_resource
         transport_resource = self.router.get_next_resource(self.transport_process)
         self.set_next_process()
-        if isinstance(transport_resource, resources.TransportResource):
-            self.request_transport(transport_resource, origin_resource, self.next_resource)
-            yield self.finished_process
+        self.request_transport(transport_resource, origin_resource, self.next_resource) # type: ignore False
+        yield self.finished_process
         self.finished_process = events.Event(self.env)
 
     def set_next_resource(self):
         if self.next_process:
             self.next_resource = self.router.get_next_resource(self.next_process)
-
-
-class ConcreteMaterial(Material):
-    due_time: float = 0.0
-
 
 
 class Order(ABC, BaseModel):

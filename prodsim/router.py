@@ -6,12 +6,8 @@ from dataclasses import dataclass
 from typing import List, TYPE_CHECKING
 import numpy as np
 
-from . import process
-
-
 if TYPE_CHECKING:
-    from prodsim import resources
-    from prodsim import sink
+    from prodsim import resources, process, material, sink
     from prodsim.factories import resource_factory, sink_factory
 
 
@@ -20,7 +16,7 @@ class Router:
     def __init__(self, resource_factory: resource_factory.ResourceFactory, sink_factory: sink_factory.SinkFactory, routing_heuristic: Callable[..., resources.Resourcex]):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
-        self.routing_heuristic: Callable[..., resources.Resourcex] = routing_heuristic
+        self.routing_heuristic: Callable[..., material.Location] = routing_heuristic
 
     @abstractmethod
     def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
@@ -29,16 +25,13 @@ class Router:
     def get_sink(self, _material_type: str) -> sink.Sink:
         possible_sinks = self.sink_factory.get_sinks_with_material_type(_material_type)
         chosen_sink = self.routing_heuristic(possible_sinks)
-        if isinstance(chosen_sink, sink.Sink):
-            return chosen_sink
-        else:
-            raise TypeError("Routing heuristic did not return a sink")
+        return chosen_sink # type: ignore False
         
 
 class SimpleRouter(Router):
-    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
+    def get_next_resource(self, target_process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_factory.get_resources_with_process(
-            __process
+            target_process
         )
         return self.routing_heuristic(possible_resources)
 
@@ -49,11 +42,10 @@ class AvoidDeadlockRouter(Router):
             __process
         )
         for resource in possible_resources:
-            if not isinstance(resource, resources.ProductionResource):
-                continue
-            for input_queue in resource.input_queues:
-                if len(possible_resources) > 1 and len(input_queue.items) >= input_queue.capacity - 3:
-                    possible_resources.remove(resource)
+            if hasattr(resource, "input_queues"):
+                for input_queue in resource.input_queues:
+                    if len(possible_resources) > 1 and len(input_queue.items) >= input_queue.capacity - 3:
+                        possible_resources.remove(resource)
         
         return self.routing_heuristic(possible_resources)
 
@@ -91,5 +83,3 @@ ROUTING_HEURISTIC = {
 }
 
 ROUTERS = {"SimpleRouter": SimpleRouter, "AvoidDeadlockRouter": AvoidDeadlockRouter}
-
-# from prodsim.factories import resource_factory, sink_factory

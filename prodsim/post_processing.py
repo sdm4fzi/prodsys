@@ -9,11 +9,13 @@ import plotly.graph_objects as go
 
 WARM_UP_CUT_OFF = 0.15
 
+
 def hex_to_rgba(h, alpha):
-    '''
+    """
     converts color value in hex format to rgba format with alpha transparency
-    '''
-    return tuple([int(h.lstrip('#')[i:i+2], 16) for i in (0, 2, 4)] + [alpha])
+    """
+    return tuple([int(h.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)] + [alpha])
+
 
 @dataclass
 class PostProcessor:
@@ -71,6 +73,7 @@ class PostProcessor:
 
     def get_eventlog_for_material(self, material_type: str = "Material_1"):
         import pm4py
+
         df_finished_material = self.get_finished_material_df()
         df_for_pm4py = df_finished_material.loc[
             df_finished_material["Material"].notnull()
@@ -103,6 +106,7 @@ class PostProcessor:
     def save_inductive_petri_net(self):
         import pm4py
         from pm4py.visualization.petri_net import visualizer as pn_visualizer
+
         log = self.get_eventlog_for_material()
         net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(log)
         # pm4py.view_petri_net(net, initial_marking, final_marking)
@@ -115,7 +119,7 @@ class PostProcessor:
             variant=pn_visualizer.Variants.FREQUENCY,
             log=log,
         )
-        pn_visualizer.save(gviz, "results/inductive_frequency.png")
+        pn_visualizer.save(gviz, "data/inductive_frequency.png")
 
     def get_throughput_data_frame(self) -> pd.DataFrame:
         df = self.get_prepared_df()
@@ -143,11 +147,24 @@ class PostProcessor:
         df = df.groupby(by=["Material_type"])["Throughput_time"].mean()
         return df
 
+    def get_aggregated_output_and_throughput_data_frame(self) -> pd.DataFrame:
+        df = self.get_throughput_data_frame()
+        max_time = df["End_time"].max()
+        df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
+        df_tp = df.groupby(by="Material_type")["Material"].count().to_frame()
+        df_tp.rename(columns={"Material": "Output"}, inplace=True)
+        available_time = max_time * (1 - WARM_UP_CUT_OFF) / 60
+        df_tp["Throughput"] = df_tp["Output"] / available_time
+
+        return df_tp
+
     def get_aggregated_throughput_data_frame(self) -> pd.DataFrame:
         df = self.get_throughput_data_frame()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count()
+        available_time = max_time * (1 - WARM_UP_CUT_OFF)
+
         return df_tp
 
     def plot_throughput_time_distribution(self):
@@ -325,23 +342,25 @@ class PostProcessor:
                 x=df_material_type["Time"],
                 y=df_material_type["WIP_avg"],
                 mode="lines",
-                line=dict(color=color)
+                line=dict(color=color),
             )
             fig.add_scatter(
                 name=material_type + " Upper Bound",
                 x=df_material_type["Time"],
                 y=df_material_type["WIP_avg"] + df_material_type["WIP_std"],
                 mode="lines",
-                line=dict(dash='dash', color=color), showlegend=False
+                line=dict(dash="dash", color=color),
+                showlegend=False,
             )
             fig.add_scatter(
                 name=material_type + " Lower Bound",
                 x=df_material_type["Time"],
                 y=df_material_type["WIP_avg"] - df_material_type["WIP_std"],
                 mode="lines",
-                line=dict(dash='dash', color=color),
+                line=dict(dash="dash", color=color),
                 fill="tonexty",
-                fillcolor='rgba' + str(hex_to_rgba(color, 0.2)), showlegend=False
+                fillcolor="rgba" + str(hex_to_rgba(color, 0.2)),
+                showlegend=False,
             )
 
         fig.show()
@@ -354,25 +373,34 @@ class PostProcessor:
         df_per_material = self.get_df_with_WIP_per_product()
 
         df = pd.concat([df, df_per_material])
-        fig = px.scatter(df, x='Time', y='WIP', color='Material_type', trendline="expanding", opacity=0.01)
+        fig = px.scatter(
+            df,
+            x="Time",
+            y="WIP",
+            color="Material_type",
+            trendline="expanding",
+            opacity=0.01,
+        )
         # fig = px.scatter(df, x='Time', y='WIP', color='Material_type', trendline="rolling", trendline_options=dict(window=20))
         fig.data = [t for t in fig.data if t.mode == "lines"]
         fig.update_traces(showlegend=True)
 
-
         fig.show()
 
     def print_aggregated_data(self):
-        print("WIP")
-        print("\t", self.get_df_with_aggregated_WIP())
+        print("\n------------- Throughput -------------\n")
 
-        print("\nThroughput time")
-        print("\t", self.get_aggregated_throughput_time_data_frame())
+        print(self.get_aggregated_output_and_throughput_data_frame())
 
-        print("\nResource states")
+        print("------------- WIP -------------\n")
+        print(self.get_df_with_aggregated_WIP())
+
+        print("\n------------- Throughput time -------------\n")
+        print(self.get_aggregated_throughput_time_data_frame())
+
+        print("\n------------- Resource states -------------\n")
 
         print(
-            "\t",
             self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"]),
         )
 
@@ -386,33 +414,3 @@ class PostProcessor:
         s = self.get_df_with_aggregated_WIP()
         s = s.drop(labels=["Total"])
         return list(s.values)
-
-
-if __name__ == "__main__":
-    p = PostProcessor(filepath="data/data22.csv")
-
-    # df = p.get_df_with_aggregated_WIP()
-
-    # print(df)
-
-    # p.plot_WIP()
-
-    # df = p.get_time_per_state_of_resources()
-
-    # print(df)
-
-    # p.plot_time_per_state_of_resources()
-
-    # df = p.get_aggregated_throughput_time_data_frame()
-    # print(df)
-
-    print(p.get_aggregated_throughput_data())
-    print(p.get_aggregated_throughput_time_data())
-    print(p.get_aggregated_wip_data())
-
-    p.plot_throughput_over_time()
-    print("_______")
-    p.plot_WIP()
-
-    # p.plot_inductive_bpmn()
-    # p.save_inductive_petri_net()

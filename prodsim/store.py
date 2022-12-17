@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 
-from pydantic import BaseModel
-
+from typing import Union
 from simpy.resources import store
 
-from .data_structures import queue_data
+from prodsim.data_structures import queue_data
 
-from . import sim
+from prodsim import sim
 
 
-class Queue(BaseModel, store.FilterStore):
-    env: sim.Environment
-    queue_data: queue_data.QueueData
+class Queue(store.FilterStore):
+    def __init__(self, env: sim.Environment, queue_data: queue_data.QueueData):
+        self.env: sim.Environment = env
+        self.queue_data: queue_data.QueueData = queue_data
+        super().__init__(env, self.queue_data.capacity)
 
-    class Config:
-        arbitrary_types_allowed = True
-
-    def post_init(self):
-        super().__init__(env=self.env, capacity=self.queue_data.capacity)
 
 

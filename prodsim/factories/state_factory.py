@@ -5,9 +5,9 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import parse_obj_as, BaseModel
 
-from .. import sim, state
-from . import time_model_factory
-from ..data_structures import state_data
+from prodsim import sim, state
+from prodsim.factories import time_model_factory
+from prodsim.data_structures import state_data
 
 
 if TYPE_CHECKING:
@@ -20,6 +20,9 @@ class StateFactory(BaseModel):
 
     state_data: List[state_data.STATE_DATA_UNION] = []
     states: List[state.STATE_UNION] = []
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
@@ -39,7 +42,7 @@ class StateFactory(BaseModel):
         values.update({"time_model": time_model, "env": self.env})
         self.states.append(parse_obj_as(state.STATE_UNION, values))
 
-    def create_states_from_adapter(self, adapter: adapter.Adapter):
+    def create_states(self, adapter: adapter.Adapter):
         for state_data in adapter.state_data:
             self.add_state(state_data)
 

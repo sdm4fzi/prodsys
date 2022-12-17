@@ -1,25 +1,28 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Any, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 
-import simpy
+from pydantic import BaseModel, Field
+from simpy import events
 
-from . import base, router, sim, sink, store, time_model
+from prodsim import router, sim, store, time_model
+from prodsim.data_structures import source_data, material_data
 
 if TYPE_CHECKING:
-    from .factories import material_factory, resource_factory, queue_factory, time_model_factory
+    from prodsim.factories import material_factory
 
-@dataclass
-class Source(base.IDEntity):
+
+class Source(BaseModel):
     env: sim.Environment
-    data: Any
+    data: source_data.SourceData
+    material_data: material_data.MaterialData
     material_factory: material_factory.MaterialFactory
-    location: List[int]
-    material_type: str
     time_model: time_model.TimeModel
     router: router.Router
-    output_queues: List[store.Queue] = field(default_factory=list, init=False)
+    output_queues: List[store.Queue] = Field(default_factory=list, init=False)
+
+    class Config:
+        arbitrary_types_allowed = True
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         self.output_queues.extend(output_queues)
@@ -30,75 +33,19 @@ class Source(base.IDEntity):
     def create_material_loop(self):
         while True:
             yield self.env.timeout(self.time_model.get_next_time())
-            __material = self.material_factory.create_material(
-                type=self.material_type, router=self.router
+            material = self.material_factory.create_material(
+                self.material_data, self.router
             )
-            events = []
+            available_events_events = []
             for queue in self.output_queues:
-                events.append(queue.put(__material))
-            yield simpy.AllOf(self.env, events)
+                available_events_events.append(queue.put(material.material_data))
+            yield events.AllOf(self.env, available_events_events)
 
-            __material.process = self.env.process(__material.process_material())
-            __material.next_resource = self
+            material.process = self.env.process(material.process_material())
+            material.next_resource = self
 
-    def get_location(self) -> List[int]:
-        return self.location
-
-
-@dataclass
-class SourceFactory:
-    data: dict
-    env: sim.Environment
-    material_factory: material_factory.MaterialFactory
-    time_model_factory: time_model_factory.TimeModelFactory
-    queue_factory: queue_factory.QueueFactory
-    resource_factory: resource_factory.ResourceFactory
-    sink_factory: sink.SinkFactory
-
-    sources: List[Source] = field(default_factory=list, init=False)
-
-    def create_sources(self):
-        for values in self.data.values():
-            self.add_source(values)
-
-    def get_router(self, router_type: str, routing_heuristic: str):
-        return router.ROUTERS[router_type](
-            self.resource_factory,
-            self.sink_factory,
-            router.ROUTING_HEURISTIC[routing_heuristic],
-        )
-
-    def add_source(self, values: dict):
-        router = self.get_router(values["router"], values["routing_heuristic"])
-
-        time_model = self.time_model_factory.get_time_model(values["time_model_id"])
-        source = Source(
-            ID=values["ID"],
-            description=values["description"],
-            location=values["location"],
-            env=self.env,
-            material_factory=self.material_factory,
-            material_type=values["material_type"],
-            time_model=time_model,
-            router=router,
-        )
-        self.add_queues_to_source(source, values)
-        self.sources.append(source)
-
-    def add_queues_to_source(self, _source: Source, values: Dict):
-        if "output_queues" in values.keys():
-            output_queues = self.queue_factory.get_queues(values["output_queues"])
-            _source.add_output_queues(output_queues)
-
-    def start_sources(self):
-        for _source in self.sources:
-            _source.start_source()
-
-    def get_source(self, ID) -> Source:
-        return [s for s in self.sources if s.ID == ID].pop()
-
-    def get_sources(self, IDs: List[str]) -> List[Source]:
-        return [s for s in self.sources if s.ID in IDs]
-
-    def get_sources_with_material_type(self, __material_type: str):
-        return [s for s in self.sources if __material_type == s.material_type]
+    def get_location(self) -> Tuple[float, float]:
+        return self.data.location
+    
+from prodsim.factories import material_factory
+Source.update_forward_refs()

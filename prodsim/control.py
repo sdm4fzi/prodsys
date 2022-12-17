@@ -8,10 +8,10 @@ from typing import List, Generator, TYPE_CHECKING
 # from process import Process
 from simpy import events
 
-from . import request, sim
+from prodsim import request, sim
 
 if TYPE_CHECKING:
-    from . import material, process, state, resources
+    from prodsim import material, process, state, resources, request, sink
 
 
 class Controller(ABC, BaseModel):
@@ -23,7 +23,7 @@ class Controller(ABC, BaseModel):
     requests: List[request.Request] = Field(init=False, default_factory=list)
     running_processes: List[events.Event] = []
 
-    @validator("requested")
+    @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
         return events.Event(values["env"])
     
@@ -69,18 +69,20 @@ class ProductionController(Controller):
 
     def get_next_material_for_process(
         self, resource: resources.Resourcex, material: material.Material
-    ):
+    ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
                 # _material_type = _process.get_raw_material_type()
 
                 # TODO: here should be an advanced process model that controls, which material should be get from which
-                #  queue
-                events.append(queue.get(filter=lambda x: x is material))
+                events.append(queue.get(filter=lambda item: item is material.material_data))            
+            if not events:
+                raise ValueError("No material in queue")
+            return events
         else:
             raise ValueError("Resource is not a ProductionResource")
-        return events
+
 
     def put_material_to_output_queue(
         self, resource: resources.Resourcex, materials: List[material.Material]
@@ -91,7 +93,7 @@ class ProductionController(Controller):
                 # _material_type = _process.get_raw_material_type()
                 # TODO: implement here a _resource.put_material_of_queues(material)
                 for material in materials:
-                    events.append(queue.put(material))
+                    events.append(queue.put(material.material_data))
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -127,11 +129,9 @@ class ProductionController(Controller):
 
         # yield _resource.setup(_material.next_process)
         with resource.request() as req:
-            self.sort_queue(resource)
             yield req
             eventss = self.get_next_material_for_process(resource, material)
             yield events.AllOf(resource.env, eventss)
-            next_materials = [event.value for event in eventss]
             production_state = resource.get_free_process(process)
             if production_state is None:
                 production_state = resource.get_process(process)
@@ -139,9 +139,9 @@ class ProductionController(Controller):
             self.run_process(production_state, material)
             yield production_state.finished_process
             production_state.process = None
-            eventss = self.put_material_to_output_queue(resource, next_materials)
+            eventss = self.put_material_to_output_queue(resource, [material])
             yield events.AllOf(resource.env, eventss)
-            for next_material in next_materials:
+            for next_material in [material]:
                 next_material.finished_process.succeed()
 
     def run_process(self, input_state: state.State, target_material: material.Material):
@@ -165,27 +165,25 @@ class TransportController(Controller):
         resource.setup(process)
 
     def get_next_material_for_process(
-        self, resource: resources.Resourcex, material: material.Material
+        self, resource: material.Location, material: material.Material
     ):
         events = []
-        if isinstance(resource, resources.ProductionResource):
+        if isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source):
             for queue in resource.output_queues:
-                # TODO: here should be an advanced process model that controls, which material should be get from which
-                #  queue
-                events.append(queue.get(filter=lambda x: x is material))
+                events.append(queue.get(filter=lambda x: x is material.material_data))
+            if not events:
+                raise ValueError("No material in queue")
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
         return events
 
     def put_material_to_input_queue(
-        self, resource: resources.Resourcex, material: material.Material
+        self, resource: material.Location, material: material.Material
     ) -> List[events.Event]:
         events = []
-        if isinstance(resource, resources.ProductionResource):
+        if isinstance(resource, resources.ProductionResource) or isinstance(resource, sink.Sink):
             for queue in resource.input_queues:
-                # _material_type = _process.get_raw_material_type()
-                # TODO: implement here a _resource.put_material_of_queues(material)
-                events.append(queue.put(material))
+                events.append(queue.put(material.material_data))
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
 
@@ -208,7 +206,6 @@ class TransportController(Controller):
                 or not self.requests
             ):
                 continue
-
             self.control_policy(self.requests)
             process_request = self.requests.pop(0)
             running_process = self.env.process(self.start_process(process_request))
@@ -221,7 +218,8 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
         
-        yield resource.setup(process)
+        #TODO: add setup here
+        # yield resource.setup(process)
         with resource.request() as req:
             self.sort_queue(resource)
             yield req
@@ -231,6 +229,7 @@ class TransportController(Controller):
                 self.run_process(transport_state, material, target=origin)
                 yield transport_state.finished_process
                 transport_state.process = None
+                
             eventss = self.get_next_material_for_process(origin, material)
             yield events.AllOf(resource.env, eventss)
             transport_state = resource.get_process(process)
@@ -249,19 +248,16 @@ class TransportController(Controller):
         self,
         input_state: state.State,
         material: material.Material,
-        target: resources.Resourcex,
+        target: material.Location,
     ):
         env = input_state.env
         target_location = target.get_location()
         input_state.activate_state()
         input_state.state_info.log_material(material)
         input_state.state_info.log_target_location(target)
-        if isinstance(input_state, state.TransportState):
-            input_state.process = env.process(
-                input_state.process_state(target=target_location)
+        input_state.process = env.process(
+            input_state.process_state(target=target_location) # type: ignore False
         )
-
-        # return input_state.process
 
 
 def FIFO_control_policy(requests: List[request.Request]) -> None:
@@ -273,12 +269,12 @@ def LIFO_control_policy(requests: List[request.Request]) -> None:
 
 
 def SPT_control_policy(requests: List[request.Request]) -> None:
-    requests.sort(key=lambda x: x._process.get_expected_process_time())
+    requests.sort(key=lambda x: x.process.get_expected_process_time())
 
 
 def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> None:
     requests.sort(
-        key=lambda x: x._process.get_expected_process_time(
+        key=lambda x: x.process.get_expected_process_time(
             x.origin.get_location(), x.target.get_location()
         )
     )
@@ -287,6 +283,6 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
 class BatchController(Controller):
     pass
 
-from . import resources
+from prodsim import resources, source, sink
 ProductionController.update_forward_refs()
 TransportController.update_forward_refs()
