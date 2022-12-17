@@ -19,12 +19,7 @@ class QueueFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_queues_from_configuration_data(self, configuration_data: dict):
-        for values in configuration_data.values():
-            self.queues_data.append(parse_obj_as(queue_data.QueueData, values))
-            self.add_queue(self.queues_data[-1])
-
-    def create_queues_from_adapter(self, adapter: adapter.Adapter):
+    def create_queues(self, adapter: adapter.Adapter):
         for queue_data in adapter.queue_data:
             self.add_queue(queue_data)
 

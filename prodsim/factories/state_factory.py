@@ -42,7 +42,7 @@ class StateFactory(BaseModel):
         values.update({"time_model": time_model, "env": self.env})
         self.states.append(parse_obj_as(state.STATE_UNION, values))
 
-    def create_states_from_adapter(self, adapter: adapter.Adapter):
+    def create_states(self, adapter: adapter.Adapter):
         for state_data in adapter.state_data:
             self.add_state(state_data)
 

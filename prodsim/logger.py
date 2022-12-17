@@ -16,8 +16,15 @@ class Datacollector(BaseModel):
     data: Dict[str, Any] = {"Resources": []}
 
     def log_data_to_csv(self, filepath: str):
+        df = self.get_data_as_dataframe()
+        df.to_csv(filepath)
 
-        df = self.get_data()
+    def log_data_to_json(self, filepath: str):
+        df = self.get_data_as_dataframe()
+        df.to_json(filepath)
+    
+    def get_data_as_dataframe(self) -> pd.DataFrame:
+        df = pd.DataFrame(self.data["Resources"])
         df["Activity"] = pd.Categorical(
             df["Activity"],
             categories=[
@@ -30,10 +37,7 @@ class Datacollector(BaseModel):
             ],
             ordered=True,
         )
-        df.to_csv(filepath)
-
-    def get_data(self) -> pd.DataFrame:
-        df = pd.DataFrame(self.data["Resources"])
+        df["Activity"] = df.Activity.astype(str)
         return df
 
     def patch_state(
@@ -76,7 +80,7 @@ class Datacollector(BaseModel):
         attr: List[str],
         pre: Optional[Callable] = None,
         post: Optional[Callable] = None,
-    ):  
+    ):
         if pre is not None:
             pre = self.register_monitor(pre, self.data["Resources"])
         if post is not None:
@@ -86,54 +90,6 @@ class Datacollector(BaseModel):
     def register_monitor(self, monitor: Callable, data: list) -> functools.partial:
         partial_monitor = partial(monitor, data)
         return partial_monitor
-
-
-def post_monitor_resource(data: List[tuple], resource: resources.Resourcex):
-    """This is our monitoring callback."""
-    if resource.current_process:
-        process_ID = resource.current_process.process_data.ID
-    else:
-        process_ID = None
-    item = (
-        resource.data.ID,
-        process_ID,
-        resource.count,
-        resource.env.now,
-    )
-    data.append(item)
-
-
-def pre_monitor_state(data: List[tuple], state: state.State):
-    resource = state.resource
-    if resource.current_process:
-        process_ID = resource.current_process.process_data.ID
-    else:
-        process_ID = None
-
-    item = (
-        resource.data.ID,
-        process_ID,
-        resource.env.now,
-        state.done_in,  # type: ignore        False
-    )
-    data.append(item)
-
-
-def post_monitor_state(data: List[tuple], state: state.State):
-    resource = state.resource
-    if resource.current_process:
-        process_ID = resource.current_process.process_data.ID
-    else:
-        process_ID = None
-
-    item = (
-        resource.data.ID,
-        process_ID,
-        resource.env.now,
-        state.done_in,  # type: ignore False
-        True,
-    )
-    data.append(item)
 
 
 def post_monitor_state_info(data: List[dict], state_info: state.StateInfo):

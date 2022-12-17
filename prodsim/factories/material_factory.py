@@ -5,14 +5,12 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 
-from prodsim import (logger, process, router, sim)
+from prodsim import logger, process, router, sim, proces_models
 from prodsim.data_structures import material_data
 from prodsim.factories import process_factory
 
 # if TYPE_CHECKING:
 #     from .. import material
-
-
 
 
 class MaterialFactory(BaseModel):
@@ -25,21 +23,27 @@ class MaterialFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_material(self, material_data: material_data.MaterialData, router: router.Router):
+    def create_material(
+        self, material_data: material_data.MaterialData, router: router.Router
+    ):
         material_data = material_data.copy()
-        material_data.ID = str(material_data.material_type) + "_" + str(self.material_counter)
+        material_data.ID = (
+            str(material_data.material_type) + "_" + str(self.material_counter)
+        )
         process_model = self.create_process_model(material_data)
         transport_processes = self.process_factory.get_process(
             material_data.transport_process
         )
-        if not transport_processes or isinstance(transport_processes, process.ProductionProcess):
+        if not transport_processes or isinstance(
+            transport_processes, process.ProductionProcess
+        ):
             raise ValueError("Transport process not found.")
         material_object = material.Material(
             env=self.env,
             material_data=material_data,
             router=router,
             process_model=process_model,
-            transport_process=transport_processes
+            transport_process=transport_processes,
         )
         if self.data_collecter:
             self.data_collecter.register_patch(
@@ -52,16 +56,20 @@ class MaterialFactory(BaseModel):
         self.materials.append(material_object)
         return material_object
 
-    def create_process_model(self, material_data: material_data.MaterialData) -> process.ProcessModel:
+    def create_process_model(
+        self, material_data: material_data.MaterialData
+    ) -> proces_models.ProcessModel:
         if isinstance(material_data.processes, list):
             process_list = self.process_factory.get_processes_in_order(
                 material_data.processes
             )
-            return process.ListProcessModel(process_list=process_list)
+            return proces_models.ListProcessModel(process_list=process_list)
         if isinstance(material_data.processes, str):
             import pm4py
 
-            net, initial_marking, final_marking = pm4py.read_pnml(material_data.processes)
+            net, initial_marking, final_marking = pm4py.read_pnml(
+                material_data.processes
+            )
             for transition in net.transitions:
                 if not transition.label:
                     transition_process = material.SKIP_LABEL
@@ -70,13 +78,16 @@ class MaterialFactory(BaseModel):
                         transition.label
                     )
                 transition.properties["Process"] = transition_process
-            return process.PetriNetProcessModel(net=net, initial_marking=initial_marking, final_marking=final_marking)
+            return proces_models.PetriNetProcessModel(
+                net=net, initial_marking=initial_marking, final_marking=final_marking
+            )
         else:
             raise ValueError("Process model not recognized.")
 
     def get_material(self, ID) -> material.Material:
         return [m for m in self.materials if m.material_data.ID == ID].pop()
-    
-from prodsim import material
-material.Material.update_forward_refs()
 
+
+from prodsim import material
+
+material.Material.update_forward_refs()

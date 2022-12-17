@@ -71,13 +71,9 @@ def register_production_states_for_processes(
             }
         }
         if isinstance(process_instance, process.ProductionProcess):
-            state_factory.create_states_from_configuration_data(
-                {"ProductionState": values}
-            )
+            state_factory.create_states_from_configuration_data({"ProductionState": values})
         elif isinstance(process_instance, process.TransportProcess):
-            state_factory.create_states_from_configuration_data(
-                {"TransportState": values}
-            )
+            state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)  # type: ignore
@@ -98,12 +94,7 @@ class ResourceFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_resources_from_configuration_data(self, configuration_data: dict):
-        for values in configuration_data.values():
-            self.resource_data.append(parse_obj_as(RESOURCE_DATA_UNION, values))
-            self.add_resource(self.resource_data[-1])
-
-    def create_resources_from_adapter(self, adapter: adapter.Adapter):
+    def create_resources(self, adapter: adapter.Adapter):
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data)
 
@@ -133,7 +124,7 @@ class ResourceFactory(BaseModel):
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.processes)
-        
+
         ids = [proc.process_data.ID for proc in processes]
         values.update({"processes": processes})
 
@@ -190,4 +181,8 @@ class ResourceFactory(BaseModel):
     def get_resources_with_process(
         self, target_process: process.Process
     ) -> List[resources.Resourcex]:
-        return [res for res in self.resources if target_process.process_data.ID in res.data.processes]
+        return [
+            res
+            for res in self.resources
+            if target_process.process_data.ID in res.data.processes
+        ]

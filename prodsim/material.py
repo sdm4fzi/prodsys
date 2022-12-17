@@ -10,7 +10,7 @@ import numpy as np
 from simpy import events
 
 from prodsim import (process, request, router, resources, sim, sink,
-               source)
+               source, proces_models)
 
 from prodsim.data_structures import material_data
 
@@ -63,7 +63,7 @@ Location = Union[resources.Resourcex, source.Source, sink.Sink]
 class Material(BaseModel):
     env: sim.Environment
     material_data: material_data.MaterialData
-    process_model: process.ProcessModel
+    process_model: proces_models.ProcessModel
     transport_process: process.TransportProcess
     router: router.Router
 
@@ -138,11 +138,6 @@ class Material(BaseModel):
     def set_next_resource(self):
         if self.next_process:
             self.next_resource = self.router.get_next_resource(self.next_process)
-
-
-class ConcreteMaterial(Material):
-    due_time: float = 0.0
-
 
 
 class Order(ABC, BaseModel):

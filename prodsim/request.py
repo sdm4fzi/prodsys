@@ -8,7 +8,12 @@ if TYPE_CHECKING:
 
 
 class Request:
-    def __init__(self, process: process.PROCESS_UNION, material: material.Material, resource: resources.Resourcex):
+    def __init__(
+        self,
+        process: process.PROCESS_UNION,
+        material: material.Material,
+        resource: resources.Resourcex,
+    ):
         self.process = process
         self.material = material
         self.resource = resource
@@ -18,13 +23,20 @@ class Request:
 
     def get_material(self) -> material.Material:
         return self.material
-    
+
     def get_resource(self) -> resources.Resourcex:
         return self.resource
 
+
 class TransportResquest(Request):
-    def __init__(self, process: process.TransportProcess, material: material.Material, resource: resources.TransportResource,
-        origin: material.Location, target: material.Location):
+    def __init__(
+        self,
+        process: process.TransportProcess,
+        material: material.Material,
+        resource: resources.TransportResource,
+        origin: material.Location,
+        target: material.Location,
+    ):
         self.process: process.TransportProcess = process
         self.material: material.Material = material
         self.resource: resources.TransportResource = resource
@@ -33,7 +45,7 @@ class TransportResquest(Request):
 
     def get_process(self) -> process.TransportProcess:
         return self.process
-    
+
     def get_resource(self) -> resources.TransportResource:
         return self.resource
 
