@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from . import loader
+from .. import loader
 
 
 def get_minimum_simjson_structure() -> Dict[str, Union[str, list, dict]]:

@@ -8,10 +8,10 @@ from typing import List, Generator, TYPE_CHECKING
 # from process import Process
 from simpy import events
 
-from prodsim import request, sim
+from prodsim.simulation import request, sim
 
 if TYPE_CHECKING:
-    from prodsim import material, process, state, resources, request, sink
+    from prodsim.simulation import material, process, state, resources, request, sink
 
 
 class Controller(ABC, BaseModel):
@@ -283,6 +283,7 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
 class BatchController(Controller):
     pass
 
-from prodsim import resources, source, sink
+from prodsim.simulation import resources, source, sink
+Controller.update_forward_refs()
 ProductionController.update_forward_refs()
 TransportController.update_forward_refs()

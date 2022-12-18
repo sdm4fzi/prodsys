@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 
 from prodsim import loader, sim
-from prodsim.optimization_util import (check_valid_configuration, crossover,
+from prodsim.util.optimization_util import (check_valid_configuration, crossover,
                                        evaluate, mutation,
                                        random_configuration)
 from prodsim.util import set_seed

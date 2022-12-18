@@ -4,8 +4,8 @@ from copy import copy, deepcopy
 from typing import Dict, List, Union
 
 from . import loader
-from .sim import Environment
-from .post_processing import PostProcessor
+from prodsim.simulation.sim import Environment
+from prodsim.util.post_processing import PostProcessor
 
 
 def crossover(ind1, ind2):

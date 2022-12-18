@@ -5,7 +5,7 @@ from typing import List, TYPE_CHECKING, Tuple
 from pydantic import BaseModel, Field
 from simpy import events
 
-from prodsim import router, sim, store, time_model
+from prodsim.simulation import router, sim, store, time_model
 from prodsim.data_structures import source_data, material_data
 
 if TYPE_CHECKING:

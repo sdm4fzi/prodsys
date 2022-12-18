@@ -1,5 +1,5 @@
 from prodsim import loader
-from prodsim.flexis_adapter import FlexisAdapter
+from prodsim.adapters.flexis_adapter import FlexisAdapter
 import json
 
 flexis_file_path = "data/Output_data_format/Szenario1-84Sek_gut.xlsx"

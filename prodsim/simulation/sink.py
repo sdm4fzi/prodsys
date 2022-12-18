@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Any, TYPE_CHECKING, Tuple
+from typing import List, Tuple
 
 from pydantic import BaseModel, Field
 
-from prodsim import sim, store
+from prodsim.simulation import sim, store
 from prodsim.data_structures import sink_data
 
 

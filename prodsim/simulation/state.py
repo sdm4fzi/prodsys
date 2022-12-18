@@ -8,7 +8,7 @@ from simpy import events
 from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
 
-from prodsim import sim, time_model
+from prodsim.simulation import sim, time_model
 from prodsim.data_structures.state_data import (
     StateData,
     BreakDownStateData,
@@ -17,7 +17,7 @@ from prodsim.data_structures.state_data import (
 )
 
 if TYPE_CHECKING:
-    from . import material, resources
+    from prodsim.simulation import material, resources
 
 
 class StateEnum(str, Enum):

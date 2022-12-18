@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel
 
-from prodsim import sim, store
+from prodsim.simulation import sim, store
 
 if TYPE_CHECKING:
-    from prodsim import adapter
+    from prodsim.adapters import adapter
     from prodsim.data_structures import queue_data
 
 class QueueFactory(BaseModel):

@@ -5,10 +5,10 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, parse_obj_as
 
 from prodsim.data_structures import time_model_data
-from prodsim import time_model
+from prodsim.simulation import time_model
 
 if TYPE_CHECKING:
-    from prodsim import adapter
+    from prodsim.adapters import adapter
 
 class TimeModelFactory(BaseModel):
     time_model_data: List[time_model_data.TIME_MODEL_DATA] = []

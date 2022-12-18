@@ -8,11 +8,11 @@ import random
 
 from simpy.resources import resource
 from simpy import events
-from prodsim import process, sim, store
+from prodsim.simulation import process, sim, store
 
 
 from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
-from prodsim import control, state
+from prodsim.simulation import control, state
 
 # TODO: Need to fix the multi inheritance problem and instantiation of simpy resource super class
 class Resourcex(BaseModel, ABC, resource.Resource):

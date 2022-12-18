@@ -5,9 +5,10 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 
-from prodsim import logger, process, router, sim, proces_models
+from prodsim.simulation import router, sim
 from prodsim.data_structures import material_data
 from prodsim.factories import process_factory
+from prodsim.simulation import logger, proces_models, process
 
 # if TYPE_CHECKING:
 #     from .. import material
@@ -88,6 +89,6 @@ class MaterialFactory(BaseModel):
         return [m for m in self.materials if m.material_data.ID == ID].pop()
 
 
-from prodsim import material
+from prodsim.simulation import material
 
 material.Material.update_forward_refs()

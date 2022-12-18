@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 
-from typing import Union
 from simpy.resources import store
 
 from prodsim.data_structures import queue_data
 
-from prodsim import sim
+from prodsim.simulation import sim
 
 
 class Queue(store.FilterStore):

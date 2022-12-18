@@ -7,9 +7,11 @@ from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 import pandas as pd
 from pydantic import BaseModel
 
+from prodsim.simulation import state
+
 
 if TYPE_CHECKING:
-    from prodsim import material, resources, state
+    from prodsim.simulation import material, resources
 
 
 class Datacollector(BaseModel):

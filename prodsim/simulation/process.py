@@ -5,7 +5,7 @@ from typing import Tuple, Union
 
 from pydantic import BaseModel
 
-from prodsim import time_model
+from prodsim.simulation import time_model
 from prodsim.data_structures import processes_data
 
 

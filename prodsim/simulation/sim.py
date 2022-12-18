@@ -11,7 +11,7 @@ from tqdm import tqdm
 # from .factories import state_factory, time_model_factory
 
 if TYPE_CHECKING:
-    from prodsim import request
+    from prodsim.simulation import request
 
 
 VERBOSE = 1

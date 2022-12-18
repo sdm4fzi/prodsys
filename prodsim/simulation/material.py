@@ -9,11 +9,10 @@ from pydantic import BaseModel, Field, Extra
 import numpy as np
 from simpy import events
 
-from prodsim import (process, request, router, resources, sim, sink,
+from prodsim.simulation import (process, request, router, resources, sim, sink,
                source, proces_models)
 
 from prodsim.data_structures import material_data
-
 
 
 def flatten(xs):

@@ -5,13 +5,14 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import parse_obj_as, BaseModel
 
-from prodsim import sim, state
+from prodsim.simulation import sim
 from prodsim.factories import time_model_factory
 from prodsim.data_structures import state_data
+from prodsim.simulation import state
 
 
 if TYPE_CHECKING:
-    from .. import adapter
+    from ..adapters import adapter
 
 
 class StateFactory(BaseModel):

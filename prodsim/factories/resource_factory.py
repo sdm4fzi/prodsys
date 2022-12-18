@@ -5,7 +5,8 @@ from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from prodsim import sim
+from prodsim.simulation import sim
+from prodsim.simulation import process, state
 from prodsim.util.util import get_class_from_str
 
 
@@ -15,10 +16,11 @@ from prodsim.data_structures.resource_data import (
 )
 from prodsim.factories import process_factory, state_factory, queue_factory
 
-from prodsim import control, resources, process
+from prodsim.simulation import control, resources
 
 if TYPE_CHECKING:
-    from prodsim import state, store, adapter
+    from prodsim.simulation import store
+    from prodsim.adapters import adapter
 
 
 CONTROLLER_DICT: Dict = {

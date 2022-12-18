@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
-    from prodsim import material, process, resources
+    from prodsim.simulation import material, process, resources
 
 
 class Request:

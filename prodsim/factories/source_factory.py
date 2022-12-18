@@ -6,7 +6,7 @@ from typing import Dict, List, TYPE_CHECKING
 from pydantic import BaseModel, parse_obj_as, Field
 
 
-from prodsim import router, sim, source
+from prodsim.simulation import router, sim, source
 from prodsim.data_structures import source_data, material_data
 
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         time_model_factory,
         sink_factory,
     )
-    from prodsim import adapter
+    from prodsim.adapters import adapter
 
 
 class SourceFactory(BaseModel):

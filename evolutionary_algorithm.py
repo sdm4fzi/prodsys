@@ -4,8 +4,8 @@ from random import random
 
 from deap import algorithms, base, creator, tools
 
-from prodsim import sim
-from prodsim.optimization_util import (crossover, evaluate, mutation,
+from prodsim.simulation import sim
+from prodsim.util.optimization_util import (crossover, evaluate, mutation,
                                        random_configuration)
 from prodsim.util import set_seed
 

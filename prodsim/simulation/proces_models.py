@@ -5,7 +5,7 @@ from typing import List, Union, Optional
 
 from pydantic import BaseModel, Field, validator
 
-from prodsim import process
+from prodsim.simulation import process
 import pm4py
 
 

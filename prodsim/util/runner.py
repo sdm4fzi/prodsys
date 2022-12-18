@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field
 import numpy as np
 import time
 
-from prodsim import adapter, sim, logger, post_processing
+from prodsim.adapters import adapter
+from prodsim.simulation import sim
 from prodsim.factories import (
     state_factory,
     time_model_factory,
@@ -18,6 +19,8 @@ from prodsim.factories import (
     sink_factory,
     source_factory,
 )
+from prodsim.simulation import logger
+from prodsim.util import post_processing
 
 VERBOSE = 1
 

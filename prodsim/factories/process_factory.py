@@ -5,11 +5,11 @@ from typing import List, Optional, TYPE_CHECKING
 from pydantic import BaseModel, parse_obj_as
 
 from prodsim.factories import time_model_factory
-from prodsim import process
+from prodsim.simulation import process
 from prodsim.data_structures import processes_data
 
 if TYPE_CHECKING:
-    from prodsim import adapter
+    from prodsim.adapters import adapter
 
 
 class ProcessFactory(BaseModel):

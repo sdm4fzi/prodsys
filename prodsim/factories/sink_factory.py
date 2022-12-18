@@ -5,11 +5,11 @@ from typing import Dict, List, Any, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, parse_obj_as
 
-from prodsim import sim, sink
+from prodsim.simulation import sim, sink
 from prodsim.data_structures import sink_data
 if TYPE_CHECKING:
     from prodsim.factories import material_factory, queue_factory
-    from prodsim import adapter
+    from prodsim.adapters import adapter
 
 
 class SinkFactory(BaseModel):
