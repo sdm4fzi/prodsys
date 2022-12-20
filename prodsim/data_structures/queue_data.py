@@ -7,4 +7,4 @@ from pydantic import validator
 
 
 class QueueData(CoreAsset):
-    capacity: Union[int, float] = float("inf")
+    capacity: Union[int, float] = 0.0

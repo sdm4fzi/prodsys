@@ -151,15 +151,6 @@ class JsonAdapter(Adapter):
     def read_data(self, file_path: str):
         data = load_json(file_path=file_path)
         self.seed = data["seed"]
-        # self.time_model_data = self.create_typed_object_from_configuration_data(
-        #     data["time_models"], time_model_data.TIME_MODEL_DATA
-        # )
-        # self.state_data = self.create_typed_object_from_configuration_data(
-        #     data["states"], state_data.STATE_DATA_UNION
-        # )
-        # self.process_data = self.create_typed_object_from_configuration_data(
-        #     data["processes"], processes_data.PROCESS_DATA_UNION
-        # )
         self.time_model_data = self.create_objects_from_configuration_data(
             data["time_models"], time_model_data.TIME_MODEL_DATA
         )

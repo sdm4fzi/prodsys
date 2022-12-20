@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass, field
+
 from typing import List
 
 import pandas as pd
@@ -401,8 +402,17 @@ class PostProcessor:
         print("\n------------- Resource states -------------\n")
 
         print(
-            self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"]),
+            self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"])
         )
+
+    def get_aggregated_data(self) -> dict:
+        data = {}
+        data["Throughput"] = self.get_aggregated_output_and_throughput_data_frame().reset_index().to_dict()
+        data["WIP"] = self.get_df_with_aggregated_WIP().reset_index().to_dict()
+        data["Throughput time"] = self.get_aggregated_throughput_time_data_frame().reset_index().to_dict()
+        data["Resource states"] = self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"]).reset_index().to_dict()
+
+        return data
 
     def get_aggregated_throughput_time_data(self) -> List[float]:
         return list(self.get_aggregated_throughput_time_data_frame().values)

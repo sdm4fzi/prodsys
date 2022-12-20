@@ -12,7 +12,11 @@ class Queue(store.FilterStore):
     def __init__(self, env: sim.Environment, queue_data: queue_data.QueueData):
         self.env: sim.Environment = env
         self.queue_data: queue_data.QueueData = queue_data
-        super().__init__(env, self.queue_data.capacity)
+        if queue_data.capacity == 0:
+            capacity = float("inf")
+        else:
+            capacity = queue_data.capacity
+        super().__init__(env, capacity)
 
 
 

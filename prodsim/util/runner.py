@@ -139,20 +139,20 @@ class Runner(BaseModel):
         t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
-        # print_util.print_simulation_info(env, t_0, t_1)
         print("\n\n###############  run finished  ###############\n")
 
-
+    def print_results(self):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
-        p.print_aggregated_data()
-        # p.plot_time_per_state_of_resources()
-        # p.plot_WIP()
-        # p.plot_throughput_over_time()
-        # p.plot_throughput_time_distribution()
-        # p.plot_time_per_state_of_resources()
-        # p.plot_WIP_with_range()
-        # p.plot_inductive_bpmn()
-        # p.save_inductive_petri_net()
+        s = p.print_aggregated_data()
+
+    def get_event_data_simulation_results_as_dict(self) -> dict:
+        p = post_processing.PostProcessor()
+        df_raw=self.data_collector.get_data_as_dataframe()
+        return df_raw.to_dict()
+    
+    def get_aggregated_data_simulation_results(self) -> dict:
+        p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
+        return p.get_aggregated_data()
 
     def save_results_as_csv(self):
         self.data_collector.log_data_to_csv(filepath=f"data/{self.time_stamp}.csv")
