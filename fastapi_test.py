@@ -13,13 +13,14 @@ from prodsim.data_structures import (
     source_data,
     sink_data,
 )
-from prodsim import adapter, runner
+import prodsim
+# from prodsim import adapters, runner
 
 app = FastAPI()
 
 class Project(BaseModel):
     ID: str
-    adapters: Dict[str, adapter.JsonAdapter] = {}
+    adapters: Dict[str, prodsim.adapters.JsonAdapter] = {}
 
 class Result(BaseModel):
     adapter_id: str
@@ -70,21 +71,21 @@ async def delete_project(project_id: str):
 
 
 @app.put("/projects/{project_id}/adapters")
-async def create_adapter(project_id: str, adapter: adapter.JsonAdapter):
+async def create_adapter(project_id: str, adapter: prodsim.adapters.JsonAdapter):
     project = get_project(project_id)
     project.adapters.append(adapter)
     return "Sucessfully created adapter with ID: " + adapter.ID
 
 
 @app.get(
-    "/projects/{project_id}/adapters", response_model=Dict[str, adapter.JsonAdapter]
+    "/projects/{project_id}/adapters", response_model=Dict[str, prodsim.adapters.JsonAdapter]
 )
 async def read_adapters(project_id: str):
     project = get_project(project_id)
     return project.adapters
 
 
-def get_adapter(project_id: str, adapter_id: str) -> adapter.JsonAdapter:
+def get_adapter(project_id: str, adapter_id: str) -> prodsim.adapters.JsonAdapter:
     project = get_project(project_id)
     if adapter_id not in project.adapters:
         raise HTTPException(404, f"Adapter {adapter_id} not found in project {project_id}")
@@ -92,7 +93,7 @@ def get_adapter(project_id: str, adapter_id: str) -> adapter.JsonAdapter:
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}", response_model=adapter.JsonAdapter
+    "/projects/{project_id}/adapters/{adapter_id}", response_model=prodsim.adapters.JsonAdapter
 )
 async def read_adapter(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
@@ -100,7 +101,7 @@ async def read_adapter(project_id: str, adapter_id: str):
 
 
 @app.put("/projects/{project_id}/adapters/{adapter_id}")
-async def update_adapter(project_id: str, adapter_id: str, ada: adapter.JsonAdapter):
+async def update_adapter(project_id: str, adapter_id: str, ada: prodsim.adapters.JsonAdapter):
     project = get_project(project_id)
     project.adapters[adapter_id] = ada
     return "Sucessfully updated adapter with ID: " + adapter_id
@@ -117,7 +118,7 @@ async def delete_adapter(project_id: str, adapter_id: str):
 @app.get("/projects/{project_id}/adapters/{adapter_id}/run_simulation")
 async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
-    runner_object = runner.Runner(adapter=adapter)
+    runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
     runner_object.run(3000)
     results_database.append(Result(adapter_id=adapter_id, event_results=runner_object.get_event_data_simulation_results_as_dict(), 

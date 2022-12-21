@@ -4,7 +4,7 @@ import prodsim
 
 if __name__ == '__main__':
 
-    adapter_object = prodsim.adapter.JsonAdapter()
+    adapter_object = prodsim.adapters.JsonAdapter()
 
     # adapter_object.read_data('data/simple_example.json')
     adapter_object.read_data('data/example_configuration.json')
