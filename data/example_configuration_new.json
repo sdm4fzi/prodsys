@@ -1,1 +1,275 @@
-{"valid_configuration": true, "reconfiguration_cost": 0, "time_model_data": [{"ID": "function_time_model_1", "description": "normal distribution time model with 20 minutes", "type": "FunctionTimeModel", "distribution_function": "normal", "parameters": [14.3, 5.0], "batch_size": 100}, {"ID": "function_time_model_2", "description": "constant distribution time model with 10 minutes", "type": "FunctionTimeModel", "distribution_function": "constant", "parameters": [15.0], "batch_size": 100}, {"ID": "function_time_model_3", "description": "normal distribution time model with 20 minutes", "type": "FunctionTimeModel", "distribution_function": "normal", "parameters": [20.0, 5.0], "batch_size": 100}, {"ID": "function_time_model_4", "description": "exponential distribution time model with 100 minutes", "type": "FunctionTimeModel", "distribution_function": "exponential", "parameters": [46.0], "batch_size": 100}, {"ID": "function_time_model_5", "description": "exponential distribution time model with 150 minutes", "type": "FunctionTimeModel", "distribution_function": "exponential", "parameters": [150.0], "batch_size": 100}, {"ID": "history_time_model_1", "description": "history time model", "type": "HistoryTimeModel", "history": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0]}, {"ID": "manhattan_time_model_1", "description": "manhattan time model with speed 180 m/min = 3 m/s", "type": "ManhattanDistanceTimeModel", "speed": 30.0, "reaction_time": 0.15}], "state_data": [{"ID": "Breakdownstate_1", "description": "Breakdown state machine 1", "time_model_id": "function_time_model_5", "type": "BreakDownState"}, {"ID": "Breakdownstate_2", "description": "Breakdown state machine 2", "time_model_id": "function_time_model_5", "type": "BreakDownState"}], "process_data": [{"ID": "P1", "description": "Process 1", "time_model_id": "function_time_model_1", "type": "ProductionProcesses"}, {"ID": "P2", "description": "Process 2", "time_model_id": "function_time_model_2", "type": "ProductionProcesses"}, {"ID": "P3", "description": "Process 3", "time_model_id": "function_time_model_3", "type": "ProductionProcesses"}, {"ID": "TP1", "description": "Transport Process 1", "time_model_id": "manhattan_time_model_1", "type": "TransportProcesses"}], "queue_data": [{"ID": "IQ1", "description": "Input-queue 1 for R1 and R2", "capacity": 250}, {"ID": "OQ1", "description": "Output-queue 1 for R1", "capacity": 250}, {"ID": "OQ2", "description": "Output-queue 2 for R2", "capacity": 250}, {"ID": "IQ2", "description": "Input-queue 2 for R3", "capacity": 250}, {"ID": "OQ3", "description": "Output-queue 3 for R3", "capacity": 250}, {"ID": "SourceQueue", "description": "Output-Queue for all sources", "capacity": 0}, {"ID": "SinkQueue", "description": "Input-Queue for all sinks", "capacity": 0}], "resource_data": [{"ID": "R1", "description": "Resource 1", "capacity": 2, "location": [10.0, 10.0], "controller": "SimpleController", "control_policy": "FIFO", "processes": ["P1", "P2"], "process_capacity": [2, 1], "states": ["Breakdownstate_1"], "input_queues": ["IQ1"], "output_queues": ["OQ1"]}, {"ID": "R2", "description": "Resource 2", "capacity": 1, "location": [20.0, 10.0], "controller": "SimpleController", "control_policy": "FIFO", "processes": ["P2", "P3"], "process_capacity": null, "states": ["Breakdownstate_2"], "input_queues": ["IQ1"], "output_queues": ["OQ2"]}, {"ID": "R3", "description": "Resource 3", "capacity": 2, "location": [20.0, 20.0], "controller": "SimpleController", "control_policy": "FIFO", "processes": ["P1", "P3"], "process_capacity": [1, 2], "states": ["Breakdownstate_1", "Breakdownstate_2"], "input_queues": ["IQ2"], "output_queues": ["OQ3"]}, {"ID": "R4", "description": "Resource 3", "capacity": 2, "location": [10.0, 20.0], "controller": "SimpleController", "control_policy": "FIFO", "processes": ["P1", "P3"], "process_capacity": [2, 2], "states": ["Breakdownstate_1"], "input_queues": ["IQ2"], "output_queues": ["OQ3"]}, {"ID": "TR1", "description": "Transport Resource 1", "capacity": 1, "location": [15.0, 15.0], "controller": "TransportController", "control_policy": "FIFO", "processes": ["TP1"], "process_capacity": null, "states": ["Breakdownstate_1"]}, {"ID": "TR2", "description": "Transport Resource 2", "capacity": 1, "location": [15.0, 20.0], "controller": "TransportController", "control_policy": "SPT_transport", "processes": ["TP1"], "process_capacity": null, "states": ["Breakdownstate_1"]}], "material_data": [{"ID": "Material_1", "description": "Material 1", "material_type": "Material_1", "processes": ["P1", "P2", "P3"], "transport_process": "TP1"}, {"ID": "Material_2", "description": "Material 2", "material_type": "Material_2", "processes": ["P1", "P2", "P3", "P1"], "transport_process": "TP1"}, {"ID": "Material_3", "description": "Material 3", "material_type": "Material_3", "processes": "data/example_material_petri_net.pnml", "transport_process": "TP1"}], "sink_data": [{"ID": "SK1", "description": "Sink 1", "location": [50.0, 50.0], "material_type": "Material_1", "input_queues": ["SinkQueue"]}, {"ID": "SK2", "description": "Sink 2", "location": [55.0, 50.0], "material_type": "Material_2", "input_queues": ["SinkQueue"]}, {"ID": "SK3", "description": "Sink 3", "location": [45.0, 50.0], "material_type": "Material_3", "input_queues": ["SinkQueue"]}], "source_data": [{"ID": "S1", "description": "Source 1", "location": [0.0, 0.0], "material_type": "Material_1", "time_model_id": "function_time_model_4", "router": "AvoidDeadlockRouter", "routing_heuristic": "random", "output_queues": ["SourceQueue"]}, {"ID": "S2", "description": "Source 2", "location": [30.0, 30.0], "material_type": "Material_2", "time_model_id": "function_time_model_4", "router": "AvoidDeadlockRouter", "routing_heuristic": "random", "output_queues": ["SourceQueue"]}, {"ID": "S3", "description": "Source 3", "location": [40.0, 30.0], "material_type": "Material_3", "time_model_id": "function_time_model_4", "router": "AvoidDeadlockRouter", "routing_heuristic": "random", "output_queues": ["SourceQueue"]}], "seed": 24}
+{
+  "valid_configuration": true,
+  "reconfiguration_cost": 0,
+  "time_model_data": [
+    {
+      "ID": "function_time_model_1",
+      "description": "normal distribution time model with 20 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [14.3, 5.0],
+      "batch_size": 100
+    },
+    {
+      "ID": "function_time_model_2",
+      "description": "constant distribution time model with 10 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [15.0],
+      "batch_size": 100
+    },
+    {
+      "ID": "function_time_model_3",
+      "description": "normal distribution time model with 20 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [20.0, 5.0],
+      "batch_size": 100
+    },
+    {
+      "ID": "function_time_model_4",
+      "description": "exponential distribution time model with 100 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [46.0],
+      "batch_size": 100
+    },
+    {
+      "ID": "function_time_model_5",
+      "description": "exponential distribution time model with 150 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [150.0],
+      "batch_size": 100
+    },
+    {
+      "ID": "history_time_model_1",
+      "description": "history time model",
+      "type": "HistoryTimeModel",
+      "history": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0]
+    },
+    {
+      "ID": "manhattan_time_model_1",
+      "description": "manhattan time model with speed 180 m/min = 3 m/s",
+      "type": "ManhattanDistanceTimeModel",
+      "speed": 30.0,
+      "reaction_time": 0.15
+    }
+  ],
+  "state_data": [
+    {
+      "ID": "Breakdownstate_1",
+      "description": "Breakdown state machine 1",
+      "time_model_id": "function_time_model_5",
+      "type": "BreakDownState"
+    },
+    {
+      "ID": "Breakdownstate_2",
+      "description": "Breakdown state machine 2",
+      "time_model_id": "function_time_model_5",
+      "type": "BreakDownState"
+    }
+  ],
+  "process_data": [
+    {
+      "ID": "P1",
+      "description": "Process 1",
+      "time_model_id": "function_time_model_1",
+      "type": "ProductionProcesses"
+    },
+    {
+      "ID": "P2",
+      "description": "Process 2",
+      "time_model_id": "function_time_model_2",
+      "type": "ProductionProcesses"
+    },
+    {
+      "ID": "P3",
+      "description": "Process 3",
+      "time_model_id": "function_time_model_3",
+      "type": "ProductionProcesses"
+    },
+    {
+      "ID": "TP1",
+      "description": "Transport Process 1",
+      "time_model_id": "manhattan_time_model_1",
+      "type": "TransportProcesses"
+    }
+  ],
+  "queue_data": [
+    {
+      "ID": "IQ1",
+      "description": "Input-queue 1 for R1 and R2",
+      "capacity": 250
+    },
+    { "ID": "OQ1", "description": "Output-queue 1 for R1", "capacity": 250 },
+    { "ID": "OQ2", "description": "Output-queue 2 for R2", "capacity": 250 },
+    { "ID": "IQ2", "description": "Input-queue 2 for R3", "capacity": 250 },
+    { "ID": "OQ3", "description": "Output-queue 3 for R3", "capacity": 250 },
+    {
+      "ID": "SourceQueue",
+      "description": "Output-Queue for all sources",
+      "capacity": 0
+    },
+    {
+      "ID": "SinkQueue",
+      "description": "Input-Queue for all sinks",
+      "capacity": 0
+    }
+  ],
+  "resource_data": [
+    {
+      "ID": "R1",
+      "description": "Resource 1",
+      "capacity": 2,
+      "location": [10.0, 10.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P1", "P2"],
+      "process_capacity": [2, 1],
+      "states": ["Breakdownstate_1"],
+      "input_queues": ["IQ1"],
+      "output_queues": ["OQ1"]
+    },
+    {
+      "ID": "R2",
+      "description": "Resource 2",
+      "capacity": 1,
+      "location": [20.0, 10.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P2", "P3"],
+      "process_capacity": null,
+      "states": ["Breakdownstate_2"],
+      "input_queues": ["IQ1"],
+      "output_queues": ["OQ2"]
+    },
+    {
+      "ID": "R3",
+      "description": "Resource 3",
+      "capacity": 2,
+      "location": [20.0, 20.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P1", "P3"],
+      "process_capacity": [1, 2],
+      "states": ["Breakdownstate_1", "Breakdownstate_2"],
+      "input_queues": ["IQ2"],
+      "output_queues": ["OQ3"]
+    },
+    {
+      "ID": "R4",
+      "description": "Resource 3",
+      "capacity": 2,
+      "location": [10.0, 20.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P1", "P3"],
+      "process_capacity": [2, 2],
+      "states": ["Breakdownstate_1"],
+      "input_queues": ["IQ2"],
+      "output_queues": ["OQ3"]
+    },
+    {
+      "ID": "TR1",
+      "description": "Transport Resource 1",
+      "capacity": 1,
+      "location": [15.0, 15.0],
+      "controller": "TransportController",
+      "control_policy": "FIFO",
+      "processes": ["TP1"],
+      "process_capacity": null,
+      "states": ["Breakdownstate_1"]
+    },
+    {
+      "ID": "TR2",
+      "description": "Transport Resource 2",
+      "capacity": 1,
+      "location": [15.0, 20.0],
+      "controller": "TransportController",
+      "control_policy": "SPT_transport",
+      "processes": ["TP1"],
+      "process_capacity": null,
+      "states": ["Breakdownstate_1"]
+    }
+  ],
+  "material_data": [
+    {
+      "ID": "Material_1",
+      "description": "Material 1",
+      "material_type": "Material_1",
+      "processes": ["P1", "P2", "P3"],
+      "transport_process": "TP1"
+    },
+    {
+      "ID": "Material_2",
+      "description": "Material 2",
+      "material_type": "Material_2",
+      "processes": ["P1", "P2", "P3", "P1"],
+      "transport_process": "TP1"
+    },
+    {
+      "ID": "Material_3",
+      "description": "Material 3",
+      "material_type": "Material_3",
+      "processes": "data/example_material_petri_net.pnml",
+      "transport_process": "TP1"
+    }
+  ],
+  "sink_data": [
+    {
+      "ID": "SK1",
+      "description": "Sink 1",
+      "location": [50.0, 50.0],
+      "material_type": "Material_1",
+      "input_queues": ["SinkQueue"]
+    },
+    {
+      "ID": "SK2",
+      "description": "Sink 2",
+      "location": [55.0, 50.0],
+      "material_type": "Material_2",
+      "input_queues": ["SinkQueue"]
+    },
+    {
+      "ID": "SK3",
+      "description": "Sink 3",
+      "location": [45.0, 50.0],
+      "material_type": "Material_3",
+      "input_queues": ["SinkQueue"]
+    }
+  ],
+  "source_data": [
+    {
+      "ID": "S1",
+      "description": "Source 1",
+      "location": [0.0, 0.0],
+      "material_type": "Material_1",
+      "time_model_id": "function_time_model_4",
+      "router": "AvoidDeadlockRouter",
+      "routing_heuristic": "random",
+      "output_queues": ["SourceQueue"]
+    },
+    {
+      "ID": "S2",
+      "description": "Source 2",
+      "location": [30.0, 30.0],
+      "material_type": "Material_2",
+      "time_model_id": "function_time_model_4",
+      "router": "AvoidDeadlockRouter",
+      "routing_heuristic": "random",
+      "output_queues": ["SourceQueue"]
+    },
+    {
+      "ID": "S3",
+      "description": "Source 3",
+      "location": [40.0, 30.0],
+      "material_type": "Material_3",
+      "time_model_id": "function_time_model_4",
+      "router": "AvoidDeadlockRouter",
+      "routing_heuristic": "random",
+      "output_queues": ["SourceQueue"]
+    }
+  ],
+  "seed": 24
+}
