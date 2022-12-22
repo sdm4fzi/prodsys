@@ -6,4 +6,6 @@ scipy==1.8.1
 simpy==4.0.1
 tqdm==4.64.0
 pydantic
+fastapi
+"uvicorn[standard]"
 basyx
