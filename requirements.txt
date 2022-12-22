@@ -8,10 +8,5 @@ openpyxl==3.0.10
 plotly==5.11.0
 scipy==1.9.3
 simpy==4.0.1
-tqdm==4.64.0
-pydantic
-fastapi
-"uvicorn[standard]"
-basyx
-
 pm4py==2.3.3
+basyx
