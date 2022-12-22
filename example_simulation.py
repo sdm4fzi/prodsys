@@ -16,6 +16,6 @@ if __name__ == '__main__':
 
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
-    runner_object.run(3000)
+    runner_object.run(30000)
     # runner_object.save_results_as_csv()
     # runner_object.save_results_as_json()
