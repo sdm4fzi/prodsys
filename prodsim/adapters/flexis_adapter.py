@@ -117,6 +117,7 @@ class FlexisAdapter(adapters.Adapter):
         self.initialize_process_models(flexis_data_frames)
         # TODO: add setup states here and breakdown states
         self.initialize_resource_models(flexis_data_frames)
+        self.initialize_queue_models()
 
     def get_object_from_data_frame(
         self, data_frame: pd.DataFrame, type: Type
@@ -231,6 +232,21 @@ class FlexisAdapter(adapters.Adapter):
             processes=self._capability_process_dict[resource.availableCapabilityNames],
             states=[]
         )
+    
+    def initialize_queue_models(self):
+        for resource in self.resource_data:
+            self.queue_data.append(queue_data.QueueData(
+                ID=resource.ID + "_input_queue",
+                description="Input queue for " + resource.ID,
+                capacity=100
+            ))
+            self.queue_data.append(queue_data.QueueData(
+                ID=resource.ID + "_output_queue",
+                description="Output queue for " + resource.ID,
+                capacity=100
+            ))
+            resource.input_queues = [resource.ID + "_input_queue"]
+            resource.output_queues = [resource.ID + "_output_queue"]
 
     def write_data(self, file_path: str):
         pass
