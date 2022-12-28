@@ -1,5 +1,5 @@
 from typing import Dict, Union, Type, List, Optional
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, Extra
 import datetime
 
 from prodsim import adapters
@@ -48,6 +48,19 @@ class TaskType(BaseModel):
     setupGroup: str
     durationGroup: str
 
+class Machine(BaseModel):
+    name: str
+    label: str
+    description: str
+    locationName: str
+    shiftName: str
+    setupGroup: str
+    availableCapabilityNames: str
+    setupGroup: Optional[str]
+    durationGroup:str
+
+    class Config:
+            extra = "ignore"
 
 class FlexisDataFrames(BaseModel):
     ApplicationName: pd.DataFrame
@@ -90,24 +103,20 @@ def read_excel(file_path: str):
         data[sheet] = data[sheet].dropna(how="all")
         data[sheet] = data[sheet].iloc[1:]
         new_columns = [column for column in data[sheet].columns if column]
-        data[sheet] = data[sheet][new_columns]
-        # import sys
-        # sys.exit() 
+        data[sheet] = data[sheet][new_columns] 
     return data
 
 
 class FlexisAdapter(adapters.Adapter):
-    def read_data(self, file_path: str):
-        # read excel file
-        xls = pd.ExcelFile(file_path)
-        # input_data = {}
-        # for sheet_name in xls.sheet_names:
-        #     input_data[sheet_name] = pd.read_excel(xls, sheet_name)  # type: ignore False True
+    _capability_process_dict: Dict[str, List[str]] = {}
 
+    def read_data(self, file_path: str):    
         input_data = read_excel(file_path)
         flexis_data_frames = FlexisDataFrames(**input_data)
         self.initialize_time_models(flexis_data_frames)
         self.initialize_process_models(flexis_data_frames)
+        # TODO: add setup states here and breakdown states
+        self.initialize_resource_models(flexis_data_frames)
 
     def get_object_from_data_frame(
         self, data_frame: pd.DataFrame, type: Type
@@ -199,7 +208,29 @@ class FlexisAdapter(adapters.Adapter):
                         time_model_id=time_model_id,
                     )
                 )
+            if not task_type.requiredCapabilityNames in self._capability_process_dict:
+                self._capability_process_dict[task_type.requiredCapabilityNames] = []
+            self._capability_process_dict[task_type.requiredCapabilityNames].append(time_model_id)
         return proceses_data_models
+    
+    def initialize_resource_models(self, flexis_data_frames: FlexisDataFrames):
+        resource_data = self.get_object_from_data_frame(
+            flexis_data_frames.Machine, Machine
+        )
+        for resource in resource_data:
+            self.resource_data.append(self.create_resource_model(resource))
+
+    def create_resource_model(self, resource: Machine):
+        return resource_data.ProductionResourceData(
+            ID=resource.name,
+            description=resource.description,
+            capacity=1,
+            location=(0,0),
+            controller="SimpleController",
+            control_policy="FIFO",
+            processes=self._capability_process_dict[resource.availableCapabilityNames],
+            states=[]
+        )
 
     def write_data(self, file_path: str):
         pass
