@@ -175,37 +175,30 @@ class FlexisAdapter(adapters.Adapter):
         task_type_data = self.get_object_from_data_frame(
             flexis_data_frames.TaskType, TaskType
         )
-        print(flexis_data_frames.Machine["durationGroup:String"])
         machine_duration_groups = flexis_data_frames.Machine[
             "durationGroup:String"
         ].unique()
-        print(machine_duration_groups)
         for task_type in task_type_data:
-            print(task_type, machine_duration_groups)
-            print(type(task_type), type(machine_duration_groups))
             self.process_data += self.create_process_model(
                 task_type, machine_duration_groups
             )
-        print("##################")
 
     def create_process_model(
         self, task_type: TaskType, machine_duration_groups: List[str]
     ):
         proceses_data_models = []
         for machine_duration_group in machine_duration_groups:
-            try:
+            time_model_ids = set([t.ID for t in self.time_model_data])
+            time_model_id = machine_duration_group.split(":")[0] + "_" + task_type.durationGroup
+            if time_model_id in time_model_ids:
                 proceses_data_models.append(
                     processes_data.ProductionProcessData(
                         ID=task_type.name,
                         description=task_type.description,
                         type=processes_data.ProcessTypeEnum.ProductionProcesses,
-                        time_model_id=machine_duration_group.split(":")[0]
-                        + "_"
-                        + task_type.durationGroup,
+                        time_model_id=time_model_id,
                     )
                 )
-            except ValueError:
-                print("ValueError")
         return proceses_data_models
 
     def write_data(self, file_path: str):
