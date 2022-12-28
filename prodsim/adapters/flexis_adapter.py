@@ -48,6 +48,7 @@ class TaskType(BaseModel):
     setupGroup: str
     durationGroup: str
 
+
 class Machine(BaseModel):
     name: str
     label: str
@@ -57,10 +58,11 @@ class Machine(BaseModel):
     setupGroup: str
     availableCapabilityNames: str
     setupGroup: Optional[str]
-    durationGroup:str
+    durationGroup: str
 
     class Config:
-            extra = "ignore"
+        extra = "ignore"
+
 
 class FlexisDataFrames(BaseModel):
     ApplicationName: pd.DataFrame
@@ -98,19 +100,20 @@ def read_excel(file_path: str):
     data = {}
     for sheet in sheets:
         data[sheet] = pd.DataFrame(
-            wb[sheet].values, columns=[cell.value for cell in wb[sheet][1]],
+            wb[sheet].values,
+            columns=[cell.value for cell in wb[sheet][1]],
         )
         data[sheet] = data[sheet].dropna(how="all")
         data[sheet] = data[sheet].iloc[1:]
         new_columns = [column for column in data[sheet].columns if column]
-        data[sheet] = data[sheet][new_columns] 
+        data[sheet] = data[sheet][new_columns]
     return data
 
 
 class FlexisAdapter(adapters.Adapter):
     _capability_process_dict: Dict[str, List[str]] = {}
 
-    def read_data(self, file_path: str):    
+    def read_data(self, file_path: str):
         input_data = read_excel(file_path)
         flexis_data_frames = FlexisDataFrames(**input_data)
         self.initialize_time_models(flexis_data_frames)
@@ -118,6 +121,7 @@ class FlexisAdapter(adapters.Adapter):
         # TODO: add setup states here and breakdown states
         self.initialize_resource_models(flexis_data_frames)
         self.initialize_queue_models()
+        self.initialize_transport_models()
 
     def get_object_from_data_frame(
         self, data_frame: pd.DataFrame, type: Type
@@ -199,7 +203,9 @@ class FlexisAdapter(adapters.Adapter):
         proceses_data_models = []
         for machine_duration_group in machine_duration_groups:
             time_model_ids = set([t.ID for t in self.time_model_data])
-            time_model_id = machine_duration_group.split(":")[0] + "_" + task_type.durationGroup
+            time_model_id = (
+                machine_duration_group.split(":")[0] + "_" + task_type.durationGroup
+            )
             if time_model_id in time_model_ids:
                 proceses_data_models.append(
                     processes_data.ProductionProcessData(
@@ -211,9 +217,11 @@ class FlexisAdapter(adapters.Adapter):
                 )
             if not task_type.requiredCapabilityNames in self._capability_process_dict:
                 self._capability_process_dict[task_type.requiredCapabilityNames] = []
-            self._capability_process_dict[task_type.requiredCapabilityNames].append(time_model_id)
+            self._capability_process_dict[task_type.requiredCapabilityNames].append(
+                time_model_id
+            )
         return proceses_data_models
-    
+
     def initialize_resource_models(self, flexis_data_frames: FlexisDataFrames):
         resource_data = self.get_object_from_data_frame(
             flexis_data_frames.Machine, Machine
@@ -226,27 +234,53 @@ class FlexisAdapter(adapters.Adapter):
             ID=resource.name,
             description=resource.description,
             capacity=1,
-            location=(0,0),
+            location=(0, 0),
             controller="SimpleController",
             control_policy="FIFO",
             processes=self._capability_process_dict[resource.availableCapabilityNames],
-            states=[]
+            states=[],
         )
-    
+
     def initialize_queue_models(self):
         for resource in self.resource_data:
-            self.queue_data.append(queue_data.QueueData(
-                ID=resource.ID + "_input_queue",
-                description="Input queue for " + resource.ID,
-                capacity=100
-            ))
-            self.queue_data.append(queue_data.QueueData(
-                ID=resource.ID + "_output_queue",
-                description="Output queue for " + resource.ID,
-                capacity=100
-            ))
+            self.queue_data.append(
+                queue_data.QueueData(
+                    ID=resource.ID + "_input_queue",
+                    description="Input queue for " + resource.ID,
+                    capacity=100,
+                )
+            )
+            self.queue_data.append(
+                queue_data.QueueData(
+                    ID=resource.ID + "_output_queue",
+                    description="Output queue for " + resource.ID,
+                    capacity=100,
+                )
+            )
             resource.input_queues = [resource.ID + "_input_queue"]
             resource.output_queues = [resource.ID + "_output_queue"]
+
+    def initialize_transport_models(self):
+        # ID=transition_time.jobTypeName + "_" + transition_time.transitionTimeGroup,
+
+        transport_process = processes_data.TransportProcessData(
+            ID="Transport",
+            description="Transport process",
+            type=processes_data.ProcessTypeEnum.TransportProcesses,
+            time_model_id=self.time_model_data[-1].ID,
+        )
+        self.process_data.append(transport_process)
+        transport_resource = resource_data.TransportResourceData(
+            ID="Transport",
+            description="Transport resource",
+            capacity=1,
+            location=(0, 0),
+            controller="TransportController",
+            control_policy="SPT_transport",
+            processes=["Transport"],
+            states=[],
+        )
+        self.resource_data.append(transport_resource)
 
     def write_data(self, file_path: str):
         pass
