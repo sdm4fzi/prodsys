@@ -64,6 +64,11 @@ class Machine(BaseModel):
         extra = "ignore"
 
 
+class JobWorkplan(BaseModel):
+    jobTypeName: str
+    taskTypeName: List[str]
+
+
 class FlexisDataFrames(BaseModel):
     ApplicationName: pd.DataFrame
     Capability: pd.DataFrame
@@ -122,6 +127,8 @@ class FlexisAdapter(adapters.Adapter):
         self.initialize_resource_models(flexis_data_frames)
         self.initialize_queue_models()
         self.initialize_transport_models()
+        self.initialize_material_models(flexis_data_frames)
+        self.initialize_source_and_sink_data(flexis_data_frames)
 
     def get_object_from_data_frame(
         self, data_frame: pd.DataFrame, type: Type
@@ -131,7 +138,7 @@ class FlexisAdapter(adapters.Adapter):
         data = data_frame.to_dict(orient="index")
         object_list = []
         for entry, entry_values in data.items():
-            for key in entry_values:
+            for key in list(entry_values):
                 if ":" in key:
                     new_key = key.split(":")[0]
                     data[entry][new_key] = data[entry].pop(key)
@@ -230,6 +237,7 @@ class FlexisAdapter(adapters.Adapter):
             self.resource_data.append(self.create_resource_model(resource))
 
     def create_resource_model(self, resource: Machine):
+        # TODO: rework processes with capabilities!
         return resource_data.ProductionResourceData(
             ID=resource.name,
             description=resource.description,
@@ -281,6 +289,81 @@ class FlexisAdapter(adapters.Adapter):
             states=[],
         )
         self.resource_data.append(transport_resource)
+
+    def initialize_material_models(self, flexis_data_frames: FlexisDataFrames):
+        workplan_df = (
+            flexis_data_frames.WorkPlan.groupby(by=["jobTypeName:String"])[
+                "taskTypeName:String"
+            ]
+            .apply(list)
+            .to_frame()
+            .reset_index()
+        )
+        workplans: List[JobWorkplan] = self.get_object_from_data_frame(
+            workplan_df, JobWorkplan
+        )
+        for workplan in workplans:
+            self.material_data.append(
+                material_data.MaterialData(
+                    ID=workplan.jobTypeName,
+                    description=workplan.jobTypeName,
+                    processes=workplan.taskTypeName,
+                    transport_process="Transport",
+                )
+            )
+
+    def initialize_source_and_sink_data(self, flexis_data_frames: FlexisDataFrames):
+        # TODO: rework to scheduled state
+        occurences = flexis_data_frames.Order["productName:String"].value_counts()
+        freq = 48 * 60 / occurences
+        for material in self.material_data:
+            self.queue_data.append(
+                queue_data.QueueData(
+                    ID=material.ID + "_source_output_queue",
+                    description="Source queue for " + material.ID,
+                )
+            )
+            self.time_model_data.append(
+                time_model_data.FunctionTimeModelData(
+                    ID=material.ID + "_source_time_model",
+                    description="Source time model for " + material.ID,
+                    type=time_model_data.TimeModelEnum.FunctionTimeModel,
+                    distribution_function="exponential",
+                    parameters=[freq[material.ID]],
+                )
+            )
+
+            self.source_data.append(
+                source_data.SourceData(
+                    ID=material.ID + "_source",
+                    description="Source for " + material.ID,
+                    capacity=100,
+                    location=(0, 0),
+                    material_type=material.ID,
+                    time_model_id=material.ID + "_source_time_model",
+                    router="AvoidDeadlockRouter",
+                    routing_heuristic="random",
+                    output_queues=[material.ID + "_source_output_queue"],
+                )
+            )
+
+            self.queue_data.append(
+                queue_data.QueueData(
+                    ID=material.ID + "_sink_input_queue",
+                    description="Sink queue for " + material.ID,
+                )
+            )
+            self.sink_data.append(
+                sink_data.SinkData(
+                    ID=material.ID + "_sink",
+                    description="Sink for " + material.ID,
+                    location=(0, 0),
+                    material_type=material.ID,
+                    input_queues=[
+                        material.ID + "_sink_input_queue",
+                    ],
+                )
+            )
 
     def write_data(self, file_path: str):
         pass

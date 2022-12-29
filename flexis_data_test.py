@@ -1,4 +1,5 @@
 from prodsim.adapters.flexis_adapter import FlexisAdapter
+import prodsim
 import json
 
 flexis_file_path = "data/adapter_sdm/flexis/Szenario1-84Sek_gut.xlsx"
@@ -9,6 +10,10 @@ flexis_file_path = "data/adapter_sdm/flexis/Szenario1-84Sek_gut.xlsx"
 adapter = FlexisAdapter()
 
 adapter.read_data(flexis_file_path)
+
+runner_object = prodsim.runner.Runner(adapter=adapter)
+runner_object.initialize_simulation()
+runner_object.run(30000)
 
 # loader.write_data("data/Output_data_format/Szenario1-84Sek_gut_neu.json")
 

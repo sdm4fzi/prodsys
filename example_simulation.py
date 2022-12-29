@@ -9,8 +9,8 @@ if __name__ == '__main__':
     # adapter_object.read_data('data/simple_example.json')
     adapter_object.read_data('data/example_configuration.json')
     json = adapter_object.json()
-    with open('data/example_configuration_new.json', 'w') as f:
-        f.write(json)
+    # with open('data/example_configuration_new.json', 'w') as f:
+    #     f.write(json)
     # adapter_object.write_data("data/example_configuration.json")
 
 
