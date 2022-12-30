@@ -145,6 +145,14 @@ class Runner(BaseModel):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
         s = p.print_aggregated_data()
 
+    def plot_results(self):
+        p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
+        p.plot_throughput_over_time()
+        p.plot_WIP()
+        # p.plot_WIP_with_range()
+        p.plot_throughput_time_distribution()
+        p.plot_time_per_state_of_resources()
+
     def get_event_data_simulation_results_as_dict(self) -> dict:
         p = post_processing.PostProcessor()
         df_raw=self.data_collector.get_data_as_dataframe()

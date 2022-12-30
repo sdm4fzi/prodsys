@@ -72,7 +72,7 @@ def register_production_states_for_processes(
                 "time_model_id": process_instance.process_data.time_model_id,
             }
         }
-        if isinstance(process_instance, process.ProductionProcess):
+        if isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess):
             state_factory.create_states_from_configuration_data({"ProductionState": values})
         elif isinstance(process_instance, process.TransportProcess):
             state_factory.create_states_from_configuration_data({"TransportState": values})

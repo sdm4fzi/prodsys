@@ -215,18 +215,19 @@ class FlexisAdapter(adapters.Adapter):
             )
             if time_model_id in time_model_ids:
                 proceses_data_models.append(
-                    processes_data.ProductionProcessData(
+                    processes_data.CapabilityProcessData(
                         ID=task_type.name,
                         description=task_type.description,
-                        type=processes_data.ProcessTypeEnum.ProductionProcesses,
+                        type=processes_data.ProcessTypeEnum.CapabilityProcesses,
                         time_model_id=time_model_id,
+                        capability=task_type.requiredCapabilityNames,
                     )
                 )
-            if not task_type.requiredCapabilityNames in self._capability_process_dict:
-                self._capability_process_dict[task_type.requiredCapabilityNames] = []
-            self._capability_process_dict[task_type.requiredCapabilityNames].append(
-                time_model_id
-            )
+                if not task_type.requiredCapabilityNames in self._capability_process_dict:
+                    self._capability_process_dict[task_type.requiredCapabilityNames] = []
+                self._capability_process_dict[task_type.requiredCapabilityNames].append(
+                    task_type.requiredCapabilityNames
+                )
         return proceses_data_models
 
     def initialize_resource_models(self, flexis_data_frames: FlexisDataFrames):
@@ -237,7 +238,6 @@ class FlexisAdapter(adapters.Adapter):
             self.resource_data.append(self.create_resource_model(resource))
 
     def create_resource_model(self, resource: Machine):
-        # TODO: rework processes with capabilities!
         return resource_data.ProductionResourceData(
             ID=resource.name,
             description=resource.description,
@@ -290,6 +290,22 @@ class FlexisAdapter(adapters.Adapter):
         )
         self.resource_data.append(transport_resource)
 
+    def get_capabilities_of_workplan(
+        self, flexis_data_frames: FlexisDataFrames, workplan: JobWorkplan
+    ):
+        task_type_data = self.get_object_from_data_frame(
+            flexis_data_frames.TaskType, TaskType
+        )
+        required_capability_names = []
+        for task_type_name in workplan.taskTypeName:
+            for task_type in task_type_data:
+                if task_type_name == task_type.name:
+                    required_capability_names.append(task_type.requiredCapabilityNames)
+                    break
+            else:
+                raise ValueError("Task type not found: " + task_type_name)
+        return required_capability_names
+
     def initialize_material_models(self, flexis_data_frames: FlexisDataFrames):
         workplan_df = (
             flexis_data_frames.WorkPlan.groupby(by=["jobTypeName:String"])[
@@ -303,11 +319,24 @@ class FlexisAdapter(adapters.Adapter):
             workplan_df, JobWorkplan
         )
         for workplan in workplans:
+            required_capabilities = self.get_capabilities_of_workplan(
+                flexis_data_frames, workplan
+            )
+            self.process_data += [
+                processes_data.CapabilityProcessData(
+                    ID=capability,
+                    description=capability,
+                    time_model_id=self.time_model_data[0].ID,
+                    type=processes_data.ProcessTypeEnum.CapabilityProcesses,
+                    capability=capability,
+                )
+                for capability in required_capabilities
+            ]
             self.material_data.append(
                 material_data.MaterialData(
                     ID=workplan.jobTypeName,
                     description=workplan.jobTypeName,
-                    processes=workplan.taskTypeName,
+                    processes=required_capabilities,
                     transport_process="Transport",
                 )
             )
@@ -341,7 +370,7 @@ class FlexisAdapter(adapters.Adapter):
                     location=(0, 0),
                     material_type=material.ID,
                     time_model_id=material.ID + "_source_time_model",
-                    router="AvoidDeadlockRouter",
+                    router="CapabilityRouter",
                     routing_heuristic="random",
                     output_queues=[material.ID + "_source_output_queue"],
                 )
