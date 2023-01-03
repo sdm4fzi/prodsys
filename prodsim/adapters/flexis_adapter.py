@@ -177,17 +177,20 @@ class FlexisAdapter(adapters.Adapter):
         )
 
     def create_transport_time_model(self, transition_time: TransitionTime):
+        duration_in_minutes = (
+            transition_time.duration
+            - datetime.datetime.strptime("00:00:00.000", "%H:%M:%S.%f")
+        ).total_seconds() / 60 - 24 * 60
+        if duration_in_minutes < 0:
+            duration_in_minutes = 3
+
         return time_model_data.FunctionTimeModelData(
             ID=transition_time.jobTypeName + "_" + transition_time.transitionTimeGroup,
             description=f"Process time of {transition_time.jobTypeName} and {transition_time.transitionTimeGroup}",
             type=time_model_data.TimeModelEnum.FunctionTimeModel,
             distribution_function="constant",
             parameters=[
-                (
-                    transition_time.duration
-                    - datetime.datetime.strptime("00:00:00.000", "%H:%M:%S.%f")
-                ).total_seconds()
-                / 60
+                duration_in_minutes
             ],
             batch_size=100,
         )
@@ -223,8 +226,13 @@ class FlexisAdapter(adapters.Adapter):
                         capability=task_type.requiredCapabilityNames,
                     )
                 )
-                if not task_type.requiredCapabilityNames in self._capability_process_dict:
-                    self._capability_process_dict[task_type.requiredCapabilityNames] = []
+                if (
+                    not task_type.requiredCapabilityNames
+                    in self._capability_process_dict
+                ):
+                    self._capability_process_dict[
+                        task_type.requiredCapabilityNames
+                    ] = []
                 self._capability_process_dict[task_type.requiredCapabilityNames].append(
                     task_type.requiredCapabilityNames
                 )
@@ -278,17 +286,18 @@ class FlexisAdapter(adapters.Adapter):
             time_model_id=self.time_model_data[-1].ID,
         )
         self.process_data.append(transport_process)
-        transport_resource = resource_data.TransportResourceData(
-            ID="Transport",
-            description="Transport resource",
-            capacity=1,
-            location=(0, 0),
-            controller="TransportController",
-            control_policy="SPT_transport",
-            processes=["Transport"],
-            states=[],
-        )
-        self.resource_data.append(transport_resource)
+        for i in range(50):
+            transport_resource = resource_data.TransportResourceData(
+                ID="Transport_" + str(i),
+                description="Transport resource",
+                capacity=1,
+                location=(0, 0),
+                controller="TransportController",
+                control_policy="SPT_transport",
+                processes=["Transport"],
+                states=[],
+            )
+            self.resource_data.append(transport_resource)
 
     def get_capabilities_of_workplan(
         self, flexis_data_frames: FlexisDataFrames, workplan: JobWorkplan
@@ -306,6 +315,26 @@ class FlexisAdapter(adapters.Adapter):
                 raise ValueError("Task type not found: " + task_type_name)
         return required_capability_names
 
+    def create_capability_processes(
+        self, flexis_data_frames: FlexisDataFrames, workplans: List[JobWorkplan]
+    ):
+        all_capabilities = set()
+        for workplan in workplans:
+            required_capabilities = self.get_capabilities_of_workplan(
+                flexis_data_frames, workplan
+            )
+            all_capabilities.update(required_capabilities)
+        self.process_data += [
+            processes_data.CapabilityProcessData(
+                ID=capability,
+                description=capability,
+                time_model_id=self.time_model_data[0].ID,
+                type=processes_data.ProcessTypeEnum.CapabilityProcesses,
+                capability=capability,
+            )
+            for capability in all_capabilities
+        ]
+
     def initialize_material_models(self, flexis_data_frames: FlexisDataFrames):
         workplan_df = (
             flexis_data_frames.WorkPlan.groupby(by=["jobTypeName:String"])[
@@ -318,20 +347,11 @@ class FlexisAdapter(adapters.Adapter):
         workplans: List[JobWorkplan] = self.get_object_from_data_frame(
             workplan_df, JobWorkplan
         )
+        self.create_capability_processes(flexis_data_frames, workplans)
         for workplan in workplans:
             required_capabilities = self.get_capabilities_of_workplan(
                 flexis_data_frames, workplan
             )
-            self.process_data += [
-                processes_data.CapabilityProcessData(
-                    ID=capability,
-                    description=capability,
-                    time_model_id=self.time_model_data[0].ID,
-                    type=processes_data.ProcessTypeEnum.CapabilityProcesses,
-                    capability=capability,
-                )
-                for capability in required_capabilities
-            ]
             self.material_data.append(
                 material_data.MaterialData(
                     ID=workplan.jobTypeName,
@@ -344,6 +364,7 @@ class FlexisAdapter(adapters.Adapter):
     def initialize_source_and_sink_data(self, flexis_data_frames: FlexisDataFrames):
         # TODO: rework to scheduled state
         occurences = flexis_data_frames.Order["productName:String"].value_counts()
+        occurences = occurences * 15
         freq = 48 * 60 / occurences
         for material in self.material_data:
             self.queue_data.append(

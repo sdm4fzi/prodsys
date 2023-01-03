@@ -33,14 +33,33 @@ class PostProcessor:
         self.df_raw = pd.read_csv(self.filepath)
         self.df_raw.drop(columns=["Unnamed: 0"], inplace=True)
 
+    def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.DataFrame:
+        return (
+            (df["State"].str.contains("S") & (~df["State"].str.contains("~")))
+            | (df["State"].str.contains("source"))
+            | (df["State"].str.contains("sink"))
+        )
+
+    def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
+        return (
+            (df["State"].str.contains("P"))
+            | (df["State"].str.contains("~"))
+            | (df["State"].str.contains("Transport"))
+        )
+
     def get_prepared_df(self) -> pd.DataFrame:
         df = self.df_raw.copy()
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
-        df["Material_type"] = df["Material"].str[:10]
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
-        df["Material_type"] = df["Material"].str[:10]
-        df.loc[df["State"].str.contains("S"), "State_type"] = "Interface State"
-        df.loc[df["State"].str.contains("P"), "State_type"] = "Process State"
+        df["Material_type"] = df["Material"].str.rsplit("_", n=1).str[0]
+        df.loc[
+            self.get_conditions_for_interface_state(df),
+            "State_type",
+        ] = "Interface State"
+        df.loc[
+            self.get_conditions_for_process_state(df),
+            "State_type",
+        ] = "Process State"
         df.loc[df["State"].str.contains("Breakdown"), "State_type"] = "Breakdown State"
 
         COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
@@ -407,10 +426,21 @@ class PostProcessor:
 
     def get_aggregated_data(self) -> dict:
         data = {}
-        data["Throughput"] = self.get_aggregated_output_and_throughput_data_frame().reset_index().to_dict()
+        data["Throughput"] = (
+            self.get_aggregated_output_and_throughput_data_frame()
+            .reset_index()
+            .to_dict()
+        )
         data["WIP"] = self.get_df_with_aggregated_WIP().reset_index().to_dict()
-        data["Throughput time"] = self.get_aggregated_throughput_time_data_frame().reset_index().to_dict()
-        data["Resource states"] = self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"]).reset_index().to_dict()
+        data["Throughput time"] = (
+            self.get_aggregated_throughput_time_data_frame().reset_index().to_dict()
+        )
+        data["Resource states"] = (
+            self.get_time_per_state_of_resources()
+            .set_index(["Resource", "Time_type"])
+            .reset_index()
+            .to_dict()
+        )
 
         return data
 
