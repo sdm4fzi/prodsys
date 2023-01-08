@@ -286,7 +286,7 @@ class FlexisAdapter(adapters.Adapter):
             time_model_id=self.time_model_data[-1].ID,
         )
         self.process_data.append(transport_process)
-        for i in range(50):
+        for i in range(20):
             transport_resource = resource_data.TransportResourceData(
                 ID="Transport_" + str(i),
                 description="Transport resource",
