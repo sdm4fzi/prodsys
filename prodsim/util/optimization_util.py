@@ -1,11 +1,18 @@
 import json
 import random
 from copy import copy, deepcopy
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
-from . import loader
+from uuid import uuid1
+from collections.abc import Iterable
+
+
+from prodsim import adapters
 from prodsim.simulation.sim import Environment
 from prodsim.util.post_processing import PostProcessor
+from prodsim.data_structures import (
+    queue_data, resource_data, time_model_data, state_data, processes_data, material_data, sink_data, source_data
+)
 
 
 def crossover(ind1, ind2):
@@ -76,84 +83,123 @@ def mutation(scenario_dict, individual):
             change_control_policy,
         ]
     )
-    loader_object = individual[0]
-    mutation_operation(loader_object, scenario_dict)
+    adapter_object = individual[0]
+    mutation_operation(adapter_object, scenario_dict)
     individual[0].add_default_queues(queue_capacity=100)
 
     return (individual,)
 
+def get_possible_production_processes_IDs(adapter_object: adapters.Adapter, scenario_dict: dict) -> Union[List[str], List[List[str]]]:
+    possible_processes = adapter_object.process_data
+    if not any([process.type == processes_data.ProcessTypeEnum.CapabilityProcesses for process in possible_processes]):
+        return [process.ID for process in possible_processes if isinstance(process, processes_data.ProductionProcessData)]
+    capability_processes = [process for process in possible_processes if isinstance(process, processes_data.CapabilityProcessData) and process.time_model_id is not None]
+    process_dict = {}
+    for process in capability_processes:
+        if not process.capability in process_dict.keys():
+            process_dict[process.capability] = []
+        process_dict[process.capability].append(process.ID)
+    return list(process_dict.values())
 
-def add_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
+def flatten(xs):
+    for x in xs:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            yield from flatten(x)
+        else:
+            yield x
+
+def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     num_process_modules = (
         random.choice(
             range(scenario_dict["constraints"]["max_num_processes_per_machine"])
         )
         + 1
     )
-    possible_processes = loader_object.get_processes()
+    possible_processes = get_possible_production_processes_IDs(adapter_object, scenario_dict)
     process_module_list = random.sample(possible_processes, num_process_modules)
+    process_module_list = list(flatten(process_module_list))
+
 
     control_policy = random.choice(scenario_dict["options"]["machine_controllers"])
-    possible_positions = deepcopy(scenario_dict["options"]["positions"])
-    for machine_key in loader_object.get_machines():
-        possible_positions.remove(loader_object.resource_data[machine_key]["location"])
+    possible_positions: List[Tuple[float, float]] =[tuple(position[0], position[1]) for position in deepcopy(scenario_dict["options"]["positions"])]
+    for resource in adapter_object.resource_data:
+        possible_positions.remove(resource.location)
     if possible_positions:
         location = random.choice(possible_positions)
-        loader_object.add_machine(
-            control_policy=control_policy,
+        machine_ids = [resource.ID for resource in adapter_object.resource_data if isinstance(resource, resource_data.ProductionResourceData)]
+        machine_id = str(uuid1())
+        while machine_id in machine_ids:
+            machine_id = str(uuid1())
+        adapter_object.resource_data.append(
+        resource_data.ProductionResourceData(
+            ID=machine_id,
+            description="",
+            capacity=1,
             location=location,
+            controller="SimpleController",
+            control_policy=control_policy,
             processes=process_module_list,
-            states=["BS1"],
+        )
         )
 
-
 def add_transport_resource(
-    loader_object: loader.CustomLoader, scenario_dict: dict
+    adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
     control_policy = random.choice(scenario_dict["options"]["transport_controllers"])
-    loader_object.add_transport_resource(
+
+    transport_resource_ids = [resource.ID for resource in adapter_object.resource_data if isinstance(resource, resource_data.TransportResourceData)]
+    transport_resource_id = str(uuid1())
+    while transport_resource_id in transport_resource_ids:
+        transport_resource_id = str(uuid1())
+    adapter_object.resource_data.append(
+    resource_data.TransportResourceData(
+        ID=transport_resource_id,
+        description="",
+        capacity=1,
+        location=(0.0, 0.0),
+        controller="TransportController",
         control_policy=control_policy,
-        location=[0, 0],
-        processes=["TP1"],
-        states=["BS2"],
+        processes="Transport",
+    )
     )
 
-
-def add_process_module(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
-    possible_machines = loader_object.get_machines()
+def add_process_module(adapter_object: adapters.CustomLoader, scenario_dict: dict) -> None:
+    possible_machines = [machine for machine in adapter_object.resource_data if isinstance(machine, resource_data.ProductionResourceData)]
     if possible_machines:
-        possible_processes = loader_object.get_processes()
+        possible_processes = get_possible_production_processes_IDs()
         machine = random.choice(possible_machines)
         process_module_to_add = random.choice(possible_processes)
-        loader_object.resource_data[machine]["processes"].append(process_module_to_add)
+        if isinstance(process_module_to_add, str):
+            process_module_to_add = [process_module_to_add]
+        machine.processes += process_module_to_add
 
 
-def remove_machine(loader_object: loader.CustomLoader, scenario_dict: dict) -> None:
-    possible_machines = loader_object.get_machines()
+def remove_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
+    possible_machines = [machine for machine in adapter_object.resource_data if isinstance(machine, resource_data.ProductionResourceData)]
     if possible_machines:
         machine = random.choice(possible_machines)
-        del loader_object.resource_data[machine]
+        adapter_object.resource_data.remove(machine)
 
 
 def remove_transport_resource(
-    loader_object: loader.CustomLoader, scenario_dict: dict
+    adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
-    transport_resources = loader_object.get_transport_resources()
+    transport_resources = [machine for machine in adapter_object.resource_data if isinstance(machine, resource_data.TransportResourceData)]
     if transport_resources:
         transport_resource = random.choice(transport_resources)
-        del loader_object.resource_data[transport_resource]
+        adapter_object.resource_data.remove(transport_resource)
 
 
 def remove_process_module(
-    loader_object: loader.CustomLoader, scenario_dict: dict
+    adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
-    possible_machines = loader_object.get_machines()
+    possible_machines = [machine for machine in adapter_object.resource_data if isinstance(machine, resource_data.ProductionResourceData)]
     if possible_machines:
         machine = random.choice(possible_machines)
-        process_modules = loader_object.resource_data[machine]["processes"]
+        process_modules = adapter_object.resource_data[machine]["processes"]
         if process_modules:
             process_module_to_delete = random.choice(process_modules)
-            loader_object.resource_data[machine]["processes"].remove(
+            adapter_object.resource_data[machine]["processes"].remove(
                 process_module_to_delete
             )
 

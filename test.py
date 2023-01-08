@@ -1,6 +1,17 @@
-import pandas as pd
+import prodsim
+from prodsim.adapters import JsonAdapter, FlexisAdapter
+import json
 
-df = pd.DataFrame({'a': ["a_2_2", "b", "c_1"]})
-print(df)
-df['a'] = df['a'].str.rsplit('_', n=1).str[0]
-print(df)
+flexis_file_path = "data/adapter_sdm/flexis/Szenario1-84Sek_gut.xlsx"
+
+
+adapter = FlexisAdapter()
+
+adapter.read_data(flexis_file_path)
+
+copy = adapter.copy(deep=True)
+copy.resource_data.remove(copy.resource_data[0])
+
+
+print(len(adapter.resource_data))
+print(len(copy.resource_data))

@@ -211,15 +211,15 @@ class FlexisAdapter(adapters.Adapter):
         self, task_type: TaskType, machine_duration_groups: List[str]
     ):
         proceses_data_models = []
+        time_model_ids = set([t.ID for t in self.time_model_data])
         for machine_duration_group in machine_duration_groups:
-            time_model_ids = set([t.ID for t in self.time_model_data])
             time_model_id = (
                 machine_duration_group.split(":")[0] + "_" + task_type.durationGroup
             )
             if time_model_id in time_model_ids:
                 proceses_data_models.append(
                     processes_data.CapabilityProcessData(
-                        ID=task_type.name,
+                        ID=time_model_id,
                         description=task_type.description,
                         type=processes_data.ProcessTypeEnum.CapabilityProcesses,
                         time_model_id=time_model_id,
@@ -234,7 +234,7 @@ class FlexisAdapter(adapters.Adapter):
                         task_type.requiredCapabilityNames
                     ] = []
                 self._capability_process_dict[task_type.requiredCapabilityNames].append(
-                    task_type.requiredCapabilityNames
+                    time_model_id
                 )
         return proceses_data_models
 
@@ -309,32 +309,14 @@ class FlexisAdapter(adapters.Adapter):
         for task_type_name in workplan.taskTypeName:
             for task_type in task_type_data:
                 if task_type_name == task_type.name:
-                    required_capability_names.append(task_type.requiredCapabilityNames)
+                    possible_processes = self._capability_process_dict[task_type.requiredCapabilityNames]
+                    possible_processes = [process for process in possible_processes if task_type_name in process]
+                    required_capability_names.append(possible_processes[0])
                     break
             else:
                 raise ValueError("Task type not found: " + task_type_name)
         return required_capability_names
-
-    def create_capability_processes(
-        self, flexis_data_frames: FlexisDataFrames, workplans: List[JobWorkplan]
-    ):
-        all_capabilities = set()
-        for workplan in workplans:
-            required_capabilities = self.get_capabilities_of_workplan(
-                flexis_data_frames, workplan
-            )
-            all_capabilities.update(required_capabilities)
-        self.process_data += [
-            processes_data.CapabilityProcessData(
-                ID=capability,
-                description=capability,
-                time_model_id=self.time_model_data[0].ID,
-                type=processes_data.ProcessTypeEnum.CapabilityProcesses,
-                capability=capability,
-            )
-            for capability in all_capabilities
-        ]
-
+    
     def initialize_material_models(self, flexis_data_frames: FlexisDataFrames):
         workplan_df = (
             flexis_data_frames.WorkPlan.groupby(by=["jobTypeName:String"])[
@@ -347,7 +329,6 @@ class FlexisAdapter(adapters.Adapter):
         workplans: List[JobWorkplan] = self.get_object_from_data_frame(
             workplan_df, JobWorkplan
         )
-        self.create_capability_processes(flexis_data_frames, workplans)
         for workplan in workplans:
             required_capabilities = self.get_capabilities_of_workplan(
                 flexis_data_frames, workplan
@@ -392,6 +373,7 @@ class FlexisAdapter(adapters.Adapter):
                     material_type=material.ID,
                     time_model_id=material.ID + "_source_time_model",
                     router="CapabilityRouter",
+                    # router="AvoidDeadlockRouter", # also working
                     routing_heuristic="random",
                     output_queues=[material.ID + "_source_output_queue"],
                 )

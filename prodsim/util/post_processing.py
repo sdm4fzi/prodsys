@@ -35,7 +35,7 @@ class PostProcessor:
 
     def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.DataFrame:
         return (
-            (df["State"].str.contains("S") & (~df["State"].str.contains("~")))
+            (df["State"].str.contains("S") & (df["State"].str.len() == 2))
             | (df["State"].str.contains("source"))
             | (df["State"].str.contains("sink"))
         )
@@ -43,8 +43,8 @@ class PostProcessor:
     def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
         return (
             (df["State"].str.contains("P"))
-            | (df["State"].str.contains("~"))
             | (df["State"].str.contains("Transport"))
+            | ~((df["State"].str.contains("Breakdown")) | (df["State"].str.contains("source")) | (df["State"].str.contains("sink")))
         )
 
     def get_prepared_df(self) -> pd.DataFrame:
@@ -60,6 +60,7 @@ class PostProcessor:
             self.get_conditions_for_process_state(df),
             "State_type",
         ] = "Process State"
+
         df.loc[df["State"].str.contains("Breakdown"), "State_type"] = "Breakdown State"
 
         COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
