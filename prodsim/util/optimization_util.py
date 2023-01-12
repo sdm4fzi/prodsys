@@ -491,12 +491,12 @@ def get_objective_values(reconfiguration_cost: int, pp: PostProcessor) -> List[f
 
 
 def evaluate(
+    individual,
     scenario_dict: dict,
     base_scenario: adapters.Adapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     save_folder: str,
-    individual,
 ) -> List[float]:
     adapter_object: adapters.Adapter = individual[0]
     current_generation = solution_dict["current_generation"]
