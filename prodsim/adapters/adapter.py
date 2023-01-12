@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Any, Set
+from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator
 
 from prodsim.data_structures import (
@@ -15,9 +15,38 @@ from prodsim.data_structures import (
     source_data,
 )
 
+def get_machines(adapter: Adapter) -> List[resource_data.ProductionResourceData]:
+    return [resource for resource in adapter.resource_data if isinstance(resource, resource_data.ProductionResourceData)]
+
+def get_transport_resources(adapter: Adapter) -> List[resource_data.TransportResourceData]:
+    return [resource for resource in adapter.resource_data if isinstance(resource, resource_data.TransportResourceData)]
 
 def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
     return set([obj.ID for obj in list_of_objects])
+
+
+def get_default_queues_for_resource(
+    resource: resource_data.ProductionResourceData,
+    queue_capacity: Union[float, int] = 0.0,
+) -> Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]:
+    input_queues = [
+        queue_data.QueueData(
+            ID=resource.ID + "default_input_queue",
+            description="Default input queue of " + resource.ID,
+            capacity=queue_capacity,
+        )
+    ]
+    output_queues = [
+        queue_data.QueueData(
+            ID=resource.ID + "default_output_queue",
+            description="Default output queue of " + resource.ID,
+            capacity=queue_capacity,
+        )
+    ]
+    return input_queues, output_queues
+
+
+
 
 
 class Adapter(ABC, BaseModel):
@@ -72,11 +101,17 @@ class Adapter(ABC, BaseModel):
                 )
         if isinstance(resource, resource_data.ProductionResourceData):
             queues = get_set_of_IDs(values["queue_data"])
-            for queue in resource.input_queues + resource.output_queues:
-                if queue not in queues:
-                    raise ValueError(
-                        f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
-                    )
+            if resource.input_queues and resource.output_queues:
+                for queue in resource.input_queues + resource.output_queues:
+                    if queue not in queues:
+                        raise ValueError(
+                            f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
+                        )
+            else:
+                input_queues, output_queues = get_default_queues_for_resource(resource)
+                resource.input_queues = list(get_set_of_IDs(input_queues))
+                resource.output_queues = list(get_set_of_IDs(output_queues))
+                values["queue_data"] += input_queues + output_queues
 
         return resource
 
