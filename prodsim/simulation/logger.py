@@ -19,10 +19,14 @@ class Datacollector(BaseModel):
 
     def log_data_to_csv(self, filepath: str):
         df = self.get_data_as_dataframe()
+        import warnings
+        warnings.simplefilter(action = "ignore", category = RuntimeWarning)
         df.to_csv(filepath)
 
     def log_data_to_json(self, filepath: str):
         df = self.get_data_as_dataframe()
+        import warnings
+        warnings.simplefilter(action = "ignore", category = RuntimeWarning)
         df.to_json(filepath)
     
     def get_data_as_dataframe(self) -> pd.DataFrame:
@@ -39,7 +43,7 @@ class Datacollector(BaseModel):
             ],
             ordered=True,
         )
-        df["Activity"] = df.Activity.astype(str)
+        df["Activity"] = df["Activity"].astype("string")
         return df
 
     def patch_state(

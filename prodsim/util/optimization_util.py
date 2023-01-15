@@ -254,7 +254,7 @@ def remove_transport_resource(
 
 def get_processes_by_capabilities(
     check_processes: List[processes_data.PROCESS_DATA_UNION],
-):
+) -> Dict[str, List[str]]:
     processes_by_capability = {}
     for process in check_processes:
         if process.capability not in processes_by_capability:
@@ -283,8 +283,11 @@ def remove_process_module(
                 process_module_to_delete = [random.choice(process_modules)]
             else:
                 processes_by_capability = get_processes_by_capabilities(check_processes)
-                process_module_to_delete = random.choice(processes_by_capability.keys())
-            machine.processes.remove(process_module_to_delete)
+                capability_to_delete = random.choice(processes_by_capability.keys())
+                process_module_to_delete = processes_by_capability[capability_to_delete]
+
+            for process in process_module_to_delete:
+                machine.processes.remove(process)
 
 
 def move_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
@@ -305,12 +308,12 @@ def move_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     if possible_machines:
         machine = random.choice(possible_machines)
         possible_positions: List[Tuple[float, float]] = [
-            tuple(position[0], position[1])
+            tuple([position[0], position[1]])
             for position in deepcopy(scenario_dict["options"]["positions"])
         ]
-
         for machine in adapter_object.resource_data:
-            possible_positions.remove(machine.location)
+            if machine.location in possible_positions:
+                possible_positions.remove(machine.location)
         if possible_positions:
             machine.location = random.choice(possible_positions)
 
@@ -511,6 +514,7 @@ def evaluate(
         if (
             generation != "current_generation"
             and adapter_object.dict() in solution_dict[generation]
+            and "fitness" in performances[generation][str(index)]
         ):
             index = solution_dict[generation].index(adapter_object.dict())
             return performances[generation][str(index)]["fitness"]
@@ -524,7 +528,6 @@ def evaluate(
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(10000)
-
     df = runner_object.data_collector.get_data_as_dataframe()
     p = PostProcessor(df_raw=df)
     reconfiguration_cost = calculate_reconfiguration_cost(scenario_dict, adapter_object, base_scenario)

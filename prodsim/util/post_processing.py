@@ -267,7 +267,7 @@ class PostProcessor:
         ].sum()
         df_time_per_state = df_time_per_state.to_frame().reset_index()
 
-        df_resource_time = df_time_per_state.groupby(by="Resource").sum().reset_index()
+        df_resource_time = df_time_per_state.groupby(by="Resource").sum(numeric_only=True).reset_index()
         df_resource_time.rename(
             columns={"time_increment": "resource_time"}, inplace=True
         )
