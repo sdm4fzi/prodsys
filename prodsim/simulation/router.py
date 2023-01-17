@@ -7,6 +7,7 @@ from typing import List, TYPE_CHECKING
 import numpy as np
 
 from prodsim.simulation import process
+from prodsim.simulation import resources
 
 
 if TYPE_CHECKING:

@@ -21,7 +21,10 @@ from prodsim.data_structures import (
     source_data,
 )
 
-def remove_queues_from_resource(machine: resource_data.ProductionResourceData, adapter: adapters.Adapter) -> adapters.Adapter:
+
+def remove_queues_from_resource(
+    machine: resource_data.ProductionResourceData, adapter: adapters.Adapter
+) -> adapters.Adapter:
     if machine.input_queues or machine.output_queues:
         for queue_ID in machine.input_queues + machine.output_queues:
             for queue in adapter.queue_data:
@@ -33,28 +36,31 @@ def remove_queues_from_resource(machine: resource_data.ProductionResourceData, a
             machine.output_queues = []
         return adapter
 
+
 def remove_unused_queues_from_adapter(adapter: adapters.Adapter) -> adapters.Adapter:
     for queue in adapter.queue_data:
         if not any(
             [
                 queue.ID in machine.input_queues + machine.output_queues
-                for machine in adapters.get_machines(adapter) if machine.input_queues or machine.output_queues
-            ] + 
-            [
-                queue.ID in source.output_queues for source in adapter.source_data
-            ] + 
-            [
-                queue.ID in sink.input_queues for sink in adapter.sink_data
+                for machine in adapters.get_machines(adapter)
+                if machine.input_queues or machine.output_queues
             ]
+            + [queue.ID in source.output_queues for source in adapter.source_data]
+            + [queue.ID in sink.input_queues for sink in adapter.sink_data]
         ):
             adapter.queue_data.remove(queue)
     return adapter
 
-def add_default_queues_to_resources(adapter: adapters.Adapter, queue_capacity=100) -> adapters.Adapter:
+
+def add_default_queues_to_resources(
+    adapter: adapters.Adapter, queue_capacity=100
+) -> adapters.Adapter:
     for machine in adapters.get_machines(adapter):
         remove_queues_from_resource(machine, adapter)
         remove_unused_queues_from_adapter(adapter)
-        input_queues, output_queues = adapters.get_default_queues_for_resource(machine, queue_capacity)
+        input_queues, output_queues = adapters.get_default_queues_for_resource(
+            machine, queue_capacity
+        )
         machine.input_queues = list(adapters.get_set_of_IDs(input_queues))
         machine.output_queues = list(adapters.get_set_of_IDs(output_queues))
         adapter.queue_data += input_queues + output_queues
@@ -154,9 +160,7 @@ def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
         )
         + 1
     )
-    possible_processes = get_possible_production_processes_IDs(
-        adapter_object
-    )
+    possible_processes = get_possible_production_processes_IDs(adapter_object)
     if num_process_modules > len(possible_processes):
         num_process_modules = len(possible_processes)
     process_module_list = random.sample(possible_processes, num_process_modules)
@@ -180,7 +184,8 @@ def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
         machine_id = str(uuid1())
         while machine_id in machine_ids:
             machine_id = str(uuid1())
-        adapter_object.resource_data.append(resource_data.ProductionResourceData(
+        adapter_object.resource_data.append(
+            resource_data.ProductionResourceData(
                 ID=machine_id,
                 description="",
                 capacity=1,
@@ -188,10 +193,9 @@ def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
                 controller="SimpleController",
                 control_policy=control_policy,
                 processes=process_module_list,
-            ))
+            )
+        )
         add_default_queues_to_resources(adapter_object)
-
-        
 
 
 def add_transport_resource(
@@ -220,9 +224,7 @@ def add_transport_resource(
     )
 
 
-def add_process_module(
-    adapter_object: adapters.Adapter, scenario_dict: dict
-) -> None:
+def add_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
     if possible_machines:
         possible_processes = get_possible_production_processes_IDs(adapter_object)
@@ -416,24 +418,27 @@ def calculate_reconfiguration_cost(
 def random_configuration(
     scenario_dict: dict, baseline: adapters.Adapter
 ) -> adapters.Adapter:
-
-    num_machines = (
-        random.choice(range(scenario_dict["constraints"]["max_num_machines"])) + 1
-    )
-    num_transport_resources = (
-        random.choice(
-            range(scenario_dict["constraints"]["max_num_transport_resources"])
+    while True:
+        num_machines = (
+            random.choice(range(scenario_dict["constraints"]["max_num_machines"])) + 1
         )
-        + 1
-    )
+        num_transport_resources = (
+            random.choice(
+                range(scenario_dict["constraints"]["max_num_transport_resources"])
+            )
+            + 1
+        )
 
-    adapter_object = baseline.copy(deep=True)
-    adapter_object.resource_data = []
+        adapter_object = baseline.copy(deep=True)
+        adapter_object.resource_data = []
 
-    for _ in range(num_machines):
-        add_machine(adapter_object, scenario_dict)
-    for _ in range(num_transport_resources):
-        add_transport_resource(adapter_object, scenario_dict)
+        for _ in range(num_machines):
+            add_machine(adapter_object, scenario_dict)
+        for _ in range(num_transport_resources):
+            add_transport_resource(adapter_object, scenario_dict)
+
+        if check_valid_configuration(adapter_object, baseline, scenario_dict):
+            break
 
     return adapter_object
 
@@ -447,23 +452,27 @@ def check_valid_configuration(
         len(adapters.get_machines(configuration))
         > scenario_dict["constraints"]["max_num_machines"]
     ):
-        print("too many machines")
         return False
 
     if (
         len(adapters.get_transport_resources(configuration))
         > scenario_dict["constraints"]["max_num_transport_resources"]
     ) or (len(adapters.get_transport_resources(configuration)) == 0):
-        print("too many transport resources", len(adapters.get_transport_resources(configuration)))
         return False
 
     for resource in configuration.resource_data:
         if (
-            len(get_grouped_processes_of_machine(resource, get_possible_production_processes_IDs(configuration)))
+            len(
+                get_grouped_processes_of_machine(
+                    resource, get_possible_production_processes_IDs(configuration)
+                )
+            )
             > scenario_dict["constraints"]["max_num_processes_per_machine"]
         ):
-            print("too many processes per machine")
             return False
+    
+    if set(flatten([resource.processes for resource in adapters.get_machines(configuration)])) < set(get_possible_production_processes_IDs(configuration)):
+        return False
 
     reconfiguration_cost = calculate_reconfiguration_cost(
         scenario_dict=scenario_dict,
@@ -475,7 +484,7 @@ def check_valid_configuration(
     if reconfiguration_cost > scenario_dict["constraints"]["max_reconfiguration_cost"]:
         print("too high reconfiguration cost")
         return False
-    
+
     return True
 
 
@@ -494,21 +503,23 @@ def get_objective_values(reconfiguration_cost: int, pp: PostProcessor) -> List[f
 
 
 def evaluate(
-    individual,
     scenario_dict: dict,
     base_scenario: adapters.Adapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     save_folder: str,
+    individual,
 ) -> List[float]:
+
     adapter_object: adapters.Adapter = individual[0]
     current_generation = solution_dict["current_generation"]
 
     counter = len(performances[current_generation])
     performances[current_generation][str(counter)] = {}
-
-    adapters.JsonAdapter(**adapter_object.dict()).write_data(f"{save_folder}/f_{current_generation}_{str(counter)}.json")
-
+    print("\n \n", counter, "\n \n", current_generation)
+    adapters.JsonAdapter(**adapter_object.dict()).write_data(
+        f"{save_folder}/f_{current_generation}_{str(counter)}.json"
+    )
 
     for generation in solution_dict.keys():
         if (
@@ -524,13 +535,13 @@ def evaluate(
     if not check_valid_configuration(adapter_object, base_scenario, scenario_dict):
         print("invalid configuration")
         return [-100000, 100000, 100000]
-    
+
     runner_object = runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(10000)
     df = runner_object.data_collector.get_data_as_dataframe()
     p = PostProcessor(df_raw=df)
-    reconfiguration_cost = calculate_reconfiguration_cost(scenario_dict, adapter_object, base_scenario)
+    reconfiguration_cost = calculate_reconfiguration_cost(
+        scenario_dict, adapter_object, base_scenario
+    )
     return get_objective_values(reconfiguration_cost, p)
-
-    

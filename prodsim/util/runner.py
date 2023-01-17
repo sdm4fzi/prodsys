@@ -139,7 +139,6 @@ class Runner(BaseModel):
         t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
-        print("\n\n###############  run finished  ###############\n")
 
     def print_results(self):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())

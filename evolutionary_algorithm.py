@@ -1,77 +1,85 @@
 import json
 import time
 from random import random
+import multiprocessing
 
 from deap import algorithms, base, creator, tools
 
 from prodsim.simulation import sim
+from prodsim import adapters	
 from prodsim.util.optimization_util import (crossover, evaluate, mutation,
                                        random_configuration)
-from prodsim.util import set_seed
+from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 600
+POPULATION_SIZE = 15
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
 
+
+
+with open("data/scenario.json") as json_file:
+    scenario_dict = json.load(json_file)
+base_scenario = adapters.JsonAdapter()
+base_scenario.read_data('data/example_configuration.json')
+
+set_seed(SEED)
+
+# weights für: (throughput, wip, cost)
+# weights = (0.004, -1.0, -0.0003)
+weights = (0.025, -1.0, -0.001)
+
+solution_dict = {"current_generation": "00", "00": []}
+performances = {}
+performances["00"] = {}
+start = time.perf_counter()
+
+creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+
+toolbox = base.Toolbox()
+toolbox.register(
+    "random_configuration", random_configuration, scenario_dict, base_scenario
+)
+toolbox.register(
+    "individual",
+    tools.initRepeat,
+    creator.Individual,
+    toolbox.random_configuration,
+    n=1,
+)
+
+# Startpopulation erzeugen
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+toolbox.register(
+    "evaluate",
+    evaluate,
+    scenario_dict,
+    base_scenario,
+    solution_dict,
+    performances,
+    SAVE_FOLDER,
+)
+toolbox.register("mate", crossover)  # pass
+toolbox.register("mutate", mutation, scenario_dict)
+# toolbox.register('select', tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selNSGA2)
+# toolbox.register('select', tools.selNSGA3)
+
 if __name__ == "__main__":
 
-    base_scenario = "data/base_scenario.json"
-    with open("data/scenario.json") as json_file:
-        scenario_dict = json.load(json_file)
 
-    set_seed(SEED)
-
-    # weights für: (throughput, wip, cost)
-    # weights = (0.004, -1.0, -0.0003)
-    weights = (0.025, -1.0, -0.001)
-
-    solution_dict = {"current_generation": "00", "00": []}
-    performances = {}
-    performances["00"] = {}
-    start = time.perf_counter()
-
-    creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
-    creator.create("Individual", list, fitness=creator.FitnessMax)
-
-
-    toolbox = base.Toolbox()
-    toolbox.register(
-        "random_configuration", random_configuration, scenario_dict, base_scenario
-    )
-    toolbox.register(
-        "individual",
-        tools.initRepeat,
-        creator.Individual,
-        toolbox.random_configuration,
-        n=1,
-    )
-    # options_dict = {}
-
-
-    # Startpopulation erzeugen
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register(
-        "evaluate",
-        evaluate,
-        scenario_dict,
-        base_scenario,
-        solution_dict,
-        performances,
-        SAVE_FOLDER,
-    )
-    toolbox.register("mate", crossover)  # pass
-    toolbox.register("mutate", mutation, scenario_dict)
-    # toolbox.register('select', tools.selTournament, tournsize=3)
-    toolbox.register("select", tools.selNSGA2)
-    # toolbox.register('select', tools.selNSGA3)
-
+    pool = multiprocessing.Pool(7)
+    # toolbox.register("map", pool.map)
 
     population = toolbox.population(n=POPULATION_SIZE)
     fitnesses = toolbox.map(toolbox.evaluate, population)
+    print("peter")
     generation_performances = []
+    pool.close()
 
     for counter, (ind, fit) in enumerate(zip(population, fitnesses)):
         ind.fitness.values = fit

@@ -262,7 +262,7 @@
       "material_type": "Material_1",
       "time_model_id": "function_time_model_4",
       "router": "AvoidDeadlockRouter",
-      "routing_heuristic": "random",
+      "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     },
     "1": {
@@ -272,7 +272,7 @@
       "material_type": "Material_2",
       "time_model_id": "function_time_model_4",
       "router": "AvoidDeadlockRouter",
-      "routing_heuristic": "random",
+      "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     },
     "2": {
@@ -282,7 +282,7 @@
       "material_type": "Material_3",
       "time_model_id": "function_time_model_4",
       "router": "AvoidDeadlockRouter",
-      "routing_heuristic": "random",
+      "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     }
   }
