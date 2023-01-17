@@ -516,7 +516,6 @@ def evaluate(
 
     counter = len(performances[current_generation])
     performances[current_generation][str(counter)] = {}
-    print("\n \n", counter, "\n \n", current_generation)
     adapters.JsonAdapter(**adapter_object.dict()).write_data(
         f"{save_folder}/f_{current_generation}_{str(counter)}.json"
     )

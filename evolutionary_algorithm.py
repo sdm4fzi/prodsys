@@ -13,7 +13,7 @@ from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 15
+POPULATION_SIZE = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
@@ -70,16 +70,14 @@ toolbox.register("select", tools.selNSGA2)
 # toolbox.register('select', tools.selNSGA3)
 
 if __name__ == "__main__":
-
-
-    pool = multiprocessing.Pool(7)
-    # toolbox.register("map", pool.map)
-
     population = toolbox.population(n=POPULATION_SIZE)
+    
+    pool = multiprocessing.Pool(len(population))
+    toolbox.register("map", pool.map)
     fitnesses = toolbox.map(toolbox.evaluate, population)
+    pool.close()
     print("peter")
     generation_performances = []
-    pool.close()
 
     for counter, (ind, fit) in enumerate(zip(population, fitnesses)):
         ind.fitness.values = fit
@@ -111,7 +109,10 @@ if __name__ == "__main__":
 
         # Evaluate the individuals
         # invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        pool = multiprocessing.Pool(len(offspring))
+        toolbox.register("map", pool.map)
         fits = toolbox.map(toolbox.evaluate, offspring)
+        pool.close()
         generation_performances = []
 
         for counter, (fit, ind) in enumerate(zip(fits, offspring)):
@@ -134,3 +135,5 @@ if __name__ == "__main__":
 
         with open("data/ea_results.json", "w") as json_file:
             json.dump(performances, json_file)
+        
+
