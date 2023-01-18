@@ -24,7 +24,8 @@ SAVE_FOLDER = "data/ea_results"
 with open("data/scenario.json") as json_file:
     scenario_dict = json.load(json_file)
 base_scenario = adapters.JsonAdapter()
-base_scenario.read_data('data/example_configuration.json')
+# base_scenario.read_data('data/example_configuration.json')
+base_scenario.read_data('data/base_scenario_new.json')
 
 set_seed(SEED)
 
