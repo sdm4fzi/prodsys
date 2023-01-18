@@ -8,12 +8,13 @@ from deap import algorithms, base, creator, tools
 from prodsim.simulation import sim
 from prodsim import adapters	
 from prodsim.util.optimization_util import (crossover, evaluate, mutation,
-                                       random_configuration)
+                                       random_configuration, document_individual)
 from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 8
+POPULATION_SIZE = 40
+N_PROCESSES = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
@@ -61,7 +62,6 @@ toolbox.register(
     base_scenario,
     solution_dict,
     performances,
-    SAVE_FOLDER,
 )
 toolbox.register("mate", crossover)  # pass
 toolbox.register("mutate", mutation, scenario_dict)
@@ -72,18 +72,18 @@ toolbox.register("select", tools.selNSGA2)
 if __name__ == "__main__":
     population = toolbox.population(n=POPULATION_SIZE)
     
-    pool = multiprocessing.Pool(len(population))
+    pool = multiprocessing.Pool(N_PROCESSES)
     toolbox.register("map", pool.map)
     fitnesses = toolbox.map(toolbox.evaluate, population)
     pool.close()
-    print("peter")
     generation_performances = []
 
     for counter, (ind, fit) in enumerate(zip(population, fitnesses)):
+        document_individual(solution_dict, SAVE_FOLDER, ind)
         ind.fitness.values = fit
         aggregated_fitness = sum(ind.fitness.wvalues)
         generation_performances.append(aggregated_fitness)
-        performances["00"][str(counter)] = {
+        performances["00"][ind[0].ID] = {
             "agg_fitness": aggregated_fitness,
             "fitness": [float(value) for value in ind.fitness.values],
             "time_stamp": time.perf_counter() - start
@@ -109,17 +109,18 @@ if __name__ == "__main__":
 
         # Evaluate the individuals
         # invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        pool = multiprocessing.Pool(len(offspring))
+        pool = multiprocessing.Pool(N_PROCESSES)
         toolbox.register("map", pool.map)
         fits = toolbox.map(toolbox.evaluate, offspring)
         pool.close()
         generation_performances = []
 
         for counter, (fit, ind) in enumerate(zip(fits, offspring)):
+            document_individual(solution_dict, SAVE_FOLDER, ind)
             ind.fitness.values = fit
             aggregated_fitness = sum(ind.fitness.wvalues)
             generation_performances.append(aggregated_fitness)
-            performances[str(g)][str(counter)] = {
+            performances[str(g)][ind[0].ID] = {
                 "agg_fitness": aggregated_fitness,
                 "fitness": [float(value) for value in ind.fitness.values],
                 "time_stamp": time.perf_counter() - start

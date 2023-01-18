@@ -50,7 +50,7 @@ def get_default_queues_for_resource(
 
 
 class Adapter(ABC, BaseModel):
-
+    ID: str = ""
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 

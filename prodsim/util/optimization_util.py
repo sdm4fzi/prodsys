@@ -68,6 +68,9 @@ def add_default_queues_to_resources(
 
 
 def crossover(ind1, ind2):
+    ind1[0].ID = ""
+    ind2[0].ID = ""
+
     crossover_type = random.choice(["machine", "partial_machine", "transport_resource"])
     adapter1: adapters.Adapter = ind1[0]
     adapter2: adapters.Adapter = ind2[0]
@@ -96,6 +99,7 @@ def crossover(ind1, ind2):
 
 
 def mutation(scenario_dict, individual):
+    individual[0].ID = ""
     mutation_operation = random.choice(
         [
             add_machine,
@@ -502,34 +506,45 @@ def get_objective_values(reconfiguration_cost: int, pp: PostProcessor) -> List[f
     ]
 
 
+
+
+def document_individual(
+    solution_dict: Dict[str, Union[list, str]],
+    save_folder: str,
+    individual,
+):
+    adapter_object: adapters.Adapter = individual[0]
+    current_generation = solution_dict["current_generation"]
+
+    if not adapter_object.ID:
+        adapter_object.ID = str(uuid1())
+    solution_dict[current_generation].append(adapter_object.ID)
+
+    adapters.JsonAdapter(**adapter_object.dict()).write_data(
+        f"{save_folder}/f_{current_generation}_{adapter_object.ID}.json"
+    )
+
+
 def evaluate(
     scenario_dict: dict,
     base_scenario: adapters.Adapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
-    save_folder: str,
     individual,
 ) -> List[float]:
 
     adapter_object: adapters.Adapter = individual[0]
     current_generation = solution_dict["current_generation"]
 
-    counter = len(performances[current_generation])
-    performances[current_generation][str(counter)] = {}
-    adapters.JsonAdapter(**adapter_object.dict()).write_data(
-        f"{save_folder}/f_{current_generation}_{str(counter)}.json"
-    )
-
-    for generation in solution_dict.keys():
-        if (
-            generation != "current_generation"
-            and adapter_object.dict() in solution_dict[generation]
-            and "fitness" in performances[generation][str(index)]
-        ):
-            index = solution_dict[generation].index(adapter_object.dict())
-            return performances[generation][str(index)]["fitness"]
-
-    solution_dict[current_generation].append(adapter_object.dict())
+    if adapter_object.ID:
+        for generation in solution_dict.keys():
+            if (
+                generation != "current_generation"
+                and not generation == current_generation
+                and adapter_object.ID in solution_dict[generation]
+            ):
+                print("found in previous generation", adapter_object.ID)
+                return performances[generation][adapter_object.ID]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario, scenario_dict):
         print("invalid configuration")
