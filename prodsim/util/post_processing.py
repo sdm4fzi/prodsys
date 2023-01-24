@@ -1,6 +1,8 @@
 import os
 from dataclasses import dataclass, field
 
+from prodsim.simulation import state
+
 from typing import List
 
 import pandas as pd
@@ -34,18 +36,12 @@ class PostProcessor:
         self.df_raw.drop(columns=["Unnamed: 0"], inplace=True)
 
     def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.DataFrame:
-        return (
-            (df["State"].str.contains("S") & (df["State"].str.len() == 2))
-            | (df["State"].str.contains("source"))
-            | (df["State"].str.contains("sink"))
-        )
+        return (df["State Type"].isin([state.StateTypeEnum.source, state.StateTypeEnum.sink]))
+    
 
     def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
-        return (
-            (df["State"].str.contains("P"))
-            | (df["State"].str.contains("Transport"))
-            | ~((df["State"].str.contains("Breakdown")) | (df["State"].str.contains("source")) | (df["State"].str.contains("sink")))
-        )
+        return (df["State Type"].isin([state.StateTypeEnum.production, state.StateTypeEnum.transport, 
+            state.StateTypeEnum.breakdown, state.StateTypeEnum.setup]))
 
     def get_prepared_df(self) -> pd.DataFrame:
         df = self.df_raw.copy()

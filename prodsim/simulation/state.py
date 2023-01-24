@@ -25,6 +25,16 @@ class StateEnum(str, Enum):
     start_interrupt = "start interrupt"
     end_interrupt = "end interrupt"
     end_state = "end state"
+    finished_material = "finished material"
+    created_material = "created material"
+
+class StateTypeEnum(str, Enum):
+    production = "Production"
+    transport = "Transport"
+    breakdown = "Breakdown"
+    setup = "Setup"
+    source = "Source"
+    sink = "Sink"
 
 
 class StateInfo(BaseModel, extra=Extra.allow):
@@ -33,32 +43,39 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _event_time: Optional[float] = 0.0
     _expected_end_time: Optional[float] = 0.0
     _activity: Optional[StateEnum] = None
+    _state_type: Optional[StateTypeEnum] = None
     _material_ID: str = ""
     _target_ID: str = ""
 
-    def log_target_location(self, target: material.Location):
+    def log_target_location(self, target: material.Location, state_type: StateTypeEnum):
         self._target_ID = target.data.ID
+        self._state_type = state_type
 
-    def log_material(self, _material: material.Material):
+    def log_material(self, _material: material.Material, state_type: StateTypeEnum):
         self._material_ID = _material.material_data.ID
+        self._state_type = state_type
 
-    def log_start_state(self, start_time: float, expected_end_time: float):
+    def log_start_state(self, start_time: float, expected_end_time: float, state_type: StateTypeEnum):
         self._event_time = start_time
         self._expected_end_time = expected_end_time
         self._activity = StateEnum.start_state
+        self._state_type = state_type
 
-    def log_start_interrupt_state(self, start_time: float):
+    def log_start_interrupt_state(self, start_time: float, state_type: StateTypeEnum):
         self._event_time = start_time
         self._activity = StateEnum.start_interrupt
+        self._state_type = state_type
 
-    def log_end_interrupt_state(self, start_time: float, expected_end_time: float):
+    def log_end_interrupt_state(self, start_time: float, expected_end_time: float, state_type: StateTypeEnum):
         self._event_time = start_time
         self._expected_end_time = expected_end_time
         self._activity = StateEnum.end_interrupt
+        self._state_type = state_type
 
-    def log_end_state(self, start_time: float):
+    def log_end_state(self, start_time: float, state_type: StateTypeEnum):
         self._event_time = start_time
         self._activity = StateEnum.end_state
+        self._state_type = state_type
 
 
 class State(ABC, BaseModel):
@@ -124,7 +141,7 @@ class ProductionState(State):
         """
         self.done_in = self.time_model.get_next_time()
         yield self.resource.active
-        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.production)
         while self.done_in:
             try:
                 self.start = self.env.now
@@ -132,14 +149,14 @@ class ProductionState(State):
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except exceptions.Interrupt:
-                self.state_info.log_start_interrupt_state(self.env.now)
+                self.state_info.log_start_interrupt_state(self.env.now, StateTypeEnum.production)
                 self.update_done_in()
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
-                    self.env.now, self.env.now + self.done_in
+                    self.env.now, self.env.now + self.done_in, StateTypeEnum.production
                 )
-        self.state_info.log_end_state(self.env.now)
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
         self.finished_process.succeed()
 
     def update_done_in(self):
@@ -176,7 +193,7 @@ class TransportState(State):
             origin=self.resource.get_location(), target=target
         )
         yield self.resource.active
-        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in)
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.transport)
         while self.done_in:
             try:
                 self.start = self.env.now
@@ -184,15 +201,15 @@ class TransportState(State):
                 self.done_in = 0  # Set to 0 to exit while loop.
 
             except exceptions.Interrupt:
-                self.state_info.log_start_interrupt_state(self.env.now)
+                self.state_info.log_start_interrupt_state(self.env.now, StateTypeEnum.transport)
                 self.update_done_in()
                 yield self.active
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
-                    self.env.now, self.env.now + self.done_in
+                    self.env.now, self.env.now + self.done_in, StateTypeEnum.transport
                 )
         self.resource.location = target
-        self.state_info.log_end_state(self.env.now)
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
         self.finished_process.succeed()
 
     def update_done_in(self):
@@ -224,11 +241,11 @@ class BreakDownState(State):
             yield self.resource.active
             self.resource.active = events.Event(self.env)
             yield self.env.process(self.resource.interrupt_states())
-            self.state_info.log_start_state(self.env.now, self.env.now + 15)
+            self.state_info.log_start_state(self.env.now, self.env.now + 15, StateTypeEnum.breakdown)
             # TODO: Schedule here the maintainer! or a time model for a repair
             yield self.env.timeout(15)
             self.resource.activate()
-            self.state_info.log_end_state(self.env.now)
+            self.state_info.log_end_state(self.env.now, StateTypeEnum.breakdown)
 
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())

@@ -8,7 +8,7 @@ from typing import List, Generator, TYPE_CHECKING
 # from process import Process
 from simpy import events
 
-from prodsim.simulation import request, sim
+from prodsim.simulation import request, sim, state
 
 if TYPE_CHECKING:
     from prodsim.simulation import material, process, state, resources, request, sink
@@ -147,7 +147,7 @@ class ProductionController(Controller):
     def run_process(self, input_state: state.State, target_material: material.Material):
         env = input_state.env
         input_state.activate_state()
-        input_state.state_info.log_material(target_material)
+        input_state.state_info.log_material(target_material, state.StateTypeEnum.production)
         input_state.process = env.process(input_state.process_state())
         # return input_state.process
 
@@ -253,8 +253,8 @@ class TransportController(Controller):
         env = input_state.env
         target_location = target.get_location()
         input_state.activate_state()
-        input_state.state_info.log_material(material)
-        input_state.state_info.log_target_location(target)
+        input_state.state_info.log_material(material, state.StateTypeEnum.transport)
+        input_state.state_info.log_target_location(target, state.StateTypeEnum.transport)
         input_state.process = env.process(
             input_state.process_state(target=target_location) # type: ignore False
         )

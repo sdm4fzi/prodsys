@@ -103,6 +103,7 @@ def post_monitor_state_info(data: List[dict], state_info: state.StateInfo):
         "Time": state_info._event_time,
         "Resource": state_info.resource_ID,
         "State": state_info.ID,
+        "State Type": state_info._state_type,
         "Activity": state_info._activity,
         "Expected End Time": state_info._expected_end_time,
         "Material": state_info._material_ID,
@@ -117,6 +118,7 @@ def post_monitor_material_info(data: List[dict], material_info: material.Materia
         "Time": material_info.event_time,
         "Resource": material_info.resource_ID,
         "State": material_info.state_ID,
+        "State Type": material_info.state_type,
         "Activity": material_info.activity,
         "Material": material_info.material_ID,
     }
