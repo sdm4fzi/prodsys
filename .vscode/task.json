@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "austin",
+            "file": "example_simulation.py",
+            "label": "Profile example_simulation.py"
+        }
+    ]
+}

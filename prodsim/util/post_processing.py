@@ -228,8 +228,6 @@ class PostProcessor:
 
         df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
 
-        fig = px.scatter(df, x="Time", y="Used_Capacity", color="Resource")
-
         df["next_State_sorting_Index"] = df.groupby(by="Resource")[
             "State_sorting_Index"
         ].shift(-1)
@@ -246,12 +244,18 @@ class PostProcessor:
         DOWN_CONDITION = (df["State_sorting_Index"] == 6) | (
             df["State_sorting_Index"] == 8
         )
+        SETUP_CONDITION = ((
+            (df["State_sorting_Index"] == 5)
+            | (df["State_sorting_Index"] == 3)
+            | ((df["State_sorting_Index"] == 4) & df["Used_Capacity"] != 0)
+        ) & (df["State Type"] == state.StateTypeEnum.setup))
 
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
         df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
+        df.loc[SETUP_CONDITION, "Time_type"] = "ST"
 
         return df
 
@@ -282,7 +286,7 @@ class PostProcessor:
             x="Resource",
             y="time_increment",
             color="Time_type",
-            color_discrete_map={"PR": "green", "SB": "yellow", "UD": "red"},
+            color_discrete_map={"PR": "green", "SB": "yellow", "UD": "red", "ST": "blue"},
         )
         fig.show()
 

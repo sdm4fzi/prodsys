@@ -67,6 +67,38 @@
       "description": "Breakdown state machine 2",
       "time_model_id": "function_time_model_5",
       "type": "BreakDownState"
+    },
+    "2": {
+      "ID": "Setup_State_1",
+      "description": "Setup state machine 1",
+      "time_model_id": "function_time_model_2",
+      "type": "SetupState",
+      "origin_setup": "P1",
+      "target_setup": "P2"
+    },
+    "3": {
+      "ID": "Setup_State_2",
+      "description": "Setup state machine 2",
+      "time_model_id": "function_time_model_2",
+      "type": "SetupState",
+      "origin_setup": "P2",
+      "target_setup": "P1"
+    },
+    "4": {
+      "ID": "Setup_State_3",
+      "description": "Setup state machine 3",
+      "time_model_id": "function_time_model_2",
+      "type": "SetupState",
+      "origin_setup": "P1",
+      "target_setup": "P3"
+    },
+    "5": {
+      "ID": "Setup_State_4",
+      "description": "Setup state machine 3",
+      "time_model_id": "function_time_model_3",
+      "type": "SetupState",
+      "origin_setup": "P3",
+      "target_setup": "P1"
     }
   },
   "processes": {
@@ -142,7 +174,7 @@
       "control_policy": "FIFO",
       "processes": ["P1", "P2"],
       "process_capacity": [2, 1],
-      "states": ["Breakdownstate_1"],
+      "states": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2"],
       "input_queues": ["IQ1"],
       "output_queues": ["OQ1"]
     },
@@ -168,7 +200,7 @@
       "control_policy": "FIFO",
       "processes": ["P1", "P3"],
       "process_capacity": [1, 2],
-      "states": ["Breakdownstate_1", "Breakdownstate_2"],
+      "states": ["Breakdownstate_1", "Breakdownstate_2", "Setup_State_3", "Setup_State_4"],
       "input_queues": ["IQ2"],
       "output_queues": ["OQ3"]
     },
@@ -181,7 +213,7 @@
       "control_policy": "FIFO",
       "processes": ["P1", "P3"],
       "process_capacity": [2, 2],
-      "states": ["Breakdownstate_1"],
+      "states": ["Breakdownstate_1", "Setup_State_3", "Setup_State_4"],
       "input_queues": ["IQ2"],
       "output_queues": ["OQ3"]
     },

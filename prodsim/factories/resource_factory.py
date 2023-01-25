@@ -46,7 +46,6 @@ def register_states(
         copy_state.env = _env
         resource.add_state(copy_state)
 
-
 def register_production_states(
     resource: resources.Resourcex,
     states: List[state.ProductionState],

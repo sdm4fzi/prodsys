@@ -14,6 +14,7 @@ from prodsim.data_structures.state_data import (
     BreakDownStateData,
     ProductionStateData,
     TransportStateData,
+    SetupStateData,
 )
 
 if TYPE_CHECKING:
@@ -106,7 +107,7 @@ class State(ABC, BaseModel):
         try:
             self.active.succeed()
         except:
-            raise RuntimeError("state is allready succeded!!")
+            raise RuntimeError(f"state {self.state_data.ID} is allready succeded!!")
         self.active = events.Event(self.env)
 
     @abstractmethod
@@ -272,21 +273,35 @@ class ScheduledState(State):
             yield None
 
 
-class SetupState(ScheduledState):
-    def __post_init__(self):
+class SetupState(State):
+    state_data: SetupStateData
+    start: float = 0.0
+    done_in: float = 0.0
+
+    def activate_state(self):
+        self.interrupt_processed = events.Event(self.env).succeed()
         self.active = events.Event(self.env)
-        # self.process = self.env.process(self.process_state())
+        self.finished_process = events.Event(self.env)
 
     def process_state(self) -> Generator:
-        while True:
-            yield None
-
-    def wait_for_schedule(self):
-        pass
+        self.done_in = self.time_model.get_next_time()
+        yield self.resource.active
+        yield self.finished_process
+        # yield self.env.process(self.all_processes_finished())
+        self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.setup)
+        yield self.env.timeout(self.done_in)
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.setup)
 
     def interrupt_process(self) -> Generator:
-        while True:
-            yield None
+        yield self.interrupt_processed
+        self.interrupt_processed = events.Event(self.env)
+        if self.process and self.process.is_alive:
+            self.process.interrupt()
+
+    def all_processes_finished(self):
+        print(self.env.now, "wait for processes to finish at", self.resource.data.ID)
+        yield events.AllOf(self.env, self.resource.controller.running_processes)
+        print(self.env.now, "finished waiting for processes to finish at", self.resource.data.ID)
 
 
-STATE_UNION = Union[BreakDownState, ProductionState, TransportState]
+STATE_UNION = Union[BreakDownState, ProductionState, TransportState, SetupState]

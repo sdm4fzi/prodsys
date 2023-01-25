@@ -14,3 +14,7 @@ def get_class_from_str(name: str, cls_dict: dict):
 def set_seed(seed: int) -> None:
     np.random.seed(seed)
     random.seed(seed)
+
+def trivial_process(env):
+    yield env.timeout(0.0)
+    

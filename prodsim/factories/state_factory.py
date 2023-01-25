@@ -12,7 +12,7 @@ from prodsim.simulation import state
 
 
 if TYPE_CHECKING:
-    from ..adapters import adapter
+    from prodsim.adapters import adapter
 
 
 class StateFactory(BaseModel):

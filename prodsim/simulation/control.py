@@ -44,12 +44,6 @@ class Controller(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def perform_setup(
-        self, resource: resources.Resourcex, process: process.Process
-    ) -> None:
-        pass
-
-    @abstractmethod
     def get_next_material_for_process(
         self, resource: resources.Resourcex, process: process.Process
     ) -> List[material.Material]:
@@ -63,9 +57,6 @@ class Controller(ABC, BaseModel):
 class ProductionController(Controller):
 
     resource: resources.ProductionResource = Field(init=False, default=None)
-
-    def perform_setup(self, resource: resources.Resourcex, process: process.PROCESS_UNION):
-        resource.setup(process)
 
     def get_next_material_for_process(
         self, resource: resources.Resourcex, material: material.Material
@@ -126,8 +117,7 @@ class ProductionController(Controller):
         resource = process_request.get_resource()
         process = process_request.get_process()
         material = process_request.get_material()
-
-        # yield _resource.setup(_material.next_process)
+        yield resource.setup(process)
         with resource.request() as req:
             yield req
             eventss = self.get_next_material_for_process(resource, material)
@@ -159,10 +149,6 @@ class TransportController(Controller):
     resource: resources.TransportResource = Field(init=False, default=None)
     requests: List[request.TransportResquest] = Field(default_factory=list)
     control_policy: Callable[[List[request.TransportResquest], ], None]
-
-
-    def perform_setup(self, resource: resources.Resourcex, process: process.PROCESS_UNION):
-        resource.setup(process)
 
     def get_next_material_for_process(
         self, resource: material.Location, material: material.Material
@@ -218,8 +204,7 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
         
-        #TODO: add setup here
-        # yield resource.setup(process)
+        yield resource.setup(process)
         with resource.request() as req:
             self.sort_queue(resource)
             yield req
