@@ -217,10 +217,10 @@ class PostProcessor:
         df = self.get_prepared_df()
         positive_condition = (df["State_type"] == "Process State") & (
             df["Activity"] == "start state"
-        )
+        ) & (df["State Type"] != state.StateTypeEnum.setup)
         negative_condition = (df["State_type"] == "Process State") & (
             df["Activity"] == "end state"
-        )
+        ) & (df["State Type"] != state.StateTypeEnum.setup)
 
         df["Increment"] = 0
         df.loc[positive_condition, "Increment"] = 1
@@ -246,8 +246,6 @@ class PostProcessor:
         )
         SETUP_CONDITION = ((
             (df["State_sorting_Index"] == 5)
-            | (df["State_sorting_Index"] == 3)
-            | ((df["State_sorting_Index"] == 4) & df["Used_Capacity"] != 0)
         ) & (df["State Type"] == state.StateTypeEnum.setup))
 
         df["time_increment"] = df["next_Time"] - df["Time"]

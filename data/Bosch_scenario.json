@@ -1,0 +1,31 @@
+{
+  "constraints": {
+    "max_reconfiguration_cost": 350000,
+    "max_num_machines": 23,
+    "max_num_processes_per_machine": 1,
+    "max_num_transport_resources": 20
+  },
+  "options": {
+    "positions": [
+      [0, 0],
+      [0, 5],
+      [5, 0],
+      [5, 5],
+      [10, 5],
+      [5, 10],
+      [20, 20],
+      [25, 20],
+      [15, 20],
+      [20, 15],
+      [25, 25]
+    ],
+    "machine_controllers": ["FIFO", "SPT", "LIFO"],
+    "transport_controllers": ["FIFO", "SPT_transport"]
+  },
+  "target": { "quantity_material_1": 1300 },
+  "costs": {
+    "machine": 60000,
+    "transport_resource": 10000,
+    "process_module": 8500
+  }
+}
