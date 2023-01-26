@@ -309,6 +309,16 @@ def move_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) -
             to_machine.processes.append(process_module_to_move)
 
 
+def arrange_machines(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
+    possible_positions: List[Tuple[float, float]] = [
+            tuple([position[0], position[1]])
+            for position in deepcopy(scenario_dict["options"]["positions"])
+        ]
+    for machine in adapters.get_machines(adapter_object):
+        machine.location = random.choice(possible_positions)
+        possible_positions.remove(machine.location)
+
+
 def move_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
     if possible_machines:

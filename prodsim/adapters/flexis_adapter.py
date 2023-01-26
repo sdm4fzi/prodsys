@@ -318,7 +318,6 @@ class FlexisAdapter(adapters.Adapter):
             self.resource_data.append(self.create_resource_model(resource))
 
     def create_resource_model(self, resource: Machine):
-        # TODO: get location from grid data
         return resource_data.ProductionResourceData(
             ID=resource.name,
             description=resource.description,
@@ -440,7 +439,7 @@ class FlexisAdapter(adapters.Adapter):
                     ID=material.ID + "_source",
                     description="Source for " + material.ID,
                     capacity=100,
-                    location=(0, 0),
+                    location=(0, 4.96),
                     material_type=material.ID,
                     time_model_id=material.ID + "_source_time_model",
                     router="CapabilityRouter",
@@ -460,7 +459,7 @@ class FlexisAdapter(adapters.Adapter):
                 sink_data.SinkData(
                     ID=material.ID + "_sink",
                     description="Sink for " + material.ID,
-                    location=(0, 0),
+                    location=(0, 12.4),
                     material_type=material.ID,
                     input_queues=[
                         material.ID + "_sink_input_queue",
@@ -478,6 +477,7 @@ class FlexisAdapter(adapters.Adapter):
             row = self._flexis_data_frames.Machine.loc[self._flexis_data_frames.Machine["availableCapabilityNames:String"].str.contains(capability)][:1]
             row["name:String"] = resource.ID
             row["label:String"] = resource.ID
+            row["location:Point"] = str(resource.location)
             new_machine_data = pd.concat([new_machine_data, row])
         new_machine_data.reset_index(inplace=True, drop=True)
         new_flexis_data_frames = self._flexis_data_frames.copy(deep=True)
