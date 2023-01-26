@@ -13,6 +13,7 @@ from prodsim.util.optimization_util import (
     mutation,
     random_configuration,
     document_individual,
+    arrange_machines
 )
 from prodsim.util.util import set_seed
 
@@ -25,17 +26,24 @@ sim.VERBOSE = 1
 SAVE_FOLDER = "data/ea_results"
 
 
-with open("data/scenario.json") as json_file:
+with open("data/Bosch_scenario.json") as json_file:
     scenario_dict = json.load(json_file)
-base_scenario = adapters.JsonAdapter()
-# base_scenario.read_data('data/example_configuration.json')
-base_scenario.read_data("data/base_scenario_new.json")
+
+file_path = "data/adapter_sdm/flexis/Szenario1-84Sek_gut_für_Bosch_reduziert.xlsx"
+base_scenario = adapters.FlexisAdapter()
+
+base_scenario.read_data(file_path)
+arrange_machines(base_scenario, scenario_dict)
 
 set_seed(SEED)
 
-# weights für: (throughput, wip, cost)
-# weights = (0.004, -1.0, -0.0003)
-weights = (0.025, -1.0, -0.001)
+
+
+weights = (
+    1, # throughput 750
+    -25, # wip 30
+    -1/350 # cost 35000
+    )
 
 solution_dict = {"current_generation": "00", "00": []}
 performances = {}

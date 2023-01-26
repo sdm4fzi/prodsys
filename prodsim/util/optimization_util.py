@@ -200,7 +200,19 @@ def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
             )
         )
         add_default_queues_to_resources(adapter_object)
+        add_setup_states_to_machine(adapter_object, machine_id, scenario_dict)
 
+def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: str, scenario_dict: dict):
+    machine = next(
+        resource
+        for resource in adapter_object.resource_data
+        if resource.ID == machine_id
+    )
+    for state in adapter_object.state_data:
+        if not isinstance(state, state_data.SetupStateData) or state in machine.states:
+            continue
+        if state.origin_setup in machine.processes or state.target_setup in machine.processes:
+            machine.states.append(state.ID)
 
 def add_transport_resource(
     adapter_object: adapters.Adapter, scenario_dict: dict
@@ -240,6 +252,7 @@ def add_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) ->
             process for process in process_module_to_add if process in machine.processes
         ]:
             machine.processes += process_module_to_add
+        add_setup_states_to_machine(adapter_object, machine.ID, scenario_dict)
 
 
 def remove_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
