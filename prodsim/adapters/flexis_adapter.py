@@ -170,10 +170,9 @@ class FlexisAdapter(adapters.Adapter):
         transition_time_data = self.get_object_from_data_frame(
             flexis_data_frames.TransitionTime, TransitionTime
         )
-        for transition_time in transition_time_data:
-            self.time_model_data.append(
-                self.create_transport_time_model(transition_time)
-            )
+        self.time_model_data.append(
+            self.create_transport_time_model()
+        )
 
         setup_time_data = self.get_object_from_data_frame(
             flexis_data_frames.SetupTime, SetupTime
@@ -199,23 +198,14 @@ class FlexisAdapter(adapters.Adapter):
             batch_size=100,
         )
 
-    def create_transport_time_model(self, transition_time: TransitionTime):
-        duration_in_minutes = (
-            transition_time.duration
-            - datetime.datetime.strptime("00:00:00.000", "%H:%M:%S.%f")
-        ).total_seconds() / 60 - 24 * 60
-        if duration_in_minutes < 0:
-            duration_in_minutes = 3
-
-        return time_model_data.FunctionTimeModelData(
-            ID=transition_time.jobTypeName + "-" + transition_time.transitionTimeGroup,
-            description=f"Process time of {transition_time.jobTypeName} and {transition_time.transitionTimeGroup}",
-            type=time_model_data.TimeModelEnum.FunctionTimeModel,
+    def create_transport_time_model(self):
+        return time_model_data.ManhattanDistanceTimeModelData(
+            ID="Transport",
+            description=f"Transport time model",
+            type=time_model_data.TimeModelEnum.ManhattanDistanceTimeModel,
             distribution_function="constant",
-            parameters=[
-                duration_in_minutes
-            ],
-            batch_size=100,
+            speed=3*60,
+            reaction_time=0.5
         )
     
     def create_setup_time_model(self, setup_time: SetupTime):
@@ -328,6 +318,7 @@ class FlexisAdapter(adapters.Adapter):
             self.resource_data.append(self.create_resource_model(resource))
 
     def create_resource_model(self, resource: Machine):
+        # TODO: get location from grid data
         return resource_data.ProductionResourceData(
             ID=resource.name,
             description=resource.description,
@@ -363,10 +354,10 @@ class FlexisAdapter(adapters.Adapter):
             ID="Transport",
             description="Transport process",
             type=processes_data.ProcessTypeEnum.TransportProcesses,
-            time_model_id=self.time_model_data[-1].ID,
+            time_model_id="Transport",
         )
         self.process_data.append(transport_process)
-        for i in range(130):
+        for i in range(2):
             transport_resource = resource_data.TransportResourceData(
                 ID="Transport_" + str(i),
                 description="Transport resource",

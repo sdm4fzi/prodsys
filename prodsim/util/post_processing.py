@@ -36,12 +36,19 @@ class PostProcessor:
         self.df_raw.drop(columns=["Unnamed: 0"], inplace=True)
 
     def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.DataFrame:
-        return (df["State Type"].isin([state.StateTypeEnum.source, state.StateTypeEnum.sink]))
-    
+        return df["State Type"].isin(
+            [state.StateTypeEnum.source, state.StateTypeEnum.sink]
+        )
 
     def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
-        return (df["State Type"].isin([state.StateTypeEnum.production, state.StateTypeEnum.transport, 
-            state.StateTypeEnum.breakdown, state.StateTypeEnum.setup]))
+        return df["State Type"].isin(
+            [
+                state.StateTypeEnum.production,
+                state.StateTypeEnum.transport,
+                state.StateTypeEnum.breakdown,
+                state.StateTypeEnum.setup,
+            ]
+        )
 
     def get_prepared_df(self) -> pd.DataFrame:
         df = self.df_raw.copy()
@@ -215,12 +222,16 @@ class PostProcessor:
 
     def get_df_with_machine_states(self) -> pd.DataFrame:
         df = self.get_prepared_df()
-        positive_condition = (df["State_type"] == "Process State") & (
-            df["Activity"] == "start state"
-        ) & (df["State Type"] != state.StateTypeEnum.setup)
-        negative_condition = (df["State_type"] == "Process State") & (
-            df["Activity"] == "end state"
-        ) & (df["State Type"] != state.StateTypeEnum.setup)
+        positive_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "start state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+        )
+        negative_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "end state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+        )
 
         df["Increment"] = 0
         df.loc[positive_condition, "Increment"] = 1
@@ -228,10 +239,28 @@ class PostProcessor:
 
         df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
 
-        df["next_State_sorting_Index"] = df.groupby(by="Resource")[
-            "State_sorting_Index"
-        ].shift(-1)
+        for resource in df["Resource"].unique():
+            if "source" in resource or "sink" in resource:
+                continue
+            example_row = (
+                df.loc[
+                    (df["Resource"] == resource)
+                    & (
+                        ((df["State_sorting_Index"] == 4) & (df["Used_Capacity"] == 0))
+                        | (df["State_sorting_Index"] == 7)
+                    )
+                ]
+                .copy()
+                .head(1)
+            )
+            example_row["Time"] = 0.0
+            df = pd.concat([example_row, df]).reset_index(drop=True)
+
         df["next_Time"] = df.groupby("Resource")["Time"].shift(-1)
+        df["next_Time"].fillna(df["Time"].max(), inplace=True)
+        df["time_increment"] = df["next_Time"] - df["Time"]
+
+        df.to_csv("test.csv")
 
         STANDBY_CONDITION = (
             (df["State_sorting_Index"] == 4) & (df["Used_Capacity"] == 0)
@@ -244,11 +273,9 @@ class PostProcessor:
         DOWN_CONDITION = (df["State_sorting_Index"] == 6) | (
             df["State_sorting_Index"] == 8
         )
-        SETUP_CONDITION = ((
-            (df["State_sorting_Index"] == 5)
-        ) & (df["State Type"] == state.StateTypeEnum.setup))
-
-        df["time_increment"] = df["next_Time"] - df["Time"]
+        SETUP_CONDITION = ((df["State_sorting_Index"] == 5)) & (
+            df["State Type"] == state.StateTypeEnum.setup
+        )
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
         df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
@@ -265,7 +292,11 @@ class PostProcessor:
         ].sum()
         df_time_per_state = df_time_per_state.to_frame().reset_index()
 
-        df_resource_time = df_time_per_state.groupby(by="Resource").sum(numeric_only=True).reset_index()
+        df_resource_time = (
+            df_time_per_state.groupby(by="Resource")
+            .sum(numeric_only=True)
+            .reset_index()
+        )
         df_resource_time.rename(
             columns={"time_increment": "resource_time"}, inplace=True
         )
@@ -284,7 +315,12 @@ class PostProcessor:
             x="Resource",
             y="time_increment",
             color="Time_type",
-            color_discrete_map={"PR": "green", "SB": "yellow", "UD": "red", "ST": "blue"},
+            color_discrete_map={
+                "PR": "green",
+                "SB": "yellow",
+                "UD": "red",
+                "ST": "blue",
+            },
         )
         fig.show()
 
