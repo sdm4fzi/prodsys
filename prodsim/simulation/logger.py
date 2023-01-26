@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import warnings
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
@@ -43,6 +44,7 @@ class Datacollector(BaseModel):
             ],
             ordered=True,
         )
+        warnings.filterwarnings("ignore")
         df["Activity"] = df["Activity"].astype("string")
         return df
 

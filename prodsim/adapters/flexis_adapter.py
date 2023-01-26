@@ -350,7 +350,7 @@ class FlexisAdapter(adapters.Adapter):
 
     def initialize_transport_models(self):
         transport_process = processes_data.TransportProcessData(
-            ID="Transport",
+            ID="TP1",
             description="Transport process",
             type=processes_data.ProcessTypeEnum.TransportProcesses,
             time_model_id="Transport",
@@ -364,7 +364,7 @@ class FlexisAdapter(adapters.Adapter):
                 location=(0, 0),
                 controller="TransportController",
                 control_policy="SPT_transport",
-                processes=["Transport"],
+                processes=["TP1"],
                 states=[],
             )
             self.resource_data.append(transport_resource)
@@ -408,7 +408,7 @@ class FlexisAdapter(adapters.Adapter):
                     ID=workplan.jobTypeName,
                     description=workplan.jobTypeName,
                     processes=required_capabilities,
-                    transport_process="Transport",
+                    transport_process="TP1",
                 )
             )
 

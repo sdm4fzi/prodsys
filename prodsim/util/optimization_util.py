@@ -302,7 +302,7 @@ def remove_process_module(
                 process_module_to_delete = [random.choice(process_modules)]
             else:
                 processes_by_capability = get_processes_by_capabilities(check_processes)
-                capability_to_delete = random.choice(processes_by_capability.keys())
+                capability_to_delete = random.choice(list(processes_by_capability.keys()))
                 process_module_to_delete = processes_by_capability[capability_to_delete]
 
             for process in process_module_to_delete:
@@ -498,7 +498,7 @@ def check_valid_configuration(
         ):
             return False
     
-    if set(flatten([resource.processes for resource in adapters.get_machines(configuration)])) < set(get_possible_production_processes_IDs(configuration)):
+    if set(flatten([resource.processes for resource in adapters.get_machines(configuration)])) < set(flatten(get_possible_production_processes_IDs(configuration))):
         return False
 
     reconfiguration_cost = calculate_reconfiguration_cost(
@@ -509,7 +509,6 @@ def check_valid_configuration(
     configuration.reconfiguration_cost = reconfiguration_cost
 
     if reconfiguration_cost > scenario_dict["constraints"]["max_reconfiguration_cost"]:
-        print("too high reconfiguration cost")
         return False
 
     return True
