@@ -53,7 +53,7 @@ def remove_unused_queues_from_adapter(adapter: adapters.Adapter) -> adapters.Ada
 
 
 def add_default_queues_to_resources(
-    adapter: adapters.Adapter, queue_capacity=100
+    adapter: adapters.Adapter, queue_capacity=0.0
 ) -> adapters.Adapter:
     for machine in adapters.get_machines(adapter):
         remove_queues_from_resource(machine, adapter)
