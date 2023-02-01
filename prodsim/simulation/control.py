@@ -114,7 +114,6 @@ class ProductionController(Controller):
                 or not self.requests
             ):
                 continue
-            print("before control policy", self.resource.data.ID, self.requests)
             self.control_policy(self.requests)
             process_request = self.requests.pop(0)
             running_process = self.env.process(self.start_process(process_request))
