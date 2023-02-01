@@ -13,7 +13,7 @@ from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 40
+POPULATION_SIZE = 16
 N_PROCESSES = 8
 sim.VERBOSE = 1
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     population = toolbox.population(n=POPULATION_SIZE)
     
     pool = multiprocessing.Pool(N_PROCESSES)
-    # toolbox.register("map", pool.map)
+    toolbox.register("map", pool.map)
     fitnesses = toolbox.map(toolbox.evaluate, population)
     pool.close()
     generation_performances = []
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         # Evaluate the individuals
         # invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         pool = multiprocessing.Pool(N_PROCESSES)
-        # toolbox.register("map", pool.map)
+        toolbox.register("map", pool.map)
         fits = toolbox.map(toolbox.evaluate, offspring)
         pool.close()
         generation_performances = []

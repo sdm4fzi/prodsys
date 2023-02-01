@@ -125,10 +125,8 @@ def get_possible_production_processes_IDs(
 ) -> Union[List[str], List[List[str]]]:
     possible_processes = adapter_object.process_data
     if not any(
-        [
-            process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
-            for process in possible_processes
-        ]
+        process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
+        for process in possible_processes
     ):
         return [
             process.ID
@@ -178,41 +176,57 @@ def add_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     for resource in adapter_object.resource_data:
         if resource.location != (0, 0):
             possible_positions.remove(resource.location)
-    if possible_positions:
-        location = random.choice(possible_positions)
-        machine_ids = [
-            resource.ID
-            for resource in adapter_object.resource_data
-            if isinstance(resource, resource_data.ProductionResourceData)
-        ]
+    if not possible_positions:
+        return None
+    location = random.choice(possible_positions)
+    machine_ids = [
+        resource.ID
+        for resource in adapter_object.resource_data
+        if isinstance(resource, resource_data.ProductionResourceData)
+    ]
+    machine_id = str(uuid1())
+    while machine_id in machine_ids:
         machine_id = str(uuid1())
-        while machine_id in machine_ids:
-            machine_id = str(uuid1())
-        adapter_object.resource_data.append(
-            resource_data.ProductionResourceData(
-                ID=machine_id,
-                description="",
-                capacity=1,
-                location=location,
-                controller="SimpleController",
-                control_policy=control_policy,
-                processes=process_module_list,
-            )
+    adapter_object.resource_data.append(
+        resource_data.ProductionResourceData(
+            ID=machine_id,
+            description="",
+            capacity=1,
+            location=location,
+            controller="SimpleController",
+            control_policy=control_policy,
+            processes=process_module_list,
         )
-        add_default_queues_to_resources(adapter_object)
-        add_setup_states_to_machine(adapter_object, machine_id, scenario_dict)
+    )
+    add_default_queues_to_resources(adapter_object)
+    add_setup_states_to_machine(adapter_object, machine_id, scenario_dict)
 
-def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: str, scenario_dict: dict):
+
+def add_setup_states_to_machine(
+    adapter_object: adapters.Adapter, machine_id: str, scenario_dict: dict
+):
     machine = next(
         resource
         for resource in adapter_object.resource_data
         if resource.ID == machine_id
     )
+    no_setup_state_ids = set(
+        [
+            state.ID
+            for state in adapter_object.state_data
+            if not isinstance(state, state_data.SetupStateData)
+        ]
+    )
+    machine.states = [state for state in machine.states if state in no_setup_state_ids]
     for state in adapter_object.state_data:
         if not isinstance(state, state_data.SetupStateData) or state in machine.states:
             continue
-        if state.origin_setup in machine.processes or state.target_setup in machine.processes:
+        if (
+            state.origin_setup in machine.processes
+            or state.target_setup in machine.processes
+        ):
             machine.states.append(state.ID)
+
 
 def add_transport_resource(
     adapter_object: adapters.Adapter, scenario_dict: dict
@@ -242,33 +256,36 @@ def add_transport_resource(
 
 def add_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
-    if possible_machines:
-        possible_processes = get_possible_production_processes_IDs(adapter_object)
-        machine = random.choice(possible_machines)
-        process_module_to_add = random.choice(possible_processes)
-        if isinstance(process_module_to_add, str):
-            process_module_to_add = [process_module_to_add]
-        if not [
-            process for process in process_module_to_add if process in machine.processes
-        ]:
-            machine.processes += process_module_to_add
-        add_setup_states_to_machine(adapter_object, machine.ID, scenario_dict)
+    if not possible_machines:
+        return
+    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    machine = random.choice(possible_machines)
+    process_module_to_add = random.choice(possible_processes)
+    if isinstance(process_module_to_add, str):
+        process_module_to_add = [process_module_to_add]
+    if not [
+        process for process in process_module_to_add if process in machine.processes
+    ]:
+        machine.processes += process_module_to_add
+    add_setup_states_to_machine(adapter_object, machine.ID, scenario_dict)
 
 
 def remove_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
-    if possible_machines:
-        machine = random.choice(possible_machines)
-        adapter_object.resource_data.remove(machine)
+    if not possible_machines:
+        return
+    machine = random.choice(possible_machines)
+    adapter_object.resource_data.remove(machine)
 
 
 def remove_transport_resource(
     adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
     transport_resources = adapters.get_transport_resources(adapter_object)
-    if transport_resources:
-        transport_resource = random.choice(transport_resources)
-        adapter_object.resource_data.remove(transport_resource)
+    if not transport_resources:
+        return
+    transport_resource = random.choice(transport_resources)
+    adapter_object.resource_data.remove(transport_resource)
 
 
 def get_processes_by_capabilities(
@@ -286,47 +303,48 @@ def remove_process_module(
     adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
     possible_machines = adapters.get_machines(adapter_object)
-    if possible_machines:
-        machine = random.choice(possible_machines)
-        process_modules = machine.processes
-        if process_modules:
-            check_processes = [
-                process
-                for process in adapter_object.process_data
-                if process.ID in process_modules
-            ]
-            if not any(
-                isinstance(process, processes_data.CapabilityProcessData)
-                for process in check_processes
-            ):
-                process_module_to_delete = [random.choice(process_modules)]
-            else:
-                processes_by_capability = get_processes_by_capabilities(check_processes)
-                capability_to_delete = random.choice(list(processes_by_capability.keys()))
-                process_module_to_delete = processes_by_capability[capability_to_delete]
+    if not possible_machines:
+        return
+    machine = random.choice(possible_machines)
 
-            for process in process_module_to_delete:
-                machine.processes.remove(process)
+    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    process_modules = get_grouped_processes_of_machine(machine, possible_processes)
+    if not process_modules:
+        return
+    process_module_to_delete = random.choice(process_modules)
+
+    for process in process_module_to_delete:
+        machine.processes.remove(process)
+    add_setup_states_to_machine(adapter_object, machine.ID, scenario_dict)
 
 
 def move_process_module(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
-    if possible_machines and len(possible_machines) > 1:
-        from_machine = random.choice(possible_machines)
-        possible_machines.remove(from_machine)
-        to_machine = random.choice(possible_machines)
-        process_module_IDs = from_machine.processes
-        if process_module_IDs:
-            process_module_to_move = random.choice(process_module_IDs)
-            from_machine.processes.remove(process_module_to_move)
-            to_machine.processes.append(process_module_to_move)
+    if not possible_machines or len(possible_machines) < 2:
+        return
+    from_machine = random.choice(possible_machines)
+    possible_machines.remove(from_machine)
+    to_machine = random.choice(possible_machines)
+
+    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    grouped_process_module_IDs = get_grouped_processes_of_machine(
+        from_machine, possible_processes
+    )
+    if not grouped_process_module_IDs:
+        return
+    process_module_to_move = random.choice(grouped_process_module_IDs)
+    for process_module in process_module_to_move:
+        from_machine.processes.remove(process_module)
+        to_machine.processes.append(process_module)
+    add_setup_states_to_machine(adapter_object, from_machine.ID, scenario_dict)
+    add_setup_states_to_machine(adapter_object, to_machine.ID, scenario_dict)
 
 
 def arrange_machines(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_positions: List[Tuple[float, float]] = [
-            tuple([position[0], position[1]])
-            for position in deepcopy(scenario_dict["options"]["positions"])
-        ]
+        tuple([position[0], position[1]])
+        for position in deepcopy(scenario_dict["options"]["positions"])
+    ]
     for machine in adapters.get_machines(adapter_object):
         machine.location = random.choice(possible_positions)
         possible_positions.remove(machine.location)
@@ -334,43 +352,45 @@ def arrange_machines(adapter_object: adapters.Adapter, scenario_dict: dict) -> N
 
 def move_machine(adapter_object: adapters.Adapter, scenario_dict: dict) -> None:
     possible_machines = adapters.get_machines(adapter_object)
-    if possible_machines:
-        machine = random.choice(possible_machines)
-        possible_positions: List[Tuple[float, float]] = [
-            tuple([position[0], position[1]])
-            for position in deepcopy(scenario_dict["options"]["positions"])
-        ]
-        for machine in adapter_object.resource_data:
-            if machine.location in possible_positions:
-                possible_positions.remove(machine.location)
-        if possible_positions:
-            machine.location = random.choice(possible_positions)
+    if not possible_machines:
+        return
+    machine = random.choice(possible_machines)
+    possible_positions: List[Tuple[float, float]] = [
+        tuple([position[0], position[1]])
+        for position in deepcopy(scenario_dict["options"]["positions"])
+    ]
+    for machine in adapter_object.resource_data:
+        if machine.location in possible_positions:
+            possible_positions.remove(machine.location)
+    if possible_positions:
+        machine.location = random.choice(possible_positions)
 
 
 def change_control_policy(
     adapter_object: adapters.Adapter, scenario_dict: dict
 ) -> None:
-    if adapter_object.resource_data:
-        resource = random.choice(adapter_object.resource_data)
-        if isinstance(resource, resource_data.ProductionResourceData):
-            possible_control_policies = copy(
-                scenario_dict["options"]["machine_controllers"]
-            )
-        else:
-            possible_control_policies = copy(
-                scenario_dict["options"]["transport_controllers"]
-            )
+    if not adapter_object.resource_data:
+        return
+    resource = random.choice(adapter_object.resource_data)
+    if isinstance(resource, resource_data.ProductionResourceData):
+        possible_control_policies = copy(
+            scenario_dict["options"]["machine_controllers"]
+        )
+    else:
+        possible_control_policies = copy(
+            scenario_dict["options"]["transport_controllers"]
+        )
 
-        possible_control_policies.remove(resource.control_policy)
-        new_control_policy = random.choice(possible_control_policies)
-        resource.control_policy = new_control_policy
+    possible_control_policies.remove(resource.control_policy)
+    new_control_policy = random.choice(possible_control_policies)
+    resource.control_policy = new_control_policy
 
 
 def get_grouped_processes_of_machine(
     machine: resource_data.ProductionResourceData, possible_processes: List[List[str]]
 ) -> List[Tuple[str]]:
     if isinstance(possible_processes[0], str):
-        return tuple(machine.processes)
+        return [tuple([process]) for process in machine.processes]
     grouped_processes = []
     for group in possible_processes:
         group = tuple(group)
@@ -497,8 +517,12 @@ def check_valid_configuration(
             > scenario_dict["constraints"]["max_num_processes_per_machine"]
         ):
             return False
-    
-    if set(flatten([resource.processes for resource in adapters.get_machines(configuration)])) < set(flatten(get_possible_production_processes_IDs(configuration))):
+
+    if set(
+        flatten(
+            [resource.processes for resource in adapters.get_machines(configuration)]
+        )
+    ) < set(flatten(get_possible_production_processes_IDs(configuration))):
         return False
 
     reconfiguration_cost = calculate_reconfiguration_cost(
@@ -526,8 +550,6 @@ def get_objective_values(reconfiguration_cost: int, pp: PostProcessor) -> List[f
         sum(wip),
         reconfiguration_cost,
     ]
-
-
 
 
 def document_individual(

@@ -182,12 +182,11 @@ class PostProcessor:
 
         return df_tp
 
-    def get_aggregated_throughput_data_frame(self) -> pd.DataFrame:
+    def get_aggregated_output_data_frame(self) -> pd.DataFrame:
         df = self.get_throughput_data_frame()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count()
-        available_time = max_time * (1 - WARM_UP_CUT_OFF)
 
         return df_tp
 
@@ -483,7 +482,7 @@ class PostProcessor:
         return list(self.get_aggregated_throughput_time_data_frame().values)
 
     def get_aggregated_throughput_data(self) -> List[float]:
-        return list(self.get_aggregated_throughput_data_frame().values)
+        return list(self.get_aggregated_output_data_frame().values)
 
     def get_aggregated_wip_data(self) -> List[float]:
         s = self.get_df_with_aggregated_WIP()

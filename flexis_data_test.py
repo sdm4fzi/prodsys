@@ -19,8 +19,8 @@ JsonAdapter(**adapter.dict()).write_data("data/adapter_sdm/flexis/Szenario1-84Se
 
 runner_object = prodsim.runner.Runner(adapter=adapter)
 runner_object.initialize_simulation()
-runner_object.run(3000)
+runner_object.run(10000)
 runner_object.save_results_as_csv()
 runner_object.print_results()
-runner_object.plot_results()
+# runner_object.plot_results()
 adapter.write_data("data/adapter_sdm/flexis/Szenario1-84Sek_gut_neu.xlsx")

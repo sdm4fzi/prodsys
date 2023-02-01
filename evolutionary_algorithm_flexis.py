@@ -99,6 +99,7 @@ if __name__ == "__main__":
         ind.fitness.values = fit
         aggregated_fitness = sum(ind.fitness.wvalues)
         generation_performances.append(aggregated_fitness)
+        print(ind[0].ID, fit, aggregated_fitness, [float(value) for value in ind.fitness.values])
         performances["00"][ind[0].ID] = {
             "agg_fitness": aggregated_fitness,
             "fitness": [float(value) for value in ind.fitness.values],
