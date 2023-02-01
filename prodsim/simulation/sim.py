@@ -6,6 +6,7 @@ from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from simpy import core
+from simpy import events
 from tqdm import tqdm
 
 # from .factories import state_factory, time_model_factory
@@ -44,6 +45,9 @@ class Environment(core.Environment):
             if VERBOSE == 1:
                 self.pbar.update(time_range - self.last_update)
                 self.pbar.refresh()
+
+    def run_until(self, until: events.Event):
+        super().run(until=until)
 
     def request_process_of_resource(self, request: request.Request) -> None:
         if VERBOSE == 1:

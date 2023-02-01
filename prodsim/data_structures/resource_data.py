@@ -16,7 +16,7 @@ class ResourceData(CoreAsset):
 
     processes: List[str]
     process_capacity: Optional[List[int]]
-    states: List[str]
+    states: Optional[List[str]] = []
 
     @validator("process_capacity")
     def check_process_capacity(cls, v, values):

@@ -34,6 +34,16 @@ class ProductionProcess(Process):
 
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
+    
+
+class CapabilityProcess(Process):
+    process_data: processes_data.CapabilityProcessData
+
+    def get_process_time(self) -> float:
+        return self.time_model.get_next_time()
+
+    def get_expected_process_time(self) -> float:
+        return self.time_model.get_expected_time()
 
 
 class TransportProcess(Process):
@@ -47,5 +57,4 @@ class TransportProcess(Process):
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
 
-
-PROCESS_UNION = Union[ProductionProcess, TransportProcess]
+PROCESS_UNION = Union[ProductionProcess, TransportProcess, CapabilityProcess]

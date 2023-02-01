@@ -46,7 +46,6 @@ def register_states(
         copy_state.env = _env
         resource.add_state(copy_state)
 
-
 def register_production_states(
     resource: resources.Resourcex,
     states: List[state.ProductionState],
@@ -72,7 +71,7 @@ def register_production_states_for_processes(
                 "time_model_id": process_instance.process_data.time_model_id,
             }
         }
-        if isinstance(process_instance, process.ProductionProcess):
+        if isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess):
             state_factory.create_states_from_configuration_data({"ProductionState": values})
         elif isinstance(process_instance, process.TransportProcess):
             state_factory.create_states_from_configuration_data({"TransportState": values})

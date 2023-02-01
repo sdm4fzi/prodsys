@@ -9,4 +9,3 @@ plotly==5.11.0
 scipy==1.9.3
 simpy==4.0.1
 pm4py==2.3.3
-basyx

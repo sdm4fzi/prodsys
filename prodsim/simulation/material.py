@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from enum import Enum
 from collections.abc import Iterable
 from typing import List, Union, Optional, TYPE_CHECKING
 
@@ -10,7 +11,7 @@ import numpy as np
 from simpy import events
 
 from prodsim.simulation import (process, request, router, resources, sim, sink,
-               source, proces_models)
+               source, proces_models, state)
 
 from prodsim.data_structures import material_data
 
@@ -28,8 +29,9 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
     resource_ID: str = Field(init=False, default=None)
     state_ID: str = Field(init=False, default=None)
     event_time: float = Field(init=False, default=None)
-    activity: str = Field(init=False, default=None)
+    activity: state.StateEnum = Field(init=False, default=None)
     material_ID: str = Field(init=False, default=None)
+    state_type: state.StateTypeEnum = Field(init=False, default=None)
 
     def log_finish_material(
         self,
@@ -41,7 +43,9 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.material_ID = _material.material_data.ID
-        self.activity = "finished material"
+        self.activity = state.StateEnum.finished_material
+        self.state_type = state.StateTypeEnum.sink
+
 
     def log_create_material(
         self,
@@ -53,7 +57,8 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.material_ID = _material.material_data.ID
-        self.activity = "created material"
+        self.activity = state.StateEnum.created_material
+        self.state_type = state.StateTypeEnum.source
 
 
 Location = Union[resources.Resourcex, source.Source, sink.Sink]

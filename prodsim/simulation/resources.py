@@ -13,8 +13,8 @@ from prodsim.simulation import process, sim, store
 
 from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, ProductionResourceData, TransportResourceData
 from prodsim.simulation import control, state
+from prodsim.util import util
 
-# TODO: Need to fix the multi inheritance problem and instantiation of simpy resource super class
 class Resourcex(BaseModel, ABC, resource.Resource):
     env: sim.Environment
     data: RESOURCE_DATA_UNION    
@@ -33,17 +33,15 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         arbitrary_types_allowed = True
         extra=Extra.allow
 
-    # def __post_init__(self):
-    #     super(Resource, self).__init__(self.env)
-    #     self.active = events.Event(self.env).succeed()
-    #     self.available = events.Event(self.env)
-
 
     def get_controller(self) -> control.Controller:
         return self.controller
 
     def add_state(self, input_state: state.STATE_UNION) -> None:
-        self.states.append(input_state)
+        if isinstance(input_state, state.SetupState):
+            self.setup_states.append(input_state)
+        else:
+            self.states.append(input_state)
         input_state.set_resource(self)
 
     def add_production_state(self, input_state: state.ProductionState) -> None:
@@ -82,7 +80,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
     def activate(self):
         self.active.succeed()
         for actual_state in self.production_states:
-            if (isinstance(actual_state, state.ProductionState) or isinstance(actual_state, state.TransportState)) and actual_state.process is not None:
+            if (isinstance(actual_state, state.ProductionState) or isinstance(actual_state, state.TransportState) or isinstance(actual_state, state.SetupStateData)) and actual_state.process is not None:
                 actual_state.activate()
 
     def request_repair(self):
@@ -100,13 +98,17 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         yield events.AllOf(self.env, eventss)
 
     def setup(self, _process: process.PROCESS_UNION):
+        if self.current_process is None:
+            self.current_process = _process
+            return self.env.process(util.trivial_process(self.env))
         for input_state in self.setup_states:
-            if input_state.state_data.ID == _process.process_data.ID:
+            if input_state.state_data.target_setup == _process.process_data.ID and \
+            input_state.state_data.origin_setup == self.current_process.process_data.ID:
                 self.current_process = _process
                 input_state.process = self.env.process(input_state.process_state())
                 return input_state.process
         else:
-            raise ValueError(f"Process {_process.process_data.ID} not found in resource {self.data.ID} for setup")
+            return self.env.process(util.trivial_process(self.env))
 
 
 class ProductionResource(Resourcex):

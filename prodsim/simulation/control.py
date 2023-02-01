@@ -8,14 +8,20 @@ from typing import List, Generator, TYPE_CHECKING
 # from process import Process
 from simpy import events
 
-from prodsim.simulation import request, sim
+from prodsim.simulation import request, sim, state
 
 if TYPE_CHECKING:
     from prodsim.simulation import material, process, state, resources, request, sink
+    from prodsim.util import gym_env
 
 
 class Controller(ABC, BaseModel):
-    control_policy: Callable[[List[request.Request], ], None]
+    control_policy: Callable[
+        [
+            List[request.Request],
+        ],
+        None,
+    ]
     env: sim.Environment
 
     resource: resources.Resourcex = Field(init=False, default=None)
@@ -26,7 +32,7 @@ class Controller(ABC, BaseModel):
     @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
         return events.Event(values["env"])
-    
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -44,12 +50,6 @@ class Controller(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def perform_setup(
-        self, resource: resources.Resourcex, process: process.Process
-    ) -> None:
-        pass
-
-    @abstractmethod
     def get_next_material_for_process(
         self, resource: resources.Resourcex, process: process.Process
     ) -> List[material.Material]:
@@ -64,9 +64,6 @@ class ProductionController(Controller):
 
     resource: resources.ProductionResource = Field(init=False, default=None)
 
-    def perform_setup(self, resource: resources.Resourcex, process: process.PROCESS_UNION):
-        resource.setup(process)
-
     def get_next_material_for_process(
         self, resource: resources.Resourcex, material: material.Material
     ) -> List[events.Event]:
@@ -76,13 +73,14 @@ class ProductionController(Controller):
                 # _material_type = _process.get_raw_material_type()
 
                 # TODO: here should be an advanced process model that controls, which material should be get from which
-                events.append(queue.get(filter=lambda item: item is material.material_data))            
+                events.append(
+                    queue.get(filter=lambda item: item is material.material_data)
+                )
             if not events:
                 raise ValueError("No material in queue")
             return events
         else:
             raise ValueError("Resource is not a ProductionResource")
-
 
     def put_material_to_output_queue(
         self, resource: resources.Resourcex, materials: List[material.Material]
@@ -116,7 +114,7 @@ class ProductionController(Controller):
                 or not self.requests
             ):
                 continue
-
+            print("before control policy", self.resource.data.ID, self.requests)
             self.control_policy(self.requests)
             process_request = self.requests.pop(0)
             running_process = self.env.process(self.start_process(process_request))
@@ -126,8 +124,7 @@ class ProductionController(Controller):
         resource = process_request.get_resource()
         process = process_request.get_process()
         material = process_request.get_material()
-
-        # yield _resource.setup(_material.next_process)
+        yield resource.setup(process)
         with resource.request() as req:
             yield req
             eventss = self.get_next_material_for_process(resource, material)
@@ -147,7 +144,9 @@ class ProductionController(Controller):
     def run_process(self, input_state: state.State, target_material: material.Material):
         env = input_state.env
         input_state.activate_state()
-        input_state.state_info.log_material(target_material)
+        input_state.state_info.log_material(
+            target_material, state.StateTypeEnum.production
+        )
         input_state.process = env.process(input_state.process_state())
         # return input_state.process
 
@@ -158,17 +157,20 @@ class ProductionController(Controller):
 class TransportController(Controller):
     resource: resources.TransportResource = Field(init=False, default=None)
     requests: List[request.TransportResquest] = Field(default_factory=list)
-    control_policy: Callable[[List[request.TransportResquest], ], None]
-
-
-    def perform_setup(self, resource: resources.Resourcex, process: process.PROCESS_UNION):
-        resource.setup(process)
+    control_policy: Callable[
+        [
+            List[request.TransportResquest],
+        ],
+        None,
+    ]
 
     def get_next_material_for_process(
         self, resource: material.Location, material: material.Material
     ):
         events = []
-        if isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source):
+        if isinstance(resource, resources.ProductionResource) or isinstance(
+            resource, source.Source
+        ):
             for queue in resource.output_queues:
                 events.append(queue.get(filter=lambda x: x is material.material_data))
             if not events:
@@ -181,7 +183,9 @@ class TransportController(Controller):
         self, resource: material.Location, material: material.Material
     ) -> List[events.Event]:
         events = []
-        if isinstance(resource, resources.ProductionResource) or isinstance(resource, sink.Sink):
+        if isinstance(resource, resources.ProductionResource) or isinstance(
+            resource, sink.Sink
+        ):
             for queue in resource.input_queues:
                 events.append(queue.put(material.material_data))
         else:
@@ -217,9 +221,8 @@ class TransportController(Controller):
         material = process_request.get_material()
         origin = process_request.get_origin()
         target = process_request.get_target()
-        
-        #TODO: add setup here
-        # yield resource.setup(process)
+
+        yield resource.setup(process)
         with resource.request() as req:
             self.sort_queue(resource)
             yield req
@@ -229,7 +232,7 @@ class TransportController(Controller):
                 self.run_process(transport_state, material, target=origin)
                 yield transport_state.finished_process
                 transport_state.process = None
-                
+
             eventss = self.get_next_material_for_process(origin, material)
             yield events.AllOf(resource.env, eventss)
             transport_state = resource.get_process(process)
@@ -253,10 +256,12 @@ class TransportController(Controller):
         env = input_state.env
         target_location = target.get_location()
         input_state.activate_state()
-        input_state.state_info.log_material(material)
-        input_state.state_info.log_target_location(target)
+        input_state.state_info.log_material(material, state.StateTypeEnum.transport)
+        input_state.state_info.log_target_location(
+            target, state.StateTypeEnum.transport
+        )
         input_state.process = env.process(
-            input_state.process_state(target=target_location) # type: ignore False
+            input_state.process_state(target=target_location)  # type: ignore False
         )
 
 
@@ -280,10 +285,19 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
     )
 
 
+def agent_control_policy(
+    gym_env: gym_env.GridWorldEnv, requests: List[request.Request]
+) -> None:
+    print("Agent control policy is asked")
+    gym_env.interrupt_simulation_event.succeed()
+
+
 class BatchController(Controller):
     pass
 
+
 from prodsim.simulation import resources, source, sink
+
 Controller.update_forward_refs()
 ProductionController.update_forward_refs()
 TransportController.update_forward_refs()
