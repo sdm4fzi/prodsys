@@ -14,7 +14,6 @@ from prodsim.data_structures import (
     sink_data,
 )
 import prodsim
-# from prodsim import adapters, runner
 
 app = FastAPI()
 
