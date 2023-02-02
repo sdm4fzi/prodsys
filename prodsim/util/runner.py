@@ -102,7 +102,7 @@ class Runner(BaseModel):
 
             self.data_collector = logger.Datacollector()
             for r in self.resource_factory.resources:
-                all_states = r.states + r.production_states
+                all_states = r.states + r.production_states + r.setup_states
                 for __state in all_states:
                     self.data_collector.register_patch(
                         __state.state_info,
@@ -139,7 +139,6 @@ class Runner(BaseModel):
         t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
-        print("\n\n###############  run finished  ###############\n")
 
     def print_results(self):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())

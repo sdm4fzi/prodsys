@@ -1,9 +1,9 @@
 {
   "constraints": {
-    "max_reconfiguration_cost": 1000000000,
-    "max_num_machines": 60,
-    "max_num_processes_per_machine": 20,
-    "max_num_transport_resources": 30
+    "max_reconfiguration_cost": 100000,
+    "max_num_machines": 6,
+    "max_num_processes_per_machine": 2,
+    "max_num_transport_resources": 3
   },
   "options": {
     "positions": [

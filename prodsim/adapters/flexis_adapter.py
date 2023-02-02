@@ -1,6 +1,7 @@
 from typing import Dict, Union, Type, List, Optional
-from pydantic import BaseModel, validator, Extra
+from pydantic import BaseModel, validator, Extra, Field
 import datetime
+from openpyxl import load_workbook
 
 from prodsim import adapters
 
@@ -16,6 +17,18 @@ from prodsim.data_structures import (
 )
 
 import pandas as pd
+
+
+class SetupTime(BaseModel):
+    machineSetupGroup: str
+    taskSetupGroupFrom: str	
+    taskSetupGroupTo: str
+    Duration: datetime.datetime
+
+    @validator("Duration", pre=True)
+    def duration_to_timedelta(cls, v):
+        return datetime.datetime.strptime(v[3:], "%H:%M:%S.%f")
+
 
 
 class ProcessTime(BaseModel):
@@ -96,9 +109,6 @@ class FlexisDataFrames(BaseModel):
         arbitrary_types_allowed = True
 
 
-from openpyxl import load_workbook
-
-
 def read_excel(file_path: str):
     wb = load_workbook(file_path, data_only=True)
     sheets = wb.sheetnames
@@ -117,14 +127,19 @@ def read_excel(file_path: str):
 
 class FlexisAdapter(adapters.Adapter):
     _capability_process_dict: Dict[str, List[str]] = {}
+    _flexis_data_frames: FlexisDataFrames = Field(default=None)
+
+    class Config:
+        extra = Extra.allow
 
     def read_data(self, file_path: str):
         input_data = read_excel(file_path)
         flexis_data_frames = FlexisDataFrames(**input_data)
+        self._flexis_data_frames = flexis_data_frames
         self.initialize_time_models(flexis_data_frames)
         self.initialize_process_models(flexis_data_frames)
-        # TODO: add setup states here and breakdown states
         self.initialize_resource_models(flexis_data_frames)
+        self.initialize_setup_state_models(flexis_data_frames)
         self.initialize_queue_models()
         self.initialize_transport_models()
         self.initialize_material_models(flexis_data_frames)
@@ -155,14 +170,21 @@ class FlexisAdapter(adapters.Adapter):
         transition_time_data = self.get_object_from_data_frame(
             flexis_data_frames.TransitionTime, TransitionTime
         )
-        for transition_time in transition_time_data:
+        self.time_model_data.append(
+            self.create_transport_time_model()
+        )
+
+        setup_time_data = self.get_object_from_data_frame(
+            flexis_data_frames.SetupTime, SetupTime
+        )
+        for setup_time in setup_time_data:
             self.time_model_data.append(
-                self.create_transport_time_model(transition_time)
+                self.create_setup_time_model(setup_time)
             )
 
     def create_process_time_model(self, process_time: ProcessTime):
         return time_model_data.FunctionTimeModelData(
-            ID=process_time.machineDurationGroup + "_" + process_time.taskDurationGroup,
+            ID=process_time.machineDurationGroup + "-" + process_time.taskDurationGroup,
             description=f"Process time of {process_time.machineDurationGroup} and {process_time.taskDurationGroup}",
             type=time_model_data.TimeModelEnum.FunctionTimeModel,
             distribution_function="constant",
@@ -176,24 +198,32 @@ class FlexisAdapter(adapters.Adapter):
             batch_size=100,
         )
 
-    def create_transport_time_model(self, transition_time: TransitionTime):
-        duration_in_minutes = (
-            transition_time.duration
-            - datetime.datetime.strptime("00:00:00.000", "%H:%M:%S.%f")
-        ).total_seconds() / 60 - 24 * 60
-        if duration_in_minutes < 0:
-            duration_in_minutes = 3
-
+    def create_transport_time_model(self):
+        return time_model_data.ManhattanDistanceTimeModelData(
+            ID="Transport",
+            description=f"Transport time model",
+            type=time_model_data.TimeModelEnum.ManhattanDistanceTimeModel,
+            distribution_function="constant",
+            speed=3*60,
+            reaction_time=0.5
+        )
+    
+    def create_setup_time_model(self, setup_time: SetupTime):
         return time_model_data.FunctionTimeModelData(
-            ID=transition_time.jobTypeName + "_" + transition_time.transitionTimeGroup,
-            description=f"Process time of {transition_time.jobTypeName} and {transition_time.transitionTimeGroup}",
+            ID=setup_time.machineSetupGroup + "-" + setup_time.taskSetupGroupFrom + "-" + setup_time.taskSetupGroupTo,
+            description=f"Process time of {setup_time.machineSetupGroup} and {setup_time.taskSetupGroupFrom} and {setup_time.taskSetupGroupTo}",
             type=time_model_data.TimeModelEnum.FunctionTimeModel,
             distribution_function="constant",
             parameters=[
-                duration_in_minutes
+                (
+                    setup_time.Duration
+                    - datetime.datetime.strptime("00:00:00.000", "%H:%M:%S.%f")
+                ).total_seconds()
+                / 60
             ],
             batch_size=100,
         )
+
 
     def initialize_process_models(self, flexis_data_frames: FlexisDataFrames):
         task_type_data = self.get_object_from_data_frame(
@@ -214,7 +244,7 @@ class FlexisAdapter(adapters.Adapter):
         time_model_ids = set([t.ID for t in self.time_model_data])
         for machine_duration_group in machine_duration_groups:
             time_model_id = (
-                machine_duration_group.split(":")[0] + "_" + task_type.durationGroup
+                machine_duration_group.split(":")[0] + "-" + task_type.durationGroup
             )
             if time_model_id in time_model_ids:
                 proceses_data_models.append(
@@ -237,7 +267,49 @@ class FlexisAdapter(adapters.Adapter):
                     time_model_id
                 )
         return proceses_data_models
+    
 
+    def get_setup_for_processes(self, process1_repr, process2_repr, setup_time_data) -> SetupTime:
+        for setup in setup_time_data:
+            setup_from_variant = "_".join(setup.taskSetupGroupFrom.split("_")[1:])
+            setup_to_variant = "_".join(setup.taskSetupGroupTo.split("_")[1:])
+            if process1_repr == setup_from_variant and process2_repr == setup_to_variant:
+                # print("Machted seutp", process1_repr, process2_repr)
+                return setup
+        for setup in setup_time_data:
+            setup_to_variant = "_".join(setup.taskSetupGroupTo.split("_")[1:])
+            if process2_repr == setup_to_variant and "*" == setup.taskSetupGroupFrom:
+                # print("found generic from setup", process1_repr, process2_repr)
+                return setup
+        for setup in setup_time_data:
+            if setup.taskSetupGroupTo == "*" and setup.taskSetupGroupFrom == "*":
+                # print("found generic setup", process1_repr, process2_repr)
+                return setup
+    
+    def initialize_setup_state_models(self, flexis_data_frames: FlexisDataFrames):
+        setup_time_data = self.get_object_from_data_frame(
+            flexis_data_frames.SetupTime, SetupTime
+        )
+        for resource in self.resource_data:
+            for process1 in resource.processes:
+                for process2 in resource.processes:
+                    process1_repr = "_".join(process1.split("-")[1].split("_")[1:])
+                    process2_repr = "_".join(process2.split("-")[1].split("_")[1:])
+                    setup = self.get_setup_for_processes(process1_repr, process2_repr, setup_time_data)
+                    setup_state = self.create_setup_state_model(process1, process2, setup)
+                    self.state_data.append(setup_state)
+                    resource.states.append(setup_state.ID)
+
+    def create_setup_state_model(self, process1: str, process2: str, setup_time: SetupTime) -> state_data.SetupStateData:
+        return state_data.SetupStateData(
+            ID=setup_time.machineSetupGroup + "-" + setup_time.taskSetupGroupFrom + "-" + setup_time.taskSetupGroupTo,
+            description=f"Process time of {setup_time.machineSetupGroup} and {setup_time.taskSetupGroupFrom} and {setup_time.taskSetupGroupTo}",
+            time_model_id=setup_time.machineSetupGroup + "-" + setup_time.taskSetupGroupFrom + "-" + setup_time.taskSetupGroupTo,
+            type=state_data.StateTypeEnum.SetupState,
+            origin_setup=process1,
+            target_setup=process2,
+        )
+    
     def initialize_resource_models(self, flexis_data_frames: FlexisDataFrames):
         resource_data = self.get_object_from_data_frame(
             flexis_data_frames.Machine, Machine
@@ -263,30 +335,28 @@ class FlexisAdapter(adapters.Adapter):
                 queue_data.QueueData(
                     ID=resource.ID + "_input_queue",
                     description="Input queue for " + resource.ID,
-                    capacity=100,
+                    capacity=0,
                 )
             )
             self.queue_data.append(
                 queue_data.QueueData(
                     ID=resource.ID + "_output_queue",
                     description="Output queue for " + resource.ID,
-                    capacity=100,
+                    capacity=0,
                 )
             )
             resource.input_queues = [resource.ID + "_input_queue"]
             resource.output_queues = [resource.ID + "_output_queue"]
 
     def initialize_transport_models(self):
-        # ID=transition_time.jobTypeName + "_" + transition_time.transitionTimeGroup,
-
         transport_process = processes_data.TransportProcessData(
-            ID="Transport",
+            ID="TP1",
             description="Transport process",
             type=processes_data.ProcessTypeEnum.TransportProcesses,
-            time_model_id=self.time_model_data[-1].ID,
+            time_model_id="Transport",
         )
         self.process_data.append(transport_process)
-        for i in range(20):
+        for i in range(2):
             transport_resource = resource_data.TransportResourceData(
                 ID="Transport_" + str(i),
                 description="Transport resource",
@@ -294,7 +364,7 @@ class FlexisAdapter(adapters.Adapter):
                 location=(0, 0),
                 controller="TransportController",
                 control_policy="SPT_transport",
-                processes=["Transport"],
+                processes=["TP1"],
                 states=[],
             )
             self.resource_data.append(transport_resource)
@@ -338,7 +408,7 @@ class FlexisAdapter(adapters.Adapter):
                     ID=workplan.jobTypeName,
                     description=workplan.jobTypeName,
                     processes=required_capabilities,
-                    transport_process="Transport",
+                    transport_process="TP1",
                 )
             )
 
@@ -369,7 +439,7 @@ class FlexisAdapter(adapters.Adapter):
                     ID=material.ID + "_source",
                     description="Source for " + material.ID,
                     capacity=100,
-                    location=(0, 0),
+                    location=(0, 4.96),
                     material_type=material.ID,
                     time_model_id=material.ID + "_source_time_model",
                     router="CapabilityRouter",
@@ -389,7 +459,7 @@ class FlexisAdapter(adapters.Adapter):
                 sink_data.SinkData(
                     ID=material.ID + "_sink",
                     description="Sink for " + material.ID,
-                    location=(0, 0),
+                    location=(0, 12.4),
                     material_type=material.ID,
                     input_queues=[
                         material.ID + "_sink_input_queue",
@@ -398,4 +468,22 @@ class FlexisAdapter(adapters.Adapter):
             )
 
     def write_data(self, file_path: str):
-        pass
+        new_machine_data = self._flexis_data_frames.Machine.copy()[0:0]
+        for resource in self.resource_data:
+            if isinstance(resource, resource_data.TransportResourceData):
+                continue
+            processes = [process for process in self.process_data if process.ID in resource.processes]
+            capability = [process.capability for process in processes][0]
+            row = self._flexis_data_frames.Machine.loc[self._flexis_data_frames.Machine["availableCapabilityNames:String"].str.contains(capability)][:1]
+            row["name:String"] = resource.ID
+            row["label:String"] = resource.ID
+            row["location:Point"] = str(resource.location)
+            new_machine_data = pd.concat([new_machine_data, row])
+        new_machine_data.reset_index(inplace=True, drop=True)
+        new_flexis_data_frames = self._flexis_data_frames.copy(deep=True)
+        new_flexis_data_frames.Machine = new_machine_data
+        writer = pd.ExcelWriter(file_path)
+        values = new_flexis_data_frames.dict()
+        for key, value in values.items():
+            value.to_excel(writer, sheet_name=key, index=False)
+        writer.close()

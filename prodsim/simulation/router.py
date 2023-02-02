@@ -7,6 +7,7 @@ from typing import List, TYPE_CHECKING
 import numpy as np
 
 from prodsim.simulation import process
+from prodsim.simulation import resources
 
 
 if TYPE_CHECKING:
@@ -79,16 +80,16 @@ class CapabilityRouter(Router):
 class AvoidDeadlockRouter(Router):
     def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
         possible_resources = self.resource_factory.get_resources_with_process(__process)
+        left_resources = [resource for resource in possible_resources]
         for resource in possible_resources:
             if hasattr(resource, "input_queues"):
                 for input_queue in resource.input_queues:
                     if (
-                        len(possible_resources) > 1
+                        len(left_resources) > 1
                         and len(input_queue.items) >= input_queue.capacity - 3
                     ):
-                        possible_resources.remove(resource)
-
-        return self.routing_heuristic(possible_resources)
+                        left_resources = [r for r in left_resources if not r is resource]
+        return self.routing_heuristic(left_resources)
 
 
 def FIFO_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
