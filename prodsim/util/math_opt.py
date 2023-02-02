@@ -145,7 +145,7 @@ class MathOptimizer(BaseModel):
     def save_model(
         self,
     ):
-        pass
+        # self.adapters.resource_data.append(resource_data.ProductionResourceData())
 
     def save_result_to_adapter(
         self,
