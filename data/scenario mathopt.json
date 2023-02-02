@@ -27,6 +27,7 @@
   "costs": {
     "machine": 30000,
     "transport_resource": 15000,
-    "process_module": 5000
+    "process_module": 5000,
+    "breakdown_cost": 0.11
   }
 }

@@ -31,6 +31,13 @@ class MathOptimizer(BaseModel):
     scenario_dict: Dict[str, str]
     model: Any = gp.Model("MILP_Rekonfiguration")
 
+    x: Any = None
+    z: Any = None
+    s: Any = None
+    a: Any = None
+    v: Any = None
+    t: Any = None
+
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.scenario_dict["costs"]["process_module"]
         return module_cost * (x - get_modul_counts(self.adapter)[Modul])
@@ -45,11 +52,13 @@ class MathOptimizer(BaseModel):
     ):
         x = self.get_workpiece_index_variable()
         process_modules, stations = self.get_process_modules_and_stations()
-        z = self.model.addVars(process_modules, stations, vtype=GRB.BINARY, name="z")
-        s = self.model.addVars(stations, vtype=GRB.BINARY, name = "s")
-        a = self.model.addVars(stations, vtype=GRB.CONTINUOUS, name = "a")
-        v = self.model.addVars(stations, vtype=GRB.CONTINUOUS, name = "v")
-        t = self.model.addVars(process_modules, vtype=GRB.INTEGER, name = "t")
+        self.z = self.model.addVars(
+            process_modules, stations, vtype=GRB.BINARY, name="z"
+        )
+        self.s = self.model.addVars(stations, vtype=GRB.BINARY, name="s")
+        self.a = self.model.addVars(stations, vtype=GRB.CONTINUOUS, name="a")
+        self.v = self.model.addVars(stations, vtype=GRB.CONTINUOUS, name="v")
+        self.t = self.model.addVars(process_modules, vtype=GRB.INTEGER, name="t")
 
     def get_workpiece_index_variable(self) -> dict:
         x = {}
@@ -82,15 +91,51 @@ class MathOptimizer(BaseModel):
         ]
         return process_modules, stations
 
-    def set_constraints(
-        self,
-    ):
-        pass
-
     def set_objective_function(
         self,
     ):
-        pass
+        process_modules, stations = self.get_process_modules_and_stations()
+        objective = (
+            sum(self.t[Modul] for Modul in process_modules)
+            + sum(stations[Station] * self.s[Station] for Station in stations)
+            + sum(
+                self.v[Station] * self.scenario_dict["costs"]["breakdown_cost"]
+                for Station in stations
+            )
+        )
+        self.model.setObjective(objective, GRB.MINIMIZE)
+
+    def set_constraints(
+        self,
+    ):
+        self.check_available_station()
+
+    def check_available_station(self):
+        for product in self.x.keys():
+            for workpiece in product.keys():
+                for step in workpiece.keys():
+                    for station, variable in step.items():
+                        self.model.addConstr(
+                            variable - self.s[station] <= 0,
+                            "für_{}_{}_{}_durchgeführt_an_{}".format(
+                                product, workpiece, step, station
+                            ),
+                        )
+
+    def check_available_process_module(self):
+        for product in self.x.keys():
+            for workpiece in product.keys():
+                for step in workpiece.keys():
+                    self.model.addConstr(
+                        sum(
+                            self.x[product, workpiece, step, Station]
+                            for Station in step.keys()
+                        )
+                        == 1,
+                        "für_{}_{}_wird_{}_durchgeführt".format(
+                            product, workpiece, step
+                        ),
+                    )
 
     def optimize(
         self,
