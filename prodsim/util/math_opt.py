@@ -66,15 +66,17 @@ class MathOptimizer(BaseModel):
     def get_workpiece_index_variable(self) -> dict:
         x = {}
         for product_type in self.adapter.material_data:
+            x[product_type.ID] = {}
             work_piece_count = self.scenario_dict["target"][product_type.ID]
             for work_piece_index in range(work_piece_count):
+                x[product_type.ID][work_piece_index] = {}
                 for step in product_type.processes:
+                    x[product_type.ID][work_piece_index][step] = {}
                     for station in range(
                         self.scenario_dict["constraints"]["max_num_machines"]
-                    ):
-                        x[
-                            product_type.ID, work_piece_index, step, station
-                        ] = self.model.addVar(
+                    ):  
+                        
+                        x[product_type.ID][work_piece_index][step][station] = self.model.addVar(
                             vtype=GRB.BINARY,
                             name="x[{},{},{},{}]".format(
                                 product_type.ID, work_piece_index, step, station
@@ -124,7 +126,7 @@ class MathOptimizer(BaseModel):
     def set_constraints(
         self,
     ):
-        self.check_available_station()
+        self.check_available_station_for_workpieces()
         self.check_available_station_for_workpieces()
         self.check_available_station()
         self.check_extended_time_per_station()
@@ -132,26 +134,26 @@ class MathOptimizer(BaseModel):
         self.check_cost_of_modules()
         self.check_maximum_breakdown_time()
 
-    def check_available_station(self):
-        for product in self.x.keys():
-            for workpiece in product.keys():
-                for step in workpiece.keys():
-                    for station, variable in step.items():
+    def check_available_station_for_workpieces(self):
+        for product, workpieces in self.x.items():
+            for workpiece, process_steps in workpieces.items():
+                for process_step, stations in process_steps.items():
+                    for station, variable in stations.items():
                         self.model.addConstr(
                             variable - self.s[station] <= 0,
                             "für_{}_{}_{}_durchgeführt_an_{}".format(
-                                product, workpiece, step, station
+                                product, workpiece, process_step, station
                             ),
                         )
 
     def check_available_station_for_workpieces(self):
-        for product in self.x.keys():
-            for workpiece in product.keys():
-                for process_step in workpiece.keys():
+        for product, workpieces in self.x.items():
+            for workpiece, process_steps in workpieces.items():
+                for process_step, stations in process_steps.items():
                     self.model.addConstr(
                         sum(
-                            self.x[product, workpiece, process_step, Station]
-                            for Station in process_step.keys()
+                            self.x[product][workpiece][process_step][station]
+                            for station in stations.keys()
                         )
                         == 1,
                         "für_{}_{}_wird_{}_durchgeführt".format(
@@ -160,13 +162,13 @@ class MathOptimizer(BaseModel):
                     )
 
     def check_available_station(self):
-        for product in self.x.keys():
-            for workpiece in product.keys():
-                for process_step in workpiece.keys():
-                    for station in process_step.keys():
+        for product, workpieces in self.x.items():
+            for workpiece, process_steps in workpieces.items():
+                for process_step, stations in process_steps.items():
+                    for station in stations.keys():
                         self.model.addConstr(
                             (
-                                self.x[product, workpiece, process_step, station]
+                                self.x[product][workpiece][process_step][station]
                                 - self.z[process_step, station]
                                 <= 0
                             ),
@@ -282,10 +284,10 @@ class MathOptimizer(BaseModel):
                     (
                         gp.quicksum(
                             self.processing_times_per_product_and_step[product][step]
-                            * self.x[product, workpiece, step, station]
-                            for product in self.x.keys()
-                            for workpiece in product.keys()
-                            for step in workpiece.keys()
+                            * self.x[product][workpiece][step][station]
+                            for product, workpieces in self.x.items()
+                            for workpiece, process_steps in workpieces.items()
+                            for step in process_steps.keys()
                         )
                     )
                     + self.a[station]
