@@ -22,8 +22,9 @@
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
     "transport_controllers": ["FIFO", "SPT_transport"]
   },
-  "target": { "Produkt_1": 148, "Produkt_2": 120 },
+  "target": { "Material_1": 148, "Produkt_2": 120 },
   "time_range": 600,
+  "maximum_breakdown_time": 180,
   "costs": {
     "machine": 30000,
     "transport_resource": 15000,
