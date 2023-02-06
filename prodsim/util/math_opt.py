@@ -28,6 +28,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
 
 class MathOptimizer(BaseModel):
     adapter: adapters.Adapter
+    # TODO: move scenario dict to adapter!
     scenario_dict: Dict[str, Any]
 
     model: Any = None
