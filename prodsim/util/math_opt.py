@@ -18,13 +18,11 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
     # Fall Prozessmodul noch nicht vorhanden fehlt
     for process in adapter.process_data:
         if isinstance(process, processes_data.ProductionProcessData):
-            modul_count_dict[process] = 0
+            modul_count_dict[process.ID] = 0
     for resource in adapter.resource_data:
         if not isinstance(resource, resource_data.ProductionResourceData):
             continue
         for process in resource.processes:
-            # if not process in modul_count_dict.keys():
-            #    modul_count_dict[process] = 0
             modul_count_dict[process] += 1
 
     return modul_count_dict
