@@ -12,6 +12,8 @@ from prodsim.data_structures import resource_data, processes_data
 import gurobipy as gp
 from gurobipy import GRB
 
+import numpy as np
+
 
 def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
     modul_count_dict = {}
@@ -128,9 +130,7 @@ class MathOptimizer(BaseModel):
             self,
     ):
         self.check_available_station_for_workpieces()
-        self.check_available_station_for_workpieces()
         self.check_available_station()
-        self.check_extended_time_per_station()
         self.check_extended_time_per_station()
         self.check_cost_of_modules()
         self.check_maximum_breakdown_time()
@@ -270,7 +270,7 @@ class MathOptimizer(BaseModel):
                     lambda time_model: time_model.ID == process.time_model_id,
                     self.adapter.time_model_data,
                 ))
-
+                # TODO: Adjust processing times with safety factor (0,85-Quantil der Normalverteilung)
                 processing_times_per_product_and_step[product.ID][
                     step
                 ] = time_model.parameters[0]
@@ -361,4 +361,28 @@ class MathOptimizer(BaseModel):
     def save_result_to_adapter(
             self,
     ):
-        pass
+        # get relevant results of optimization
+
+        for counter, result in enumerate(results):
+            new_adapter = self.adapter.copy(deep=True)
+            new_adapter.resource_data = [resource for resource in self.adapter.resource if
+                                         not isinstance(resource, resource_data.ProductionResourceData)]
+
+            possible_positions: List[Tuple[float, float]] = [        tuple(
+                [position[0], position[1]])        for position in deepcopy(scenario_dict["options"]["positions"])   ]
+            processes = []  # get from solution
+            # states = machine_state + processes_state
+            new_resource = resource_data.ProductionResourceData(
+                ID=result.index,
+                description="",
+                capacity=1,
+                location=np.random.choice(possible_positions),
+                controller="SimpleController",
+                control_policy="FIFO",
+                processes=processes,
+                process_capacity=None,
+                states=[]
+
+            )
+            new_adapter.resource_data.append(new_resource)
+            new_adapter.write_data(f"data/math_opt_solution_{counter}.json")
