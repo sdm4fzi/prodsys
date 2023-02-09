@@ -11,7 +11,26 @@ from basyx.aas import model
 import basyx.aas.adapter.json.json_serialization
 import basyx.aas.adapter.json.json_serialization
 import json
+import prodsim
+from prodsim.data_structures import resource_data
 
+
+
+adapter_object = prodsim.adapters.JsonAdapter()
+
+# adapter_object.read_data('data/simple_example.json')
+adapter_object.read_data('data/example_configuration.json')
+example_resource = adapter_object.resource_data[0]
+print(example_resource)
+
+def convert_resource_to_aas(resource: resource_data.ResourceData) -> model.AssetAdministrationShell:
+    # TODO: implement function
+    identifier = model.Identifier(id_=resource.ID,
+                              id_type=model.IdentifierType.CUSTOM)
+    resource_attributes = ["capacity"]
+    for attribute in resource_attributes:
+        value = getattr(resource, attribute)
+    pass
 
 # In this tutorial, you'll get a step by step guide on how to create an Asset Administration Shell (AAS) and all
 # required objects within. First, you need an asset for which you want to create an AAS, represented by an Asset object.
