@@ -1,9 +1,10 @@
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 
 import math
 import scipy.stats
 import datetime
 import time
+from copy import deepcopy
 
 from pydantic import BaseModel
 from prodsim import adapters
@@ -368,8 +369,7 @@ class MathOptimizer(BaseModel):
             new_adapter.resource_data = [resource for resource in self.adapter.resource if
                                          not isinstance(resource, resource_data.ProductionResourceData)]
 
-            possible_positions: List[Tuple[float, float]] = [        tuple(
-                [position[0], position[1]])        for position in deepcopy(scenario_dict["options"]["positions"])   ]
+            possible_positions: List[Tuple[float, float]] = [tuple([position[0], position[1]]) for position in deepcopy(self.scenario_dict["options"]["positions"])]
             processes = []  # get from solution
             # states = machine_state + processes_state
             new_resource = resource_data.ProductionResourceData(

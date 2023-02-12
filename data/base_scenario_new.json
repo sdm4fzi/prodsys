@@ -260,7 +260,7 @@
       "location": [-5.0, -5.0],
       "material_type": "Material_2",
       "time_model_id": "ftm2",
-      "router": "AvoidDeadlockRouter",
+      "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     }
