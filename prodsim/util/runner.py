@@ -146,9 +146,9 @@ class Runner(BaseModel):
 
     def plot_results(self):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
-        p.plot_throughput_over_time()
+        p.plot_throughput_time_over_time()
         p.plot_WIP()
-        # p.plot_WIP_with_range()
+        p.plot_WIP_with_range()
         p.plot_throughput_time_distribution()
         p.plot_time_per_state_of_resources()
 

@@ -94,6 +94,16 @@ class PostProcessor:
         finished_material = pd.Series(finished_material, name="Material")
         df_finished_material = pd.merge(df, finished_material)
         return df_finished_material
+    
+    def get_df_with_material_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
+        df = input_df.copy()
+        material_types = df.loc[
+            (df["Material_type"].notna()) & (df["Material_type"] != "")
+        ]["Material_type"].unique()
+        material_types = pd.Series(material_types, name="Material_type")
+        df_material_info = pd.merge(df, material_types)
+        return df_material_info
+
 
     def get_eventlog_for_material(self, material_type: str = "Material_1"):
         import pm4py
@@ -204,10 +214,8 @@ class PostProcessor:
         )
         fig.show()
 
-    def plot_throughput_over_time(self):
+    def plot_throughput_time_over_time(self):
         df_tp = self.get_throughput_data_frame()
-        # fig = px.scatter(df_tp, x="Start_time", y="Throughput_time", color="Material_type", trendline="lowess")
-        # fig = px.scatter(df_tp, x="Start_time", y="Throughput_time", color="Material_type", trendline="rolling", trendline_options=dict(window=20))
         fig = px.scatter(
             df_tp,
             x="Start_time",
@@ -341,6 +349,7 @@ class PostProcessor:
 
     def get_df_with_WIP_per_product(self) -> pd.DataFrame:
         df = self.get_df_with_machine_states()
+        df = self.get_df_with_material_entries(df)
         df = df.reset_index()
         for material_type in df["Material_type"].unique():
             if material_type != material_type:
