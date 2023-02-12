@@ -16,7 +16,20 @@ class Queue(store.FilterStore):
             capacity = float("inf")
         else:
             capacity = queue_data.capacity
+        self._pending_put: int = 0
         super().__init__(env, capacity)
+
+    def full(self) -> bool:
+        return (self.capacity - self._pending_put - len(self.items)) <= 0
+    
+    def reserve(self) -> None:
+        self._pending_put += 1
+        if self._pending_put + len(self.items) > self.capacity:
+            raise RuntimeError("Queue is full")
+    
+    def unreseve(self) -> None:
+        self._pending_put -= 1
+
 
 
 

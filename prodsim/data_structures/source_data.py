@@ -10,7 +10,6 @@ from prodsim.data_structures.core_asset import CoreAsset
 
 class RouterType(str, Enum):
     SimpleRouter = "SimpleRouter"
-    AvoidDeadlockRouter = "AvoidDeadlockRouter"
     CapabilityRouter = "CapabilityRouter"
 
 class RoutingHeuristic(str, Enum):

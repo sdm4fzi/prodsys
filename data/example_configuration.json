@@ -30,7 +30,7 @@
       "description": "exponential distribution time model with 100 minutes",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [46.0],
+      "parameters": [52.0],
       "batch_size": 100
     },
     "4": {
@@ -131,27 +131,27 @@
     "0": {
       "ID": "IQ1",
       "description": "Input-queue 1 for R1 and R2",
-      "capacity": 250
+      "capacity": 10
     },
     "1": {
       "ID": "OQ1",
       "description": "Output-queue 1 for R1",
-      "capacity": 250
+      "capacity": 10
     },
     "2": {
       "ID": "OQ2",
       "description": "Output-queue 2 for R2",
-      "capacity": 250
+      "capacity": 10
     },
     "3": {
       "ID": "IQ2",
       "description": "Input-queue 2 for R3",
-      "capacity": 250
+      "capacity": 10
     },
     "4": {
       "ID": "OQ3",
       "description": "Output-queue 3 for R3",
-      "capacity": 250
+      "capacity": 10
     },
     "5": {
       "ID": "SourceQueue",
@@ -293,7 +293,7 @@
       "location": [0.0, 0.0],
       "material_type": "Material_1",
       "time_model_id": "function_time_model_4",
-      "router": "AvoidDeadlockRouter",
+      "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     },
@@ -303,7 +303,7 @@
       "location": [30.0, 30.0],
       "material_type": "Material_2",
       "time_model_id": "function_time_model_4",
-      "router": "AvoidDeadlockRouter",
+      "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     },
@@ -313,7 +313,7 @@
       "location": [40.0, 30.0],
       "material_type": "Material_3",
       "time_model_id": "function_time_model_4",
-      "router": "AvoidDeadlockRouter",
+      "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     }

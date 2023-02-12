@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 import numpy as np
 
 from prodsim.simulation import process
@@ -27,22 +27,34 @@ class Router:
         self.routing_heuristic: Callable[..., material.Location] = routing_heuristic
 
     @abstractmethod
-    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
+    def get_next_resource(self, __process: process.Process) -> Optional[resources.Resourcex]:
         pass
 
     def get_sink(self, _material_type: str) -> sink.Sink:
         possible_sinks = self.sink_factory.get_sinks_with_material_type(_material_type)
         chosen_sink = self.routing_heuristic(possible_sinks)
         return chosen_sink  # type: ignore False
+    
+    def get_possible_resources(self, target_process: process.Process) -> List[resources.Resourcex]:
+        possible_resources = self.resource_factory.get_resources_with_process(target_process)
+        return possible_resources
 
 
 class SimpleRouter(Router):
-    def get_next_resource(self, target_process: process.Process) -> resources.Resourcex:
-        possible_resources = self.resource_factory.get_resources_with_process(
-            target_process
-        )
-        return self.routing_heuristic(possible_resources)
-    
+    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resourcex]:
+        possible_resources = self.resource_factory.get_resources_with_process(target_process)
+        left_resources = [resource for resource in possible_resources]
+
+        for resource in possible_resources:
+            if isinstance(resource, resources.ProductionResource):
+                for input_queue in resource.input_queues:
+                    if input_queue.full():  
+                        left_resources = [r for r in left_resources if not r.data.ID==resource.data.ID]
+                        break
+        if not left_resources:
+            return None
+        return self.routing_heuristic(left_resources)
+
 
 def get_resource_capabilities(resource: resources.Resourcex) -> List[str]:
     capabilities = []
@@ -59,8 +71,8 @@ class CapabilityRouter(Router):
             target_process
         )
         return self.routing_heuristic(possible_resources)
-    # TODO: maybe combine avoiddeadlockrouter and capabilityrouter -> seperate avoid deadlock logic and matching logic
-    def get_next_resource(self, target_process: process.Process) -> resources.Resourcex:
+
+    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resourcex]:
         if isinstance(target_process, process.TransportProcess):
             return self.get_next_resource_per_ID(target_process)
         elif not isinstance(target_process, process.CapabilityProcess):
@@ -71,26 +83,11 @@ class CapabilityRouter(Router):
         for resource in self.resource_factory.resources:
             resource_capabilities = get_resource_capabilities(resource)
 
-            if target_process.process_data.capability in resource_capabilities:
+            if (target_process.process_data.capability in resource_capabilities) and not any(q.full() for q in resource.input_queues):
                 possible_resources.append(resource)
-
+        if not possible_resources:
+            return None
         return self.routing_heuristic(possible_resources)
-
-
-class AvoidDeadlockRouter(Router):
-    def get_next_resource(self, __process: process.Process) -> resources.Resourcex:
-        possible_resources = self.resource_factory.get_resources_with_process(__process)
-        left_resources = [resource for resource in possible_resources]
-        for resource in possible_resources:
-            if hasattr(resource, "input_queues"):
-                for input_queue in resource.input_queues:
-                    if (
-                        len(left_resources) > 1
-                        and len(input_queue.items) >= input_queue.capacity - 3
-                    ):
-                        left_resources = [r for r in left_resources if not r is resource]
-        return self.routing_heuristic(left_resources)
-
 
 def FIFO_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
     return possible_resources.pop(0)
@@ -117,7 +114,7 @@ def get_shortest_queue_router(
         resource_list = [
             queue[1] for queue in queue_list if len(queue[0].items) <= min_length
         ]
-        return resource_list.pop(0)
+        return np.random.choice(resource_list)
     return random_router(possible_resources=possible_resources)
 
 
@@ -129,6 +126,5 @@ ROUTING_HEURISTIC = {
 
 ROUTERS = {
     "SimpleRouter": SimpleRouter,
-    "AvoidDeadlockRouter": AvoidDeadlockRouter,
     "CapabilityRouter": CapabilityRouter,
 }
