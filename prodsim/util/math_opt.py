@@ -33,9 +33,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
 
 class MathOptimizer(BaseModel):
     adapter: adapters.Adapter
-    # TODO: move scenario dict to adapter!
-    scenario_dict: Dict[str, Any]
-
+    
     model: Any = None
     x: Any = None
     z: Any = None
@@ -50,7 +48,7 @@ class MathOptimizer(BaseModel):
         arbitrary_types_allowed = True
 
     def cost_module(self, x: int, Modul: str) -> int:
-        module_cost = self.scenario_dict["costs"]["process_module"]
+        module_cost = self.adapter.scenario_data.info.process_module_cost
         return module_cost * (x - get_modul_counts(self.adapter)[Modul])
 
     def set_variables(
@@ -73,13 +71,13 @@ class MathOptimizer(BaseModel):
         x = {}
         for product_type in self.adapter.material_data:
             x[product_type.ID] = {}
-            work_piece_count = self.scenario_dict["target"][product_type.ID]
+            work_piece_count = self.adapter.scenario_data.constraints.target_material_count[product_type.ID]
             for work_piece_index in range(work_piece_count):
                 x[product_type.ID][work_piece_index] = {}
                 for step in product_type.processes:
                     x[product_type.ID][work_piece_index][step] = {}
                     for station in range(
-                            self.scenario_dict["constraints"]["max_num_machines"]
+                            self.adapter.scenario_data.constraints.max_num_machines
                     ):
                         x[product_type.ID][work_piece_index][step][station] = self.model.addVar(
                             vtype=GRB.BINARY,
@@ -97,7 +95,7 @@ class MathOptimizer(BaseModel):
         ]
         stations = [
             station
-            for station in range(self.scenario_dict["constraints"]["max_num_machines"])
+            for station in range(self.adapter.scenario_data.constraints.max_num_machines)
         ]
         return process_modules, stations
 
@@ -109,7 +107,7 @@ class MathOptimizer(BaseModel):
             if counter < num_previous_machines:
                 opening_cost[station] = 0
             else:
-                opening_cost[station] = self.scenario_dict["costs"]["machine"]
+                opening_cost[station] = self.adapter.scenario_data.info.machine_cost
         return opening_cost
 
     def set_objective_function(
@@ -121,7 +119,7 @@ class MathOptimizer(BaseModel):
                 sum(self.t[modul] for modul in process_modules)
                 + sum(opening_costs[station] * self.s[station] for station in stations)
                 + sum(
-            self.v[station] * self.scenario_dict["costs"]["breakdown_cost"]
+            self.v[station] * self.adapter.scenario_data.info.breakdown_cost
             for station in stations
         )
         )
@@ -202,7 +200,7 @@ class MathOptimizer(BaseModel):
         Ex_M6 = 1 / λ_M6
 
         # Berechnung der erwarteten Anzahl an Fehlern = betrachteter Zeitraum / E(x)
-        BZ = self.scenario_dict["time_range"]
+        BZ = self.adapter.scenario_data.info.time_range
         machine_breakdown_count = BZ / Ex_Maschine
         module_breakdown_count = {
             "Modul_1": BZ / Ex_M1,
@@ -238,7 +236,7 @@ class MathOptimizer(BaseModel):
             machine_breakdown_time,
             module_breakdown_time,
         ) = self.get_breakdown_values()
-        for station in range(self.scenario_dict["constraints"]["max_num_machines"]):
+        for station in range(self.adapter.scenario_data.constraints.max_num_machines):
             self.model.addConstr(
                 (
                         (
@@ -278,9 +276,9 @@ class MathOptimizer(BaseModel):
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):
-        BZ = self.scenario_dict["time_range"]
+        BZ = self.adapter.scenario_data.info.time_range
 
-        for station in range(self.scenario_dict["constraints"]["max_num_machines"]):
+        for station in range(self.adapter.scenario_data.constraints.max_num_machines):
             self.model.addConstr(
                 (
                         (
@@ -318,7 +316,7 @@ class MathOptimizer(BaseModel):
         self.model.addConstr(
             (
                     sum(self.v[Station] for Station in stations)
-                    - self.scenario_dict["maximum_breakdown_time"]
+                    - self.adapter.scenario_data.info.maximum_breakdown_time
                     <= 0
             ),
             "Maximale_Ausfallzeit_einhalten",
@@ -363,13 +361,14 @@ class MathOptimizer(BaseModel):
             self,
     ):
         # get relevant results of optimization
+        results = []
 
         for counter, result in enumerate(results):
             new_adapter = self.adapter.copy(deep=True)
             new_adapter.resource_data = [resource for resource in self.adapter.resource if
                                          not isinstance(resource, resource_data.ProductionResourceData)]
 
-            possible_positions: List[Tuple[float, float]] = [tuple([position[0], position[1]]) for position in deepcopy(self.scenario_dict["options"]["positions"])]
+            possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
             processes = []  # get from solution
             # states = machine_state + processes_state
             new_resource = resource_data.ProductionResourceData(

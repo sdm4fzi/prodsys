@@ -22,10 +22,17 @@
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
     "transport_controllers": ["FIFO", "SPT_transport"]
   },
-  "target": { "quantity_material_1": 1300 },
-  "costs": {
-    "machine": 30000,
-    "transport_resource": 15000,
-    "process_module": 5000
+  "info": {
+    "machine_cost": 30000,
+    "transport_resource_cost": 15000,
+    "process_module_cost": 5000,
+    "time_range": 1000
+
+  },
+  "optimize": ["throughput", "cost", "WIP"],
+  "weights": {
+    "throughput": 0.025,
+    "cost": 0.001,
+    "WIP": 1
   }
 }

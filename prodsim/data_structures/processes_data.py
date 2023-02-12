@@ -12,7 +12,6 @@ class ProcessTypeEnum(str, Enum):
 
 class ProcessData(CoreAsset):
     time_model_id: str
-    # type: Literal[ProcessTypeEnum.ProductionProcesses, ProcessTypeEnum.TransportProcesses]
 
 class ProductionProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.ProductionProcesses]

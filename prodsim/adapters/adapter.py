@@ -13,6 +13,7 @@ from prodsim.data_structures import (
     material_data,
     sink_data,
     source_data,
+    scenario_data
 )
 
 def get_machines(adapter: Adapter) -> List[resource_data.ProductionResourceData]:
@@ -54,6 +55,7 @@ class Adapter(ABC, BaseModel):
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
+    seed: int = 21
     time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
@@ -62,7 +64,7 @@ class Adapter(ABC, BaseModel):
     material_data: List[material_data.MaterialData] = []
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
-    seed: int = 21
+    scenario_data: Optional[scenario_data.ScenarioData] = None
 
     class Config:
         validate_assignment = True
@@ -166,9 +168,12 @@ class Adapter(ABC, BaseModel):
         return source
 
     @abstractmethod
-    def read_data(self, file_path: str):
+    def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
         pass
 
     @abstractmethod
     def write_data(self, file_path: str):
         pass
+
+    def read_scenario(self, scenario_file_path: str):
+        self.scenario_data = scenario_data.ScenarioData.parse_file(scenario_file_path)

@@ -3,15 +3,14 @@ from prodsim.util.math_opt import MathOptimizer
 
 import json
 
-with open("data/scenario mathopt.json") as json_file:
-    scenario_dict = json.load(json_file)
+BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
+SCENARIO_FILE_PATH = "data/scenario_mathopt.json"
 adapter = adapters.JsonAdapter()
-# base_scenario.read_data('data/example_configuration.json')
-adapter.read_data('data/base_scenario_new.json')
+adapter.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
 
 
 
-model = MathOptimizer(adapter=adapter, scenario_dict=scenario_dict)
+model = MathOptimizer(adapter=adapter)
 model.optimize()
 model.save_model()
 model.save_result_to_adapter()
