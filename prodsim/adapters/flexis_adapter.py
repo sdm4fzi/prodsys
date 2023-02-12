@@ -443,7 +443,7 @@ class FlexisAdapter(adapters.Adapter):
                     material_type=material.ID,
                     time_model_id=material.ID + "_source_time_model",
                     router="CapabilityRouter",
-                    # router="AvoidDeadlockRouter", # also working
+                    # router="SimpleRouter", # also working
                     routing_heuristic="random",
                     output_queues=[material.ID + "_source_output_queue"],
                 )

@@ -69,13 +69,12 @@ class Material(BaseModel):
     material_data: material_data.MaterialData
     process_model: proces_models.ProcessModel
     transport_process: process.TransportProcess
-    router: router.Router
+    material_router: router.Router
 
     next_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
     next_resource: Location = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
-    finished: bool = False
     material_info: MaterialInfo = MaterialInfo()
 
     class Config:
@@ -95,7 +94,7 @@ class Material(BaseModel):
         self.material_info.log_finish_material(
             resource=self.next_resource, _material=self, event_time=self.env.now
         )
-        self.finished = True
+        self.next_resource.register_finished_material(self)
 
     def request_process(self) -> None:
         if self.next_process:
@@ -123,27 +122,38 @@ class Material(BaseModel):
         next_possible_processes = self.process_model.get_next_possible_processes()
         if not next_possible_processes:
             self.next_process = None
-            self.next_resource = self.router.get_sink(self.material_data.material_type)
         else:
             self.next_process = np.random.choice(next_possible_processes) # type: ignore
             self.process_model.update_marking_from_transition(self.next_process) # type: ignore
             if self.next_process == SKIP_LABEL:
                 self.set_next_process()
-            self.set_next_resource()
 
     def transport_to_queue_of_resource(self):
         origin_resource = self.next_resource
-        transport_resource = self.router.get_next_resource(self.transport_process)
+        transport_resource = self.material_router.get_next_resource(self.transport_process)
         self.set_next_process()
+        yield self.env.process(self.set_next_resource())
         self.request_transport(transport_resource, origin_resource, self.next_resource) # type: ignore False
         yield self.finished_process
         self.finished_process = events.Event(self.env)
 
     def set_next_resource(self):
-        if self.next_process:
-            self.next_resource = self.router.get_next_resource(self.next_process)
-
-
+        if not self.next_process:
+            self.next_resource = self.material_router.get_sink(self.material_data.material_type)
+        else:            	
+            self.next_resource = self.material_router.get_next_resource(self.next_process)
+            while True:
+                if self.next_resource is not None and isinstance(self.next_resource, resources.ProductionResource):
+                    self.next_resource.reserve_input_queues()
+                    break
+                resource_got_free_events = [resource.got_free for resource in self.material_router.get_possible_resources(self.next_process)]
+                yield events.AnyOf(self.env, resource_got_free_events)
+                for resource in self.material_router.get_possible_resources(self.next_process):
+                    if resource.got_free.triggered:
+                        resource.got_free = events.Event(self.env)
+                        
+                self.next_resource = self.material_router.get_next_resource(self.next_process)
+                
 class Order(ABC, BaseModel):
     target_materials: List[Material]
     release_time: float

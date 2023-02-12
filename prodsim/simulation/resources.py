@@ -26,6 +26,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
     setup_states: List[state.SetupState] = Field(default_factory=list, init=False)
 
     available: events.Event = Field(default=None, init=False)
+    got_free: events.Event = Field(default=None, init=False)
     active: events.Event = Field(default=None, init=False)
     current_process: process.PROCESS_UNION = Field(default=None, init=False)
 
@@ -52,6 +53,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
+        self.got_free = events.Event(self.env)
         for actual_state in self.states:
             actual_state.activate_state()
             actual_state.process = self.env.process(actual_state.process_state())
@@ -117,12 +119,21 @@ class ProductionResource(Resourcex):
 
     input_queues: List[store.Queue] = []
     output_queues: List[store.Queue] = []
+    pending_: int = []
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         self.output_queues.extend(output_queues)
+
+    def reserve_input_queues(self):
+        for input_queue in self.input_queues:
+            input_queue.reserve()
+
+    def unreserve_input_queues(self):
+        for input_queue in self.input_queues:
+            input_queue.unreseve()
 
 class TransportResource(Resourcex):
     data: TransportResourceData
