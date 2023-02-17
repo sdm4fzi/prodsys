@@ -12,6 +12,8 @@ from prodsim.data_structures import (
     processes_data,
     source_data,
     sink_data,
+    performance_data,
+    performance_indicators
 )
 import prodsim
 
@@ -21,13 +23,8 @@ class Project(BaseModel):
     ID: str
     adapters: Dict[str, prodsim.adapters.JsonAdapter] = {}
 
-class Result(BaseModel):
-    adapter_id: str
-    event_results: dict
-    aggregated_results: dict
-
 database: List[Project] = []
-results_database: List[Result] = []
+results_database: Dict[str, performance_data.Performance] =  {}
 
 
 @app.get("/", response_model=str)
@@ -46,30 +43,30 @@ def get_project(project_id: str) -> Project:
     raise HTTPException(404, f"Project {project_id} not found")
 
 
-@app.get("/projects", response_model=List[Project])
+@app.get("/projects", response_model=List[Project], tags=["projects"])
 async def read_projects() -> List[Project]:
     return get_projects()
 
 
-@app.put("/projects/{project_id}")
+@app.put("/projects/{project_id}", tags=["projects"])
 async def create_project(project: Project) -> str:
     database.append(project)
     return "Sucessfully created project with ID: " + project.ID
 
 
-@app.get("/projects/{project_id}", response_model=Project)
+@app.get("/projects/{project_id}", response_model=Project, tags=["projects"])
 async def read_project(project_id: str) -> Project:
     return get_project(project_id)
 
 
-@app.delete("/projects/{project_id}")
+@app.delete("/projects/{project_id}", tags=["projects"])
 async def delete_project(project_id: str):
     project = get_project(project_id)
     database.remove(project)
     return "Sucessfully deleted project with ID: " + project_id
 
 
-@app.put("/projects/{project_id}/adapters")
+@app.put("/projects/{project_id}/adapters", tags=["adapters"])
 async def create_adapter(project_id: str, adapter: prodsim.adapters.JsonAdapter):
     project = get_project(project_id)
     project.adapters.append(adapter)
@@ -77,7 +74,7 @@ async def create_adapter(project_id: str, adapter: prodsim.adapters.JsonAdapter)
 
 
 @app.get(
-    "/projects/{project_id}/adapters", response_model=Dict[str, prodsim.adapters.JsonAdapter]
+    "/projects/{project_id}/adapters", response_model=Dict[str, prodsim.adapters.JsonAdapter], tags=["adapters"]
 )
 async def read_adapters(project_id: str):
     project = get_project(project_id)
@@ -92,21 +89,21 @@ def get_adapter(project_id: str, adapter_id: str) -> prodsim.adapters.JsonAdapte
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}", response_model=prodsim.adapters.JsonAdapter
+    "/projects/{project_id}/adapters/{adapter_id}", response_model=prodsim.adapters.JsonAdapter, tags=["adapters"]
 )
 async def read_adapter(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     return adapter
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}")
+@app.put("/projects/{project_id}/adapters/{adapter_id}", tags=["adapters"])
 async def update_adapter(project_id: str, adapter_id: str, ada: prodsim.adapters.JsonAdapter):
     project = get_project(project_id)
     project.adapters[adapter_id] = ada
     return "Sucessfully updated adapter with ID: " + adapter_id
 
 
-@app.delete("/projects/{project_id}/adapters/{adapter_id}")
+@app.delete("/projects/{project_id}/adapters/{adapter_id}", tags=["adapters"])
 async def delete_adapter(project_id: str, adapter_id: str):
     project = get_project(project_id)
     adapter = get_adapter(project_id, adapter_id)
@@ -114,38 +111,30 @@ async def delete_adapter(project_id: str, adapter_id: str):
     return "Sucessfully deleted adapter with ID: " + adapter_id
 
 
-@app.get("/projects/{project_id}/adapters/{adapter_id}/run_simulation")
+@app.get("/projects/{project_id}/adapters/{adapter_id}/run_simulation", tags=["simulation"])
 async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
     runner_object.run(3000)
-    results_database.append(Result(adapter_id=adapter_id, event_results=runner_object.get_event_data_simulation_results_as_dict(), 
-        aggregated_results=runner_object.get_aggregated_data_simulation_results()))
-
+    performance = runner_object.get_performance()
+    results_database[adapter_id] = performance
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
 
-def get_result(project_id: str, adapter_id: str) -> Result:
-    for result in results_database:
-        if result.adapter_id == adapter_id:
-            return result
-    raise HTTPException(404, "Results not found")
+def get_result(project_id: str, adapter_id: str) -> performance_data.Performance:
+    if adapter_id not in results_database:
+        raise HTTPException(404, f"Results for adapter {adapter_id} not found in project {project_id}")
+    return results_database[adapter_id]
 
-@app.get("/projects/{project_id}/adapters/{adapter_id}/results", response_model=Result)
+@app.get("/projects/{project_id}/adapters/{adapter_id}/aggregated_results", response_model=List[performance_indicators.KPI_UNION], tags=["simulation"])
 async def get_all_results(project_id: str, adapter_id: str):
     result = get_result(project_id, adapter_id)
-    return result
+    return result.kpis
 
-@app.get("/projects/{project_id}/adapters/{adapter_id}/results/event_results", response_model=dict)
+@app.get("/projects/{project_id}/adapters/{adapter_id}/results/event_results", response_model=List[performance_data.Event], tags=["simulation"])
 async def get_event_results(project_id: str, adapter_id: str):
     result = get_result(project_id, adapter_id)
-    return result.event_results
-
-@app.get("/projects/{project_id}/adapters/{adapter_id}/results/aggregated_results", response_model=dict)
-async def get_aggregated_results(project_id: str, adapter_id: str):
-    result = get_result(project_id, adapter_id)
-    print(result.aggregated_results)
-    return result.aggregated_results
+    return result.event_log
 
 #################### Time model data ####################
 

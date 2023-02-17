@@ -1,6 +1,5 @@
-import json
 import random
-from copy import copy, deepcopy
+from copy import deepcopy
 from typing import Dict, List, Union, Tuple, Literal
 
 from uuid import uuid1
@@ -9,18 +8,12 @@ from pydantic import parse_obj_as
 
 
 from prodsim import adapters, runner
-from prodsim.simulation.sim import Environment
 from prodsim.util.post_processing import PostProcessor
 from prodsim.data_structures import (
-    queue_data,
     resource_data,
-    time_model_data,
     state_data,
     processes_data,
-    material_data,
-    sink_data,
-    source_data,
-    scenario_data
+    performance_indicators
 )
 
 
@@ -30,7 +23,7 @@ def get_weights(adapter: adapters.Adapter, direction: Literal["min", "max"]) -> 
         return tuple([1.0] * len(adapter.scenario_data.optimize))
     for kpi_name in adapter.scenario_data.optimize:
         weight = adapter.scenario_data.weights[kpi_name]
-        kpi = parse_obj_as(scenario_data.KPI_UNION, {"name": kpi_name})
+        kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": kpi_name})
         if kpi.target != direction:
             weight *= -1
         weights.append(weight)
@@ -552,10 +545,10 @@ def get_throughput(pp: PostProcessor) -> float:
     return sum(pp.get_aggregated_throughput_data())
 
 KPI_function_dict = {
-    scenario_data.KPIEnum.COST: get_reconfiguration_cost,
-    scenario_data.KPIEnum.TRHOUGHPUT_TIME: get_throughput_time,
-    scenario_data.KPIEnum.WIP: get_wip,
-    scenario_data.KPIEnum.THROUGHPUT: get_throughput,
+    performance_indicators.KPIEnum.COST: get_reconfiguration_cost,
+    performance_indicators.KPIEnum.TRHOUGHPUT_TIME: get_throughput_time,
+    performance_indicators.KPIEnum.WIP: get_wip,
+    performance_indicators.KPIEnum.THROUGHPUT: get_throughput,
 }
 
 def document_individual(
@@ -609,7 +602,7 @@ def evaluate(
 
     fitness = []
     for kpi_name in adapter_object.scenario_data.optimize:
-        if kpi_name == scenario_data.KPIEnum.COST:
+        if kpi_name == performance_indicators.KPIEnum.COST:
             fitness.append(
                 get_reconfiguration_cost(adapter_object, base_scenario)
             )

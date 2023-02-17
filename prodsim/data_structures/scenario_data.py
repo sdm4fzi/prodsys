@@ -1,39 +1,10 @@
 from __future__ import annotations
 
-from enum import Enum
-from typing import Literal, List, Optional, Dict, Tuple, Union
+from typing import Literal, List, Optional, Dict, Tuple
 
 from pydantic import BaseModel, validator
 
-class KPIEnum(str, Enum):
-    THROUGHPUT = "throughput"
-    COST = "cost"
-    WIP = "WIP"
-    TRHOUGHPUT_TIME = "throughput_time"
-
-class KPI(BaseModel):
-    name: KPIEnum
-    target: Literal["min", "max"]
-    weight: Optional[float] = 1
-
-
-class ThroughputKPI(KPI):
-    name: Literal["throughput"]
-    target: Literal["max"] = "max"
-
-class CostKPI(KPI):
-    name: Literal["cost"]
-    target: Literal["min"] = "min"
-
-class WIPKPI(KPI):
-    name: Literal["WIP"]
-    target: Literal["min"] = "min"
-
-class ThroughputTimeKPI(KPI):
-    name: Literal["throughput_time"]
-    target: Literal["min"] = "min"
-
-KPI_UNION = Union[ThroughputKPI, CostKPI, WIPKPI, ThroughputTimeKPI]
+from prodsim.data_structures.performance_indicators import KPIEnum
 
 class ScenarioConstrainsData(BaseModel):
     max_reconfiguration_cost: float

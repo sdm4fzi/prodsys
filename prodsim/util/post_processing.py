@@ -1,23 +1,14 @@
-import os
 from dataclasses import dataclass, field
+from functools import cached_property
 
 from prodsim.simulation import state
+from prodsim.data_structures import performance_indicators
 
 from typing import List
 
 import pandas as pd
-import plotly.express as px
-import plotly.figure_factory as ff
-import plotly.graph_objects as go
 
 WARM_UP_CUT_OFF = 0.15
-
-
-def hex_to_rgba(h, alpha):
-    """
-    converts color value in hex format to rgba format with alpha transparency
-    """
-    return tuple([int(h.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)] + [alpha])
 
 
 @dataclass
@@ -50,6 +41,7 @@ class PostProcessor:
             ]
         )
 
+    @cached_property
     def get_prepared_df(self) -> pd.DataFrame:
         df = self.df_raw.copy()
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
@@ -86,15 +78,16 @@ class PostProcessor:
         df = df.sort_values(by=["Time", "Resource", "State_sorting_Index"])
         return df
 
+    @cached_property
     def get_finished_material_df(self) -> pd.DataFrame:
-        df = self.get_prepared_df()
+        df = self.get_prepared_df.copy()
         finished_material = df.loc[
             (df["Material"].notna()) & (df["Activity"] == "finished material")
         ]["Material"].unique()
         finished_material = pd.Series(finished_material, name="Material")
         df_finished_material = pd.merge(df, finished_material)
         return df_finished_material
-    
+
     def get_df_with_material_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.copy()
         material_types = df.loc[
@@ -104,11 +97,10 @@ class PostProcessor:
         df_material_info = pd.merge(df, material_types)
         return df_material_info
 
-
     def get_eventlog_for_material(self, material_type: str = "Material_1"):
         import pm4py
 
-        df_finished_material = self.get_finished_material_df()
+        df_finished_material = self.get_finished_material_df.copy()
         df_for_pm4py = df_finished_material.loc[
             df_finished_material["Material"].notnull()
         ]
@@ -128,15 +120,6 @@ class PostProcessor:
 
         return log
 
-    def plot_inductive_bpmn(self):
-        import pm4py
-
-        os.environ["PATH"] += os.pathsep + "C:/Program Files/Graphviz/bin"
-        log = self.get_eventlog_for_material()
-        process_tree = pm4py.discover_process_tree_inductive(log)
-        bpmn_model = pm4py.convert_to_bpmn(process_tree)
-        pm4py.view_bpmn(bpmn_model, format="png")
-
     def save_inductive_petri_net(self):
         import pm4py
         from pm4py.visualization.petri_net import visualizer as pn_visualizer
@@ -155,9 +138,10 @@ class PostProcessor:
         )
         pn_visualizer.save(gviz, "data/inductive_frequency.png")
 
+    @cached_property
     def get_throughput_data_frame(self) -> pd.DataFrame:
-        df = self.get_prepared_df()
-        df_finished_material = self.get_finished_material_df()
+        df = self.get_prepared_df.copy()
+        df_finished_material = self.get_finished_material_df.copy()
         min = df_finished_material.groupby(by="Material")["Time"].min()
         min.name = "Start_time"
         max = df_finished_material.groupby(by="Material")["Time"].max()
@@ -174,15 +158,34 @@ class PostProcessor:
 
         return df_tpt
 
+    @cached_property
     def get_aggregated_throughput_time_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame()
+        df = self.get_throughput_data_frame.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df = df.groupby(by=["Material_type"])["Throughput_time"].mean()
         return df
+    
+    @cached_property
+    def get_aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
+        ser = self.get_aggregated_throughput_time_data_frame.copy()
+        KPIs = []
+        context = (performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.MATERIAL_TYPE,)
+        for index, value in ser.items():
+            KPIs.append(
+                performance_indicators.ThroughputTime(
+                    name=performance_indicators.KPIEnum.TRHOUGHPUT_TIME,
+                    value=value,
+                    context=context,
+                    material_type=index,
+                )
+            )
+        return KPIs
 
+    @cached_property
     def get_aggregated_output_and_throughput_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame()
+        df = self.get_throughput_data_frame.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count().to_frame()
@@ -191,44 +194,44 @@ class PostProcessor:
         df_tp["Throughput"] = df_tp["Output"] / available_time
 
         return df_tp
+    
+    @cached_property
+    def get_throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
+        df = self.get_aggregated_output_and_throughput_data_frame.copy()
+        KPIs = []
+        context = (performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.MATERIAL_TYPE,)
+        for index, values in df.iterrows():
+            KPIs.append(
+                performance_indicators.Throughput(
+                    name=performance_indicators.KPIEnum.THROUGHPUT,
+                    value=values["Throughput"],
+                    context=context,
+                    material_type=index,
+                )
+            )
+            KPIs.append(
+                performance_indicators.Output(
+                    name=performance_indicators.KPIEnum.OUTPUT,
+                    value=values["Output"],
+                    context=context,
+                    material_type=index,
+                )
+            )
+        return KPIs
 
+    @cached_property
     def get_aggregated_output_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame()
+        df = self.get_throughput_data_frame.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count()
 
         return df_tp
 
-    def plot_throughput_time_distribution(self):
-        df_tp = self.get_throughput_data_frame()
-        grouped = df_tp.groupby(by="Material_type")["Throughput_time"].apply(list)
-
-        values = grouped.values
-
-        group_labels = grouped.index
-
-        # Create distplot with custom bin_size
-        fig = ff.create_distplot(
-            values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
-        )
-        fig.show()
-
-    def plot_throughput_time_over_time(self):
-        df_tp = self.get_throughput_data_frame()
-        fig = px.scatter(
-            df_tp,
-            x="Start_time",
-            y="Throughput_time",
-            color="Material_type",
-            trendline="expanding",
-        )
-        fig.data = [t for t in fig.data if t.mode == "lines"]
-        fig.update_traces(showlegend=True)
-        fig.show()
-
+    @cached_property
     def get_df_with_machine_states(self) -> pd.DataFrame:
-        df = self.get_prepared_df()
+        df = self.get_prepared_df.copy()
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -291,8 +294,9 @@ class PostProcessor:
 
         return df
 
+    @cached_property
     def get_time_per_state_of_resources(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states()
+        df = self.get_df_with_machine_states.copy()
 
         df_time_per_state = df.groupby(["Resource", "Time_type"])[
             "time_increment"
@@ -313,23 +317,28 @@ class PostProcessor:
         )
 
         return df_time_per_state
-
-    def plot_time_per_state_of_resources(self):
-        df_time_per_state = self.get_time_per_state_of_resources()
-
-        fig = px.bar(
-            df_time_per_state,
-            x="Resource",
-            y="time_increment",
-            color="Time_type",
-            color_discrete_map={
-                "PR": "green",
-                "SB": "yellow",
-                "UD": "red",
-                "ST": "blue",
-            },
-        )
-        fig.show()
+    
+    @cached_property
+    def get_machine_state_KPIS(self) -> List[performance_indicators.KPI]:
+        df = self.get_time_per_state_of_resources.copy()
+        KPIs = []
+        context = (performance_indicators.KPILevelEnum.RESOURCE, )
+        class_dict = {
+            "SB": (performance_indicators.StandbyTime, performance_indicators.KPIEnum.STANDBY_TIME),
+            "PR": (performance_indicators.ProductiveTime, performance_indicators.KPIEnum.PRODUCTIVE_TIME),	
+            "UD": (performance_indicators.UnscheduledDowntime, performance_indicators.KPIEnum.UNSCHEDULED_DOWNTIME),
+            "ST": (performance_indicators.SetupTime, performance_indicators.KPIEnum.SETUP_TIME),
+        }
+        for index, values in df.iterrows():
+            KPIs.append(
+                class_dict[values["Time_type"]][0](
+                    name=class_dict[values["Time_type"]][1],
+                    value=values["percentage"],
+                    context=context,
+                    resource=values["Resource"],
+                )
+            )
+        return KPIs
 
     def get_WIP_KPI(self, df) -> pd.DataFrame:
         CREATED_CONDITION = df["Activity"] == "created material"
@@ -343,13 +352,15 @@ class PostProcessor:
 
         return df
 
+    @cached_property
     def get_df_with_WIP(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states()
+        df = self.get_df_with_machine_states.copy()
         return self.get_WIP_KPI(df)
 
+    @cached_property
     def get_df_with_WIP_per_product(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states()
-        df = self.get_df_with_material_entries(df)
+        df = self.get_df_with_machine_states.copy()
+        df = self.get_df_with_material_entries(df).copy()
         df = df.reset_index()
         for material_type in df["Material_type"].unique():
             if material_type != material_type:
@@ -361,9 +372,10 @@ class PostProcessor:
 
         return df
 
+    @cached_property
     def get_df_with_aggregated_WIP(self) -> pd.Series:
-        df = self.get_df_with_WIP_per_product()
-        df_total_wip = self.get_df_with_WIP()
+        df = self.get_df_with_WIP_per_product.copy()
+        df_total_wip = self.get_df_with_WIP.copy()
         df_total_wip["Material_type"] = "Total"
         df = pd.concat([df, df_total_wip])
 
@@ -371,115 +383,50 @@ class PostProcessor:
 
         df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         group = ["Material_type"]
-        aggregation_column = ["WIP"]
 
         df = df.groupby(by=group)["WIP"].mean()
 
         return df
 
-    def plot_WIP_with_range(self):
-        df = self.get_df_with_WIP()
-        fig = px.scatter(df, x="Time", y="WIP")
-        df["Material_type"] = "Total"
-
-        df_per_material = self.get_df_with_WIP_per_product()
-
-        df = pd.concat([df, df_per_material])
-
-        fig = go.Figure()
-
-        window = 5000
-        colors = px.colors.qualitative.G10
-
-        for material_type, df_material_type in df.groupby(by="Material_type"):
-            df_material_type["WIP_avg"] = (
-                df_material_type["WIP"].rolling(window=window).mean()
+    @cached_property
+    def System_WIP_total_and_per_product(self) -> List[performance_indicators.WIP]:
+        ser = self.get_df_with_aggregated_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (performance_indicators.KPILevelEnum.SYSTEM,
+                           performance_indicators.KPILevelEnum.ALL_MATERIALS)
+                index = performance_indicators.KPILevelEnum.ALL_MATERIALS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.MATERIAL_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.WIP(
+                    name=performance_indicators.KPIEnum.WIP,
+                    value=value,
+                    context=context,
+                    material_type=index,
+                )
             )
-            df_material_type["WIP_std"] = (
-                df_material_type["WIP"].rolling(window=window).std()
-            )
-
-            color = colors.pop()
-            fig.add_scatter(
-                name=material_type,
-                x=df_material_type["Time"],
-                y=df_material_type["WIP_avg"],
-                mode="lines",
-                line=dict(color=color),
-            )
-            fig.add_scatter(
-                name=material_type + " Upper Bound",
-                x=df_material_type["Time"],
-                y=df_material_type["WIP_avg"] + df_material_type["WIP_std"],
-                mode="lines",
-                line=dict(dash="dash", color=color),
-                showlegend=False,
-            )
-            fig.add_scatter(
-                name=material_type + " Lower Bound",
-                x=df_material_type["Time"],
-                y=df_material_type["WIP_avg"] - df_material_type["WIP_std"],
-                mode="lines",
-                line=dict(dash="dash", color=color),
-                fill="tonexty",
-                fillcolor="rgba" + str(hex_to_rgba(color, 0.2)),
-                showlegend=False,
-            )
-
-        fig.show()
-
-    def plot_WIP(self):
-        df = self.get_df_with_WIP()
-        fig = px.scatter(df, x="Time", y="WIP")
-        df["Material_type"] = "Total"
-
-        df_per_material = self.get_df_with_WIP_per_product()
-
-        df = pd.concat([df, df_per_material])
-        fig = px.scatter(
-            df,
-            x="Time",
-            y="WIP",
-            color="Material_type",
-            trendline="expanding",
-            opacity=0.01,
-        )
-        # fig = px.scatter(df, x='Time', y='WIP', color='Material_type', trendline="rolling", trendline_options=dict(window=20))
-        fig.data = [t for t in fig.data if t.mode == "lines"]
-        fig.update_traces(showlegend=True)
-
-        fig.show()
-
-    def print_aggregated_data(self):
-        print("\n------------- Throughput -------------\n")
-
-        print(self.get_aggregated_output_and_throughput_data_frame())
-
-        print("------------- WIP -------------\n")
-        print(self.get_df_with_aggregated_WIP())
-
-        print("\n------------- Throughput time -------------\n")
-        print(self.get_aggregated_throughput_time_data_frame())
-
-        print("\n------------- Resource states -------------\n")
-
-        print(
-            self.get_time_per_state_of_resources().set_index(["Resource", "Time_type"])
-        )
+        return KPIs
 
     def get_aggregated_data(self) -> dict:
         data = {}
         data["Throughput"] = (
-            self.get_aggregated_output_and_throughput_data_frame()
+            self.get_aggregated_output_and_throughput_data_frame.copy()
             .reset_index()
             .to_dict()
         )
-        data["WIP"] = self.get_df_with_aggregated_WIP().reset_index().to_dict()
+        data["WIP"] = self.get_df_with_aggregated_WIP.copy().reset_index().to_dict()
         data["Throughput time"] = (
-            self.get_aggregated_throughput_time_data_frame().reset_index().to_dict()
+            self.get_aggregated_throughput_time_data_frame.copy()
+            .reset_index()
+            .to_dict()
         )
         data["Resource states"] = (
-            self.get_time_per_state_of_resources()
+            self.get_time_per_state_of_resources.copy()
             .set_index(["Resource", "Time_type"])
             .reset_index()
             .to_dict()
@@ -488,12 +435,12 @@ class PostProcessor:
         return data
 
     def get_aggregated_throughput_time_data(self) -> List[float]:
-        return list(self.get_aggregated_throughput_time_data_frame().values)
+        return list(self.get_aggregated_throughput_time_data_frame.values)
 
     def get_aggregated_throughput_data(self) -> List[float]:
-        return list(self.get_aggregated_output_data_frame().values)
+        return list(self.get_aggregated_output_data_frame.values)
 
     def get_aggregated_wip_data(self) -> List[float]:
-        s = self.get_df_with_aggregated_WIP()
+        s = self.get_df_with_aggregated_WIP.copy()
         s = s.drop(labels=["Total"])
         return list(s.values)
