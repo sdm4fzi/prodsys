@@ -269,10 +269,11 @@ class MathOptimizer(BaseModel):
                     lambda time_model: time_model.ID == process.time_model_id,
                     self.adapter.time_model_data,
                 ))
-                # TODO: Adjust processing times with safety factor (0,85-Quantil der Normalverteilung)
+                # Adjust processing times with safety factor (0,85-Quantil of the normal distribution)
+                quantil = scipy.stats.norm.ppf(0.85, loc=0, scale=1)
                 processing_times_per_product_and_step[product.ID][
                     step
-                ] = time_model.parameters[0]
+                 ] = time_model.parameters[0] + (time_model.parameters[1] * quantil)
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):
