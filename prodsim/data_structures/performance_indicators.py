@@ -20,6 +20,9 @@ class KPIEnum(str, Enum):
     SETUP_TIME = "setup_time"
     UNSCHEDULED_DOWNTIME = "unscheduled_downtime"
 
+    DYNAMIC_WIP = "dynamic_WIP"
+    DYNAMIC_THROUGHPUT_TIME = "dynamic_throughput_time"
+
 
 class KPILevelEnum(str, Enum):
     SYSTEM = "system"
@@ -42,6 +45,13 @@ class KPI(BaseModel):
     @validator("context")
     def sort_context(cls, v):
         return tuple(sorted(v))
+    
+
+class DynamicKPI(KPI):
+    start_time: float
+    end_time: float
+    material: Optional[str] = None
+    process: Optional[str] = None
 
 
 class Output(KPI):
@@ -64,15 +74,21 @@ class WIP(KPI):
     target: Literal["min"] = "min"
 
 
+class DynamicWIP(DynamicKPI, WIP):
+    name: Literal[KPIEnum.DYNAMIC_WIP]
+
+
 class ThroughputTime(KPI):
     name: Literal[KPIEnum.TRHOUGHPUT_TIME]
     target: Literal["min"] = "min"
+
+class DynamicThroughputTime(DynamicKPI, ThroughputTime):
+    name: Literal[KPIEnum.DYNAMIC_THROUGHPUT_TIME]
 
 
 class ProcessingTime(KPI):
     name: Literal[KPIEnum.PROCESSING_TIME]
     target: Literal["min"] = "min"
-
 
 class ProductiveTime(KPI):
     name: Literal[KPIEnum.PRODUCTIVE_TIME]
@@ -105,4 +121,6 @@ KPI_UNION = Union[
     StandbyTime,
     SetupTime,
     UnscheduledDowntime,
+    DynamicWIP,
+    DynamicThroughputTime,
 ]

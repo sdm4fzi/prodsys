@@ -157,6 +157,25 @@ class PostProcessor:
         df_tpt = pd.merge(df_tpt, max.to_frame().reset_index())
 
         return df_tpt
+    
+    @cached_property
+    def get_dynamic_thoughput_KPIs(self) -> List[performance_indicators.KPI]:
+        df_tp = self.get_throughput_data_frame.copy()
+        KPIs = []
+        context = (performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.MATERIAL,)
+        for index, values in df_tp.iterrows:
+            KPIs.append(
+                performance_indicators.DynamicThroughputTime(
+                    name=performance_indicators.KPIEnum.DYNAMIC_THROUGHPUT_TIME,
+                    context=context,
+                    value=values["Throughput_time"],
+                    material=index,
+                    material_type=values["Material_type"],
+                    start_time=values["Start_time"],
+                    end_time=values["End_time"],
+                )
+            )
 
     @cached_property
     def get_aggregated_throughput_time_data_frame(self) -> pd.DataFrame:
@@ -371,6 +390,39 @@ class PostProcessor:
             df = df.combine_first(df_temp)
 
         return df
+    
+    @cached_property
+    def get_dynamic_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        df = self.get_df_with_WIP.copy()
+        df["Material_type"] = "Total"
+        df_per_material = self.get_df_with_WIP_per_product.copy()
+        df = pd.concat([df, df_per_material])
+        df = df.loc[df["WIP_Increment"] != 0]
+
+        KPIs = []
+        df["next_Time"] = df["Time"].groupby(by="Material_type").shift(-1)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
+        for index, row in df.iterrows():
+            if row["Material_type"] == "Total":
+                context = (performance_indicators.KPILevelEnum.SYSTEM,
+                           performance_indicators.KPILevelEnum.ALL_MATERIALS)
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.MATERIAL_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.DynamicWIP(
+                    name=performance_indicators.KPIEnum.DYNAMIC_WIP,
+                    value=row["WIP"],
+                    context=context,
+                    material_type=row["Material_type"],
+                    start_time=row["Time"],
+                    end_time=row["next_Time"],
+                )
+            )
+        return KPIs       
+
 
     @cached_property
     def get_df_with_aggregated_WIP(self) -> pd.Series:
@@ -389,7 +441,7 @@ class PostProcessor:
         return df
 
     @cached_property
-    def System_WIP_total_and_per_product(self) -> List[performance_indicators.WIP]:
+    def System_WIP_total_and_per_product(self) -> List[performance_indicators.KPI]:
         ser = self.get_df_with_aggregated_WIP.copy()
         KPIs = []
         for index, value in ser.items():
