@@ -1,6 +1,8 @@
 from typing import List, Dict
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from pydantic import BaseModel
 from prodsim.data_structures import (
@@ -19,6 +21,21 @@ from prodsim.data_structures import (
 import prodsim
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:4200",
+    "http://127.0.0.1",
+    "http://127.0.0.1:4200",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 
 class Project(BaseModel):
@@ -51,7 +68,7 @@ async def read_projects() -> List[Project]:
     return get_projects()
 
 
-@app.put("/projects/{project_id}", tags=["projects"])
+@app.put("/projects", tags=["projects"])
 async def create_project(project: Project) -> str:
     database.append(project)
     return "Sucessfully created project with ID: " + project.ID
