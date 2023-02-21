@@ -13,6 +13,17 @@ class ScenarioConstrainsData(BaseModel):
     max_num_transport_resources: int
     target_material_count: Optional[Dict[str, int]]
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "max_reconfiguration_cost": 120000,
+                "max_num_machines": 10,
+                "max_num_processes_per_machine": 2,
+                "max_num_transport_resources": 2,
+                "target_material_count": {"Material_1": 120, "Material_2": 200},
+            }
+        }
+
 class ScenarioOptionsData(BaseModel):
     machine_controllers: List[Literal["FIFO", "LIFO", "SPT"]]
     transport_controllers: List[Literal["FIFO", "SPT_transport"]]
@@ -27,6 +38,15 @@ class ScenarioOptionsData(BaseModel):
             new_v.append(tuple(e))
 
         return new_v
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "machine_controllers": ["FIFO", "LIFO", "SPT"],
+                "transport_controllers": ["FIFO", "SPT_transport"],
+                "positions": [[10.0, 10.0], [20.0, 20.0]],
+            }
+        }
 
 class ScenarioInfoData(BaseModel):
     machine_cost: float
@@ -35,6 +55,18 @@ class ScenarioInfoData(BaseModel):
     breakdown_cost: Optional[float]
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "machine_cost": 30000,
+                "transport_resource_cost": 20000,
+                "process_module_cost": 2300,
+                "breakdown_cost": 1000,
+                "time_range": 2600,
+                "maximum_breakdown_time": 10,
+            }
+        }
 
 class ScenarioData(BaseModel):
     constraints: ScenarioConstrainsData

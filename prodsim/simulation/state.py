@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Union, TYPE_CHECKING, Generator, Tuple
+from typing import Optional, Union, TYPE_CHECKING, Generator, Tuple, List
 
 from simpy import events
 from simpy import exceptions
@@ -15,6 +15,7 @@ from prodsim.data_structures.state_data import (
     ProductionStateData,
     TransportStateData,
     SetupStateData,
+    ProcessBreakDownStateData,
 )
 
 if TYPE_CHECKING:
@@ -33,6 +34,7 @@ class StateTypeEnum(str, Enum):
     production = "Production"
     transport = "Transport"
     breakdown = "Breakdown"
+    process_breakdown = "ProcessBreakdown"
     setup = "Setup"
     source = "Source"
     sink = "Sink"
@@ -108,7 +110,6 @@ class State(ABC, BaseModel):
             self.active.succeed()
         except:
             raise RuntimeError(f"state {self.state_data.ID} is allready succeded!!")
-        self.active = events.Event(self.env)
 
     @abstractmethod
     def process_state(self) -> Generator:
@@ -121,6 +122,9 @@ class State(ABC, BaseModel):
     def activate_state(self):
         pass
 
+    def prepare_for_run(self):
+        pass
+
 
 class ProductionState(State):
     state_data: ProductionStateData
@@ -130,10 +134,13 @@ class ProductionState(State):
     start: float = 0.0
     done_in: float = 0.0
 
+    def prepare_for_run(self):
+        self.interrupt_processed = events.Event(self.env).succeed()
+        self.finished_process = events.Event(self.env)
+
     def activate_state(self):
         self.interrupt_processed = events.Event(self.env).succeed()
-        self.active = events.Event(self.env)
-        self.finished_process = events.Event(self.env)
+        self.active = events.Event(self.env).succeed()
 
     def process_state(self) -> Generator:
         """Runs a single process of a resource.
@@ -141,7 +148,12 @@ class ProductionState(State):
         Request a repairman when this happens.
         """
         self.done_in = self.time_model.get_next_time()
-        yield self.resource.active
+        # yield self.resource.active
+        try:
+            yield events.AllOf(self.env, [self.resource.active, self.active])
+        except exceptions.Interrupt:
+            yield events.AllOf(self.env, [self.active, self.resource.active])
+            self.interrupt_processed.succeed()
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.production)
         while self.done_in:
             try:
@@ -152,7 +164,7 @@ class ProductionState(State):
             except exceptions.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now, StateTypeEnum.production)
                 self.update_done_in()
-                yield self.active
+                yield events.AllOf(self.env, [self.active, self.resource.active])
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.production
@@ -180,10 +192,13 @@ class TransportState(State):
     start: float = 0.0
     done_in: float = 0.0
 
+    def prepare_for_run(self):
+        self.interrupt_processed = events.Event(self.env).succeed()
+        self.finished_process = events.Event(self.env)
+
     def activate_state(self):
         self.interrupt_processed = events.Event(self.env).succeed()
-        self.active = events.Event(self.env)
-        self.finished_process = events.Event(self.env)
+        self.active = events.Event(self.env).succeed()
 
     def process_state(self, target: Tuple[float, float]) -> Generator:
         """Runs a single process of a resource.
@@ -193,7 +208,11 @@ class TransportState(State):
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
-        yield self.resource.active
+        try:
+            yield events.AllOf(self.env, [self.resource.active, self.active])
+        except exceptions.Interrupt:
+            yield events.AllOf(self.env, [self.active, self.resource.active])
+            self.interrupt_processed.succeed()
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.transport)
         while self.done_in:
             try:
@@ -204,7 +223,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 self.state_info.log_start_interrupt_state(self.env.now, StateTypeEnum.transport)
                 self.update_done_in()
-                yield self.active
+                yield events.AllOf(self.env, [self.active, self.resource.active])
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.transport
@@ -227,9 +246,7 @@ class TransportState(State):
 
 class BreakDownState(State):
     state_data: BreakDownStateData
-
-    def __post_init__(self):
-        self.active = events.Event(self.env)
+    repair_time_model: time_model.TimeModel
 
     @root_validator
     def post_init(cls, values):
@@ -243,10 +260,46 @@ class BreakDownState(State):
             self.resource.active = events.Event(self.env)
             yield self.env.process(self.resource.interrupt_states())
             self.state_info.log_start_state(self.env.now, self.env.now + 15, StateTypeEnum.breakdown)
-            # TODO: Schedule here the maintainer! or a time model for a repair
-            yield self.env.timeout(15)
+            yield self.env.timeout(self.repair_time_model.get_next_time())
             self.resource.activate()
             self.state_info.log_end_state(self.env.now, StateTypeEnum.breakdown)
+
+    def wait_for_breakdown(self):
+        yield self.env.timeout(self.time_model.get_next_time())
+
+    def interrupt_process(self) -> Generator:
+        while True:
+            yield None
+
+        
+class ProcessBreakDownState(State):
+    state_data: ProcessBreakDownStateData
+    production_state: State = None
+    repair_time_model: time_model.TimeModel
+
+
+    @root_validator
+    def post_init(cls, values):
+        values["active"] = events.Event(values["env"])
+        return values
+    
+    def set_production_state(self, production_state: ProductionState):
+        if production_state.state_data.ID == self.state_data.process_id:
+            self.production_state = production_state
+        else:
+            raise ValueError(f"Production state {production_state.state_data.ID} does not match process id {self.state_data.process_id}")
+    
+    def process_state(self) -> Generator:
+        while True:
+            yield self.env.process(self.wait_for_breakdown())
+            yield self.production_state.active
+            self.production_state.active = events.Event(self.env)
+            if self.production_state.process and self.production_state.process.is_alive:
+                yield self.env.process(self.production_state.interrupt_process())
+            self.state_info.log_start_state(self.env.now, self.env.now + 5, StateTypeEnum.process_breakdown)
+            yield self.env.timeout(self.repair_time_model.get_next_time())
+            self.production_state.activate()
+            self.state_info.log_end_state(self.env.now, StateTypeEnum.process_breakdown)
 
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())
@@ -280,17 +333,21 @@ class SetupState(State):
 
     def activate_state(self):
         self.interrupt_processed = events.Event(self.env).succeed()
-        self.active = events.Event(self.env)
-        self.finished_process = events.Event(self.env)
+        self.active = events.Event(self.env).succeed()
+        self.finished_process = events.Event(self.env).succeed()
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
+        # TODO: Check if this is correct
         yield self.resource.active
         yield self.finished_process
-        # yield self.env.process(self.all_processes_finished())
+        self.finished_process = events.Event(self.env)
+        if any(True for state in self.resource.production_states if (state.process and state.process.is_alive)):
+            yield events.AllOf(self.env, [state.process for state in self.resource.production_states if (state.process and state.process.is_alive)])
         self.state_info.log_start_state(self.env.now, self.env.now + self.done_in, StateTypeEnum.setup)
         yield self.env.timeout(self.done_in)
         self.state_info.log_end_state(self.env.now, StateTypeEnum.setup)
+        self.finished_process.succeed()
 
     def interrupt_process(self) -> Generator:
         yield self.interrupt_processed
@@ -298,10 +355,5 @@ class SetupState(State):
         if self.process and self.process.is_alive:
             self.process.interrupt()
 
-    def all_processes_finished(self):
-        print(self.env.now, "wait for processes to finish at", self.resource.data.ID)
-        yield events.AllOf(self.env, self.resource.controller.running_processes)
-        print(self.env.now, "finished waiting for processes to finish at", self.resource.data.ID)
 
-
-STATE_UNION = Union[BreakDownState, ProductionState, TransportState, SetupState]
+STATE_UNION = Union[BreakDownState, ProductionState, TransportState, SetupState, ProcessBreakDownState]

@@ -54,8 +54,9 @@ class Resourcex(BaseModel, ABC, resource.Resource):
         self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         self.got_free = events.Event(self.env)
-        for actual_state in self.states:
+        for actual_state in self.states + self.production_states:
             actual_state.activate_state()
+        for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())
 
     def get_process(self, process: process.PROCESS_UNION) -> state.State:
@@ -81,9 +82,6 @@ class Resourcex(BaseModel, ABC, resource.Resource):
 
     def activate(self):
         self.active.succeed()
-        for actual_state in self.production_states:
-            if (isinstance(actual_state, state.ProductionState) or isinstance(actual_state, state.TransportState) or isinstance(actual_state, state.SetupStateData)) and actual_state.process is not None:
-                actual_state.activate()
 
     def request_repair(self):
         pass

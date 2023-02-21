@@ -143,7 +143,7 @@ class ProductionController(Controller):
                 
     def run_process(self, input_state: state.State, target_material: material.Material):
         env = input_state.env
-        input_state.activate_state()
+        input_state.prepare_for_run()
         input_state.state_info.log_material(
             target_material, state.StateTypeEnum.production
         )
@@ -256,7 +256,7 @@ class TransportController(Controller):
     ):
         env = input_state.env
         target_location = target.get_location()
-        input_state.activate_state()
+        input_state.prepare_for_run()
         input_state.state_info.log_material(material, state.StateTypeEnum.transport)
         input_state.state_info.log_target_location(
             target, state.StateTypeEnum.transport

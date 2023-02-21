@@ -36,11 +36,379 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+description = """
+The ProdSim-API allows you to create and run production simulations and optimizations with the ProdSim library. 
+"""
+
+app = FastAPI(
+    title="ProdSim API",
+    description=description,
+    version="0.0.1",
+    contact={
+        "name": "Sebastian Behrendt",
+        "email": "sebastianbehrendt97@gmail.com",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://mit-license.org/",
+    },
+)
 
 
 class Project(BaseModel):
     ID: str
     adapters: Dict[str, prodsim.adapters.JsonAdapter] = {}
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ID": "Example Project",
+                "adapters": {
+                    "adapter1": {
+                        "seed": 24,
+                        "time_models": {
+                            "0": {
+                                "ID": "function_time_model_1",
+                                "description": "normal distribution time model with 20 minutes",
+                                "type": "FunctionTimeModel",
+                                "distribution_function": "normal",
+                                "parameters": [14.3, 5.0],
+                                "batch_size": 100,
+                            },
+                            "1": {
+                                "ID": "function_time_model_2",
+                                "description": "constant distribution time model with 10 minutes",
+                                "type": "FunctionTimeModel",
+                                "distribution_function": "constant",
+                                "parameters": [15.0],
+                                "batch_size": 100,
+                            },
+                            "2": {
+                                "ID": "function_time_model_3",
+                                "description": "normal distribution time model with 20 minutes",
+                                "type": "FunctionTimeModel",
+                                "distribution_function": "normal",
+                                "parameters": [20.0, 5.0],
+                                "batch_size": 100,
+                            },
+                            "3": {
+                                "ID": "function_time_model_4",
+                                "description": "exponential distribution time model with 100 minutes",
+                                "type": "FunctionTimeModel",
+                                "distribution_function": "exponential",
+                                "parameters": [52.0],
+                                "batch_size": 100,
+                            },
+                            "4": {
+                                "ID": "function_time_model_5",
+                                "description": "exponential distribution time model with 150 minutes",
+                                "type": "FunctionTimeModel",
+                                "distribution_function": "exponential",
+                                "parameters": [150.0],
+                                "batch_size": 100,
+                            },
+                            "5": {
+                                "ID": "history_time_model_1",
+                                "description": "history time model",
+                                "type": "HistoryTimeModel",
+                                "history": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+                            },
+                            "6": {
+                                "ID": "manhattan_time_model_1",
+                                "description": "manhattan time model with speed 180 m/min = 3 m/s",
+                                "type": "ManhattanDistanceTimeModel",
+                                "speed": 30.0,
+                                "reaction_time": 0.15,
+                            },
+                        },
+                        "states": {
+                            "0": {
+                                "ID": "Breakdownstate_1",
+                                "description": "Breakdown state machine 1",
+                                "time_model_id": "function_time_model_5",
+                                "type": "BreakDownState",
+                            },
+                            "1": {
+                                "ID": "Breakdownstate_2",
+                                "description": "Breakdown state machine 2",
+                                "time_model_id": "function_time_model_5",
+                                "type": "BreakDownState",
+                            },
+                            "2": {
+                                "ID": "Setup_State_1",
+                                "description": "Setup state machine 1",
+                                "time_model_id": "function_time_model_2",
+                                "type": "SetupState",
+                                "origin_setup": "P1",
+                                "target_setup": "P2",
+                            },
+                            "3": {
+                                "ID": "Setup_State_2",
+                                "description": "Setup state machine 2",
+                                "time_model_id": "function_time_model_2",
+                                "type": "SetupState",
+                                "origin_setup": "P2",
+                                "target_setup": "P1",
+                            },
+                            "4": {
+                                "ID": "Setup_State_3",
+                                "description": "Setup state machine 3",
+                                "time_model_id": "function_time_model_2",
+                                "type": "SetupState",
+                                "origin_setup": "P1",
+                                "target_setup": "P3",
+                            },
+                            "5": {
+                                "ID": "Setup_State_4",
+                                "description": "Setup state machine 3",
+                                "time_model_id": "function_time_model_3",
+                                "type": "SetupState",
+                                "origin_setup": "P3",
+                                "target_setup": "P1",
+                            },
+                            "6": {
+                                "ID": "ProcessBreakdownState_1",
+                                "description": "Breakdown state process 1",
+                                "time_model_id": "function_time_model_5",
+                                "type": "ProcessBreakDownState",
+                                "process_id": "P1",
+                            },
+                        },
+                        "processes": {
+                            "0": {
+                                "ID": "P1",
+                                "description": "Process 1",
+                                "time_model_id": "function_time_model_1",
+                                "type": "ProductionProcesses",
+                            },
+                            "1": {
+                                "ID": "P2",
+                                "description": "Process 2",
+                                "time_model_id": "function_time_model_2",
+                                "type": "ProductionProcesses",
+                            },
+                            "2": {
+                                "ID": "P3",
+                                "description": "Process 3",
+                                "time_model_id": "function_time_model_3",
+                                "type": "ProductionProcesses",
+                            },
+                            "3": {
+                                "ID": "TP1",
+                                "description": "Transport Process 1",
+                                "time_model_id": "manhattan_time_model_1",
+                                "type": "TransportProcesses",
+                            },
+                        },
+                        "queues": {
+                            "0": {
+                                "ID": "IQ1",
+                                "description": "Input-queue 1 for R1 and R2",
+                                "capacity": 10,
+                            },
+                            "1": {
+                                "ID": "OQ1",
+                                "description": "Output-queue 1 for R1",
+                                "capacity": 10,
+                            },
+                            "2": {
+                                "ID": "OQ2",
+                                "description": "Output-queue 2 for R2",
+                                "capacity": 10,
+                            },
+                            "3": {
+                                "ID": "IQ2",
+                                "description": "Input-queue 2 for R3",
+                                "capacity": 10,
+                            },
+                            "4": {
+                                "ID": "OQ3",
+                                "description": "Output-queue 3 for R3",
+                                "capacity": 10,
+                            },
+                            "5": {
+                                "ID": "SourceQueue",
+                                "description": "Output-Queue for all sources",
+                                "capacity": 0,
+                            },
+                            "6": {
+                                "ID": "SinkQueue",
+                                "description": "Input-Queue for all sinks",
+                                "capacity": 0,
+                            },
+                        },
+                        "resources": {
+                            "0": {
+                                "ID": "R1",
+                                "description": "Resource 1",
+                                "capacity": 2,
+                                "location": [10.0, 10.0],
+                                "controller": "SimpleController",
+                                "control_policy": "FIFO",
+                                "processes": ["P1", "P2"],
+                                "process_capacity": [2, 1],
+                                "states": [
+                                    "Breakdownstate_1",
+                                    "Setup_State_1",
+                                    "Setup_State_2",
+                                    "ProcessBreakdownState_1",
+                                ],
+                                "input_queues": ["IQ1"],
+                                "output_queues": ["OQ1"],
+                            },
+                            "1": {
+                                "ID": "R2",
+                                "description": "Resource 2",
+                                "capacity": 1,
+                                "location": [20.0, 10.0],
+                                "controller": "SimpleController",
+                                "control_policy": "FIFO",
+                                "processes": ["P2", "P3"],
+                                "process_capacity": None,
+                                "states": ["Breakdownstate_2"],
+                                "input_queues": ["IQ1"],
+                                "output_queues": ["OQ2"],
+                            },
+                            "2": {
+                                "ID": "R3",
+                                "description": "Resource 3",
+                                "capacity": 2,
+                                "location": [20.0, 20.0],
+                                "controller": "SimpleController",
+                                "control_policy": "FIFO",
+                                "processes": ["P1", "P3"],
+                                "process_capacity": [1, 2],
+                                "states": [
+                                    "Breakdownstate_1",
+                                    "Breakdownstate_2",
+                                    "Setup_State_3",
+                                    "Setup_State_4",
+                                ],
+                                "input_queues": ["IQ2"],
+                                "output_queues": ["OQ3"],
+                            },
+                            "3": {
+                                "ID": "R4",
+                                "description": "Resource 3",
+                                "capacity": 2,
+                                "location": [10.0, 20.0],
+                                "controller": "SimpleController",
+                                "control_policy": "FIFO",
+                                "processes": ["P1", "P3"],
+                                "process_capacity": [2, 2],
+                                "states": [
+                                    "Breakdownstate_1",
+                                    "Setup_State_3",
+                                    "Setup_State_4",
+                                ],
+                                "input_queues": ["IQ2"],
+                                "output_queues": ["OQ3"],
+                            },
+                            "4": {
+                                "ID": "TR1",
+                                "description": "Transport Resource 1",
+                                "capacity": 1,
+                                "location": [15.0, 15.0],
+                                "controller": "TransportController",
+                                "control_policy": "FIFO",
+                                "processes": ["TP1"],
+                                "process_capacity": None,
+                                "states": ["Breakdownstate_1"],
+                            },
+                            "5": {
+                                "ID": "TR2",
+                                "description": "Transport Resource 2",
+                                "capacity": 1,
+                                "location": [15.0, 20.0],
+                                "controller": "TransportController",
+                                "control_policy": "SPT_transport",
+                                "processes": ["TP1"],
+                                "process_capacity": None,
+                                "states": ["Breakdownstate_1"],
+                            },
+                        },
+                        "materials": {
+                            "0": {
+                                "ID": "Material_1",
+                                "description": "Material 1",
+                                "material_type": "Material_1",
+                                "processes": ["P1", "P2", "P3"],
+                                "transport_process": "TP1",
+                            },
+                            "1": {
+                                "ID": "Material_2",
+                                "description": "Material 2",
+                                "material_type": "Material_2",
+                                "processes": ["P1", "P2", "P3", "P1"],
+                                "transport_process": "TP1",
+                            },
+                            "2": {
+                                "ID": "Material_3",
+                                "description": "Material 3",
+                                "material_type": "Material_3",
+                                "processes": "data/example_material_petri_net.pnml",
+                                "transport_process": "TP1",
+                            },
+                        },
+                        "sinks": {
+                            "0": {
+                                "ID": "SK1",
+                                "description": "Sink 1",
+                                "location": [50.0, 50.0],
+                                "material_type": "Material_1",
+                                "input_queues": ["SinkQueue"],
+                            },
+                            "1": {
+                                "ID": "SK2",
+                                "description": "Sink 2",
+                                "location": [55.0, 50.0],
+                                "material_type": "Material_2",
+                                "input_queues": ["SinkQueue"],
+                            },
+                            "2": {
+                                "ID": "SK3",
+                                "description": "Sink 3",
+                                "location": [45.0, 50.0],
+                                "material_type": "Material_3",
+                                "input_queues": ["SinkQueue"],
+                            },
+                        },
+                        "sources": {
+                            "0": {
+                                "ID": "S1",
+                                "description": "Source 1",
+                                "location": [0.0, 0.0],
+                                "material_type": "Material_1",
+                                "time_model_id": "function_time_model_4",
+                                "router": "SimpleRouter",
+                                "routing_heuristic": "shortest_queue",
+                                "output_queues": ["SourceQueue"],
+                            },
+                            "1": {
+                                "ID": "S2",
+                                "description": "Source 2",
+                                "location": [30.0, 30.0],
+                                "material_type": "Material_2",
+                                "time_model_id": "function_time_model_4",
+                                "router": "SimpleRouter",
+                                "routing_heuristic": "shortest_queue",
+                                "output_queues": ["SourceQueue"],
+                            },
+                            "2": {
+                                "ID": "S3",
+                                "description": "Source 3",
+                                "location": [40.0, 30.0],
+                                "material_type": "Material_3",
+                                "time_model_id": "function_time_model_4",
+                                "router": "SimpleRouter",
+                                "routing_heuristic": "shortest_queue",
+                                "output_queues": ["SourceQueue"],
+                            },
+                        },
+                    }
+                },
+            }
+        }
 
 
 database: List[Project] = []
@@ -175,14 +543,19 @@ async def get_all_results(project_id: str, adapter_id: str):
     response_model=List[performance_indicators.KPI_UNION],
     tags=["results"],
 )
-async def get_output_results(project_id: str, adapter_id: str, kpi: performance_indicators.KPIEnum):
+async def get_output_results(
+    project_id: str, adapter_id: str, kpi: performance_indicators.KPIEnum
+):
     enum_values = tuple(item.value for item in performance_indicators.KPIEnum)
     if kpi not in enum_values:
         raise HTTPException(404, f"KPI {kpi} not found")
     result = get_result(project_id, adapter_id)
 
-    output = [kpi_to_select for kpi_to_select in result.kpis if kpi_to_select.name == kpi]
+    output = [
+        kpi_to_select for kpi_to_select in result.kpis if kpi_to_select.name == kpi
+    ]
     return output
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/results/event_results",
@@ -215,7 +588,10 @@ def get_time_model(project_id: str, adapter_id: str, time_model_id: str):
     raise HTTPException(404, "Time model not found")
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/time_models/{time_model_id}", tags=["time_models"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/time_models/{time_model_id}",
+    tags=["time_models"],
+)
 async def create_time_model(
     project_id: str,
     adapter_id: str,
@@ -260,7 +636,10 @@ async def read_materials(project_id: str, adapter_id: str):
     return adapter.material_data
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/materials/{material_id}", tags=["materials"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/materials/{material_id}",
+    tags=["materials"],
+)
 async def create_material(
     project_id: str,
     adapter_id: str,
@@ -272,6 +651,7 @@ async def create_material(
     adapter = get_adapter(project_id, adapter_id)
     adapter.material_data.append(material)
     return "Sucessfully created material with ID: " + material.ID
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/materials/{material_id}",
@@ -304,7 +684,10 @@ async def read_processes(project_id: str, adapter_id: str):
     return adapter.process_data
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/processes/{process_id}", tags=["processes"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/processes/{process_id}",
+    tags=["processes"],
+)
 async def create_process(
     project_id: str,
     adapter_id: str,
@@ -349,7 +732,9 @@ async def read_queues(project_id: str, adapter_id: str):
     return adapter.queue_data
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/queues/{queue_id}", tags=["queues"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/queues/{queue_id}", tags=["queues"]
+)
 async def create_queue(
     project_id: str,
     adapter_id: str,
@@ -397,7 +782,10 @@ def get_resource(project_id: str, adapter_id: str, resource_id: str):
     )
 
 
-@app.delete("/projects/{project_id}/adapters/{adapter_id}/resources/{resource_id}", tags=["resources"])
+@app.delete(
+    "/projects/{project_id}/adapters/{adapter_id}/resources/{resource_id}",
+    tags=["resources"],
+)
 async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
     adapter = get_adapter(project_id, adapter_id)
     resource = get_resource(project_id, adapter_id, resource_id)
@@ -415,7 +803,10 @@ async def read_resource(project_id: str, adapter_id: str, resource_id: str):
     return resource
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/resources/{resource_id}", tags=["resources"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/resources/{resource_id}",
+    tags=["resources"],
+)
 async def create_resource(
     project_id: str,
     adapter_id: str,
@@ -495,7 +886,9 @@ async def read_sources(project_id: str, adapter_id: str):
     return adapter.source_data
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/sources/{source_id}", tags=["sources"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/sources/{source_id}", tags=["sources"]
+)
 async def create_source(
     project_id: str,
     adapter_id: str,
@@ -540,7 +933,9 @@ async def read_states(project_id: str, adapter_id: str):
     return adapter.state_data
 
 
-@app.put("/projects/{project_id}/adapters/{adapter_id}/states/{state_id}", tags=["states"])
+@app.put(
+    "/projects/{project_id}/adapters/{adapter_id}/states/{state_id}", tags=["states"]
+)
 async def create_state(
     project_id: str,
     adapter_id: str,
@@ -563,7 +958,9 @@ async def read_state(project_id: str, adapter_id: str, state_id: str):
     state = get_state(project_id, adapter_id, state_id)
     return state
 
+
 ####################### Scenario Data ############################
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/scenario",
@@ -574,6 +971,7 @@ async def read_scenario(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     return adapter.scenario_data
 
+
 @app.put("/projects/{project_id}/adapters/{adapter_id}/scenario", tags=["scenario"])
 async def create_scenario(
     project_id: str,
@@ -583,5 +981,3 @@ async def create_scenario(
     adapter = get_adapter(project_id, adapter_id)
     adapter.scenario_data = scenario
     return "Sucessfully created scenario"
-
-

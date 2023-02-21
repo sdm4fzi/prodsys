@@ -21,6 +21,20 @@ class Event(BaseModel):
     expected_end_time: Optional[float] = None
     target_location: Optional[str] = None
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "time": 12.0,
+                "resource": "R1",
+                "state": "P1",
+                "state_type": "Production",
+                "activity": "start state",
+                "material": "Material_1_12",
+                "expected_end_time": 24.3,
+                "target_location": None,
+            }
+        }
+
 class Performance(BaseModel):
     event_log: List[Event]
     kpis: List[KPI_UNION]

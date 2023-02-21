@@ -19,3 +19,14 @@ class MaterialData(CoreAsset):
         else:
             values["material_type"] = values["ID"]
         return values
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ID": "Material_1",
+                "description": "Material 1",
+                "material_type": "Material_1",
+                "processes": ["P1", "P2", "P3"],
+                "transport_process": "TP1",
+            }
+        }

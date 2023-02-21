@@ -53,6 +53,22 @@
       "type": "ManhattanDistanceTimeModel",
       "speed": 30.0,
       "reaction_time": 0.15
+    },
+    "7": {
+      "ID": "function_time_model_7",
+      "description": "exponential distribution time model with 300 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [300.0],
+      "batch_size": 100
+    },
+    "8": {
+      "ID": "function_time_model_8",
+      "description": "normal distribution time model with 15 minutes",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [15.0, 3.0],
+      "batch_size": 100
     }
   },
   "states": {
@@ -60,13 +76,15 @@
       "ID": "Breakdownstate_1",
       "description": "Breakdown state machine 1",
       "time_model_id": "function_time_model_5",
-      "type": "BreakDownState"
+      "type": "BreakDownState",
+      "repair_time_model_id": "function_time_model_8"
     },
     "1": {
       "ID": "Breakdownstate_2",
       "description": "Breakdown state machine 2",
       "time_model_id": "function_time_model_5",
-      "type": "BreakDownState"
+      "type": "BreakDownState",
+      "repair_time_model_id": "function_time_model_8"
     },
     "2": {
       "ID": "Setup_State_1",
@@ -99,6 +117,14 @@
       "type": "SetupState",
       "origin_setup": "P3",
       "target_setup": "P1"
+    },
+    "6": {
+      "ID": "ProcessBreakdownState_1",
+      "description": "Breakdown state process 1",
+      "time_model_id": "function_time_model_7",
+      "type": "ProcessBreakDownState",
+      "repair_time_model_id": "function_time_model_8",
+      "process_id": "P1"
     }
   },
   "processes": {
@@ -174,7 +200,7 @@
       "control_policy": "FIFO",
       "processes": ["P1", "P2"],
       "process_capacity": [2, 1],
-      "states": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2"],
+      "states": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2", "ProcessBreakdownState_1"],
       "input_queues": ["IQ1"],
       "output_queues": ["OQ1"]
     },

@@ -57,6 +57,7 @@ class PostProcessor:
         ] = "Process State"
 
         df.loc[df["State"].str.contains("Breakdown"), "State_type"] = "Breakdown State"
+        df = df.loc[df["State_type"] != "ProcessBreakdown"]
 
         COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
         STATE_SORTING_INDEX = {
