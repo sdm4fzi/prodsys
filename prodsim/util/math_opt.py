@@ -177,7 +177,7 @@ class MathOptimizer(BaseModel):
                             ),
                         )
 
-    # TODO: move into adapter!
+    # TODO: move into adapter and check naming of "Modul_1"!
     def get_breakdown_values(self):
         # Definition der Ausfallraten je Maschine / Modul
         # Ausfallrate Maschine
@@ -372,17 +372,20 @@ class MathOptimizer(BaseModel):
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
             processes = []  # get from solution
             # states = machine_state + processes_state
-            new_resource = resource_data.ProductionResourceData(
-                ID=result.index,
-                description="",
-                capacity=1,
-                location=np.random.choice(possible_positions),
-                controller="SimpleController",
-                control_policy="FIFO",
-                processes=processes,
-                process_capacity=None,
-                states=[]
+            new_machines = [] # hier sind Ergebnisse von optlang
+            # TODO: states richtig hinzufügen für Breakdowns (SB)
+            for machine in new_machines:
+                new_resource = resource_data.ProductionResourceData(
+                    ID=result.index,
+                    description="",
+                    capacity=1,
+                    location=np.random.choice(possible_positions),
+                    controller="SimpleController",
+                    control_policy="FIFO",
+                    processes=processes,
+                    process_capacity=None,
+                    states=[]
 
-            )
-            new_adapter.resource_data.append(new_resource)
+                )
+                new_adapter.resource_data.append(new_resource)
             new_adapter.write_data(f"data/math_opt_solution_{counter}.json")
