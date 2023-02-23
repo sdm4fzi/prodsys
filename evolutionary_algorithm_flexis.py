@@ -13,37 +13,37 @@ from prodsim.util.optimization_util import (
     mutation,
     random_configuration,
     document_individual,
-    arrange_machines
+    arrange_machines,
+    get_weights
 )
 from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 40
+POPULATION_SIZE = 8
 N_PROCESSES = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
+BASE_CONFIGURATION_FILE_PATH = "data/adapter_sdm/flexis/Szenario1-84Sek_gut_für_Bosch_reduziert.xlsx"
+SCENARIO_FILE_PATH = "data/adapter_sdm/flexis/Bosch_scenario.json"
 
-
-with open("data/Bosch_scenario.json") as json_file:
-    scenario_dict = json.load(json_file)
-
-file_path = "data/adapter_sdm/flexis/Szenario1-84Sek_gut_für_Bosch_reduziert.xlsx"
-base_scenario = adapters.FlexisAdapter()
-
-base_scenario.read_data(file_path)
-arrange_machines(base_scenario, scenario_dict)
+base_configuration = adapters.FlexisAdapter()
+base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
+arrange_machines(base_configuration)
 
 set_seed(SEED)
 
 
+# weights = (
+#     1, # throughput 750
+#     -25, # wip 30
+#     -1/350 # cost 35000
+#     )
+weights = get_weights(base_configuration, "max")
 
-weights = (
-    1, # throughput 750
-    -25, # wip 30
-    -1/350 # cost 35000
-    )
+
+
 
 solution_dict = {"current_generation": "00", "00": []}
 performances = {}
@@ -56,7 +56,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
 toolbox.register(
-    "random_configuration", random_configuration, scenario_dict, base_scenario
+    "random_configuration", random_configuration, base_configuration
 )
 toolbox.register(
     "individual",
@@ -71,13 +71,12 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register(
     "evaluate",
     evaluate,
-    scenario_dict,
-    base_scenario,
+    base_configuration,
     solution_dict,
     performances,
 )
 toolbox.register("mate", crossover)  # pass
-toolbox.register("mutate", mutation, scenario_dict)
+toolbox.register("mutate", mutation)
 # toolbox.register('select', tools.selTournament, tournsize=3)
 toolbox.register("select", tools.selNSGA2)
 # toolbox.register('select', tools.selNSGA3)

@@ -42,6 +42,14 @@
       "batch_size": 100
     },
     "5": {
+      "ID": "ftmp6",
+      "description": "function time model process 6",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [1, 0.1],
+      "batch_size": 100
+    },
+    "6": {
       "ID": "ftbs1",
       "description": "function time model breakdwon state 1",
       "type": "FunctionTimeModel",
@@ -49,7 +57,7 @@
       "parameters": [700, 4],
       "batch_size": 100
     },
-    "6": {
+    "7": {
       "ID": "ftbs2",
       "description": "function time model breakdwon state 2",
       "type": "FunctionTimeModel",
@@ -57,15 +65,23 @@
       "parameters": [1100, 4],
       "batch_size": 100
     },
-    "7": {
+    "8": {
       "ID": "ftm1",
       "description": "function time model material 1",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [2.5, 5],
+      "parameters": [4.054054054054054054054054054054, 5],
       "batch_size": 100
     },
-    "8": {
+    "9": {
+      "ID": "ftm2",
+      "description": "function time model material 2",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [5, 5],
+      "batch_size": 100
+    },
+    "10": {
       "ID": "md1",
       "description": "manhattan time model 1",
       "type": "ManhattanDistanceTimeModel",
@@ -119,6 +135,12 @@
       "type": "ProductionProcesses"
     },
     "5": {
+      "ID": "P6",
+      "description": "Process 6",
+      "time_model_id": "ftmp6",
+      "type": "ProductionProcesses"
+    },
+    "6": {
       "ID": "TP1",
       "description": "Transport Process 1",
       "time_model_id": "md1",
@@ -196,6 +218,13 @@
       "material_type": "Material_1",
       "processes": ["P1", "P2", "P3", "P4", "P5"],
       "transport_process": "TP1"
+    },
+    "1": {
+      "ID": "Material_2",
+      "description": "Material 2",
+      "material_type": "Material_2",
+      "processes": ["P4", "P6", "P2"],
+      "transport_process": "TP1"
     }
   },
   "sinks": {
@@ -204,6 +233,13 @@
       "description": "Sink 1",
       "location": [30.0, 30.0],
       "material_type": "Material_1",
+      "input_queues": ["SinkQueue"]
+    },
+    "1": {
+      "ID": "SK2",
+      "description": "Sink 2",
+      "location": [30.0, 30.0],
+      "material_type": "Material_2",
       "input_queues": ["SinkQueue"]
     }
   },
@@ -214,7 +250,17 @@
       "location": [-5.0, -5.0],
       "material_type": "Material_1",
       "time_model_id": "ftm1",
-      "router": "AvoidDeadlockRouter",
+      "router": "SimpleRouter",
+      "routing_heuristic": "shortest_queue",
+      "output_queues": ["SourceQueue"]
+    },
+    "1": {
+      "ID": "S2",
+      "description": "Source 2",
+      "location": [-5.0, -5.0],
+      "material_type": "Material_2",
+      "time_model_id": "ftm2",
+      "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
     }

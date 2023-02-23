@@ -79,6 +79,28 @@ def register_production_states_for_processes(
         states.append(_state)
     register_production_states(resource, states, _env)  # type: ignore
 
+def adjust_process_breakdown_states(
+    resource: resources.Resourcex,
+    state_factory: state_factory.StateFactory,
+    _env: sim.Environment,
+):  
+    process_breakdown_states = [state_instance for state_instance in resource.states if isinstance(state_instance, state.ProcessBreakDownState)]
+    for process_breakdown_state in process_breakdown_states:
+        process_id = process_breakdown_state.state_data.process_id
+        production_states = [state_instance for state_instance in resource.production_states if isinstance(state_instance, state.ProductionState) and state_instance.state_data.ID == process_id]
+        
+        process_breakdown_states_to_adjust = [process_breakdown_state]
+
+        if len(production_states) > 1:
+            for _ in range(len(production_states) - 1):
+                copy_state = copy.deepcopy(process_breakdown_state)
+                copy_state.env = _env
+                resource.add_state(copy_state)
+                process_breakdown_states_to_adjust.append(copy_state)
+        for resource_state, process_breakdown_state_to_adjust in zip(production_states, process_breakdown_states_to_adjust):
+            process_breakdown_state_to_adjust.set_production_state(resource_state)
+
+
 
 class ResourceFactory(BaseModel):
     env: sim.Environment
@@ -157,6 +179,7 @@ class ResourceFactory(BaseModel):
         register_production_states_for_processes(
             resource_object, self.state_factory, self.env
         )
+        adjust_process_breakdown_states(resource_object, self.state_factory, self.env)
         self.resources.append(resource_object)
 
     def start_resources(self):

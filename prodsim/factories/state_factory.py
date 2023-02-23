@@ -41,6 +41,11 @@ class StateFactory(BaseModel):
             values["state_data"].time_model_id
         )
         values.update({"time_model": time_model, "env": self.env})
+        if "repair_time_model_id" in state_data.dict():
+            repair_time_model = self.time_model_factory.get_time_model(
+                state_data.repair_time_model_id
+            )
+            values.update({"repair_time_model": repair_time_model})
         self.states.append(parse_obj_as(state.STATE_UNION, values))
 
     def create_states(self, adapter: adapter.Adapter):

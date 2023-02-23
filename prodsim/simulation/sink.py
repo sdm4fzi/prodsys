@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Tuple
+from simpy import events
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,9 @@ class Sink(BaseModel):
     def get_location(self) -> Tuple[float, float]:
         return self.data.location
     
+    def register_finished_material(self, material):
+        self.material_factory.register_finished_material(material)
+
 from prodsim.factories import material_factory
 Sink.update_forward_refs()
     

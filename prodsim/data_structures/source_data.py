@@ -8,10 +8,11 @@ from enum import Enum
 
 from prodsim.data_structures.core_asset import CoreAsset
 
+
 class RouterType(str, Enum):
     SimpleRouter = "SimpleRouter"
-    AvoidDeadlockRouter = "AvoidDeadlockRouter"
     CapabilityRouter = "CapabilityRouter"
+
 
 class RoutingHeuristic(str, Enum):
     random = "random"
@@ -26,3 +27,17 @@ class SourceData(CoreAsset):
     router: RouterType
     routing_heuristic: RoutingHeuristic
     output_queues: List[str]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ID": "S1",
+                "description": "Source 1",
+                "location": [0.0, 0.0],
+                "material_type": "Material_1",
+                "time_model_id": "function_time_model_4",
+                "router": "SimpleRouter",
+                "routing_heuristic": "shortest_queue",
+                "output_queues": ["SourceQueue"],
+            }
+        }

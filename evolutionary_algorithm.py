@@ -8,30 +8,30 @@ from deap import algorithms, base, creator, tools
 from prodsim.simulation import sim
 from prodsim import adapters	
 from prodsim.util.optimization_util import (crossover, evaluate, mutation,
-                                       random_configuration, document_individual)
+                                       random_configuration, document_individual, get_weights)
 from prodsim.util.util import set_seed
 
 SEED = 22
 NGEN = 50
-POPULATION_SIZE = 16
+POPULATION_SIZE = 8
 N_PROCESSES = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
+BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
+SCENARIO_FILE_PATH = "data/scenario.json"
 
-
-
-with open("data/scenario.json") as json_file:
-    scenario_dict = json.load(json_file)
-base_scenario = adapters.JsonAdapter()
-# base_scenario.read_data('data/example_configuration.json')
-base_scenario.read_data('data/base_scenario_new.json')
+base_configuration = adapters.JsonAdapter()
+base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
 
 set_seed(SEED)
 
+
 # weights für: (throughput, wip, cost)
 # weights = (0.004, -1.0, -0.0003)
-weights = (0.025, -1.0, -0.001)
+# weights = (0.025, -1.0, -0.001)
+weights = get_weights(base_configuration, "max")
+
 
 solution_dict = {"current_generation": "00", "00": []}
 performances = {}
@@ -44,7 +44,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 toolbox = base.Toolbox()
 toolbox.register(
-    "random_configuration", random_configuration, scenario_dict, base_scenario
+    "random_configuration", random_configuration, base_configuration
 )
 toolbox.register(
     "individual",
@@ -59,13 +59,12 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register(
     "evaluate",
     evaluate,
-    scenario_dict,
-    base_scenario,
+    base_configuration,
     solution_dict,
     performances,
 )
 toolbox.register("mate", crossover)  # pass
-toolbox.register("mutate", mutation, scenario_dict)
+toolbox.register("mutate", mutation)
 # toolbox.register('select', tools.selTournament, tournsize=3)
 toolbox.register("select", tools.selNSGA2)
 # toolbox.register('select', tools.selNSGA3)

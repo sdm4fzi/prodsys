@@ -108,12 +108,11 @@ class ProductionController(Controller):
                 for process in self.running_processes:
                     if process.triggered:
                         self.running_processes.remove(process)
-
             if (
                 len(self.running_processes) == self.resource.capacity
                 or not self.requests
             ):
-                continue
+                continue           
             self.control_policy(self.requests)
             process_request = self.requests.pop(0)
             running_process = self.env.process(self.start_process(process_request))
@@ -138,16 +137,17 @@ class ProductionController(Controller):
             eventss = self.put_material_to_output_queue(resource, [material])
             yield events.AllOf(resource.env, eventss)
             for next_material in [material]:
+                if not resource.got_free.triggered:
+                    resource.got_free.succeed()
                 next_material.finished_process.succeed()
-
+                
     def run_process(self, input_state: state.State, target_material: material.Material):
         env = input_state.env
-        input_state.activate_state()
+        input_state.prepare_for_run()
         input_state.state_info.log_material(
             target_material, state.StateTypeEnum.production
         )
         input_state.process = env.process(input_state.process_state())
-        # return input_state.process
 
     def sort_queue(self, resource: resources.Resourcex):
         pass
@@ -188,7 +188,7 @@ class TransportController(Controller):
             for queue in resource.input_queues:
                 events.append(queue.put(material.material_data))
         else:
-            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Sink")
 
         return events
 
@@ -241,6 +241,8 @@ class TransportController(Controller):
             transport_state.process = None
             eventss = self.put_material_to_input_queue(target, material)
             yield events.AllOf(resource.env, eventss)
+            if isinstance(target, resources.ProductionResource):
+                target.unreserve_input_queues()
             material.finished_process.succeed()
 
     def sort_queue(self, resource: resources.Resourcex):
@@ -254,7 +256,7 @@ class TransportController(Controller):
     ):
         env = input_state.env
         target_location = target.get_location()
-        input_state.activate_state()
+        input_state.prepare_for_run()
         input_state.state_info.log_material(material, state.StateTypeEnum.transport)
         input_state.state_info.log_target_location(
             target, state.StateTypeEnum.transport

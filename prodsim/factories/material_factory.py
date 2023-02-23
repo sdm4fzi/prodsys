@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -10,14 +10,12 @@ from prodsim.data_structures import material_data
 from prodsim.factories import process_factory
 from prodsim.simulation import logger, proces_models, process
 
-# if TYPE_CHECKING:
-#     from .. import material
-
 
 class MaterialFactory(BaseModel):
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     materials: List[material.Material] = []
+    finished_materials: List[material.Material] = []
     data_collecter: logger.Datacollector = Field(default=False, init=False)
     material_counter = 0
 
@@ -42,7 +40,7 @@ class MaterialFactory(BaseModel):
         material_object = material.Material(
             env=self.env,
             material_data=material_data,
-            router=router,
+            material_router=router,
             process_model=process_model,
             transport_process=transport_processes,
         )
@@ -85,8 +83,15 @@ class MaterialFactory(BaseModel):
         else:
             raise ValueError("Process model not recognized.")
 
-    def get_material(self, ID) -> material.Material:
+    def get_material(self, ID: str) -> material.Material:
         return [m for m in self.materials if m.material_data.ID == ID].pop()
+    
+    def remove_material(self, material: material.Material):
+        self.materials = [m for m in self.materials if m.material_data.ID != material.material_data.ID]
+
+    def register_finished_material(self, material: material.Material):
+        self.finished_materials.append(material)
+        self.remove_material(material)
 
 
 from prodsim.simulation import material
