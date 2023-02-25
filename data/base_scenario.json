@@ -51,21 +51,53 @@
     },
     "6": {
       "ID": "ftbs1",
-      "description": "function time model breakdwon state 1",
+      "description": "function time model breakdwon state machines",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [700, 4],
+      "parameters": [3333.33],
       "batch_size": 100
     },
     "7": {
       "ID": "ftbs2",
-      "description": "function time model breakdwon state 2",
+      "description": "function time model breakdwon state transport resources",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [1100, 4],
+      "parameters": [3000],
       "batch_size": 100
     },
     "8": {
+      "ID": "ftbs3",
+      "description": "function time model breakdwon state process module",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [5000],
+      "batch_size": 100
+    },
+    "9": {
+      "ID": "ftr1",
+      "description": "function time model repair time machine breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [15],
+      "batch_size": 100
+    },
+    "10": {
+      "ID": "ftr2",
+      "description": "function time model repair time transport resource breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [10],
+      "batch_size": 100
+    },
+    "11": {
+      "ID": "ftr3",
+      "description": "function time model repair time process module breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [10],
+      "batch_size": 100
+    },
+    "12": {
       "ID": "ftm1",
       "description": "function time model material 1",
       "type": "FunctionTimeModel",
@@ -73,7 +105,7 @@
       "parameters": [4.054054054054054054054054054054, 5],
       "batch_size": 100
     },
-    "9": {
+    "13": {
       "ID": "ftm2",
       "description": "function time model material 2",
       "type": "FunctionTimeModel",
@@ -81,7 +113,7 @@
       "parameters": [5, 5],
       "batch_size": 100
     },
-    "10": {
+    "14": {
       "ID": "md1",
       "description": "manhattan time model 1",
       "type": "ManhattanDistanceTimeModel",
@@ -91,16 +123,25 @@
   },
   "states": {
     "0": {
-      "ID": "BS1",
+      "ID": "BSM",
       "description": "Breakdownstate for machine",
       "time_model_id": "ftbs1",
-      "type": "BreakDownState"
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr1"
     },
     "1": {
-      "ID": "BS2",
+      "ID": "BST",
       "description": "Breakdownstate for transport resource",
       "time_model_id": "ftbs2",
-      "type": "BreakDownState"
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr2"
+    },
+    "2": {
+      "ID": "BSP",
+      "description": "Breakdownstate for process modules",
+      "time_model_id": "ftbs3",
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr3"
     }
   },
   "processes": {
@@ -168,7 +209,7 @@
       "controller": "SimpleController",
       "control_policy": "FIFO",
       "processes": ["P1", "P3"],
-      "states": ["BS1"]
+      "states": ["BSM", "BSP", "BSP"]
     },
     "1": {
       "ID": "M2",
@@ -178,7 +219,7 @@
       "controller": "SimpleController",
       "control_policy": "SPT",
       "processes": ["P2", "P5"],
-      "states": ["BS1"]
+      "states": ["BSM", "BSP", "BSP"]
     },
     "2": {
       "ID": "M3",
@@ -188,7 +229,7 @@
       "controller": "SimpleController",
       "control_policy": "FIFO",
       "processes": ["P4"],
-      "states": ["BS1"]
+      "states": ["BSM", "BSP"]
     },
     "3": {
       "ID": "M4",
@@ -198,7 +239,7 @@
       "controller": "SimpleController",
       "control_policy": "FIFO",
       "processes": ["P2"],
-      "states": ["BS1"]
+      "states": ["BSM", "BSP"]
     },
     "4": {
       "ID": "TR1",
@@ -208,7 +249,7 @@
       "controller": "TransportController",
       "control_policy": "FIFO",
       "processes": ["TP1"],
-      "states": ["BS2"]
+      "states": ["BST"]
     }
   },
   "materials": {

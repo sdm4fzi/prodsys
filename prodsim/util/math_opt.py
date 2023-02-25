@@ -8,7 +8,13 @@ from copy import deepcopy
 
 from pydantic import BaseModel
 from prodsim import adapters
-from prodsim.data_structures import resource_data, processes_data
+from prodsim.data_structures import (
+    resource_data,
+    processes_data,
+    state_data,
+    time_model_data,
+)
+from prodsim.util import optimization_util
 
 import gurobipy as gp
 from gurobipy import GRB
@@ -33,7 +39,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
 
 class MathOptimizer(BaseModel):
     adapter: adapters.Adapter
-    
+
     model: Any = None
     x: Any = None
     z: Any = None
@@ -52,7 +58,7 @@ class MathOptimizer(BaseModel):
         return module_cost * (x - get_modul_counts(self.adapter)[Modul])
 
     def set_variables(
-            self,
+        self,
     ):
         self.processing_times_per_product_and_step = (
             self.get_processing_times_per_product_and_step()
@@ -71,15 +77,21 @@ class MathOptimizer(BaseModel):
         x = {}
         for product_type in self.adapter.material_data:
             x[product_type.ID] = {}
-            work_piece_count = self.adapter.scenario_data.constraints.target_material_count[product_type.ID]
+            work_piece_count = (
+                self.adapter.scenario_data.constraints.target_material_count[
+                    product_type.ID
+                ]
+            )
             for work_piece_index in range(work_piece_count):
                 x[product_type.ID][work_piece_index] = {}
                 for step in product_type.processes:
                     x[product_type.ID][work_piece_index][step] = {}
                     for station in range(
-                            self.adapter.scenario_data.constraints.max_num_machines
+                        self.adapter.scenario_data.constraints.max_num_machines
                     ):
-                        x[product_type.ID][work_piece_index][step][station] = self.model.addVar(
+                        x[product_type.ID][work_piece_index][step][
+                            station
+                        ] = self.model.addVar(
                             vtype=GRB.BINARY,
                             name="x[{},{},{},{}]".format(
                                 product_type.ID, work_piece_index, step, station
@@ -95,7 +107,9 @@ class MathOptimizer(BaseModel):
         ]
         stations = [
             station
-            for station in range(self.adapter.scenario_data.constraints.max_num_machines)
+            for station in range(
+                self.adapter.scenario_data.constraints.max_num_machines
+            )
         ]
         return process_modules, stations
 
@@ -111,22 +125,22 @@ class MathOptimizer(BaseModel):
         return opening_cost
 
     def set_objective_function(
-            self,
+        self,
     ):
         process_modules, stations = self.get_process_modules_and_stations()
         opening_costs = self.get_opening_cost_of_stations()
         objective = (
-                sum(self.t[modul] for modul in process_modules)
-                + sum(opening_costs[station] * self.s[station] for station in stations)
-                + sum(
-            self.v[station] * self.adapter.scenario_data.info.breakdown_cost
-            for station in stations
-        )
+            sum(self.t[modul] for modul in process_modules)
+            + sum(opening_costs[station] * self.s[station] for station in stations)
+            + sum(
+                self.v[station] * self.adapter.scenario_data.info.breakdown_cost
+                for station in stations
+            )
         )
         self.model.setObjective(objective, GRB.MINIMIZE)
 
     def set_constraints(
-            self,
+        self,
     ):
         self.check_available_station_for_workpieces()
         self.check_available_station()
@@ -168,58 +182,69 @@ class MathOptimizer(BaseModel):
                     for station in stations.keys():
                         self.model.addConstr(
                             (
-                                    self.x[product][workpiece][process_step][station]
-                                    - self.z[process_step, station]
-                                    <= 0
+                                self.x[product][workpiece][process_step][station]
+                                - self.z[process_step, station]
+                                <= 0
                             ),
                             "für_{}_Werkstück_{}_{}_vorhanden_an_Station_{}".format(
                                 product, workpiece, process_step, station
                             ),
                         )
 
-    # TODO: move into adapter!
+    def get_state_with_id(self, state_id: str) -> state_data.BreakDownStateData:
+        return [
+            state for state in self.adapter.state_data if state.ID == state_id
+        ].pop()
+
+    def get_expected_time_of_time_model_with_id(
+        self, time_model_id: str
+    ) -> time_model_data:
+        return (
+            [
+                time_model
+                for time_model in self.adapter.time_model_data
+                if time_model.ID == time_model_id
+            ]
+            .pop()
+            .parameters[0]
+        )
+
     def get_breakdown_values(self):
-        # Definition der Ausfallraten je Maschine / Modul
-        # Ausfallrate Maschine
-        p = 0.0003
-        # Ausfallrate Module λ
-        λ_M1 = 0.0002
-        λ_M2 = 0.0002
-        λ_M3 = 0.0002
-        λ_M4 = 0.0002
-        λ_M5 = 0.0002
-        λ_M6 = 0.0002
 
         # Berechnung der Erwartungswerte (durchschnittliche Zeit bis zum Ausfall) E(x)=1/λ
-        Ex_Maschine = 1 / p
-        Ex_M1 = 1 / λ_M1
-        Ex_M2 = 1 / λ_M2
-        Ex_M3 = 1 / λ_M3
-        Ex_M4 = 1 / λ_M4
-        Ex_M5 = 1 / λ_M5
-        Ex_M6 = 1 / λ_M6
+        machine_breakdown_state = self.get_state_with_id(
+            optimization_util.BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+        )
+        process_module_breakdown_state = self.get_state_with_id(
+            optimization_util.BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+        )
 
-        # Berechnung der erwarteten Anzahl an Fehlern = betrachteter Zeitraum / E(x)
+        MTTF_machine = self.get_expected_time_of_time_model_with_id(
+            machine_breakdown_state.time_model_id
+        )
+        MTTR_machine = self.get_expected_time_of_time_model_with_id(
+            machine_breakdown_state.repair_time_model_id
+        )
+        MTTF_process_module = self.get_expected_time_of_time_model_with_id(
+            process_module_breakdown_state.time_model_id
+        )
+        MTTR_process_module = self.get_expected_time_of_time_model_with_id(
+            process_module_breakdown_state.repair_time_model_id
+        )
+
+        # Berechnung der erwarteten Anzahl an Fehlern und Zeitdauern der Fehler
         BZ = self.adapter.scenario_data.info.time_range
-        machine_breakdown_count = BZ / Ex_Maschine
+        machine_breakdown_count = BZ / MTTF_machine
+        machine_breakdown_time = MTTR_machine
+
+        process_modules, stations = self.get_process_modules_and_stations()
+
         module_breakdown_count = {
-            "Modul_1": BZ / Ex_M1,
-            "Modul_2": BZ / Ex_M2,
-            "Modul_3": BZ / Ex_M3,
-            "Modul_4": BZ / Ex_M4,
-            "Modul_5": BZ / Ex_M5,
-            "Modul_6": BZ / Ex_M6,
+            module: BZ / MTTF_process_module for module in process_modules
         }
 
-        # Definition der durchschnittlichen Ausfalldauer einer Maschine / eines Moduls
-        machine_breakdown_time = 15
         module_breakdown_time = {
-            "Modul_1": 10,
-            "Modul_2": 10,
-            "Modul_3": 10,
-            "Modul_4": 10,
-            "Modul_5": 10,
-            "Modul_6": 10,
+            module: MTTR_process_module for module in process_modules
         }
 
         return (
@@ -230,6 +255,7 @@ class MathOptimizer(BaseModel):
         )
 
     def check_extended_time_per_station(self):
+
         (
             machine_breakdown_count,
             module_breakdown_count,
@@ -239,20 +265,20 @@ class MathOptimizer(BaseModel):
         for station in range(self.adapter.scenario_data.constraints.max_num_machines):
             self.model.addConstr(
                 (
+                    (
                         (
-                                (
-                                        self.s[station]
-                                        * machine_breakdown_count
-                                        * machine_breakdown_time
-                                )
-                                + sum(
-                            self.z[Modul, station]
-                            * module_breakdown_count[Modul]
-                            * module_breakdown_time[Modul]
-                            for Modul in module_breakdown_count
+                            self.s[station]
+                            * machine_breakdown_count
+                            * machine_breakdown_time
                         )
+                        + sum(
+                            self.z[module, station]
+                            * module_breakdown_count[module]
+                            * module_breakdown_time[module]
+                            for module in module_breakdown_count
                         )
-                        == self.a[station]
+                    )
+                    == self.a[station]
                 ),
                 "Berechnung_der_Ausfallzeit_von_{}".format(station),
             )
@@ -262,18 +288,22 @@ class MathOptimizer(BaseModel):
         for product in self.adapter.material_data:
             processing_times_per_product_and_step[product.ID] = {}
             for step in product.processes:
-                process = next(filter(
-                    lambda process: process.ID == step, self.adapter.process_data
-                ))
-                time_model = next(filter(
-                    lambda time_model: time_model.ID == process.time_model_id,
-                    self.adapter.time_model_data,
-                ))
+                process = next(
+                    filter(
+                        lambda process: process.ID == step, self.adapter.process_data
+                    )
+                )
+                time_model = next(
+                    filter(
+                        lambda time_model: time_model.ID == process.time_model_id,
+                        self.adapter.time_model_data,
+                    )
+                )
                 # Adjust processing times with safety factor (0,85-Quantil of the normal distribution)
                 quantil = scipy.stats.norm.ppf(0.85, loc=0, scale=1)
                 processing_times_per_product_and_step[product.ID][
                     step
-                 ] = time_model.parameters[0] + (time_model.parameters[1] * quantil)
+                ] = time_model.parameters[0] + (time_model.parameters[1] * quantil)
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):
@@ -282,18 +312,18 @@ class MathOptimizer(BaseModel):
         for station in range(self.adapter.scenario_data.constraints.max_num_machines):
             self.model.addConstr(
                 (
-                        (
-                            gp.quicksum(
-                                self.processing_times_per_product_and_step[product][step]
-                                * self.x[product][workpiece][step][station]
-                                for product, workpieces in self.x.items()
-                                for workpiece, process_steps in workpieces.items()
-                                for step in process_steps.keys()
-                            )
+                    (
+                        gp.quicksum(
+                            self.processing_times_per_product_and_step[product][step]
+                            * self.x[product][workpiece][step][station]
+                            for product, workpieces in self.x.items()
+                            for workpiece, process_steps in workpieces.items()
+                            for step in process_steps.keys()
                         )
-                        + self.a[station]
-                        - BZ
-                        <= 0
+                    )
+                    + self.a[station]
+                    - BZ
+                    <= 0
                 ),
                 "Berechnung_der_überschrittenen_Zeit_an_{}".format(station),
             )
@@ -303,11 +333,11 @@ class MathOptimizer(BaseModel):
         for module in process_modules:
             self.model.addConstr(
                 (
-                        self.cost_module(
-                            sum(self.z[module, station] for station in stations), module
-                        )
-                        - self.t[module]
-                        <= 0
+                    self.cost_module(
+                        sum(self.z[module, station] for station in stations), module
+                    )
+                    - self.t[module]
+                    <= 0
                 ),
                 "Sicherstellen_Maximum_{}".format(module),
             )
@@ -316,15 +346,15 @@ class MathOptimizer(BaseModel):
         _, stations = self.get_process_modules_and_stations()
         self.model.addConstr(
             (
-                    sum(self.v[Station] for Station in stations)
-                    - self.adapter.scenario_data.info.maximum_breakdown_time
-                    <= 0
+                sum(self.v[Station] for Station in stations)
+                - self.adapter.scenario_data.info.maximum_breakdown_time
+                <= 0
             ),
             "Maximale_Ausfallzeit_einhalten",
         )
 
     def optimize(
-            self,
+        self,
     ):
         st = datetime.datetime.now()
         self.model: Any = gp.Model("MILP_Rekonfiguration")
@@ -341,33 +371,36 @@ class MathOptimizer(BaseModel):
 
         status = self.model.Status
         if status == GRB.UNBOUNDED:
-            print('The model cannot be solved because it is unbounded')
+            print("The model cannot be solved because it is unbounded")
         if status == GRB.OPTIMAL:
-            print('The optimal objective is %g' % self.model.ObjVal)
+            print("The optimal objective is %g" % self.model.ObjVal)
         if status != GRB.INF_OR_UNBD and status != GRB.INFEASIBLE:
-            print('Optimization was stopped with status %d' % status)
+            print("Optimization was stopped with status %d" % status)
 
         elapsed_time = end - st
-        print('Execution time:', elapsed_time, 'seconds')
+        print("Execution time:", elapsed_time, "seconds")
         print(self.model.write("MILP.lp"))
         # TODO: store results for later export or postprocessing
 
     def save_model(
-            self,
+        self,
     ):
         pass
         # self.adapters.resource_data.append(resource_data.ProductionResourceData())
 
     def save_result_to_adapter(
-            self,
+        self,
     ):
         # get relevant results of optimization
         results = []
 
         for counter, result in enumerate(results):
             new_adapter = self.adapter.copy(deep=True)
-            new_adapter.resource_data = [resource for resource in self.adapter.resource if
-                                         not isinstance(resource, resource_data.ProductionResourceData)]
+            new_adapter.resource_data = [
+                resource
+                for resource in self.adapter.resource
+                if not isinstance(resource, resource_data.ProductionResourceData)
+            ]
 
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
             processes = []  # get from solution
@@ -381,8 +414,7 @@ class MathOptimizer(BaseModel):
                 control_policy="FIFO",
                 processes=processes,
                 process_capacity=None,
-                states=[]
-
+                states=[],
             )
             new_adapter.resource_data.append(new_resource)
             new_adapter.write_data(f"data/math_opt_solution_{counter}.json")

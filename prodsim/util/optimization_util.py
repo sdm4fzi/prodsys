@@ -1,11 +1,11 @@
 import random
 from copy import deepcopy
 from typing import Dict, List, Union, Tuple, Literal
+from enum import Enum
 
 from uuid import uuid1
 from collections.abc import Iterable
 from pydantic import parse_obj_as
-
 
 from prodsim import adapters, runner
 from prodsim.util.post_processing import PostProcessor
@@ -16,6 +16,11 @@ from prodsim.data_structures import (
     performance_indicators
 )
 
+class BreakdownStateNamingConventino(str, Enum):
+    MACHINE_BREAKDOWN_STATE = "BSM"
+    TRANSPORT_RESOURCE_BREAKDOWN_STATE = "BST"
+    PROCESS_MODULE_BREAKDOWN_STATE = "BSP"
+    
 
 def get_weights(adapter: adapters.Adapter, direction: Literal["min", "max"]) -> Tuple[float, ...]:
     weights = []
