@@ -2,34 +2,44 @@ import json
 import time
 from copy import deepcopy
 
-from prodsim import loader, sim
-from prodsim.util.optimization_util import (check_valid_configuration, crossover,
-                                       evaluate, mutation,
-                                       random_configuration)
-from prodsim.util import set_seed
+
+from prodsim.simulation import sim
+from prodsim import adapters
+from prodsim.util.optimization_util import (
+    check_valid_configuration,
+    crossover,
+    evaluate,
+    mutation,
+    random_configuration,
+    document_individual,
+    get_weights,
+)
+from prodsim.util.util import set_seed
 
 SEED = 22
 sim.VERBOSE = 0
 
 SAVE_FOLDER = "data/anneal_results"
+BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
+SCENARIO_FILE_PATH = "data/scenario.json"
 
-base_scenario = "data/base_scenario.json"
-
-with open("data/scenario.json") as json_file:
-    scenario_dict = json.load(json_file)
+base_configuration = adapters.JsonAdapter()
+base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
 
 set_seed(SEED)
 
+
 # weights für: (throughput, wip, cost)
 # weights = (-0.004, 1.0, 0.0003)
-weights = (-0.025, 1.0, 0.001)
+# weights = (-0.025, 1.0, 0.001)
+weights = get_weights(base_configuration, "min")
 
 performances = {}
 performances["00"] = {}
 solution_dict = {"current_generation": "00", "00": []}
 start = time.perf_counter()
 
-
+# TODO: get Annealer packakge, include in requirements and import here
 class ProductionSystemOptimization(Annealer):
     def __init__(self, initial_state=None, load_state=None):
         super().__init__(initial_state, load_state)
@@ -37,17 +47,10 @@ class ProductionSystemOptimization(Annealer):
     def move(self):
         while True:
             # print("Move")
-            configuration = mutation(
-                scenario_dict=scenario_dict, individual=[deepcopy(self.state)]
-            )[0][0]
-            base_configuration = loader.CustomLoader()
-            base_configuration.read_data(base_scenario, "json")
-            if (
-                check_valid_configuration(
-                    configuration=configuration,
-                    base_configuration=base_configuration,
-                    scenario_dict=scenario_dict,
-                )
+            configuration = mutation(individual=[deepcopy(self.state)])[0][0]
+            if check_valid_configuration(
+                configuration=configuration,
+                base_configuration=base_configuration,
             ):
                 self.state = configuration
                 break
@@ -55,32 +58,28 @@ class ProductionSystemOptimization(Annealer):
     def energy(self):
 
         values = evaluate(
-            scenario_dict=scenario_dict,
-            base_scenario=base_scenario,
+            base_scenario=base_configuration,
             performances=performances,
-            solution_dict=solution_dict, 
-            save_folder=SAVE_FOLDER,
+            solution_dict=solution_dict,
             individual=[self.state],
         )
 
         performance = sum([value * weight for value, weight in zip(values, weights)])
         # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(performances["00"]) - 1
+        document_individual(solution_dict, SAVE_FOLDER, [self.state])
         performances["00"][str(counter)] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
-            "time_stamp": time.perf_counter() - start
+            "time_stamp": time.perf_counter() - start,
         }
         with open("data/anneal_results.json", "w") as json_file:
             json.dump(performances, json_file)
 
-
         return performance
 
 
-initial_state = loader.CustomLoader()
-initial_state.read_data(base_scenario, "json")
-pso = ProductionSystemOptimization(initial_state=initial_state)
+pso = ProductionSystemOptimization(initial_state=base_configuration)
 
 # pso.auto(minutes=240)
 # {'tmax': 7500.0, 'tmin': 0.67, 'steps': 1500, 'updates': 100} 64:27:53ä'
@@ -92,4 +91,3 @@ pso.steps = 4000
 pso.updates = 300
 
 internary, performance = pso.anneal()
-

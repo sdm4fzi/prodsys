@@ -6,9 +6,15 @@ import multiprocessing
 from deap import algorithms, base, creator, tools
 
 from prodsim.simulation import sim
-from prodsim import adapters	
-from prodsim.util.optimization_util import (crossover, evaluate, mutation,
-                                       random_configuration, document_individual, get_weights)
+from prodsim import adapters
+from prodsim.util.optimization_util import (
+    crossover,
+    evaluate,
+    mutation,
+    random_configuration,
+    document_individual,
+    get_weights,
+)
 from prodsim.util.util import set_seed
 
 SEED = 22
@@ -43,9 +49,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 
 toolbox = base.Toolbox()
-toolbox.register(
-    "random_configuration", random_configuration, base_configuration
-)
+toolbox.register("random_configuration", random_configuration, base_configuration)
 toolbox.register(
     "individual",
     tools.initRepeat,
@@ -71,7 +75,7 @@ toolbox.register("select", tools.selNSGA2)
 
 if __name__ == "__main__":
     population = toolbox.population(n=POPULATION_SIZE)
-    
+
     pool = multiprocessing.Pool(N_PROCESSES)
     toolbox.register("map", pool.map)
     fitnesses = toolbox.map(toolbox.evaluate, population)
@@ -86,12 +90,13 @@ if __name__ == "__main__":
         performances["00"][ind[0].ID] = {
             "agg_fitness": aggregated_fitness,
             "fitness": [float(value) for value in ind.fitness.values],
-            "time_stamp": time.perf_counter() - start
+            "time_stamp": time.perf_counter() - start,
         }
 
     print("Best Performance: ", max(generation_performances))
     print(
-        "Average Performance: ", sum(generation_performances) / len(generation_performances)
+        "Average Performance: ",
+        sum(generation_performances) / len(generation_performances),
     )
 
     population = toolbox.select(population, len(population))
@@ -123,7 +128,7 @@ if __name__ == "__main__":
             performances[str(g)][ind[0].ID] = {
                 "agg_fitness": aggregated_fitness,
                 "fitness": [float(value) for value in ind.fitness.values],
-                "time_stamp": time.perf_counter() - start
+                "time_stamp": time.perf_counter() - start,
             }
 
         print("Best Performance: ", max(generation_performances))
@@ -136,5 +141,3 @@ if __name__ == "__main__":
 
         with open("data/ea_results.json", "w") as json_file:
             json.dump(performances, json_file)
-        
-
