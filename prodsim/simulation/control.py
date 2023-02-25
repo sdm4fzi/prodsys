@@ -72,7 +72,6 @@ class ProductionController(Controller):
             for queue in resource.input_queues:
                 # _material_type = _process.get_raw_material_type()
 
-                # TODO: here should be an advanced process model that controls, which material should be get from which
                 events.append(
                     queue.get(filter=lambda item: item is material.material_data)
                 )
