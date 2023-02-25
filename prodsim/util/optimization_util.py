@@ -20,7 +20,23 @@ class BreakdownStateNamingConventino(str, Enum):
     MACHINE_BREAKDOWN_STATE = "BSM"
     TRANSPORT_RESOURCE_BREAKDOWN_STATE = "BST"
     PROCESS_MODULE_BREAKDOWN_STATE = "BSP"
-    
+
+def get_breakdown_state_ids_of_machine_with_processes(processes: List[str]) -> List[str]:
+    state_ids = [
+        BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+    ] + len(processes) * [
+        BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+    ]
+    return state_ids
+
+def clean_out_breakdown_states_of_resources(adapter_object: adapters.Adapter):
+    for resource in adapter_object.resource_data:
+        if isinstance(resource, resource_data.ProductionResourceData):
+            resource.states = get_breakdown_state_ids_of_machine_with_processes(resource.processes)
+        elif isinstance(resource, resource_data.TransportResourceData):
+            resource.states = [BreakdownStateNamingConventino.TRANSPORT_RESOURCE_BREAKDOWN_STATE]
+        else:
+            raise ValueError("unknown type of resource for breakdown state handling")
 
 def get_weights(adapter: adapters.Adapter, direction: Literal["min", "max"]) -> Tuple[float, ...]:
     weights = []
@@ -108,6 +124,8 @@ def crossover(ind1, ind2):
 
     add_default_queues_to_resources(adapter1)
     add_default_queues_to_resources(adapter2)
+    clean_out_breakdown_states_of_resources(adapter1)
+    clean_out_breakdown_states_of_resources(adapter2)
 
     return ind1, ind2
 
@@ -130,6 +148,7 @@ def mutation(individual):
     adapter_object = individual[0]
     mutation_operation(adapter_object)
     add_default_queues_to_resources(individual[0])
+    clean_out_breakdown_states_of_resources(adapter_object)
 
     return (individual,)
 
