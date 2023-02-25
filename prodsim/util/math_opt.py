@@ -379,8 +379,10 @@ class MathOptimizer(BaseModel):
 
         elapsed_time = end - st
         print("Execution time:", elapsed_time, "seconds")
-        print(self.model.write("MILP.lp"))
+        self.model.write("MILP.lp")
         # TODO: store results for later export or postprocessing
+        for entry in self.model.__dict__:
+            print(entry)
 
     def save_model(
         self,
@@ -391,7 +393,7 @@ class MathOptimizer(BaseModel):
     def save_result_to_adapter(
         self,
     ):
-        # get relevant results of optimization
+        # TODO: get most relevant results / solutions from optimization model
         results = []
 
         for counter, result in enumerate(results):
@@ -401,20 +403,30 @@ class MathOptimizer(BaseModel):
                 for resource in self.adapter.resource
                 if not isinstance(resource, resource_data.ProductionResourceData)
             ]
-
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
-            processes = []  # get from solution
-            # states = machine_state + processes_state
-            new_resource = resource_data.ProductionResourceData(
-                ID=result.index,
-                description="",
-                capacity=1,
-                location=np.random.choice(possible_positions),
-                controller="SimpleController",
-                control_policy="FIFO",
-                processes=processes,
-                process_capacity=None,
-                states=[],
-            )
-            new_adapter.resource_data.append(new_resource)
+
+            # TODO: retrieve from result the resource data that specifies the used process modules (retrieval could also be in for loop below)
+            resources_data = []
+
+            for resource_counter, resource in enumerate(resources_data):
+                processes = []  # Ids for used process modules on this machine
+                states = [
+                    optimization_util.BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+                ] + len(processes) * [
+                    optimization_util.BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+                ]
+                location = np.random.choice(possible_positions)
+                possible_positions.remove(location)
+                new_resource = resource_data.ProductionResourceData(
+                    ID="M" + str(resource_counter),
+                    description="",
+                    capacity=1,
+                    location=location,
+                    controller="SimpleController",
+                    control_policy="FIFO",
+                    processes=processes,
+                    process_capacity=None,
+                    states=states,
+                )
+                new_adapter.resource_data.append(new_resource)
             new_adapter.write_data(f"data/math_opt_solution_{counter}.json")
