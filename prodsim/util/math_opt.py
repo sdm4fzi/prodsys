@@ -405,11 +405,19 @@ class MathOptimizer(BaseModel):
             ]
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
-            # TODO: retrieve from result the resource data that specifies the used process modules (retrieval could also be in for loop below)
+            # Retrieve from result the resource data that specifies the used process modules
             resources_data = []
+            for station in self.s:
+                if station.X == 1:
+                    resources_data.append(station)
 
             for resource_counter, resource in enumerate(resources_data):
                 processes = []  # Ids for used process modules on this machine
+                modules = self.get_process_modules_and_stations()[0]
+                for module in modules:
+                    if self.z[module, resource] == 1:
+                        processes.append(module)
+
                 states = [
                     optimization_util.BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
                 ] + len(processes) * [
