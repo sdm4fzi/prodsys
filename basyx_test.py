@@ -178,3 +178,5 @@ print(aas_data)
 # # Heads up! It is important to open the file in text-mode with utf-8 encoding!
 # with open('data.json', 'w', encoding='utf-8') as json_file:
 #     basyx.aas.adapter.json.json_serialization.write_aas_json_file(json_file, obj_store)
+
+
