@@ -143,7 +143,9 @@ class MathOptimizer(BaseModel):
         self,
     ):
         self.check_available_station_for_workpieces()
-        self.check_available_station()
+        self.check_all_process_steps_available_for_workpieces()
+        self.check_module_available_at_station()
+        self.check_breakdown_time_per_station()
         self.check_extended_time_per_station()
         self.check_cost_of_modules()
         self.check_maximum_breakdown_time()
@@ -160,7 +162,7 @@ class MathOptimizer(BaseModel):
                             ),
                         )
 
-    def check_available_station_for_workpieces(self):
+    def check_all_process_steps_available_for_workpieces(self):
         for product, workpieces in self.x.items():
             for workpiece, process_steps in workpieces.items():
                 for process_step, stations in process_steps.items():
@@ -175,7 +177,7 @@ class MathOptimizer(BaseModel):
                         ),
                     )
 
-    def check_available_station(self):
+    def check_module_available_at_station(self):
         for product, workpieces in self.x.items():
             for workpiece, process_steps in workpieces.items():
                 for process_step, stations in process_steps.items():
@@ -254,7 +256,7 @@ class MathOptimizer(BaseModel):
             module_breakdown_time,
         )
 
-    def check_extended_time_per_station(self):
+    def check_breakdown_time_per_station(self):
 
         (
             machine_breakdown_count,
