@@ -6,10 +6,10 @@ from pydantic import root_validator, BaseModel
 
 from prodsim.data_structures.core_asset import CoreAsset
 
-class AAS(BaseModel):
+class AAS(CoreAsset):
     type: str = "AssetAdministrationShell"
 
-class Submodel(BaseModel):
+class Submodel(CoreAsset):
     type: str = "Submodel"
     
 class SubmodelElementCollection(BaseModel):
@@ -24,7 +24,7 @@ class Reference(BaseModel):
 
 
 
-class Product(CoreAsset, AAS):
+class Product(AAS):
     bom: BOM
 
 
@@ -41,6 +41,7 @@ class subProduct(CoreAsset, SubmodelElementCollection):
     status: str
     quantity: str
     subProductAttributes: SubmodelElementCollection
+    
     
 class subProductAttributes(CoreAsset,SubmodelElementCollection):
     attribute: DataElement 
