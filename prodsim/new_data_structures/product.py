@@ -12,14 +12,9 @@ class AAS(CoreAsset):
 class Submodel(CoreAsset):
     type: str = "Submodel"
     
-class SubmodelElementCollection(BaseModel):
+class SubmodelElementCollection(CoreAsset):
     type: str = "SubmodelElementCollection"
    
-class Property(BaseModel):
-    type: str = "Property"
-    
-class Reference(BaseModel):
-    type: str = "Reference"
 
 
 
@@ -28,14 +23,13 @@ class Product(AAS):
     bom: BOM
 
 
-class BOM(CoreAsset, Submodel):
+class BOM(Submodel):
     assembly: file
     subProductCount: str
     subProduct: SubmodelElementCollection
     
     
-    
-class subProduct(CoreAsset, SubmodelElementCollection):
+class subProduct(SubmodelElementCollection):
     subProbductType: str
     subProductAAS: Reference
     status: str
@@ -43,5 +37,5 @@ class subProduct(CoreAsset, SubmodelElementCollection):
     subProductAttributes: SubmodelElementCollection
     
     
-class subProductAttributes(CoreAsset,SubmodelElementCollection):
+class subProductAttributes(SubmodelElementCollection):
     attribute: DataElement 
