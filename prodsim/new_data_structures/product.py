@@ -28,8 +28,8 @@ class Product(AAS):
     bom: BOM
 
 
-class BOM(CoreAsset, Submodel):
-    assembly: file
+class BOM(Submodel):
+    assembly: str
     subProductCount: str
     subProduct: SubmodelElementCollection
     
