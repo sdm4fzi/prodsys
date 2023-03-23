@@ -364,6 +364,10 @@ class MathOptimizer(BaseModel):
         self.set_variables()
         self.set_constraints()
         self.set_objective_function()
+        # Anzahl gewünschter Lösungen festlegen
+        self.model.setParam(GRB.Param.PoolSolutions, 2)
+        # Finde die n besten Lösungen
+        self.model.setParam(GRB.Param.PoolSearchMode, 2)
 
         # Optimierung
         stopt = datetime.datetime.now()
@@ -396,28 +400,30 @@ class MathOptimizer(BaseModel):
         self,
     ):
         # TODO: get most relevant results / solutions from optimization model
-        results = []
+        nSolutions = self.model.SolCount
 
-        for counter, result in enumerate(results):
+        for result in range(nSolutions):
             new_adapter = self.adapter.copy(deep=True)
             new_adapter.resource_data = [
                 resource
-                for resource in self.adapter.resource
+                for resource in self.adapter.resource_data
                 if not isinstance(resource, resource_data.ProductionResourceData)
             ]
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
+            self.model.setParam(GRB.Param.SolutionNumber, result)
             # Retrieve from result the resource data that specifies the used process modules
             resources_data = []
-            for station in self.s:
-                if station.X == 1:
+            stations = self.get_process_modules_and_stations()[1]
+            for station in stations:
+                if self.s[station].Xn == 1:
                     resources_data.append(station)
 
             for resource_counter, resource in enumerate(resources_data):
                 processes = []  # Ids for used process modules on this machine
                 modules = self.get_process_modules_and_stations()[0]
                 for module in modules:
-                    if self.z[module, resource] == 1:
+                    if self.z[module, resource].Xn == 1:
                         processes.append(module)
 
                 states = [
@@ -439,4 +445,4 @@ class MathOptimizer(BaseModel):
                     states=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-            new_adapter.write_data(f"data/math_opt_solution_{counter}.json")
+            new_adapter.write_data(f"data/math_opt_solution_{GRB.Param.SolutionNumber}.json")
