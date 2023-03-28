@@ -203,7 +203,7 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
 
     control_policy = random.choice(adapter_object.scenario_data.options.machine_controllers)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
-    for resource in adapter_object.resource_data:
+    for resource in adapters.get_machines(adapter_object):
         if resource.location != (0, 0):
             possible_positions.remove(resource.location)
     if not possible_positions:
@@ -370,7 +370,7 @@ def move_process_module(adapter_object: adapters.Adapter) -> None:
 
 
 def arrange_machines(adapter_object: adapters.Adapter) -> None:
-    possible_positions = adapter_object.scenario_data.options.positions
+    possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_machines(adapter_object):
         machine.location = random.choice(possible_positions)
         possible_positions.remove(machine.location)
@@ -381,7 +381,7 @@ def move_machine(adapter_object: adapters.Adapter) -> None:
     if not possible_machines:
         return
     machine = random.choice(possible_machines)
-    possible_positions = adapter_object.scenario_data.options.positions
+    possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapter_object.resource_data:
         if machine.location in possible_positions:
             possible_positions.remove(machine.location)
@@ -396,9 +396,9 @@ def change_control_policy(
         return
     resource = random.choice(adapter_object.resource_data)
     if isinstance(resource, resource_data.ProductionResourceData):
-        possible_control_policies = adapter_object.scenario_data.options.machine_controllers
+        possible_control_policies = deepcopy(adapter_object.scenario_data.options.machine_controllers)
     else:
-        possible_control_policies = adapter_object.scenario_data.options.transport_controllers
+        possible_control_policies = deepcopy(adapter_object.scenario_data.options.transport_controllers)
 
     possible_control_policies.remove(resource.control_policy)
     new_control_policy = random.choice(possible_control_policies)

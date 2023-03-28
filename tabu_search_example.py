@@ -2,9 +2,6 @@ import json
 import time
 from copy import deepcopy
 
-# TODO: add to requirements and install package
-from Solid.TabuSearch import TabuSearch
-
 from prodsim.simulation import sim
 from prodsim import adapters
 from prodsim.util.optimization_util import (
@@ -17,13 +14,14 @@ from prodsim.util.optimization_util import (
     get_weights,
 )
 from prodsim.util.util import set_seed
+from prodsim.util.tabu_search import TabuSearch
 
 SEED = 22
 sim.VERBOSE = 0
 
 SAVE_FOLDER = "data/tabu_results"
-BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
-SCENARIO_FILE_PATH = "data/scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
+SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 
 base_configuration = adapters.JsonAdapter()
 base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
@@ -33,7 +31,7 @@ set_seed(SEED)
 # weights für: (throughput, wip, cost)
 # weights = (0.004, -1.0, -0.0003)
 # weights = (0.025, -1.0, -0.001)
-weights = get_weights(base_configuration, "min")
+weights = get_weights(base_configuration, "max")
 
 performances = {}
 performances["00"] = {}
@@ -69,17 +67,15 @@ class Algorithm(TabuSearch):
     def _neighborhood(self):
         neighboarhood = []
         for _ in range(10):
-            configuration = mutation(individual=[deepcopy(self.current)]
-            )[0][0]
-            if (
-                check_valid_configuration(
-                    configuration=configuration,
-                    base_configuration=base_configuration,
-                )
-                and configuration.ID not in neighboarhood
-            ):
-                neighboarhood.append(configuration.ID)
-
+            while True:
+                configuration = mutation(individual=[deepcopy(self.current)]
+                )[0][0]
+                if check_valid_configuration(
+                        configuration=configuration,
+                        base_configuration=base_configuration,
+                    ):
+                    neighboarhood.append(configuration)
+                    break
         return neighboarhood
 
 alg = Algorithm(initial_state=base_configuration, tabu_size=10, max_steps=300, max_score=500)

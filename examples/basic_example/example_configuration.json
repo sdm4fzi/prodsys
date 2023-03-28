@@ -285,7 +285,7 @@
       "ID": "Material_3",
       "description": "Material 3",
       "material_type": "Material_3",
-      "processes": "data/example_material_petri_net.pnml",
+      "processes": "examples/basic_example/example_material_petri_net.pnml",
       "transport_process": "TP1"
     }
   },

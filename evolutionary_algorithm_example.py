@@ -24,8 +24,8 @@ N_PROCESSES = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
-BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
-SCENARIO_FILE_PATH = "data/scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
+SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 
 base_configuration = adapters.JsonAdapter()
 base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)

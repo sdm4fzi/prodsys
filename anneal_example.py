@@ -2,6 +2,7 @@ import json
 import time
 from copy import deepcopy
 
+from simanneal import Annealer
 
 from prodsim.simulation import sim
 from prodsim import adapters
@@ -20,8 +21,8 @@ SEED = 22
 sim.VERBOSE = 0
 
 SAVE_FOLDER = "data/anneal_results"
-BASE_CONFIGURATION_FILE_PATH = "data/base_scenario.json"
-SCENARIO_FILE_PATH = "data/scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
+SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 
 base_configuration = adapters.JsonAdapter()
 base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
