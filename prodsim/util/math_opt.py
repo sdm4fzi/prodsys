@@ -5,6 +5,8 @@ import scipy.stats
 import datetime
 import time
 from copy import deepcopy
+import json
+import random
 
 from pydantic import BaseModel
 from prodsim import adapters
@@ -385,7 +387,7 @@ class MathOptimizer(BaseModel):
 
         elapsed_time = end - st
         print("Execution time:", elapsed_time, "seconds")
-        self.model.write("MILP.lp")
+        self.model.write("data/MILP.lp")
         # TODO: store results for later export or postprocessing
         for entry in self.model.__dict__:
             print(entry)
@@ -399,11 +401,14 @@ class MathOptimizer(BaseModel):
     def save_result_to_adapter(
         self,
     ):
-        # TODO: get most relevant results / solutions from optimization model
         nSolutions = self.model.SolCount
+        solution_dict = {"current_generation": "00", "00": []}
+        performances = {}
+        performances["00"] = {}
 
-        for result in range(nSolutions):
+        for result_counter in range(nSolutions):
             new_adapter = self.adapter.copy(deep=True)
+            new_adapter.ID = result_counter
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
@@ -411,7 +416,7 @@ class MathOptimizer(BaseModel):
             ]
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
-            self.model.setParam(GRB.Param.SolutionNumber, result)
+            self.model.setParam(GRB.Param.SolutionNumber, result_counter)
             # Retrieve from result the resource data that specifies the used process modules
             resources_data = []
             stations = self.get_process_modules_and_stations()[1]
@@ -431,7 +436,7 @@ class MathOptimizer(BaseModel):
                 ] + len(processes) * [
                     optimization_util.BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
                 ]
-                location = np.random.choice(possible_positions)
+                location = random.choice(possible_positions)
                 possible_positions.remove(location)
                 new_resource = resource_data.ProductionResourceData(
                     ID="M" + str(resource_counter),
@@ -445,4 +450,17 @@ class MathOptimizer(BaseModel):
                     states=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-            new_adapter.write_data(f"data/math_opt_solution_{GRB.Param.SolutionNumber}.json")
+            simulation_results = optimization_util.evaluate(
+                self.adapter,
+                solution_dict,
+                performances,
+                [new_adapter])
+            SAVE_FOLDER = "data/m_opt_results"
+            optimization_util.document_individual(solution_dict, SAVE_FOLDER, [new_adapter])
+            performances["00"][new_adapter.ID] = {
+                "agg_fitness": 0.0,
+                "fitness": [float(value) for value in simulation_results],
+                "time_stamp": 0.0
+            }
+        with open("data/math_opt_results.json", "w") as json_file:
+            json.dump(performances, json_file)

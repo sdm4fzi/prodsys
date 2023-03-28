@@ -23,8 +23,8 @@ class ResourceData(CoreAsset):
         if not v:
             return None
 
-        if len(v) != len(values["processes"]):
-            raise ValueError("process_capacity must have the same length as processes")
+        if len(v) != len(values["processes"]) and sum(v) != len(values["processes"]):
+            raise ValueError(f"process_capacity {v} must have the same length as processes {values['processes']}")
         if max(v) > values["capacity"]:
             raise ValueError("process_capacity must be smaller than capacity")
         return v

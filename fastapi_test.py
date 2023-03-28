@@ -430,6 +430,30 @@ def get_project(project_id: str) -> Project:
             return project
     raise HTTPException(404, f"Project {project_id} not found")
 
+def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
+    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+    runner_object.initialize_simulation()
+    runner_object.run(5000)
+    performance = runner_object.get_performance_data()
+    results_database[adapter_object.ID] = performance
+
+@app.get("/load_example_project", response_model=str, tags=["projects"])
+async def load_example_project() -> str:
+    example_project = Project(ID="example_project")
+    database.append(example_project)
+    
+    adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object.read_data('examples/basic_example/example_configuration.json')
+    evaluate(adapter_object)
+    example_project.adapters[adapter_object.ID] = adapter_object
+
+    # adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_2")
+    # adapter_object.read_data('examples/optimization_example/base_scenario.json')
+    # evaluate(adapter_object)
+    # example_project.adapters[adapter_object.ID] = adapter_object
+
+    return "Sucessfully loaded example project"
+
 
 @app.get("/projects", response_model=List[Project], tags=["projects"])
 async def read_projects() -> List[Project]:
@@ -515,7 +539,7 @@ async def run_simulation(project_id: str, adapter_id: str):
     runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
     runner_object.run(3000)
-    performance = runner_object.get_performance()
+    performance = runner_object.get_performance_data()
     results_database[adapter_id] = performance
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
 
@@ -537,6 +561,15 @@ async def get_all_results(project_id: str, adapter_id: str):
     result = get_result(project_id, adapter_id)
     return result.kpis
 
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/results/event_results",
+    response_model=List[performance_data.Event],
+    tags=["results"],
+)
+async def get_event_results(project_id: str, adapter_id: str):
+    result = get_result(project_id, adapter_id)
+    return result.event_log
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/results/{kpi}",
@@ -555,16 +588,6 @@ async def get_output_results(
         kpi_to_select for kpi_to_select in result.kpis if kpi_to_select.name == kpi
     ]
     return output
-
-
-@app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/results/event_results",
-    response_model=List[performance_data.Event],
-    tags=["results"],
-)
-async def get_event_results(project_id: str, adapter_id: str):
-    result = get_result(project_id, adapter_id)
-    return result.event_log
 
 
 #################### Time model data ####################
