@@ -27,27 +27,26 @@ class SubmodelElementCollection(CoreAsset):
 
 
 
-class Product(AAS):
-    ID: str
-    description: str
-    bom: BOM
-
-
 class BOM(Submodel):
     ID: str
     description: str
-    assembly: file
-    subProductCount: str
+    assembly: str
+    subProductCount: Optional[str]
     subProduct: SubmodelElementCollection
     
     
 class subProduct(SubmodelElementCollection):
     subProbductType: str
-    subProductAAS: Reference
+    subProductAAS: str
     status: str
     quantity: str
     subProductAttributes: SubmodelElementCollection
     
     
 class subProductAttributes(SubmodelElementCollection):
-    attribute: DataElement 
+    attribute: str 
+
+class Product(AAS):
+    ID: str
+    description: str
+    bom: BOM
