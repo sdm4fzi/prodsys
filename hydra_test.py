@@ -6,12 +6,8 @@ from prodsim.simulation import resources
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
-    print(OmegaConf.to_yaml(cfg))
     adapter_object = prodsim.adapters.JsonAdapter()
-
     adapter_object.read_data(cfg["simulation"]["configuration_file"])
-    # adapter_object.write_data("data/example_configuration.json")
-
 
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
