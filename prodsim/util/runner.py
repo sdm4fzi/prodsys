@@ -194,9 +194,9 @@ class Runner(BaseModel):
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
         return p.get_aggregated_data()
 
-    def save_results_as_csv(self):
-        self.data_collector.log_data_to_csv(filepath=f"data/{self.time_stamp}.csv")
+    def save_results_as_csv(self, save_folder="data"):
+        self.data_collector.log_data_to_csv(filepath=f"{save_folder}/{self.time_stamp}.csv")
 
-    def save_results_as_json(self):
-        self.data_collector.log_data_to_json(filepath=f"data/{self.time_stamp}.json")
+    def save_results_as_json(self, save_folder="data"):
+        self.data_collector.log_data_to_json(filepath=f"{save_folder}/{self.time_stamp}.json")
 

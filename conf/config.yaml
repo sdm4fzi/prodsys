@@ -1,0 +1,5 @@
+simulation:
+  configuration_file: "examples/basic_example/example_configuration.json"
+  run_length: 20000
+  save_results: true
+  save_folder: "data"
