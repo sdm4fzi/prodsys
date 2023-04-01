@@ -217,10 +217,10 @@ class MathOptimizer(BaseModel):
 
         # Berechnung der Erwartungswerte (durchschnittliche Zeit bis zum Ausfall) E(x)=1/λ
         machine_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+            optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
         )
         process_module_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+            optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
         )
 
         MTTF_machine = self.get_expected_time_of_time_model_with_id(
@@ -399,7 +399,7 @@ class MathOptimizer(BaseModel):
         # self.adapters.resource_data.append(resource_data.ProductionResourceData())
 
     def save_result_to_adapter(
-        self,
+        self, save_folder: str
     ):
         nSolutions = self.model.SolCount
         solution_dict = {"current_generation": "00", "00": []}
@@ -432,9 +432,9 @@ class MathOptimizer(BaseModel):
                         processes.append(module)
 
                 states = [
-                    optimization_util.BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+                    optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
                 ] + len(processes) * [
-                    optimization_util.BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+                    optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
                 ]
                 location = random.choice(possible_positions)
                 possible_positions.remove(location)
@@ -455,12 +455,11 @@ class MathOptimizer(BaseModel):
                 solution_dict,
                 performances,
                 [new_adapter])
-            SAVE_FOLDER = "data/m_opt_results"
-            optimization_util.document_individual(solution_dict, SAVE_FOLDER, [new_adapter])
+            optimization_util.document_individual(solution_dict, save_folder + "/math_opt_configurations", [new_adapter])
             performances["00"][new_adapter.ID] = {
                 "agg_fitness": 0.0,
                 "fitness": [float(value) for value in simulation_results],
                 "time_stamp": 0.0
             }
-        with open("data/math_opt_results.json", "w") as json_file:
+        with open(f"{save_folder}/math_opt_results.json", "w") as json_file:
             json.dump(performances, json_file)

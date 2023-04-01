@@ -1,6 +1,6 @@
 import random
 from copy import deepcopy
-from typing import Dict, List, Union, Tuple, Literal
+from typing import Dict, List, Union, Tuple, Literal, Callable
 from enum import Enum
 
 from uuid import uuid1
@@ -13,19 +13,20 @@ from prodsim.data_structures import (
     resource_data,
     state_data,
     processes_data,
-    performance_indicators
+    performance_indicators,
+    scenario_data
 )
 
-class BreakdownStateNamingConventino(str, Enum):
+class BreakdownStateNamingConvention(str, Enum):
     MACHINE_BREAKDOWN_STATE = "BSM"
     TRANSPORT_RESOURCE_BREAKDOWN_STATE = "BST"
     PROCESS_MODULE_BREAKDOWN_STATE = "BSP"
 
 def get_breakdown_state_ids_of_machine_with_processes(processes: List[str]) -> List[str]:
     state_ids = [
-        BreakdownStateNamingConventino.MACHINE_BREAKDOWN_STATE
+        BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
     ] + len(processes) * [
-        BreakdownStateNamingConventino.PROCESS_MODULE_BREAKDOWN_STATE
+        BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
     ]
     return state_ids
 
@@ -34,7 +35,7 @@ def clean_out_breakdown_states_of_resources(adapter_object: adapters.Adapter):
         if isinstance(resource, resource_data.ProductionResourceData):
             resource.states = get_breakdown_state_ids_of_machine_with_processes(resource.processes)
         elif isinstance(resource, resource_data.TransportResourceData):
-            resource.states = [BreakdownStateNamingConventino.TRANSPORT_RESOURCE_BREAKDOWN_STATE]
+            resource.states = [BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE]
         else:
             raise ValueError("unknown type of resource for breakdown state handling")
 
@@ -129,21 +130,32 @@ def crossover(ind1, ind2):
 
     return ind1, ind2
 
+def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable]:
+    mutations_operations = []
+    transformations = adapter_object.scenario_data.options.transformations
+    if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
+        mutations_operations.append(add_machine)
+        mutations_operations.append(remove_machine)
+        mutations_operations.append(move_machine)
+        mutations_operations.append(change_control_policy)
+        mutations_operations.append(add_process_module)
+        mutations_operations.append(remove_process_module)
+        mutations_operations.append(move_process_module)
+    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
+        mutations_operations.append(add_transport_resource)
+        mutations_operations.append(remove_transport_resource)
+    if scenario_data.ReconfigurationEnum.LAYOUT in transformations:
+        mutations_operations.append(move_machine)
+    if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations:
+        mutations_operations.append(change_control_policy)
+    if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:  
+        mutations_operations.append(change_routing_policy)
+    return mutations_operations
 
 def mutation(individual):
     individual[0].ID = ""
     mutation_operation = random.choice(
-        [
-            add_machine,
-            add_transport_resource,
-            add_process_module,
-            remove_machine,
-            remove_transport_resource,
-            remove_process_module,
-            move_machine,
-            move_process_module,
-            change_control_policy,
-        ]
+        get_mutation_operations(individual[0])
     )
     adapter_object = individual[0]
     mutation_operation(adapter_object)
@@ -405,6 +417,16 @@ def change_control_policy(
     resource.control_policy = new_control_policy
 
 
+def change_routing_policy(
+    adapter_object: adapters.Adapter
+) -> None:
+    source = random.choice(adapter_object.source_data)
+    possible_routing_policies = deepcopy(adapter_object.scenario_data.options.routing_heuristics)
+
+    possible_routing_policies.remove(source.routing_heuristic)
+    source.routing_heuristic = random.choice(possible_routing_policies)
+
+
 def get_grouped_processes_of_machine(
     machine: resource_data.ProductionResourceData, possible_processes: Union[List[str], List[Tuple[str, ...]]]
 ) -> List[Tuple[str]]:
@@ -480,29 +502,96 @@ def get_reconfiguration_cost(
     return machine_cost + transport_resource_cost + process_module_cost
 
 
-def random_configuration(baseline: adapters.Adapter
+def get_random_production_capacity(
+    adapter_object: adapters.Adapter,
 ) -> adapters.Adapter:
-    while True:
-        num_machines = (
-            random.choice(range(baseline.scenario_data.constraints.max_num_machines)) + 1
+    num_machines = (
+            random.choice(range(adapter_object.scenario_data.constraints.max_num_machines)) + 1
         )
-        num_transport_resources = (
+    adapter_object.resource_data = adapters.get_transport_resources(adapter_object)
+    for _ in range(num_machines):
+        add_machine(adapter_object)
+
+    return adapter_object
+
+
+def get_random_transport_capacity(
+    adapter_object: adapters.Adapter,
+) -> adapters.Adapter:
+    num_transport_resources = (
             random.choice(
-                range(baseline.scenario_data.constraints.max_num_transport_resources)
+                range(adapter_object.scenario_data.constraints.max_num_transport_resources)
             )
             + 1
         )
+    adapter_object.resource_data = adapters.get_machines(adapter_object)
+    for _ in range(num_transport_resources):
+        add_transport_resource(adapter_object)
 
+    return adapter_object
+
+def get_random_layout(
+    adapter_object: adapters.Adapter,
+) -> adapters.Adapter:
+    possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
+    for machine in adapters.get_machines(adapter_object):
+        machine.location = random.choice(possible_positions)
+        possible_positions.remove(machine.location)
+    return adapter_object
+
+def get_random_control_policies(
+    adapter_object: adapters.Adapter,
+) -> adapters.Adapter:
+    possible_production_control_policies = deepcopy(adapter_object.scenario_data.options.machine_controllers)
+    for machine in adapters.get_machines(adapter_object):
+        machine.control_policy = random.choice(possible_production_control_policies)
+    possible_transport_control_policies = deepcopy(adapter_object.scenario_data.options.transport_controllers)
+    for transport_resource in adapters.get_transport_resources(adapter_object):
+        transport_resource.control_policy = random.choice(possible_transport_control_policies)
+    return adapter_object
+
+def get_random_routing_logic(
+    adapter_object: adapters.Adapter,
+) -> adapters.Adapter:
+    possible_routing_logics = deepcopy(adapter_object.scenario_data.options.routing_heuristics)
+    for source in adapter_object.source_data:
+        source.routing_heuristic = random.choice(possible_routing_logics)
+    return adapter_object
+
+def random_configuration(baseline: adapters.Adapter
+) -> adapters.Adapter:
+    while True:
         adapter_object = baseline.copy(deep=True)
-        adapter_object.resource_data = []
-
-        for _ in range(num_machines):
-            add_machine(adapter_object)
-        for _ in range(num_transport_resources):
-            add_transport_resource(adapter_object)
-
+        get_random_production_capacity(adapter_object)
+        get_random_transport_capacity(adapter_object)
+        get_random_routing_logic(adapter_object)
+        add_default_queues_to_resources(adapter_object)
+        clean_out_breakdown_states_of_resources(adapter_object)
         if check_valid_configuration(adapter_object, baseline):
             break
+
+    return adapter_object
+
+def partial_random_configuration(baseline: adapters.Adapter
+) -> adapters.Adapter:
+    transformations = baseline.scenario_data.options.transformations
+    while True:
+        adapter_object = baseline.copy(deep=True)
+        if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
+            get_random_production_capacity(adapter_object)
+        if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
+            get_random_transport_capacity(adapter_object)
+        if scenario_data.ReconfigurationEnum.LAYOUT in transformations:
+            get_random_layout(adapter_object)
+        if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations:
+            get_random_control_policies(adapter_object)
+        if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
+            get_random_routing_logic(adapter_object)
+
+        add_default_queues_to_resources(adapter_object)
+        clean_out_breakdown_states_of_resources(adapter_object)
+        if check_valid_configuration(adapter_object, baseline):
+            break        
 
     return adapter_object
 

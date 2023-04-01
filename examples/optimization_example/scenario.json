@@ -3,9 +3,17 @@
     "max_reconfiguration_cost": 100000,
     "max_num_machines": 6,
     "max_num_processes_per_machine": 2,
-    "max_num_transport_resources": 3
+    "max_num_transport_resources": 3,
+    "target_material_count": { "Material_1": 148, "Material_2": 120 }
   },
   "options": {
+    "transformations": [
+      "production_capacity",
+      "transport_capacity",
+      "layout",
+      "sequencing_logic",
+      "routing_logic"
+    ],
     "positions": [
       [0, 0],
       [0, 5],
@@ -20,14 +28,16 @@
       [25, 25]
     ],
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
-    "transport_controllers": ["FIFO", "SPT_transport"]
+    "transport_controllers": ["FIFO", "SPT_transport"],
+    "routing_heuristics": ["shortest_queue", "random", "FIFO"]
   },
   "info": {
     "machine_cost": 30000,
     "transport_resource_cost": 15000,
     "process_module_cost": 5000,
-    "time_range": 1000
-
+    "breakdown_cost": 0.11,
+    "time_range": 600,
+    "maximum_breakdown_time": 180
   },
   "optimize": ["throughput", "cost", "WIP"],
   "weights": {

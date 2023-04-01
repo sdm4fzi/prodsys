@@ -7,6 +7,9 @@
     "target_material_count": { "Material_1": 148, "Material_2": 120 }
   },
   "options": {
+    "transformations": [
+      "layout"
+    ],
     "positions": [
       [0, 0],
       [0, 5],
@@ -21,7 +24,8 @@
       [25, 25]
     ],
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
-    "transport_controllers": ["FIFO", "SPT_transport"]
+    "transport_controllers": ["FIFO", "SPT_transport"],
+    "routing_heuristics": ["shortest_queue", "random", "FIFO"]
   },
   "info": {
     "machine_cost": 30000,
@@ -31,5 +35,10 @@
     "time_range": 600,
     "maximum_breakdown_time": 180
   },
-  "optimize": ["cost"]
+  "optimize": ["throughput", "cost", "WIP"],
+  "weights": {
+    "throughput": 0.025,
+    "cost": 0.001,
+    "WIP": 1
+  }
 }

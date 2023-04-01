@@ -11,7 +11,7 @@ from prodsim.util.optimization_util import (
     crossover,
     evaluate,
     mutation,
-    random_configuration,
+    partial_random_configuration,
     document_individual,
     get_weights,
 )
@@ -24,8 +24,9 @@ N_PROCESSES = 8
 sim.VERBOSE = 1
 
 SAVE_FOLDER = "data/ea_results"
-BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
-SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
+# BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "data/ea_results/f_00_0f3a01eb-d08a-11ed-93ff-a670a3eb8803.json"
+SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"
 
 base_configuration = adapters.JsonAdapter()
 base_configuration.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
@@ -45,7 +46,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 
 toolbox = base.Toolbox()
-toolbox.register("random_configuration", random_configuration, base_configuration)
+toolbox.register("random_configuration", partial_random_configuration, base_configuration)
 toolbox.register(
     "individual",
     tools.initRepeat,

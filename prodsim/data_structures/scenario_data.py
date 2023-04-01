@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 from typing import Literal, List, Optional, Dict, Tuple
+from enum import Enum
 
 from pydantic import BaseModel, validator
 
 from prodsim.data_structures.performance_indicators import KPIEnum
+
+class ReconfigurationEnum(str, Enum):
+    PRODUCTION_CAPACITY = "production_capacity"
+    TRANSPORT_CAPACITY = "transport_capacity"
+    LAYOUT = "layout"
+    SEQUENCING_LOGIC = "sequencing_logic"
+    ROUTING_LOGIC = "routing_logic"
 
 class ScenarioConstrainsData(BaseModel):
     max_reconfiguration_cost: float
@@ -25,8 +33,10 @@ class ScenarioConstrainsData(BaseModel):
         }
 
 class ScenarioOptionsData(BaseModel):
+    transformations: List[ReconfigurationEnum]
     machine_controllers: List[Literal["FIFO", "LIFO", "SPT"]]
     transport_controllers: List[Literal["FIFO", "SPT_transport"]]
+    routing_heuristics: List[Literal["shortest_queue", "random", "FIFO"]]
     positions: List[Tuple[float, float]]
 
     @validator("positions")
