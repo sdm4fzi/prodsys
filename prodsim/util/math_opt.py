@@ -236,7 +236,7 @@ class MathOptimizer(BaseModel):
             process_module_breakdown_state.repair_time_model_id
         )
 
-        # Berechnung der erwarteten Anzahl an Fehlern und Zeitdauern der Fehler
+        # TODO: BZ, product count in adapter und maximum breakdown time in adapter mit Prozent-Hyperparameter für Problemgröße multiplizieren
         BZ = self.adapter.scenario_data.info.time_range
         machine_breakdown_count = BZ / MTTF_machine
         machine_breakdown_time = MTTR_machine
