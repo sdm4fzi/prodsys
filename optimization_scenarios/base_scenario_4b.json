@@ -1,4 +1,4 @@
-# Use Case 4b: 650 Produkt 1, 500 Produkt 2, 523 Produkt 3
+# Use Case 4b: 650 Produkt 1, 500 Produkt 2, 525 Produkt 3
 {
   "seed": 24,
   "time_models": {
@@ -119,7 +119,7 @@
       "description": "function time model material 3",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [(86400/251.04)/60, 5],
+      "parameters": [(86400/252)/60, 5],
       "batch_size": 100
     },
     "15": {

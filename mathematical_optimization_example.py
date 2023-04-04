@@ -4,7 +4,7 @@ from prodsim.util.math_opt import MathOptimizer
 import json
 
 BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
-SCENARIO_FILE_PATH = "examples/optimization_example/scenario_mathopt.json"
+SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 adapter = adapters.JsonAdapter()
 adapter.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
 

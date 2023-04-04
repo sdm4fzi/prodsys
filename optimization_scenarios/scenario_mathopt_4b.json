@@ -1,11 +1,11 @@
-# Use Case 4b: 650 Produkt 1, 500 Produkt 2, 523 Produkt 3
+# Use Case 4b: 650 Produkt 1, 500 Produkt 2, 525 Produkt 3
 {
   "constraints": {
     "max_reconfiguration_cost": 100000,
     "max_num_machines": 6,
     "max_num_processes_per_machine": 2,
     "max_num_transport_resources": 3,
-    "target_material_count": { "Material_1": 650, "Material_2": 500 , "Material_3": 523}
+    "target_material_count": { "Material_1": 650, "Material_2": 500 , "Material_3": 525}
   },
   "options": {
     "positions": [

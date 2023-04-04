@@ -367,9 +367,9 @@ class MathOptimizer(BaseModel):
         self.set_constraints()
         self.set_objective_function()
         # Anzahl gewünschter Lösungen festlegen
-        self.model.setParam(GRB.Param.PoolSolutions, 2)
+        # self.model.setParam(GRB.Param.PoolSolutions, 1)
         # Finde die n besten Lösungen
-        self.model.setParam(GRB.Param.PoolSearchMode, 2)
+        # self.model.setParam(GRB.Param.PoolSearchMode, 2)
 
         # Optimierung
         stopt = datetime.datetime.now()
