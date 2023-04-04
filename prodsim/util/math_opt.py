@@ -414,6 +414,7 @@ class MathOptimizer(BaseModel):
                 for resource in self.adapter.resource_data
                 if not isinstance(resource, resource_data.ProductionResourceData)
             ]
+            # TODO: add a second transport resource for use cases
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
             self.model.setParam(GRB.Param.SolutionNumber, result_counter)
