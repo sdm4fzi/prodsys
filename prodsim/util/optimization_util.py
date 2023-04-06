@@ -674,7 +674,7 @@ def document_individual(
 
     if not adapter_object.ID:
         adapter_object.ID = str(uuid1())
-    solution_dict[current_generation].append(adapter_object.ID)
+        solution_dict[current_generation].append(adapter_object.ID)
 
     adapters.JsonAdapter(**adapter_object.dict()).write_data(
         f"{save_folder}/f_{current_generation}_{adapter_object.ID}.json"
@@ -698,7 +698,7 @@ def evaluate(
                 and not generation == current_generation
                 and adapter_object.ID in solution_dict[generation]
             ):
-                print("found in previous generation", adapter_object.ID)
+                print("solution from generation ", generation,"with name:", adapter_object.ID)
                 return performances[generation][adapter_object.ID]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
