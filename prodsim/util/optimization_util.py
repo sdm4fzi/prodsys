@@ -14,32 +14,42 @@ from prodsim.data_structures import (
     state_data,
     processes_data,
     performance_indicators,
-    scenario_data
+    scenario_data,
 )
+
 
 class BreakdownStateNamingConvention(str, Enum):
     MACHINE_BREAKDOWN_STATE = "BSM"
     TRANSPORT_RESOURCE_BREAKDOWN_STATE = "BST"
     PROCESS_MODULE_BREAKDOWN_STATE = "BSP"
 
-def get_breakdown_state_ids_of_machine_with_processes(processes: List[str]) -> List[str]:
-    state_ids = [
-        BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
-    ] + len(processes) * [
-        BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
-    ]
+
+def get_breakdown_state_ids_of_machine_with_processes(
+    processes: List[str],
+) -> List[str]:
+    state_ids = [BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE] + len(
+        processes
+    ) * [BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE]
     return state_ids
+
 
 def clean_out_breakdown_states_of_resources(adapter_object: adapters.Adapter):
     for resource in adapter_object.resource_data:
         if isinstance(resource, resource_data.ProductionResourceData):
-            resource.states = get_breakdown_state_ids_of_machine_with_processes(resource.processes)
+            resource.states = get_breakdown_state_ids_of_machine_with_processes(
+                resource.processes
+            )
         elif isinstance(resource, resource_data.TransportResourceData):
-            resource.states = [BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE]
+            resource.states = [
+                BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
+            ]
         else:
             raise ValueError("unknown type of resource for breakdown state handling")
 
-def get_weights(adapter: adapters.Adapter, direction: Literal["min", "max"]) -> Tuple[float, ...]:
+
+def get_weights(
+    adapter: adapters.Adapter, direction: Literal["min", "max"]
+) -> Tuple[float, ...]:
     weights = []
     if not adapter.scenario_data.weights:
         return tuple([1.0] * len(adapter.scenario_data.optimize))
@@ -50,7 +60,6 @@ def get_weights(adapter: adapters.Adapter, direction: Literal["min", "max"]) -> 
             weight *= -1
         weights.append(weight)
     return tuple(weights)
-
 
 
 def remove_queues_from_resource(
@@ -130,6 +139,7 @@ def crossover(ind1, ind2):
 
     return ind1, ind2
 
+
 def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable]:
     mutations_operations = []
     transformations = adapter_object.scenario_data.options.transformations
@@ -148,15 +158,14 @@ def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable]:
         mutations_operations.append(move_machine)
     if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations:
         mutations_operations.append(change_control_policy)
-    if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:  
+    if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
         mutations_operations.append(change_routing_policy)
     return mutations_operations
 
+
 def mutation(individual):
     individual[0].ID = ""
-    mutation_operation = random.choice(
-        get_mutation_operations(individual[0])
-    )
+    mutation_operation = random.choice(get_mutation_operations(individual[0]))
     adapter_object = individual[0]
     mutation_operation(adapter_object)
     add_default_queues_to_resources(individual[0])
@@ -203,7 +212,9 @@ def flatten(xs):
 def add_machine(adapter_object: adapters.Adapter) -> None:
     num_process_modules = (
         random.choice(
-            range(adapter_object.scenario_data.constraints.max_num_processes_per_machine)
+            range(
+                adapter_object.scenario_data.constraints.max_num_processes_per_machine
+            )
         )
         + 1
     )
@@ -213,7 +224,9 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
     process_module_list = random.sample(possible_processes, num_process_modules)
     process_module_list = list(flatten(process_module_list))
 
-    control_policy = random.choice(adapter_object.scenario_data.options.machine_controllers)
+    control_policy = random.choice(
+        adapter_object.scenario_data.options.machine_controllers
+    )
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for resource in adapters.get_machines(adapter_object):
         if resource.location != (0, 0):
@@ -244,9 +257,7 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
     add_setup_states_to_machine(adapter_object, machine_id)
 
 
-def add_setup_states_to_machine(
-    adapter_object: adapters.Adapter, machine_id: str
-):
+def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: str):
     machine = next(
         resource
         for resource in adapter_object.resource_data
@@ -270,10 +281,10 @@ def add_setup_states_to_machine(
             machine.states.append(state.ID)
 
 
-def add_transport_resource(
-    adapter_object: adapters.Adapter
-) -> None:
-    control_policy = random.choice(adapter_object.scenario_data.options.transport_controllers)
+def add_transport_resource(adapter_object: adapters.Adapter) -> None:
+    control_policy = random.choice(
+        adapter_object.scenario_data.options.transport_controllers
+    )
 
     transport_resource_ids = [
         resource.ID
@@ -320,8 +331,7 @@ def remove_machine(adapter_object: adapters.Adapter) -> None:
     adapter_object.resource_data.remove(machine)
 
 
-def remove_transport_resource(
-    adapter_object: adapters.Adapter) -> None:
+def remove_transport_resource(adapter_object: adapters.Adapter) -> None:
     transport_resources = adapters.get_transport_resources(adapter_object)
     if not transport_resources:
         return
@@ -340,9 +350,7 @@ def get_processes_by_capabilities(
     return processes_by_capability
 
 
-def remove_process_module(
-    adapter_object: adapters.Adapter
-) -> None:
+def remove_process_module(adapter_object: adapters.Adapter) -> None:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return
@@ -401,34 +409,37 @@ def move_machine(adapter_object: adapters.Adapter) -> None:
         machine.location = random.choice(possible_positions)
 
 
-def change_control_policy(
-    adapter_object: adapters.Adapter
-) -> None:
+def change_control_policy(adapter_object: adapters.Adapter) -> None:
     if not adapter_object.resource_data:
         return
     resource = random.choice(adapter_object.resource_data)
     if isinstance(resource, resource_data.ProductionResourceData):
-        possible_control_policies = deepcopy(adapter_object.scenario_data.options.machine_controllers)
+        possible_control_policies = deepcopy(
+            adapter_object.scenario_data.options.machine_controllers
+        )
     else:
-        possible_control_policies = deepcopy(adapter_object.scenario_data.options.transport_controllers)
+        possible_control_policies = deepcopy(
+            adapter_object.scenario_data.options.transport_controllers
+        )
 
     possible_control_policies.remove(resource.control_policy)
     new_control_policy = random.choice(possible_control_policies)
     resource.control_policy = new_control_policy
 
 
-def change_routing_policy(
-    adapter_object: adapters.Adapter
-) -> None:
+def change_routing_policy(adapter_object: adapters.Adapter) -> None:
     source = random.choice(adapter_object.source_data)
-    possible_routing_policies = deepcopy(adapter_object.scenario_data.options.routing_heuristics)
+    possible_routing_policies = deepcopy(
+        adapter_object.scenario_data.options.routing_heuristics
+    )
 
     possible_routing_policies.remove(source.routing_heuristic)
     source.routing_heuristic = random.choice(possible_routing_policies)
 
 
 def get_grouped_processes_of_machine(
-    machine: resource_data.ProductionResourceData, possible_processes: Union[List[str], List[Tuple[str, ...]]]
+    machine: resource_data.ProductionResourceData,
+    possible_processes: Union[List[str], List[Tuple[str, ...]]],
 ) -> List[Tuple[str]]:
     if isinstance(possible_processes[0], str):
         return [tuple([process]) for process in machine.processes]
@@ -482,7 +493,9 @@ def get_reconfiguration_cost(
         num_process_modules_before = get_num_of_process_modules(baseline)
 
     machine_cost = max(
-        0, (num_machines - num_machines_before) * adapter_object.scenario_data.info.machine_cost
+        0,
+        (num_machines - num_machines_before)
+        * adapter_object.scenario_data.info.machine_cost,
     )
     transport_resource_cost = max(
         0,
@@ -506,8 +519,9 @@ def get_random_production_capacity(
     adapter_object: adapters.Adapter,
 ) -> adapters.Adapter:
     num_machines = (
-            random.choice(range(adapter_object.scenario_data.constraints.max_num_machines)) + 1
-        )
+        random.choice(range(adapter_object.scenario_data.constraints.max_num_machines))
+        + 1
+    )
     adapter_object.resource_data = adapters.get_transport_resources(adapter_object)
     for _ in range(num_machines):
         add_machine(adapter_object)
@@ -519,16 +533,17 @@ def get_random_transport_capacity(
     adapter_object: adapters.Adapter,
 ) -> adapters.Adapter:
     num_transport_resources = (
-            random.choice(
-                range(adapter_object.scenario_data.constraints.max_num_transport_resources)
-            )
-            + 1
+        random.choice(
+            range(adapter_object.scenario_data.constraints.max_num_transport_resources)
         )
+        + 1
+    )
     adapter_object.resource_data = adapters.get_machines(adapter_object)
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
 
     return adapter_object
+
 
 def get_random_layout(
     adapter_object: adapters.Adapter,
@@ -539,41 +554,37 @@ def get_random_layout(
         possible_positions.remove(machine.location)
     return adapter_object
 
+
 def get_random_control_policies(
     adapter_object: adapters.Adapter,
 ) -> adapters.Adapter:
-    possible_production_control_policies = deepcopy(adapter_object.scenario_data.options.machine_controllers)
+    possible_production_control_policies = deepcopy(
+        adapter_object.scenario_data.options.machine_controllers
+    )
     for machine in adapters.get_machines(adapter_object):
         machine.control_policy = random.choice(possible_production_control_policies)
-    possible_transport_control_policies = deepcopy(adapter_object.scenario_data.options.transport_controllers)
+    possible_transport_control_policies = deepcopy(
+        adapter_object.scenario_data.options.transport_controllers
+    )
     for transport_resource in adapters.get_transport_resources(adapter_object):
-        transport_resource.control_policy = random.choice(possible_transport_control_policies)
+        transport_resource.control_policy = random.choice(
+            possible_transport_control_policies
+        )
     return adapter_object
+
 
 def get_random_routing_logic(
     adapter_object: adapters.Adapter,
 ) -> adapters.Adapter:
-    possible_routing_logics = deepcopy(adapter_object.scenario_data.options.routing_heuristics)
+    possible_routing_logics = deepcopy(
+        adapter_object.scenario_data.options.routing_heuristics
+    )
     for source in adapter_object.source_data:
         source.routing_heuristic = random.choice(possible_routing_logics)
     return adapter_object
 
-def random_configuration(baseline: adapters.Adapter
-) -> adapters.Adapter:
-    while True:
-        adapter_object = baseline.copy(deep=True)
-        get_random_production_capacity(adapter_object)
-        get_random_transport_capacity(adapter_object)
-        get_random_routing_logic(adapter_object)
-        add_default_queues_to_resources(adapter_object)
-        clean_out_breakdown_states_of_resources(adapter_object)
-        if check_valid_configuration(adapter_object, baseline):
-            break
 
-    return adapter_object
-
-def partial_random_configuration(baseline: adapters.Adapter
-) -> adapters.Adapter:
+def random_configuration(baseline: adapters.Adapter) -> adapters.Adapter:
     transformations = baseline.scenario_data.options.transformations
     while True:
         adapter_object = baseline.copy(deep=True)
@@ -581,9 +592,17 @@ def partial_random_configuration(baseline: adapters.Adapter
             get_random_production_capacity(adapter_object)
         if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
             get_random_transport_capacity(adapter_object)
-        if scenario_data.ReconfigurationEnum.LAYOUT in transformations:
+        if (
+            scenario_data.ReconfigurationEnum.LAYOUT in transformations
+            and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY
+            not in transformations
+        ):
             get_random_layout(adapter_object)
-        if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations:
+        if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations and (
+            scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
+            or scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY
+            not in transformations
+        ):
             get_random_control_policies(adapter_object)
         if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
             get_random_routing_logic(adapter_object)
@@ -591,7 +610,7 @@ def partial_random_configuration(baseline: adapters.Adapter
         add_default_queues_to_resources(adapter_object)
         clean_out_breakdown_states_of_resources(adapter_object)
         if check_valid_configuration(adapter_object, baseline):
-            break        
+            break
 
     return adapter_object
 
@@ -620,7 +639,7 @@ def check_valid_configuration(
                 )
             )
             > configuration.scenario_data.constraints.max_num_processes_per_machine
-        ):  
+        ):
             return False
 
     if set(
@@ -636,7 +655,10 @@ def check_valid_configuration(
     )
     configuration.reconfiguration_cost = reconfiguration_cost
 
-    if reconfiguration_cost > configuration.scenario_data.constraints.max_reconfiguration_cost:
+    if (
+        reconfiguration_cost
+        > configuration.scenario_data.constraints.max_reconfiguration_cost
+    ):
         return False
 
     return True
@@ -651,11 +673,14 @@ def get_throughput_time(pp: PostProcessor) -> float:
     )
     return avg_throughput_time
 
+
 def get_wip(pp: PostProcessor) -> float:
     return sum(pp.get_aggregated_wip_data())
 
+
 def get_throughput(pp: PostProcessor) -> float:
     return sum(pp.get_aggregated_throughput_data())
+
 
 KPI_function_dict = {
     performance_indicators.KPIEnum.COST: get_reconfiguration_cost,
@@ -663,6 +688,7 @@ KPI_function_dict = {
     performance_indicators.KPIEnum.WIP: get_wip,
     performance_indicators.KPIEnum.THROUGHPUT: get_throughput,
 }
+
 
 def document_individual(
     solution_dict: Dict[str, Union[list, str]],
@@ -698,7 +724,12 @@ def evaluate(
                 and not generation == current_generation
                 and adapter_object.ID in solution_dict[generation]
             ):
-                print("solution from generation ", generation,"with name:", adapter_object.ID)
+                print(
+                    "solution from generation ",
+                    generation,
+                    "with name:",
+                    adapter_object.ID,
+                )
                 return performances[generation][adapter_object.ID]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
@@ -716,9 +747,7 @@ def evaluate(
     fitness = []
     for kpi_name in adapter_object.scenario_data.optimize:
         if kpi_name == performance_indicators.KPIEnum.COST:
-            fitness.append(
-                get_reconfiguration_cost(adapter_object, base_scenario)
-            )
+            fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
             continue
         fitness.append(KPI_function_dict[kpi_name](p))
 

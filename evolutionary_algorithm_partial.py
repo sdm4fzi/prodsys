@@ -11,7 +11,7 @@ from prodsim.util.optimization_util import (
     crossover,
     evaluate,
     mutation,
-    partial_random_configuration,
+    random_configuration,
     document_individual,
     get_weights,
 )
@@ -46,7 +46,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 
 toolbox = base.Toolbox()
-toolbox.register("random_configuration", partial_random_configuration, base_configuration)
+toolbox.register("random_configuration", random_configuration, base_configuration)
 toolbox.register(
     "individual",
     tools.initRepeat,
