@@ -23,6 +23,20 @@ from gurobipy import GRB
 
 import numpy as np
 
+def adjust_number_of_transport_resources(adapter_object: adapters.Adapter, number_of_transport_resources: int) -> None:
+    """Adjusts the number of transport resources in the adapter object.
+
+    Args:
+        adapter_object (adapters.Adapter): Adapter object.
+        number_of_transport_resources (int): Number of transport resources.
+    """
+    existing_transport_resource = adapter_object.resource_data[0]
+    existing_transport_resource.ID = "TR0"
+    for i in range(number_of_transport_resources - 1):
+        new_transport_resource = existing_transport_resource.copy(deep=True)
+        new_transport_resource.ID = f"TR{i + 1}"
+        adapter_object.resource_data.append(new_transport_resource)
+
 
 def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
     modul_count_dict = {}
@@ -41,6 +55,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
 
 class MathOptimizer(BaseModel):
     adapter: adapters.Adapter
+    optimization_time_portion: float = 1.0
 
     model: Any = None
     x: Any = None
@@ -79,11 +94,11 @@ class MathOptimizer(BaseModel):
         x = {}
         for product_type in self.adapter.material_data:
             x[product_type.ID] = {}
-            work_piece_count = (
+            work_piece_count = int(round(
                 self.adapter.scenario_data.constraints.target_material_count[
                     product_type.ID
-                ]
-            )
+                ] * self.optimization_time_portion
+            , 0))
             for work_piece_index in range(work_piece_count):
                 x[product_type.ID][work_piece_index] = {}
                 for step in product_type.processes:
@@ -236,8 +251,7 @@ class MathOptimizer(BaseModel):
             process_module_breakdown_state.repair_time_model_id
         )
 
-        # TODO: BZ, product count in adapter und maximum breakdown time in adapter mit Prozent-Hyperparameter für Problemgröße multiplizieren
-        BZ = self.adapter.scenario_data.info.time_range
+        BZ = self.adapter.scenario_data.info.time_range * self.optimization_time_portion
         machine_breakdown_count = BZ / MTTF_machine
         machine_breakdown_time = MTTR_machine
 
@@ -351,14 +365,14 @@ class MathOptimizer(BaseModel):
         self.model.addConstr(
             (
                 sum(self.v[Station] for Station in stations)
-                - self.adapter.scenario_data.info.maximum_breakdown_time
+                - self.adapter.scenario_data.info.maximum_breakdown_time * self.optimization_time_portion
                 <= 0
             ),
             "Maximale_Ausfallzeit_einhalten",
         )
 
     def optimize(
-        self,
+        self, n_solutions=1
     ):
         st = datetime.datetime.now()
         self.model: Any = gp.Model("MILP_Rekonfiguration")
@@ -367,9 +381,9 @@ class MathOptimizer(BaseModel):
         self.set_constraints()
         self.set_objective_function()
         # Anzahl gewünschter Lösungen festlegen
-        # self.model.setParam(GRB.Param.PoolSolutions, 1)
+        self.model.setParam(GRB.Param.PoolSolutions, n_solutions)
         # Finde die n besten Lösungen
-        # self.model.setParam(GRB.Param.PoolSearchMode, 2)
+        self.model.setParam(GRB.Param.PoolSearchMode, 2)
 
         # Optimierung
         stopt = datetime.datetime.now()
@@ -387,19 +401,14 @@ class MathOptimizer(BaseModel):
 
         elapsed_time = end - st
         print("Execution time:", elapsed_time, "seconds")
-        self.model.write("data/MILP.lp")
-        # TODO: store results for later export or postprocessing
-        for entry in self.model.__dict__:
-            print(entry)
 
     def save_model(
-        self,
-    ):
-        pass
-        # self.adapters.resource_data.append(resource_data.ProductionResourceData())
-
-    def save_result_to_adapter(
         self, save_folder: str
+    ):
+        self.model.write(f"{save_folder}/MILP.lp")
+
+    def save_results(
+        self, save_folder: str, adjusted_number_of_transport_resources: int=1
     ):
         nSolutions = self.model.SolCount
         solution_dict = {"current_generation": "00", "00": []}
@@ -408,13 +417,12 @@ class MathOptimizer(BaseModel):
 
         for result_counter in range(nSolutions):
             new_adapter = self.adapter.copy(deep=True)
-            new_adapter.ID = result_counter
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
                 if not isinstance(resource, resource_data.ProductionResourceData)
             ]
-            # TODO: add a second transport resource for use cases
+            adjust_number_of_transport_resources(new_adapter, adjusted_number_of_transport_resources)
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
             self.model.setParam(GRB.Param.SolutionNumber, result_counter)
@@ -451,16 +459,17 @@ class MathOptimizer(BaseModel):
                     states=states,
                 )
                 new_adapter.resource_data.append(new_resource)
+            optimization_util.add_default_queues_to_resources(new_adapter)
             simulation_results = optimization_util.evaluate(
                 self.adapter,
                 solution_dict,
                 performances,
                 [new_adapter])
-            optimization_util.document_individual(solution_dict, save_folder + "/math_opt_configurations", [new_adapter])
+            optimization_util.document_individual(solution_dict, save_folder, [new_adapter])
             performances["00"][new_adapter.ID] = {
                 "agg_fitness": 0.0,
                 "fitness": [float(value) for value in simulation_results],
                 "time_stamp": 0.0
             }
-        with open(f"{save_folder}/math_opt_results.json", "w") as json_file:
+        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)

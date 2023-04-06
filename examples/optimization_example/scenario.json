@@ -2,7 +2,7 @@
   "constraints": {
     "max_reconfiguration_cost": 100000,
     "max_num_machines": 6,
-    "max_num_processes_per_machine": 2,
+    "max_num_processes_per_machine": 3,
     "max_num_transport_resources": 3,
     "target_material_count": { "Material_1": 148, "Material_2": 120 }
   },

@@ -583,6 +583,10 @@ def get_random_routing_logic(
         source.routing_heuristic = random.choice(possible_routing_logics)
     return adapter_object
 
+def random_configuration_with_initial_solution(initial_adapters: List[adapters.Adapter]) -> adapters.Adapter:
+    adapter_object = random.choice(initial_adapters)
+    return random_configuration(adapter_object)
+
 
 def random_configuration(baseline: adapters.Adapter) -> adapters.Adapter:
     transformations = baseline.scenario_data.options.transformations
@@ -622,13 +626,15 @@ def check_valid_configuration(
     if (
         len(adapters.get_machines(configuration))
         > configuration.scenario_data.constraints.max_num_machines
-    ):
+    ):  
+        print("too many machines")
         return False
 
     if (
         len(adapters.get_transport_resources(configuration))
         > configuration.scenario_data.constraints.max_num_transport_resources
     ) or (len(adapters.get_transport_resources(configuration)) == 0):
+        print("too many transport resources")
         return False
 
     for resource in configuration.resource_data:
@@ -639,7 +645,8 @@ def check_valid_configuration(
                 )
             )
             > configuration.scenario_data.constraints.max_num_processes_per_machine
-        ):
+        ):  
+            print("too many processes per machine")
             return False
 
     if set(
@@ -647,6 +654,7 @@ def check_valid_configuration(
             [resource.processes for resource in adapters.get_machines(configuration)]
         )
     ) < set(flatten(get_possible_production_processes_IDs(configuration))):
+        print("not all processes available")
         return False
 
     reconfiguration_cost = get_reconfiguration_cost(
@@ -659,6 +667,7 @@ def check_valid_configuration(
         reconfiguration_cost
         > configuration.scenario_data.constraints.max_reconfiguration_cost
     ):
+        print("too expensive reconfigugration")
         return False
 
     return True

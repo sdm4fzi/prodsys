@@ -1,0 +1,4 @@
+simulation_length: 1440
+print_results: true
+plot_results: true
+save_results: true

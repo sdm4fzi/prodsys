@@ -2,9 +2,14 @@ import json
 import time
 from random import random
 import multiprocessing
+from typing import List
+from functools import partial
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+from os import listdir
+from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
 
@@ -15,6 +20,7 @@ from prodsim.util.optimization_util import (
     evaluate,
     mutation,
     random_configuration,
+    random_configuration_with_initial_solution,
     document_individual,
     get_weights,
 )
@@ -26,18 +32,36 @@ sim.VERBOSE = 1
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
+def read_initial_solutions(folder_path: str, base_configuration: adapters.Adapter) -> List[adapters.Adapter]:
+    """Reads all initial solutions from a folder and returns them as a list of adapters."""
+    file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
+    adapter_objects = []
+    for file_path in file_paths:
+        adapter = adapters.JsonAdapter()
+        print(folder_path, file_path)
+        adapter.read_data(join(folder_path, file_path))
+        adapter.scenario_data = base_configuration.scenario_data.copy()
+        adapter_objects.append(adapter)
+    return adapter_objects
+
 
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonAdapter,
     solution_dict: dict,
     performances: dict,
     weights: tuple,
+    initial_solutions_folder: str
 ):
+    
 
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
     toolbox = base.Toolbox()
-    toolbox.register("random_configuration", random_configuration, base_configuration)
+    if initial_solutions_folder:
+        initial_solutions = read_initial_solutions(initial_solutions_folder, base_configuration)
+        toolbox.register("random_configuration", random_configuration_with_initial_solution, initial_solutions)
+    else:
+        toolbox.register("random_configuration", random_configuration, base_configuration)
     toolbox.register(
         "individual",
         tools.initRepeat,
@@ -96,7 +120,10 @@ def run_evolutionary_algorithm(
     seed: int,
     ngen: int,
     population_size: int,
+    mutation_rate: float,
+    crossover_rate: float,
     n_processes: int,
+    initial_solutions_folder: str = ""
 ):
     base_configuration = adapters.JsonAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
@@ -115,6 +142,7 @@ def run_evolutionary_algorithm(
         solution_dict=solution_dict,
         performances=performances,
         weights=weights,
+        initial_solutions_folder=initial_solutions_folder
     )
 
     population = toolbox.population(n=population_size)
@@ -139,7 +167,7 @@ def run_evolutionary_algorithm(
         # Vary population
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
-        offspring = algorithms.varAnd(offspring, toolbox, cxpb=0.1, mutpb=0.15)
+        offspring = algorithms.varAnd(offspring, toolbox, cxpb=crossover_rate, mutpb=mutation_rate)
 
         # Evaluate the individuals
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
@@ -149,6 +177,6 @@ def run_evolutionary_algorithm(
 
         population = toolbox.select(population + offspring, population_size)
 
-        with open("data/ea_results.json", "w") as json_file:
+        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
     pool.close()

@@ -1,16 +1,5 @@
-mode: "optimization"
-simulation:
-  configuration_file: "examples/basic_example/example_configuration.json"
-  save_results: true
-  save_folder: "data"
-optimization:
-  mode: "mathematical"
-  base_configuration: "..."
-  initial_solutions_folder: "..."
-  scenario_data: "..."
-  save_folder: "..."
-hyperparameters:
-  optimization_length: 20000
-  generations: 40
-  population_size: 40
+defaults:
+  - general: example
+  - simulation: one_day_simulation
+  - optimization: example_evolutionary_algorithm
   

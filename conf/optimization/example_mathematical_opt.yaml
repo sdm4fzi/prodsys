@@ -1,0 +1,5 @@
+algorithm: "mathematical"
+n_solutions: 3
+optimization_time_portion: 1
+adjusted_number_of_transport_resources: 2
+save_model: true
