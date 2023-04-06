@@ -4,6 +4,23 @@ from random import randint, random, shuffle
 from collections import deque
 from numpy import argmax
 
+import json
+import time
+
+from prodsim.simulation import sim
+from prodsim import adapters
+from prodsim.util.optimization_util import (
+    check_valid_configuration,
+    crossover,
+    evaluate,
+    mutation,
+    random_configuration,
+    document_individual,
+    get_weights,
+)
+from prodsim.util.util import set_seed
+
+
 class TabuSearch:
     """
     Conducts tabu search
@@ -138,3 +155,75 @@ class TabuSearch:
                 return self.best, self._score(self.best)
         print("TERMINATING - REACHED MAXIMUM STEPS")
         return self.best, self._score(self.best)
+    
+
+def run_tabu_search(
+    save_folder: str,
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    seed: int,
+    tabu_size,
+    max_steps,
+    max_score,
+    initial_solution_file_path: str = ""
+):
+    base_configuration = adapters.JsonAdapter()
+    base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+
+    if initial_solution_file_path:
+        initial_solution = adapters.JsonAdapter()
+        initial_solution.read_data(initial_solution_file_path, scenario_file_path)
+    else:
+        initial_solution = base_configuration.copy(deep=True)
+
+    set_seed(seed)
+
+    weights = get_weights(base_configuration, "max")
+
+    solution_dict = {"current_generation": "0", "0": []}
+    performances = {}
+    performances["0"] = {}
+    start = time.perf_counter()
+
+    class Algorithm(TabuSearch):
+        def _score(self, state):
+            values = evaluate(
+                base_scenario=base_configuration,
+                performances=performances,
+                solution_dict=solution_dict,
+                individual=[state],
+            )
+
+            performance = sum([value * weight for value, weight in zip(values, weights)])
+            counter = len(performances["0"]) - 1
+            print(counter, performance)
+            document_individual(solution_dict, save_folder, [state])
+
+            performances["0"][str(counter)] = {
+                "agg_fitness": performance,
+                "fitness": [float(value) for value in values],
+                "time_stamp": time.perf_counter() - start,
+            }
+            with open(f"{save_folder}/optimization_results.json", "w") as json_file:
+                json.dump(performances, json_file)
+
+            return performance
+
+        def _neighborhood(self):
+            neighboarhood = []
+            for _ in range(10):
+                while True:
+                    configuration = mutation(individual=[deepcopy(self.current)]
+                    )[0][0]
+                    if check_valid_configuration(
+                            configuration=configuration,
+                            base_configuration=base_configuration,
+                        ):
+                        neighboarhood.append(configuration)
+                        break
+            return neighboarhood
+        
+    alg = Algorithm(initial_state=initial_solution, tabu_size=tabu_size,
+                    max_steps=max_steps, max_score=max_score)
+    best_solution, best_objective_value = alg.run()
+    print("Best solution: ", best_objective_value)

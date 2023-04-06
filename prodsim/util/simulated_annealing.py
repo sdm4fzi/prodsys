@@ -21,10 +21,7 @@ sim.VERBOSE = 0
 
 class ProductionSystemOptimization(Annealer):
     def __init__(self, base_configuration: adapters.Adapter, save_folder: str, performances: dict, solutions_dict: dict, start: float, weights: tuple, initial_solution: adapters.Adapter=None):
-        if initial_solution:
-            super().__init__(initial_solution, None)
-        else:
-            super().__init__(base_configuration, None)
+        super().__init__(initial_solution, None)
         self.save_folder = save_folder
         self.base_configuration = base_configuration
         self.performances = performances
@@ -83,11 +80,11 @@ def run_simulated_annealing(
         initial_solution = adapters.JsonAdapter()
         initial_solution.read_data(initial_solution_file_path, scenario_file_path)
     else:
-        initial_solution = None
+        initial_solution = base_configuration.copy(deep=True)
 
     set_seed(seed)
 
-    weights = get_weights(base_configuration, "max")
+    weights = get_weights(base_configuration, "min")
 
     solution_dict = {"current_generation": "0", "0": []}
     performances = {}

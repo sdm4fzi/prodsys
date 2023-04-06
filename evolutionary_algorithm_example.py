@@ -11,7 +11,34 @@ SAVE_FOLDER = "data/ea_results"
 BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
 SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 
+PARTIAL_SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"
+INITIAL_SOLUTION_FOLDER = "examples/optimization_example/initial_solutions"
 
 
 if __name__ == "__main__":
-    run_evolutionary_algorithm(SAVE_FOLDER, BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH, seed, NGEN, POPULATION_SIZE, MUTATION_RATE, CROSS_OVER_RATE, N_PROCESSES)
+    # Full optimization run
+    run_evolutionary_algorithm(
+        SAVE_FOLDER,
+        BASE_CONFIGURATION_FILE_PATH,
+        SCENARIO_FILE_PATH,
+        seed,
+        NGEN,
+        POPULATION_SIZE,
+        MUTATION_RATE,
+        CROSS_OVER_RATE,
+        N_PROCESSES,
+    )
+
+    # Partial optimization with initial solutions
+    # run_evolutionary_algorithm(
+    #     SAVE_FOLDER,
+    #     BASE_CONFIGURATION_FILE_PATH,
+    #     PARTIAL_SCENARIO_FILE_PATH,
+    #     seed,
+    #     NGEN,
+    #     POPULATION_SIZE,
+    #     MUTATION_RATE,
+    #     CROSS_OVER_RATE,
+    #     N_PROCESSES,
+    #     INITIAL_SOLUTION_FOLDER
+    # )

@@ -1,5 +1,4 @@
 mode: "optimization"
 configuration_path: "examples/optimization_example/base_scenario.json"
 scenario_path: "examples/optimization_example/scenario.json"
-initial_solutions_folder: "examples/optimization_example/initial_solutions"
 save_folder: "data/optimization_results"

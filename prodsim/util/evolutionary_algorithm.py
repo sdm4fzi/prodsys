@@ -24,25 +24,13 @@ from prodsim.util.optimization_util import (
     document_individual,
     get_weights,
 )
-from prodsim.util.util import set_seed
+from prodsim.util.util import set_seed, read_initial_solutions
 
 
 sim.VERBOSE = 1
 
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
-
-def read_initial_solutions(folder_path: str, base_configuration: adapters.Adapter) -> List[adapters.Adapter]:
-    """Reads all initial solutions from a folder and returns them as a list of adapters."""
-    file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
-    adapter_objects = []
-    for file_path in file_paths:
-        adapter = adapters.JsonAdapter()
-        print(folder_path, file_path)
-        adapter.read_data(join(folder_path, file_path))
-        adapter.scenario_data = base_configuration.scenario_data.copy()
-        adapter_objects.append(adapter)
-    return adapter_objects
 
 
 def register_functions_in_toolbox(
@@ -52,8 +40,6 @@ def register_functions_in_toolbox(
     weights: tuple,
     initial_solutions_folder: str
 ):
-    
-
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
     toolbox = base.Toolbox()
