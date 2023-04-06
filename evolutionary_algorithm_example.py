@@ -63,7 +63,7 @@ toolbox.register(
     solution_dict,
     performances,
 )
-toolbox.register("mate", crossover)  # pass
+toolbox.register("mate", crossover)
 toolbox.register("mutate", mutation)
 # toolbox.register('select', tools.selTournament, tournsize=3)
 toolbox.register("select", tools.selNSGA2)
@@ -75,7 +75,6 @@ if __name__ == "__main__":
     pool = multiprocessing.Pool(N_PROCESSES)
     toolbox.register("map", pool.map)
     fitnesses = toolbox.map(toolbox.evaluate, population)
-    pool.close()
     generation_performances = []
 
     for counter, (ind, fit) in enumerate(zip(population, fitnesses)):
@@ -109,11 +108,8 @@ if __name__ == "__main__":
         offspring = algorithms.varAnd(offspring, toolbox, cxpb=0.1, mutpb=0.15)
 
         # Evaluate the individuals
-        # invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        pool = multiprocessing.Pool(N_PROCESSES)
         toolbox.register("map", pool.map)
         fits = toolbox.map(toolbox.evaluate, offspring)
-        pool.close()
         generation_performances = []
 
         for counter, (fit, ind) in enumerate(zip(fits, offspring)):
