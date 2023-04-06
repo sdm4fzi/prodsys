@@ -13,6 +13,7 @@ def prepare_save_folder(file_paths: str):
     if not isExist:
         os.makedirs(file_paths)
 
+# TODO: add Anneal and tabu search to hydra functionality
 
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
