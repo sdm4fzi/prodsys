@@ -132,7 +132,7 @@ class FlexisAdapter(adapters.Adapter):
     class Config:
         extra = Extra.allow
 
-    def read_data(self, file_path: str):
+    def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
         input_data = read_excel(file_path)
         flexis_data_frames = FlexisDataFrames(**input_data)
         self._flexis_data_frames = flexis_data_frames
@@ -144,6 +144,9 @@ class FlexisAdapter(adapters.Adapter):
         self.initialize_transport_models()
         self.initialize_material_models(flexis_data_frames)
         self.initialize_source_and_sink_data(flexis_data_frames)
+
+        if scenario_file_path:
+            self.read_scenario(scenario_file_path)
 
     def get_object_from_data_frame(
         self, data_frame: pd.DataFrame, type: Type

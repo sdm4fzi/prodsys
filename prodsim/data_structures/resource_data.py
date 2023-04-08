@@ -23,16 +23,36 @@ class ResourceData(CoreAsset):
         if not v:
             return None
 
-        if len(v) != len(values["processes"]):
-            raise ValueError("process_capacity must have the same length as processes")
+        if len(v) != len(values["processes"]) and sum(v) != len(values["processes"]):
+            raise ValueError(f"process_capacity {v} must have the same length as processes {values['processes']}")
         if max(v) > values["capacity"]:
             raise ValueError("process_capacity must be smaller than capacity")
         return v
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "ID": "R1",
+                "description": "Resource 1",
+                "capacity": 2,
+                "location": [10.0, 10.0],
+                "controller": "SimpleController",
+                "control_policy": "FIFO",
+                "processes": ["P1", "P2"],
+                "process_capacity": [2, 1],
+                "states": [
+                    "Breakdownstate_1",
+                    "Setup_State_1",
+                    "Setup_State_2",
+                    "ProcessBreakdownState_1",
+                ],
+                "input_queues": ["IQ1"],
+                "output_queues": ["OQ1"],
+            }
+        }
+
 
 class ProductionResourceData(ResourceData):
-    # type: Literal[ResourceType.ProductionResource]
-
     controller: Literal["SimpleController"]
     control_policy: Literal["FIFO", "LIFO", "SPT"]
 
@@ -44,6 +64,21 @@ class TransportResourceData(ResourceData):
 
     controller: Literal["TransportController"]
     control_policy: Literal["FIFO", "SPT_transport"]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ID": "TR1",
+                "description": "Transport Resource 1",
+                "capacity": 1,
+                "location": [15.0, 15.0],
+                "controller": "TransportController",
+                "control_policy": "FIFO",
+                "processes": ["TP1"],
+                "process_capacity": None,
+                "states": ["Breakdownstate_1"],
+            }
+        }
 
 
 RESOURCE_DATA_UNION = Union[ProductionResourceData, TransportResourceData]

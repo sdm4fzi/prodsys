@@ -1,0 +1,3 @@
+mode: "simulation"
+configuration_path: "examples/basic_example/example_configuration.json"
+save_folder: "data/example_results"

@@ -114,14 +114,4 @@ class ManhattanDistanceTimeModel(TimeModel):
         return self.get_next_time(origin, target)
 
 
-class MarkovTimeModel(TimeModel):
-    # TODO: Add time model based on Markov chains
-
-    def get_next_time(self) -> float:
-        return 0.0
-
-    def get_expected_time(self, origin, target) -> float:
-        return 0.0
-
-
 TIME_MODEL = Union[HistoryTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]

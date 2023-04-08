@@ -1,0 +1,292 @@
+# Use Case 3a: 1100 Produkt 3a (7 Bearbeitungsschritte)
+{
+  "seed": 24,
+  "time_models": {
+    "0": {
+      "ID": "ftmp1",
+      "description": "function time model process 1",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [0.8333333333333334, 0.08333333333333333],
+      "batch_size": 100
+    },
+    "1": {
+      "ID": "ftmp2",
+      "description": "function time model process 2",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [4.166666666666667, 0.4166666666666667],
+      "batch_size": 100
+    },
+    "2": {
+      "ID": "ftmp3",
+      "description": "function time model process 3",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [0.6666666666666666, 0.06666666666666667],
+      "batch_size": 100
+    },
+    "3": {
+      "ID": "ftmp4",
+      "description": "function time model process 4",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [3.0, 0.3],
+      "batch_size": 100
+    },
+    "4": {
+      "ID": "ftmp5",
+      "description": "function time model process 5",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [0.6666666666666666, 0.06666666666666667],
+      "batch_size": 100
+    },
+    "5": {
+      "ID": "ftmp6",
+      "description": "function time model process 6",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [60/60, 6/60],
+      "batch_size": 100
+    },
+    "6": {
+      "ID": "ftmp7",
+      "description": "function time model process 7",
+      "type": "FunctionTimeModel",
+      "distribution_function": "normal",
+      "parameters": [80/60, 8/60],
+      "batch_size": 100
+    },
+    "7": {
+      "ID": "ftbs1",
+      "description": "function time model breakdwon state machines",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [3333.33],
+      "batch_size": 100
+    },
+    "8": {
+      "ID": "ftbs2",
+      "description": "function time model breakdwon state transport resources",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [3000],
+      "batch_size": 100
+    },
+    "9": {
+      "ID": "ftbs3",
+      "description": "function time model breakdwon state process module",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [5000],
+      "batch_size": 100
+    },
+    "10": {
+      "ID": "ftr1",
+      "description": "function time model repair time machine breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [15],
+      "batch_size": 100
+    },
+    "11": {
+      "ID": "ftr2",
+      "description": "function time model repair time transport resource breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [10],
+      "batch_size": 100
+    },
+    "12": {
+      "ID": "ftr3",
+      "description": "function time model repair time process module breakdwon",
+      "type": "FunctionTimeModel",
+      "distribution_function": "constant",
+      "parameters": [10],
+      "batch_size": 100
+    },
+    "13": {
+      "ID": "ftm1",
+      "description": "function time model material 1",
+      "type": "FunctionTimeModel",
+      "distribution_function": "exponential",
+      "parameters": [(86400/528)/ 60, 5],
+      "batch_size": 100
+    },
+    "14": {
+      "ID": "md1",
+      "description": "manhattan time model 1",
+      "type": "ManhattanDistanceTimeModel",
+      "speed": 60,
+      "reaction_time": 0.03333333333333333
+    }
+  },
+  "states": {
+    "0": {
+      "ID": "BSM",
+      "description": "Breakdownstate for machine",
+      "time_model_id": "ftbs1",
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr1"
+    },
+    "1": {
+      "ID": "BST",
+      "description": "Breakdownstate for transport resource",
+      "time_model_id": "ftbs2",
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr2"
+    },
+    "2": {
+      "ID": "BSP",
+      "description": "Breakdownstate for process modules",
+      "time_model_id": "ftbs3",
+      "type": "BreakDownState",
+      "repair_time_model_id": "ftr3"
+    }
+  },
+  "processes": {
+    "0": {
+      "ID": "P1",
+      "description": "Process 1",
+      "time_model_id": "ftmp1",
+      "type": "ProductionProcesses"
+    },
+    "1": {
+      "ID": "P2",
+      "description": "Process 2",
+      "time_model_id": "ftmp2",
+      "type": "ProductionProcesses"
+    },
+    "2": {
+      "ID": "P3",
+      "description": "Process 3",
+      "time_model_id": "ftmp3",
+      "type": "ProductionProcesses"
+    },
+    "3": {
+      "ID": "P4",
+      "description": "Process 4",
+      "time_model_id": "ftmp4",
+      "type": "ProductionProcesses"
+    },
+    "4": {
+      "ID": "P5",
+      "description": "Process 5",
+      "time_model_id": "ftmp5",
+      "type": "ProductionProcesses"
+    },
+    "5": {
+      "ID": "P6",
+      "description": "Process 6",
+      "time_model_id": "ftmp6",
+      "type": "ProductionProcesses"
+    },
+    "6": {
+      "ID": "P7",
+      "description": "Process 7",
+      "time_model_id": "ftmp7",
+      "type": "ProductionProcesses"
+    },
+    "7": {
+      "ID": "TP1",
+      "description": "Transport Process 1",
+      "time_model_id": "md1",
+      "type": "TransportProcesses"
+    }
+  },
+  "queues": {
+    "0": {
+      "ID": "SourceQueue",
+      "description": "Output-Queue for all sources",
+      "capacity": 0
+    },
+    "1": {
+      "ID": "SinkQueue",
+      "description": "Input-Queue for all sinks",
+      "capacity": 0
+    }
+  },
+  "resources": {
+    "0": {
+      "ID": "M1",
+      "description": "Machine 1",
+      "capacity": 1,
+      "location": [0.0, 0.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P1", "P3"],
+      "states": ["BSM", "BSP", "BSP"]
+    },
+    "1": {
+      "ID": "M2",
+      "description": "Machine 2",
+      "capacity": 1,
+      "location": [0.0, 5.0],
+      "controller": "SimpleController",
+      "control_policy": "SPT",
+      "processes": ["P2", "P5"],
+      "states": ["BSM", "BSP", "BSP"]
+    },
+    "2": {
+      "ID": "M3",
+      "description": "Machine 3",
+      "capacity": 1,
+      "location": [5.0, 0.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P4"],
+      "states": ["BSM", "BSP"]
+    },
+    "3": {
+      "ID": "M4",
+      "description": "Machine 4",
+      "capacity": 1,
+      "location": [5.0, 5.0],
+      "controller": "SimpleController",
+      "control_policy": "FIFO",
+      "processes": ["P2"],
+      "states": ["BSM", "BSP"]
+    },
+    "4": {
+      "ID": "TR1",
+      "description": "Transport Resource 1",
+      "capacity": 1,
+      "location": [0.0, 10.0],
+      "controller": "TransportController",
+      "control_policy": "FIFO",
+      "processes": ["TP1"],
+      "states": ["BST"]
+    }
+  },
+  "materials": {
+    "0": {
+      "ID": "Material_1",
+      "description": "Material 1",
+      "material_type": "Material_1",
+      "processes": ["P1", "P2", "P3", "P4", "P5", "P6", "P7"],
+      "transport_process": "TP1"
+    },
+  },
+  "sinks": {
+    "0": {
+      "ID": "SK1",
+      "description": "Sink 1",
+      "location": [30.0, 30.0],
+      "material_type": "Material_1",
+      "input_queues": ["SinkQueue"]
+    },
+  },
+  "sources": {
+    "0": {
+      "ID": "S1",
+      "description": "Source 1",
+      "location": [-5.0, -5.0],
+      "material_type": "Material_1",
+      "time_model_id": "ftm1",
+      "router": "SimpleRouter",
+      "routing_heuristic": "shortest_queue",
+      "output_queues": ["SourceQueue"]
+    },
+  }
+}

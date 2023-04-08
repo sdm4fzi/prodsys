@@ -1,0 +1,5 @@
+defaults:
+  - general: example
+  - simulation: one_day_simulation
+  - optimization: example_evolutionary_algorithm
+  

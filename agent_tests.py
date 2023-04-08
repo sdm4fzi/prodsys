@@ -7,8 +7,8 @@ if __name__ == '__main__':
 
     adapter_object = prodsim.adapters.JsonAdapter()
 
-    adapter_object.read_data('data/example_configuration.json')
-    env = gym_env.GridWorldEnv(adapter_object, "R2", render_mode="human")
+    adapter_object.read_data('examples/basic_example/example_configuration.json')
+    env = gym_env.ProductionControlEnv(adapter_object, "R2", render_mode="human")
     ob, info = env.reset()
 
     for _ in range(20):

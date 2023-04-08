@@ -3,9 +3,11 @@ from __future__ import annotations
 import contextlib
 import random
 from pydantic import BaseModel, Field
+from typing import List
 
 import numpy as np
 import time
+from functools import cached_property
 
 from prodsim.adapters import adapter
 from prodsim.simulation import sim
@@ -20,9 +22,16 @@ from prodsim.factories import (
     source_factory,
 )
 from prodsim.simulation import logger
-from prodsim.util import post_processing
+from prodsim.util import post_processing, kpi_visualization
+from prodsim.data_structures import performance_data
 
 VERBOSE = 1
+
+def run_simulation(adapter_object: adapter.Adapter, run_length: int) -> Runner:
+    runner_object = Runner(adapter=adapter_object)
+    runner_object.initialize_simulation()
+    runner_object.run(run_length)
+    return runner_object
 
 
 @contextlib.contextmanager
@@ -55,6 +64,7 @@ class Runner(BaseModel):
     material_factory: material_factory.MaterialFactory = Field(init=False, default=None)
     data_collector: logger.Datacollector = Field(init=False, default=None)
     time_stamp: str = Field(init=False, default="")
+    post_processor: post_processing.PostProcessor = Field(init=False, default=None)
 
     class Config:
         arbitrary_types_allowed = True
@@ -139,31 +149,60 @@ class Runner(BaseModel):
         t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
+    def get_post_processor(self) -> post_processing.PostProcessor:
+        if not self.post_processor:
+            self.post_processor = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
+        return self.post_processor
+
 
     def print_results(self):
-        p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
-        s = p.print_aggregated_data()
+        p = self.get_post_processor()
+        kpi_visualization.print_aggregated_data(p)
 
     def plot_results(self):
-        p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
-        p.plot_throughput_time_over_time()
-        p.plot_WIP()
-        p.plot_WIP_with_range()
-        p.plot_throughput_time_distribution()
-        p.plot_time_per_state_of_resources()
+        p = self.get_post_processor()
+        kpi_visualization.plot_throughput_time_over_time(p)
+        kpi_visualization.plot_WIP(p)
+        kpi_visualization.plot_WIP_with_range(p)
+        kpi_visualization.plot_throughput_time_distribution(p)
+        kpi_visualization.plot_time_per_state_of_resources(p)
 
-    def get_event_data_simulation_results_as_dict(self) -> dict:
-        p = post_processing.PostProcessor()
+    def get_event_data_of_simulation(self) -> List[performance_data.Event]:
+        p = self.get_post_processor()
         df_raw=self.data_collector.get_data_as_dataframe()
-        return df_raw.to_dict()
+        events = []
+        for index, row in df_raw.iterrows():
+            events.append(
+                performance_data.Event(
+                    time=row["Time"],
+                    resource=row["Resource"],
+                    state=row["State"],
+                    state_type=row["State Type"],
+                    activity=row["Activity"],
+                    material=row["Material"],
+                    expected_end_time=row["Expected End Time"],
+                    target_location=row["Target location"],
+                )
+            )
+        return events
+    
+    def get_performance_data(self) -> performance_data.Performance:
+        p = self.get_post_processor()
+        kpis = []
+        kpis += p.System_WIP_total_and_per_product
+        kpis += p.get_throughput_and_output_KPIs
+        kpis += p.get_aggregated_throughput_time_KPIs
+        kpis += p.get_machine_state_KPIS
+        event_data = self.get_event_data_of_simulation()
+        return performance_data.Performance(kpis=kpis, event_log=event_data)
     
     def get_aggregated_data_simulation_results(self) -> dict:
         p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
         return p.get_aggregated_data()
 
-    def save_results_as_csv(self):
-        self.data_collector.log_data_to_csv(filepath=f"data/{self.time_stamp}.csv")
+    def save_results_as_csv(self, save_folder="data"):
+        self.data_collector.log_data_to_csv(filepath=f"{save_folder}/{self.time_stamp}.csv")
 
-    def save_results_as_json(self):
-        self.data_collector.log_data_to_json(filepath=f"data/{self.time_stamp}.json")
+    def save_results_as_json(self, save_folder="data"):
+        self.data_collector.log_data_to_json(filepath=f"{save_folder}/{self.time_stamp}.json")
 

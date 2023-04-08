@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Optional
 from pydantic import parse_obj_as, BaseModel
 
 from prodsim.adapters import adapter
@@ -24,7 +24,7 @@ def load_json(file_path: str) -> dict:
     return data
 
 class JsonAdapter(adapter.Adapter):
-    def read_data(self, file_path: str):
+    def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
         data = load_json(file_path=file_path)
         self.seed = data["seed"]
         self.time_model_data = self.create_objects_from_configuration_data(
@@ -42,6 +42,8 @@ class JsonAdapter(adapter.Adapter):
         self.material_data = self.create_objects_from_configuration_data(data["materials"], material_data.MaterialData)
         self.sink_data = self.create_objects_from_configuration_data(data["sinks"], sink_data.SinkData)
         self.source_data = self.create_objects_from_configuration_data(data["sources"], source_data.SourceData)
+        if scenario_file_path:
+            self.read_scenario(scenario_file_path)
 
     def create_typed_object_from_configuration_data(
         self, configuration_data: Dict[str, Any], type
