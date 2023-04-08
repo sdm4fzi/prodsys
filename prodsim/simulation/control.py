@@ -70,8 +70,6 @@ class ProductionController(Controller):
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
-                # _material_type = _process.get_raw_material_type()
-
                 events.append(
                     queue.get(filter=lambda item: item is material.material_data)
                 )
@@ -113,11 +111,12 @@ class ProductionController(Controller):
             ):
                 continue           
             self.control_policy(self.requests)
-            process_request = self.requests.pop(0)
-            running_process = self.env.process(self.start_process(process_request))
+            running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
 
-    def start_process(self, process_request: request.Request):
+    def start_process(self) -> Generator:
+        yield self.env.timeout(0)
+        process_request = self.requests.pop(0)
         resource = process_request.get_resource()
         process = process_request.get_process()
         material = process_request.get_material()
@@ -209,11 +208,13 @@ class TransportController(Controller):
             ):
                 continue
             self.control_policy(self.requests)
-            process_request = self.requests.pop(0)
-            running_process = self.env.process(self.start_process(process_request))
+            running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
 
-    def start_process(self, process_request: request.TransportResquest):
+    def start_process(self) -> Generator:
+        yield self.env.timeout(0)
+        process_request = self.requests.pop(0)
+
         resource = process_request.get_resource()
         process = process_request.get_process()
         material = process_request.get_material()
@@ -286,9 +287,8 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
 
 
 def agent_control_policy(
-    gym_env: gym_env.GridWorldEnv, requests: List[request.Request]
+    gym_env: gym_env.ProductionControlEnv, requests: List[request.Request]
 ) -> None:
-    print("Agent control policy is asked")
     gym_env.interrupt_simulation_event.succeed()
 
 
