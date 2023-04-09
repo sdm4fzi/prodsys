@@ -1,14 +1,19 @@
 from prodsim import adapters
-from prodsim.util.math_opt import MathOptimizer
+from prodsim.util.math_opt import run_mathematical_optimization
+
+
 BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
 SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 SAVE_FOLDER = "data/math_results"
-adapter = adapters.JsonAdapter()
-adapter.read_data(BASE_CONFIGURATION_FILE_PATH, SCENARIO_FILE_PATH)
+OPTIMIZATION_TIME_PORTION = 1.0
+NUMBER_OF_SOLUTIONS = 2
+ADJUSTED_NUMBER_OF_TRANSPORT_RESOURCES = 2
 
-
-
-model = MathOptimizer(adapter=adapter, optimization_time_portion=0.4)
-model.optimize(n_solutions=2)
-model.save_model(save_folder=SAVE_FOLDER)
-model.save_results(save_folder=SAVE_FOLDER, adjusted_number_of_transport_resources=2)
+run_mathematical_optimization(
+    SAVE_FOLDER,
+    BASE_CONFIGURATION_FILE_PATH,
+    SCENARIO_FILE_PATH,
+    OPTIMIZATION_TIME_PORTION,
+    NUMBER_OF_SOLUTIONS,
+    ADJUSTED_NUMBER_OF_TRANSPORT_RESOURCES
+)

@@ -81,6 +81,11 @@ class JsonAdapter(adapter.Adapter):
                 "sources": self.get_dict_of_list_objects(self.source_data)
         }
         return data
+    
+    def write_scenario_data(self, file_path: str) -> None:
+        data = self.scenario_data.dict()
+        with open(file_path, "w") as json_file:
+            json.dump(data, json_file)
 
     def get_dict_of_list_objects(self, values: List[BaseModel]) -> dict:
         return {counter: data.dict() for counter, data in enumerate(values)}

@@ -12,6 +12,7 @@ from os import listdir
 from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
+from pydantic import BaseModel
 
 from prodsim.simulation import sim
 from prodsim import adapters
@@ -166,3 +167,29 @@ def run_evolutionary_algorithm(
         with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
     pool.close()
+
+class EvolutionaryAlgorithmHyperparameters(BaseModel):
+    seed: int
+    number_of_generations: int
+    population_size: int
+    mutation_rate: float
+    crossover_rate: float
+    number_of_processes: int
+
+def optimize_configuration(
+    save_folder: str,
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    hyper_parameters: EvolutionaryAlgorithmHyperparameters
+):  
+    run_evolutionary_algorithm(
+        save_folder,
+        base_configuration_file_path,
+        scenario_file_path,
+        hyper_parameters.seed,
+        hyper_parameters.number_of_generations,
+        hyper_parameters.population_size,
+        hyper_parameters.mutation_rate,
+        hyper_parameters.crossover_rate,
+        hyper_parameters.number_of_processes
+    )
