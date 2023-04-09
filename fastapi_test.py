@@ -573,6 +573,7 @@ async def run_configuration_optimization(project_id: str, adapter_id: str, hyper
     
     if isinstance(hyper_parameters, evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters):
         optimization_func = evolutionary_algorithm.optimize_configuration
+        # TODO: add here also the other optimizers!
     else:
         raise HTTPException(
             404, f"Wrong Hyperparameters for optimization."
