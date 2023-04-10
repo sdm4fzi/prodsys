@@ -1,15 +1,15 @@
 ECHO Welcome to batch scripting
-CALL python hydra_test.py general=example_optimization optimization=example_evolutionary_algorithm
+CALL python hydra_app.py general=example_optimization optimization=example_evolutionary_algorithm
 ECHO finished evolutionary
-CALL python hydra_test.py general=example_partial_optimization optimization=example_evolutionary_algorithm
+CALL python hydra_app.py general=example_partial_optimization optimization=example_evolutionary_algorithm
 ECHO finished partial evolutionary
-CALL python hydra_test.py general=example_optimization optimization=example_mathematical_opt
+CALL python hydra_app.py general=example_optimization optimization=example_mathematical_opt
 ECHO finished mathematical optimization
-CALL python hydra_test.py general=example_optimization optimization=example_anneal
+CALL python hydra_app.py general=example_optimization optimization=example_anneal
 ECHO finished anneal
-CALL python hydra_test.py general=example_partial_optimization optimization=example_anneal
+CALL python hydra_app.py general=example_partial_optimization optimization=example_anneal
 ECHO finished partial anneal
-CALL python hydra_test.py general=example_optimization optimization=example_tabu_search
+CALL python hydra_app.py general=example_optimization optimization=example_tabu_search
 ECHO finished tabu search
-CALL python hydra_test.py general=example_partial_optimization optimization=example_tabu_search
+CALL python hydra_app.py general=example_partial_optimization optimization=example_tabu_search
 ECHO finished partial tabu search
