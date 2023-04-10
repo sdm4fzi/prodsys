@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
+from pydantic import parse_obj_as
 
 
 from pydantic import BaseModel
@@ -624,11 +625,28 @@ async def run_configuration_optimization(
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results",
     tags=["optimization"],
+    response_model=Dict[str, List[performance_indicators.KPI_UNION]],
 )
 def get_optimization_core_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
-    return data
+    adapter_object = get_adapter(project_id, adapter_id)
+    kpis = adapter_object.scenario_data.optimize
+    response = {}
+    for solution in data.values():
+        for adapter_name in solution.keys():
+            response[adapter_name] = []
+            for kpi_name, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
+                kpi_object = parse_obj_as(
+                    performance_indicators.KPI_UNION,
+                    {
+                        "name": kpi_name,
+                        "value": kpi_value,
+                        "context": [performance_indicators.KPILevelEnum.SYSTEM],
+                    },
+                )
+                response[adapter_name].append(kpi_object)
+    return response
 
 
 @app.get(
