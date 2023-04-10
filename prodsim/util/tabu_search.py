@@ -7,6 +7,8 @@ from numpy import argmax
 import json
 import time
 
+from pydantic import BaseModel, Field
+
 from prodsim.simulation import sim
 from prodsim import adapters
 from prodsim.util.optimization_util import (
@@ -227,3 +229,46 @@ def run_tabu_search(
                     max_steps=max_steps, max_score=max_score)
     best_solution, best_objective_value = alg.run()
     print("Best solution: ", best_objective_value)
+
+
+class TabuSearchHyperparameters(BaseModel): 
+    # specifiy parameters as field with with defaults and description and also add a schema extra
+    seed: int = Field(
+        0, description="Seed for random number generator"
+    )
+    tabu_size: int = Field(
+        10, description="Size of tabu list"
+    )
+    max_steps: int = Field(
+        300, description="Maximum number of steps"
+    )
+    max_score: float = Field(
+        500, description="Maximum score"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "seed": 0,
+                "tabu_size": 10,
+                "max_steps": 300,
+                "max_score": 500,
+            }
+        }
+
+
+def optimize_configuration(
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    save_folder: str,
+    hyperparameters: TabuSearchHyperparameters
+):
+    run_tabu_search(
+        save_folder=save_folder,
+        base_configuration_file_path=base_configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        seed=hyperparameters.seed,
+        tabu_size=hyperparameters.tabu_size,
+        max_steps=hyperparameters.max_steps,
+        max_score=hyperparameters.max_score,
+    )

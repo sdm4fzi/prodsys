@@ -2,6 +2,8 @@ import json
 import time
 from copy import deepcopy
 
+from pydantic import BaseModel, Field
+
 from simanneal import Annealer
 
 from prodsim.simulation import sim
@@ -106,3 +108,54 @@ def run_simulated_annealing(
     pso.updates = updates
 
     internary, performance = pso.anneal()
+
+
+class SimulatedAnnealingHyperparameters(BaseModel):
+    seed: int = Field(
+        default=0,
+        description="Seed for random number generator",
+    )
+    Tmax: int = Field(
+        default=10000,
+        description="Maximum temperature",
+    )
+    Tmin: int = Field(
+        default=1,
+        description="Minimum temperature",
+    )
+    steps: int = Field(
+        default=4000,
+        description="Number of steps",
+    )
+    updates: int = Field(
+        default=300,
+        description="Number of updates",
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "seed": 0,
+                "Tmax": 10000,
+                "Tmin": 1,
+                "steps": 4000,
+                "updates": 300,
+            }
+        }
+
+def optimize_configuration(
+        base_configuration_file_path: str,
+    scenario_file_path: str,
+    save_folder: str,
+    hyperparameters: SimulatedAnnealingHyperparameters,
+):
+    run_simulated_annealing(
+        save_folder=save_folder,
+        base_configuration_file_path=base_configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        seed=hyperparameters.seed,
+        Tmax=hyperparameters.Tmax,
+        Tmin=hyperparameters.Tmin,
+        steps=hyperparameters.steps,
+        updates=hyperparameters.updates
+    )

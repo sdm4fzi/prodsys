@@ -8,7 +8,7 @@ from copy import deepcopy
 import json
 import random
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from prodsim import adapters
 from prodsim.data_structures import (
     resource_data,
@@ -500,4 +500,40 @@ def run_mathematical_optimization(
     model.save_results(
         save_folder=save_folder,
         adjusted_number_of_transport_resources=adjusted_number_of_transport_resources,
+    )
+
+
+class MathOptHyperparameters(BaseModel):
+    optimization_time_portion: float = Field(
+        0.5, description="Portion of the total time that is used for optimization."
+    )
+    number_of_solutions: int = Field(
+        1, description="Number of solutions that are generated."
+    )
+    adjusted_number_of_transport_resources: int = Field(
+        1, description="Number of transport resources that are used for the optimization."
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "optimization_time_portion": 0.5,
+                "number_of_solutions": 1,
+                "adjusted_number_of_transport_resources": 1,
+            }
+        }
+
+def optimize_configuration(
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    save_folder: str,
+    hyperparameters: MathOptHyperparameters,
+):
+    run_mathematical_optimization(
+        save_folder=save_folder,
+        base_configuration_file_path=base_configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        optimization_time_portion=hyperparameters.optimization_time_portion,
+        number_of_solutions=hyperparameters.number_of_solutions,
+        adjusted_number_of_transport_resources=hyperparameters.adjusted_number_of_transport_resources,
     )

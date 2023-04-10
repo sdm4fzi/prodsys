@@ -177,9 +177,9 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
     number_of_processes: int
 
 def optimize_configuration(
-    save_folder: str,
     base_configuration_file_path: str,
     scenario_file_path: str,
+    save_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters
 ):  
     run_evolutionary_algorithm(

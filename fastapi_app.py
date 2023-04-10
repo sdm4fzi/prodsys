@@ -20,7 +20,13 @@ from prodsim.data_structures import (
     performance_indicators,
     scenario_data,
 )
-from prodsim.util import evolutionary_algorithm, tabu_search, simulated_annealing, math_opt, util
+from prodsim.util import (
+    evolutionary_algorithm,
+    tabu_search,
+    simulated_annealing,
+    math_opt,
+    util,
+)
 import prodsim
 
 app = FastAPI()
@@ -433,6 +439,7 @@ def get_project(project_id: str) -> Project:
             return project
     raise HTTPException(404, f"Project {project_id} not found")
 
+
 def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
@@ -440,26 +447,30 @@ def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
     performance = runner_object.get_performance_data()
     results_database[adapter_object.ID] = performance
 
+
 @app.get("/load_example_project", response_model=str, tags=["projects"])
 async def load_example_project() -> str:
     example_project = Project(ID="example_project")
     database.append(example_project)
-    
+
     adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
-    adapter_object.read_data('examples/basic_example/example_configuration.json')
+    adapter_object.read_data("examples/basic_example/example_configuration.json")
     evaluate(adapter_object)
     example_project.adapters[adapter_object.ID] = adapter_object
 
     return "Sucessfully loaded example project"
 
+
 @app.get("/load_optimization_example", response_model=str, tags=["projects"])
 async def load_example_project() -> str:
     example_project = Project(ID="example_optimization_project")
     database.append(example_project)
-    
+
     adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
-    adapter_object.read_data('examples/optimization_example/base_scenario.json', 
-                             "examples/optimization_example/scenario.json")
+    adapter_object.read_data(
+        "examples/optimization_example/base_scenario.json",
+        "examples/optimization_example/scenario.json",
+    )
     example_project.adapters[adapter_object.ID] = adapter_object
 
     return "Sucessfully loaded optimization example project. Optimizations runs can be started now."
@@ -554,11 +565,20 @@ async def run_simulation(project_id: str, adapter_id: str):
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
 
 
-
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration", tags=["optimization"]
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration",
+    tags=["optimization"],
 )
-async def run_configuration_optimization(project_id: str, adapter_id: str, hyper_parameters: Union[evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters, str]):
+async def run_configuration_optimization(
+    project_id: str,
+    adapter_id: str,
+    hyper_parameters: Union[
+        evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters,
+        simulated_annealing.SimulatedAnnealingHyperparameters,
+        tabu_search.TabuSearchHyperparameters,
+        math_opt.MathOptHyperparameters,
+    ],
+):
     adapter = get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
         raise HTTPException(
@@ -570,25 +590,35 @@ async def run_configuration_optimization(project_id: str, adapter_id: str, hyper
     util.prepare_save_folder(save_folder)
     adapter.write_data(configuration_file_path)
     adapter.write_scenario_data(scenario_file_path)
-    
-    if isinstance(hyper_parameters, evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters):
+
+    if isinstance(
+        hyper_parameters, evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters
+    ):
         optimization_func = evolutionary_algorithm.optimize_configuration
-        # TODO: add here also the other optimizers!
+    elif isinstance(
+        hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters
+    ):
+        optimization_func = simulated_annealing.optimize_configuration
+    elif isinstance(hyper_parameters, tabu_search.TabuSearchHyperparameters):
+        optimization_func = tabu_search.optimize_configuration
+    elif isinstance(hyper_parameters, math_opt.MathOptHyperparameters):
+        optimization_func = math_opt.optimize_configuration
     else:
-        raise HTTPException(
-            404, f"Wrong Hyperparameters for optimization."
-        )
-    
-    optimization_func(save_folder=save_folder,
-                      base_configuration_file_path=configuration_file_path,
-                      scenario_file_path=scenario_file_path,
-                      hyper_parameters=hyper_parameters
-                      )
+        raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
+
+    optimization_func(
+        save_folder=save_folder,
+        base_configuration_file_path=configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        hyper_parameters=hyper_parameters,
+    )
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
-# TODO: create response model for results for openAPI documentation. 
+
+# TODO: create response model for results for openAPI documentation
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results", tags=["optimization"]
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results",
+    tags=["optimization"],
 )
 def get_optimization_core_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
@@ -597,9 +627,44 @@ def get_optimization_core_results(project_id: str, adapter_id: str):
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/{solution_id}", tags=["optimization"], response_model=prodsim.adapters.JsonAdapter
+        # a method that loads a result of the optimization, simulates it
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results/{solution_id}",
 )
-def get_optimization_solution(project_id: str, adapter_id: str, solution_id: str) -> prodsim.adapters.JsonAdapter:
+def get_optimization_results(project_id: str, adapter_id: str, solution_id: str):
+    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
+        data = json.load(json_file)
+    adapter_object = prodsim.adapters.JsonAdapter(data)
+    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+    runner_object.initialize_simulation()
+    runner_object.run(3000)
+    performance = runner_object.get_performance_data()
+    # TODO: save results to the adapter in the fastAPI app.
+    return "Sucessfully ran simulation for adapter with ID: " + adapter_id
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/pareto_front_ids",
+    tags=["optimization"], response_model=List[str]
+)
+def get_optimization_pareto_front(project_id: str, adapter_id: str):
+    with open(f"data/{project_id}/{adapter_id}/pareto_front.json") as json_file:
+        data = json.load(json_file)
+    # TODO: add here the possibility to get the pareto front of the optimization results
+
+    # TODO: add function that simulates all configurations of the pareto front and saves results to the adapter in the fastAPI app.
+
+
+    return ["2", "3"]
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/{solution_id}",
+    tags=["optimization"],
+    response_model=prodsim.adapters.JsonAdapter,
+)
+def get_optimization_solution(
+    project_id: str, adapter_id: str, solution_id: str
+) -> prodsim.adapters.JsonAdapter:
     with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
         data = json.load(json_file)
     return data
@@ -621,6 +686,7 @@ def get_result(project_id: str, adapter_id: str) -> performance_data.Performance
 async def get_all_results(project_id: str, adapter_id: str):
     result = get_result(project_id, adapter_id)
     return result.kpis
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/results/event_results",
@@ -1065,6 +1131,7 @@ async def create_scenario(
     adapter = get_adapter(project_id, adapter_id)
     adapter.scenario_data = scenario
     return "Sucessfully created scenario"
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
