@@ -1,5 +1,8 @@
 from typing import List, Dict, Literal, Union
 
+import hydra
+from omegaconf import DictConfig
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -36,6 +39,8 @@ origins = [
     "http://localhost:4200",
     "http://127.0.0.1",
     "http://127.0.0.1:4200",
+    "http://0.0.0.0",
+    "http://0.0.0.0:4200",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -627,9 +632,9 @@ def get_optimization_core_results(project_id: str, adapter_id: str):
 
 
 @app.get(
-        # a method that loads a result of the optimization, simulates it
+    # a method that loads a result of the optimization, simulates it
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results/{solution_id}",
-    tags=["optimization"]
+    tags=["optimization"],
 )
 def get_optimization_results(project_id: str, adapter_id: str, solution_id: str):
     with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
@@ -645,7 +650,8 @@ def get_optimization_results(project_id: str, adapter_id: str, solution_id: str)
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/pareto_front_ids",
-    tags=["optimization"], response_model=List[str]
+    tags=["optimization"],
+    response_model=List[str],
 )
 def get_optimization_pareto_front(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/pareto_front.json") as json_file:
@@ -653,7 +659,6 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
     # TODO: add here the possibility to get the pareto front of the optimization results
 
     # TODO: add function that simulates all configurations of the pareto front and saves results to the adapter in the fastAPI app.
-
 
     return ["2", "3"]
 
@@ -1134,7 +1139,10 @@ async def create_scenario(
     return "Sucessfully created scenario"
 
 
+@hydra.main(config_path="conf", config_name="config", version_base=None)
+def prodsim_app(cfg: DictConfig) -> None:
+    uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
+
+
 if __name__ == "__main__":
-    # TODO: add here a hyra configuration for startup with different host ports
-    # uvicorn.run(app, host="127.0.0.1", port=8000)
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    prodsim_app()
