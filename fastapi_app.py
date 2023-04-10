@@ -31,6 +31,7 @@ from prodsim.util import (
     simulated_annealing,
     math_opt,
     util,
+    optimization_analysis,
 )
 import prodsim
 
@@ -566,7 +567,7 @@ async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
-    runner_object.run(2*7*24*60)
+    runner_object.run(2 * 7 * 24 * 60)
     performance = runner_object.get_performance_data()
     results_database[adapter_id] = performance
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
@@ -650,7 +651,10 @@ def get_optimization_results(project_id: str, adapter_id: str):
 
 
 def prepare_adapter_from_optimization(
-    adapter_object: prodsim.adapters.JsonAdapter, project_id: str, adapter_id: str, solution_id: str
+    adapter_object: prodsim.adapters.JsonAdapter,
+    project_id: str,
+    adapter_id: str,
+    solution_id: str,
 ):
     origin_adapter = get_adapter(project_id, adapter_id)
     adapter_object.scenario_data = origin_adapter.scenario_data
@@ -667,38 +671,62 @@ def prepare_adapter_from_optimization(
     results_database[adapter_id] = performance
 
 
-
-@app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/register/{solution_id}",
-    tags=["optimization"]
-)
-def register_adapter_with_evaluation(project_id: str, adapter_id: str, solution_id: str):
+def get_configuration_results_adapter_from_filesystem(
+    project_id: str, adapter_id: str, solution_id: str
+):
     adapter_object = prodsim.adapters.JsonAdapter()
-    if not os.path.exists(f"data/{project_id}/{adapter_id}/f_0_{solution_id}.json"):
+    files = os.listdir(f"data/{project_id}/{adapter_id}")
+    if not any(solution_id in file for file in files):
         raise HTTPException(
             404,
             f"Solution {solution_id} for adapter {adapter_id} in project {project_id} does not exist.",
         )
-    adapter_object.read_data(f"data/{project_id}/{adapter_id}/f_0_{solution_id}.json")
-
-    prepare_adapter_from_optimization(adapter_object, project_id, adapter_id, solution_id)
-
-    return "Sucessfully registered and ran simulation for adapter with ID: " + solution_id
+    file_name = next(file for file in files if solution_id in file)
+    adapter_object.read_data(f"data/{project_id}/{adapter_id}/{file_name}")
+    return adapter_object
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/pareto_front_ids",
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/register/{solution_id}",
     tags=["optimization"],
-    response_model=List[str],
+)
+def register_adapter_with_evaluation(
+    project_id: str, adapter_id: str, solution_id: str
+):
+    adapter_object = get_configuration_results_adapter_from_filesystem(
+        project_id, adapter_id, solution_id
+    )
+    prepare_adapter_from_optimization(
+        adapter_object, project_id, adapter_id, solution_id
+    )
+
+    return (
+        "Sucessfully registered and ran simulation for adapter with ID: " + solution_id
+    )
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/pareto_front_performances",
+    tags=["optimization"],
+    response_model=str,
 )
 def get_optimization_pareto_front(project_id: str, adapter_id: str):
-    with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
-        data = json.load(json_file)
-    # TODO: add here the possibility to get the pareto front of the optimization results
+    IDs = optimization_analysis.get_pareto_solutions_from_result_files(
+        f"data/{project_id}/{adapter_id}/optimization_results.json"
+    )
+    for solution_id in IDs:
 
-    # TODO: add function that simulates all configurations of the pareto front and saves results to the adapter in the fastAPI app.
+        adapter_object = get_configuration_results_adapter_from_filesystem(
+            project_id, adapter_id, solution_id
+        )
+        prepare_adapter_from_optimization(
+            adapter_object, project_id, adapter_id, solution_id
+        )
 
-    return ["2", "3"]
+    return (
+        "Succesfully found pareto front, registered and ran simulations for pareto adapters with IDs: "
+        + str(IDs)
+    )
 
 
 @app.get(
