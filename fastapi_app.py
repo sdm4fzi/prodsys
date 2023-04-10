@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
+import os
 from pydantic import parse_obj_as
 
 
@@ -565,7 +566,7 @@ async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
-    runner_object.run(3000)
+    runner_object.run(2*7*24*60)
     performance = runner_object.get_performance_data()
     results_database[adapter_id] = performance
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
@@ -621,13 +622,12 @@ async def run_configuration_optimization(
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
 
-# TODO: create response model for results for openAPI documentation
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results",
     tags=["optimization"],
     response_model=Dict[str, List[performance_indicators.KPI_UNION]],
 )
-def get_optimization_core_results(project_id: str, adapter_id: str):
+def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
     adapter_object = get_adapter(project_id, adapter_id)
@@ -649,21 +649,41 @@ def get_optimization_core_results(project_id: str, adapter_id: str):
     return response
 
 
-@app.get(
-    # a method that loads a result of the optimization, simulates it
-    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results/{solution_id}",
-    tags=["optimization"],
-)
-def get_optimization_results(project_id: str, adapter_id: str, solution_id: str):
-    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
-        data = json.load(json_file)
-    adapter_object = prodsim.adapters.JsonAdapter(data)
+def prepare_adapter_from_optimization(
+    adapter_object: prodsim.adapters.JsonAdapter, project_id: str, adapter_id: str, solution_id: str
+):
+    origin_adapter = get_adapter(project_id, adapter_id)
+    adapter_object.scenario_data = origin_adapter.scenario_data
+    adapter_object.ID = solution_id
+
+    project = get_project(project_id)
+    project.adapters[solution_id] = adapter_object
+
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(3000)
+
     performance = runner_object.get_performance_data()
-    # TODO: save results to the adapter in the fastAPI app.
-    return "Sucessfully ran simulation for adapter with ID: " + adapter_id
+    results_database[adapter_id] = performance
+
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/register/{solution_id}",
+    tags=["optimization"]
+)
+def register_adapter_with_evaluation(project_id: str, adapter_id: str, solution_id: str):
+    adapter_object = prodsim.adapters.JsonAdapter()
+    if not os.path.exists(f"data/{project_id}/{adapter_id}/f_0_{solution_id}.json"):
+        raise HTTPException(
+            404,
+            f"Solution {solution_id} for adapter {adapter_id} in project {project_id} does not exist.",
+        )
+    adapter_object.read_data(f"data/{project_id}/{adapter_id}/f_0_{solution_id}.json")
+
+    prepare_adapter_from_optimization(adapter_object, project_id, adapter_id, solution_id)
+
+    return "Sucessfully registered and ran simulation for adapter with ID: " + solution_id
 
 
 @app.get(
@@ -672,7 +692,7 @@ def get_optimization_results(project_id: str, adapter_id: str, solution_id: str)
     response_model=List[str],
 )
 def get_optimization_pareto_front(project_id: str, adapter_id: str):
-    with open(f"data/{project_id}/{adapter_id}/pareto_front.json") as json_file:
+    with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
     # TODO: add here the possibility to get the pareto front of the optimization results
 
