@@ -629,6 +629,7 @@ def get_optimization_core_results(project_id: str, adapter_id: str):
 @app.get(
         # a method that loads a result of the optimization, simulates it
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results/{solution_id}",
+    tags=["optimization"]
 )
 def get_optimization_results(project_id: str, adapter_id: str, solution_id: str):
     with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
@@ -1134,4 +1135,6 @@ async def create_scenario(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    # TODO: add here a hyra configuration for startup with different host ports
+    # uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
