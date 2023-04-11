@@ -229,7 +229,7 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
     )
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for resource in adapters.get_machines(adapter_object):
-        if resource.location != (0, 0):
+        if resource.location != (0, 0) and resource.location in possible_positions:
             possible_positions.remove(resource.location)
     if not possible_positions:
         return None

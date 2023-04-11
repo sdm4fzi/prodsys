@@ -70,25 +70,27 @@ class Runner(BaseModel):
         arbitrary_types_allowed = True
 
     def initialize_simulation(self):
-        with temp_seed(self.adapter.seed):
+        # TODO: fix this deep copy more thoughtfully to spare runnning time
+        adapter = self.adapter.copy(deep=True)
+        with temp_seed(adapter.seed):
 
             self.time_model_factory = time_model_factory.TimeModelFactory()
-            self.time_model_factory.create_time_models(self.adapter)
+            self.time_model_factory.create_time_models(adapter)
 
-            self.env = sim.Environment(seed=self.adapter.seed)
+            self.env = sim.Environment(seed=adapter.seed)
 
             self.state_factory = state_factory.StateFactory(
                 env=self.env, time_model_factory=self.time_model_factory
             )
-            self.state_factory.create_states(self.adapter)
+            self.state_factory.create_states(adapter)
 
             self.process_factory = process_factory.ProcessFactory(
                 time_model_factory=self.time_model_factory
             )
-            self.process_factory.create_processes(self.adapter)
+            self.process_factory.create_processes(adapter)
 
             self.queue_factory = queue_factory.QueueFactory(env=self.env)
-            self.queue_factory.create_queues(self.adapter)
+            self.queue_factory.create_queues(adapter)
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
@@ -96,7 +98,7 @@ class Runner(BaseModel):
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
             )
-            self.resource_factory.create_resources(self.adapter)
+            self.resource_factory.create_resources(adapter)
 
             self.material_factory = material_factory.MaterialFactory(
                 env=self.env, process_factory=self.process_factory
@@ -108,7 +110,7 @@ class Runner(BaseModel):
                 queue_factory=self.queue_factory,
             )
 
-            self.sink_factory.create_sinks(self.adapter)
+            self.sink_factory.create_sinks(adapter)
 
             self.data_collector = logger.Datacollector()
             for r in self.resource_factory.resources:
@@ -135,7 +137,7 @@ class Runner(BaseModel):
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
             )
-            self.source_factory.create_sources(self.adapter)
+            self.source_factory.create_sources(adapter)
 
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
