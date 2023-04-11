@@ -561,7 +561,7 @@ async def delete_adapter(project_id: str, adapter_id: str):
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/run_simulation", tags=["simulation"]
+    "/projects/{project_id}/adapters/{adapter_id}/run_simulation", tags=["simulation"], response_model=str
 )
 async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
@@ -573,9 +573,10 @@ async def run_simulation(project_id: str, adapter_id: str):
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
 
 
-@app.get(
+@app.post(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration",
     tags=["optimization"],
+    response_model=str,
 )
 async def run_configuration_optimization(
     project_id: str,
@@ -689,6 +690,7 @@ def get_configuration_results_adapter_from_filesystem(
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/register/{solution_id}",
     tags=["optimization"],
+    response_model=str,
 )
 def register_adapter_with_evaluation(
     project_id: str, adapter_id: str, solution_id: str
