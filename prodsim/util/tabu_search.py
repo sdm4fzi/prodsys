@@ -261,14 +261,14 @@ def optimize_configuration(
     base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
-    hyperparameters: TabuSearchHyperparameters
+    hyper_parameters: TabuSearchHyperparameters
 ):
     run_tabu_search(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,
         scenario_file_path=scenario_file_path,
-        seed=hyperparameters.seed,
-        tabu_size=hyperparameters.tabu_size,
-        max_steps=hyperparameters.max_steps,
-        max_score=hyperparameters.max_score,
+        seed=hyper_parameters.seed,
+        tabu_size=hyper_parameters.tabu_size,
+        max_steps=hyper_parameters.max_steps,
+        max_score=hyper_parameters.max_score,
     )

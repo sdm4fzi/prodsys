@@ -527,13 +527,13 @@ def optimize_configuration(
     base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
-    hyperparameters: MathOptHyperparameters,
+    hyper_parameters: MathOptHyperparameters,
 ):
     run_mathematical_optimization(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,
         scenario_file_path=scenario_file_path,
-        optimization_time_portion=hyperparameters.optimization_time_portion,
-        number_of_solutions=hyperparameters.number_of_solutions,
-        adjusted_number_of_transport_resources=hyperparameters.adjusted_number_of_transport_resources,
+        optimization_time_portion=hyper_parameters.optimization_time_portion,
+        number_of_solutions=hyper_parameters.number_of_solutions,
+        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
     )

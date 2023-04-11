@@ -147,15 +147,15 @@ def optimize_configuration(
         base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
-    hyperparameters: SimulatedAnnealingHyperparameters,
+    hyper_parameters: SimulatedAnnealingHyperparameters,
 ):
     run_simulated_annealing(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,
         scenario_file_path=scenario_file_path,
-        seed=hyperparameters.seed,
-        Tmax=hyperparameters.Tmax,
-        Tmin=hyperparameters.Tmin,
-        steps=hyperparameters.steps,
-        updates=hyperparameters.updates
+        seed=hyper_parameters.seed,
+        Tmax=hyper_parameters.Tmax,
+        Tmin=hyper_parameters.Tmin,
+        steps=hyper_parameters.steps,
+        updates=hyper_parameters.updates
     )
