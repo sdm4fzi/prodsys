@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Literal, List, Optional, Dict, Tuple
+from typing import Literal, List, Optional, Dict
 from enum import Enum
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, conlist
 
 from prodsim.data_structures.performance_indicators import KPIEnum
 
@@ -37,7 +37,7 @@ class ScenarioOptionsData(BaseModel):
     machine_controllers: List[Literal["FIFO", "LIFO", "SPT"]]
     transport_controllers: List[Literal["FIFO", "SPT_transport"]]
     routing_heuristics: List[Literal["shortest_queue", "random", "FIFO"]]
-    positions: List[Tuple[float, float]]
+    positions: List[conlist(float, min_items=2, max_items=2)]
 
     @validator("positions")
     def check_positions(cls, v):
