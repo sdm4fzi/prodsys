@@ -507,13 +507,6 @@ async def delete_project(project_id: str):
     return "Sucessfully deleted project with ID: " + project_id
 
 
-@app.put("/projects/{project_id}/adapters", tags=["adapters"])
-async def create_adapter(project_id: str, adapter: prodsim.adapters.JsonAdapter):
-    project = get_project(project_id)
-    project.adapters.append(adapter)
-    return "Sucessfully created adapter with ID: " + adapter.ID
-
-
 @app.get(
     "/projects/{project_id}/adapters",
     response_model=Dict[str, prodsim.adapters.JsonAdapter],
