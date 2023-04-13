@@ -338,7 +338,6 @@ class SetupState(State):
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
-        # TODO: Check if this is correct
         yield self.resource.active
         yield self.finished_process
         self.finished_process = events.Event(self.env)

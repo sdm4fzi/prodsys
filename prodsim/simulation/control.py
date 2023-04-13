@@ -85,8 +85,6 @@ class ProductionController(Controller):
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.output_queues:
-                # _material_type = _process.get_raw_material_type()
-                # TODO: implement here a _resource.put_material_of_queues(material)
                 for material in materials:
                     events.append(queue.put(material.material_data))
         else:
