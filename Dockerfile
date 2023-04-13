@@ -9,5 +9,6 @@ COPY ./conf /code/conf
 COPY ./examples /code/examples
 COPY ./prodsim /code/prodsim
 
+EXPOSE 8000
 
 CMD ["python", "fastapi_app.py", "fastapi=linux"]
