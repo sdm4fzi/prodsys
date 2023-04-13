@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List, Generator, Optional, Union, Tuple, TYPE_CHECKING, Any
+from typing import List, Generator, Optional, Union
 
 from pydantic import BaseModel, Field, Extra
 import random
@@ -71,10 +71,10 @@ class Resourcex(BaseModel, ABC, resource.Resource):
                 return actual_state
         return None
 
-    def get_location(self) -> Tuple[float, float]:
+    def get_location(self) -> List[float]:
         return self.data.location
 
-    def set_location(self, new_location: Tuple[float, float]) -> None:
+    def set_location(self, new_location: List[float]) -> None:
         self.data.location = new_location
 
     def get_states(self) -> List[state.State]:

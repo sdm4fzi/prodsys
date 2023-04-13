@@ -20,9 +20,6 @@ class ProcessModel(ABC, BaseModel):
     ) -> None:
         pass
 
-    # def look_ahead(self, process: Process, look_ahead: int) -> List[Tuple[Process]]:
-    #     pass
-
 
 class ListProcessModel(ProcessModel):
     process_list: List[process.PROCESS_UNION]

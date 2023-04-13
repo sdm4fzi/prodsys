@@ -36,7 +36,7 @@
     "transport_resource_cost": 15000,
     "process_module_cost": 5000,
     "breakdown_cost": 0.11,
-    "time_range": 600,
+    "time_range": 2880 ,
     "maximum_breakdown_time": 180
   },
   "optimize": ["throughput", "cost", "WIP"],

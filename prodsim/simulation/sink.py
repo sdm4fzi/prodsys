@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-from simpy import events
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +20,7 @@ class Sink(BaseModel):
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
 
-    def get_location(self) -> Tuple[float, float]:
+    def get_location(self) -> List[float]:
         return self.data.location
     
     def register_finished_material(self, material):

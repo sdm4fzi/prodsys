@@ -18,16 +18,16 @@ class TimeModel(ABC, BaseModel):
     @abstractmethod
     def get_next_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         pass
 
     @abstractmethod
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         pass
 
@@ -45,8 +45,8 @@ class FunctionTimeModel(TimeModel):
 
     def get_next_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         try:
             value = self.statistics_buffer.pop()
@@ -64,8 +64,8 @@ class FunctionTimeModel(TimeModel):
 
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         return self.time_model_data.parameters[0]
 
@@ -75,15 +75,15 @@ class HistoryTimeModel(TimeModel):
 
     def get_next_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         return np.random.choice(self.time_model_data.history, 1)[0]
 
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         return sum(self.time_model_data.history) / len(self.time_model_data.history)
 
@@ -93,8 +93,8 @@ class ManhattanDistanceTimeModel(TimeModel):
 
     def get_next_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         if origin is None or target is None:
             raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
@@ -106,8 +106,8 @@ class ManhattanDistanceTimeModel(TimeModel):
 
     def get_expected_time(
         self,
-        origin: Optional[Tuple[float, float]] = None,
-        target: Optional[Tuple[float, float]] = None,
+        origin: Optional[List[float]] = None,
+        target: Optional[List[float]] = None,
     ) -> float:
         if origin is None or target is None:
             raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
