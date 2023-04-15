@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Literal, Union, List, Tuple, Optional
 
-from pydantic import validator
+from pydantic import validator, conlist
 
 from prodsim.data_structures.core_asset import CoreAsset
 
 
 class ResourceData(CoreAsset):
     capacity: int
-    location: Tuple[float, float]
+    location: conlist(float, min_items=2, max_items=2)
 
     controller: Literal["SimpleController", "TransportController"]
     control_policy: Literal["FIFO", "SPT_transport", "LIFO", "SPT"]

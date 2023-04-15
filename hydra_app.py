@@ -10,9 +10,6 @@ from prodsim.util.runner import run_simulation
 from prodsim.util.util import get_initial_solution_file_pth, prepare_save_folder
 
 
-# TODO: add Anneal and tabu search to hydra functionality
-
-
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
     if cfg.general.mode == "simulation":

@@ -119,7 +119,7 @@ class ResourceFactory(BaseModel):
 
     def create_resources(self, adapter: adapter.Adapter):
         for resource_data in adapter.resource_data:
-            self.add_resource(resource_data)
+            self.add_resource(resource_data.copy(deep=True))
 
     def adjust_process_capacities(self, resource_data: RESOURCE_DATA_UNION):
         if resource_data.process_capacity:

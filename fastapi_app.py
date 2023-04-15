@@ -1,7 +1,14 @@
-from typing import List, Dict
+from typing import List, Dict, Literal, Union
+
+import hydra
+from omegaconf import DictConfig
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import json
+import os
+from pydantic import parse_obj_as
 
 
 from pydantic import BaseModel
@@ -18,6 +25,14 @@ from prodsim.data_structures import (
     performance_indicators,
     scenario_data,
 )
+from prodsim.util import (
+    evolutionary_algorithm,
+    tabu_search,
+    simulated_annealing,
+    math_opt,
+    util,
+    optimization_analysis,
+)
 import prodsim
 
 app = FastAPI()
@@ -27,6 +42,8 @@ origins = [
     "http://localhost:4200",
     "http://127.0.0.1",
     "http://127.0.0.1:4200",
+    "http://0.0.0.0",
+    "http://0.0.0.0:4200",
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -430,6 +447,7 @@ def get_project(project_id: str) -> Project:
             return project
     raise HTTPException(404, f"Project {project_id} not found")
 
+
 def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
     runner_object = prodsim.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
@@ -437,22 +455,33 @@ def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
     performance = runner_object.get_performance_data()
     results_database[adapter_object.ID] = performance
 
+
 @app.get("/load_example_project", response_model=str, tags=["projects"])
 async def load_example_project() -> str:
     example_project = Project(ID="example_project")
     database.append(example_project)
-    
+
     adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
-    adapter_object.read_data('examples/basic_example/example_configuration.json')
+    adapter_object.read_data("examples/basic_example/example_configuration.json")
     evaluate(adapter_object)
     example_project.adapters[adapter_object.ID] = adapter_object
 
-    # adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_2")
-    # adapter_object.read_data('examples/optimization_example/base_scenario.json')
-    # evaluate(adapter_object)
-    # example_project.adapters[adapter_object.ID] = adapter_object
-
     return "Sucessfully loaded example project"
+
+
+@app.get("/load_optimization_example", response_model=str, tags=["projects"])
+async def load_example_project() -> str:
+    example_project = Project(ID="example_optimization_project")
+    database.append(example_project)
+
+    adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object.read_data(
+        "examples/optimization_example/base_scenario.json",
+        "examples/optimization_example/scenario.json",
+    )
+    example_project.adapters[adapter_object.ID] = adapter_object
+
+    return "Sucessfully loaded optimization example project. Optimizations runs can be started now."
 
 
 @app.get("/projects", response_model=List[Project], tags=["projects"])
@@ -476,13 +505,6 @@ async def delete_project(project_id: str):
     project = get_project(project_id)
     database.remove(project)
     return "Sucessfully deleted project with ID: " + project_id
-
-
-@app.put("/projects/{project_id}/adapters", tags=["adapters"])
-async def create_adapter(project_id: str, adapter: prodsim.adapters.JsonAdapter):
-    project = get_project(project_id)
-    project.adapters.append(adapter)
-    return "Sucessfully created adapter with ID: " + adapter.ID
 
 
 @app.get(
@@ -532,16 +554,187 @@ async def delete_adapter(project_id: str, adapter_id: str):
 
 
 @app.get(
-    "/projects/{project_id}/adapters/{adapter_id}/run_simulation", tags=["simulation"]
+    "/projects/{project_id}/adapters/{adapter_id}/run_simulation", tags=["simulation"], response_model=str
 )
 async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     runner_object = prodsim.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
-    runner_object.run(3000)
+    runner_object.run(2 * 7 * 24 * 60)
     performance = runner_object.get_performance_data()
     results_database[adapter_id] = performance
     return "Sucessfully ran simulation for adapter with ID: " + adapter_id
+
+
+@app.post(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration",
+    tags=["optimization"],
+    response_model=str,
+)
+async def run_configuration_optimization(
+    project_id: str,
+    adapter_id: str,
+    hyper_parameters: Union[
+        evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters,
+        simulated_annealing.SimulatedAnnealingHyperparameters,
+        tabu_search.TabuSearchHyperparameters,
+        math_opt.MathOptHyperparameters,
+    ],
+):
+    adapter = get_adapter(project_id, adapter_id)
+    if not adapter.scenario_data:
+        raise HTTPException(
+            404, f"Adapter {adapter_id} is missing scenario data for optimization."
+        )
+    configuration_file_path = f"data/{project_id}/{adapter_id}_configuration.json"
+    scenario_file_path = f"data/{project_id}/{adapter_id}_scenario.json"
+    save_folder = f"data/{project_id}/{adapter_id}"
+    util.prepare_save_folder(save_folder)
+    adapter.write_data(configuration_file_path)
+    adapter.write_scenario_data(scenario_file_path)
+
+    if isinstance(
+        hyper_parameters, evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters
+    ):
+        optimization_func = evolutionary_algorithm.optimize_configuration
+    elif isinstance(
+        hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters
+    ):
+        optimization_func = simulated_annealing.optimize_configuration
+    elif isinstance(hyper_parameters, tabu_search.TabuSearchHyperparameters):
+        optimization_func = tabu_search.optimize_configuration
+    elif isinstance(hyper_parameters, math_opt.MathOptHyperparameters):
+        optimization_func = math_opt.optimize_configuration
+    else:
+        raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
+
+    optimization_func(
+        save_folder=save_folder,
+        base_configuration_file_path=configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        hyper_parameters=hyper_parameters,
+    )
+    return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/results",
+    tags=["optimization"],
+    response_model=Dict[str, List[performance_indicators.KPI_UNION]],
+)
+def get_optimization_results(project_id: str, adapter_id: str):
+    with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
+        data = json.load(json_file)
+    adapter_object = get_adapter(project_id, adapter_id)
+    kpis = adapter_object.scenario_data.optimize
+    response = {}
+    for solution in data.values():
+        for adapter_name in solution.keys():
+            response[adapter_name] = []
+            for kpi_name, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
+                kpi_object = parse_obj_as(
+                    performance_indicators.KPI_UNION,
+                    {
+                        "name": kpi_name,
+                        "value": kpi_value,
+                        "context": [performance_indicators.KPILevelEnum.SYSTEM],
+                    },
+                )
+                response[adapter_name].append(kpi_object)
+    return response
+
+
+def prepare_adapter_from_optimization(
+    adapter_object: prodsim.adapters.JsonAdapter,
+    project_id: str,
+    adapter_id: str,
+    solution_id: str,
+):
+    origin_adapter = get_adapter(project_id, adapter_id)
+    adapter_object.scenario_data = origin_adapter.scenario_data
+    adapter_object.ID = solution_id
+
+    project = get_project(project_id)
+    project.adapters[solution_id] = adapter_object
+
+    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+    runner_object.initialize_simulation()
+    runner_object.run(3000)
+
+    performance = runner_object.get_performance_data()
+    results_database[adapter_id] = performance
+
+
+def get_configuration_results_adapter_from_filesystem(
+    project_id: str, adapter_id: str, solution_id: str
+):
+    adapter_object = prodsim.adapters.JsonAdapter()
+    files = os.listdir(f"data/{project_id}/{adapter_id}")
+    if not any(solution_id in file for file in files):
+        raise HTTPException(
+            404,
+            f"Solution {solution_id} for adapter {adapter_id} in project {project_id} does not exist.",
+        )
+    file_name = next(file for file in files if solution_id in file)
+    adapter_object.read_data(f"data/{project_id}/{adapter_id}/{file_name}")
+    return adapter_object
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/register/{solution_id}",
+    tags=["optimization"],
+    response_model=str,
+)
+def register_adapter_with_evaluation(
+    project_id: str, adapter_id: str, solution_id: str
+):
+    adapter_object = get_configuration_results_adapter_from_filesystem(
+        project_id, adapter_id, solution_id
+    )
+    prepare_adapter_from_optimization(
+        adapter_object, project_id, adapter_id, solution_id
+    )
+
+    return (
+        "Sucessfully registered and ran simulation for adapter with ID: " + solution_id
+    )
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/pareto_front_performances",
+    tags=["optimization"],
+    response_model=str,
+)
+def get_optimization_pareto_front(project_id: str, adapter_id: str):
+    IDs = optimization_analysis.get_pareto_solutions_from_result_files(
+        f"data/{project_id}/{adapter_id}/optimization_results.json"
+    )
+    for solution_id in IDs:
+
+        adapter_object = get_configuration_results_adapter_from_filesystem(
+            project_id, adapter_id, solution_id
+        )
+        prepare_adapter_from_optimization(
+            adapter_object, project_id, adapter_id, solution_id
+        )
+
+    return (
+        "Succesfully found pareto front, registered and ran simulations for pareto adapters with IDs: "
+        + str(IDs)
+    )
+
+
+@app.get(
+    "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/{solution_id}",
+    tags=["optimization"],
+    response_model=prodsim.adapters.JsonAdapter,
+)
+def get_optimization_solution(
+    project_id: str, adapter_id: str, solution_id: str
+) -> prodsim.adapters.JsonAdapter:
+    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
+        data = json.load(json_file)
+    return data
 
 
 def get_result(project_id: str, adapter_id: str) -> performance_data.Performance:
@@ -560,6 +753,7 @@ def get_result(project_id: str, adapter_id: str) -> performance_data.Performance
 async def get_all_results(project_id: str, adapter_id: str):
     result = get_result(project_id, adapter_id)
     return result.kpis
+
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/results/event_results",
@@ -1004,3 +1198,12 @@ async def create_scenario(
     adapter = get_adapter(project_id, adapter_id)
     adapter.scenario_data = scenario
     return "Sucessfully created scenario"
+
+
+@hydra.main(config_path="conf", config_name="config", version_base=None)
+def prodsim_app(cfg: DictConfig) -> None:
+    uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
+
+
+if __name__ == "__main__":
+    prodsim_app()

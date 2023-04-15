@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Union, TYPE_CHECKING, Generator, Tuple, List
+from typing import Optional, Union, TYPE_CHECKING, Generator, List
 
 from simpy import events
 from simpy import exceptions
@@ -200,7 +200,7 @@ class TransportState(State):
         self.interrupt_processed = events.Event(self.env).succeed()
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self, target: Tuple[float, float]) -> Generator:
+    def process_state(self, target: List[float]) -> Generator:
         """Runs a single process of a resource.
         While making a part, the machine may break multiple times.
         Request a repairman when this happens.
@@ -338,7 +338,6 @@ class SetupState(State):
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
-        # TODO: Check if this is correct
         yield self.resource.active
         yield self.finished_process
         self.finished_process = events.Event(self.env)

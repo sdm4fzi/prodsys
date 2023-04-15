@@ -8,7 +8,7 @@ from copy import deepcopy
 import json
 import random
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from prodsim import adapters
 from prodsim.data_structures import (
     resource_data,
@@ -16,14 +16,17 @@ from prodsim.data_structures import (
     state_data,
     time_model_data,
 )
-from prodsim.util import optimization_util
+from prodsim.util import optimization_util, util
 
 import gurobipy as gp
 from gurobipy import GRB
 
 import numpy as np
 
-def adjust_number_of_transport_resources(adapter_object: adapters.Adapter, number_of_transport_resources: int) -> None:
+
+def adjust_number_of_transport_resources(
+    adapter_object: adapters.Adapter, number_of_transport_resources: int
+) -> None:
     """Adjusts the number of transport resources in the adapter object.
 
     Args:
@@ -94,11 +97,15 @@ class MathOptimizer(BaseModel):
         x = {}
         for product_type in self.adapter.material_data:
             x[product_type.ID] = {}
-            work_piece_count = int(round(
-                self.adapter.scenario_data.constraints.target_material_count[
-                    product_type.ID
-                ] * self.optimization_time_portion
-            , 0))
+            work_piece_count = int(
+                round(
+                    self.adapter.scenario_data.constraints.target_material_count[
+                        product_type.ID
+                    ]
+                    * self.optimization_time_portion,
+                    0,
+                )
+            )
             for work_piece_index in range(work_piece_count):
                 x[product_type.ID][work_piece_index] = {}
                 for step in product_type.processes:
@@ -365,15 +372,14 @@ class MathOptimizer(BaseModel):
         self.model.addConstr(
             (
                 sum(self.v[Station] for Station in stations)
-                - self.adapter.scenario_data.info.maximum_breakdown_time * self.optimization_time_portion
+                - self.adapter.scenario_data.info.maximum_breakdown_time
+                * self.optimization_time_portion
                 <= 0
             ),
             "Maximale_Ausfallzeit_einhalten",
         )
 
-    def optimize(
-        self, n_solutions=1
-    ):
+    def optimize(self, n_solutions=1):
         st = datetime.datetime.now()
         self.model: Any = gp.Model("MILP_Rekonfiguration")
 
@@ -402,13 +408,11 @@ class MathOptimizer(BaseModel):
         elapsed_time = end - st
         print("Execution time:", elapsed_time, "seconds")
 
-    def save_model(
-        self, save_folder: str
-    ):
+    def save_model(self, save_folder: str):
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
-        self, save_folder: str, adjusted_number_of_transport_resources: int=1
+        self, save_folder: str, adjusted_number_of_transport_resources: int = 1
     ):
         nSolutions = self.model.SolCount
         solution_dict = {"current_generation": "00", "00": []}
@@ -422,7 +426,9 @@ class MathOptimizer(BaseModel):
                 for resource in self.adapter.resource_data
                 if not isinstance(resource, resource_data.ProductionResourceData)
             ]
-            adjust_number_of_transport_resources(new_adapter, adjusted_number_of_transport_resources)
+            adjust_number_of_transport_resources(
+                new_adapter, adjusted_number_of_transport_resources
+            )
             possible_positions = deepcopy(self.adapter.scenario_data.options.positions)
 
             self.model.setParam(GRB.Param.SolutionNumber, result_counter)
@@ -461,15 +467,73 @@ class MathOptimizer(BaseModel):
                 new_adapter.resource_data.append(new_resource)
             optimization_util.add_default_queues_to_resources(new_adapter)
             simulation_results = optimization_util.evaluate(
-                self.adapter,
-                solution_dict,
-                performances,
-                [new_adapter])
-            optimization_util.document_individual(solution_dict, save_folder, [new_adapter])
+                self.adapter, solution_dict, performances, [new_adapter]
+            )
+            optimization_util.document_individual(
+                solution_dict, save_folder, [new_adapter]
+            )
             performances["00"][new_adapter.ID] = {
                 "agg_fitness": 0.0,
                 "fitness": [float(value) for value in simulation_results],
-                "time_stamp": 0.0
+                "time_stamp": 0.0,
             }
         with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
+
+
+def run_mathematical_optimization(
+    save_folder: str,
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    optimization_time_portion: float,
+    number_of_solutions: int,
+    adjusted_number_of_transport_resources: int,
+):
+    adapter = adapters.JsonAdapter()
+    adapter.read_data(base_configuration_file_path, scenario_file_path)
+    util.prepare_save_folder(save_folder)
+    model = MathOptimizer(
+        adapter=adapter, optimization_time_portion=optimization_time_portion
+    )
+    model.optimize(n_solutions=number_of_solutions)
+    model.save_model(save_folder=save_folder)
+    model.save_results(
+        save_folder=save_folder,
+        adjusted_number_of_transport_resources=adjusted_number_of_transport_resources,
+    )
+
+
+class MathOptHyperparameters(BaseModel):
+    optimization_time_portion: float = Field(
+        0.5, description="Portion of the total time that is used for optimization."
+    )
+    number_of_solutions: int = Field(
+        1, description="Number of solutions that are generated."
+    )
+    adjusted_number_of_transport_resources: int = Field(
+        1, description="Number of transport resources that are used for the optimization."
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "optimization_time_portion": 0.5,
+                "number_of_solutions": 1,
+                "adjusted_number_of_transport_resources": 1,
+            }
+        }
+
+def optimize_configuration(
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    save_folder: str,
+    hyper_parameters: MathOptHyperparameters,
+):
+    run_mathematical_optimization(
+        save_folder=save_folder,
+        base_configuration_file_path=base_configuration_file_path,
+        scenario_file_path=scenario_file_path,
+        optimization_time_portion=hyper_parameters.optimization_time_portion,
+        number_of_solutions=hyper_parameters.number_of_solutions,
+        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
+    )

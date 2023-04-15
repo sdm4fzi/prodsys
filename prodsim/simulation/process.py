@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Tuple, Union
+from typing import Union, List
 
 from pydantic import BaseModel
 
@@ -50,7 +50,7 @@ class TransportProcess(Process):
     process_data: processes_data.TransportProcessData
 
     def get_process_time(
-        self, origin: Tuple[float, float], target: Tuple[float, float]
+        self, origin: List[float], target: List[float]
     ) -> float:
         return self.time_model.get_next_time(origin=origin, target=target)
 

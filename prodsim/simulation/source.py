@@ -44,7 +44,7 @@ class Source(BaseModel):
             material.process = self.env.process(material.process_material())
             material.next_resource = self
 
-    def get_location(self) -> Tuple[float, float]:
+    def get_location(self) -> List[float]:
         return self.data.location
     
 from prodsim.factories import material_factory
