@@ -1,7 +1,7 @@
 from prodsim.util.simulated_annealing import run_simulated_annealing
 
 SEED = 22
-SAVE_FOLDER = "data/anneal_results"
+SAVE_FOLDER = "prodsim/data/anneal_results"
 BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
 SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 

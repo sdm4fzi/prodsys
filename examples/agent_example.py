@@ -14,6 +14,6 @@ if __name__ == '__main__':
     for _ in range(20):
         action = env.action_space.sample()
         ob, reward, terminated, truncated, info = env.step(action)
-        
+        print(f"action: {action}, reward: {reward}, terminated: {terminated}, truncated: {truncated}, time: {env.resource_controller.env.now}")
         if terminated or truncated:
             observation, info = env.reset()
