@@ -35,24 +35,6 @@ from prodsim.util import (
 )
 import prodsim
 
-app = FastAPI()
-
-origins = [
-    "http://localhost",
-    "http://localhost:4200",
-    "http://127.0.0.1",
-    "http://127.0.0.1:4200",
-    "http://0.0.0.0",
-    "http://0.0.0.0:4200",
-]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 description = """
 The ProdSim-API allows you to create and run production simulations and optimizations with the ProdSim library. 
 """
@@ -71,6 +53,21 @@ app = FastAPI(
     },
 )
 
+origins = [
+    "http://localhost",
+    "http://localhost:4200",
+    "http://127.0.0.1",
+    "http://127.0.0.1:4200",
+    "http://0.0.0.0",
+    "http://0.0.0.0:4200",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class Project(BaseModel):
     ID: str
