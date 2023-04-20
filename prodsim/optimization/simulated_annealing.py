@@ -8,12 +8,10 @@ from simanneal import Annealer
 
 from prodsim.simulation import sim
 from prodsim import adapters
-from prodsim.util.optimization_util import (
+from prodsim.optimization.optimization_util import (
     check_valid_configuration,
-    crossover,
     evaluate,
     mutation,
-    random_configuration,
     document_individual,
     get_weights,
 )

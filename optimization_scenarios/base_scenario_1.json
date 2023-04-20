@@ -1,4 +1,3 @@
-# Use Case 1: 1100 Produkt 1
 {
   "seed": 24,
   "time_models": {
@@ -95,7 +94,7 @@
       "description": "function time model material 1",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [(86400/528)/ 60, 5],
+      "parameters": [2.727272727272727, 5],
       "batch_size": 100
     },
     "12": {
@@ -238,7 +237,7 @@
       "material_type": "Material_1",
       "processes": ["P1", "P2", "P3", "P4", "P5"],
       "transport_process": "TP1"
-    },
+    }
   },
   "sinks": {
     "0": {
@@ -247,7 +246,7 @@
       "location": [30.0, 30.0],
       "material_type": "Material_1",
       "input_queues": ["SinkQueue"]
-    },
+    }
   },
   "sources": {
     "0": {
@@ -259,6 +258,6 @@
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
-    },
+    }
   }
 }

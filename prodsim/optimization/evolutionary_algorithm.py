@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from prodsim.simulation import sim
 from prodsim import adapters
-from prodsim.util.optimization_util import (
+from prodsim.optimization.optimization_util import (
     crossover,
     evaluate,
     mutation,

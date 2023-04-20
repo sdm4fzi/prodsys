@@ -1,4 +1,3 @@
-# Use Case 4b: 650 Produkt 1, 500 Produkt 2, 525 Produkt 3
 {
   "seed": 24,
   "time_models": {
@@ -119,7 +118,7 @@
       "description": "function time model material 3",
       "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [(86400/252)/60, 5],
+      "parameters": [5.7142857142857135, 5],
       "batch_size": 100
     },
     "15": {
@@ -275,7 +274,7 @@
       "material_type": "Material_2",
       "processes": ["P4", "P6", "P2"],
       "transport_process": "TP1"
-    }
+    },
     "2": {
       "ID": "Material_3",
       "description": "Material 3",
@@ -298,7 +297,7 @@
       "location": [30.0, 30.0],
       "material_type": "Material_2",
       "input_queues": ["SinkQueue"]
-    }
+    },
     "2": {
       "ID": "SK3",
       "description": "Sink 3",
@@ -327,7 +326,7 @@
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
       "output_queues": ["SourceQueue"]
-    }
+    },
     "2": {
       "ID": "S3",
       "description": "Source 3",

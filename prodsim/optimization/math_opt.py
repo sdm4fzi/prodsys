@@ -16,7 +16,8 @@ from prodsim.data_structures import (
     state_data,
     time_model_data,
 )
-from prodsim.util import optimization_util, util
+from prodsim.optimization import optimization_util
+from prodsim.util import util
 
 import gurobipy as gp
 from gurobipy import GRB

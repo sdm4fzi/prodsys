@@ -1,4 +1,4 @@
-from prodsim.util.evolutionary_algorithm import run_evolutionary_algorithm
+from prodsim.optimization.evolutionary_algorithm import run_evolutionary_algorithm
 
 seed = 22
 NGEN = 9

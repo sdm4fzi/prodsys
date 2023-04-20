@@ -1,4 +1,3 @@
-# Use Case 3b: 1100 Produkt 3b (9 Bearbeitungsschritte)
 {
   "constraints": {
     "max_reconfiguration_cost": 100000,
@@ -8,6 +7,13 @@
     "target_material_count": { "Material_1": 1100}
   },
   "options": {
+    "transformations": [
+      "production_capacity",
+      "transport_capacity",
+      "layout",
+      "sequencing_logic",
+      "routing_logic"
+    ],
     "positions": [
       [0, 0],
       [0, 5],
@@ -22,7 +28,8 @@
       [25, 25]
     ],
     "machine_controllers": ["FIFO", "SPT", "LIFO"],
-    "transport_controllers": ["FIFO", "SPT_transport"]
+    "transport_controllers": ["FIFO", "SPT_transport"],
+    "routing_heuristics": ["shortest_queue", "random", "FIFO"]
   },
   "info": {
     "machine_cost": 30000,
@@ -32,5 +39,10 @@
     "time_range": 3000,
     "maximum_breakdown_time": 180
   },
-  "optimize": ["cost"]
+  "optimize": ["throughput", "cost", "WIP"],
+  "weights": {
+    "throughput": 0.025,
+    "cost": 0.001,
+    "WIP": 1
+  }
 }

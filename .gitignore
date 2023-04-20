@@ -8,6 +8,7 @@ ini/
 .ipynb_checkpoints/
 .idea/
 .idea
+.python-version
 __pycache__/
 changeability_pack/
 data/
@@ -17,3 +18,6 @@ outputs/
 build/
 prodsim.egg-info/
 .eggs/
+dist/
+.pytest_cache/
+

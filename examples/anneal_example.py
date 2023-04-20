@@ -1,4 +1,4 @@
-from prodsim.util.simulated_annealing import run_simulated_annealing
+from prodsim.optimization.simulated_annealing import run_simulated_annealing
 
 SEED = 22
 SAVE_FOLDER = "prodsim/data/anneal_results"

@@ -25,13 +25,9 @@ from prodsim.data_structures import (
     performance_indicators,
     scenario_data,
 )
+from prodsim.optimization import evolutionary_algorithm, math_opt, optimization_analysis, simulated_annealing, tabu_search
 from prodsim.util import (
-    evolutionary_algorithm,
-    tabu_search,
-    simulated_annealing,
-    math_opt,
     util,
-    optimization_analysis,
 )
 import prodsim
 

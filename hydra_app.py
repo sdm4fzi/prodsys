@@ -2,10 +2,10 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 import prodsim
-from prodsim.util.evolutionary_algorithm import run_evolutionary_algorithm
-from prodsim.util.math_opt import MathOptimizer
-from prodsim.util.simulated_annealing import run_simulated_annealing
-from prodsim.util.tabu_search import run_tabu_search
+from prodsim.optimization.evolutionary_algorithm import run_evolutionary_algorithm
+from prodsim.optimization.math_opt import MathOptimizer
+from prodsim.optimization.simulated_annealing import run_simulated_annealing
+from prodsim.optimization.tabu_search import run_tabu_search
 from prodsim.util.runner import run_simulation
 from prodsim.util.util import get_initial_solution_file_pth, prepare_save_folder
 
