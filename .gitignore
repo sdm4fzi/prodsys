@@ -20,4 +20,5 @@ prodsim.egg-info/
 .eggs/
 dist/
 .pytest_cache/
+optimization_scenarios/results/
 
