@@ -4,3 +4,6 @@ defaults:
   - optimization: example_evolutionary_algorithm
   - fastapi: local
   
+hydra:
+  searchpath:
+    - pkg://scenarios/conf
