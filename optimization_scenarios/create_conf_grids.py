@@ -73,6 +73,6 @@ for number_of_generation in number_of_generations:
 
                 grid_runner_string += "CALL python hydra_app.py general=" + SCENARIO + "_" + hyper_param_name + " optimization=" + SCENARIO + "_" + hyper_param_name + "\n"
                 grid_runner_string += "ECHO Finished optimization of " + hyper_param_name + "\n"
-df.to_excel("hyper_parameter_grid_" +  SCENARIO + ".xlsx")
+df.to_excel("optimization_scenarios/hyper_parameter_grid_" +  SCENARIO + ".xlsx")
 with open("optimization_scenarios/grid_runner_" + SCENARIO + ".bat", "w") as f:
     f.write(grid_runner_string)

@@ -1,0 +1,4 @@
+configuration_path: base_configuration_H1.json
+mode: optimization
+save_folder: results/H1_conf_20_128_0.15_0.05
+scenario_path: scenario_H1.json
