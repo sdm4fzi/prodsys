@@ -10,12 +10,12 @@ def create_hyperparameter_conf_and_save(
         "algorithm": algorithm,
         "seed": seed,
         "number_of_generations": number_of_generation,
-        "number_of_individuals": number_of_individual,
+        "population_size": number_of_individual,
         "mutation_rate": mutation_rate,
         "crossover_rate": crossover_rate,
         "number_of_processes": number_of_processes,
     }
-    with open("optimization_scenarios/conf/optimization/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
+    with open("conf/optimization/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
         yaml.dump(conf, f)
 
 
@@ -26,7 +26,7 @@ def create_general_conf(filename):
         "scenario_path": "scenario_" + SCENARIO + ".json",
         "save_folder": "results/" + SCENARIO + "_" + filename,
     }
-    with open("optimization_scenarios/conf/general/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
+    with open("conf/general/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
         yaml.dump(conf, f)
 
 
@@ -73,6 +73,6 @@ for number_of_generation in number_of_generations:
 
                 grid_runner_string += "CALL python hydra_app.py general=" + SCENARIO + "_" + hyper_param_name + " optimization=" + SCENARIO + "_" + hyper_param_name + "\n"
                 grid_runner_string += "ECHO Finished optimization of " + hyper_param_name + "\n"
-df.to_excel("optimization_scenarios/hyper_parameter_grid_" +  SCENARIO + ".xlsx")
-with open("optimization_scenarios/grid_runner_" + SCENARIO + ".bat", "w") as f:
+df.to_excel("hyper_parameter_grid_" +  SCENARIO + ".xlsx")
+with open("grid_runner_" + SCENARIO + ".bat", "w") as f:
     f.write(grid_runner_string)
