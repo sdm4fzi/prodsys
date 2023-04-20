@@ -11,7 +11,7 @@ except Exception:
 
 setup(
    name='prodsim',
-   version='0.1.0',
+   version='1.0.0',
    description='A useful module for production system simulation and optimization',
    license="MIT",
    long_description=long_description,

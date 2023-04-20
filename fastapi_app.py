@@ -42,7 +42,7 @@ The ProdSim-API allows you to create and run production simulations and optimiza
 app = FastAPI(
     title="ProdSim API",
     description=description,
-    version="0.0.1",
+    version="1.0.0",
     contact={
         "name": "Sebastian Behrendt",
         "email": "sebastianbehrendt97@gmail.com",
