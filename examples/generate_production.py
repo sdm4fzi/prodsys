@@ -8,7 +8,7 @@ welding_time_model = prodsim.time_model_data.FunctionTimeModelData(
     ID="time model 1",
     description="Time model 1 is create!",
     type=prodsim.time_model_data.TimeModelEnum.FunctionTimeModel, # TODO: set defaults for them.
-    distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Constant,
+    distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Exponential,
     parameters=[25] # 25 minutes # TODO: make this with location and scale instead of a list
 )
 
@@ -79,7 +79,7 @@ arrival_time_model = prodsim.time_model_data.FunctionTimeModelData(
     ID="time model 3",
     description="Time model 3 is create!",
     type=prodsim.time_model_data.TimeModelEnum.FunctionTimeModel,
-    distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Constant,
+    distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Exponential,
     parameters=[30.0],
 )
 
@@ -128,7 +128,7 @@ production_system.sink_data = [sink]
 
 runner = prodsim.runner.Runner(adapter=production_system)
 runner.initialize_simulation()
-runner.run(20000)
+runner.run(100000)
 
 
 runner.print_results()
