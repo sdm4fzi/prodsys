@@ -140,7 +140,7 @@ def crossover(ind1, ind2):
     return ind1, ind2
 
 
-def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable]:
+def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable[[adapters.Adapter], bool]]:
     mutations_operations = []
     transformations = adapter_object.scenario_data.options.transformations
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
@@ -164,10 +164,10 @@ def get_mutation_operations(adapter_object: adapters.Adapter) -> List[Callable]:
 
 
 def mutation(individual):
-    individual[0].ID = ""
     mutation_operation = random.choice(get_mutation_operations(individual[0]))
     adapter_object = individual[0]
-    mutation_operation(adapter_object)
+    if mutation_operation(adapter_object):
+        individual[0].ID = ""
     add_default_queues_to_resources(individual[0])
     clean_out_breakdown_states_of_resources(adapter_object)
 
@@ -209,7 +209,7 @@ def flatten(xs):
             yield x
 
 
-def add_machine(adapter_object: adapters.Adapter) -> None:
+def add_machine(adapter_object: adapters.Adapter) -> bool:
     num_process_modules = (
         random.choice(
             range(
@@ -229,10 +229,10 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
     )
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for resource in adapters.get_machines(adapter_object):
-        if resource.location != (0, 0) and resource.location in possible_positions:
+        if resource.location in possible_positions:
             possible_positions.remove(resource.location)
     if not possible_positions:
-        return None
+        return False
     location = random.choice(possible_positions)
     machine_ids = [
         resource.ID
@@ -240,8 +240,6 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
         if isinstance(resource, resource_data.ProductionResourceData)
     ]
     machine_id = str(uuid1())
-    while machine_id in machine_ids:
-        machine_id = str(uuid1())
     adapter_object.resource_data.append(
         resource_data.ProductionResourceData(
             ID=machine_id,
@@ -255,6 +253,7 @@ def add_machine(adapter_object: adapters.Adapter) -> None:
     )
     add_default_queues_to_resources(adapter_object)
     add_setup_states_to_machine(adapter_object, machine_id)
+    return True
 
 
 def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: str):
@@ -281,7 +280,7 @@ def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: st
             machine.states.append(state.ID)
 
 
-def add_transport_resource(adapter_object: adapters.Adapter) -> None:
+def add_transport_resource(adapter_object: adapters.Adapter) -> bool:
     control_policy = random.choice(
         adapter_object.scenario_data.options.transport_controllers
     )
@@ -305,12 +304,13 @@ def add_transport_resource(adapter_object: adapters.Adapter) -> None:
             processes=["TP1"],
         )
     )
+    return True
 
 
-def add_process_module(adapter_object: adapters.Adapter) -> None:
+def add_process_module(adapter_object: adapters.Adapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
-        return
+        return False
     possible_processes = get_possible_production_processes_IDs(adapter_object)
     machine = random.choice(possible_machines)
     process_module_to_add = random.choice(possible_processes)
@@ -321,22 +321,25 @@ def add_process_module(adapter_object: adapters.Adapter) -> None:
     ]:
         machine.processes += process_module_to_add
     add_setup_states_to_machine(adapter_object, machine.ID)
+    return True
 
 
-def remove_machine(adapter_object: adapters.Adapter) -> None:
+def remove_machine(adapter_object: adapters.Adapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
-        return
+        return False
     machine = random.choice(possible_machines)
     adapter_object.resource_data.remove(machine)
+    return True
 
 
-def remove_transport_resource(adapter_object: adapters.Adapter) -> None:
+def remove_transport_resource(adapter_object: adapters.Adapter) -> bool:
     transport_resources = adapters.get_transport_resources(adapter_object)
     if not transport_resources:
-        return
+        return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
+    return True
 
 
 def get_processes_by_capabilities(
@@ -350,27 +353,28 @@ def get_processes_by_capabilities(
     return processes_by_capability
 
 
-def remove_process_module(adapter_object: adapters.Adapter) -> None:
+def remove_process_module(adapter_object: adapters.Adapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
-        return
+        return False
     machine = random.choice(possible_machines)
 
     possible_processes = get_possible_production_processes_IDs(adapter_object)
     process_modules = get_grouped_processes_of_machine(machine, possible_processes)
     if not process_modules:
-        return
+        return False
     process_module_to_delete = random.choice(process_modules)
 
     for process in process_module_to_delete:
         machine.processes.remove(process)
     add_setup_states_to_machine(adapter_object, machine.ID)
+    return True
 
 
-def move_process_module(adapter_object: adapters.Adapter) -> None:
+def move_process_module(adapter_object: adapters.Adapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines or len(possible_machines) < 2:
-        return
+        return False
     from_machine = random.choice(possible_machines)
     possible_machines.remove(from_machine)
     to_machine = random.choice(possible_machines)
@@ -380,13 +384,14 @@ def move_process_module(adapter_object: adapters.Adapter) -> None:
         from_machine, possible_processes
     )
     if not grouped_process_module_IDs:
-        return
+        return False
     process_module_to_move = random.choice(grouped_process_module_IDs)
     for process_module in process_module_to_move:
         from_machine.processes.remove(process_module)
         to_machine.processes.append(process_module)
     add_setup_states_to_machine(adapter_object, from_machine.ID)
     add_setup_states_to_machine(adapter_object, to_machine.ID)
+    return True
 
 
 def arrange_machines(adapter_object: adapters.Adapter) -> None:
@@ -396,22 +401,24 @@ def arrange_machines(adapter_object: adapters.Adapter) -> None:
         possible_positions.remove(machine.location)
 
 
-def move_machine(adapter_object: adapters.Adapter) -> None:
+def move_machine(adapter_object: adapters.Adapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
-        return
+        return False
     machine = random.choice(possible_machines)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapter_object.resource_data:
         if machine.location in possible_positions:
             possible_positions.remove(machine.location)
-    if possible_positions:
-        machine.location = random.choice(possible_positions)
+    if not possible_positions:
+        return False
+    machine.location = random.choice(possible_positions)
+    return True
 
 
-def change_control_policy(adapter_object: adapters.Adapter) -> None:
+def change_control_policy(adapter_object: adapters.Adapter) -> bool:
     if not adapter_object.resource_data:
-        return
+        return False
     resource = random.choice(adapter_object.resource_data)
     if isinstance(resource, resource_data.ProductionResourceData):
         possible_control_policies = deepcopy(
@@ -425,6 +432,7 @@ def change_control_policy(adapter_object: adapters.Adapter) -> None:
     possible_control_policies.remove(resource.control_policy)
     new_control_policy = random.choice(possible_control_policies)
     resource.control_policy = new_control_policy
+    return True
 
 
 def change_routing_policy(adapter_object: adapters.Adapter) -> None:
@@ -618,23 +626,23 @@ def random_configuration(baseline: adapters.Adapter) -> adapters.Adapter:
 
     return adapter_object
 
-
-def check_valid_configuration(
-    configuration: adapters.Adapter,
-    base_configuration: adapters.Adapter,
-) -> bool:
+def valid_num_machines(configuration: adapters.Adapter) -> bool:
     if (
         len(adapters.get_machines(configuration))
         > configuration.scenario_data.constraints.max_num_machines
     ):  
         return False
+    return True
 
+def valid_transport_capacity(configuration: adapters.Adapter) -> bool:
     if (
         len(adapters.get_transport_resources(configuration))
         > configuration.scenario_data.constraints.max_num_transport_resources
     ) or (len(adapters.get_transport_resources(configuration)) == 0):
         return False
+    return True
 
+def valid_num_process_modules(configuration: adapters.Adapter) -> bool:
     for resource in configuration.resource_data:
         if (
             len(
@@ -645,14 +653,28 @@ def check_valid_configuration(
             > configuration.scenario_data.constraints.max_num_processes_per_machine
         ):  
             return False
+    return True
 
+def valid_processes_available(configuration: adapters.Adapter) -> bool:
     if set(
         flatten(
             [resource.processes for resource in adapters.get_machines(configuration)]
         )
     ) < set(flatten(get_possible_production_processes_IDs(configuration))):
         return False
+    return True
 
+def valid_positions(configuration: adapters.Adapter) -> bool:
+    positions = [machine.location for machine in adapters.get_machines(configuration)]
+    if any(positions.count(location) > 1 for location in positions):
+        return False
+
+    possible_positions = configuration.scenario_data.options.positions
+    if any(position not in possible_positions for position in positions):
+        return False
+    return True
+
+def valid_reconfiguration_cost(configuration: adapters.Adapter, base_configuration: adapters.Adapter) -> bool:
     reconfiguration_cost = get_reconfiguration_cost(
         adapter_object=configuration,
         baseline=base_configuration,
@@ -663,6 +685,28 @@ def check_valid_configuration(
         reconfiguration_cost
         > configuration.scenario_data.constraints.max_reconfiguration_cost
     ):
+        return False
+    return True
+
+def check_valid_configuration(
+    configuration: adapters.Adapter,
+    base_configuration: adapters.Adapter,
+) -> bool:
+    if not valid_num_machines(configuration):
+        return False
+    if not valid_transport_capacity(configuration):
+        return False
+
+    if not valid_num_process_modules(configuration):
+        return False
+
+    if not valid_processes_available(configuration):
+        return False
+    
+    if not valid_positions(configuration):
+        return False
+
+    if not valid_reconfiguration_cost(configuration, base_configuration):
         return False
 
     return True

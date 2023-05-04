@@ -41,13 +41,10 @@ class ScenarioOptionsData(BaseModel):
 
     @validator("positions")
     def check_positions(cls, v):
-        new_v = []
         for e in v:
             if len(e) != 2:
                 raise ValueError("positions must be a list of tuples of length 2")
-            new_v.append(tuple(e))
-
-        return new_v
+        return v
     
     class Config:
         schema_extra = {
