@@ -15,7 +15,7 @@ def create_hyperparameter_conf_and_save(
         "crossover_rate": crossover_rate,
         "number_of_processes": number_of_processes,
     }
-    with open("conf/optimization/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
+    with open("conf/optimization/" + SCENARIO + "_EA_" + filename + ".yaml", "w") as f:
         yaml.dump(conf, f)
 
 
@@ -24,9 +24,9 @@ def create_general_conf(filename):
         "mode": "optimization",
         "configuration_path": "base_configuration_" + SCENARIO + ".json",
         "scenario_path": "scenario_" + SCENARIO + ".json",
-        "save_folder": "results/" + SCENARIO + "_" + filename,
+        "save_folder": "results/" + SCENARIO + "_EA_" + filename,
     }
-    with open("conf/general/" + SCENARIO + "_" + filename + ".yaml", "w") as f:
+    with open("conf/general/" + SCENARIO + "_EA_" + filename + ".yaml", "w") as f:
         yaml.dump(conf, f)
 
 
@@ -43,7 +43,7 @@ configurations = []
 df = pd.DataFrame(columns=["number_of_generation", "number_of_individual", "mutation_rate", "crossover_rate", "filename"])
 
 
-grid_runner_string = "ECHO Welcome to optimization of " + SCENARIO + "\n"
+grid_runner_string = "ECHO Welcome to optimization of " + SCENARIO + "with EA\n"
 
 for number_of_generation in number_of_generations:
     for number_of_individual in number_of_individuals:
@@ -71,8 +71,8 @@ for number_of_generation in number_of_generations:
                     hyper_param_name,
                 ]
 
-                grid_runner_string += "CALL python hydra_app.py general=" + SCENARIO + "_" + hyper_param_name + " optimization=" + SCENARIO + "_" + hyper_param_name + "\n"
+                grid_runner_string += "CALL python hydra_app.py general=" + SCENARIO + "_EA_" + hyper_param_name + " optimization=" + SCENARIO + "_EA_" + hyper_param_name + "\n"
                 grid_runner_string += "ECHO Finished optimization of " + hyper_param_name + "\n"
-df.to_excel("hyper_parameter_grid_" +  SCENARIO + ".xlsx")
-with open("grid_runner_" + SCENARIO + ".bat", "w") as f:
+df.to_excel("hyper_parameter_grid_" +  SCENARIO + "_EA.xlsx")
+with open("grid_runner_" + SCENARIO + "_EA.bat", "w") as f:
     f.write(grid_runner_string)
