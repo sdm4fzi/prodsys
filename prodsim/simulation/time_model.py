@@ -8,7 +8,7 @@ from pydantic import BaseModel, validator
 
 from prodsim.data_structures.time_model_data import (
     FunctionTimeModelData,
-    HistoryTimeModelData,
+    SequentialTimeModelData,
     ManhattanDistanceTimeModelData,
 )
 from prodsim.util.statistical_functions import FUNCTION_DICT, FunctionTimeModelEnum
@@ -18,7 +18,7 @@ class TimeModel(ABC, BaseModel):
     @abstractmethod
     def get_next_time(
         self,
-        origin: Optional[List[float]] = None,
+        origin: Optional[List[float]] = None, # TOOO: rework this with kwargs
         target: Optional[List[float]] = None,
     ) -> float:
         pass
@@ -36,7 +36,7 @@ class FunctionTimeModel(TimeModel):
     time_model_data: FunctionTimeModelData
     statistics_buffer: List[float] = []
     distribution_function_object: Callable[
-        [List[float], int], List[float]
+        [FunctionTimeModelData], List[float]
     ] = FUNCTION_DICT[FunctionTimeModelEnum.Constant]
 
     @validator("distribution_function_object", always=True)
@@ -59,7 +59,7 @@ class FunctionTimeModel(TimeModel):
 
     def _fill_buffer(self):
         self.statistics_buffer = self.distribution_function_object(
-            self.time_model_data.parameters, self.time_model_data.batch_size
+            self.time_model_data
         )
 
     def get_expected_time(
@@ -67,25 +67,25 @@ class FunctionTimeModel(TimeModel):
         origin: Optional[List[float]] = None,
         target: Optional[List[float]] = None,
     ) -> float:
-        return self.time_model_data.parameters[0]
+        return self.time_model_data.location
 
 
-class HistoryTimeModel(TimeModel):
-    time_model_data: HistoryTimeModelData
+class SequentialTimeModel(TimeModel):
+    time_model_data: SequentialTimeModelData
 
     def get_next_time(
         self,
         origin: Optional[List[float]] = None,
         target: Optional[List[float]] = None,
     ) -> float:
-        return np.random.choice(self.time_model_data.history, 1)[0]
+        return np.random.choice(self.time_model_data.sequence, 1)[0]
 
     def get_expected_time(
         self,
         origin: Optional[List[float]] = None,
         target: Optional[List[float]] = None,
     ) -> float:
-        return sum(self.time_model_data.history) / len(self.time_model_data.history)
+        return sum(self.time_model_data.sequence) / len(self.time_model_data.sequence)
 
 
 class ManhattanDistanceTimeModel(TimeModel):
@@ -114,4 +114,4 @@ class ManhattanDistanceTimeModel(TimeModel):
         return self.get_next_time(origin, target)
 
 
-TIME_MODEL = Union[HistoryTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]
+TIME_MODEL = Union[SequentialTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]

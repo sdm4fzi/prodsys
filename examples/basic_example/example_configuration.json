@@ -4,71 +4,62 @@
     "0": {
       "ID": "function_time_model_1",
       "description": "normal distribution time model with 20 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "normal",
-      "parameters": [14.3, 5.0],
-      "batch_size": 100
+      "location": 14.3,
+      "scale": 5.0
     },
     "1": {
       "ID": "function_time_model_2",
       "description": "constant distribution time model with 10 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "constant",
-      "parameters": [15.0],
-      "batch_size": 100
+      "location": 15.0,
+      "scale": 0.0
     },
     "2": {
       "ID": "function_time_model_3",
       "description": "normal distribution time model with 20 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "normal",
-      "parameters": [20.0, 5.0],
-      "batch_size": 100
+      "location": 20.0,
+      "scale": 5.0
     },
     "3": {
       "ID": "function_time_model_4",
       "description": "exponential distribution time model with 100 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [52.0],
-      "batch_size": 100
+      "location": 52.0,
+      "scale": 0.0
     },
     "4": {
       "ID": "function_time_model_5",
       "description": "exponential distribution time model with 150 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [150.0],
-      "batch_size": 100
+      "location": 150.0,
+      "scale": 0.0
     },
     "5": {
-      "ID": "history_time_model_1",
-      "description": "history time model",
-      "type": "HistoryTimeModel",
-      "history": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0]
+      "ID": "sequential_time_model_1",
+      "description": "Sequential time model",
+      "sequence": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0]
     },
     "6": {
       "ID": "manhattan_time_model_1",
       "description": "manhattan time model with speed 180 m/min = 3 m/s",
-      "type": "ManhattanDistanceTimeModel",
       "speed": 30.0,
       "reaction_time": 0.15
     },
     "7": {
       "ID": "function_time_model_7",
       "description": "exponential distribution time model with 300 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "exponential",
-      "parameters": [300.0],
-      "batch_size": 100
+      "location": 300.0,
+      "scale": 0.0
     },
     "8": {
       "ID": "function_time_model_8",
       "description": "normal distribution time model with 15 minutes",
-      "type": "FunctionTimeModel",
       "distribution_function": "normal",
-      "parameters": [15.0, 3.0],
-      "batch_size": 100
+      "location": 15.0,
+      "scale": 3.0
     }
   },
   "states": {
