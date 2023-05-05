@@ -43,8 +43,9 @@ grid_runner_string = "ECHO Welcome to optimization of " + SCENARIO + "with MO\n"
 
 for n_solution in n_solutions:
     for optimization_time in optimization_time_portion:
-        hyper_param_name = "conf_{}_{}_{}_{}".format(
-
+        hyper_param_name = "conf_{}_{}".format(
+            n_solution,
+            optimization_time,
         )
         create_hyperparameter_conf_and_save(
             hyper_param_name,

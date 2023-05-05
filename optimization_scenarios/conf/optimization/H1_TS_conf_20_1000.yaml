@@ -1,0 +1,5 @@
+algorithm: tabu_search
+max_score: 500
+max_steps: 1000
+seed: 22
+tabu_size: 20

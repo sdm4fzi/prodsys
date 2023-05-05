@@ -1,0 +1,6 @@
+Tmax: 10000
+Tmin: 1
+algorithm: simulated_annealing
+seed: 22
+steps: 2000
+updates: 100

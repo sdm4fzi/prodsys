@@ -1,0 +1,7 @@
+algorithm: evolutionary
+crossover_rate: 0.15
+mutation_rate: 0.15
+number_of_generations: 40
+number_of_processes: 16
+population_size: 256
+seed: 22
