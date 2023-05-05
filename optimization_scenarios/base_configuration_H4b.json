@@ -198,40 +198,40 @@
       "description": "Machine 1",
       "capacity": 1,
       "location": [0.0, 0.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P1", "P3"],
-      "states": ["BSM", "BSP", "BSP"]
+      "process_ids": ["P1", "P3"],
+      "state_ids": ["BSM", "BSP", "BSP"]
     },
     "1": {
       "ID": "M2",
       "description": "Machine 2",
       "capacity": 1,
       "location": [0.0, 5.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "SPT",
-      "processes": ["P2", "P5"],
-      "states": ["BSM", "BSP", "BSP"]
+      "process_ids": ["P2", "P5"],
+      "state_ids": ["BSM", "BSP", "BSP"]
     },
     "2": {
       "ID": "M3",
       "description": "Machine 3",
       "capacity": 1,
       "location": [5.0, 0.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P4"],
-      "states": ["BSM", "BSP"]
+      "process_ids": ["P4"],
+      "state_ids": ["BSM", "BSP"]
     },
     "3": {
       "ID": "M4",
       "description": "Machine 4",
       "capacity": 1,
       "location": [5.0, 5.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P2"],
-      "states": ["BSM", "BSP"]
+      "process_ids": ["P2"],
+      "state_ids": ["BSM", "BSP"]
     },
     "4": {
       "ID": "TR1",
@@ -240,8 +240,8 @@
       "location": [0.0, 10.0],
       "controller": "TransportController",
       "control_policy": "FIFO",
-      "processes": ["TP1"],
-      "states": ["BST"]
+      "process_ids": ["TP1"],
+      "state_ids": ["BST"]
     }
   },
   "materials": {
@@ -249,14 +249,14 @@
       "ID": "Material_1",
       "description": "Material 1",
       "material_type": "Material_1",
-      "processes": ["P1", "P2", "P3", "P4", "P5"],
+      "process_ids": ["P1", "P2", "P3", "P4", "P5"],
       "transport_process": "TP1"
     },
     "1": {
       "ID": "Material_2",
       "description": "Material 2",
       "material_type": "Material_2",
-      "processes": ["P4", "P6", "P2"],
+      "process_ids": ["P4", "P6", "P2"],
       "transport_process": "TP1"
     },
     "2": {

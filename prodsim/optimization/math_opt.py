@@ -51,7 +51,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
     for resource in adapter.resource_data:
         if not isinstance(resource, resource_data.ProductionResourceData):
             continue
-        for process in resource.processes:
+        for process in resource.process_ids:
             modul_count_dict[process] += 1
 
     return modul_count_dict
@@ -461,9 +461,9 @@ class MathOptimizer(BaseModel):
                     location=location,
                     controller="SimpleController",
                     control_policy="FIFO",
-                    processes=processes,
+                    process_ids=processes,
                     process_capacity=None,
-                    states=states,
+                    state_ids=states,
                 )
                 new_adapter.resource_data.append(new_resource)
             optimization_util.add_default_queues_to_resources(new_adapter)

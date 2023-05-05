@@ -444,13 +444,13 @@ class Adapter(ABC, BaseModel):
     @validator("resource_data", each_item=True)
     def check_resources(cls, resource, values):
         processes = get_set_of_IDs(values["process_data"])
-        for process in resource.processes:
+        for process in resource.process_ids:
             if process not in processes:
                 raise ValueError(
                     f"The process {process} of resource {resource.ID} is not a valid process of {processes}."
                 )
         states = get_set_of_IDs(values["state_data"])
-        for state in resource.states:
+        for state in resource.state_ids:
             if state not in states:
                 raise ValueError(
                     f"The state {state} of resource {resource.ID} is not a valid state of {states}."

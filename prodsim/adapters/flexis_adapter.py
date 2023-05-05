@@ -294,14 +294,14 @@ class FlexisAdapter(adapters.Adapter):
             flexis_data_frames.SetupTime, SetupTime
         )
         for resource in self.resource_data:
-            for process1 in resource.processes:
-                for process2 in resource.processes:
+            for process1 in resource.process_ids:
+                for process2 in resource.process_ids:
                     process1_repr = "_".join(process1.split("-")[1].split("_")[1:])
                     process2_repr = "_".join(process2.split("-")[1].split("_")[1:])
                     setup = self.get_setup_for_processes(process1_repr, process2_repr, setup_time_data)
                     setup_state = self.create_setup_state_model(process1, process2, setup)
                     self.state_data.append(setup_state)
-                    resource.states.append(setup_state.ID)
+                    resource.state_ids.append(setup_state.ID)
 
     def create_setup_state_model(self, process1: str, process2: str, setup_time: SetupTime) -> state_data.SetupStateData:
         return state_data.SetupStateData(
@@ -328,8 +328,8 @@ class FlexisAdapter(adapters.Adapter):
             location=(0, 0),
             controller="SimpleController",
             control_policy="FIFO",
-            processes=self._capability_process_dict[resource.availableCapabilityNames],
-            states=[],
+            process_ids=self._capability_process_dict[resource.availableCapabilityNames],
+            state_ids=[],
         )
 
     def initialize_queue_models(self):
@@ -367,8 +367,8 @@ class FlexisAdapter(adapters.Adapter):
                 location=(0, 0),
                 controller="TransportController",
                 control_policy="SPT_transport",
-                processes=["TP1"],
-                states=[],
+                process_ids=["TP1"],
+                state_ids=[],
             )
             self.resource_data.append(transport_resource)
 
@@ -475,7 +475,7 @@ class FlexisAdapter(adapters.Adapter):
         for resource in self.resource_data:
             if isinstance(resource, resource_data.TransportResourceData):
                 continue
-            processes = [process for process in self.process_data if process.ID in resource.processes]
+            processes = [process for process in self.process_data if process.ID in resource.process_ids]
             capability = [process.capability for process in processes][0]
             row = self._flexis_data_frames.Machine.loc[self._flexis_data_frames.Machine["availableCapabilityNames:String"].str.contains(capability)][:1]
             row["name:String"] = resource.ID

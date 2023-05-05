@@ -13,6 +13,8 @@ from prodsim.util.util import get_class_from_str
 from prodsim.data_structures.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
+    ControllerEnum,
+    ResourceControlPolicy, TransportControlPolicy
 )
 from prodsim.factories import process_factory, state_factory, queue_factory
 
@@ -24,15 +26,15 @@ if TYPE_CHECKING:
 
 
 CONTROLLER_DICT: Dict = {
-    "SimpleController": control.ProductionController,
-    "TransportController": control.TransportController,
+    ControllerEnum.PipelineController: control.ProductionController,
+    ControllerEnum.TransportController: control.TransportController,
 }
 
 CONTROL_POLICY_DICT: Dict = {
-    "FIFO": control.FIFO_control_policy,
-    "LIFO": control.LIFO_control_policy,
-    "SPT": control.SPT_control_policy,
-    "SPT_transport": control.SPT_transport_control_policy,
+    ResourceControlPolicy.FIFO: control.FIFO_control_policy,
+    ResourceControlPolicy.LIFO: control.LIFO_control_policy,
+    ResourceControlPolicy.SPT: control.SPT_control_policy,
+    TransportControlPolicy.SPT_transport: control.SPT_transport_control_policy,
 }
 
 
@@ -122,11 +124,11 @@ class ResourceFactory(BaseModel):
             self.add_resource(resource_data.copy(deep=True))
 
     def adjust_process_capacities(self, resource_data: RESOURCE_DATA_UNION):
-        if resource_data.process_capacity:
+        if resource_data.process_capacities:
             for process, capacity in zip(
-                resource_data.processes, resource_data.process_capacity
+                resource_data.process_ids, resource_data.process_capacities
             ):
-                resource_data.processes += [process] * (capacity - 1)
+                resource_data.process_ids += [process] * (capacity - 1)
 
     def get_queues_for_resource(
         self, resource_data: ProductionResourceData
@@ -146,7 +148,7 @@ class ResourceFactory(BaseModel):
 
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
-        processes = self.process_factory.get_processes_in_order(resource_data.processes)
+        processes = self.process_factory.get_processes_in_order(resource_data.process_ids)
 
         ids = [proc.process_data.ID for proc in processes]
         values.update({"processes": processes})
@@ -174,7 +176,7 @@ class ResourceFactory(BaseModel):
         # print(resource_object._env)
         controller.set_resource(resource_object)
 
-        states = self.state_factory.get_states(resource_data.states)
+        states = self.state_factory.get_states(resource_data.state_ids)
         register_states(resource_object, states, self.env)
         register_production_states_for_processes(
             resource_object, self.state_factory, self.env
@@ -208,5 +210,5 @@ class ResourceFactory(BaseModel):
         return [
             res
             for res in self.resources
-            if target_process.process_data.ID in res.data.processes
+            if target_process.process_data.ID in res.data.process_ids
         ]

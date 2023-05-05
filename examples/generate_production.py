@@ -7,15 +7,14 @@ production_system = prodsim.adapters.JsonAdapter(ID="example_production_system",
 welding_time_model = prodsim.time_model_data.FunctionTimeModelData(
     ID="time model 1",
     description="Time model 1 is create!",
-    type=prodsim.time_model_data.TimeModelEnum.FunctionTimeModel, # TODO: set defaults for them.
     distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Exponential,
-    parameters=[25] # 25 minutes # TODO: make this with location and scale instead of a list
+    location=25.0,
+    scale=0.0
 )
 
 transport_time_model = prodsim.time_model_data.ManhattanDistanceTimeModelData(
     ID="time model 2",
     description="Time model 2 is create!",
-    type=prodsim.time_model_data.TimeModelEnum.ManhattanDistanceTimeModel,
     speed=5.0,
     reaction_time=0.0,
 )
@@ -25,15 +24,15 @@ transport_time_model = prodsim.time_model_data.ManhattanDistanceTimeModelData(
 
 welding_process = prodsim.processes_data.ProductionProcessData(
     ID="Welding",
-    description="Welding process", # TODO: make an api, where you can insert here objects and not only the string....
-    time_model_id="time model 1",
+    description="Welding process",
+    time_model_id=welding_time_model.ID,
     type=prodsim.processes_data.ProcessTypeEnum.ProductionProcesses,
 )
 
 transport_process = prodsim.processes_data.TransportProcessData(
     ID="NormalTransport",
     description="Normal transport process",
-    time_model_id="time model 2",
+    time_model_id=transport_time_model.ID,
     type=prodsim.processes_data.ProcessTypeEnum.TransportProcesses,
 )
 
@@ -44,9 +43,9 @@ machine = prodsim.resource_data.ProductionResourceData(
     description="Machine 1 data description",
     capacity=2,
     location=[10.0, 10.0],
-    controller="SimpleController",
-    control_policy="FIFO",
-    processes=["Welding"],
+    controller=prodsim.resource_data.ControllerEnum.PipelineController,
+    control_policy=prodsim.resource_data.ResourceControlPolicy.FIFO,
+    process_ids=[welding_process.ID],
 )
 
 machine_queues = prodsim.adapters.get_default_queues_for_resource(resource=machine, queue_capacity=3)
@@ -58,9 +57,9 @@ transport_resource = prodsim.resource_data.TransportResourceData(
     description="Forklift 1 data description",
     capacity=1,
     location=[5.0, 0.0],
-    controller="TransportController",
-    control_policy="FIFO",
-    processes=["NormalTransport"],
+    controller=prodsim.resource_data.ControllerEnum.TransportController,
+    control_policy=prodsim.resource_data.TransportControlPolicy.SPT_transport,
+    process_ids=[transport_process.ID],
 )
 
 
@@ -69,8 +68,8 @@ transport_resource = prodsim.resource_data.TransportResourceData(
 material = prodsim.material_data.MaterialData(
     ID="material 1",
     description="Material 1 data description",
-    processes=["Welding"],
-    transport_process="NormalTransport"
+    processes=[welding_process.ID],
+    transport_process=transport_process.ID
 )
 
 # Create a time model for material arrival in the system and a source that creates the material
@@ -80,7 +79,8 @@ arrival_time_model = prodsim.time_model_data.FunctionTimeModelData(
     description="Time model 3 is create!",
     type=prodsim.time_model_data.TimeModelEnum.FunctionTimeModel,
     distribution_function=prodsim.time_model_data.FunctionTimeModelEnum.Exponential,
-    parameters=[30.0],
+    location=30,
+    scale=0
 )
 
 source_q = prodsim.queue_data.QueueData(

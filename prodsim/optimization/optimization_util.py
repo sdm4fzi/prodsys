@@ -36,11 +36,11 @@ def get_breakdown_state_ids_of_machine_with_processes(
 def clean_out_breakdown_states_of_resources(adapter_object: adapters.Adapter):
     for resource in adapter_object.resource_data:
         if isinstance(resource, resource_data.ProductionResourceData):
-            resource.states = get_breakdown_state_ids_of_machine_with_processes(
-                resource.processes
+            resource.state_ids = get_breakdown_state_ids_of_machine_with_processes(
+                resource.process_ids
             )
         elif isinstance(resource, resource_data.TransportResourceData):
-            resource.states = [
+            resource.state_ids = [
                 BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
             ]
         else:
@@ -248,7 +248,7 @@ def add_machine(adapter_object: adapters.Adapter) -> bool:
             location=location,
             controller="SimpleController",
             control_policy=control_policy,
-            processes=process_module_list,
+            process_ids=process_module_list,
         )
     )
     add_default_queues_to_resources(adapter_object)
@@ -269,15 +269,15 @@ def add_setup_states_to_machine(adapter_object: adapters.Adapter, machine_id: st
             if not isinstance(state, state_data.SetupStateData)
         ]
     )
-    machine.states = [state for state in machine.states if state in no_setup_state_ids]
+    machine.state_ids = [state for state in machine.state_ids if state in no_setup_state_ids]
     for state in adapter_object.state_data:
-        if not isinstance(state, state_data.SetupStateData) or state in machine.states:
+        if not isinstance(state, state_data.SetupStateData) or state in machine.state_ids:
             continue
         if (
-            state.origin_setup in machine.processes
-            or state.target_setup in machine.processes
+            state.origin_setup in machine.process_ids
+            or state.target_setup in machine.process_ids
         ):
-            machine.states.append(state.ID)
+            machine.state_ids.append(state.ID)
 
 
 def add_transport_resource(adapter_object: adapters.Adapter) -> bool:
@@ -301,7 +301,7 @@ def add_transport_resource(adapter_object: adapters.Adapter) -> bool:
             location=(0.0, 0.0),
             controller="TransportController",
             control_policy=control_policy,
-            processes=["TP1"],
+            process_ids=["TP1"],
         )
     )
     return True
@@ -317,9 +317,9 @@ def add_process_module(adapter_object: adapters.Adapter) -> bool:
     if isinstance(process_module_to_add, str):
         process_module_to_add = [process_module_to_add]
     if not [
-        process for process in process_module_to_add if process in machine.processes
+        process for process in process_module_to_add if process in machine.process_ids
     ]:
-        machine.processes += process_module_to_add
+        machine.process_ids += process_module_to_add
     add_setup_states_to_machine(adapter_object, machine.ID)
     return True
 
@@ -366,7 +366,7 @@ def remove_process_module(adapter_object: adapters.Adapter) -> bool:
     process_module_to_delete = random.choice(process_modules)
 
     for process in process_module_to_delete:
-        machine.processes.remove(process)
+        machine.process_ids.remove(process)
     add_setup_states_to_machine(adapter_object, machine.ID)
     return True
 
@@ -387,8 +387,8 @@ def move_process_module(adapter_object: adapters.Adapter) -> bool:
         return False
     process_module_to_move = random.choice(grouped_process_module_IDs)
     for process_module in process_module_to_move:
-        from_machine.processes.remove(process_module)
-        to_machine.processes.append(process_module)
+        from_machine.process_ids.remove(process_module)
+        to_machine.process_ids.append(process_module)
     add_setup_states_to_machine(adapter_object, from_machine.ID)
     add_setup_states_to_machine(adapter_object, to_machine.ID)
     return True
@@ -450,10 +450,10 @@ def get_grouped_processes_of_machine(
     possible_processes: Union[List[str], List[Tuple[str, ...]]],
 ) -> List[Tuple[str]]:
     if isinstance(possible_processes[0], str):
-        return [tuple([process]) for process in machine.processes]
+        return [tuple([process]) for process in machine.process_ids]
     grouped_processes = []
     for group in possible_processes:
-        for process in machine.processes:
+        for process in machine.process_ids:
             if process in group:
                 grouped_processes.append(group)
                 break
@@ -658,7 +658,7 @@ def valid_num_process_modules(configuration: adapters.Adapter) -> bool:
 def valid_processes_available(configuration: adapters.Adapter) -> bool:
     if set(
         flatten(
-            [resource.processes for resource in adapters.get_machines(configuration)]
+            [resource.process_ids for resource in adapters.get_machines(configuration)]
         )
     ) < set(flatten(get_possible_production_processes_IDs(configuration))):
         return False

@@ -187,11 +187,11 @@
       "description": "Resource 1",
       "capacity": 2,
       "location": [10.0, 10.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P1", "P2"],
-      "process_capacity": [2, 1],
-      "states": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2", "ProcessBreakdownState_1"],
+      "process_ids": ["P1", "P2"],
+      "process_capacities": [2, 1],
+      "state_ids": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2", "ProcessBreakdownState_1"],
       "input_queues": ["IQ1"],
       "output_queues": ["OQ1"]
     },
@@ -200,11 +200,10 @@
       "description": "Resource 2",
       "capacity": 1,
       "location": [20.0, 10.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P2", "P3"],
-      "process_capacity": null,
-      "states": ["Breakdownstate_2"],
+      "process_ids": ["P2", "P3"],
+      "state_ids": ["Breakdownstate_2"],
       "input_queues": ["IQ1"],
       "output_queues": ["OQ2"]
     },
@@ -213,11 +212,11 @@
       "description": "Resource 3",
       "capacity": 2,
       "location": [20.0, 20.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P1", "P3"],
-      "process_capacity": [1, 2],
-      "states": ["Breakdownstate_1", "Breakdownstate_2", "Setup_State_3", "Setup_State_4"],
+      "process_ids": ["P1", "P3"],
+      "process_capacities": [1, 2],
+      "state_ids": ["Breakdownstate_1", "Breakdownstate_2", "Setup_State_3", "Setup_State_4"],
       "input_queues": ["IQ2"],
       "output_queues": ["OQ3"]
     },
@@ -226,11 +225,11 @@
       "description": "Resource 3",
       "capacity": 2,
       "location": [10.0, 20.0],
-      "controller": "SimpleController",
+      "controller": "PipelineController",
       "control_policy": "FIFO",
-      "processes": ["P1", "P3"],
-      "process_capacity": [2, 2],
-      "states": ["Breakdownstate_1", "Setup_State_3", "Setup_State_4"],
+      "process_ids": ["P1", "P3"],
+      "process_capacities": [2, 2],
+      "state_ids": ["Breakdownstate_1", "Setup_State_3", "Setup_State_4"],
       "input_queues": ["IQ2"],
       "output_queues": ["OQ3"]
     },
@@ -241,9 +240,8 @@
       "location": [15.0, 15.0],
       "controller": "TransportController",
       "control_policy": "FIFO",
-      "processes": ["TP1"],
-      "process_capacity": null,
-      "states": ["Breakdownstate_1"]
+      "process_ids": ["TP1"],
+      "state_ids": ["Breakdownstate_1"]
     },
     "5": {
       "ID": "TR2",
@@ -252,9 +250,8 @@
       "location": [15.0, 20.0],
       "controller": "TransportController",
       "control_policy": "SPT_transport",
-      "processes": ["TP1"],
-      "process_capacity": null,
-      "states": ["Breakdownstate_1"]
+      "process_ids": ["TP1"],
+      "state_ids": ["Breakdownstate_1"]
     }
   },
   "materials": {
