@@ -110,10 +110,10 @@ class Runner(BaseModel):
 
             self.sink_factory.create_sinks(self.adapter)
 
-            self.event_logger = logger.Logger()
-            logger.observe_resource_states(self.event_logger, self.resource_factory)
+            self.event_logger = logger.EventLogger()
+            self.event_logger.observe_resource_states(self.resource_factory)
 
-            self.material_factory.data_collecter = self.event_logger
+            self.material_factory.event_logger = self.event_logger
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,

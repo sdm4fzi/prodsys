@@ -24,7 +24,7 @@ class Controller(ABC, BaseModel):
     ]
     env: sim.Environment
 
-    resource: resources.Resourcex = Field(init=False, default=None)
+    resource: resources.Resource = Field(init=False, default=None)
     requested: events.Event = Field(init=False, default=None)
     requests: List[request.Request] = Field(init=False, default_factory=list)
     running_processes: List[events.Event] = []
@@ -36,7 +36,7 @@ class Controller(ABC, BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def set_resource(self, resource: resources.Resourcex) -> None:
+    def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
         self.env = resource.env
 
@@ -51,12 +51,12 @@ class Controller(ABC, BaseModel):
 
     @abstractmethod
     def get_next_material_for_process(
-        self, resource: resources.Resourcex, process: process.Process
+        self, resource: resources.Resource, process: process.Process
     ) -> List[material.Material]:
         pass
 
     @abstractmethod
-    def sort_queue(self, _resource: resources.Resourcex):
+    def sort_queue(self, _resource: resources.Resource):
         pass
 
 
@@ -65,7 +65,7 @@ class ProductionController(Controller):
     resource: resources.ProductionResource = Field(init=False, default=None)
 
     def get_next_material_for_process(
-        self, resource: resources.Resourcex, material: material.Material
+        self, resource: resources.Resource, material: material.Material
     ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource):
@@ -80,7 +80,7 @@ class ProductionController(Controller):
             raise ValueError("Resource is not a ProductionResource")
 
     def put_material_to_output_queue(
-        self, resource: resources.Resourcex, materials: List[material.Material]
+        self, resource: resources.Resource, materials: List[material.Material]
     ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource):
@@ -145,7 +145,7 @@ class ProductionController(Controller):
         )
         input_state.process = env.process(input_state.process_state())
 
-    def sort_queue(self, resource: resources.Resourcex):
+    def sort_queue(self, resource: resources.Resource):
         pass
 
 
@@ -243,7 +243,7 @@ class TransportController(Controller):
                 target.unreserve_input_queues()
             material.finished_process.succeed()
 
-    def sort_queue(self, resource: resources.Resourcex):
+    def sort_queue(self, resource: resources.Resource):
         pass
 
     def run_process(

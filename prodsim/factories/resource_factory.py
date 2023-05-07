@@ -39,7 +39,7 @@ CONTROL_POLICY_DICT: Dict = {
 
 
 def register_states(
-    resource: resources.Resourcex,
+    resource: resources.Resource,
     states: List[state.STATE_UNION],
     _env: sim.Environment,
 ):
@@ -49,7 +49,7 @@ def register_states(
         resource.add_state(copy_state)
 
 def register_production_states(
-    resource: resources.Resourcex,
+    resource: resources.Resource,
     states: List[state.ProductionState],
     _env: sim.Environment,
 ):
@@ -60,7 +60,7 @@ def register_production_states(
 
 
 def register_production_states_for_processes(
-    resource: resources.Resourcex,
+    resource: resources.Resource,
     state_factory: state_factory.StateFactory,
     _env: sim.Environment,
 ):
@@ -82,7 +82,7 @@ def register_production_states_for_processes(
     register_production_states(resource, states, _env)  # type: ignore
 
 def adjust_process_breakdown_states(
-    resource: resources.Resourcex,
+    resource: resources.Resource,
     state_factory: state_factory.StateFactory,
     _env: sim.Environment,
 ):  
@@ -195,18 +195,18 @@ class ResourceFactory(BaseModel):
         return [r for r in self.resources if r.data.ID == ID].pop()
 
     def get_controller_of_resource(
-        self, _resource: resources.Resourcex
+        self, _resource: resources.Resource
     ) -> Optional[Union[control.ProductionController, control.TransportController]]:
         for controller in self.controllers:
             if controller.resource == _resource:
                 return controller
 
-    def get_resources(self, IDs: List[str]) -> List[resources.Resourcex]:
+    def get_resources(self, IDs: List[str]) -> List[resources.Resource]:
         return [r for r in self.resources if r.data.ID in IDs]
 
     def get_resources_with_process(
         self, target_process: process.Process
-    ) -> List[resources.Resourcex]:
+    ) -> List[resources.Resource]:
         return [
             res
             for res in self.resources

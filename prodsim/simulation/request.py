@@ -11,7 +11,7 @@ class Request:
         self,
         process: process.PROCESS_UNION,
         material: material.Material,
-        resource: resources.Resourcex,
+        resource: resources.Resource,
     ):
         self.process = process
         self.material = material
@@ -23,7 +23,7 @@ class Request:
     def get_material(self) -> material.Material:
         return self.material
 
-    def get_resource(self) -> resources.Resourcex:
+    def get_resource(self) -> resources.Resource:
         return self.resource
 
 

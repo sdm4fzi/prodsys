@@ -35,7 +35,7 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
 
     def log_finish_material(
         self,
-        resource: Union[resources.Resourcex, sink.Sink, source.Source],
+        resource: Union[resources.Resource, sink.Sink, source.Source],
         _material: Material,
         event_time: float,
     ):  
@@ -49,7 +49,7 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
 
     def log_create_material(
         self,
-        resource: Union[resources.Resourcex, sink.Sink, source.Source],
+        resource: Union[resources.Resource, sink.Sink, source.Source],
         _material: Material,
         event_time: float,
     ) -> None:
@@ -61,7 +61,7 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
         self.state_type = state.StateTypeEnum.source
 
 
-Location = Union[resources.Resourcex, source.Source, sink.Sink]
+Location = Union[resources.Resource, source.Source, sink.Sink]
 
 
 class Material(BaseModel):

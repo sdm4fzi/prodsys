@@ -89,7 +89,7 @@ class State(ABC, BaseModel):
     finished_process: events.Event = Field(
         None, description="finished_process", init=False
     )
-    resource: resources.Resourcex = Field(
+    resource: resources.Resource = Field(
         init=False, default=None, description="_resource"
     )
     process: Optional[events.Process] = Field(None, description="process")
@@ -98,7 +98,7 @@ class State(ABC, BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def set_resource(self, resource_model: resources.Resourcex) -> None:
+    def set_resource(self, resource_model: resources.Resource) -> None:
         self.resource = resource_model
         self.finished_process = events.Event(self.env).succeed()
         self.state_info = StateInfo(

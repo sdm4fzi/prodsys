@@ -15,7 +15,7 @@ from prodsim.data_structures.resource_data import RESOURCE_DATA_UNION, Productio
 from prodsim.simulation import control, state
 from prodsim.util import util
 
-class Resourcex(BaseModel, ABC, resource.Resource):
+class Resource(BaseModel, ABC, resource.Resource):
     env: sim.Environment
     data: RESOURCE_DATA_UNION    
     processes: List[process.PROCESS_UNION]
@@ -111,7 +111,7 @@ class Resourcex(BaseModel, ABC, resource.Resource):
             return self.env.process(util.trivial_process(self.env))
 
 
-class ProductionResource(Resourcex):
+class ProductionResource(Resource):
     data: ProductionResourceData
     controller: control.ProductionController
 
@@ -133,7 +133,7 @@ class ProductionResource(Resourcex):
         for input_queue in self.input_queues:
             input_queue.unreseve()
 
-class TransportResource(Resourcex):
+class TransportResource(Resource):
     data: TransportResourceData
     controller: control.TransportController
 

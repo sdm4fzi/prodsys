@@ -20,14 +20,14 @@ class Router:
         self,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
-        routing_heuristic: Callable[..., resources.Resourcex],
+        routing_heuristic: Callable[..., resources.Resource],
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.routing_heuristic: Callable[..., material.Location] = routing_heuristic
 
     @abstractmethod
-    def get_next_resource(self, __process: process.Process) -> Optional[resources.Resourcex]:
+    def get_next_resource(self, __process: process.Process) -> Optional[resources.Resource]:
         pass
 
     def get_sink(self, _material_type: str) -> sink.Sink:
@@ -35,13 +35,13 @@ class Router:
         chosen_sink = self.routing_heuristic(possible_sinks)
         return chosen_sink  # type: ignore False
     
-    def get_possible_resources(self, target_process: process.Process) -> List[resources.Resourcex]:
+    def get_possible_resources(self, target_process: process.Process) -> List[resources.Resource]:
         possible_resources = self.resource_factory.get_resources_with_process(target_process)
         return possible_resources
 
 
 class SimpleRouter(Router):
-    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resourcex]:
+    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resource]:
         possible_resources = self.resource_factory.get_resources_with_process(target_process)
         left_resources = [resource for resource in possible_resources]
 
@@ -56,7 +56,7 @@ class SimpleRouter(Router):
         return self.routing_heuristic(left_resources)
 
 
-def get_resource_capabilities(resource: resources.Resourcex) -> List[str]:
+def get_resource_capabilities(resource: resources.Resource) -> List[str]:
     capabilities = []
     for resource_process in resource.processes:
         if isinstance(resource_process, process.CapabilityProcess):
@@ -66,13 +66,13 @@ def get_resource_capabilities(resource: resources.Resourcex) -> List[str]:
 
 
 class CapabilityRouter(Router):
-    def get_next_resource_per_ID(self, target_process: process.Process) -> resources.Resourcex:
+    def get_next_resource_per_ID(self, target_process: process.Process) -> resources.Resource:
         possible_resources = self.resource_factory.get_resources_with_process(
             target_process
         )
         return self.routing_heuristic(possible_resources)
 
-    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resourcex]:
+    def get_next_resource(self, target_process: process.Process) -> Optional[resources.Resource]:
         if isinstance(target_process, process.TransportProcess):
             return self.get_next_resource_per_ID(target_process)
         elif not isinstance(target_process, process.CapabilityProcess):
@@ -89,18 +89,18 @@ class CapabilityRouter(Router):
             return None
         return self.routing_heuristic(possible_resources)
 
-def FIFO_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
+def FIFO_router(possible_resources: List[resources.Resource]) -> resources.Resource:
     return possible_resources.pop(0)
 
 
-def random_router(possible_resources: List[resources.Resourcex]) -> resources.Resourcex:
+def random_router(possible_resources: List[resources.Resource]) -> resources.Resource:
     possible_resources.sort(key=lambda x: x.data.ID)
     return np.random.choice(possible_resources)  # type: ignore
 
 
 def get_shortest_queue_router(
-    possible_resources: List[resources.Resourcex],
-) -> resources.Resourcex:
+    possible_resources: List[resources.Resource],
+) -> resources.Resource:
     queue_list = []
     for resource in possible_resources:
         if not isinstance(resource, resources.ProductionResource):
