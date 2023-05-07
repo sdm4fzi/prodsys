@@ -62,7 +62,7 @@ class Runner(BaseModel):
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
     source_factory: source_factory.SourceFactory = Field(init=False, default=None)
     material_factory: material_factory.MaterialFactory = Field(init=False, default=None)
-    data_collector: logger.Datacollector = Field(init=False, default=None)
+    event_logger: logger.Logger = Field(init=False, default=None)
     time_stamp: str = Field(init=False, default="")
     post_processor: post_processing.PostProcessor = Field(init=False, default=None)
 
@@ -110,22 +110,10 @@ class Runner(BaseModel):
 
             self.sink_factory.create_sinks(self.adapter)
 
-            self.data_collector = logger.Datacollector()
-            for r in self.resource_factory.resources:
-                all_states = r.states + r.production_states + r.setup_states
-                for __state in all_states:
-                    self.data_collector.register_patch(
-                        __state.state_info,
-                        attr=[
-                            "log_start_state",
-                            "log_start_interrupt_state",
-                            "log_end_interrupt_state",
-                            "log_end_state",
-                        ],
-                        post=logger.post_monitor_state_info,
-                    )
+            self.event_logger = logger.Logger()
+            logger.observe_resource_states(self.event_logger, self.resource_factory)
 
-            self.material_factory.data_collecter = self.data_collector
+            self.material_factory.data_collecter = self.event_logger
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
@@ -151,7 +139,7 @@ class Runner(BaseModel):
 
     def get_post_processor(self) -> post_processing.PostProcessor:
         if not self.post_processor:
-            self.post_processor = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
+            self.post_processor = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return self.post_processor
 
 
@@ -169,7 +157,7 @@ class Runner(BaseModel):
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
         p = self.get_post_processor()
-        df_raw=self.data_collector.get_data_as_dataframe()
+        df_raw=self.event_logger.get_data_as_dataframe()
         events = []
         for index, row in df_raw.iterrows():
             events.append(
@@ -197,12 +185,12 @@ class Runner(BaseModel):
         return performance_data.Performance(kpis=kpis, event_log=event_data)
     
     def get_aggregated_data_simulation_results(self) -> dict:
-        p = post_processing.PostProcessor(df_raw=self.data_collector.get_data_as_dataframe())
+        p = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return p.get_aggregated_data()
 
     def save_results_as_csv(self, save_folder="data"):
-        self.data_collector.log_data_to_csv(filepath=f"{save_folder}/{self.time_stamp}.csv")
+        self.event_logger.log_data_to_csv(filepath=f"{save_folder}/{self.time_stamp}.csv")
 
     def save_results_as_json(self, save_folder="data"):
-        self.data_collector.log_data_to_json(filepath=f"{save_folder}/{self.time_stamp}.json")
+        self.event_logger.log_data_to_json(filepath=f"{save_folder}/{self.time_stamp}.json")
 

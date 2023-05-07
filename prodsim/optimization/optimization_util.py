@@ -789,7 +789,7 @@ def evaluate(
     if not adapter_object.scenario_data.info.time_range:
         raise ValueError("time_range is not defined in scenario_data")
     runner_object.run(adapter_object.scenario_data.info.time_range)
-    df = runner_object.data_collector.get_data_as_dataframe()
+    df = runner_object.event_logger.get_data_as_dataframe()
     p = PostProcessor(df_raw=df)
 
     fitness = []

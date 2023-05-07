@@ -16,7 +16,7 @@ class MaterialFactory(BaseModel):
     process_factory: process_factory.ProcessFactory
     materials: List[material.Material] = []
     finished_materials: List[material.Material] = []
-    data_collecter: logger.Datacollector = Field(default=False, init=False)
+    data_collecter: logger.Logger = Field(default=False, init=False)
     material_counter = 0
 
     class Config:
@@ -45,11 +45,7 @@ class MaterialFactory(BaseModel):
             transport_process=transport_processes,
         )
         if self.data_collecter:
-            self.data_collecter.register_patch(
-                material_object.material_info,
-                attr=["log_create_material", "log_finish_material"],
-                post=logger.post_monitor_material_info,
-            )
+            logger.observe_terminalf_material_states(self.data_collecter, material_object)
 
         self.material_counter += 1
         self.materials.append(material_object)

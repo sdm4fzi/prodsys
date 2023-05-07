@@ -13,9 +13,10 @@ from prodsim.simulation import state
 
 if TYPE_CHECKING:
     from prodsim.simulation import material, resources
+    from prodsim.factories import resource_factory
 
 
-class Datacollector(BaseModel):
+class Logger(BaseModel):
     data: Dict[str, Any] = {"Resources": []}
 
     def log_data_to_csv(self, filepath: str):
@@ -125,3 +126,25 @@ def post_monitor_material_info(data: List[dict], material_info: material.Materia
         "Material": material_info.material_ID,
     }
     data.append(item)
+
+def observe_resource_states(logger: Logger, resource_factory: resource_factory.ResourceFactory):
+    for r in resource_factory.resources:
+        all_states = r.states + r.production_states + r.setup_states
+        for __state in all_states:
+            logger.register_patch(
+                __state.state_info,
+                attr=[
+                    "log_start_state",
+                    "log_start_interrupt_state",
+                    "log_end_interrupt_state",
+                    "log_end_state",
+                ],
+                post=post_monitor_state_info,
+            )
+
+def observe_terminalf_material_states(logger: Logger, material: material.Material):
+    logger.register_patch(
+                material.material_info,
+                attr=["log_create_material", "log_finish_material"],
+                post=post_monitor_material_info,
+            )
