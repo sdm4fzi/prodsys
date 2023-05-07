@@ -8,9 +8,8 @@ from simpy import events
 import gymnasium as gym
 from gymnasium import spaces
 from prodsim import adapters, runner
-from prodsim.simulation import control
+from prodsim.simulation import control, sim, logger
 
-from prodsim.simulation import sim
 sim.VERBOSE = 0
 
 
@@ -23,6 +22,7 @@ class ProductionControlEnv(gym.Env):
 
         self.interrupt_simulation_event: events.Event = None
         self.resource_controller: control.Controller = None
+        self.observation_logger: logger.ObservationLogger = None
 
         self.observation_space = spaces.Dict(
             {
@@ -58,7 +58,8 @@ class ProductionControlEnv(gym.Env):
         ).get_controller()
         control_policy = partial(control.agent_control_policy, self)
         self.resource_controller.control_policy = control_policy
-
+        self.observation_logger = logger.ObservationLogger()
+        self.observation_logger.observe_resources(self.resource_controller.resource)
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
         # print("simulated until decision is needed")

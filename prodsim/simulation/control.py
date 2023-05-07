@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, Extra
 from typing import List, Generator, TYPE_CHECKING
 
 # from process import Process
@@ -35,6 +35,7 @@ class Controller(ABC, BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+        extra=Extra.allow
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
@@ -61,7 +62,6 @@ class Controller(ABC, BaseModel):
 
 
 class ProductionController(Controller):
-
     resource: resources.ProductionResource = Field(init=False, default=None)
 
     def get_next_material_for_process(
@@ -107,7 +107,7 @@ class ProductionController(Controller):
                 len(self.running_processes) == self.resource.capacity
                 or not self.requests
             ):
-                continue           
+                continue
             self.control_policy(self.requests)
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
@@ -136,12 +136,18 @@ class ProductionController(Controller):
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
                 next_material.finished_process.succeed()
-                
+
     def run_process(self, input_state: state.State, target_material: material.Material):
         env = input_state.env
         input_state.prepare_for_run()
         input_state.state_info.log_material(
             target_material, state.StateTypeEnum.production
+        )
+        target_material.material_info.log_start_process(
+            target_material.next_resource,
+            target_material,
+            self.env.now,
+            state.StateTypeEnum.production,
         )
         input_state.process = env.process(input_state.process_state())
 
@@ -184,7 +190,9 @@ class TransportController(Controller):
             for queue in resource.input_queues:
                 events.append(queue.put(material.material_data))
         else:
-            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Sink")
+            raise ValueError(
+                f"Resource {resource.data.ID} is not a ProductionResource or Sink"
+            )
 
         return events
 
@@ -258,6 +266,12 @@ class TransportController(Controller):
         input_state.state_info.log_material(material, state.StateTypeEnum.transport)
         input_state.state_info.log_target_location(
             target, state.StateTypeEnum.transport
+        )
+        material.material_info.log_start_process(
+            material.next_resource,
+            material,
+            self.env.now,
+            state.StateTypeEnum.transport,
         )
         input_state.process = env.process(
             input_state.process_state(target=target_location)  # type: ignore False

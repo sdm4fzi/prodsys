@@ -10,8 +10,17 @@ from pydantic import BaseModel, Field, Extra
 import numpy as np
 from simpy import events
 
-from prodsim.simulation import (process, request, router, resources, sim, sink,
-               source, proces_models, state)
+from prodsim.simulation import (
+    process,
+    request,
+    router,
+    resources,
+    sim,
+    sink,
+    source,
+    proces_models,
+    state,
+)
 
 from prodsim.data_structures import material_data
 
@@ -23,7 +32,9 @@ def flatten(xs):
         else:
             yield x
 
+
 SKIP_LABEL = "skip"
+
 
 class MaterialInfo(BaseModel, extra=Extra.allow):
     resource_ID: str = Field(init=False, default=None)
@@ -38,14 +49,13 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
         resource: Union[resources.Resource, sink.Sink, source.Source],
         _material: Material,
         event_time: float,
-    ):  
+    ):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.material_ID = _material.material_data.ID
         self.activity = state.StateEnum.finished_material
         self.state_type = state.StateTypeEnum.sink
-
 
     def log_create_material(
         self,
@@ -59,6 +69,34 @@ class MaterialInfo(BaseModel, extra=Extra.allow):
         self.material_ID = _material.material_data.ID
         self.activity = state.StateEnum.created_material
         self.state_type = state.StateTypeEnum.source
+
+    def log_start_process(
+        self,
+        resource: resources.Resource,
+        _material: Material,
+        event_time: float,
+        state_type: state.StateTypeEnum,
+    ) -> None:
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.material_ID = _material.material_data.ID
+        self.activity = state.StateEnum.start_state
+        self.state_type = state_type
+
+    def log_end_process(
+        self,
+        resource: resources.Resource,
+        _material: Material,
+        event_time: float,
+        state_type: state.StateTypeEnum,
+    ) -> None:
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.material_ID = _material.material_data.ID
+        self.activity = state.StateEnum.end_state
+        self.state_type = state_type
 
 
 Location = Union[resources.Resource, source.Source, sink.Sink]
@@ -89,6 +127,9 @@ class Material(BaseModel):
         while self.next_process:
             self.request_process()
             yield self.finished_process
+            self.material_info.log_end_process(
+                resource=self.next_resource, _material=self, event_time=self.env.now, state_type=state.StateTypeEnum.production
+            )
             self.finished_process = events.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
         self.material_info.log_finish_material(
@@ -99,7 +140,11 @@ class Material(BaseModel):
     def request_process(self) -> None:
         if self.next_process:
             self.env.request_process_of_resource(
-                request.Request(process=self.next_process, material=self, resource=self.next_resource)
+                request.Request(
+                    process=self.next_process,
+                    material=self,
+                    resource=self.next_resource,
+                )
             )
 
     def request_transport(
@@ -123,46 +168,57 @@ class Material(BaseModel):
         if not next_possible_processes:
             self.next_process = None
         else:
-            self.next_process = np.random.choice(next_possible_processes) # type: ignore
-            self.process_model.update_marking_from_transition(self.next_process) # type: ignore
+            self.next_process = np.random.choice(next_possible_processes)  # type: ignore
+            self.process_model.update_marking_from_transition(self.next_process)  # type: ignore
             if self.next_process == SKIP_LABEL:
                 self.set_next_process()
 
     def transport_to_queue_of_resource(self):
         origin_resource = self.next_resource
-        transport_resource = self.material_router.get_next_resource(self.transport_process)
+        transport_resource = self.material_router.get_next_resource(
+            self.transport_process
+        )
         self.set_next_process()
         yield self.env.process(self.set_next_resource())
-        self.request_transport(transport_resource, origin_resource, self.next_resource) # type: ignore False
+        self.request_transport(transport_resource, origin_resource, self.next_resource)  # type: ignore False
         yield self.finished_process
+        self.material_info.log_end_process(
+            resource=transport_resource,
+            _material=self,
+            event_time=self.env.now,
+            state_type=state.StateTypeEnum.transport,
+        )
         self.finished_process = events.Event(self.env)
 
     def set_next_resource(self):
         if not self.next_process:
-            self.next_resource = self.material_router.get_sink(self.material_data.material_type)
-        else:            	
-            self.next_resource = self.material_router.get_next_resource(self.next_process)
+            self.next_resource = self.material_router.get_sink(
+                self.material_data.material_type
+            )
+        else:
+            self.next_resource = self.material_router.get_next_resource(
+                self.next_process
+            )
             while True:
-                if self.next_resource is not None and isinstance(self.next_resource, resources.ProductionResource):
+                if self.next_resource is not None and isinstance(
+                    self.next_resource, resources.ProductionResource
+                ):
                     self.next_resource.reserve_input_queues()
                     break
-                resource_got_free_events = [resource.got_free for resource in self.material_router.get_possible_resources(self.next_process)]
+                resource_got_free_events = [
+                    resource.got_free
+                    for resource in self.material_router.get_possible_resources(
+                        self.next_process
+                    )
+                ]
                 yield events.AnyOf(self.env, resource_got_free_events)
-                for resource in self.material_router.get_possible_resources(self.next_process):
+                for resource in self.material_router.get_possible_resources(
+                    self.next_process
+                ):
                     if resource.got_free.triggered:
                         resource.got_free = events.Event(self.env)
-                        
-                self.next_resource = self.material_router.get_next_resource(self.next_process)
-                
-class Order(ABC, BaseModel):
-    target_materials: List[Material]
-    release_time: float
-    due_time: float
-    current_materials: List[Material] = Field(default_factory=lambda: [], init=False)
 
-    def add_current_material(self, material: Material):
-        self.current_materials.append(material)
-
-    def remove_current_material(self, material: Material):
-        self.current_materials.remove(material)
+                self.next_resource = self.material_router.get_next_resource(
+                    self.next_process
+                )
 

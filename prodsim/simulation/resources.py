@@ -25,7 +25,6 @@ class Resource(BaseModel, ABC, resource.Resource):
     production_states: List[state.State] = Field(default_factory=list, init=False)
     setup_states: List[state.SetupState] = Field(default_factory=list, init=False)
 
-    available: events.Event = Field(default=None, init=False)
     got_free: events.Event = Field(default=None, init=False)
     active: events.Event = Field(default=None, init=False)
     current_process: process.PROCESS_UNION = Field(default=None, init=False)
@@ -51,7 +50,6 @@ class Resource(BaseModel, ABC, resource.Resource):
 
     def start_states(self):
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
-        self.available = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         self.got_free = events.Event(self.env)
         for actual_state in self.states + self.production_states:
@@ -85,10 +83,6 @@ class Resource(BaseModel, ABC, resource.Resource):
 
     def request_repair(self):
         pass
-
-    def reactivate(self):
-        for _state in self.states:
-            _state.activate()
 
     def interrupt_states(self) -> Generator:
         eventss: List[events.Event] = []

@@ -17,3 +17,7 @@ if __name__ == '__main__':
         print(f"action: {action}, reward: {reward}, terminated: {terminated}, truncated: {truncated}, time: {env.resource_controller.env.now}")
         if terminated or truncated:
             observation, info = env.reset()
+        print("__________")
+        import json
+        with open("example_log.json", "w") as f:
+            json.dump(env.observation_logger.resource_state_data, f)
