@@ -246,7 +246,7 @@ def add_machine(adapter_object: adapters.Adapter) -> bool:
             description="",
             capacity=1,
             location=location,
-            controller="SimpleController",
+            controller=resource_data.ControllerEnum.PipelineController,
             control_policy=control_policy,
             process_ids=process_module_list,
         )
