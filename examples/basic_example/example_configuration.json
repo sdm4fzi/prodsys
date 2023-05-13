@@ -147,7 +147,7 @@
   "queues": {
     "0": {
       "ID": "IQ1",
-      "description": "Input-queue 1 for R1 and R2",
+      "description": "Input-queue 1 for R1",
       "capacity": 10
     },
     "1": {
@@ -179,6 +179,11 @@
       "ID": "SinkQueue",
       "description": "Input-Queue for all sinks",
       "capacity": 0
+    },
+    "7": {
+      "ID": "IQ9",
+      "description": "Input-queue 1 for R2",
+      "capacity": 10
     }
   },
   "resources": {
@@ -204,7 +209,7 @@
       "control_policy": "FIFO",
       "process_ids": ["P2", "P3"],
       "state_ids": ["Breakdownstate_2"],
-      "input_queues": ["IQ1"],
+      "input_queues": ["IQ9"],
       "output_queues": ["OQ2"]
     },
     "2": {

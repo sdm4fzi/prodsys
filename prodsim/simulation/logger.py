@@ -16,8 +16,8 @@ from prodsim.simulation import state
 
 
 if TYPE_CHECKING:
-    from prodsim.simulation import material, resources, control
-    from prodsim.factories import resource_factory, material_factory
+    from prodsim.simulation import material
+    from prodsim.factories import resource_factory
 
 
 class Logger(BaseModel, ABC):
@@ -153,81 +153,3 @@ class EventLogger(Logger):
                     attr=["log_create_material", "log_finish_material"],
                     post=post_monitor_material_info,
                 )
-
-
-def post_monitor_resource(data: List[dict], resource: resources.Resource):
-    production_state_info = []
-    for production_state in resource.production_states:
-        if production_state.process:
-            production_process_info = {
-                "Process": production_state.state_info.ID,
-                "Material": production_state.state_info._material_ID,
-                "Activity": production_state.state_info._activity,
-                "State": production_state.state_info._state_type,
-            }
-            production_state_info.append(production_process_info)
-    
-    input_queue_info = []
-    for queue in resource.input_queues:
-        for material_data in queue.items:
-            # TODO: implement function to retrieve material from material factory to get next process and next resource and waiting since
-            production_process_info = {
-                "Material": material_data.ID,
-                "Activity": "waiting",
-                # "Process": material.next_process,
-                # "Next_Resource": material.next_resource,
-                # "waiting_since": material.material_info.event_time
-            }
-            input_queue_info.append(production_process_info)
-
-    output_queue_info = []
-    for queue in resource.output_queues:
-        for material_data in queue.items:
-            production_process_info = {
-                "Material": material_data.ID,
-                "Activity": "waiting",
-                # "Process": material.next_process,
-                # "Next_Resource": material.next_resource,
-                # "waiting_since": material.material_info.event_time
-            }
-            output_queue_info.append(production_process_info)
-    item = {
-        "Time": resource.env.now,
-        "Resource": resource.data.ID,
-        "Available": resource.active.triggered,
-        "Users": production_state_info,
-        "Input Queue": input_queue_info,
-        "Output Queue": output_queue_info
-    }
-    data.append(item)
-
-
-def monitor_controller(data: List[dict], controller: control.Controller):
-    resource = controller.resource
-    post_monitor_resource(data, resource)
-
-class ObservationLogger(Logger):
-    resource_state_data: List[Dict[str, Union[str, int, float, Enum]]] = []
-    material_state_data: List[Dict[str, Union[str, int, float, Enum]]] = []
-
-    def get_data_as_dataframe(self) -> pd.DataFrame:
-        pass
-
-    def observe_resources(self, resource: resources.Resource):
-        self.register_patch(
-            self.resource_state_data,
-            resource,
-            ["interrupt_states", "activate", "start_states", "setup"],
-            post=post_monitor_resource,
-        )
-        controller = resource.get_controller()
-        self.register_patch(
-            self.resource_state_data,
-            controller,
-            ["start_process"],
-            post=monitor_controller,
-            pre=monitor_controller
-        )
-
-    # def observe_materials(self, material_factory: material_factory.MaterialFactory):
-    #     pass
