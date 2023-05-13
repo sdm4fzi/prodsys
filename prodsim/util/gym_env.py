@@ -40,6 +40,7 @@ class ProductionControlEnv(gym.Env):
         self.action_space = spaces.Box(0, 1 , shape=(queue.capacity,), dtype=float)
 
         self.render_mode = render_mode
+        self.reward = 0
 
     def _get_obs(self):
         processes_observation = self.observer.observe_processes()
@@ -75,7 +76,6 @@ class ProductionControlEnv(gym.Env):
         Reset env for new episode and run until first point of observation.
         """
 
-        # TODO: check if necessary, maybe for deterministic agent
         super().reset(seed=seed)
 
         self.runner.initialize_simulation()
@@ -91,9 +91,7 @@ class ProductionControlEnv(gym.Env):
                                                   resource=self.resource)
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
-        # print("simulated until decision is needed")
         self.interrupt_simulation_event = events.Event(self.runner.env)
-        # print(self.resource_controller.resource.data.ID, self.resource_controller.requests)
 
         observation = self._get_obs()
         info = self._get_info()
@@ -101,17 +99,11 @@ class ProductionControlEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
 
-        # print("return obs and info", observation, info)
-
-
         return observation, info
 
     def step(self, action):
 
         queue_index = np.argmax(action)
-        print("action received: ", action)
-        print("queue index: ", queue_index)
-        print("queue before reshuffle", [r.material.material_data.ID for r in self.resource_controller.requests])
         if queue_index >= len(self.resource_controller.requests):
             queue_index = np.random.choice([i for i in range(len(self.resource_controller.requests))])
             to_process = self.resource_controller.requests.pop(queue_index)
@@ -121,7 +113,6 @@ class ProductionControlEnv(gym.Env):
             setup_sparse_reward = self.resource.current_process is None or to_process.process.process_data.ID == self.resource.current_process.process_data.ID
 
         self.resource_controller.requests.insert(0, to_process)
-        print("queue after reshuffle", [r.material.material_data.ID for r in self.resource_controller.requests])
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
         self.step_count += 1
@@ -129,20 +120,16 @@ class ProductionControlEnv(gym.Env):
 
         terminated = self.runner.env.now >= 300000
         reward = self.resource.input_queues[0].capacity - len(self.resource_controller.requests) if self.step_count % 10 == 0 else setup_sparse_reward  # Binary sparse rewards
-        print("reward: ", reward)
+        self.reward = reward
         observation = self._get_obs()
         info = self._get_info()
 
         if self.render_mode == "human":
             self.render()
 
-        # print("return obs and info and others", observation, info, terminated, reward)
-
-
         return observation, reward, terminated, False, info
 
     def render(self):
         if self.render_mode == "human":
-            # self.runner.print_results()
             pass
         
