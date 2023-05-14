@@ -229,7 +229,7 @@ class ProductionRoutingEnv(gym.Env):
         queue_capacity = sum(queue.capacity for queue in self.adapter.queue_data if queue.ID != "SinkQueue")
         resource_capacity = sum(resource.capacity for resource in self.adapter.resource_data)
         wip = len(self.runner.material_factory.materials)
-        reward = (queue_capacity + resource_capacity) / wip * 10 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
+        reward = (queue_capacity + resource_capacity) / wip * 100 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
         self.reward = reward
         observation = self._get_obs()
         info = self._get_info()
