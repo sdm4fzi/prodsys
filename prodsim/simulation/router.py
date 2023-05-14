@@ -13,6 +13,7 @@ from prodsim.simulation import resources
 if TYPE_CHECKING:
     from prodsim.simulation import resources, process, material, sink
     from prodsim.factories import resource_factory, sink_factory
+    from prodsim.util import gym_env
 
 
 class Router:
@@ -89,16 +90,16 @@ class CapabilityRouter(Router):
             return None
         return self.routing_heuristic(possible_resources)
 
-def FIFO_router(possible_resources: List[resources.Resource]) -> resources.Resource:
+def FIFO_routing_heuristic(possible_resources: List[resources.Resource]) -> resources.Resource:
     return possible_resources.pop(0)
 
 
-def random_router(possible_resources: List[resources.Resource]) -> resources.Resource:
+def random_routing_heuristic(possible_resources: List[resources.Resource]) -> resources.Resource:
     possible_resources.sort(key=lambda x: x.data.ID)
     return np.random.choice(possible_resources)  # type: ignore
 
 
-def get_shortest_queue_router(
+def shortest_queue_routing_heuristic(
     possible_resources: List[resources.Resource],
 ) -> resources.Resource:
     queue_list = []
@@ -115,13 +116,21 @@ def get_shortest_queue_router(
             queue[1] for queue in queue_list if len(queue[0].items) <= min_length
         ]
         return np.random.choice(resource_list)
-    return random_router(possible_resources=possible_resources)
+    return random_routing_heuristic(possible_resources=possible_resources)
+
+def agent_routing_heuristic(gym_env: gym_env.ProductionRoutingEnv, possible_resources: List[resources.Resource]
+                            ) -> resources.Resource:
+    gym_env.load_possible_resources(possible_resources)
+    gym_env.interrupt_simulation_event.succeed()
+    return gym_env.get_chosen_resource()
+
+    
 
 
 ROUTING_HEURISTIC = {
-    "shortest_queue": get_shortest_queue_router,
-    "random": random_router,
-    "FIFO": FIFO_router,
+    "shortest_queue": shortest_queue_routing_heuristic,
+    "random": random_routing_heuristic,
+    "FIFO": FIFO_routing_heuristic,
 }
 
 ROUTERS = {

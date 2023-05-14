@@ -178,6 +178,7 @@ class Material(BaseModel):
         transport_resource = self.material_router.get_next_resource(
             self.transport_process
         )
+        yield self.env.timeout(0)
         self.set_next_process()
         yield self.env.process(self.set_next_resource())
         self.request_transport(transport_resource, origin_resource, self.next_resource)  # type: ignore False
@@ -199,6 +200,7 @@ class Material(BaseModel):
             self.next_resource = self.material_router.get_next_resource(
                 self.next_process
             )
+            yield self.env.timeout(0)
             while True:
                 if self.next_resource is not None and isinstance(
                     self.next_resource, resources.ProductionResource
@@ -221,4 +223,5 @@ class Material(BaseModel):
                 self.next_resource = self.material_router.get_next_resource(
                     self.next_process
                 )
+                yield self.env.timeout(0)
 

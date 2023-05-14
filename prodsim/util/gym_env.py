@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 import numpy as np
 from simpy import events
@@ -9,7 +9,7 @@ from simpy import events
 import gymnasium as gym
 from gymnasium import spaces
 from prodsim import adapters, runner
-from prodsim.simulation import control, sim, observer
+from prodsim.simulation import control, sim, observer, router
 
 sim.VERBOSE = 0
 
@@ -119,7 +119,118 @@ class ProductionControlEnv(gym.Env):
         self.interrupt_simulation_event = events.Event(self.runner.env)
 
         terminated = self.runner.env.now >= 300000
-        reward = self.resource.input_queues[0].capacity - len(self.resource_controller.requests) if self.step_count % 10 == 0 else setup_sparse_reward  # Binary sparse rewards
+        reward = self.resource.input_queues[0].capacity - len(self.resource_controller.requests) + setup_sparse_reward if self.step_count % 10 == 0 else setup_sparse_reward  # Binary sparse rewards
+        self.reward = reward
+        observation = self._get_obs()
+        info = self._get_info()
+
+        if self.render_mode == "human":
+            self.render()
+
+        return observation, reward, terminated, False, info
+
+    def render(self):
+        if self.render_mode == "human":
+            pass
+
+
+class ProductionRoutingEnv(gym.Env):
+
+    def __init__(self, adapter: adapters.Adapter, render_mode=None):
+        self.adapter = adapter
+        self.runner: runner.Runner = runner.Runner(adapter=self.adapter)
+        
+        self.router: router.Router = None
+        self.possible_resources: List[resources.Resource] = []
+        self.chosen_resource: Optional[resources.Resource] = None
+
+        self.interrupt_simulation_event: events.Event = None
+        self.observers: List[observer.ResourceObserver] = []
+        self.step_count = 0
+        
+        shape = (len(self.adapter.resource_data),)
+
+        self.observation_space = spaces.Box(0, 1, shape=shape, dtype=float)
+
+        self.action_space = spaces.Box(0, 1 , shape=shape, dtype=float)
+
+        self.render_mode = render_mode
+        self.reward = 0
+
+    def _get_obs(self):
+        available_resources = []
+        for obs in self.observers:
+            resource_available_status = obs.observe_resource_available()
+            available_resources.append(resource_available_status.available)
+
+        return np.array(available_resources)
+
+    def _get_info(self):
+        return {"infoo": 0}
+
+    def reset(self, seed=None, options=None):
+        """
+        Reset env for new episode and run until first point of observation.
+        """
+
+        super().reset(seed=seed)
+
+        self.runner.initialize_simulation()
+        self.interrupt_simulation_event = events.Event(self.runner.env)
+        agent_routing_heuristic = partial(router.agent_routing_heuristic, self)
+        self.router = router.SimpleRouter(self.runner.resource_factory, self.runner.sink_factory, agent_routing_heuristic)  
+        
+        sources = self.runner.source_factory.sources
+        for source in sources:
+            source.router = self.router
+        
+        for resource in self.runner.resource_factory.resources:
+            obs = observer.ResourceObserver(resource_factory=self.runner.resource_factory, 
+                                                  material_factory=self.runner.material_factory, 
+                                                  resource=resource)
+            self.observers.append(obs)
+
+        print("start simulation")
+        self.runner.env.run_until(until=self.interrupt_simulation_event)
+        print("stop simulation")
+        self.interrupt_simulation_event = events.Event(self.runner.env)
+
+        observation = self._get_obs()
+        info = self._get_info()
+
+        if self.render_mode == "human":
+            self.render()
+
+        return observation, info
+    
+    def load_possible_resources(self, resources: List[resources.Resource]):
+        self.possible_resources = resources
+
+    def get_chosen_resource(self) -> resources.Resource:
+        return self.chosen_resource
+
+    def step(self, action):
+
+        resource = np.argmax(action)
+
+        self.chosen_resource = self.runner.resource_factory.resources[resource]
+        if not self.chosen_resource.data.ID in [r.data.ID for r in self.possible_resources]:
+            sparse_reward = 0
+            self.chosen_resource = self.possible_resources.pop()
+            self.possible_resources = []
+        else:
+            sparse_reward = 1
+            self.possible_resources = []
+
+        self.runner.env.run_until(until=self.interrupt_simulation_event)
+        self.step_count += 1
+        self.interrupt_simulation_event = events.Event(self.runner.env)
+
+        terminated = self.runner.env.now >= 300000
+        queue_capacity = sum(queue.capacity for queue in self.adapter.queue_data if queue.ID != "SinkQueue")
+        resource_capacity = sum(resource.capacity for resource in self.adapter.resource_data)
+        wip = len(self.runner.material_factory.materials)
+        reward = wip / (queue_capacity + resource_capacity) * 10 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
         self.reward = reward
         observation = self._get_obs()
         info = self._get_info()
