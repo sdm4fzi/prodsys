@@ -184,15 +184,14 @@ class ProductionRoutingEnv(gym.Env):
         for source in sources:
             source.router = self.router
         
+        self.observers = []
         for resource in self.runner.resource_factory.resources:
             obs = observer.ResourceObserver(resource_factory=self.runner.resource_factory, 
                                                   material_factory=self.runner.material_factory, 
                                                   resource=resource)
             self.observers.append(obs)
 
-        print("start simulation")
         self.runner.env.run_until(until=self.interrupt_simulation_event)
-        print("stop simulation")
         self.interrupt_simulation_event = events.Event(self.runner.env)
 
         observation = self._get_obs()
@@ -230,7 +229,7 @@ class ProductionRoutingEnv(gym.Env):
         queue_capacity = sum(queue.capacity for queue in self.adapter.queue_data if queue.ID != "SinkQueue")
         resource_capacity = sum(resource.capacity for resource in self.adapter.resource_data)
         wip = len(self.runner.material_factory.materials)
-        reward = wip / (queue_capacity + resource_capacity) * 10 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
+        reward = (queue_capacity + resource_capacity) / wip * 10 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
         self.reward = reward
         observation = self._get_obs()
         info = self._get_info()
