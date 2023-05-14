@@ -416,7 +416,6 @@ class FlexisAdapter(adapters.Adapter):
             )
 
     def initialize_source_and_sink_data(self, flexis_data_frames: FlexisDataFrames):
-        # TODO: rework to scheduled state
         occurences = flexis_data_frames.Order["productName:String"].value_counts()
         occurences = occurences * 15
         freq = 48 * 60 / occurences

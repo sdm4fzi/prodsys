@@ -2,8 +2,6 @@ import pytest
 
 from prodsim.util import util
 
-# TODO: build a setup.py for working testing
-
 class Tets_get_class_from_str:
     
     def test_existing_key_returns_value(self,):

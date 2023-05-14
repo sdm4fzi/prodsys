@@ -69,7 +69,6 @@ def register_functions_in_toolbox(
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
 
-    # TODO: make this as a parameter
     # toolbox.register('select', tools.selTournament, tournsize=3)
     toolbox.register("select", tools.selNSGA2)
     # toolbox.register('select', tools.selNSGA3)
