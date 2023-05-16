@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "prodsim"
+name = "prodsys"
 version = "0.1.0"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
@@ -21,18 +21,23 @@ openpyxl = "^3.1.2"
 plotly = "^5.14.1"
 scipy = "^1.10.1"
 
-
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"
 
 
 [tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+
+[tool.poetry.group.experimental.dependencies]
 basyx-python-sdk = "^0.2.2"
 strawberry-graphql = "^0.171.1"
 gymnasium = ">=0.26.3"
 pm4py = "^2.7.3"
-black = "^23.3.0"
-
+torch = "^2.0.1"
+torchvision = "^0.15.2"
+torchaudio = "^2.0.2"
+stable-baselines3 = {git = "https://github.com/DLR-RM/stable-baselines3.git"}
+tensorboard = "^2.13.0"
 
 [tool.poetry.group.build.dependencies]
 setuptools = "^67.7.0"

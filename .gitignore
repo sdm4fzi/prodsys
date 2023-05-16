@@ -13,10 +13,10 @@ __pycache__/
 changeability_pack/
 data/
 CPSL_results/
-prodsim.code-workspace
+prodsys.code-workspace
 outputs/
 build/
-prodsim.egg-info/
+prodsys.egg-info/
 .eggs/
 dist/
 .pytest_cache/

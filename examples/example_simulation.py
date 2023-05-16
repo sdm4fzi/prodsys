@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import prodsim
+import prodsys
 
 
 if __name__ == '__main__':
 
-    adapter_object = prodsim.adapters.JsonAdapter()
+    adapter_object = prodsys.adapters.JsonAdapter()
 
     adapter_object.read_data('examples/basic_example/example_configuration.json')
     # adapter_object.write_data("data/example_configuration.json")
 
 
-    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+    runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(20000)
     runner_object.print_results()

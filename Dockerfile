@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 COPY ./fastapi_app.py /code/fastapi_app.py
 COPY ./conf /code/conf
 COPY ./examples /code/examples
-COPY ./prodsim /code/prodsim
+COPY ./prodsys /code/prodsys
 
 EXPOSE 8000
 

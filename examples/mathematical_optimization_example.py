@@ -1,4 +1,4 @@
-from prodsim.optimization.math_opt import run_mathematical_optimization
+from prodsys.optimization.math_opt import run_mathematical_optimization
 
 
 BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"

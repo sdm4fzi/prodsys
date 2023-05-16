@@ -1,4 +1,4 @@
-ECHO Welcome to batch scripting
+ECHO Welcome to prodsys batch scripting
 CALL python hydra_app.py general=example_optimization optimization=example_evolutionary_algorithm
 ECHO finished evolutionary
 CALL python hydra_app.py general=example_partial_optimization optimization=example_evolutionary_algorithm

@@ -1,5 +1,5 @@
-from prodsim.optimization.tabu_search import run_tabu_search
-from prodsim.simulation import sim
+from prodsys.optimization.tabu_search import run_tabu_search
+from prodsys.simulation import sim
 
 sim.VERBOSE = 0
 

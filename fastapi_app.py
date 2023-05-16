@@ -12,7 +12,7 @@ from pydantic import parse_obj_as
 
 
 from pydantic import BaseModel
-from prodsim.data_structures import (
+from prodsys.data_structures import (
     time_model_data,
     resource_data,
     queue_data,
@@ -25,23 +25,23 @@ from prodsim.data_structures import (
     performance_indicators,
     scenario_data,
 )
-from prodsim.optimization import evolutionary_algorithm, math_opt, optimization_analysis, simulated_annealing, tabu_search
-from prodsim.util import (
+from prodsys.optimization import evolutionary_algorithm, math_opt, optimization_analysis, simulated_annealing, tabu_search
+from prodsys.util import (
     util,
 )
-import prodsim
+import prodsys
 
 description = """
-The ProdSim-API allows you to create and run production simulations and optimizations with the ProdSim library. 
+The prodsys API allows you to create and run production simulations and optimizations with the prodsys library as a web service. 
 """
 
 app = FastAPI(
-    title="ProdSim API",
+    title="prodsys API",
     description=description,
-    version="1.0.0",
+    version=prodsys.VERSION,
     contact={
         "name": "Sebastian Behrendt",
-        "email": "sebastianbehrendt97@gmail.com",
+        "email": "sebastian.behrendt@kit.edu",
     },
     license_info={
         "name": "MIT License",
@@ -49,14 +49,6 @@ app = FastAPI(
     },
 )
 
-origins = [
-    "http://localhost",
-    "http://localhost:4200",
-    "http://127.0.0.1",
-    "http://127.0.0.1:4200",
-    "http://0.0.0.0",
-    "http://0.0.0.0:4200",
-]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -67,7 +59,7 @@ app.add_middleware(
 
 class Project(BaseModel):
     ID: str
-    adapters: Dict[str, prodsim.adapters.JsonAdapter] = {}
+    adapters: Dict[str, prodsys.adapters.JsonAdapter] = {}
 
     class Config:
         schema_extra = {
@@ -253,7 +245,7 @@ class Project(BaseModel):
                                 "description": "Resource 1",
                                 "capacity": 2,
                                 "location": [10.0, 10.0],
-                                "controller": "SimpleController",
+                                "controller": "PipelineController",
                                 "control_policy": "FIFO",
                                 "processes": ["P1", "P2"],
                                 "process_capacity": [2, 1],
@@ -271,7 +263,7 @@ class Project(BaseModel):
                                 "description": "Resource 2",
                                 "capacity": 1,
                                 "location": [20.0, 10.0],
-                                "controller": "SimpleController",
+                                "controller": "PipelineController",
                                 "control_policy": "FIFO",
                                 "processes": ["P2", "P3"],
                                 "process_capacity": None,
@@ -284,7 +276,7 @@ class Project(BaseModel):
                                 "description": "Resource 3",
                                 "capacity": 2,
                                 "location": [20.0, 20.0],
-                                "controller": "SimpleController",
+                                "controller": "PipelineController",
                                 "control_policy": "FIFO",
                                 "processes": ["P1", "P3"],
                                 "process_capacity": [1, 2],
@@ -302,7 +294,7 @@ class Project(BaseModel):
                                 "description": "Resource 3",
                                 "capacity": 2,
                                 "location": [10.0, 20.0],
-                                "controller": "SimpleController",
+                                "controller": "PipelineController",
                                 "control_policy": "FIFO",
                                 "processes": ["P1", "P3"],
                                 "process_capacity": [2, 2],
@@ -427,7 +419,7 @@ results_database: Dict[str, performance_data.Performance] = {}
 
 @app.get("/", response_model=str)
 async def root():
-    return "prodsim API v1.0"
+    return "prodsys API v1.0"
 
 
 def get_projects() -> List[Project]:
@@ -441,8 +433,8 @@ def get_project(project_id: str) -> Project:
     raise HTTPException(404, f"Project {project_id} not found")
 
 
-def evaluate(adapter_object: prodsim.adapters.JsonAdapter) -> str:
-    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+def evaluate(adapter_object: prodsys.adapters.JsonAdapter) -> str:
+    runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(5000)
     performance = runner_object.get_performance_data()
@@ -454,7 +446,7 @@ async def load_example_project() -> str:
     example_project = Project(ID="example_project")
     database.append(example_project)
 
-    adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object = prodsys.adapters.JsonAdapter(ID="example_adapter_1")
     adapter_object.read_data("examples/basic_example/example_configuration.json")
     evaluate(adapter_object)
     example_project.adapters[adapter_object.ID] = adapter_object
@@ -467,7 +459,7 @@ async def load_example_project() -> str:
     example_project = Project(ID="example_optimization_project")
     database.append(example_project)
 
-    adapter_object = prodsim.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object = prodsys.adapters.JsonAdapter(ID="example_adapter_1")
     adapter_object.read_data(
         "examples/optimization_example/base_scenario.json",
         "examples/optimization_example/scenario.json",
@@ -502,7 +494,7 @@ async def delete_project(project_id: str):
 
 @app.get(
     "/projects/{project_id}/adapters",
-    response_model=Dict[str, prodsim.adapters.JsonAdapter],
+    response_model=Dict[str, prodsys.adapters.JsonAdapter],
     tags=["adapters"],
 )
 async def read_adapters(project_id: str):
@@ -510,7 +502,7 @@ async def read_adapters(project_id: str):
     return project.adapters
 
 
-def get_adapter(project_id: str, adapter_id: str) -> prodsim.adapters.JsonAdapter:
+def get_adapter(project_id: str, adapter_id: str) -> prodsys.adapters.JsonAdapter:
     project = get_project(project_id)
     if adapter_id not in project.adapters:
         raise HTTPException(
@@ -521,7 +513,7 @@ def get_adapter(project_id: str, adapter_id: str) -> prodsim.adapters.JsonAdapte
 
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}",
-    response_model=prodsim.adapters.JsonAdapter,
+    response_model=prodsys.adapters.JsonAdapter,
     tags=["adapters"],
 )
 async def read_adapter(project_id: str, adapter_id: str):
@@ -531,7 +523,7 @@ async def read_adapter(project_id: str, adapter_id: str):
 
 @app.put("/projects/{project_id}/adapters/{adapter_id}", tags=["adapters"])
 async def update_adapter(
-    project_id: str, adapter_id: str, ada: prodsim.adapters.JsonAdapter
+    project_id: str, adapter_id: str, ada: prodsys.adapters.JsonAdapter
 ):
     project = get_project(project_id)
     project.adapters[adapter_id] = ada
@@ -551,7 +543,7 @@ async def delete_adapter(project_id: str, adapter_id: str):
 )
 async def run_simulation(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
-    runner_object = prodsim.runner.Runner(adapter=adapter)
+    runner_object = prodsys.runner.Runner(adapter=adapter)
     runner_object.initialize_simulation()
     runner_object.run(2 * 7 * 24 * 60)
     performance = runner_object.get_performance_data()
@@ -638,7 +630,7 @@ def get_optimization_results(project_id: str, adapter_id: str):
 
 
 def prepare_adapter_from_optimization(
-    adapter_object: prodsim.adapters.JsonAdapter,
+    adapter_object: prodsys.adapters.JsonAdapter,
     project_id: str,
     adapter_id: str,
     solution_id: str,
@@ -650,9 +642,13 @@ def prepare_adapter_from_optimization(
     project = get_project(project_id)
     project.adapters[solution_id] = adapter_object
 
-    runner_object = prodsim.runner.Runner(adapter=adapter_object)
+    runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
-    runner_object.run(3000)
+    if adapter_object.scenario_data and adapter_object.scenario_data.info.time_range:
+        run_length = adapter_object.scenario_data.info.time_range
+    else:
+        run_length = 2 * 7 * 24 * 60
+    runner_object.run(run_length)
 
     performance = runner_object.get_performance_data()
     results_database[adapter_id] = performance
@@ -661,7 +657,7 @@ def prepare_adapter_from_optimization(
 def get_configuration_results_adapter_from_filesystem(
     project_id: str, adapter_id: str, solution_id: str
 ):
-    adapter_object = prodsim.adapters.JsonAdapter()
+    adapter_object = prodsys.adapters.JsonAdapter()
     files = os.listdir(f"data/{project_id}/{adapter_id}")
     if not any(solution_id in file for file in files):
         raise HTTPException(
@@ -720,11 +716,11 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 @app.get(
     "/projects/{project_id}/adapters/{adapter_id}/optimize_configuration/{solution_id}",
     tags=["optimization"],
-    response_model=prodsim.adapters.JsonAdapter,
+    response_model=prodsys.adapters.JsonAdapter,
 )
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
-) -> prodsim.adapters.JsonAdapter:
+) -> prodsys.adapters.JsonAdapter:
     with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
         data = json.load(json_file)
     return data
@@ -1194,9 +1190,9 @@ async def create_scenario(
 
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
-def prodsim_app(cfg: DictConfig) -> None:
+def prodsys_app(cfg: DictConfig) -> None:
     uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
 
 
 if __name__ == "__main__":
-    prodsim_app()
+    prodsys_app()

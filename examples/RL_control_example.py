@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import prodsim
-from prodsim.util import gym_env
+import prodsys
+from prodsys.util import gym_env
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     
 
-    adapter_object = prodsim.adapters.JsonAdapter()
+    adapter_object = prodsys.adapters.JsonAdapter()
     adapter_object.read_data('examples/basic_example/example_configuration.json')
     env = gym_env.ProductionControlEnv(adapter_object, "R2", render_mode="human")
 
