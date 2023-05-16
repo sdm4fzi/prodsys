@@ -21,4 +21,7 @@ prodsys.egg-info/
 dist/
 .pytest_cache/
 optimization_scenarios/results/
+.python-version
+optimization_scenarios/
+.vscode/
 
