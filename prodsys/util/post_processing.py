@@ -290,8 +290,6 @@ class PostProcessor:
         df["next_Time"].fillna(df["Time"].max(), inplace=True)
         df["time_increment"] = df["next_Time"] - df["Time"]
 
-        df.to_csv("test.csv")
-
         STANDBY_CONDITION = (
             (df["State_sorting_Index"] == 4) & (df["Used_Capacity"] == 0)
         ) | (df["State_sorting_Index"] == 7)
