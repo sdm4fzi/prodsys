@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections.abc import Iterable
 
 import random
 import os
@@ -57,4 +58,13 @@ def prepare_save_folder(file_paths: str):
     isExist = os.path.exists(file_paths)
     if not isExist:
         os.makedirs(file_paths)
+
+
+def flatten(xs):
+    for x in xs:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            yield from flatten(x)
+        else:
+            yield x
+
 
