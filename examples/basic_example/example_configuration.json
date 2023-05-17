@@ -196,7 +196,12 @@
       "control_policy": "FIFO",
       "process_ids": ["P1", "P2"],
       "process_capacities": [2, 1],
-      "state_ids": ["Breakdownstate_1", "Setup_State_1", "Setup_State_2", "ProcessBreakdownState_1"],
+      "state_ids": [
+        "Breakdownstate_1",
+        "Setup_State_1",
+        "Setup_State_2",
+        "ProcessBreakdownState_1"
+      ],
       "input_queues": ["IQ1"],
       "output_queues": ["OQ1"]
     },
@@ -221,7 +226,12 @@
       "control_policy": "FIFO",
       "process_ids": ["P1", "P3"],
       "process_capacities": [1, 2],
-      "state_ids": ["Breakdownstate_1", "Breakdownstate_2", "Setup_State_3", "Setup_State_4"],
+      "state_ids": [
+        "Breakdownstate_1",
+        "Breakdownstate_2",
+        "Setup_State_3",
+        "Setup_State_4"
+      ],
       "input_queues": ["IQ2"],
       "output_queues": ["OQ3"]
     },
@@ -278,7 +288,7 @@
       "ID": "Material_3",
       "description": "Material 3",
       "material_type": "Material_3",
-      "processes": "examples/basic_example/example_material_petri_net.pnml",
+      "processes": { "P1": ["P2", "P3"], "P2": [], "P3": [] },
       "transport_process": "TP1"
     }
   },

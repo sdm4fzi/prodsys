@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Dict
 
 from pydantic import BaseModel, Field
 
@@ -50,32 +50,38 @@ class MaterialFactory(BaseModel):
         self.material_counter += 1
         self.materials.append(material_object)
         return material_object
+    
+    
+    def get_precendece_graph_from_id_adjacency_matrix(self, id_adjacency_matrix: Dict[str, List[str]]) -> proces_models.PrecedenceGraphProcessModel:
+        precedence_graph = proces_models.PrecedenceGraphProcessModel()
+        id_predecessor_adjacency_matrix = proces_models.get_predecessors_adjacency_matrix(id_adjacency_matrix)
+        print(id_predecessor_adjacency_matrix)
+        for key in id_adjacency_matrix.keys():
+            sucessor_ids = id_adjacency_matrix[key]
+            predecessor_ids = id_predecessor_adjacency_matrix[key]
+            print(key, sucessor_ids, predecessor_ids)
+            process = self.process_factory.get_process(key)
+            successors = [self.process_factory.get_process(successor_id) for successor_id in sucessor_ids]
+            predecessors = [self.process_factory.get_process(predecessor_id) for predecessor_id in predecessor_ids]
+            precedence_graph.add_node(process, successors, predecessors)
+        return precedence_graph
 
     def create_process_model(
         self, material_data: material_data.MaterialData
     ) -> proces_models.ProcessModel:
-        if isinstance(material_data.processes, list):
+        if isinstance(material_data.processes, list) and isinstance(material_data.processes[0], str):
             process_list = self.process_factory.get_processes_in_order(
                 material_data.processes
             )
             return proces_models.ListProcessModel(process_list=process_list)
-        if isinstance(material_data.processes, str):
-            import pm4py
-
-            net, initial_marking, final_marking = pm4py.read_pnml(
+        elif isinstance(material_data.processes, dict):
+            print(material_data.processes)
+            return self.get_precendece_graph_from_id_adjacency_matrix(material_data.processes)
+        elif isinstance(material_data.processes, list) and isinstance(material_data.processes[0], list):
+            id_adjacency_matrix = proces_models.get_adjacency_matrix_from_edges(
                 material_data.processes
             )
-            for transition in net.transitions:
-                if not transition.label:
-                    transition_process = material.SKIP_LABEL
-                else:
-                    transition_process = self.process_factory.get_process(
-                        transition.label
-                    )
-                transition.properties["Process"] = transition_process
-            return proces_models.PetriNetProcessModel(
-                net=net, initial_marking=initial_marking, final_marking=final_marking
-            )
+            return self.get_precendece_graph_from_id_adjacency_matrix(id_adjacency_matrix)
         else:
             raise ValueError("Process model not recognized.")
 

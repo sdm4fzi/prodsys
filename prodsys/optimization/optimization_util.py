@@ -4,7 +4,6 @@ from typing import Dict, List, Union, Tuple, Literal, Callable
 from enum import Enum
 
 from uuid import uuid1
-from collections.abc import Iterable
 from pydantic import parse_obj_as
 
 from prodsys import adapters, runner
@@ -16,6 +15,7 @@ from prodsys.data_structures import (
     performance_indicators,
     scenario_data,
 )
+from prodsys.util.util import flatten
 
 
 class BreakdownStateNamingConvention(str, Enum):
@@ -199,14 +199,6 @@ def get_possible_production_processes_IDs(
             process_dict[process.capability] = []
         process_dict[process.capability].append(process.ID)
     return [tuple(value) for value in process_dict.values()]
-
-
-def flatten(xs):
-    for x in xs:
-        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
-            yield from flatten(x)
-        else:
-            yield x
 
 
 def add_machine(adapter_object: adapters.Adapter) -> bool:
@@ -800,3 +792,4 @@ def evaluate(
         fitness.append(KPI_function_dict[kpi_name](p))
 
     return fitness
+
