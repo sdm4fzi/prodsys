@@ -19,8 +19,18 @@ from prodsys.util.util import set_seed
 
 sim.VERBOSE = 0
 
+
 class ProductionSystemOptimization(Annealer):
-    def __init__(self, base_configuration: adapters.Adapter, save_folder: str, performances: dict, solutions_dict: dict, start: float, weights: tuple, initial_solution: adapters.Adapter=None):
+    def __init__(
+        self,
+        base_configuration: adapters.Adapter,
+        save_folder: str,
+        performances: dict,
+        solutions_dict: dict,
+        start: float,
+        weights: tuple,
+        initial_solution: adapters.Adapter = None,
+    ):
         super().__init__(initial_solution, None)
         self.save_folder = save_folder
         self.base_configuration = base_configuration
@@ -40,7 +50,6 @@ class ProductionSystemOptimization(Annealer):
                 break
 
     def energy(self):
-
         values = evaluate(
             base_scenario=self.base_configuration,
             performances=self.performances,
@@ -48,7 +57,9 @@ class ProductionSystemOptimization(Annealer):
             individual=[self.state],
         )
 
-        performance = sum([value * weight for value, weight in zip(values, self.weights)])
+        performance = sum(
+            [value * weight for value, weight in zip(values, self.weights)]
+        )
         # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(self.performances["0"]) - 1
         document_individual(self.solution_dict, self.save_folder, [self.state])
@@ -62,6 +73,7 @@ class ProductionSystemOptimization(Annealer):
 
         return performance
 
+
 def run_simulated_annealing(
     save_folder: str,
     base_configuration_file_path: str,
@@ -71,7 +83,7 @@ def run_simulated_annealing(
     Tmin: int,
     steps: int,
     updates: int,
-    initial_solution_file_path: str = ""
+    initial_solution_file_path: str = "",
 ):
     adapters.Adapter.Config.validate = False
     adapters.Adapter.Config.validate_assignment = False
@@ -100,7 +112,8 @@ def run_simulated_annealing(
         solutions_dict=solution_dict,
         start=start,
         weights=weights,
-        initial_solution=initial_solution)
+        initial_solution=initial_solution,
+    )
 
     pso.Tmax = Tmax
     pso.Tmin = Tmin
@@ -111,6 +124,15 @@ def run_simulated_annealing(
 
 
 class SimulatedAnnealingHyperparameters(BaseModel):
+    """
+    Hyperparameters to perform a configuration optimization with simulated annealing.
+    Args:
+        seed (int): Seed for random number generator
+        Tmax (int): Maximum temperature
+        Tmin (int): Minimum temperature
+        steps (int): Number of steps
+        updates (int): Number of updates
+    """
     seed: int = Field(
         default=0,
         description="Seed for random number generator",
@@ -135,16 +157,20 @@ class SimulatedAnnealingHyperparameters(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "seed": 0,
-                "Tmax": 10000,
-                "Tmin": 1,
-                "steps": 4000,
-                "updates": 300,
+                "summary": "Simulated Annealing Hyperparameters",
+                "value": {
+                    "seed": 0,
+                    "Tmax": 10000,
+                    "Tmin": 1,
+                    "steps": 4000,
+                    "updates": 300,
+                },
             }
         }
 
+
 def optimize_configuration(
-        base_configuration_file_path: str,
+    base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: SimulatedAnnealingHyperparameters,
@@ -157,5 +183,5 @@ def optimize_configuration(
         Tmax=hyper_parameters.Tmax,
         Tmin=hyper_parameters.Tmin,
         steps=hyper_parameters.steps,
-        updates=hyper_parameters.updates
+        updates=hyper_parameters.updates,
     )

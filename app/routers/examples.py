@@ -12,8 +12,6 @@ import prodsys
 from app.dependencies import database, Project, evaluate
 
 
-# TODO: update the schema exaples
-
 router = APIRouter(
     tags=["examples"],
     responses={404: {"description": "Not found"}},

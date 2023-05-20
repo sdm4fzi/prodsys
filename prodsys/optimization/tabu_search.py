@@ -27,6 +27,7 @@ class TabuSearch:
     """
     Conducts tabu search
     """
+
     __metaclass__ = ABCMeta
 
     cur_steps = None
@@ -54,25 +55,26 @@ class TabuSearch:
         if isinstance(tabu_size, int) and tabu_size > 0:
             self.tabu_size = tabu_size
         else:
-            raise TypeError('Tabu size must be a positive integer')
+            raise TypeError("Tabu size must be a positive integer")
 
         if isinstance(max_steps, int) and max_steps > 0:
             self.max_steps = max_steps
         else:
-            raise TypeError('Maximum steps must be a positive integer')
+            raise TypeError("Maximum steps must be a positive integer")
 
         if max_score is not None:
             if isinstance(max_score, (int, float)):
                 self.max_score = float(max_score)
             else:
-                raise TypeError('Maximum score must be a numeric type')
+                raise TypeError("Maximum score must be a numeric type")
 
     def __str__(self):
-        return ('TABU SEARCH: \n' +
-                'CURRENT STEPS: %d \n' +
-                'BEST SCORE: %f \n' +
-                'BEST MEMBER: %s \n\n') % \
-               (self.cur_steps, self._score(self.best), str(self.best))
+        return (
+            "TABU SEARCH: \n"
+            + "CURRENT STEPS: %d \n"
+            + "BEST SCORE: %f \n"
+            + "BEST MEMBER: %s \n\n"
+        ) % (self.cur_steps, self._score(self.best), str(self.best))
 
     def __repr__(self):
         return self.__str__()
@@ -157,7 +159,7 @@ class TabuSearch:
                 return self.best, self._score(self.best)
         print("TERMINATING - REACHED MAXIMUM STEPS")
         return self.best, self._score(self.best)
-    
+
 
 def run_tabu_search(
     save_folder: str,
@@ -167,7 +169,7 @@ def run_tabu_search(
     tabu_size,
     max_steps,
     max_score,
-    initial_solution_file_path: str = ""
+    initial_solution_file_path: str = "",
 ):
     adapters.Adapter.Config.validate = False
     adapters.Adapter.Config.validate_assignment = False
@@ -198,7 +200,9 @@ def run_tabu_search(
                 individual=[state],
             )
 
-            performance = sum([value * weight for value, weight in zip(values, weights)])
+            performance = sum(
+                [value * weight for value, weight in zip(values, weights)]
+            )
             counter = len(performances["0"]) - 1
             print(counter, performance)
             document_individual(solution_dict, save_folder, [state])
@@ -217,44 +221,52 @@ def run_tabu_search(
             neighboarhood = []
             for _ in range(10):
                 while True:
-                    configuration = mutation(individual=[deepcopy(self.current)]
-                    )[0][0]
+                    configuration = mutation(individual=[deepcopy(self.current)])[0][0]
                     if check_valid_configuration(
-                            configuration=configuration,
-                            base_configuration=base_configuration,
-                        ):
+                        configuration=configuration,
+                        base_configuration=base_configuration,
+                    ):
                         neighboarhood.append(configuration)
                         break
             return neighboarhood
-        
-    alg = Algorithm(initial_state=initial_solution, tabu_size=tabu_size,
-                    max_steps=max_steps, max_score=max_score)
+
+    alg = Algorithm(
+        initial_state=initial_solution,
+        tabu_size=tabu_size,
+        max_steps=max_steps,
+        max_score=max_score,
+    )
     best_solution, best_objective_value = alg.run()
     print("Best solution: ", best_objective_value)
 
 
-class TabuSearchHyperparameters(BaseModel): 
-    # specifiy parameters as field with with defaults and description and also add a schema extra
-    seed: int = Field(
-        0, description="Seed for random number generator"
-    )
-    tabu_size: int = Field(
-        10, description="Size of tabu list"
-    )
-    max_steps: int = Field(
-        300, description="Maximum number of steps"
-    )
-    max_score: float = Field(
-        500, description="Maximum score"
-    )
+class TabuSearchHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization with tabu search.
+
+
+    Args:
+        seed (int): Seed for random number generator
+        tabu_size (int): Size of tabu list
+        max_steps (int): Maximum number of steps
+        max_score (float): Maximum score
+    """
+
+    seed: int = Field(0, description="Seed for random number generator")
+    tabu_size: int = Field(10, description="Size of tabu list")
+    max_steps: int = Field(300, description="Maximum number of steps")
+    max_score: float = Field(500, description="Maximum score")
 
     class Config:
         schema_extra = {
             "example": {
-                "seed": 0,
-                "tabu_size": 10,
-                "max_steps": 300,
-                "max_score": 500,
+                "summary": "Tabu Search Hyperparameters",
+                "value": {
+                    "seed": 0,
+                    "tabu_size": 10,
+                    "max_steps": 300,
+                    "max_score": 500,
+                },
             }
         }
 
@@ -263,7 +275,7 @@ def optimize_configuration(
     base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
-    hyper_parameters: TabuSearchHyperparameters
+    hyper_parameters: TabuSearchHyperparameters,
 ):
     run_tabu_search(
         save_folder=save_folder,

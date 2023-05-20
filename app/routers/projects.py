@@ -1,18 +1,7 @@
 from typing import List
 
-
-from fastapi import APIRouter, Depends, HTTPException
-
-
-from prodsys.data_structures import (
-    time_model_data,
-)
-
-
+from fastapi import APIRouter
 from app.dependencies import Project, get_projects, get_project, database
-
-# TODO: update the schema exaples
-
 
 router = APIRouter(
     prefix="/projects",
@@ -20,15 +9,31 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get("/", response_model=List[Project])
+PROJECT_LIST_EXAMPLE = [Project.Config.schema_extra["example"]["value"]]
+
+
+@router.get(
+    "/",
+    response_model=List[Project],
+    responses={
+        200: {
+            "description": "Sucessfully returned projects",
+            "content": {"application/json": {"example": PROJECT_LIST_EXAMPLE}},
+        },
+        404: {"description": "No projects found."},
+    },
+)
 async def read_projects() -> List[Project]:
     return get_projects()
 
 
 @router.put("/{project_id}")
-async def create_project(project: Project, ) -> str:
+async def create_project(
+    project: Project,
+) -> str:
     database.append(project)
     return "Sucessfully created project with ID: " + project.ID
+
 
 @router.get("/{project_id}", response_model=Project)
 async def read_project(project_id: str) -> Project:

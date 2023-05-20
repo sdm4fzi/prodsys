@@ -8,8 +8,6 @@ from prodsys.data_structures import (
 )
 from app.dependencies import get_adapter, evaluate
 
-# TODO: rework examples here
-
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/simulate",
     tags=["simulation"],

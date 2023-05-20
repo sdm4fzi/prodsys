@@ -237,8 +237,6 @@ class MathOptimizer(BaseModel):
         )
 
     def get_breakdown_values(self):
-
-        # Berechnung der Erwartungswerte (durchschnittliche Zeit bis zum Ausfall) E(x)=1/λ
         machine_breakdown_state = self.get_state_with_id(
             optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
         )
@@ -281,7 +279,6 @@ class MathOptimizer(BaseModel):
         )
 
     def check_breakdown_time_per_station(self):
-
         (
             machine_breakdown_count,
             module_breakdown_count,
@@ -507,6 +504,16 @@ def run_mathematical_optimization(
 
 
 class MathOptHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization with mathematical optimization. For mathetical optimization, only production capacity is optimized..
+    Mathematical optimization is performed with Gurobi, so a valid Gurobi license is required.
+
+    Args:
+        optimization_time_portion (float): Portion of the total time that is used for optimization.
+        number_of_solutions (int): Number of solutions that are generated.
+        adjusted_number_of_transport_resources (int): Number of transport resources that are used for the optimization.
+    """
+
     optimization_time_portion: float = Field(
         0.5, description="Portion of the total time that is used for optimization."
     )
@@ -514,17 +521,22 @@ class MathOptHyperparameters(BaseModel):
         1, description="Number of solutions that are generated."
     )
     adjusted_number_of_transport_resources: int = Field(
-        1, description="Number of transport resources that are used for the optimization."
+        1,
+        description="Number of transport resources that are used for the optimization.",
     )
 
     class Config:
         schema_extra = {
             "example": {
-                "optimization_time_portion": 0.5,
-                "number_of_solutions": 1,
-                "adjusted_number_of_transport_resources": 1,
+                "summary": "Mathematical Optimization Hyperparameters",
+                "value": {
+                    "optimization_time_portion": 0.5,
+                    "number_of_solutions": 1,
+                    "adjusted_number_of_transport_resources": 1,
+                },
             }
         }
+
 
 def optimize_configuration(
     base_configuration_file_path: str,

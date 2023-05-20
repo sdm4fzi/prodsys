@@ -11,8 +11,6 @@ from prodsys.data_structures import (
 
 from app.dependencies import get_project, get_adapter
 
-# TODO: update the exaples
-
 router = APIRouter(
     prefix="/projects/{project_id}/adapters",
     tags=["adapters"],

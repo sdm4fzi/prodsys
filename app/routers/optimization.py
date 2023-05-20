@@ -1,8 +1,8 @@
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Annotated
 
 from pydantic import parse_obj_as
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 
 import json
 import prodsys
@@ -20,13 +20,18 @@ from prodsys.data_structures import (
 from app.dependencies import get_adapter, prepare_adapter_from_optimization, get_configuration_results_adapter_from_filesystem
 
 
-# TODO: rework examples here
-
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/optimize",
     tags=["optimization"],
     responses={404: {"description": "Not found"}},
 )
+
+HYPERPARAMETER_EXAMPLES = {
+    "Evolutionary algorithm": evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters.Config.schema_extra["example"],
+    "Simulated annealing": simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra["example"],
+    "Tabu search": tabu_search.TabuSearchHyperparameters.Config.schema_extra["example"],
+    "Mathematical optimization": math_opt.MathOptHyperparameters.Config.schema_extra["example"],
+}
 
 @router.post(
     "/",
@@ -35,12 +40,12 @@ router = APIRouter(
 async def run_configuration_optimization(
     project_id: str,
     adapter_id: str,
-    hyper_parameters: Union[
+    hyper_parameters: Annotated[Union[
         evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters,
         simulated_annealing.SimulatedAnnealingHyperparameters,
         tabu_search.TabuSearchHyperparameters,
         math_opt.MathOptHyperparameters,
-    ],
+    ], Body(examples=HYPERPARAMETER_EXAMPLES)],
 ):
     adapter = get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:

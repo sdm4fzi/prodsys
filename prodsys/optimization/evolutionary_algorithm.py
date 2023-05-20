@@ -12,7 +12,7 @@ from os import listdir
 from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
@@ -39,16 +39,24 @@ def register_functions_in_toolbox(
     solution_dict: dict,
     performances: dict,
     weights: tuple,
-    initial_solutions_folder: str
+    initial_solutions_folder: str,
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
     toolbox = base.Toolbox()
     if initial_solutions_folder:
-        initial_solutions = read_initial_solutions(initial_solutions_folder, base_configuration)
-        toolbox.register("random_configuration", random_configuration_with_initial_solution, initial_solutions)
+        initial_solutions = read_initial_solutions(
+            initial_solutions_folder, base_configuration
+        )
+        toolbox.register(
+            "random_configuration",
+            random_configuration_with_initial_solution,
+            initial_solutions,
+        )
     else:
-        toolbox.register("random_configuration", random_configuration, base_configuration)
+        toolbox.register(
+            "random_configuration", random_configuration, base_configuration
+        )
     toolbox.register(
         "individual",
         tools.initRepeat,
@@ -109,7 +117,7 @@ def run_evolutionary_algorithm(
     mutation_rate: float,
     crossover_rate: float,
     n_processes: int,
-    initial_solutions_folder: str = ""
+    initial_solutions_folder: str = "",
 ):
     adapters.Adapter.Config.validate = False
     adapters.Adapter.Config.validate_assignment = False
@@ -130,7 +138,7 @@ def run_evolutionary_algorithm(
         solution_dict=solution_dict,
         performances=performances,
         weights=weights,
-        initial_solutions_folder=initial_solutions_folder
+        initial_solutions_folder=initial_solutions_folder,
     )
 
     population = toolbox.population(n=population_size)
@@ -155,7 +163,9 @@ def run_evolutionary_algorithm(
         # Vary population
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
-        offspring = algorithms.varAnd(offspring, toolbox, cxpb=crossover_rate, mutpb=mutation_rate)
+        offspring = algorithms.varAnd(
+            offspring, toolbox, cxpb=crossover_rate, mutpb=mutation_rate
+        )
 
         # Evaluate the individuals
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
@@ -169,20 +179,59 @@ def run_evolutionary_algorithm(
             json.dump(performances, json_file)
     pool.close()
 
+
 class EvolutionaryAlgorithmHyperparameters(BaseModel):
-    seed: int
-    number_of_generations: int
-    population_size: int
-    mutation_rate: float
-    crossover_rate: float
-    number_of_processes: int
+    """
+    Hyperparameters for configuration optimization using an evolutionary algorithm.
+
+    Args:
+        seed (int): Seed for the random number generator.
+        number_of_generations (int): Number of generations to run the algorithm.
+        population_size (int): Number of individuals in each generation.
+        mutation_rate (float): Probability of mutating an individual.
+        crossover_rate (float): Probability of crossover between two individuals.
+        number_of_processes (int): Number of processes to use for parallelization.
+    """
+
+    seed: int = Field(0, description="Seed for the random number generator.")
+    number_of_generations: int = Field(
+        10, description="Number of generations to run the algorithm."
+    )
+    population_size: int = Field(
+        10, description="Number of individuals in each generation."
+    )
+    mutation_rate: float = Field(
+        0.1, description="Probability of mutating an individual."
+    )
+    crossover_rate: float = Field(
+        0.1, description="Probability of crossover between two individuals."
+    )
+    number_of_processes: int = Field(
+        1, description="Number of processes to use for parallelization."
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Evolutionary Algorithm Hperparameters",
+                "value": {
+                    "seed": 0,
+                    "number_of_generations": 10,
+                    "population_size": 10,
+                    "mutation_rate": 0.1,
+                    "crossover_rate": 0.1,
+                    "number_of_processes": 1,
+                },
+            }
+        }
+
 
 def optimize_configuration(
     base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
-    hyper_parameters: EvolutionaryAlgorithmHyperparameters
-):  
+    hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+):
     run_evolutionary_algorithm(
         save_folder,
         base_configuration_file_path,
@@ -192,5 +241,5 @@ def optimize_configuration(
         hyper_parameters.population_size,
         hyper_parameters.mutation_rate,
         hyper_parameters.crossover_rate,
-        hyper_parameters.number_of_processes
+        hyper_parameters.number_of_processes,
     )
