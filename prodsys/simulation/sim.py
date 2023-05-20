@@ -44,7 +44,7 @@ class Environment(core.Environment):
             super().run(time_range)
             if VERBOSE == 1:
                 self.pbar.update(time_range - self.last_update)
-                self.pbar.refresh()
+                self.pbar.close()
 
     def run_until(self, until: events.Event):
         super().run(until=until)

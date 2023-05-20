@@ -39,10 +39,18 @@
     "time_range": 2880 ,
     "maximum_breakdown_time": 180
   },
-  "optimize": ["throughput", "cost", "WIP"],
-  "weights": {
-    "throughput": 0.025,
-    "cost": 0.001,
-    "WIP": 1
-  }
+  "objectives": [
+    {
+      "name": "throughput",
+      "weight": 0.025
+    },
+    {
+      "name": "cost",
+      "weight": 0.001
+    },
+    {
+      "name": "WIP",
+      "weight": 1
+    }
+  ]
 }

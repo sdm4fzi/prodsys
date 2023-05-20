@@ -466,7 +466,7 @@ class MathOptimizer(BaseModel):
                     state_ids=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-            optimization_util.add_default_queues_to_resources(new_adapter)
+            util.add_default_queues_to_resources(new_adapter)
             simulation_results = optimization_util.evaluate(
                 self.adapter, solution_dict, performances, [new_adapter]
             )
@@ -490,6 +490,8 @@ def run_mathematical_optimization(
     number_of_solutions: int,
     adjusted_number_of_transport_resources: int,
 ):
+    adapters.Adapter.Config.validate = False
+    adapters.Adapter.Config.validate_assignment = False
     adapter = adapters.JsonAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     util.prepare_save_folder(save_folder)

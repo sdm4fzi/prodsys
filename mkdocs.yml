@@ -1,0 +1,7 @@
+site_name: prodsys Documentation
+theme: 
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings

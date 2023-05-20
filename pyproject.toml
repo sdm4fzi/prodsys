@@ -20,6 +20,7 @@ pandas = "^2.0.0"
 openpyxl = "^3.1.2"
 plotly = "^5.14.1"
 scipy = "^1.10.1"
+mkdocstrings = {version = ">=0.18", extras = ["python-legacy"]}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"
@@ -27,6 +28,7 @@ pytest = "^7.3.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
+mkdocs-material = "^9.1.13"
 
 [tool.poetry.group.experimental.dependencies]
 basyx-python-sdk = "^0.2.2"

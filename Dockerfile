@@ -4,11 +4,12 @@ COPY ./requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY ./fastapi_app.py /code/fastapi_app.py
+COPY ./app.py /code/app.py
 COPY ./conf /code/conf
 COPY ./examples /code/examples
 COPY ./prodsys /code/prodsys
+COPY ./app /code/app
 
 EXPOSE 8000
 
-CMD ["python", "fastapi_app.py", "fastapi=linux"]
+CMD ["python", "app.py", "fastapi=linux"]

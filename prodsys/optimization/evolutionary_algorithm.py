@@ -111,6 +111,8 @@ def run_evolutionary_algorithm(
     n_processes: int,
     initial_solutions_folder: str = ""
 ):
+    adapters.Adapter.Config.validate = False
+    adapters.Adapter.Config.validate_assignment = False
     base_configuration = adapters.JsonAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 

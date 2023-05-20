@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 import random
 from copy import deepcopy
 from typing import Dict, List, Union, Tuple, Literal, Callable
 from enum import Enum
 
 from uuid import uuid1
+from collections.abc import Iterable
 from pydantic import parse_obj_as
 
 from prodsys import adapters, runner
+from prodsys.adapters.adapter import add_default_queues_to_resources
+from prodsys.adapters.adapter import check_redudant_locations
+from prodsys.adapters.adapter import check_required_processes_available
+from prodsys.adapters.adapter import get_possible_production_processes_IDs
 from prodsys.util.post_processing import PostProcessor
 from prodsys.data_structures import (
     resource_data,
@@ -51,60 +58,12 @@ def get_weights(
     adapter: adapters.Adapter, direction: Literal["min", "max"]
 ) -> Tuple[float, ...]:
     weights = []
-    if not adapter.scenario_data.weights:
-        return tuple([1.0] * len(adapter.scenario_data.optimize))
-    for kpi_name in adapter.scenario_data.optimize:
-        weight = adapter.scenario_data.weights[kpi_name]
-        kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": kpi_name})
+    for objective in adapter.scenario_data.objectives:
+        kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
         if kpi.target != direction:
-            weight *= -1
-        weights.append(weight)
+            objective.weight *= -1
+        weights.append(objective.weight)
     return tuple(weights)
-
-
-def remove_queues_from_resource(
-    machine: resource_data.ProductionResourceData, adapter: adapters.Adapter
-) -> adapters.Adapter:
-    if machine.input_queues or machine.output_queues:
-        for queue_ID in machine.input_queues + machine.output_queues:
-            for queue in adapter.queue_data:
-                if queue.ID == queue_ID:
-                    adapter.queue_data.remove(queue)
-                    break
-        for machine in adapters.get_machines(adapter):
-            machine.input_queues = []
-            machine.output_queues = []
-        return adapter
-
-
-def remove_unused_queues_from_adapter(adapter: adapters.Adapter) -> adapters.Adapter:
-    for queue in adapter.queue_data:
-        if not any(
-            [
-                queue.ID in machine.input_queues + machine.output_queues
-                for machine in adapters.get_machines(adapter)
-                if machine.input_queues or machine.output_queues
-            ]
-            + [queue.ID in source.output_queues for source in adapter.source_data]
-            + [queue.ID in sink.input_queues for sink in adapter.sink_data]
-        ):
-            adapter.queue_data.remove(queue)
-    return adapter
-
-
-def add_default_queues_to_resources(
-    adapter: adapters.Adapter, queue_capacity=0.0
-) -> adapters.Adapter:
-    for machine in adapters.get_machines(adapter):
-        remove_queues_from_resource(machine, adapter)
-        remove_unused_queues_from_adapter(adapter)
-        input_queues, output_queues = adapters.get_default_queues_for_resource(
-            machine, queue_capacity
-        )
-        machine.input_queues = list(adapters.get_set_of_IDs(input_queues))
-        machine.output_queues = list(adapters.get_set_of_IDs(output_queues))
-        adapter.queue_data += input_queues + output_queues
-    return adapter
 
 
 def crossover(ind1, ind2):
@@ -172,33 +131,6 @@ def mutation(individual):
     clean_out_breakdown_states_of_resources(adapter_object)
 
     return (individual,)
-
-
-def get_possible_production_processes_IDs(
-    adapter_object: adapters.Adapter,
-) -> Union[List[str], List[Tuple[str, ...]]]:
-    possible_processes = adapter_object.process_data
-    if not any(
-        process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
-        for process in possible_processes
-    ):
-        return [
-            process.ID
-            for process in possible_processes
-            if isinstance(process, processes_data.ProductionProcessData)
-        ]
-    capability_processes = [
-        process
-        for process in possible_processes
-        if isinstance(process, processes_data.CapabilityProcessData)
-        and process.time_model_id is not None
-    ]
-    process_dict = {}
-    for process in capability_processes:
-        if not process.capability in process_dict.keys():
-            process_dict[process.capability] = []
-        process_dict[process.capability].append(process.ID)
-    return [tuple(value) for value in process_dict.values()]
 
 
 def add_machine(adapter_object: adapters.Adapter) -> bool:
@@ -647,20 +579,11 @@ def valid_num_process_modules(configuration: adapters.Adapter) -> bool:
             return False
     return True
 
-def valid_processes_available(configuration: adapters.Adapter) -> bool:
-    if set(
-        flatten(
-            [resource.process_ids for resource in adapters.get_machines(configuration)]
-        )
-    ) < set(flatten(get_possible_production_processes_IDs(configuration))):
-        return False
-    return True
-
 def valid_positions(configuration: adapters.Adapter) -> bool:
-    positions = [machine.location for machine in adapters.get_machines(configuration)]
-    if any(positions.count(location) > 1 for location in positions):
+    if not check_redudant_locations(configuration):
         return False
 
+    positions = [machine.location for machine in adapters.get_machines(configuration)]
     possible_positions = configuration.scenario_data.options.positions
     if any(position not in possible_positions for position in positions):
         return False
@@ -688,19 +611,14 @@ def check_valid_configuration(
         return False
     if not valid_transport_capacity(configuration):
         return False
-
     if not valid_num_process_modules(configuration):
         return False
-
-    if not valid_processes_available(configuration):
+    if not check_required_processes_available(configuration):
         return False
-    
     if not valid_positions(configuration):
         return False
-
     if not valid_reconfiguration_cost(configuration, base_configuration):
         return False
-
     return True
 
 
@@ -785,11 +703,10 @@ def evaluate(
     p = PostProcessor(df_raw=df)
 
     fitness = []
-    for kpi_name in adapter_object.scenario_data.optimize:
-        if kpi_name == performance_indicators.KPIEnum.COST:
+    for objective in adapter_object.scenario_data.objectives:
+        if objective.name == performance_indicators.KPIEnum.COST:
             fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
             continue
-        fitness.append(KPI_function_dict[kpi_name](p))
+        fitness.append(KPI_function_dict[objective.name](p))
 
     return fitness
-

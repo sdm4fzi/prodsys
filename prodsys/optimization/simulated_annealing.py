@@ -73,6 +73,8 @@ def run_simulated_annealing(
     updates: int,
     initial_solution_file_path: str = ""
 ):
+    adapters.Adapter.Config.validate = False
+    adapters.Adapter.Config.validate_assignment = False
     base_configuration = adapters.JsonAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 

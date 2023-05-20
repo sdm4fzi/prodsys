@@ -1,7 +1,5 @@
 import prodsys
 
-production_system = prodsys.adapters.JsonAdapter(ID="example_production_system", seed=2)
-
 # Create a time model for a production process and a transport process
 
 welding_time_model = prodsys.time_model_data.FunctionTimeModelData(
@@ -48,8 +46,6 @@ machine = prodsys.resource_data.ProductionResourceData(
     process_ids=[welding_process.ID],
 )
 
-machine_queues = prodsys.adapters.get_default_queues_for_resource(resource=machine, queue_capacity=3)
-
 # create a transport resource
 
 transport_resource = prodsys.resource_data.TransportResourceData(
@@ -83,19 +79,6 @@ arrival_time_model = prodsys.time_model_data.FunctionTimeModelData(
     scale=0
 )
 
-source_q = prodsys.queue_data.QueueData(
-    ID="SourceQueue",
-    description="Source queue",
-)
-
-
-sink_q = prodsys.queue_data.QueueData(
-    ID="SinkQueue",
-    description="Sink queue",
-)
-
-
-
 source = prodsys.source_data.SourceData(
     ID="source 1",
     description="Source 1 data description",
@@ -104,7 +87,6 @@ source = prodsys.source_data.SourceData(
     time_model_id="time model 3",
     router=prodsys.source_data.RouterType.SimpleRouter,
     routing_heuristic=prodsys.source_data.RoutingHeuristic.random,
-    output_queues=["SourceQueue"],
 )
 
 # Create a sink to drop the material
@@ -114,17 +96,19 @@ sink = prodsys.sink_data.SinkData(
     description="Sink 1 data description",
     location=[20.0, 20.0],
     material_type="material 1",
-    input_queues=["SinkQueue"],
 )
-    
 
-production_system.time_model_data = [welding_time_model, transport_time_model, arrival_time_model]
-production_system.process_data = [welding_process, transport_process]
-production_system.resource_data = [machine, transport_resource]
-production_system.material_data = [material]
-production_system.queue_data = [source_q, sink_q] + machine_queues[0] + machine_queues[1]
-production_system.source_data = [source]
-production_system.sink_data = [sink]
+production_system = prodsys.adapters.JsonAdapter(
+    time_model_data=[welding_time_model, transport_time_model, arrival_time_model],
+    process_data=[welding_process, transport_process],
+    resource_data=[machine, transport_resource],
+    material_data=[material],
+    source_data=[source],
+    sink_data=[sink],
+    )
+
+
+production_system.physical_validation()
 
 runner = prodsys.runner.Runner(adapter=production_system)
 runner.initialize_simulation()
