@@ -67,4 +67,12 @@ def flatten(xs):
         else:
             yield x
 
+def flatten_object(xs):
+    for x in xs:
+        if isinstance(x, list):
+            yield from flatten_object(x)
+        else:
+            yield x
+
+
 

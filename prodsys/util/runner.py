@@ -177,10 +177,10 @@ class Runner(BaseModel):
     def get_performance_data(self) -> performance_data.Performance:
         p = self.get_post_processor()
         kpis = []
-        kpis += p.System_WIP_total_and_per_product
-        kpis += p.get_throughput_and_output_KPIs
-        kpis += p.get_aggregated_throughput_time_KPIs
-        kpis += p.get_machine_state_KPIS
+        kpis += p.WIP_KPIs
+        kpis += p.throughput_and_output_KPIs
+        kpis += p.aggregated_throughput_time_KPIs
+        kpis += p.machine_state_KPIS
         event_data = self.get_event_data_of_simulation()
         return performance_data.Performance(kpis=kpis, event_log=event_data)
     

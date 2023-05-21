@@ -160,6 +160,7 @@ class WIP(KPI):
 
 class DynamicWIP(DynamicKPI, WIP):
     name: Literal[KPIEnum.DYNAMIC_WIP]
+    target: Literal["min"] = "min"
 
     class Config:
         schema_extra = {
@@ -201,6 +202,7 @@ class ThroughputTime(KPI):
 
 class DynamicThroughputTime(DynamicKPI, ThroughputTime):
     name: Literal[KPIEnum.DYNAMIC_THROUGHPUT_TIME]
+    target: Literal["min"] = "min"
 
     class Config:
         schema_extra = {

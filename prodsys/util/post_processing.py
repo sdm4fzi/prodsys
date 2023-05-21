@@ -13,6 +13,23 @@ WARM_UP_CUT_OFF = 0.15
 
 @dataclass
 class PostProcessor:
+    """
+    Class that represents a post processor for the simulation results. It provides methods to read the simulation results from a csv file and to calculate simulation result analysis data and KPIs.
+
+    The data frame that contains the raw simulation results contains the following columns:
+        -Time: Time of the event
+        -Resource: ID fo the Resource that performed the event
+        -State: ID of the State of the resource (production states, transport states, breakdown states, setup states)
+        -State Type: Type of the state according to the prodsys.simulation.state.StateTypeEnum
+        -Activity: Activity of the resource according to the prodsys.simulation.state.StateEnum
+        -Material: ID of the Material that is processed by the resource only for creation and production states
+        -Expected End Time: Expected end time of the state at the beginning of the process
+        -Target location: Target location of the material at the end of the process
+
+    Args:
+        filepath (str): Path to the csv file with the simulation results.
+        df_raw (pd.DataFrame): Data frame with the simulation results.
+    """
     filepath: str = field(default="")
     df_raw: pd.DataFrame = field(default=None)
 
@@ -21,6 +38,12 @@ class PostProcessor:
             self.read_df_from_csv()
 
     def read_df_from_csv(self, filepath_input: str = None):
+        """
+        Reads the simulation results from a csv file.
+
+        Args:
+            filepath_input (str, optional): Path to the csv file with the simulation results. Defaults to None and the at instantiation provided filepath is used.
+        """
         if filepath_input:
             self.filepath = filepath_input
         self.df_raw = pd.read_csv(self.filepath)
@@ -42,7 +65,18 @@ class PostProcessor:
         )
 
     @cached_property
-    def get_prepared_df(self) -> pd.DataFrame:
+    def df_prepared(self) -> pd.DataFrame:
+        """
+        Adds to self.df_raw the following columns:
+            -DateTime: Time of the event
+            -Combined_activity: Activity and state of the event combined for easier filtering
+            -Material_type: Type of the material
+            -State_type: Type of the state according to the StateTypeEnum
+            -State_sorting_Index: Index to sort the states in the correct order
+            
+        Returns:
+            pd.DataFrame: Data frame with the simulation results and the added columns.
+        """
         df = self.df_raw.copy()
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
@@ -80,8 +114,14 @@ class PostProcessor:
         return df
 
     @cached_property
-    def get_finished_material_df(self) -> pd.DataFrame:
-        df = self.get_prepared_df.copy()
+    def df_finished_material(self) -> pd.DataFrame:
+        """
+        Returns a prepared data frame (df_prepared) with only finished materials.
+
+        Returns:
+            pd.DataFrame: Data frame with only finished materials.
+        """
+        df = self.df_prepared.copy()
         finished_material = df.loc[
             (df["Material"].notna()) & (df["Activity"] == "finished material")
         ]["Material"].unique()
@@ -99,9 +139,19 @@ class PostProcessor:
         return df_material_info
 
     def get_eventlog_for_material(self, material_type: str = "Material_1"):
+        """
+        Returns an event log for a specific material type. It can be further anaylzed with the pm4py library.
+
+        Args:
+            material_type (str, optional): Type of material that should be considered in the event log. Defaults to "Material_1".
+
+        Returns:
+            pm4py.event_log.EventLog: Event log for a specific material type.
+
+        """
         import pm4py
 
-        df_finished_material = self.get_finished_material_df.copy()
+        df_finished_material = self.df_finished_material.copy()
         df_for_pm4py = df_finished_material.loc[
             df_finished_material["Material"].notnull()
         ]
@@ -122,6 +172,9 @@ class PostProcessor:
         return log
 
     def save_inductive_petri_net(self):
+        """
+        Saves an inductive petri net for a specific material type, that shows the process model realized in the simulation for finishing the material.
+        """
         import pm4py
         from pm4py.visualization.petri_net import visualizer as pn_visualizer
 
@@ -140,9 +193,15 @@ class PostProcessor:
         pn_visualizer.save(gviz, "data/inductive_frequency.png")
 
     @cached_property
-    def get_throughput_data_frame(self) -> pd.DataFrame:
-        df = self.get_prepared_df.copy()
-        df_finished_material = self.get_finished_material_df.copy()
+    def df_throughput(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the throughput time for each finished material.
+
+        Returns:
+            pd.DataFrame: Data frame with the throughput time for each finished material.
+        """
+        df = self.df_prepared.copy()
+        df_finished_material = self.df_finished_material.copy()
         min = df_finished_material.groupby(by="Material")["Time"].min()
         min.name = "Start_time"
         max = df_finished_material.groupby(by="Material")["Time"].max()
@@ -160,12 +219,18 @@ class PostProcessor:
         return df_tpt
     
     @cached_property
-    def get_dynamic_thoughput_KPIs(self) -> List[performance_indicators.KPI]:
-        df_tp = self.get_throughput_data_frame.copy()
+    def dynamic_thoughput_time_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of Dynamic Throughput KPI values for the throughput time of each finished material.
+
+        Returns:
+            List[performance_indicators.KPI]: List of Dynamic Throughput KPI values.
+        """
+        df_tp = self.df_throughput.copy()
         KPIs = []
         context = (performance_indicators.KPILevelEnum.SYSTEM,
             performance_indicators.KPILevelEnum.MATERIAL,)
-        for index, values in df_tp.iterrows:
+        for index, values in df_tp.iterrows():
             KPIs.append(
                 performance_indicators.DynamicThroughputTime(
                     name=performance_indicators.KPIEnum.DYNAMIC_THROUGHPUT_TIME,
@@ -177,18 +242,31 @@ class PostProcessor:
                     end_time=values["End_time"],
                 )
             )
+        return KPIs
 
     @cached_property
-    def get_aggregated_throughput_time_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame.copy()
+    def df_aggregated_throughput_time(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the average throughput time for each material type.
+
+        Returns:
+            pd.DataFrame: Data frame with the average throughput time for each material type.
+        """
+        df = self.df_throughput.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df = df.groupby(by=["Material_type"])["Throughput_time"].mean()
         return df
     
     @cached_property
-    def get_aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
-        ser = self.get_aggregated_throughput_time_data_frame.copy()
+    def aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average Throughput Time KPI values for each material type.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average Throughput Time KPI values.
+        """
+        ser = self.df_aggregated_throughput_time.copy()
         KPIs = []
         context = (performance_indicators.KPILevelEnum.SYSTEM,
             performance_indicators.KPILevelEnum.MATERIAL_TYPE,)
@@ -204,8 +282,14 @@ class PostProcessor:
         return KPIs
 
     @cached_property
-    def get_aggregated_output_and_throughput_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame.copy()
+    def df_aggregated_output_and_throughput(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the average throughput and output for each material type.
+
+        Returns:
+            pd.DataFrame: Data frame with the average throughput and output for each material type.
+        """
+        df = self.df_throughput.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count().to_frame()
@@ -216,8 +300,14 @@ class PostProcessor:
         return df_tp
     
     @cached_property
-    def get_throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
-        df = self.get_aggregated_output_and_throughput_data_frame.copy()
+    def throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average Throughput and Output KPI values for each material type.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average Throughput and Output KPI values.
+        """
+        df = self.df_aggregated_output_and_throughput.copy()
         KPIs = []
         context = (performance_indicators.KPILevelEnum.SYSTEM,
             performance_indicators.KPILevelEnum.MATERIAL_TYPE,)
@@ -241,8 +331,14 @@ class PostProcessor:
         return KPIs
 
     @cached_property
-    def get_aggregated_output_data_frame(self) -> pd.DataFrame:
-        df = self.get_throughput_data_frame.copy()
+    def df_aggregated_output(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the total output for each material type.
+
+        Returns:
+            pd.DataFrame: Data frame with the total output for each material type.
+        """
+        df = self.df_throughput.copy()
         max_time = df["End_time"].max()
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
         df_tp = df.groupby(by="Material_type")["Material"].count()
@@ -250,8 +346,19 @@ class PostProcessor:
         return df_tp
 
     @cached_property
-    def get_df_with_machine_states(self) -> pd.DataFrame:
-        df = self.get_prepared_df.copy()
+    def df_resource_states(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the machine states and the time spent in each state. 
+        There are 4 different states a resource can spend its time: 
+            -SB: A resource is in standby state, could process but no material is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the machine states and the time spent in each state.
+        """
+        df = self.df_prepared.copy()
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -313,8 +420,20 @@ class PostProcessor:
         return df
 
     @cached_property
-    def get_time_per_state_of_resources(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states.copy()
+    def df_aggregated_resource_states(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the total time spent in each state of each resource. 
+
+        There are 4 different states a resource can spend its time:
+            -SB: A resource is in standby state, could process but no material is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the total time spent in each state of each resource.
+        """
+        df = self.df_resource_states.copy()
 
         df_time_per_state = df.groupby(["Resource", "Time_type"])[
             "time_increment"
@@ -337,8 +456,14 @@ class PostProcessor:
         return df_time_per_state
     
     @cached_property
-    def get_machine_state_KPIS(self) -> List[performance_indicators.KPI]:
-        df = self.get_time_per_state_of_resources.copy()
+    def machine_state_KPIS(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of KPI values for the time spent in each state of each resource.
+
+        Returns:
+            List[performance_indicators.KPI]: List of KPI values for the time spent in each state of each resource.
+        """
+        df = self.df_aggregated_resource_states.copy()
         KPIs = []
         context = (performance_indicators.KPILevelEnum.RESOURCE, )
         class_dict = {
@@ -371,13 +496,25 @@ class PostProcessor:
         return df
 
     @cached_property
-    def get_df_with_WIP(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states.copy()
+    def df_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time in the total production system.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time in the total production system.
+        """
+        df = self.df_resource_states.copy()
         return self.get_WIP_KPI(df)
 
     @cached_property
-    def get_df_with_WIP_per_product(self) -> pd.DataFrame:
-        df = self.get_df_with_machine_states.copy()
+    def df_WIP_per_product(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each material type.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each material type.
+        """
+        df = self.df_resource_states.copy()
         df = self.get_df_with_material_entries(df).copy()
         df = df.reset_index()
         for material_type in df["Material_type"].unique():
@@ -391,10 +528,16 @@ class PostProcessor:
         return df
     
     @cached_property
-    def get_dynamic_WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        df = self.get_df_with_WIP.copy()
+    def dynamic_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of Dynamic WIP KPI values for the WIP over time for each material type and the whole system.
+
+        Returns:
+            List[performance_indicators.KPI]: List of Dynamic WIP KPI values.
+        """
+        df = self.df_WIP.copy()
         df["Material_type"] = "Total"
-        df_per_material = self.get_df_with_WIP_per_product.copy()
+        df_per_material = self.df_WIP_per_product.copy()
         df = pd.concat([df, df_per_material])
         df = df.loc[df["WIP_Increment"] != 0]
 
@@ -424,9 +567,15 @@ class PostProcessor:
 
 
     @cached_property
-    def get_df_with_aggregated_WIP(self) -> pd.Series:
-        df = self.get_df_with_WIP_per_product.copy()
-        df_total_wip = self.get_df_with_WIP.copy()
+    def df_aggregated_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the average WIP for each material type and the whole system.
+
+        Returns:
+            pd.DataFrame: Dataframe with the average WIP for each material type and the whole system.
+        """
+        df = self.df_WIP_per_product.copy()
+        df_total_wip = self.df_WIP.copy()
         df_total_wip["Material_type"] = "Total"
         df = pd.concat([df, df_total_wip])
 
@@ -440,8 +589,14 @@ class PostProcessor:
         return df
 
     @cached_property
-    def System_WIP_total_and_per_product(self) -> List[performance_indicators.KPI]:
-        ser = self.get_df_with_aggregated_WIP.copy()
+    def WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average WIP KPI values for each material type and the whole system.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average WIP KPI values.
+        """
+        ser = self.df_aggregated_WIP.copy()
         KPIs = []
         for index, value in ser.items():
             if index == "Total":
@@ -464,20 +619,26 @@ class PostProcessor:
         return KPIs
 
     def get_aggregated_data(self) -> dict:
+        """
+        Returns a dictionary with the aggregated data for the simulation results.
+
+        Returns:
+            dict: Dictionary with the aggregated data for throughput, wip, throughput time and resource states.
+        """
         data = {}
         data["Throughput"] = (
-            self.get_aggregated_output_and_throughput_data_frame.copy()
+            self.df_aggregated_output_and_throughput.copy()
             .reset_index()
             .to_dict()
         )
-        data["WIP"] = self.get_df_with_aggregated_WIP.copy().reset_index().to_dict()
+        data["WIP"] = self.df_aggregated_WIP.copy().reset_index().to_dict()
         data["Throughput time"] = (
-            self.get_aggregated_throughput_time_data_frame.copy()
+            self.df_aggregated_throughput_time.copy()
             .reset_index()
             .to_dict()
         )
         data["Resource states"] = (
-            self.get_time_per_state_of_resources.copy()
+            self.df_aggregated_resource_states.copy()
             .set_index(["Resource", "Time_type"])
             .reset_index()
             .to_dict()
@@ -486,12 +647,12 @@ class PostProcessor:
         return data
 
     def get_aggregated_throughput_time_data(self) -> List[float]:
-        return list(self.get_aggregated_throughput_time_data_frame.values)
+        return list(self.df_aggregated_throughput_time.values)
 
     def get_aggregated_throughput_data(self) -> List[float]:
-        return list(self.get_aggregated_output_data_frame.values)
+        return list(self.df_aggregated_output.values)
 
     def get_aggregated_wip_data(self) -> List[float]:
-        s = self.get_df_with_aggregated_WIP.copy()
+        s = self.df_aggregated_WIP.copy()
         s = s.drop(labels=["Total"])
         return list(s.values)

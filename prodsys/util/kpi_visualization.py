@@ -14,7 +14,7 @@ def hex_to_rgba(h, alpha):
     return tuple([int(h.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)] + [alpha])
 
 def plot_throughput_time_distribution(post_processor: post_processing.PostProcessor):
-    df_tp = post_processor.get_throughput_data_frame
+    df_tp = post_processor.df_throughput
     grouped = df_tp.groupby(by="Material_type")["Throughput_time"].apply(list)
 
     values = grouped.values
@@ -28,7 +28,7 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
     fig.show()
 
 def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor):
-    df_tp = post_processor.get_throughput_data_frame
+    df_tp = post_processor.df_throughput
     fig = px.scatter(
         df_tp,
         x="Start_time",
@@ -42,7 +42,7 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
 
 
 def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor):
-    df_time_per_state = post_processor.get_time_per_state_of_resources
+    df_time_per_state = post_processor.df_aggregated_resource_states
 
     fig = px.bar(
         df_time_per_state,
@@ -60,11 +60,11 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
 
 
 def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
-    df = post_processor.get_df_with_WIP.copy()
+    df = post_processor.df_WIP.copy()
     fig = px.scatter(df, x="Time", y="WIP")
     df["Material_type"] = "Total"
 
-    df_per_material = post_processor.get_df_with_WIP_per_product.copy()
+    df_per_material = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_material])
 
@@ -111,11 +111,11 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
     fig.show()
 
 def plot_WIP(post_processor: post_processing.PostProcessor):
-    df = post_processor.get_df_with_WIP.copy()
+    df = post_processor.df_WIP.copy()
     fig = px.scatter(df, x="Time", y="WIP")
     df["Material_type"] = "Total"
 
-    df_per_material = post_processor.get_df_with_WIP_per_product.copy()
+    df_per_material = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_material])
     fig = px.scatter(
@@ -135,18 +135,18 @@ def plot_WIP(post_processor: post_processing.PostProcessor):
 def print_aggregated_data(post_processor: post_processing.PostProcessor):
     print("\n------------- Throughput -------------\n")
 
-    print(post_processor.get_aggregated_output_and_throughput_data_frame)
+    print(post_processor.df_aggregated_output_and_throughput)
 
     print("------------- WIP -------------\n")
-    print(post_processor.get_df_with_aggregated_WIP)
+    print(post_processor.df_aggregated_WIP)
 
     print("\n------------- Throughput time -------------\n")
-    print(post_processor.get_aggregated_throughput_time_data_frame)
+    print(post_processor.df_aggregated_throughput_time)
 
     print("\n------------- Resource states -------------\n")
 
     print(
-        post_processor.get_time_per_state_of_resources.copy().set_index(["Resource", "Time_type"])
+        post_processor.df_aggregated_resource_states.copy().set_index(["Resource", "Time_type"])
     )
 
 def plot_inductive_bpmn(post_processor: post_processing.PostProcessor):

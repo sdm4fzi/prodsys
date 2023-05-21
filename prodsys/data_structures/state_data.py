@@ -58,7 +58,7 @@ class BreakDownStateData(StateData):
     Args:
         ID (str): ID of the state.
         description (str): Description of the state.
-        time_model_id (str): Time model ID of the state.
+        time_model_id (str): Time model ID of the state. Specifies the time interval between breakdowns.
         type (StateTypeEnum): Type of the state.
         repair_time_model_id (str): Time model ID of the repair time.
     """
@@ -176,8 +176,8 @@ class SetupStateData(StateData):
         description (str): Description of the state.
         time_model_id (str): Time model ID of the state.
         type (StateTypeEnum): Type of the state.
-        origin_setup (str): ID of the origin setup.
-        target_setup (str): ID of the target setup.
+        origin_setup (str): ID of the origin process for the setup.
+        target_setup (str): ID of the target process for the setup.
     """
 
     type: Literal[StateTypeEnum.SetupState]
