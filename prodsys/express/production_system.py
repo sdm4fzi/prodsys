@@ -62,6 +62,10 @@ def remove_duplicate_items(
 class ProductionSystem(core.ExpressObject):
     """
     Class that represents a production system. A production system containts of resources, materials, sources and sinks.
+    It is the `prodsys.express` equivalent to the 'ProductionSystemAdapter' of the `prodsys.adapters` module and
+    can be converted to this data object. In contrast to the adapter,
+    this class nests the objects in a tree structure, which makes it easier to work with when instantiating
+    a production system, but more complicated when reviewing the data itself.
 
     Args:
         resources (List[resources.Resource]): Resources of the production system.
@@ -77,7 +81,7 @@ class ProductionSystem(core.ExpressObject):
 
     def to_data_object(self) -> prodsys.adapters.ProductionSystemAdapter:
         """
-        Converts the express object (prodsys.express) to a data object (prodsys.data_structures).
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             prodsys.adapters.Adapter: An instance of the data object.
@@ -94,7 +98,9 @@ class ProductionSystem(core.ExpressObject):
         )
         processes = remove_duplicate_items(processes)
 
-        states = list(util.flatten_object([resource.states for resource in self.resources]))
+        states = list(
+            util.flatten_object([resource.states for resource in self.resources])
+        )
         states = remove_duplicate_items(states)
 
         time_models = (
@@ -118,20 +124,22 @@ class ProductionSystem(core.ExpressObject):
         source_data = [source.to_data_object() for source in self.sources]
         sink_data = [sink.to_data_object() for sink in self.sinks]
 
-        queue_data = list(util.flatten_object(
-            [s._output_queues for s in self.sources]
-            + [
-                r._input_queues
-                for r in self.resources
-                if isinstance(r, resources.ProductionResource)
-            ]
-            + [
-                r._output_queues
-                for r in self.resources
-                if isinstance(r, resources.ProductionResource)
-            ]
-            + [s._input_queues for s in self.sinks]
-        ))
+        queue_data = list(
+            util.flatten_object(
+                [s._output_queues for s in self.sources]
+                + [
+                    r._input_queues
+                    for r in self.resources
+                    if isinstance(r, resources.ProductionResource)
+                ]
+                + [
+                    r._output_queues
+                    for r in self.resources
+                    if isinstance(r, resources.ProductionResource)
+                ]
+                + [s._input_queues for s in self.sinks]
+            )
+        )
         return prodsys.adapters.JsonProductionSystemAdapter(
             time_model_data=time_model_data,
             process_data=process_data,
@@ -142,20 +150,34 @@ class ProductionSystem(core.ExpressObject):
             sink_data=sink_data,
             queue_data=queue_data,
         )
-    
-    def run(self, time_range: float=2880):
+
+    def run(self, time_range: float = 2880):
         self._runner = prodsys.runner.Runner(adapter=self.to_data_object())
         self._runner.initialize_simulation()
         self._runner.run(time_range)
-    
+
+    def validate(self):
+        """
+        Validates the production system. Checks if the production system is valid.
+
+        Raises:
+            ValueError: If the production system is not valid.
+        """
+        adapter = self.to_data_object()
+        adapter.physical_validation()
+
     @property
     def runner(self):
         if not self._runner:
-            raise ValueError("Runner has not been initialized. Please run the simulation first with the run function.")
+            raise ValueError(
+                "Runner has not been initialized. Please run the simulation first with the run function."
+            )
         return self._runner
-    
+
     @property
     def post_processor(self):
         if not self._runner:
-            raise ValueError("Runner has not been initialized. Please run the simulation first with the run function.")
+            raise ValueError(
+                "Runner has not been initialized. Please run the simulation first with the run function."
+            )
         return self._runner.get_post_processor()

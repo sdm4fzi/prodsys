@@ -1,3 +1,11 @@
+"""
+In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on materials. Transport resources are resources that can transport materials from one location to another. Both types of resources are represented by the `Resource` class. The `Resource` class is an abstract base class and cannot be instantiated. Instead, the `ProductionResource` and `TransportResource` classes can be used to represent production resources and transport resources, respectively.
+
+The following resources are available:
+
+- `ProductionResource`: Class that represents a production resource.
+- `TransportResource`: Class that represents a transport resource.
+"""
 from typing import List, Optional, Union
 from uuid import uuid1
 
@@ -51,43 +59,40 @@ class ProductionResource(Resource, core.ExpressObject):
 
     Examples:
         Production resource with a capacity of 2 and 2 production processes:
-        >>> import prodsys.express as psx
-        >>> welding_time_model = psx.time_model_data.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
-        >>> screwing_time_model = psx.time_model_data.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=10.0,
-        ...     scale=2.0,
-        ... )
-        >>> welding_process = psx.process.ProductionProcess(
-        ...     time_model=welding_time_model
-        ...     )
-        >>> screwing_process = psx.process.ProductionProcess(
-        ...     time_model=screwing_time_model
-        ...     )
-        >>> production_resource = psx.resource.ProductionResource(
-        ...     processes=[welding_process, screwing_process],
-        ...     location=[10.0, 10.0]
-        ...     capacity=2
-        ...     )
+        ``` py
+        import prodsys.express as psx
+        welding_time_model = psx.time_model_data.FunctionTimeModel(
+            distribution_function="normal",
+            location=20.0,
+            scale=5.0,
+        )
+        screwing_time_model = psx.time_model_data.FunctionTimeModel(
+            distribution_function="normal",
+            location=10.0,
+            scale=2.0,
+        )
+        welding_process = psx.process.ProductionProcess(
+            time_model=welding_time_model
+        )
+        screwing_process = psx.process.ProductionProcess(
+            time_model=screwing_time_model
+        )
+        psx.ProductionResource(
+            processes=[welding_process, screwing_process],
+            location=[10.0, 10.0]
+            capacity=2
+        )
+        ```
     """
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
-    # location: conlist(float, min_items=2, max_items=2)
-    # capacity: int = 1
-    # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
-    # controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
     control_policy: resource_data.ResourceControlPolicy = resource_data.ResourceControlPolicy.FIFO
     queue_size: Optional[int] = 0
-    # ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
     def to_data_object(self) -> resource_data.ProductionResourceData:
         """
-        Converts the object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             resource_data.ProductionResourceData: Data object of the express object.
@@ -124,18 +129,20 @@ class TransportResource(Resource, core.ExpressObject):
 
     Examples:
         Transport resource with a capacity of 1:
-        >>> import prodsys.express as psx
-        >>> time_model = psx.time_model_data.ManhattanDistanceTimeModel(
-        ...     speed=1.0,
-        ...     reaction_time=1.0,
-        ...     )
-        >>> transport_process = psx.process.TransportProcess(
-        ...     time_model=time_model
-        ...     )
-        >>> transport_resource = psx.resource.TransportResource(
-        ...     processes=[transport_process],
-        ...     location=[10.0, 10.0]
-        ...     )
+        ``` py
+        import prodsys.express as psx
+        time_model = psx.time_model_data.ManhattanDistanceTimeModel(
+            speed=1.0,
+            reaction_time=1.0,
+        )
+        transport_process = psx.process.TransportProcess(
+            time_model=time_model
+        )
+        psx.TransportResource(
+            processes=[transport_process],
+            location=[10.0, 10.0]
+        )
+        ```
     """
     processes: List[process.TransportProcess]
     location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list)
@@ -150,7 +157,7 @@ class TransportResource(Resource, core.ExpressObject):
 
     def to_data_object(self) -> resource_data.TransportResourceData:
         """
-        Converts the object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             resource_data.TransportResourceData: Data object of the express object.

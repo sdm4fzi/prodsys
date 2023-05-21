@@ -1,3 +1,13 @@
+"""
+The `processes_data` module contains the `prodsys.data_structure` classes to represent the processes that can 
+be performed on materials by resources.
+
+The following processes are possible:
+- `ProductionProcessData`: A process that can be performed on a material by a production resource.
+- `CapabilityProcessData`: A process that can be performed on a material by a resource, based on the capability of the resource.
+- `TransportProcessData`: A process that can be performed on a material by a transport resource.
+"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -47,6 +57,18 @@ class ProductionProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.ProductionProcesses]): Type of the process.
+
+    Examples:
+        A production process with ID "P1", description "Process 1" and time model ID "function_time_model_1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.ProductionProcessData(
+            ID="P1",
+            description="Process 1",
+            time_model_id="function_time_model_1",
+            type="ProductionProcesses",
+        )
+        ```
     """
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
@@ -75,6 +97,19 @@ class CapabilityProcessData(ProcessData):
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.CapabilityProcesses]): Type of the process.
         capability (str): Capability of the process.
+
+    Examples:
+        A capability process with ID "P1", description "Process 1", time model ID "function_time_model_1" and capability "C1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.CapabilityProcessData(
+            ID="P1",
+            description="Process 1",
+            time_model_id="function_time_model_1",
+            type="CapabilityProcesses",
+            capability="C1",
+        )
+        ```
     """
 
     type: Literal[ProcessTypeEnum.CapabilityProcesses]
@@ -104,6 +139,18 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
+
+    Examples:
+        A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.TransportProcessData(
+            ID="TP1",
+            description="Transport Process 1",
+            time_model_id="manhattan_time_model_1",
+            type="TransportProcesses",
+        )
+        ```
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]

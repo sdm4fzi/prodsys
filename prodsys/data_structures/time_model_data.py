@@ -1,3 +1,13 @@
+"""
+The `time_model` module contains classes to specify time models in the simulation for the arrival
+of products, performance of processes and transports and the duration of states.
+
+The following time models are possible:
+- `SequentialTimeModelData`: A time model that is based on a sequence of values.
+- `FunctionTimeModelData`: A time model that is based on a distribution function which gets sampled.
+- `ManhattanDistanceTimeModelData`: A time model that is based on the manhattan distance between two nodes and a constant velocity.
+"""
+
 from __future__ import annotations
 
 from typing import List, Literal, Union
@@ -29,12 +39,14 @@ class SequentialTimeModelData(CoreAsset):
 
     Examples:
         Sequential time model with 7 time values:
-        >>> from prodsys.data_structures import time_model_data
-        >>> time_model_data.SequentialTimeModelData(
-        ...     ID="sequence_time_model_1",
-        ...     description="Examplary sequence time model",
-        ...     sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-        ... )
+        ```	py
+        import prodsys
+        prodsys.time_model_data.SequentialTimeModelData(
+            ID="sequence_time_model_1",
+            description="Examplary sequence time model",
+            sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+        )
+        ```
     """
 
     sequence: List[float]
@@ -65,14 +77,16 @@ class FunctionTimeModelData(CoreAsset):
 
     Examples:
         Normal distribution time model with 20 minutes:
-        >>> from prodsys.data_structures import time_model_data
-        >>> time_model_data.FunctionTimeModelData(
-        ...     ID="function_time_model_1",
-        ...     description="normal distribution time model with 20 minutes",
-        ...     distribution_function=time_model_data.FunctionTimeModelEnum.normal,
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
+        ``` py
+        import prodsys
+        prodsys.time_model_data.FunctionTimeModelData(
+            ID="function_time_model_1",
+            description="normal distribution time model with 20 minutes",
+            distribution_function=prodsys.FunctionTimeModelEnum.normal,
+            location=20.0,
+            scale=5.0,
+        )
+        ```
     """
 
     distribution_function: FunctionTimeModelEnum
@@ -106,14 +120,15 @@ class ManhattanDistanceTimeModelData(CoreAsset):
         reaction_time (float): Reaction time of the transport.
 
     Examples:
-        Manhattan time model with speed 180 m/min = 3 m/s:
-        >>> from prodsys.data_structures import time_model_data
-        >>> time_model_data.ManhattanDistanceTimeModelData(
-        ...     ID="manhattan_time_model_1",
-        ...     description="manhattan time model with speed 180 m/min = 3 m/s",
-        ...     speed=30.0,
-        ...     reaction_time=0.15,
-        ... )
+        Manhattan time model with speed 180 m/min = 3 m/s and reaction time 0.15 minutes:
+        ``` py
+        import prodsys
+        time_model_data.ManhattanDistanceTimeModelData(
+            ID="manhattan_time_model_1",
+            description="manhattan time model with speed 180 m/min = 3 m/s",
+            speed=180.0,
+            reaction_time=0.15,
+        )
     """
 
     speed: float

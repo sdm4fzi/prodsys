@@ -1,3 +1,12 @@
+"""
+The `time_model` module contains classes to specify time models in the simulation for the arrival
+of products, performance of processes and the duration of states.
+
+The following time models are possible:
+- `SequentialTimeModel`: A time model that is based on a sequence of values.
+- `FunctionTimeModel`: A time model that is based on a distribution function which gets sampled.
+- `ManhattanDistanceTimeModel`: A time model that is based on the manhattan distance between two nodes and a constant velocity.
+"""
 from __future__ import annotations
 
 from typing import List, Optional, Union
@@ -20,10 +29,12 @@ class SequentialTimeModel(core.ExpressObject):
 
     Examples:
         Sequential time model with 7 time values:
-        >>> import prodsys.express as psx
-        >>> psx.SequentialTimeModel(
-        ...     sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-        ... )
+        ``` py
+        import prodsys.express as psx
+        psx.SequentialTimeModel(
+            sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+        )
+        ```
     """
     sequence: List[float]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -31,7 +42,7 @@ class SequentialTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.SequentialTimeModelData:
         """
-        Converts the object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             time_model_data.SequentialTimeModelData: Data object of the express object.
@@ -56,12 +67,14 @@ class FunctionTimeModel(core.ExpressObject):
 
     Examples:
         Normal distribution time model with 20 minutes mean and 5 minutes standard deviation:
-        >>> import prodsys.express as psx
-        >>> psx.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
+        ``` py
+        import prodsys.express as psx
+        psx.FunctionTimeModel(
+            distribution_function="normal",
+            location=20.0,
+            scale=5.0,
+        )
+        ```
     """
     distribution_function: time_model_data.FunctionTimeModelEnum
     location: float
@@ -70,7 +83,7 @@ class FunctionTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.FunctionTimeModelData:
         """
-        Converts the express object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             time_model_data.FunctionTimeModelData: Data object of the express object.
@@ -94,12 +107,14 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
         reaction_time (float): Reaction time of the driver in minutes.
 
     Examples:
-        Manhattan distance time model with 20 minutes mean and 5 minutes standard deviation:
-        >>> import prodsys.express as psx
-        >>> psx.ManhattanDistanceTimeModel(
-        ...     speed=20.0,
-        ...     reaction_time=5.0,
-        ... )
+        Manhattan distance time model with a speed of 50 meters per minute and a reaction time of 0.5 minutes:
+        ``` py
+        import prodsys.express as psx
+        psx.ManhattenDistanceTimeModel(
+            speed=50.0,
+            reaction_time=0.5,
+        )
+        ```
     """
     speed: float
     reaction_time: float
@@ -107,7 +122,7 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.ManhattanDistanceTimeModelData:
         """
-        Converts the express object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             time_model_data.ManhattanDistanceTimeModelData: Data object of the express object.

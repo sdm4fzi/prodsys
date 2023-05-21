@@ -13,6 +13,14 @@ if TYPE_CHECKING:
 
 
 class SinkFactory(BaseModel):
+    """
+    Factory class that creates and stores `prodsys.simulation` sink objects from `prodsys.data_structures` sink objects.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+        material_factory (material_factory.MaterialFactory): Factory that creates material objects.
+        queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
+    """
     env: sim.Environment
     material_factory: material_factory.MaterialFactory
     queue_factory: queue_factory.QueueFactory
@@ -23,6 +31,12 @@ class SinkFactory(BaseModel):
         arbitrary_types_allowed = True
 
     def create_sinks(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates sink objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): Adapter that contains the sink data.
+        """
         for data in adapter.sink_data:
             self.add_sink(data)
 
@@ -40,13 +54,39 @@ class SinkFactory(BaseModel):
         input_queues = self.queue_factory.get_queues(_sink.data.input_queues)
         _sink.add_input_queues(input_queues)
 
-    def get_sink(self, ID) -> sink.Sink:
+    def get_sink(self, ID: str) -> sink.Sink:
+        """
+        Method returns a sink object with the given ID.
+        
+        Args:
+            ID (str): ID of the sink object.
+        Returns:
+            sink.Sink: Sink object with the given ID.
+        """
         return [s for s in self.sinks if s.data.ID == ID].pop()
 
     def get_sinks(self, IDs: List[str]) -> List[sink.Sink]:
+        """
+        Method returns a list of sink objects with the given IDs.
+
+        Args:
+            IDs (List[str]): List of IDs that is used to sort the sink objects.
+
+        Returns:
+            List[sink.Sink]: List of sink objects with the given IDs.
+        """
         return [s for s in self.sinks if s.data.ID in IDs]
 
-    def get_sinks_with_material_type(self, __material_type: str):
+    def get_sinks_with_material_type(self, __material_type: str) -> List[sink.Sink]:
+        """
+        Method returns a list of sink objects with the given material type.
+
+        Args:
+            __material_type (str): Material type that is used to sort the sink objects.
+
+        Returns:
+            List[sink.Sink]: List of sink objects with the given material type.
+        """
         return [s for s in self.sinks if __material_type == s.data.material_type]
 
 from prodsys.factories import material_factory, queue_factory   

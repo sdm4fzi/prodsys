@@ -11,29 +11,58 @@ if TYPE_CHECKING:
     from prodsys.data_structures import queue_data
 
 class QueueFactory(BaseModel):
+    """
+    Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.data_structures` queue objects.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+
+
+    Returns:
+        _type_: _description_
+    """
     env: sim.Environment
 
     queues: List[store.Queue] = []
-    queues_data: List[queue_data.QueueData] = []
 
     class Config:
         arbitrary_types_allowed = True
 
     def create_queues(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates queue objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): _description_
+        """
         for queue_data in adapter.queue_data:
             self.add_queue(queue_data)
 
     def add_queue(self, queue_data: queue_data.QueueData):
         values = {}
         values.update({"env": self.env, "queue_data": queue_data})
-        # self.queues.append(parse_obj_as(store.Queue, values))
         q = store.Queue(self.env, queue_data)
         self.queues.append(q)
-        # self.queues.append(parse_obj_as(store.Queue, values))
-        # self.queues[-1].post_init()
 
-    def get_queue(self, ID) -> store.Queue:
+    def get_queue(self, ID: str) -> store.Queue:
+        """
+        Metthod returns a queue object with the given ID.
+
+        Args:
+            ID (str): ID of the queue object.
+        Returns:
+            store.Queue: Queue object with the given ID.
+        """
         return [q for q in self.queues if q.queue_data.ID == ID].pop()
 
     def get_queues(self, IDs: List[str]) -> List[store.Queue]:
+        """
+        Method returns a list of queue objects with the given IDs.
+
+        Args:
+            IDs (List[str]): List of IDs of the queue objects.
+
+        Returns:
+            List[store.Queue]: List of queue objects with the given IDs.
+        """
         return [q for q in self.queues if q.queue_data.ID in IDs]

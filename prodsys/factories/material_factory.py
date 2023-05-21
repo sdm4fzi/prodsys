@@ -13,7 +13,7 @@ from prodsys.simulation import logger, proces_models, process
 
 class MaterialFactory(BaseModel):
     """
-    Factory class that creates material objects.
+    Factory class that creates and stores `prodsys.simulation` material objects from `prodsys.data_structures` material objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

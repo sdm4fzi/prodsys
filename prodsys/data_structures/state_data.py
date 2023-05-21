@@ -1,3 +1,16 @@
+"""
+The `state_data` module contains the `prodsys.data_structure` classes to represent the states that resources 
+can be in during a simulation.
+
+The following states are possible:
+
+- `BreakDownStateData`: A state that makes a resource unavailable for a certain time.
+- `ProcessBreakDownStateData`: A state that makes a process unavailable for a certain time but other processes can still be performed.
+- `SetupStateData`: A state that represents the time needed to change the process of a resource.
+- `ProductionStateData`: A state that represents the time needed to process a material.
+- `TransportStateData`: A state that represents the time needed to transport a material.	    
+"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -61,6 +74,18 @@ class BreakDownStateData(StateData):
         time_model_id (str): Time model ID of the state. Specifies the time interval between breakdowns.
         type (StateTypeEnum): Type of the state.
         repair_time_model_id (str): Time model ID of the repair time.
+
+    Examples:
+        Breakdown state with a function time model:
+        ``` py  
+        import prodsys
+        prodsys.state_data.BreakDownStateData(
+            ID="Breakdownstate_1",
+            description="Breakdown state machine 1",
+            time_model_id="function_time_model_5",
+            repair_time_model_id="function_time_model_8",
+        )
+        ```
     """
 
     type: Literal[StateTypeEnum.BreakDownState]
@@ -91,6 +116,20 @@ class ProcessBreakDownStateData(StateData):
         time_model_id (str): Time model ID of the state.
         type (StateTypeEnum): Type of the state.
         repair_time_model_id (str): Time model ID of the repair time.
+        process_id (str): ID of the process that is broken down.
+
+    Examples:
+        Process breakdown state with a function time model:
+        ``` py
+        import prodsys
+        prodsys.state_data.ProcessBreakDownStateData(
+            ID="ProcessBreakDownState_1",
+            description="Process Breakdown state machine 1",
+            time_model_id="function_time_model_7",
+            repair_time_model_id="function_time_model_8",
+            process_id="P1",
+        )
+        ```
     """
 
     type: Literal[StateTypeEnum.ProcessBreakDownState]
@@ -115,13 +154,14 @@ class ProcessBreakDownStateData(StateData):
 
 class ProductionStateData(StateData):
     """
-    Class that represents a production state. By undergoing a production state, the material is processed and continues its process model.
+    Class that represents a production state. By undergoing a production state, the material is processed and continues its process model. Production states don't have to be initialized because they are automatically created when a process is added to a resource.
 
     Args:
         ID (str): ID of the state.
         description (str): Description of the state.
         time_model_id (str): Time model ID of the state.
         type (StateTypeEnum): Type of the state.
+
     """
 
     type: Literal[StateTypeEnum.ProductionState]
@@ -142,7 +182,7 @@ class ProductionStateData(StateData):
 
 class TransportStateData(StateData):
     """
-    Class that represents a transport state. By undergoing a transport state, the material is transported and its position is changed.
+    Class that represents a transport state. By undergoing a transport state, the material is transported and its position is changed. Transport states don't have to be initialized because they are automatically created when a transport process is added to a resource.
 
     Args:
         ID (str): ID of the state.
@@ -178,6 +218,19 @@ class SetupStateData(StateData):
         type (StateTypeEnum): Type of the state.
         origin_setup (str): ID of the origin process for the setup.
         target_setup (str): ID of the target process for the setup.
+
+    Examples:
+        Setup state with a function time model:
+        ``` py
+        import prodsys
+        prodsys.state_data.SetupStateData(
+            ID="Setup_State_2",
+            description="Setup state machine 2",
+            time_model_id="function_time_model_2",
+            origin_setup="P2",
+            target_setup="P1",
+        )
+        ```
     """
 
     type: Literal[StateTypeEnum.SetupState]

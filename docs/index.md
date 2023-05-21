@@ -15,4 +15,8 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
     docs/
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
-        API_reference.md
+        API_reference/
+            Express API.md
+            Data structures API.md
+            Adapter.md
+            Simulation Object Factories.md

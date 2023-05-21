@@ -39,6 +39,21 @@ class SourceData(CoreAsset):
         router (RouterType): Router of the source.
         routing_heuristic (RoutingHeuristic): Routing heuristic of the source.
         output_queues (Optional[List[str]], optional): List of output queues of the source. Defaults to None.
+
+    Examples:
+        A source with ID "S1":
+        ``` py
+        import prodsys
+        prodsys.source_data.SourceData(
+            ID="S1",
+            description="Source 1",
+            location=[0.0, 0.0],
+            material_type="Material_1",
+            time_model_id="function_time_model_4",
+            router="SimpleRouter",
+            routing_heuristic="shortest_queue",
+            output_queues=["SourceQueue"],
+        )
     """
     location: conlist(float, min_items=2, max_items=2)
     material_type: str

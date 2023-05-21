@@ -1,3 +1,12 @@
+"""
+This module contains the data structures for the scenario data that is used in optimization to determine the best configuration of a production system. A Scenario constists thereby of:
+- `ScenarioConstrainsData`: The constraints of the scenario.
+- `ScenarioOptionsData`: The options of the scenario.
+- `ScenarioInfoData`: The information of the scenario.
+- 'Objectives': The objectives of the scenario.
+- `ScenarioData`: The scenario data that contains the constraints, options, information and objectives of the scenario. 
+"""
+
 from __future__ import annotations
 
 from typing import Literal, List, Optional, Dict

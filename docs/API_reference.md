@@ -1,1 +1,0 @@
-::: prodsys.data_structures.material_data.MaterialData

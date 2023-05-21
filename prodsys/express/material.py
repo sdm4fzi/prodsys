@@ -20,29 +20,31 @@ class Material(core.ExpressObject):
 
     Examples:
         Material with 2 sequential processes and a transport process:
-        >>> import prodsys.express as psx
-        >>> welding_time_model = psx.time_model_data.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
-        >>> welding_process_1 = psx.process.ProductionProcess(
-        ...     time_model=welding_time_model,
-        ... )
-        >>> welding_process_2 = psx.process.ProductionProcess(
-        ...     time_model=welding_time_model,
-        ... )
-        >>> transport_time_model = psx.time_model_data.ManhattenDistanceTimeModel(
-        ...     speed=10,
-        ...     reaction_time= 0.3
-        ... )
-        >>> transport_process = psx.process.TransportProcess(
-        ...     time_model=transport_time_model,
-        ... )
-        >>> psx.Material(
-        ...     processes=[welding_process_1, welding_process_2],
-        ...     transport_process=transport_process
-        ... )
+        ```py
+        import prodsys.express as psx
+        welding_time_model = psx.time_model_data.FunctionTimeModel(
+            distribution_function="normal",
+            location=20.0,
+            scale=5.0,
+         )
+        welding_process_1 = psx.process.ProductionProcess(
+            time_model=welding_time_model,
+        )
+        welding_process_2 = psx.process.ProductionProcess(
+            time_model=welding_time_model,
+        )
+        transport_time_model = psx.time_model_data.ManhattenDistanceTimeModel(
+            speed=10,
+            reaction_time= 0.3
+        )
+        transport_process = psx.process.TransportProcess(
+            time_model=transport_time_model,
+        )
+        psx.Material(
+            processes=[welding_process_1, welding_process_2],
+            transport_process=transport_process
+        )
+        ```
     """
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
     transport_process: process.TransportProcess
@@ -50,7 +52,7 @@ class Material(core.ExpressObject):
 
     def to_data_object(self) -> material_data.MaterialData:
         """
-        Converts the object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             material_data.MaterialData: An instance of the data object.

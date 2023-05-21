@@ -105,6 +105,15 @@ def adjust_process_breakdown_states(
 
 
 class ResourceFactory(BaseModel):
+    """
+    Factory class that creates and stores `prodsys.simulation` resource objects from `prodsys.data_structures` resource objects.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+        process_factory (process_factory.ProcessFactory): Factory that creates process objects.
+        state_factory (state_factory.StateFactory): Factory that creates state objects.
+        queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
+    """
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     state_factory: state_factory.StateFactory
@@ -120,6 +129,12 @@ class ResourceFactory(BaseModel):
         arbitrary_types_allowed = True
 
     def create_resources(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates resource objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): Adapter that contains the resource data.
+        """
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data.copy(deep=True))
 
@@ -185,28 +200,67 @@ class ResourceFactory(BaseModel):
         self.resources.append(resource_object)
 
     def start_resources(self):
+        """
+        Method starts the simpy processes of the controllers of the resources to initialize the simulation.
+        """
         for _resource in self.resources:
             _resource.start_states()
 
         for controller in self.controllers:
             self.env.process(controller.control_loop())  # type: ignore
 
-    def get_resource(self, ID):
+    def get_resource(self, ID: str) -> resources.RESOURCE_UNION:
+        """
+        Method returns a resource object with the given ID.
+
+        Args:
+            ID (str): ID of the resource object.
+
+        Returns:
+            resources.RESOURCE_UNION: Resource object with the given ID.
+        """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
     def get_controller_of_resource(
         self, _resource: resources.Resource
     ) -> Optional[Union[control.ProductionController, control.TransportController]]:
+        """
+        Method returns the controller of the given resource.
+
+        Args:
+            _resource (resources.Resource): Resource object.
+
+        Returns:
+            Optional[Union[control.ProductionController, control.TransportController]]: Controller of the given resource.
+        """
         for controller in self.controllers:
             if controller.resource == _resource:
                 return controller
 
     def get_resources(self, IDs: List[str]) -> List[resources.Resource]:
+        """
+        Method returns a list of resource objects with the given IDs.
+
+        Args:
+            IDs (List[str]): List of IDs that is used to sort the resource objects.
+
+        Returns:
+            List[resources.Resource]: List of resource objects with the given IDs.
+        """
         return [r for r in self.resources if r.data.ID in IDs]
 
     def get_resources_with_process(
         self, target_process: process.Process
     ) -> List[resources.Resource]:
+        """
+        Method returns a list of resource objects that contain the given process.
+
+        Args:
+            target_process (process.Process): Process object that is used to filter the resource objects.
+
+        Returns:
+            List[resources.Resource]: List of resource objects that contain the given process.
+        """
         return [
             res
             for res in self.resources

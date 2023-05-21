@@ -1,3 +1,13 @@
+"""
+`process` module contains the `prodsys.express` classes to represent the processes that can 
+be performed on materials by resources.
+
+The following processes are possible:
+- `ProductionProcess`: A process that can be performed on a material by a production resource.
+- `CapabilityProcess`: A process that can be performed on a material by a resource, based on the capability of the resource.
+- `TransportProcess`: A process that can be performed on a material by a transport resource.
+"""
+
 from __future__ import annotations
 
 from typing import List, Optional, Union
@@ -58,15 +68,17 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
 
     Examples:
         Production process with a function time model:
-        >>> import prodsys.express as psx
-        >>> welding_time_model = psx.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
-        >>> psx.ProductionProcess(
-        ...     time_model=welding_time_model
-        ... )
+        ``` py
+        import prodsys.express as psx
+        welding_time_model = psx.time_model_data.FunctionTimeModel(
+            distribution_function="normal",
+            location=20.0,
+            scale=5.0,
+        )
+        psx.ProductionProcess(
+            time_model=welding_time_model,
+        )
+        ```
     """
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.ProductionProcesses
@@ -74,7 +86,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.ProductionProcessData:
         """
-        Converts the object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             processes_data.ProductionProcessData: Data object of the express object.
@@ -104,16 +116,18 @@ class CapabilityProcess(Process, core.ExpressObject):
 
     Examples:
         Capability process with a function time model:
-        >>> import prodsys.express as psx
-        >>> welding_time_model = psx.FunctionTimeModel(
-        ...     distribution_function="normal",
-        ...     location=20.0,
-        ...     scale=5.0,
-        ... )
-        >>> psx.CapabilityProcess(
-        ...     time_model=welding_time_model,
-        ...     capability="welding"
-        ... )
+        ``` py
+        import prodsys.express as psx
+        welding_time_model = psx.FunctionTimeModel(
+            distribution_function="normal",
+            location=20.0,
+            scale=5.0,
+        )
+        psx.CapabilityProcess(
+            time_model=welding_time_model,
+            capability="welding"
+        )
+        ```
     """
     capability: str
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -123,7 +137,7 @@ class CapabilityProcess(Process, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.CapabilityProcessData:
         """
-        Converts the express object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             processes_data.CapabilityProcessData: Data object of the express object.
@@ -151,14 +165,16 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
 
     Examples:
         Transport process with a manhattan distance time model:
-        >>> import prodsys.express as psx
-        >>> manhattan_time_model = psx.ManhattanDistanceTimeModel(
-        ...     speed=30.0,
-        ...     reaction_time=0.15,
-        ... )
-        >>> psx.TransportProcess(
-        ...     time_model=manhattan_time_model
-        ... )
+        ```py
+        import prodsys.express as psx
+        manhattan_time_model = psx.ManhattenDistanceTimeModel(
+            speed=30.0,
+            reaction_time=0.15,
+        )
+        psx.TransportProcess(
+            time_model=manhattan_time_model
+        )
+        ```
     """ 
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.TransportProcesses
@@ -166,7 +182,7 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.TransportProcessData:
         """
-        Converts the express object to a data object.
+        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
             processes_data.TransportProcessData: Data object of the express object.

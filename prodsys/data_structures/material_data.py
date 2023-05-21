@@ -9,7 +9,15 @@ from prodsys.data_structures.core_asset import CoreAsset
 
 class MaterialData(CoreAsset):
     """
-    Class that represents material data. 
+    Class that represents material data, specifically the required processes and the allows tranport process.
+
+    The processes describe thereby the process model that needs to be completed for the material to be finished. There are three different ways to describe the process model:
+
+    - Sequential process model: The processes are given as a list of process IDs. The processes are executed sequentially.
+    - Adjacency matrix process model: The processes are given as an adjacency matrix that describes the precedence graph of the material.
+    - Edges process model: The processes are given as a list of edges. The edges describe the precedence graph of the material.
+
+    See the examples for more insights.
 
     Args:
         ID (str): ID of the material. If not given, the material type is used. Gets overwritten to the instance material ID, when an instance is created during simulation. 
@@ -20,43 +28,49 @@ class MaterialData(CoreAsset):
 
     Examples:
         Material with sequential process model:
-        >>> from prodsys.data_structures import material_data
-        >>> material_data.MaterialData(
-        ...     ID="Material_1",
-        ...     description="Material 1",
-        ...     material_type="Material_1",
-        ...     processes=["P1", "P2", "P3"],
-        ...     transport_process="TP1",
-        ... )
+        ``` py
+        import prodsys
+        prodsys.material_data.MaterialData(
+            ID="Material_1",
+            description="Material 1",
+            material_type="Material_1",
+            processes=["P1", "P2", "P3"],
+            transport_process="TP1",
+        )
+        ```
 
         Material with adjacency matrix process model:
-        >>> from prodsys.data_structures import material_data
-        >>> material_data.MaterialData(
-        ...     ID="Material_1",
-        ...     description="Material 1",
-        ...     material_type="Material_1",
-        ...     processes={
-        ...         "P1": ["P2", "P3"],
-        ...         "P2": ["P3"],
-        ...         "P3": [],
-        ...     },
-        ...     transport_process="TP1",
-        ... )
+        ``` py  
+        import prodsys
+        prodsys.material_data.MaterialData(
+            ID="Material_1",
+            description="Material 1",
+            material_type="Material_1",
+            processes={
+                "P1": ["P2", "P3"],
+                "P2": ["P3"],
+                "P3": [],
+            },
+            transport_process="TP1",
+        )
+        ```
 
         Material with graph edges process model:
-        >>> from prodsys.data_structures import material_data
-        >>> material_data.MaterialData(
-        ...     ID="Material_1",
-        ...     description="Material 1",
-        ...     material_type="Material_1",
-        ...     processes=[
-        ...         ["P1", "P2"],
-        ...         ["P1", "P3"],
-        ...         ["P2", "P4"],
-        ...         ["P3", "P4"],
-        ...     ],
-        ...     transport_process="TP1",
-        ... )
+        ``` py
+        import prodsys
+        prodsys.material_data.MaterialData(
+            ID="Material_1",
+            description="Material 1",
+            material_type="Material_1",
+            processes=[
+                ["P1", "P2"],
+                ["P1", "P3"],
+                ["P2", "P4"],
+                ["P3", "P4"],
+            ],
+            transport_process="TP1",
+        )
+        ```
     """
     material_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]

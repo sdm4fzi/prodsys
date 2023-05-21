@@ -21,6 +21,15 @@ from prodsys.util import util
 
 
 def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data.ProductionResourceData]:
+    """
+    Returns a list of all machines in the adapter.
+
+    Args:
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
+
+    Returns:
+        List[resource_data.ProductionResourceData]: List of all machines in the adapter
+    """
     return [
         resource
         for resource in adapter.resource_data
@@ -31,6 +40,15 @@ def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data.Product
 def get_transport_resources(
     adapter: ProductionSystemAdapter,
 ) -> List[resource_data.TransportResourceData]:
+    """
+    Returns a list of all transport resources in the adapter.
+
+    Args:
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
+
+    Returns:
+        List[resource_data.TransportResourceData]: List of all transport resources in the adapter
+    """
     return [
         resource
         for resource in adapter.resource_data
@@ -39,6 +57,15 @@ def get_transport_resources(
 
 
 def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
+    """
+    Returns a set of all IDs of the objects in the list, by utilizing the ID attribute of the objects.
+
+    Args:
+        list_of_objects (List[Any]): List of objects that have an ID attribute
+
+    Returns:
+        Set[str]: Set of all IDs of the objects in the list
+    """
     return set([obj.ID for obj in list_of_objects])
 
 
@@ -46,6 +73,16 @@ def get_default_queues_for_resource(
     resource: resource_data.ProductionResourceData,
     queue_capacity: Union[float, int] = 0.0,
 ) -> Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]:
+    """
+    Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
+
+    Args:
+        resource (resource_data.ProductionResourceData): Resource for which the default queues should be returned
+        queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]: Tuple of two lists of default queues for the given resource
+    """
     input_queues = [
         queue_data.QueueData(
             ID=resource.ID + "_default_input_queue",
@@ -96,6 +133,16 @@ def remove_unused_queues_from_adapter(adapter: adapters.ProductionSystemAdapter)
 def add_default_queues_to_resources(
     adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Convenience function to add default queues to all machines in the adapter.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
+    """
     for machine in adapters.get_machines(adapter):
         remove_queues_from_resource(machine, adapter)
         remove_unused_queues_from_adapter(adapter)
@@ -111,6 +158,16 @@ def add_default_queues_to_resources(
 def get_default_queue_for_source(
     source: source_data.SourceData, queue_capacity=0.0
 ) -> queue_data.QueueData:
+    """
+    Returns a default queue for the given source.
+
+    Args:
+        source (source_data.SourceData): Source for which the default queue should be returned
+        queue_capacity (float, optional): Capacity of the default queue. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        queue_data.QueueData: Default queue for the given source
+    """
     return queue_data.QueueData(
         ID=source.ID + "_default_output_queue",
         description="Default output queue of " + source.ID,
@@ -121,6 +178,16 @@ def get_default_queue_for_source(
 def add_default_queues_to_sources(
     adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Convenience function to add default queues to all sources in the adapter.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sources
+    """
     for source in adapter.source_data:
         if not source.output_queues:
             output_queues = [get_default_queue_for_source(source, queue_capacity)]
@@ -132,6 +199,16 @@ def add_default_queues_to_sources(
 def get_default_queue_for_sink(
     sink: sink_data.SinkData, queue_capacity=0.0
 ) -> queue_data.QueueData:
+    """
+    Returns a default queue for the given sink.
+
+    Args:
+        sink (sink_data.SinkData): Sink for which the default queue should be returned
+        queue_capacity (float, optional): Capacity of the default queue. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        queue_data.QueueData: Default queue for the given sink
+    """
     return queue_data.QueueData(
         ID=sink.ID + "_default_input_queue",
         description="Default input queue of " + sink.ID,
@@ -142,6 +219,16 @@ def get_default_queue_for_sink(
 def add_default_queues_to_sinks(
     adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Convenience function to add default queues to all sinks in the adapter.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sinks
+    """
     for sink in adapter.sink_data:
         if not sink.input_queues:
             input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
@@ -153,6 +240,16 @@ def add_default_queues_to_sinks(
 def add_default_queues_to_adapter(
     adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Convenience function to add default queues to all machines, sources and sinks in the adapter.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines, sources and sinks
+    """
     adapter = add_default_queues_to_resources(adapter, queue_capacity)
     adapter = add_default_queues_to_sources(adapter, queue_capacity)
     adapter = add_default_queues_to_sinks(adapter, queue_capacity)
@@ -160,11 +257,30 @@ def add_default_queues_to_adapter(
 
 
 class ProductionSystemAdapter(ABC, BaseModel):
-    ID: str = ""
-    valid_configuration: bool = True
-    reconfiguration_cost: float = 0
+    """
+    A ProductionSystemAdapter serves as a n abstract base class of a data container to represent a production system. It is based on the `prodsys.data_structures` module, but is also compatible with the `prodsys.express` API.
+    It is used as the basis for all simulation and optimization algorithms in prodsys and comes with complete data validation. 
+    Thereby, it is assured that the expected data is used for simulation and optimization. If the data is not valid, an error is raised with information about the reasons for invalidity.
+    The adapter targets easy integration of algorithms with each other in different environments. 
+    Therefore, the adapter can even be used for integration of new algorithms by serving as a defined data interface. 
 
-    seed: int = 21
+    Args:
+        ID (str, optional): ID of the production system. Defaults to "".
+        seed (int, optional): Seed for the random number generator used in simulation. Defaults to 0.
+        time_model_data (List[time_model_data.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
+        state_data (List[state_data.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
+        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by materials and provided by resources in the production system. Defaults to [].
+        queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
+        resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
+        material_data (List[material_data.MaterialData], optional): List of materials in the production system. Defaults to [].
+        sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
+        source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
+        scenario_data (Optional[scenario_data.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
+        valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
+        reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
+    """
+    ID: str = ""
+    seed: int = 0
     time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
@@ -174,6 +290,10 @@ class ProductionSystemAdapter(ABC, BaseModel):
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
+
+    
+    valid_configuration: bool = True
+    reconfiguration_cost: float = 0
 
     class Config:
         validate = True
@@ -675,10 +795,23 @@ class ProductionSystemAdapter(ABC, BaseModel):
 
     @abstractmethod
     def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
+        """
+        Reads the data from the given file path and scenario file path.
+
+        Args:
+            file_path (str): File path for the production system configuration
+            scenario_file_path (Optional[str], optional): File path for the scenario data. Defaults to None.
+        """
         pass
 
     @abstractmethod
     def write_data(self, file_path: str):
+        """
+        Writes the data to the given file path.
+
+        Args:
+            file_path (str): File path for the production system configuration
+        """
         pass
 
     def read_scenario(self, scenario_file_path: str):
@@ -698,6 +831,13 @@ class ProductionSystemAdapter(ABC, BaseModel):
             )
 
     def physical_validation(self):
+        """
+        Checks if the configuration is physically valid, i.e. if all resources are positioned at different locations and if all required processes are available.
+
+        Raises:
+            ValueError: If multiple objects are positioned at the same location.
+            ValueError: If not all required process are available.
+        """
         if not check_redudant_locations(self):
             raise ValueError(f"Multiple objects are positioned at the same location.")
         if not check_required_processes_available(self):

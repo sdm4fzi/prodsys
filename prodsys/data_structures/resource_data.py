@@ -1,3 +1,12 @@
+"""
+In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on materials. Transport resources are resources that can transport materials from one location to another. Both types of resources are represented by the `ResourceData` class. The `ResourceData` class is an abstract base class and cannot be instantiated. Instead, the `ProductionResourceData` and `TransportResourceData` classes can be used to represent production resources and transport resources, respectively.
+
+The following resources are available:
+
+- `ProductionResourceData`: Class that represents a production resource.
+- `TransportResourceData`: Class that represents a transport resource.
+"""
+
 from __future__ import annotations
 
 from typing import Literal, Union, List, Tuple, Optional
@@ -94,6 +103,28 @@ class ProductionResourceData(ResourceData):
         state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
         input_queues (Optional[List[str]], optional): Input queues of the resource. Defaults to None.
         output_queues (Optional[List[str]], optional): Output queues of the resource. Defaults to None.
+
+    Examples:
+        Creation of a production resource with a capacity of 2, a location of [10.0, 10.0], a PipelineController and a FIFO control policy:
+        ```py
+        import prodsys
+        prodsys.resource_data.ProductionResourceData(
+            ID="R1",
+            description="Resource 1",
+            capacity=2,
+            location=[10.0, 10.0],
+            controller=prodsys.resource_data.ControllerEnum.PipelineController,
+            control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
+            process_ids=["P1", "P2"],
+            process_capacities=[2, 1],
+            states=[
+                "Breakdownstate_1",
+                "Setup_State_1",
+            ],
+            input_queues=["IQ1"],
+            output_queues=["OQ1"],
+        )
+        ```
     """
 
     controller: Literal[ControllerEnum.PipelineController]
@@ -142,6 +173,21 @@ class TransportResourceData(ResourceData):
         process_ids (List[str]): Process IDs of the resource.
         process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
         state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
+
+    Examples:
+        Creation of a transport resource with a capacity of 1, a location of [15.0, 15.0], a TransportController and a FIFO control policy:
+        ```py
+        import prodsys
+        prodsys.resource_data.TransportResourceData(
+            ID="TR1",
+            description="Transport Resource 1",
+            capacity=1,
+            location=[15.0, 15.0],
+            controller=prodsys.resource_data.ControllerEnum.TransportController,
+            control_policy=prodsys.resource_data.TransportControlPolicy.FIFO,
+            process_ids=["TP1"],
+        )
+        ```
     """
 
     controller: Literal[ControllerEnum.TransportController]

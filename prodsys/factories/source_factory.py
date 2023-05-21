@@ -22,6 +22,17 @@ if TYPE_CHECKING:
 
 
 class SourceFactory(BaseModel):
+    """
+    Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.data_structures.source_data.SourceData`.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+        material_factory (material_factory.MaterialFactory): Factory that creates material objects.
+        time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
+        queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
+        resource_factory (resource_factory.ResourceFactory): Factory that creates resource objects.
+        sink_factory (sink_factory.SinkFactory): Factory that creates sink objects.
+    """
     env: sim.Environment
     material_factory: material_factory.MaterialFactory
     time_model_factory: time_model_factory.TimeModelFactory
@@ -38,6 +49,12 @@ class SourceFactory(BaseModel):
         arbitrary_types_allowed = True
 
     def create_sources(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates source objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): Adapter that contains the source data.
+        """
         for values in adapter.source_data:
             for material_d in adapter.material_data:
                 if material_d.material_type == values.material_type:
@@ -75,16 +92,46 @@ class SourceFactory(BaseModel):
         source.add_output_queues(output_queues)
 
     def start_sources(self):
+        """
+        Starts the processes of all source objects, i.e. initializes the simulation.
+        """
         for _source in self.sources:
             _source.start_source()
 
-    def get_source(self, ID) -> source.Source:
+    def get_source(self, ID: str) -> source.Source:
+        """
+        Returns a source object with the given ID.
+
+        Args:
+            ID (str): ID of the source object.
+
+        Returns:
+            source.Source: Source object with the given ID.
+        """
         return [s for s in self.sources if s.data.ID == ID].pop()
 
     def get_sources(self, IDs: List[str]) -> List[source.Source]:
+        """
+        Method returns a list of source objects with the given IDs.
+
+        Args:
+            IDs (List[str]): List of IDs that is used to sort the source objects.
+
+        Returns:
+            List[source.Source]: List of source objects with the given IDs.
+        """
         return [s for s in self.sources if s.data.ID in IDs]
 
-    def get_sources_with_material_type(self, __material_type: str):
+    def get_sources_with_material_type(self, __material_type: str) -> List[source.Source]:
+        """
+        Method returns a list of source objects with the given material type.
+
+        Args:
+            __material_type (str): Material type that is used to sort the source objects. 
+
+        Returns:
+            List[source.Source]: List of source objects with the given material type.
+        """
         return [s for s in self.sources if __material_type == s.data.material_type]
 
 
