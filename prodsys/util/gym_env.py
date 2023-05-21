@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 class ProductionControlEnv(gym.Env):
 
-    def __init__(self, adapter: adapters.Adapter, resource_id: str, render_mode=None):
+    def __init__(self, adapter: adapters.ProductionSystemAdapter, resource_id: str, render_mode=None):
         self.adapter = adapter
         self.resource_id = resource_id
         self.runner = runner.Runner(adapter=self.adapter)
@@ -136,7 +136,7 @@ class ProductionControlEnv(gym.Env):
 
 class ProductionRoutingEnv(gym.Env):
 
-    def __init__(self, adapter: adapters.Adapter, render_mode=None):
+    def __init__(self, adapter: adapters.ProductionSystemAdapter, render_mode=None):
         self.adapter = adapter
         self.runner: runner.Runner = runner.Runner(adapter=self.adapter)
         

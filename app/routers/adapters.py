@@ -19,7 +19,7 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=Dict[str, prodsys.adapters.JsonAdapter],
+    response_model=Dict[str, prodsys.adapters.JsonProductionSystemAdapter],
 )
 async def read_adapters(project_id: str):
     project = get_project(project_id)
@@ -28,7 +28,7 @@ async def read_adapters(project_id: str):
 
 @router.get(
     "/{adapter_id}",
-    response_model=prodsys.adapters.JsonAdapter,
+    response_model=prodsys.adapters.JsonProductionSystemAdapter,
 )
 async def read_adapter(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
@@ -37,7 +37,7 @@ async def read_adapter(project_id: str, adapter_id: str):
 
 @router.put("/{adapter_id}")
 async def update_adapter(
-    project_id: str, adapter_id: str, ada: prodsys.adapters.JsonAdapter
+    project_id: str, adapter_id: str, ada: prodsys.adapters.JsonProductionSystemAdapter
 ):
     project = get_project(project_id)
     project.adapters[adapter_id] = ada

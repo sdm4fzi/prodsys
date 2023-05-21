@@ -23,7 +23,7 @@ def load_json(file_path: str) -> dict:
         data = json.load(json_file)
     return data
 
-class JsonAdapter(adapter.Adapter):
+class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
     def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
         data = load_json(file_path=file_path)
         self.seed = data["seed"]

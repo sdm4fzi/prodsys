@@ -17,7 +17,7 @@ class ProcessFactory(BaseModel):
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     processes: List[process.PROCESS_UNION] = []
 
-    def create_processes(self, adapter: adapter.Adapter):
+    def create_processes(self, adapter: adapter.ProductionSystemAdapter):
         for process_data in adapter.process_data:
             self.add_processes(process_data)
 

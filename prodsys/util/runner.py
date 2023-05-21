@@ -27,7 +27,7 @@ from prodsys.data_structures import performance_data
 
 VERBOSE = 1
 
-def run_simulation(adapter_object: adapter.Adapter, run_length: int) -> Runner:
+def run_simulation(adapter_object: adapter.ProductionSystemAdapter, run_length: int) -> Runner:
     runner_object = Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(run_length)
@@ -48,7 +48,7 @@ def temp_seed(seed):
 
 
 class Runner(BaseModel):
-    adapter: adapter.Adapter
+    adapter: adapter.ProductionSystemAdapter
     env: sim.Environment = Field(
         None, description="The environment to run the simulation in", init=False
     )

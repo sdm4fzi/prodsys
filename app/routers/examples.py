@@ -22,7 +22,7 @@ async def load_example_project() -> str:
     example_project = Project(ID="example_project")
     database.append(example_project)
 
-    adapter_object = prodsys.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object = prodsys.adapters.JsonProductionSystemAdapter(ID="example_adapter_1")
     adapter_object.read_data("examples/basic_example/example_configuration.json")
     evaluate(adapter_object)
     example_project.adapters[adapter_object.ID] = adapter_object
@@ -35,7 +35,7 @@ async def load_optimization_example_project() -> str:
     example_project = Project(ID="example_optimization_project")
     database.append(example_project)
 
-    adapter_object = prodsys.adapters.JsonAdapter(ID="example_adapter_1")
+    adapter_object = prodsys.adapters.JsonProductionSystemAdapter(ID="example_adapter_1")
     adapter_object.read_data(
         "examples/optimization_example/base_scenario.json",
         "examples/optimization_example/scenario.json",

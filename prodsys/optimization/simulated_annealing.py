@@ -23,13 +23,13 @@ sim.VERBOSE = 0
 class ProductionSystemOptimization(Annealer):
     def __init__(
         self,
-        base_configuration: adapters.Adapter,
+        base_configuration: adapters.ProductionSystemAdapter,
         save_folder: str,
         performances: dict,
         solutions_dict: dict,
         start: float,
         weights: tuple,
-        initial_solution: adapters.Adapter = None,
+        initial_solution: adapters.ProductionSystemAdapter = None,
     ):
         super().__init__(initial_solution, None)
         self.save_folder = save_folder
@@ -85,13 +85,13 @@ def run_simulated_annealing(
     updates: int,
     initial_solution_file_path: str = "",
 ):
-    adapters.Adapter.Config.validate = False
-    adapters.Adapter.Config.validate_assignment = False
-    base_configuration = adapters.JsonAdapter()
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 
     if initial_solution_file_path:
-        initial_solution = adapters.JsonAdapter()
+        initial_solution = adapters.JsonProductionSystemAdapter()
         initial_solution.read_data(initial_solution_file_path, scenario_file_path)
     else:
         initial_solution = base_configuration.copy(deep=True)

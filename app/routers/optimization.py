@@ -155,11 +155,11 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 @router.get(
     "/{solution_id}",
     tags=["optimization"],
-    response_model=prodsys.adapters.JsonAdapter,
+    response_model=prodsys.adapters.JsonProductionSystemAdapter,
 )
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
-) -> prodsys.adapters.JsonAdapter:
+) -> prodsys.adapters.JsonProductionSystemAdapter:
     with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
         data = json.load(json_file)
     return data

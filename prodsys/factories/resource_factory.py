@@ -119,7 +119,7 @@ class ResourceFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_resources(self, adapter: adapter.Adapter):
+    def create_resources(self, adapter: adapter.ProductionSystemAdapter):
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data.copy(deep=True))
 

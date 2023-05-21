@@ -75,7 +75,7 @@ class ProductionSystem(core.ExpressObject):
 
     _runner: Optional[prodsys.runner.Runner] = Field(default=None, init=False)
 
-    def to_data_object(self) -> prodsys.adapters.Adapter:
+    def to_data_object(self) -> prodsys.adapters.ProductionSystemAdapter:
         """
         Converts the express object (prodsys.express) to a data object (prodsys.data_structures).
 
@@ -132,7 +132,7 @@ class ProductionSystem(core.ExpressObject):
             ]
             + [s._input_queues for s in self.sinks]
         ))
-        return prodsys.adapters.JsonAdapter(
+        return prodsys.adapters.JsonProductionSystemAdapter(
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,

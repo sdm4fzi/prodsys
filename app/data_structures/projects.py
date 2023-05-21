@@ -6,7 +6,7 @@ import prodsys
 
 class Project(BaseModel):
     ID: str
-    adapters: Dict[str, prodsys.adapters.JsonAdapter] = {}
+    adapters: Dict[str, prodsys.adapters.JsonProductionSystemAdapter] = {}
 
     class Config:
         schema_extra = {
@@ -15,7 +15,7 @@ class Project(BaseModel):
                 "value": {
                     "ID": "Example Project",
                     "adapters": {
-                        "Example Adapter": prodsys.adapters.Adapter.Config.schema_extra["example"]
+                        "Example Adapter": prodsys.adapters.ProductionSystemAdapter.Config.schema_extra["example"]
                         
                     },
                 },

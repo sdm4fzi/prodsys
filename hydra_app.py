@@ -13,7 +13,7 @@ from prodsys.util.util import get_initial_solution_file_pth, prepare_save_folder
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
     if cfg.general.mode == "simulation":
-        adapter_object = prodsys.adapters.JsonAdapter()
+        adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
         adapter_object.read_data(cfg.general.configuration_path)
         runner_object = run_simulation(adapter_object, cfg.simulation.simulation_length)
         if cfg.simulation.print_results:
@@ -98,7 +98,7 @@ def my_app(cfg: DictConfig) -> None:
         elif cfg.optimization.algorithm == "mathematical":
             cfg.general.save_folder += "/mathematical"
             prepare_save_folder(cfg.general.save_folder)
-            adapter_object = prodsys.adapters.JsonAdapter()
+            adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
             adapter_object.read_data(
                 cfg.general.configuration_path, cfg.general.scenario_path
             )

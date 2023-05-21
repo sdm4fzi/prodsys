@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     
 
-    adapter_object = prodsys.adapters.JsonAdapter()
+    adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
     adapter_object.read_data('examples/basic_example/example_configuration.json')
     env = gym_env.ProductionRoutingEnv(adapter_object, render_mode="human")
 

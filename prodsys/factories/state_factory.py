@@ -48,7 +48,7 @@ class StateFactory(BaseModel):
             values.update({"repair_time_model": repair_time_model})
         self.states.append(parse_obj_as(state.STATE_UNION, values))
 
-    def create_states(self, adapter: adapter.Adapter):
+    def create_states(self, adapter: adapter.ProductionSystemAdapter):
         for state_data in adapter.state_data:
             self.add_state(state_data)
 

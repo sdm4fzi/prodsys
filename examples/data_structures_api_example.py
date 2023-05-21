@@ -98,7 +98,7 @@ sink = prodsys.sink_data.SinkData(
     material_type="material 1",
 )
 
-production_system = prodsys.adapters.JsonAdapter(
+production_system = prodsys.adapters.JsonProductionSystemAdapter(
     time_model_data=[welding_time_model, transport_time_model, arrival_time_model],
     process_data=[welding_process, transport_process],
     resource_data=[machine, transport_resource],

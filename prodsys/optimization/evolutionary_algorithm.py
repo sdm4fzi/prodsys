@@ -35,7 +35,7 @@ creator.create("Individual", list, fitness=creator.FitnessMax)
 
 
 def register_functions_in_toolbox(
-    base_configuration: adapters.JsonAdapter,
+    base_configuration: adapters.JsonProductionSystemAdapter,
     solution_dict: dict,
     performances: dict,
     weights: tuple,
@@ -119,9 +119,9 @@ def run_evolutionary_algorithm(
     n_processes: int,
     initial_solutions_folder: str = "",
 ):
-    adapters.Adapter.Config.validate = False
-    adapters.Adapter.Config.validate_assignment = False
-    base_configuration = adapters.JsonAdapter()
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 
     set_seed(seed)

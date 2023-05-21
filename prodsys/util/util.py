@@ -33,15 +33,15 @@ def trivial_process(env):
 
 
 def read_initial_solutions(
-    folder_path: str, base_configuration: adapters.Adapter
-) -> List[adapters.Adapter]:
+    folder_path: str, base_configuration: adapters.ProductionSystemAdapter
+) -> List[adapters.ProductionSystemAdapter]:
     """Reads all initial solutions from a folder and returns them as a list of adapters."""
     file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
     adapter_objects = []
     for file_path in file_paths:
         if ".json" not in file_path or file_path == "optimization_results.json":
             continue
-        adapter = adapters.JsonAdapter()
+        adapter = adapters.JsonProductionSystemAdapter()
         adapter.read_data(join(folder_path, file_path))
         adapter.scenario_data = base_configuration.scenario_data.copy()
         adapter_objects.append(adapter)

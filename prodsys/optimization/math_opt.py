@@ -26,7 +26,7 @@ import numpy as np
 
 
 def adjust_number_of_transport_resources(
-    adapter_object: adapters.Adapter, number_of_transport_resources: int
+    adapter_object: adapters.ProductionSystemAdapter, number_of_transport_resources: int
 ) -> None:
     """Adjusts the number of transport resources in the adapter object.
 
@@ -42,7 +42,7 @@ def adjust_number_of_transport_resources(
         adapter_object.resource_data.append(new_transport_resource)
 
 
-def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
+def get_modul_counts(adapter: adapters.ProductionSystemAdapter) -> Dict[str, int]:
     modul_count_dict = {}
     # Fall Prozessmodul noch nicht vorhanden fehlt
     for process in adapter.process_data:
@@ -58,7 +58,7 @@ def get_modul_counts(adapter: adapters.Adapter) -> Dict[str, int]:
 
 
 class MathOptimizer(BaseModel):
-    adapter: adapters.Adapter
+    adapter: adapters.ProductionSystemAdapter
     optimization_time_portion: float = 1.0
 
     model: Any = None
@@ -487,9 +487,9 @@ def run_mathematical_optimization(
     number_of_solutions: int,
     adjusted_number_of_transport_resources: int,
 ):
-    adapters.Adapter.Config.validate = False
-    adapters.Adapter.Config.validate_assignment = False
-    adapter = adapters.JsonAdapter()
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     util.prepare_save_folder(save_folder)
     model = MathOptimizer(

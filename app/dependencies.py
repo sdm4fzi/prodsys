@@ -22,7 +22,7 @@ def get_project(project_id: str) -> Project:
             return project
     raise HTTPException(404, f"Project {project_id} not found")
 
-def get_adapter(project_id: str, adapter_id: str) -> prodsys.adapters.JsonAdapter:
+def get_adapter(project_id: str, adapter_id: str) -> prodsys.adapters.JsonProductionSystemAdapter:
     project = get_project(project_id)
     if adapter_id not in project.adapters:
         raise HTTPException(
@@ -31,7 +31,7 @@ def get_adapter(project_id: str, adapter_id: str) -> prodsys.adapters.JsonAdapte
     return project.adapters[adapter_id]
 
 
-def evaluate(adapter_object: prodsys.adapters.JsonAdapter) -> str:
+def evaluate(adapter_object: prodsys.adapters.JsonProductionSystemAdapter) -> str:
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     if adapter_object.scenario_data and adapter_object.scenario_data.info.time_range:
@@ -104,7 +104,7 @@ def get_state(project_id: str, adapter_id: str, state_id: str):
 
 
 def prepare_adapter_from_optimization(
-    adapter_object: prodsys.adapters.JsonAdapter,
+    adapter_object: prodsys.adapters.JsonProductionSystemAdapter,
     project_id: str,
     adapter_id: str,
     solution_id: str,
@@ -131,7 +131,7 @@ def prepare_adapter_from_optimization(
 def get_configuration_results_adapter_from_filesystem(
     project_id: str, adapter_id: str, solution_id: str
 ):
-    adapter_object = prodsys.adapters.JsonAdapter()
+    adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
     files = os.listdir(f"data/{project_id}/{adapter_id}")
     if not any(solution_id in file for file in files):
         raise HTTPException(

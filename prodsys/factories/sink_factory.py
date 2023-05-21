@@ -22,7 +22,7 @@ class SinkFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_sinks(self, adapter: adapter.Adapter):
+    def create_sinks(self, adapter: adapter.ProductionSystemAdapter):
         for data in adapter.sink_data:
             self.add_sink(data)
 

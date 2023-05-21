@@ -20,7 +20,7 @@ from prodsys.data_structures import (
 from prodsys.util import util
 
 
-def get_machines(adapter: Adapter) -> List[resource_data.ProductionResourceData]:
+def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data.ProductionResourceData]:
     return [
         resource
         for resource in adapter.resource_data
@@ -29,7 +29,7 @@ def get_machines(adapter: Adapter) -> List[resource_data.ProductionResourceData]
 
 
 def get_transport_resources(
-    adapter: Adapter,
+    adapter: ProductionSystemAdapter,
 ) -> List[resource_data.TransportResourceData]:
     return [
         resource
@@ -64,8 +64,8 @@ def get_default_queues_for_resource(
 
 
 def remove_queues_from_resource(
-    machine: resource_data.ProductionResourceData, adapter: adapters.Adapter
-) -> adapters.Adapter:
+    machine: resource_data.ProductionResourceData, adapter: adapters.ProductionSystemAdapter
+) -> adapters.ProductionSystemAdapter:
     if machine.input_queues or machine.output_queues:
         for queue_ID in machine.input_queues + machine.output_queues:
             for queue in adapter.queue_data:
@@ -78,7 +78,7 @@ def remove_queues_from_resource(
         return adapter
 
 
-def remove_unused_queues_from_adapter(adapter: adapters.Adapter) -> adapters.Adapter:
+def remove_unused_queues_from_adapter(adapter: adapters.ProductionSystemAdapter) -> adapters.ProductionSystemAdapter:
     for queue in adapter.queue_data:
         if not any(
             [
@@ -94,8 +94,8 @@ def remove_unused_queues_from_adapter(adapter: adapters.Adapter) -> adapters.Ada
 
 
 def add_default_queues_to_resources(
-    adapter: adapters.Adapter, queue_capacity=0.0
-) -> adapters.Adapter:
+    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
+) -> adapters.ProductionSystemAdapter:
     for machine in adapters.get_machines(adapter):
         remove_queues_from_resource(machine, adapter)
         remove_unused_queues_from_adapter(adapter)
@@ -119,8 +119,8 @@ def get_default_queue_for_source(
 
 
 def add_default_queues_to_sources(
-    adapter: adapters.Adapter, queue_capacity=0.0
-) -> adapters.Adapter:
+    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
+) -> adapters.ProductionSystemAdapter:
     for source in adapter.source_data:
         if not source.output_queues:
             output_queues = [get_default_queue_for_source(source, queue_capacity)]
@@ -140,8 +140,8 @@ def get_default_queue_for_sink(
 
 
 def add_default_queues_to_sinks(
-    adapter: adapters.Adapter, queue_capacity=0.0
-) -> adapters.Adapter:
+    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
+) -> adapters.ProductionSystemAdapter:
     for sink in adapter.sink_data:
         if not sink.input_queues:
             input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
@@ -151,15 +151,15 @@ def add_default_queues_to_sinks(
 
 
 def add_default_queues_to_adapter(
-    adapter: adapters.Adapter, queue_capacity=0.0
-) -> adapters.Adapter:
+    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
+) -> adapters.ProductionSystemAdapter:
     adapter = add_default_queues_to_resources(adapter, queue_capacity)
     adapter = add_default_queues_to_sources(adapter, queue_capacity)
     adapter = add_default_queues_to_sinks(adapter, queue_capacity)
     return adapter
 
 
-class Adapter(ABC, BaseModel):
+class ProductionSystemAdapter(ABC, BaseModel):
     ID: str = ""
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
@@ -708,7 +708,7 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
     return [list(x) for x in set(tuple(x) for x in input_list)]
 
 
-def check_redudant_locations(adapter: adapters.Adapter) -> bool:
+def check_redudant_locations(adapter: adapters.ProductionSystemAdapter) -> bool:
     machine_locations = [machine.location for machine in adapters.get_machines(adapter)]
     source_locations = remove_duplicate_locations(
         [source.location for source in adapter.source_data]
@@ -723,7 +723,7 @@ def check_redudant_locations(adapter: adapters.Adapter) -> bool:
 
 
 def get_possible_production_processes_IDs(
-    adapter_object: adapters.Adapter,
+    adapter_object: adapters.ProductionSystemAdapter,
 ) -> Union[List[str], List[Tuple[str, ...]]]:
     possible_processes = adapter_object.process_data
     if not any(
@@ -749,7 +749,7 @@ def get_possible_production_processes_IDs(
     return [tuple(value) for value in process_dict.values()]
 
 
-def check_required_processes_available(configuration: adapters.Adapter) -> bool:
+def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
     available = set(
         util.flatten(
             [resource.process_ids for resource in adapters.get_machines(configuration)]

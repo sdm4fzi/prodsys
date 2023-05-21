@@ -37,7 +37,7 @@ class SourceFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_sources(self, adapter: adapter.Adapter):
+    def create_sources(self, adapter: adapter.ProductionSystemAdapter):
         for values in adapter.source_data:
             for material_d in adapter.material_data:
                 if material_d.material_type == values.material_type:

@@ -19,7 +19,7 @@ class QueueFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def create_queues(self, adapter: adapter.Adapter):
+    def create_queues(self, adapter: adapter.ProductionSystemAdapter):
         for queue_data in adapter.queue_data:
             self.add_queue(queue_data)
 

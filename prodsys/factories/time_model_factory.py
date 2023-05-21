@@ -14,7 +14,7 @@ class TimeModelFactory(BaseModel):
     time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
     time_models: List[time_model.TIME_MODEL] = []
 
-    def create_time_models(self, adapter: adapter.Adapter):
+    def create_time_models(self, adapter: adapter.ProductionSystemAdapter):
         for time_model_data in adapter.time_model_data:
             self.time_models.append(
                 parse_obj_as(time_model.TIME_MODEL, {"time_model_data": time_model_data})
