@@ -19,4 +19,5 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
             Express API.md
             Data structures API.md
             Adapter.md
+            Optimization.md
             Simulation Object Factories.md

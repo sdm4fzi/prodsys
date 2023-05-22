@@ -24,9 +24,6 @@ from prodsys.util.util import set_seed
 
 
 class TabuSearch:
-    """
-    Conducts tabu search
-    """
 
     __metaclass__ = ABCMeta
 
@@ -43,13 +40,6 @@ class TabuSearch:
     max_score = None
 
     def __init__(self, initial_state, tabu_size, max_steps, max_score=None):
-        """
-
-        :param initial_state: initial state, should implement __eq__ or __cmp__
-        :param tabu_size: number of states to keep in tabu list
-        :param max_steps: maximum number of steps to run algorithm for
-        :param max_score: score to stop algorithm once reached
-        """
         self.initial_state = initial_state
 
         if isinstance(tabu_size, int) and tabu_size > 0:
@@ -92,39 +82,16 @@ class TabuSearch:
 
     @abstractmethod
     def _score(self, state):
-        """
-        Returns objective function value of a state
-
-        :param state: a state
-        :return: objective function value of state
-        """
         pass
 
     @abstractmethod
     def _neighborhood(self):
-        """
-        Returns list of all members of neighborhood of current state, given self.current
-
-        :return: list of members of neighborhood
-        """
         pass
 
     def _best(self, neighborhood):
-        """
-        Finds the best member of a neighborhood
-
-        :param neighborhood: a neighborhood
-        :return: best member of neighborhood
-        """
         return neighborhood[argmax([self._score(x) for x in neighborhood])]
 
     def run(self, verbose=True):
-        """
-        Conducts tabu search
-
-        :param verbose: indicates whether or not to print progress regularly
-        :return: best state and objective function value of best state
-        """
         self._clear()
         for i in range(self.max_steps):
             self.cur_steps += 1
@@ -171,6 +138,19 @@ def run_tabu_search(
     max_score,
     initial_solution_file_path: str = "",
 ):
+    """
+    Runs tabu search optimization.
+
+    Args:
+        save_folder (str): Folder to save the results in.
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        seed (int): Random seed for optimization.
+        tabu_size (_type_): Size of the tabu list.
+        max_steps (_type_): Maximum number of steps.
+        max_score (_type_): Maximum score to stop optimization.
+        initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
+    """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
@@ -252,10 +232,10 @@ class TabuSearchHyperparameters(BaseModel):
         max_score (float): Maximum score
     """
 
-    seed: int = Field(0, description="Seed for random number generator")
-    tabu_size: int = Field(10, description="Size of tabu list")
-    max_steps: int = Field(300, description="Maximum number of steps")
-    max_score: float = Field(500, description="Maximum score")
+    seed: int = 0
+    tabu_size: int = 10
+    max_steps: int = 300
+    max_score: float = 500
 
     class Config:
         schema_extra = {
@@ -277,6 +257,15 @@ def optimize_configuration(
     save_folder: str,
     hyper_parameters: TabuSearchHyperparameters,
 ):
+    """
+    Optimize configuration with tabu search.
+
+    Args:
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        save_folder (str): Folder to save the results in.
+        hyper_parameters (TabuSearchHyperparameters): Hyperparameters for configuration optimization with tabu search.
+    """
     run_tabu_search(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,

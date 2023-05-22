@@ -14,8 +14,6 @@ class TimeModelFactory(BaseModel):
     """
     Factory class that creates and stores `prodsys.simulation` time model objects based on the given time model data according to `prodsys.data_structures.time_model_data.TIME_MODEL_DATA`.
 
-    Args:
-
     Returns:
         _type_: _description_
     """

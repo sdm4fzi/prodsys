@@ -119,6 +119,21 @@ def run_evolutionary_algorithm(
     n_processes: int,
     initial_solutions_folder: str = "",
 ):
+    """
+    Run an evolutionary algorithm for configuration optimization.
+
+    Args:
+        save_folder (str): Folder to save the results in.
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        seed (int): Random seed for optimization.
+        ngen (int): Number of generations to run the algorithm.
+        population_size (int): Number of individuals in each generation.
+        mutation_rate (float): Probability of mutating an individual.
+        crossover_rate (float): Probability of crossover between two individuals.
+        n_processes (int): Number of processes to use for parallelization.
+        initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
+    """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
@@ -194,21 +209,11 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
     """
 
     seed: int = Field(0, description="Seed for the random number generator.")
-    number_of_generations: int = Field(
-        10, description="Number of generations to run the algorithm."
-    )
-    population_size: int = Field(
-        10, description="Number of individuals in each generation."
-    )
-    mutation_rate: float = Field(
-        0.1, description="Probability of mutating an individual."
-    )
-    crossover_rate: float = Field(
-        0.1, description="Probability of crossover between two individuals."
-    )
-    number_of_processes: int = Field(
-        1, description="Number of processes to use for parallelization."
-    )
+    number_of_generations: int = 10
+    population_size: int = 10
+    mutation_rate: float = 0.1
+    crossover_rate: float = 0.1
+    number_of_processes: int = 1
 
     class Config:
         schema_extra = {
@@ -232,6 +237,15 @@ def optimize_configuration(
     save_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
 ):
+    """
+    Optimize a configuration using an evolutionary algorithm.
+
+    Args:
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        save_folder (str): Folder to save the results in.
+        hyper_parameters (EvolutionaryAlgorithmHyperparameters): Hyperparameters for configuration optimization using an evolutionary algorithm.
+    """
     run_evolutionary_algorithm(
         save_folder,
         base_configuration_file_path,

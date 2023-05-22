@@ -6,7 +6,17 @@ import plotly.graph_objects as go
 import numpy as np
 from copy import copy
 
-def read_json_file(filepath: str, label: str) -> pd.DataFrame:
+def read_optimization_results_file(filepath: str, label: str) -> pd.DataFrame:
+    """
+    Function reads the results of an optimization run from a json file and returns a pandas dataframe.
+
+    Args:
+        filepath (str): Filepath to the json file.
+        label (str): Label to specify the utilized optimizer.
+
+    Returns:
+        pd.DataFrame: _description_
+    """
     with open(filepath) as json_file:
         data = json.load(json_file)
     new_data = {}
@@ -33,13 +43,15 @@ def read_json_file(filepath: str, label: str) -> pd.DataFrame:
         df['agg_fitness'] = -1 * df['agg_fitness']
     return df.copy()
 
-
-
-def is_pareto_efficient_simple(costs):
+def is_pareto_efficient_simple(costs: np.ndarray) -> np.ndarray:
     """
     Find the pareto-efficient points
-    :param costs: An (n_points, n_costs) array
-    :return: A (n_points, ) boolean array, indicating whether each point is Pareto efficient
+
+    Args:
+        costs (np.ndarray): An (n_points, n_costs) array
+
+    Returns:
+        np.ndarray: A (n_points, ) boolean array, indicating whether each point is Pareto efficient
     """
     is_efficient = np.ones(costs.shape[0], dtype = bool)
     for i, c in enumerate(costs):
@@ -49,14 +61,15 @@ def is_pareto_efficient_simple(costs):
     return is_efficient
 
 # Faster than is_pareto_efficient_simple, but less readable.
-def is_pareto_efficient(costs, return_mask = True):
+def is_pareto_efficient(costs):
     """
     Find the pareto-efficient points
-    :param costs: An (n_points, n_costs) array
-    :param return_mask: True to return a mask
-    :return: An array of indices of pareto-efficient points.
-        If return_mask is True, this will be an (n_points, ) boolean array
-        Otherwise it will be a (n_efficient_points, ) integer array of indices.
+
+    Args:
+        costs (np.ndarray): An (n_points, n_costs) array
+
+    Returns:
+        np.ndarray: A (n_points, ) boolean array, indicating whether each point is Pareto efficient
     """
     is_efficient = np.arange(costs.shape[0])
     n_points = costs.shape[0]
@@ -67,17 +80,23 @@ def is_pareto_efficient(costs, return_mask = True):
         is_efficient = is_efficient[nondominated_point_mask]  # Remove dominated points
         costs = costs[nondominated_point_mask]
         next_point_index = np.sum(nondominated_point_mask[:next_point_index])+1
-    if return_mask:
-        is_efficient_mask = np.zeros(n_points, dtype = bool)
-        is_efficient_mask[is_efficient] = True
-        return is_efficient_mask
-    else:
-        return is_efficient
+    is_efficient_mask = np.zeros(n_points, dtype = bool)
+    is_efficient_mask[is_efficient] = True
+    return is_efficient_mask
 
 
 
 def get_pareto_solutions_from_result_files(file_path: str, ) -> List[str]:
-    df = read_json_file(file_path, label="optimizer")
+    """
+    Analyses an optimization result file and returns the IDs of the pareto efficient solutions.
+
+    Args:
+        file_path (str): Filepath of the json file containing the optimization results.
+
+    Returns:
+        List[str]: List of IDs of the pareto efficient solutions.
+    """
+    df = read_optimization_results_file(file_path, label="optimizer")
     df = df.drop_duplicates(subset=['agg_fitness', 'cost', 'throughput', 'wip', 'optimizer'])
     df["cost"] = df["cost"].astype(float)
     df["agg_fitness"] = df["agg_fitness"].astype(float)

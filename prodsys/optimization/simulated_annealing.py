@@ -85,6 +85,20 @@ def run_simulated_annealing(
     updates: int,
     initial_solution_file_path: str = "",
 ):
+    """
+    Run a simulated annealing algorithm for configuration optimization.
+
+    Args:
+        save_folder (str): Folder to save the results in.
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        seed (int): Random seed for optimization.
+        Tmax (int): Maximum temperature
+        Tmin (int): Minimum temperature
+        steps (int): Steps for annealing
+        updates (int): Number of updates
+        initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
+    """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
@@ -133,26 +147,11 @@ class SimulatedAnnealingHyperparameters(BaseModel):
         steps (int): Number of steps
         updates (int): Number of updates
     """
-    seed: int = Field(
-        default=0,
-        description="Seed for random number generator",
-    )
-    Tmax: int = Field(
-        default=10000,
-        description="Maximum temperature",
-    )
-    Tmin: int = Field(
-        default=1,
-        description="Minimum temperature",
-    )
-    steps: int = Field(
-        default=4000,
-        description="Number of steps",
-    )
-    updates: int = Field(
-        default=300,
-        description="Number of updates",
-    )
+    seed: int = 0
+    Tmax: int = 10000
+    Tmin: int = 1
+    steps: int = 4000
+    updates: int = 300
 
     class Config:
         schema_extra = {
@@ -175,6 +174,15 @@ def optimize_configuration(
     save_folder: str,
     hyper_parameters: SimulatedAnnealingHyperparameters,
 ):
+    """
+    Optimize a configuration with simulated annealing.
+
+    Args:
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        save_folder (str): Folder to save the results in.
+        hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters to perform a configuration optimization with simulated annealing.
+    """
     run_simulated_annealing(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,

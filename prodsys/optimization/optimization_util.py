@@ -1,3 +1,7 @@
+"""
+Module containts utility functions for the optimization module. These functions can be used to change the production system configuration and evaluate its performance.
+"""
+
 from __future__ import annotations
 
 import random
@@ -57,6 +61,16 @@ def clean_out_breakdown_states_of_resources(adapter_object: adapters.ProductionS
 def get_weights(
     adapter: adapters.ProductionSystemAdapter, direction: Literal["min", "max"]
 ) -> Tuple[float, ...]:
+    """
+    Get the weights for the objectives of the optimization from an adapter.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+        direction (Literal[&quot;min&quot;, &quot;max&quot;]): Optimization target direction of the optimizer.
+
+    Returns:
+        Tuple[float, ...]: Tuple of weights for the objectives.
+    """
     weights = []
     for objective in adapter.scenario_data.objectives:
         kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
@@ -134,6 +148,15 @@ def mutation(individual):
 
 
 def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that adds a random machine to the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a machine was added, False otherwise (if adding is not possible due to constraint violations).
+    """
     num_process_modules = (
         random.choice(
             range(
@@ -205,6 +228,15 @@ def add_setup_states_to_machine(adapter_object: adapters.ProductionSystemAdapter
 
 
 def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that adds a random transport resource to the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a transport resource was added, False otherwise (if adding is not possible due to constraint violations).
+    """
     control_policy = random.choice(
         adapter_object.scenario_data.options.transport_controllers
     )
@@ -232,6 +264,15 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
 
 
 def add_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that adds a random process module to a random machine of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a process module was added, False otherwise (if adding is not possible due to constraint violations).
+    """
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
@@ -249,6 +290,15 @@ def add_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool
 
 
 def remove_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that removes a random machine from the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a machine was removed, False otherwise (if removing is not possible due to constraint violations).
+    """
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
@@ -258,6 +308,15 @@ def remove_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
 
 
 def remove_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that removes a random transport resource from the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a transport resource was removed, False otherwise (if removing is not possible due to constraint violations).
+    """
     transport_resources = adapters.get_transport_resources(adapter_object)
     if not transport_resources:
         return False
@@ -278,6 +337,15 @@ def get_processes_by_capabilities(
 
 
 def remove_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that removes a random process module from a random machine of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a process module was removed, False otherwise (if removing is not possible due to constraint violations).
+    """
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
@@ -296,6 +364,15 @@ def remove_process_module(adapter_object: adapters.ProductionSystemAdapter) -> b
 
 
 def move_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that moves a random process module from a random machine to another random machine of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a process module was moved, False otherwise (if moving is not possible due to constraint violations).
+    """
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines or len(possible_machines) < 2:
         return False
@@ -326,6 +403,15 @@ def arrange_machines(adapter_object: adapters.ProductionSystemAdapter) -> None:
 
 
 def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that moves a random machine to a random position of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if a machine was moved, False otherwise (if moving is not possible due to constraint violations).
+    """
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
@@ -341,6 +427,15 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
 
 
 def change_control_policy(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that changes the control policy of a random resource of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if the control policy was changed, False otherwise (if changing is not possible due to constraint violations).
+    """
     if not adapter_object.resource_data:
         return False
     resource = random.choice(adapter_object.resource_data)
@@ -360,6 +455,12 @@ def change_control_policy(adapter_object: adapters.ProductionSystemAdapter) -> b
 
 
 def change_routing_policy(adapter_object: adapters.ProductionSystemAdapter) -> None:
+    """
+    Function that changes the routing policy of a random source of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+    """
     source = random.choice(adapter_object.source_data)
     possible_routing_policies = deepcopy(
         adapter_object.scenario_data.options.routing_heuristics
@@ -450,6 +551,15 @@ def get_reconfiguration_cost(
 def get_random_production_capacity(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Function that adds a random number of machines to the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and added machines.
+    """
     num_machines = (
         random.choice(range(adapter_object.scenario_data.constraints.max_num_machines))
         + 1
@@ -464,6 +574,15 @@ def get_random_production_capacity(
 def get_random_transport_capacity(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Function that adds a random number of transport resources to the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and added transport resources.
+    """
     num_transport_resources = (
         random.choice(
             range(adapter_object.scenario_data.constraints.max_num_transport_resources)
@@ -480,6 +599,15 @@ def get_random_transport_capacity(
 def get_random_layout(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Function that randomly arranges the machines of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and arranged machines.
+    """
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_machines(adapter_object):
         machine.location = random.choice(possible_positions)
@@ -490,6 +618,15 @@ def get_random_layout(
 def get_random_control_policies(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Function that randomly assigns control policies to the machines and transport resources of the production system.
+    
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+        
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and assigned control policies.
+    """
     possible_production_control_policies = deepcopy(
         adapter_object.scenario_data.options.machine_controllers
     )
@@ -508,6 +645,15 @@ def get_random_control_policies(
 def get_random_routing_logic(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> adapters.ProductionSystemAdapter:
+    """
+    Function that randomly assigns routing logics to the sources of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and assigned routing logics.
+    """
     possible_routing_logics = deepcopy(
         adapter_object.scenario_data.options.routing_heuristics
     )
@@ -516,11 +662,29 @@ def get_random_routing_logic(
     return adapter_object
 
 def random_configuration_with_initial_solution(initial_adapters: List[adapters.ProductionSystemAdapter]) -> adapters.ProductionSystemAdapter:
+    """
+    Function that creates a random configuration based on an list of initial solutions.
+
+    Args:
+        initial_adapters (List[adapters.ProductionSystemAdapter]): List of initial solutions.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Random configuration based on an initial solution.
+    """
     adapter_object = random.choice(initial_adapters)
     return random_configuration(adapter_object)
 
 
 def random_configuration(baseline: adapters.ProductionSystemAdapter) -> adapters.ProductionSystemAdapter:
+    """
+    Function that creates a random configuration based on a baseline configuration.
+
+    Args:
+        baseline (adapters.ProductionSystemAdapter): Baseline configuration.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
+    """
     transformations = baseline.scenario_data.options.transformations
     while True:
         adapter_object = baseline.copy(deep=True)
@@ -607,6 +771,16 @@ def check_valid_configuration(
     configuration: adapters.ProductionSystemAdapter,
     base_configuration: adapters.ProductionSystemAdapter,
 ) -> bool:
+    """
+    Function that checks if a configuration is valid.
+
+    Args:
+        configuration (adapters.ProductionSystemAdapter): Configuration to be checked.
+        base_configuration (adapters.ProductionSystemAdapter): Baseline configuration.
+
+    Returns:
+        bool: True if the configuration is valid, False otherwise.
+    """
     if not valid_num_machines(configuration):
         return False
     if not valid_transport_capacity(configuration):
@@ -671,6 +845,21 @@ def evaluate(
     performances: dict,
     individual,
 ) -> List[float]:
+    """
+    Function that evaluates a configuration.
+
+    Args:
+        base_scenario (adapters.ProductionSystemAdapter): Baseline configuration.
+        solution_dict (Dict[str, Union[list, str]]): Dictionary containing the solutions of the current and previous generations.
+        performances (dict): Dictionary containing the performances of the current and previous generations.
+        individual (List[adapters.ProductionSystemAdapter]): List if length 1 containing the configuration to be evaluated.
+
+    Raises:
+        ValueError: If the time range is not defined in the scenario data.
+
+    Returns:
+        List[float]: List of the fitness values of the configuration.
+    """
 
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     current_generation = solution_dict["current_generation"]

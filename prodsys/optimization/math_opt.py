@@ -58,6 +58,13 @@ def get_modul_counts(adapter: adapters.ProductionSystemAdapter) -> Dict[str, int
 
 
 class MathOptimizer(BaseModel):
+    """
+    Mathematical optimizer for configuration planning of production systems. For mathetical optimization, only production capacity, cosidering the number of production resources and their processes. Here, only configuration cost can be optimized. However, the mathematical optimization set the expected number of produced materials as a constraint, thus allowing for a target output.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): Adapter that contains the configuration of the production system to use for optimization.
+        optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
+    """
     adapter: adapters.ProductionSystemAdapter
     optimization_time_portion: float = 1.0
 
@@ -378,6 +385,12 @@ class MathOptimizer(BaseModel):
         )
 
     def optimize(self, n_solutions=1):
+        """
+        Optimize the configuration of the production system.
+
+        Args:
+            n_solutions (int, optional): Number of solutions to find. Defaults to 1.
+        """
         st = datetime.datetime.now()
         self.model: Any = gp.Model("MILP_Rekonfiguration")
 
@@ -407,11 +420,30 @@ class MathOptimizer(BaseModel):
         print("Execution time:", elapsed_time, "seconds")
 
     def save_model(self, save_folder: str):
+        """
+        Saves the optimization model to a file with the name 'MILP.lp'.
+
+        Args:
+            save_folder (str): Folder to save the model in.
+        """
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
         self, save_folder: str, adjusted_number_of_transport_resources: int = 1
     ):
+        """
+        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run. 
+
+        For saving the configuration, some defaults attributes are used for non-found degrees of freedom in the optimization:
+
+        - random location of a production resource
+        - FIFO control policy for a production resource
+        - FIFO control policy for a transport resource
+
+        Args:
+            save_folder (str): Folder to save the results in.
+            adjusted_number_of_transport_resources (int, optional): Number of transport resources that are used for the optimization. Defaults to 1.
+        """
         nSolutions = self.model.SolCount
         solution_dict = {"current_generation": "00", "00": []}
         performances = {}
@@ -487,6 +519,17 @@ def run_mathematical_optimization(
     number_of_solutions: int,
     adjusted_number_of_transport_resources: int,
 ):
+    """
+    Run a mathematical optimization for configuration planning of production systems. 
+
+    Args:
+        save_folder (str): Folder to save the results in.
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
+        number_of_solutions (int): Number of solutions to find.
+        adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
+    """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     adapter = adapters.JsonProductionSystemAdapter()
@@ -514,16 +557,9 @@ class MathOptHyperparameters(BaseModel):
         adjusted_number_of_transport_resources (int): Number of transport resources that are used for the optimization.
     """
 
-    optimization_time_portion: float = Field(
-        0.5, description="Portion of the total time that is used for optimization."
-    )
-    number_of_solutions: int = Field(
-        1, description="Number of solutions that are generated."
-    )
-    adjusted_number_of_transport_resources: int = Field(
-        1,
-        description="Number of transport resources that are used for the optimization.",
-    )
+    optimization_time_portion: float = 0.5
+    number_of_solutions: int = 1
+    adjusted_number_of_transport_resources: int = 1
 
     class Config:
         schema_extra = {
@@ -544,6 +580,15 @@ def optimize_configuration(
     save_folder: str,
     hyper_parameters: MathOptHyperparameters,
 ):
+    """
+    Optimize the configuration of the production system with mathematical optimization.
+
+    Args:
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        save_folder (str): Folder to save the results in.
+        hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
+    """
     run_mathematical_optimization(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,
