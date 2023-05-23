@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field
 
 
 from prodsys.simulation import router, sim
-from prodsys.data_structures import material_data
+from prodsys.data_structures import product_data
 from prodsys.factories import process_factory
 from prodsys.simulation import logger, proces_models, process
 
 
-class MaterialFactory(BaseModel):
+class ProductFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` material objects from `prodsys.data_structures` material objects.
+    Factory class that creates and stores `prodsys.simulation` product objects from `prodsys.data_structures` product objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.
@@ -22,55 +22,55 @@ class MaterialFactory(BaseModel):
 
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
-    materials: List[material.Material] = []
-    finished_materials: List[material.Material] = []
+    products: List[product.Product] = []
+    finished_products: List[product.Product] = []
     event_logger: logger.EventLogger = Field(default=False, init=False)
-    material_counter = 0
+    product_counter = 0
 
     class Config:
         arbitrary_types_allowed = True
 
-    def create_material(
-        self, material_data: material_data.MaterialData, router: router.Router
-    ) -> material.Material:
+    def create_product(
+        self, product_data: product_data.ProductData, router: router.Router
+    ) -> product.Product:
         """
-        Creates a material object based on the given material data and router.
+        Creates a product object based on the given product data and router.
 
         Args:
-            material_data (material_data.MaterialData): Material data that is used to create the material object.
-            router (router.Router): Router that is used to route the material object.
+            product_data (product_data.ProductData): Product data that is used to create the product object.
+            router (router.Router): Router that is used to route the product object.
 
         Raises:
             ValueError: If the transport process is not found.
 
         Returns:
-            material.Material: Created material object.
+            product.Product: Created product object.
         """
-        material_data = material_data.copy()
-        material_data.ID = (
-            str(material_data.material_type) + "_" + str(self.material_counter)
+        product_data = product_data.copy()
+        product_data.ID = (
+            str(product_data.product_type) + "_" + str(self.product_counter)
         )
-        process_model = self.create_process_model(material_data)
+        process_model = self.create_process_model(product_data)
         transport_processes = self.process_factory.get_process(
-            material_data.transport_process
+            product_data.transport_process
         )
         if not transport_processes or isinstance(
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
-        material_object = material.Material(
+        product_object = product.Product(
             env=self.env,
-            material_data=material_data,
-            material_router=router,
+            product_data=product_data,
+            product_router=router,
             process_model=process_model,
             transport_process=transport_processes,
         )
         if self.event_logger:
-            self.event_logger.observe_terminal_material_states(material_object)
+            self.event_logger.observe_terminal_product_states(product_object)
 
-        self.material_counter += 1
-        self.materials.append(material_object)
-        return material_object
+        self.product_counter += 1
+        self.products.append(product_object)
+        return product_object
 
     def get_precendece_graph_from_id_adjacency_matrix(
         self, id_adjacency_matrix: Dict[str, List[str]]
@@ -95,13 +95,13 @@ class MaterialFactory(BaseModel):
         return precedence_graph
 
     def create_process_model(
-        self, material_data: material_data.MaterialData
+        self, product_data: product_data.ProductData
     ) -> proces_models.ProcessModel:
         """
-        Creates a process model based on the given material data.
+        Creates a process model based on the given product data.
 
         Args:
-            material_data (material_data.MaterialData): Material data that is used to create the process model.
+            product_data (product_data.ProductData): Product data that is used to create the process model.
 
         Raises:
             ValueError: If the process model is not recognized.
@@ -109,22 +109,22 @@ class MaterialFactory(BaseModel):
         Returns:
             proces_models.ProcessModel: Created process model.
         """
-        if isinstance(material_data.processes, list) and isinstance(
-            material_data.processes[0], str
+        if isinstance(product_data.processes, list) and isinstance(
+            product_data.processes[0], str
         ):
             process_list = self.process_factory.get_processes_in_order(
-                material_data.processes
+                product_data.processes
             )
             return proces_models.ListProcessModel(process_list=process_list)
-        elif isinstance(material_data.processes, dict):
+        elif isinstance(product_data.processes, dict):
             return self.get_precendece_graph_from_id_adjacency_matrix(
-                material_data.processes
+                product_data.processes
             )
-        elif isinstance(material_data.processes, list) and isinstance(
-            material_data.processes[0], list
+        elif isinstance(product_data.processes, list) and isinstance(
+            product_data.processes[0], list
         ):
             id_adjacency_matrix = proces_models.get_adjacency_matrix_from_edges(
-                material_data.processes
+                product_data.processes
             )
             return self.get_precendece_graph_from_id_adjacency_matrix(
                 id_adjacency_matrix
@@ -132,40 +132,40 @@ class MaterialFactory(BaseModel):
         else:
             raise ValueError("Process model not recognized.")
 
-    def get_material(self, ID: str) -> material.Material:
+    def get_product(self, ID: str) -> product.Product:
         """
-        Returns the material object with the given ID.
+        Returns the product object with the given ID.
 
         Args:
-            ID (str): ID of the material object.
+            ID (str): ID of the product object.
 
         Returns:
-            material.Material: Material object with the given ID.
+            product.Product: Product object with the given ID.
         """
-        return [m for m in self.materials if m.material_data.ID == ID].pop()
+        return [m for m in self.products if m.product_data.ID == ID].pop()
 
-    def remove_material(self, material: material.Material):
+    def remove_product(self, product: product.Product):
         """
-        Removes the given material object from the material factory list of current material objects.
+        Removes the given product object from the product factory list of current product objects.
 
         Args:
-            material (material.Material): Material object that is removed.
+            product (product.Product): Product object that is removed.
         """
-        self.materials = [
-            m for m in self.materials if m.material_data.ID != material.material_data.ID
+        self.products = [
+            m for m in self.products if m.product_data.ID != product.product_data.ID
         ]
 
-    def register_finished_material(self, material: material.Material):
+    def register_finished_product(self, product: product.Product):
         """
-        Registers the given material object as a finished material object.
+        Registers the given product object as a finished product object.
 
         Args:
-            material (material.Material): Material object that is registered as a finished material object.
+            product (product.Product): Product object that is registered as a finished product object.
         """
-        self.finished_materials.append(material)
-        self.remove_material(material)
+        self.finished_products.append(product)
+        self.remove_product(product)
 
 
-from prodsys.simulation import material
+from prodsys.simulation import product
 
-material.Material.update_forward_refs()
+product.Product.update_forward_refs()

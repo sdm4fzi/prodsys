@@ -24,7 +24,7 @@ class Event(BaseModel):
         state (str): State of the event.
         state_type (str): State type of the event, representing a state.StateTypeEnum.
         activity (str): Activity of the event, representing a state.StateEnum.
-        material (Optional[str], optional): Material of the event. Defaults to None.
+        product (Optional[str], optional): Product of the event. Defaults to None.
         expected_end_time (Optional[float], optional): Expected end time of the event. Defaults to None.
         target_location (Optional[str], optional): Target location of the event. Defaults to None.
     """
@@ -34,7 +34,7 @@ class Event(BaseModel):
     state: str
     state_type: str
     activity: str
-    material: Optional[str] = None
+    product: Optional[str] = None
     expected_end_time: Optional[float] = None
     target_location: Optional[str] = None
 
@@ -49,7 +49,7 @@ class Event(BaseModel):
                         "state": "P1",
                         "state_type": "Production",
                         "activity": "start state",
-                        "material": "Material_1_12",
+                        "product": "Product_1_12",
                         "expected_end_time": 24.3,
                         "target_location": None,
                     },
@@ -62,7 +62,7 @@ class Event(BaseModel):
                         "state": "P1",
                         "state_type": "Production",
                         "activity": "end state",
-                        "material": "Material_1_12",
+                        "product": "Product_1_12",
                         "expected_end_time": None,
                         "target_location": None,
                     },

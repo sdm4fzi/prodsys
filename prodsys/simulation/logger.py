@@ -15,7 +15,7 @@ from prodsys.simulation import state
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import material
+    from prodsys.simulation import product
     from prodsys.factories import resource_factory
 
 
@@ -90,21 +90,21 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "State Type": state_info._state_type,
         "Activity": state_info._activity,
         "Expected End Time": state_info._expected_end_time,
-        "Material": state_info._material_ID,
+        "Product": state_info._product_ID,
         "Target location": state_info._target_ID,
     }
     data.append(item)
 
 
-def post_monitor_material_info(data: List[dict], material_info: material.MaterialInfo):
+def post_monitor_product_info(data: List[dict], product_info: product.ProductInfo):
 
     item = {
-        "Time": material_info.event_time,
-        "Resource": material_info.resource_ID,
-        "State": material_info.state_ID,
-        "State Type": material_info.state_type,
-        "Activity": material_info.activity,
-        "Material": material_info.material_ID,
+        "Time": product_info.event_time,
+        "Resource": product_info.resource_ID,
+        "State": product_info.state_ID,
+        "State Type": product_info.state_type,
+        "Activity": product_info.activity,
+        "Product": product_info.product_ID,
     }
     data.append(item)
 
@@ -117,12 +117,7 @@ class EventLogger(Logger):
         df["Activity"] = pd.Categorical(
             df["Activity"],
             categories=[
-                "created material",
-                "end state",
-                "end interrupt",
-                "start state",
-                "start interrupt",
-                "finished material",
+                v.value for v in list(state.StateEnum)
             ],
             ordered=True,
         )
@@ -145,10 +140,10 @@ class EventLogger(Logger):
                     post=post_monitor_resource_states,
                 )
 
-    def observe_terminal_material_states(self, material: material.Material):
+    def observe_terminal_product_states(self, product: product.Product):
         self.register_patch(
                     self.event_data,
-                    material.material_info,
-                    attr=["log_create_material", "log_finish_material"],
-                    post=post_monitor_material_info,
+                    product.product_info,
+                    attr=["log_create_product", "log_finish_product"],
+                    post=post_monitor_product_info,
                 )

@@ -8,12 +8,12 @@ from pydantic import parse_obj_as, BaseModel
 from prodsys.adapters import adapter
 
 from prodsys.data_structures import (
+    product_data,
     queue_data,
     resource_data,
     time_model_data,
     state_data,
     processes_data,
-    material_data,
     sink_data,
     source_data,
 )
@@ -32,10 +32,10 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         seed (int, optional): Seed for the random number generator used in simulation. Defaults to 0.
         time_model_data (List[time_model_data.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
         state_data (List[state_data.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
-        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by materials and provided by resources in the production system. Defaults to [].
+        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
         queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
         resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
-        material_data (List[material_data.MaterialData], optional): List of materials in the production system. Defaults to [].
+        product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to [].
         sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
@@ -64,7 +64,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
 
         self.queue_data = self.create_objects_from_configuration_data(data["queues"], queue_data.QueueData)
         self.resource_data = self.create_objects_from_configuration_data(data["resources"], resource_data.RESOURCE_DATA_UNION)
-        self.material_data = self.create_objects_from_configuration_data(data["materials"], material_data.MaterialData)
+        self.product_data = self.create_objects_from_configuration_data(data["products"], product_data.ProductData)
         self.sink_data = self.create_objects_from_configuration_data(data["sinks"], sink_data.SinkData)
         self.source_data = self.create_objects_from_configuration_data(data["sources"], source_data.SourceData)
         if scenario_file_path:
@@ -107,7 +107,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
                 "processes": self.get_dict_of_list_objects(self.process_data),
                 "queues": self.get_dict_of_list_objects(self.queue_data),
                 "resources": self.get_dict_of_list_objects(self.resource_data),
-                "materials": self.get_dict_of_list_objects(self.material_data),
+                "products": self.get_dict_of_list_objects(self.product_data),
                 "sinks": self.get_dict_of_list_objects(self.sink_data),
                 "sources": self.get_dict_of_list_objects(self.source_data)
         }

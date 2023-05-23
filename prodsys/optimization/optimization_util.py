@@ -797,11 +797,11 @@ def check_valid_configuration(
 
 
 def get_throughput_time(pp: PostProcessor) -> float:
-    throughput_time_for_materials = pp.get_aggregated_throughput_time_data()
-    if not throughput_time_for_materials:
-        throughput_time_for_materials = [100000]
-    avg_throughput_time = sum(throughput_time_for_materials) / len(
-        throughput_time_for_materials
+    throughput_time_for_products = pp.get_aggregated_throughput_time_data()
+    if not throughput_time_for_products:
+        throughput_time_for_products = [100000]
+    avg_throughput_time = sum(throughput_time_for_products) / len(
+        throughput_time_for_products
     )
     return avg_throughput_time
 

@@ -17,7 +17,7 @@ from prodsys.factories import (
     process_factory,
     queue_factory,
     resource_factory,
-    material_factory,
+    product_factory,
     sink_factory,
     source_factory,
 )
@@ -61,7 +61,7 @@ class Runner(BaseModel):
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
     source_factory: source_factory.SourceFactory = Field(init=False, default=None)
-    material_factory: material_factory.MaterialFactory = Field(init=False, default=None)
+    product_factory: product_factory.ProductFactory = Field(init=False, default=None)
     event_logger: logger.Logger = Field(init=False, default=None)
     time_stamp: str = Field(init=False, default="")
     post_processor: post_processing.PostProcessor = Field(init=False, default=None)
@@ -98,13 +98,13 @@ class Runner(BaseModel):
             )
             self.resource_factory.create_resources(self.adapter)
 
-            self.material_factory = material_factory.MaterialFactory(
+            self.product_factory = product_factory.ProductFactory(
                 env=self.env, process_factory=self.process_factory
             )
 
             self.sink_factory = sink_factory.SinkFactory(
                 env=self.env,
-                material_factory=self.material_factory,
+                product_factory=self.product_factory,
                 queue_factory=self.queue_factory,
             )
 
@@ -113,11 +113,11 @@ class Runner(BaseModel):
             self.event_logger = logger.EventLogger()
             self.event_logger.observe_resource_states(self.resource_factory)
 
-            self.material_factory.event_logger = self.event_logger
+            self.product_factory.event_logger = self.event_logger
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
-                material_factory=self.material_factory,
+                product_factory=self.product_factory,
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
@@ -167,7 +167,7 @@ class Runner(BaseModel):
                     state=row["State"],
                     state_type=row["State Type"],
                     activity=row["Activity"],
-                    material=row["Material"],
+                    product=row["Product"],
                     expected_end_time=row["Expected End Time"],
                     target_location=row["Target location"],
                 )

@@ -34,7 +34,7 @@ class SourceData(CoreAsset):
         ID (str): ID of the source.
         description (str): Description of the source.
         location (List[float]): Location of the source. It has to be a list of length 2.
-        material_type (str): Material type of the source.
+        product_type (str): Product type of the source.
         time_model_id (str): Time model ID of the source.
         router (RouterType): Router of the source.
         routing_heuristic (RoutingHeuristic): Routing heuristic of the source.
@@ -48,7 +48,7 @@ class SourceData(CoreAsset):
             ID="S1",
             description="Source 1",
             location=[0.0, 0.0],
-            material_type="Material_1",
+            product_type="Product_1",
             time_model_id="function_time_model_4",
             router="SimpleRouter",
             routing_heuristic="shortest_queue",
@@ -56,7 +56,7 @@ class SourceData(CoreAsset):
         )
     """
     location: conlist(float, min_items=2, max_items=2)
-    material_type: str
+    product_type: str
     time_model_id: str
     router: RouterType
     routing_heuristic: RoutingHeuristic
@@ -70,7 +70,7 @@ class SourceData(CoreAsset):
                     "ID": "S1",
                     "description": "Source 1",
                     "location": [0.0, 0.0],
-                    "material_type": "Material_1",
+                    "product_type": "Product_1",
                     "time_model_id": "function_time_model_4",
                     "router": "SimpleRouter",
                     "routing_heuristic": "shortest_queue",

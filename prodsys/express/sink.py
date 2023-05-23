@@ -8,7 +8,7 @@ from pydantic.dataclasses import dataclass
 from prodsys.data_structures import sink_data, queue_data
 import prodsys
 
-from prodsys.express import core, material
+from prodsys.express import core, product
 
 @dataclass
 class Sink(core.ExpressObject):
@@ -16,7 +16,7 @@ class Sink(core.ExpressObject):
     Class that represents a sink.
 
     Args:
-        material (material.Material): Material of the sink.
+        product (product.Product): Product of the sink.
         location (conlist(float, min_items=2, max_items=2)): Location of the sink.
         ID (str): ID of the sink.
     
@@ -24,7 +24,7 @@ class Sink(core.ExpressObject):
         _input_queues (List[queue_data.QueueData]): Input queues of the sink.
     
     Examples:
-        Creation of a sink with a material and a location:
+        Creation of a sink with a product and a location:
         ```py
         import prodsys.express as psx
         welding_time_model = psx.time_model_data.FunctionTimeModel(
@@ -45,17 +45,17 @@ class Sink(core.ExpressObject):
         transport_process = psx.process.TransportProcess(
             time_model=transport_time_model,
         )
-        material = psx.Material(
+        product = psx.Product(
             processes=[welding_process_1, welding_process_2],
             transport_process=transport_process 
         )
         psx.Sink(
-            material=material,
+            product=product,
             location=[0.0, 0.0],
         )
         ```
     """
-    material: material.Material
+    product: product.Product
     location: conlist(float, min_items=2, max_items=2)
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
@@ -72,7 +72,7 @@ class Sink(core.ExpressObject):
             ID=self.ID,
             description="",
             location=self.location,
-            material_type=self.material.ID,
+            product_type=self.product.ID,
         )
         self._input_queues = [prodsys.adapters.get_default_queue_for_sink(sink)]
         sink.input_queues = [q.ID for q in self._input_queues]

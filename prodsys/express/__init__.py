@@ -10,7 +10,7 @@ Recommended is to use the API for programmatically specifying a production syste
 The following modules are available:
 
 - `prodsys.express.core`: Contains the abstract base class for express objects.	
-- `prodsys.express.material`: Contains classes to specify materials.
+- `prodsys.express.product`: Contains classes to specify products.
 - `prodsys.express.process`: Contains classes to specify processes.
 - `prodsys.express.production_system`: Contains classes to specify a production system.
 - `prodsys.express.resources`: Contains classes to specify resources.
@@ -32,7 +32,7 @@ from prodsys.express.process import (
 )
 from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState
 from prodsys.express.resources import ProductionResource, TransportResource
-from prodsys.express.material import Material
+from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
 from prodsys.express.production_system import ProductionSystem

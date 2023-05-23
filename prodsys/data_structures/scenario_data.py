@@ -42,14 +42,14 @@ class ScenarioConstrainsData(BaseModel):
         max_num_machines (int): Maximum number of machines that can be used in the scenario.
         max_num_processes_per_machine (int): Maximum number of processes that can be assigned to a machine in the scenario.
         max_num_transport_resources (int): Maximum number of transport resources that can be used in the scenario.
-        target_material_count (Optional[Dict[str, int]], optional): Target material count for the scenario. Defaults to None. Mapping of material type to target count in the considered time range of the scenario.
+        target_product_count (Optional[Dict[str, int]], optional): Target product count for the scenario. Defaults to None. Mapping of product type to target count in the considered time range of the scenario.
     """
 
     max_reconfiguration_cost: float
     max_num_machines: int
     max_num_processes_per_machine: int
     max_num_transport_resources: int
-    target_material_count: Optional[Dict[str, int]]
+    target_product_count: Optional[Dict[str, int]]
 
     class Config:
         schema_extra = {
@@ -60,7 +60,7 @@ class ScenarioConstrainsData(BaseModel):
                     "max_num_machines": 10,
                     "max_num_processes_per_machine": 2,
                     "max_num_transport_resources": 2,
-                    "target_material_count": {"Material_1": 120, "Material_2": 200},
+                    "target_product_count": {"Product_1": 120, "Product_2": 200},
                 },
             }
         }
@@ -210,7 +210,7 @@ class ScenarioData(BaseModel):
                         "max_num_machines": 10,
                         "max_num_processes_per_machine": 2,
                         "max_num_transport_resources": 2,
-                        "target_material_count": {"Material_1": 120, "Material_2": 200},
+                        "target_product_count": {"Product_1": 120, "Product_2": 200},
                     },
                     "options": {
                         "transformations": [

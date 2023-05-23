@@ -11,7 +11,7 @@ from prodsys.data_structures import sink_data
 class Sink(BaseModel):
     env: sim.Environment
     data: sink_data.SinkData
-    material_factory: material_factory.MaterialFactory
+    product_factory: product_factory.ProductFactory
     input_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
     class Config:
@@ -23,10 +23,10 @@ class Sink(BaseModel):
     def get_location(self) -> List[float]:
         return self.data.location
     
-    def register_finished_material(self, material):
-        self.material_factory.register_finished_material(material)
+    def register_finished_product(self, product):
+        self.product_factory.register_finished_product(product)
 
-from prodsys.factories import material_factory
+from prodsys.factories import product_factory
 Sink.update_forward_refs()
     
 

@@ -12,8 +12,8 @@ from prodsys.util import util
 
 from prodsys.express import (
     core,
+    product,
     resources,
-    material,
     source,
     sink,
     process,
@@ -28,7 +28,7 @@ def remove_duplicate_items(
             resources.Resource,
             source.Source,
             sink.Sink,
-            material.Material,
+            product.Product,
             state.STATE_UNION,
             process.PROCESS_UNION,
             time_model.TIME_MODEL_UNION,
@@ -39,7 +39,7 @@ def remove_duplicate_items(
         resources.Resource,
         source.Source,
         sink.Sink,
-        material.Material,
+        product.Product,
         state.STATE_UNION,
         process.PROCESS_UNION,
         time_model.TIME_MODEL_UNION,
@@ -61,7 +61,7 @@ def remove_duplicate_items(
 @dataclass
 class ProductionSystem(core.ExpressObject):
     """
-    Class that represents a production system. A production system containts of resources, materials, sources and sinks.
+    Class that represents a production system. A production system containts of resources, products, sources and sinks.
     It is the `prodsys.express` equivalent to the 'ProductionSystemAdapter' of the `prodsys.adapters` module and
     can be converted to this data object. In contrast to the adapter,
     this class nests the objects in a tree structure, which makes it easier to work with when instantiating
@@ -86,13 +86,13 @@ class ProductionSystem(core.ExpressObject):
         Returns:
             prodsys.adapters.Adapter: An instance of the data object.
         """
-        materials = [source.material for source in self.sources] + [
-            sink.material for sink in self.sinks
+        products = [source.product for source in self.sources] + [
+            sink.product for sink in self.sinks
         ]
-        materials = remove_duplicate_items(materials)
+        products = remove_duplicate_items(products)
         processes = list(
             util.flatten_object(
-                [material.processes for material in materials]
+                [product.processes for product in products]
                 + [resource.processes for resource in self.resources]
             )
         )
@@ -119,7 +119,7 @@ class ProductionSystem(core.ExpressObject):
         time_model_data = [time_model.to_data_object() for time_model in time_models]
         process_data = [process.to_data_object() for process in processes]
         state_data = [state.to_data_object() for state in states]
-        material_data = [material.to_data_object() for material in materials]
+        product_data = [product.to_data_object() for product in products]
         resource_data = [resource.to_data_object() for resource in self.resources]
         source_data = [source.to_data_object() for source in self.sources]
         sink_data = [sink.to_data_object() for sink in self.sinks]
@@ -144,7 +144,7 @@ class ProductionSystem(core.ExpressObject):
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,
-            material_data=material_data,
+            product_data=product_data,
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,

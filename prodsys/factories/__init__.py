@@ -3,7 +3,7 @@ The `prodsys.factories` package contains the factory classes to create `prodsys.
 
 The following modules are available:
 
-- `prodsys.factories.material_factory`: Contains the factory class to create materials.
+- `prodsys.factories.product_factory`: Contains the factory class to create products.
 - `prodsys.factories.process_factory`: Contains the factory class to create processes.
 - `prodsys.factories.queue_factory`: Contains the factory class to create queues.
 - `prodsys.factories.resource_factory`: Contains the factory class to create resources.

@@ -1,27 +1,24 @@
 from __future__ import annotations
 
-from enum import Enum
-from abc import ABC, abstractmethod
-from typing import List, Union, TYPE_CHECKING, Dict, Type, Callable
+from typing import List, TYPE_CHECKING
 
-import numpy as np
 from pydantic import BaseModel
 
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import material, resources, control, state
-    from prodsys.factories import resource_factory, material_factory
+    from prodsys.simulation import resources, state
+    from prodsys.factories import resource_factory
 
 
 class ProcessObservation(BaseModel):
     process: str
-    material: str
+    product: str
     activity: state.StateEnum
     state: state.StateTypeEnum
 
 class QueueObservation(BaseModel):
-    material: str
+    product: str
     activity: str
     process: str
     next_resource: str
@@ -33,42 +30,42 @@ def observe_processes(resource: resources.Resource) -> List[ProcessObservation]:
         if production_state.process:
             observation = ProcessObservation(
                 process=production_state.state_info.ID,
-                material=production_state.state_info._material_ID,
+                product=production_state.state_info._product_ID,
                 activity=production_state.state_info._activity,
                 state=production_state.state_info._state_type
             )
             process_observations.append(observation)
     return process_observations
 
-def observe_input_queue(resource: resources.Resource, material_factory: material_factory.MaterialFactory) -> List[QueueObservation]:
+def observe_input_queue(resource: resources.Resource, product_factory: product_factory.ProductFactory) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.input_queues:
-        for material_data in queue.items:
-            material = material_factory.get_material(material_data.ID)
+        for product_data in queue.items:
+            product = product_factory.get_product(product_data.ID)
 
             production_process_info = QueueObservation(
-                material=material_data.ID,
+                product=product_data.ID,
                 activity="waiting",
-                process=material.next_process.process_data.ID,
-                next_resource=material.next_resource.data.ID,
-                waiting_since=material.material_info.event_time
+                process=product.next_process.process_data.ID,
+                next_resource=product.next_resource.data.ID,
+                waiting_since=product.product_info.event_time
             )
             queue_observation.append(production_process_info)
 
     return queue_observation
 
-def observe_output_queue(resource: resources.Resource, material_factory: material_factory.MaterialFactory) -> List[QueueObservation]:
+def observe_output_queue(resource: resources.Resource, product_factory: product_factory.ProductFactory) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.output_queues:
-        for material_data in queue.items:
-            material = material_factory.get_material(material_data.ID)
+        for product_data in queue.items:
+            product = product_factory.get_product(product_data.ID)
 
             production_process_info = QueueObservation(
-                material=material_data.ID,
+                product=product_data.ID,
                 activity="waiting",
-                process=material.next_process,
-                next_resource=material.next_resource,
-                waiting_since=material.material_info.event_time
+                process=product.next_process,
+                next_resource=product.next_resource,
+                waiting_since=product.product_info.event_time
             )
             queue_observation.append(production_process_info)
 
@@ -83,21 +80,21 @@ def observe_resource_available(resource: resources.Resource) -> ResourceAvailabl
 
 class ResourceObserver(BaseModel):
     resource_factory: resource_factory.ResourceFactory
-    material_factory: material_factory.MaterialFactory
+    product_factory: product_factory.ProductFactory
     resource: resources.Resource
 
     def observe_processes(self) -> List[ProcessObservation]:
         return observe_processes(self.resource)
     
     def observe_input_queue(self) -> List[QueueObservation]:
-        return observe_input_queue(self.resource, self.material_factory)
+        return observe_input_queue(self.resource, self.product_factory)
     
     def observe_output_queue(self) -> List[QueueObservation]:
-        return observe_output_queue(self.resource, self.material_factory)
+        return observe_output_queue(self.resource, self.product_factory)
     
     def observe_resource_available(self) -> ResourceAvailableObservation:
         return observe_resource_available(self.resource)
     
-from prodsys.factories import resource_factory, material_factory
-from prodsys.simulation import material, resources, control, state
+from prodsys.factories import resource_factory, product_factory
+from prodsys.simulation import resources, state
 ResourceObserver.update_forward_refs()

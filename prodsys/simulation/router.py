@@ -11,7 +11,7 @@ from prodsys.simulation import resources
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, process, material, sink
+    from prodsys.simulation import resources, process, product, sink
     from prodsys.factories import resource_factory, sink_factory
     from prodsys.util import gym_env
 
@@ -25,14 +25,14 @@ class Router:
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
-        self.routing_heuristic: Callable[..., material.Location] = routing_heuristic
+        self.routing_heuristic: Callable[..., product.Location] = routing_heuristic
 
     @abstractmethod
     def get_next_resource(self, __process: process.Process) -> Optional[resources.Resource]:
         pass
 
-    def get_sink(self, _material_type: str) -> sink.Sink:
-        possible_sinks = self.sink_factory.get_sinks_with_material_type(_material_type)
+    def get_sink(self, _product_type: str) -> sink.Sink:
+        possible_sinks = self.sink_factory.get_sinks_with_product_type(_product_type)
         chosen_sink = self.routing_heuristic(possible_sinks)
         return chosen_sink  # type: ignore False
     

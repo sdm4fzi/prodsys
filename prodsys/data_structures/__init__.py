@@ -5,7 +5,7 @@ All of these formats are compatible with the `prodsys.express` API. However, the
 The following modules are available:
 
 - `prodsys.data_structures.core_asset`: Contains the abstract base class for data objects.
-- `prodsys.data_structures.material_data`: Contains classes to represent materials.
+- `prodsys.data_structures.product_data`: Contains classes to represent products.
 - `prodsys.data_structures.performance_data`: Contains classes to represent performance data.
 - `prodsys.data_structures.performance_indicators`: Contains classes to represent performance indicators (KPIs).
 - `prodsys.data_structures.processes_data`: Contains classes to represent processes.

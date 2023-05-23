@@ -4,22 +4,22 @@ from uuid import uuid1
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import material_data
+from prodsys.data_structures import product_data
 
 from prodsys.express import process, core
 
 @dataclass
-class Material(core.ExpressObject):
+class Product(core.ExpressObject):
     """
-    Class that represents a material.
+    Class that represents a product.
 
     Args:
-        processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Processes of the material required for its production. These processes are executed sequentially. To have more degree of freedom with precedence graph process models, use the prodsys.datastructures API of material.
-        transport_process (process.TransportProcess): Transport process of the material.
-        ID (str): ID of the material.
+        processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Processes of the product required for its production. These processes are executed sequentially. To have more degree of freedom with precedence graph process models, use the prodsys.datastructures API of product.
+        transport_process (process.TransportProcess): Transport process of the product.
+        ID (str): ID of the product.
 
     Examples:
-        Material with 2 sequential processes and a transport process:
+        Product with 2 sequential processes and a transport process:
         ```py
         import prodsys.express as psx
         welding_time_model = psx.time_model_data.FunctionTimeModel(
@@ -40,7 +40,7 @@ class Material(core.ExpressObject):
         transport_process = psx.process.TransportProcess(
             time_model=transport_time_model,
         )
-        psx.Material(
+        psx.Product(
             processes=[welding_process_1, welding_process_2],
             transport_process=transport_process
         )
@@ -50,14 +50,14 @@ class Material(core.ExpressObject):
     transport_process: process.TransportProcess
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def to_data_object(self) -> material_data.MaterialData:
+    def to_data_object(self) -> product_data.ProductData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
 
         Returns:
-            material_data.MaterialData: An instance of the data object.
+            product_data.ProductData: An instance of the data object.
         """
-        return material_data.MaterialData(
+        return product_data.ProductData(
             ID=self.ID,
             description="",
             processes=[process.ID for process in self.processes],

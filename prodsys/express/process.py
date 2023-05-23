@@ -1,11 +1,11 @@
 """
 `process` module contains the `prodsys.express` classes to represent the processes that can 
-be performed on materials by resources.
+be performed on products by resources.
 
 The following processes are possible:
-- `ProductionProcess`: A process that can be performed on a material by a production resource.
-- `CapabilityProcess`: A process that can be performed on a material by a resource, based on the capability of the resource.
-- `TransportProcess`: A process that can be performed on a material by a transport resource.
+- `ProductionProcess`: A process that can be performed on a product by a production resource.
+- `CapabilityProcess`: A process that can be performed on a product by a resource, based on the capability of the resource.
+- `TransportProcess`: A process that can be performed on a product by a transport resource.
 """
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
 class CapabilityProcess(Process, core.ExpressObject):
     """
     Class that represents a capability process. For capability processes, matching of 
-    required processes of material and provided processes by resources is done based on 
+    required processes of product and provided processes by resources is done based on 
     the capability instead of the porcess itself.
 
     Args:
@@ -154,7 +154,7 @@ class CapabilityProcess(Process, core.ExpressObject):
 @dataclass
 class TransportProcess(DefaultProcess, core.ExpressObject):
     """
-    Class that represents a transport process. Transport processes are required to transport material from one location to another. 
+    Class that represents a transport process. Transport processes are required to transport product from one location to another. 
 
     Args:
         time_model (time_model.TIME_MODEL_UNION): Time model of the process.

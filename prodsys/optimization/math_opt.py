@@ -59,7 +59,7 @@ def get_modul_counts(adapter: adapters.ProductionSystemAdapter) -> Dict[str, int
 
 class MathOptimizer(BaseModel):
     """
-    Mathematical optimizer for configuration planning of production systems. For mathetical optimization, only production capacity, cosidering the number of production resources and their processes. Here, only configuration cost can be optimized. However, the mathematical optimization set the expected number of produced materials as a constraint, thus allowing for a target output.
+    Mathematical optimizer for configuration planning of production systems. For mathetical optimization, only production capacity, cosidering the number of production resources and their processes. Here, only configuration cost can be optimized. However, the mathematical optimization set the expected number of produced products as a constraint, thus allowing for a target output.
 
     Args:
         adapter (adapters.ProductionSystemAdapter): Adapter that contains the configuration of the production system to use for optimization.
@@ -103,11 +103,11 @@ class MathOptimizer(BaseModel):
 
     def get_workpiece_index_variable(self) -> dict:
         x = {}
-        for product_type in self.adapter.material_data:
+        for product_type in self.adapter.product_data:
             x[product_type.ID] = {}
             work_piece_count = int(
                 round(
-                    self.adapter.scenario_data.constraints.target_material_count[
+                    self.adapter.scenario_data.constraints.target_product_count[
                         product_type.ID
                     ]
                     * self.optimization_time_portion,
@@ -315,7 +315,7 @@ class MathOptimizer(BaseModel):
 
     def get_processing_times_per_product_and_step(self):
         processing_times_per_product_and_step = {}
-        for product in self.adapter.material_data:
+        for product in self.adapter.product_data:
             processing_times_per_product_and_step[product.ID] = {}
             for step in product.processes:
                 process = next(

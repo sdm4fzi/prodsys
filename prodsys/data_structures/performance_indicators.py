@@ -35,9 +35,9 @@ class KPILevelEnum(str, Enum):
 
     SYSTEM = "system"
     RESOURCE = "resource"
-    ALL_MATERIALS = "all_materials"
-    MATERIAL_TYPE = "material_type"
-    MATERIAL = "material"
+    ALL_PRODUCTS = "all_products"
+    PRODUCT_TYPE = "product_type"
+    PRODUCT = "product"
     PROCESS = "process"
 
 
@@ -52,7 +52,7 @@ class KPI(BaseModel):
         value (Optional[float], optional): Value of the KPI. Defaults to None.
         context (Tuple[KPILevelEnum, ...], optional): Context of the KPI. Defaults to None.
         resource (Optional[str], optional): Resource of the KPI. Defaults to None.
-        material_type (Optional[str], optional): Material type of the KPI. Defaults to None.    Returns:
+        product_type (Optional[str], optional): Product type of the KPI. Defaults to None.    Returns:
     """
 
     name: KPIEnum
@@ -61,7 +61,7 @@ class KPI(BaseModel):
     value: Optional[float] = None
     context: Tuple[KPILevelEnum, ...] = None
     resource: Optional[str] = None
-    material_type: Optional[str] = None
+    product_type: Optional[str] = None
 
     @validator("context")
     def sort_context(cls, v):
@@ -75,7 +75,7 @@ class DynamicKPI(KPI):
 
     start_time: float
     end_time: float
-    material: Optional[str] = None
+    product: Optional[str] = None
     process: Optional[str] = None
 
 
@@ -92,8 +92,8 @@ class Output(KPI):
                     "target": "max",
                     "weight": 1,
                     "value": 34,
-                    "context": ["system", "material_type"],
-                    "material_type": "MaterialType_1",
+                    "context": ["system", "product_type"],
+                    "product_type": "ProductType_1",
                 },
             }
         }
@@ -112,8 +112,8 @@ class Throughput(KPI):
                     "target": "max",
                     "weight": 1,
                     "value": 4.32,
-                    "context": ["system", "material_type"],
-                    "material_type": "MaterialType_1",
+                    "context": ["system", "product_type"],
+                    "product_type": "ProductType_1",
                 },
             }
         }
@@ -151,8 +151,8 @@ class WIP(KPI):
                     "target": "min",
                     "weight": 1,
                     "value": 121,
-                    "context": ["system", "material_type"],
-                    "material_type": "MaterialType_1",
+                    "context": ["system", "product_type"],
+                    "product_type": "ProductType_1",
                 },
             }
         }
@@ -171,8 +171,8 @@ class DynamicWIP(DynamicKPI, WIP):
                     "target": "min",
                     "weight": 1,
                     "value": 121,
-                    "context": ["system", "material"],
-                    "material_type": "MaterialType_1",
+                    "context": ["system", "product"],
+                    "product_type": "ProductType_1",
                     "start_time": 21.2,
                     "end_time": 23.4,
                 },
@@ -193,8 +193,8 @@ class ThroughputTime(KPI):
                     "target": "min",
                     "weight": 1,
                     "value": 221.1,
-                    "context": ["system", "material_type"],
-                    "material_type": "MaterialType_1",
+                    "context": ["system", "product_type"],
+                    "product_type": "ProductType_1",
                 },
             }
         }
@@ -213,9 +213,9 @@ class DynamicThroughputTime(DynamicKPI, ThroughputTime):
                     "target": "min",
                     "weight": 1,
                     "value": 201.3,
-                    "context": ["system", "material"],
-                    "material_type": "MaterialType_1",
-                    "material": "Material_1_23",
+                    "context": ["system", "product"],
+                    "product_type": "ProductType_1",
+                    "product": "Product_1_23",
                 },
             }
         }

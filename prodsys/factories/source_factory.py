@@ -7,12 +7,11 @@ from pydantic import BaseModel, parse_obj_as, Field
 
 
 from prodsys.simulation import router, sim, source
-from prodsys.data_structures import source_data, material_data
+from prodsys.data_structures import source_data, product_data
 
 
 if TYPE_CHECKING:
     from prodsys.factories import (
-        material_factory,
         resource_factory,
         queue_factory,
         time_model_factory,
@@ -27,20 +26,20 @@ class SourceFactory(BaseModel):
 
     Args:
         env (sim.Environment): prodsys simulation environment.
-        material_factory (material_factory.MaterialFactory): Factory that creates material objects.
+        product_factory (product_factory.ProductFactory): Factory that creates product objects.
         time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
         resource_factory (resource_factory.ResourceFactory): Factory that creates resource objects.
         sink_factory (sink_factory.SinkFactory): Factory that creates sink objects.
     """
     env: sim.Environment
-    material_factory: material_factory.MaterialFactory
+    product_factory: product_factory.ProductFactory
     time_model_factory: time_model_factory.TimeModelFactory
     queue_factory: queue_factory.QueueFactory
     resource_factory: resource_factory.ResourceFactory
     sink_factory: sink_factory.SinkFactory
 
-    material_data: List[material_data.MaterialData] = Field(
+    product_data: List[product_data.ProductData] = Field(
         default_factory=list, init=False
     )
     sources: List[source.Source] = Field(default_factory=list, init=False)
@@ -56,9 +55,9 @@ class SourceFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the source data.
         """
         for values in adapter.source_data:
-            for material_d in adapter.material_data:
-                if material_d.material_type == values.material_type:
-                    self.add_source(values, material_d)
+            for product_d in adapter.product_data:
+                if product_d.product_type == values.product_type:
+                    self.add_source(values, product_d)
 
     def get_router(self, router_type: str, routing_heuristic: str):
         return router.ROUTERS[router_type](
@@ -70,7 +69,7 @@ class SourceFactory(BaseModel):
     def add_source(
         self,
         source_data: source_data.SourceData,
-        material_data_of_source: material_data.MaterialData,
+        product_data_of_source: product_data.ProductData,
     ):
         router = self.get_router(source_data.router, source_data.routing_heuristic)
 
@@ -79,8 +78,8 @@ class SourceFactory(BaseModel):
         source_object = source.Source(
             env=self.env,
             data=source_data,
-            material_data=material_data_of_source,
-            material_factory=self.material_factory,
+            product_data=product_data_of_source,
+            product_factory=self.product_factory,
             time_model=time_model,
             router=router,
         )
@@ -122,21 +121,21 @@ class SourceFactory(BaseModel):
         """
         return [s for s in self.sources if s.data.ID in IDs]
 
-    def get_sources_with_material_type(self, __material_type: str) -> List[source.Source]:
+    def get_sources_with_product_type(self, __product_type: str) -> List[source.Source]:
         """
-        Method returns a list of source objects with the given material type.
+        Method returns a list of source objects with the given product type.
 
         Args:
-            __material_type (str): Material type that is used to sort the source objects. 
+            __product_type (str): Product type that is used to sort the source objects. 
 
         Returns:
-            List[source.Source]: List of source objects with the given material type.
+            List[source.Source]: List of source objects with the given product type.
         """
-        return [s for s in self.sources if __material_type == s.data.material_type]
+        return [s for s in self.sources if __product_type == s.data.product_type]
 
 
 from prodsys.factories import (
-    material_factory,
+    product_factory,
     resource_factory,
     queue_factory,
     time_model_factory,

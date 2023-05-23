@@ -1,11 +1,11 @@
 """
 The `processes_data` module contains the `prodsys.data_structure` classes to represent the processes that can 
-be performed on materials by resources.
+be performed on products by resources.
 
 The following processes are possible:
-- `ProductionProcessData`: A process that can be performed on a material by a production resource.
-- `CapabilityProcessData`: A process that can be performed on a material by a resource, based on the capability of the resource.
-- `TransportProcessData`: A process that can be performed on a material by a transport resource.
+- `ProductionProcessData`: A process that can be performed on a product by a production resource.
+- `CapabilityProcessData`: A process that can be performed on a product by a resource, based on the capability of the resource.
+- `TransportProcessData`: A process that can be performed on a product by a transport resource.
 """
 
 from __future__ import annotations

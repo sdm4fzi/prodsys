@@ -12,7 +12,7 @@ The following degrees of freedom are supported and can be specified by the scena
 - Moving processes between production resources
 - Changing the control policy of a production resource
 - Changing the control policy of a transport resource
-- Changing the routing policy of material types
+- Changing the routing policy of product types
 
 The following algorithms are supported:
 

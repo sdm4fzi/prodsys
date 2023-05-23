@@ -87,7 +87,7 @@ class ProductionControlEnv(gym.Env):
         control_policy = partial(control.agent_control_policy, self)
         self.resource_controller.control_policy = control_policy
         self.observer = observer.ResourceObserver(resource_factory=self.runner.resource_factory, 
-                                                  material_factory=self.runner.material_factory, 
+                                                  product_factory=self.runner.product_factory, 
                                                   resource=self.resource)
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
@@ -187,7 +187,7 @@ class ProductionRoutingEnv(gym.Env):
         self.observers = []
         for resource in self.runner.resource_factory.resources:
             obs = observer.ResourceObserver(resource_factory=self.runner.resource_factory, 
-                                                  material_factory=self.runner.material_factory, 
+                                                  product_factory=self.runner.product_factory, 
                                                   resource=resource)
             self.observers.append(obs)
 
@@ -228,7 +228,7 @@ class ProductionRoutingEnv(gym.Env):
         terminated = self.runner.env.now >= 300000
         queue_capacity = sum(queue.capacity for queue in self.adapter.queue_data if queue.ID != "SinkQueue")
         resource_capacity = sum(resource.capacity for resource in self.adapter.resource_data)
-        wip = len(self.runner.material_factory.materials)
+        wip = len(self.runner.product_factory.products)
         reward = (queue_capacity + resource_capacity) / wip * 100 + sparse_reward if self.step_count % 10 == 0 else sparse_reward  # Binary sparse rewards
         self.reward = reward
         observation = self._get_obs()

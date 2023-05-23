@@ -87,14 +87,14 @@
     },
     "12": {
       "ID": "ftm1",
-      "description": "function time model material 1",
+      "description": "function time model product 1",
       "distribution_function": "exponential",
       "location": 4.05,
       "scale": 0.0
     },
     "13": {
       "ID": "ftm2",
-      "description": "function time model material 2",
+      "description": "function time model product 2",
       "distribution_function": "exponential",
       "location": 5.0,
       "scale": 0.0
@@ -238,18 +238,18 @@
       "state_ids": ["BST"]
     }
   },
-  "materials": {
+  "products": {
     "0": {
-      "ID": "Material_1",
-      "description": "Material 1",
-      "material_type": "Material_1",
+      "ID": "Product_1",
+      "description": "Product 1",
+      "product_type": "Product_1",
       "processes": ["P1", "P2", "P3", "P4", "P5"],
       "transport_process": "TP1"
     },
     "1": {
-      "ID": "Material_2",
-      "description": "Material 2",
-      "material_type": "Material_2",
+      "ID": "Product_2",
+      "description": "Product 2",
+      "product_type": "Product_2",
       "processes": ["P4", "P6", "P2"],
       "transport_process": "TP1"
     }
@@ -259,14 +259,14 @@
       "ID": "SK1",
       "description": "Sink 1",
       "location": [30.0, 30.0],
-      "material_type": "Material_1",
+      "product_type": "Product_1",
       "input_queues": ["SinkQueue"]
     },
     "1": {
       "ID": "SK2",
       "description": "Sink 2",
       "location": [30.0, 30.0],
-      "material_type": "Material_2",
+      "product_type": "Product_2",
       "input_queues": ["SinkQueue"]
     }
   },
@@ -275,7 +275,7 @@
       "ID": "S1",
       "description": "Source 1",
       "location": [-5.0, -5.0],
-      "material_type": "Material_1",
+      "product_type": "Product_1",
       "time_model_id": "ftm1",
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
@@ -285,7 +285,7 @@
       "ID": "S2",
       "description": "Source 2",
       "location": [-5.0, -5.0],
-      "material_type": "Material_2",
+      "product_type": "Product_2",
       "time_model_id": "ftm2",
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",

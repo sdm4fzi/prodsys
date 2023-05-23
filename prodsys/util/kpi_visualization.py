@@ -15,7 +15,7 @@ def hex_to_rgba(h, alpha):
 
 def plot_throughput_time_distribution(post_processor: post_processing.PostProcessor):
     df_tp = post_processor.df_throughput
-    grouped = df_tp.groupby(by="Material_type")["Throughput_time"].apply(list)
+    grouped = df_tp.groupby(by="Product_type")["Throughput_time"].apply(list)
 
     values = grouped.values
 
@@ -33,7 +33,7 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
         df_tp,
         x="Start_time",
         y="Throughput_time",
-        color="Material_type",
+        color="Product_type",
         trendline="expanding",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
@@ -62,45 +62,45 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
 def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
     df = post_processor.df_WIP.copy()
     fig = px.scatter(df, x="Time", y="WIP")
-    df["Material_type"] = "Total"
+    df["Product_type"] = "Total"
 
-    df_per_material = post_processor.df_WIP_per_product.copy()
+    df_per_product = post_processor.df_WIP_per_product.copy()
 
-    df = pd.concat([df, df_per_material])
+    df = pd.concat([df, df_per_product])
 
     fig = go.Figure()
 
     window = 5000
     colors = px.colors.qualitative.G10
 
-    for material_type, df_material_type in df.groupby(by="Material_type"):
-        df_material_type["WIP_avg"] = (
-            df_material_type["WIP"].rolling(window=window).mean()
+    for product_type, df_product_type in df.groupby(by="Product_type"):
+        df_product_type["WIP_avg"] = (
+            df_product_type["WIP"].rolling(window=window).mean()
         )
-        df_material_type["WIP_std"] = (
-            df_material_type["WIP"].rolling(window=window).std()
+        df_product_type["WIP_std"] = (
+            df_product_type["WIP"].rolling(window=window).std()
         )
 
         color = colors.pop()
         fig.add_scatter(
-            name=material_type,
-            x=df_material_type["Time"],
-            y=df_material_type["WIP_avg"],
+            name=product_type,
+            x=df_product_type["Time"],
+            y=df_product_type["WIP_avg"],
             mode="lines",
             line=dict(color=color),
         )
         fig.add_scatter(
-            name=material_type + " Upper Bound",
-            x=df_material_type["Time"],
-            y=df_material_type["WIP_avg"] + df_material_type["WIP_std"],
+            name=product_type + " Upper Bound",
+            x=df_product_type["Time"],
+            y=df_product_type["WIP_avg"] + df_product_type["WIP_std"],
             mode="lines",
             line=dict(dash="dash", color=color),
             showlegend=False,
         )
         fig.add_scatter(
-            name=material_type + " Lower Bound",
-            x=df_material_type["Time"],
-            y=df_material_type["WIP_avg"] - df_material_type["WIP_std"],
+            name=product_type + " Lower Bound",
+            x=df_product_type["Time"],
+            y=df_product_type["WIP_avg"] - df_product_type["WIP_std"],
             mode="lines",
             line=dict(dash="dash", color=color),
             fill="tonexty",
@@ -113,20 +113,20 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
 def plot_WIP(post_processor: post_processing.PostProcessor):
     df = post_processor.df_WIP.copy()
     fig = px.scatter(df, x="Time", y="WIP")
-    df["Material_type"] = "Total"
+    df["Product_type"] = "Total"
 
-    df_per_material = post_processor.df_WIP_per_product.copy()
+    df_per_product = post_processor.df_WIP_per_product.copy()
 
-    df = pd.concat([df, df_per_material])
+    df = pd.concat([df, df_per_product])
     fig = px.scatter(
         df,
         x="Time",
         y="WIP",
-        color="Material_type",
+        color="Product_type",
         trendline="expanding",
         opacity=0.01,
     )
-    # fig = px.scatter(df, x='Time', y='WIP', color='Material_type', trendline="rolling", trendline_options=dict(window=20))
+    # fig = px.scatter(df, x='Time', y='WIP', color='Product_type', trendline="rolling", trendline_options=dict(window=20))
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
 
@@ -153,7 +153,7 @@ def plot_inductive_bpmn(post_processor: post_processing.PostProcessor):
     import pm4py
 
     os.environ["PATH"] += os.pathsep + "C:/Program Files/Graphviz/bin"
-    log = post_processor.get_eventlog_for_material()
+    log = post_processor.get_eventlog_for_product()
     process_tree = pm4py.discover_process_tree_inductive(log)
     bpmn_model = pm4py.convert_to_bpmn(process_tree)
     pm4py.view_bpmn(bpmn_model, format="png")

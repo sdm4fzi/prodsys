@@ -7,8 +7,8 @@ The following states are possible:
 - `BreakDownStateData`: A state that makes a resource unavailable for a certain time.
 - `ProcessBreakDownStateData`: A state that makes a process unavailable for a certain time but other processes can still be performed.
 - `SetupStateData`: A state that represents the time needed to change the process of a resource.
-- `ProductionStateData`: A state that represents the time needed to process a material.
-- `TransportStateData`: A state that represents the time needed to transport a material.	    
+- `ProductionStateData`: A state that represents the time needed to process a product.
+- `TransportStateData`: A state that represents the time needed to transport a product.	    
 """
 
 from __future__ import annotations
@@ -154,7 +154,7 @@ class ProcessBreakDownStateData(StateData):
 
 class ProductionStateData(StateData):
     """
-    Class that represents a production state. By undergoing a production state, the material is processed and continues its process model. Production states don't have to be initialized because they are automatically created when a process is added to a resource.
+    Class that represents a production state. By undergoing a production state, the product is processed and continues its process model. Production states don't have to be initialized because they are automatically created when a process is added to a resource.
 
     Args:
         ID (str): ID of the state.
@@ -182,7 +182,7 @@ class ProductionStateData(StateData):
 
 class TransportStateData(StateData):
     """
-    Class that represents a transport state. By undergoing a transport state, the material is transported and its position is changed. Transport states don't have to be initialized because they are automatically created when a transport process is added to a resource.
+    Class that represents a transport state. By undergoing a transport state, the product is transported and its position is changed. Transport states don't have to be initialized because they are automatically created when a transport process is added to a resource.
 
     Args:
         ID (str): ID of the state.

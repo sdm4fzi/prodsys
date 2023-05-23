@@ -11,7 +11,7 @@ from simpy import events
 from prodsys.simulation import request, sim, state
 
 if TYPE_CHECKING:
-    from prodsys.simulation import material, process, state, resources, request, sink
+    from prodsys.simulation import product, process, state, resources, request, sink
     from prodsys.util import gym_env
 
 
@@ -51,9 +51,9 @@ class Controller(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_next_material_for_process(
+    def get_next_product_for_process(
         self, resource: resources.Resource, process: process.Process
-    ) -> List[material.Material]:
+    ) -> List[product.Product]:
         pass
 
     @abstractmethod
@@ -64,29 +64,29 @@ class Controller(ABC, BaseModel):
 class ProductionController(Controller):
     resource: resources.ProductionResource = Field(init=False, default=None)
 
-    def get_next_material_for_process(
-        self, resource: resources.Resource, material: material.Material
+    def get_next_product_for_process(
+        self, resource: resources.Resource, product: product.Product
     ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
                 events.append(
-                    queue.get(filter=lambda item: item is material.material_data)
+                    queue.get(filter=lambda item: item is product.product_data)
                 )
             if not events:
-                raise ValueError("No material in queue")
+                raise ValueError("No product in queue")
             return events
         else:
             raise ValueError("Resource is not a ProductionResource")
 
-    def put_material_to_output_queue(
-        self, resource: resources.Resource, materials: List[material.Material]
+    def put_product_to_output_queue(
+        self, resource: resources.Resource, products: List[product.Product]
     ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.output_queues:
-                for material in materials:
-                    events.append(queue.put(material.material_data))
+                for product in products:
+                    events.append(queue.put(product.product_data))
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -117,35 +117,35 @@ class ProductionController(Controller):
         process_request = self.requests.pop(0)
         resource = process_request.get_resource()
         process = process_request.get_process()
-        material = process_request.get_material()
+        product = process_request.get_product()
         yield resource.setup(process)
         with resource.request() as req:
             yield req
-            eventss = self.get_next_material_for_process(resource, material)
+            eventss = self.get_next_product_for_process(resource, product)
             yield events.AllOf(resource.env, eventss)
             production_state = resource.get_free_process(process)
             if production_state is None:
                 production_state = resource.get_process(process)
             yield production_state.finished_process
-            self.run_process(production_state, material)
+            self.run_process(production_state, product)
             yield production_state.finished_process
             production_state.process = None
-            eventss = self.put_material_to_output_queue(resource, [material])
+            eventss = self.put_product_to_output_queue(resource, [product])
             yield events.AllOf(resource.env, eventss)
-            for next_material in [material]:
+            for next_product in [product]:
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
-                next_material.finished_process.succeed()
+                next_product.finished_process.succeed()
 
-    def run_process(self, input_state: state.State, target_material: material.Material):
+    def run_process(self, input_state: state.State, target_product: product.Product):
         env = input_state.env
         input_state.prepare_for_run()
-        input_state.state_info.log_material(
-            target_material, state.StateTypeEnum.production
+        input_state.state_info.log_product(
+            target_product, state.StateTypeEnum.production
         )
-        target_material.material_info.log_start_process(
-            target_material.next_resource,
-            target_material,
+        target_product.product_info.log_start_process(
+            target_product.next_resource,
+            target_product,
             self.env.now,
             state.StateTypeEnum.production,
         )
@@ -165,30 +165,30 @@ class TransportController(Controller):
         None,
     ]
 
-    def get_next_material_for_process(
-        self, resource: material.Location, material: material.Material
+    def get_next_product_for_process(
+        self, resource: product.Location, product: product.Product
     ):
         events = []
         if isinstance(resource, resources.ProductionResource) or isinstance(
             resource, source.Source
         ):
             for queue in resource.output_queues:
-                events.append(queue.get(filter=lambda x: x is material.material_data))
+                events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
-                raise ValueError("No material in queue")
+                raise ValueError("No product in queue")
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource")
         return events
 
-    def put_material_to_input_queue(
-        self, resource: material.Location, material: material.Material
+    def put_product_to_input_queue(
+        self, resource: product.Location, product: product.Product
     ) -> List[events.Event]:
         events = []
         if isinstance(resource, resources.ProductionResource) or isinstance(
             resource, sink.Sink
         ):
             for queue in resource.input_queues:
-                events.append(queue.put(material.material_data))
+                events.append(queue.put(product.product_data))
         else:
             raise ValueError(
                 f"Resource {resource.data.ID} is not a ProductionResource or Sink"
@@ -223,7 +223,7 @@ class TransportController(Controller):
 
         resource = process_request.get_resource()
         process = process_request.get_process()
-        material = process_request.get_material()
+        product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
 
@@ -234,22 +234,22 @@ class TransportController(Controller):
             if origin.get_location() != resource.get_location():
                 transport_state = resource.get_process(process)
                 yield transport_state.finished_process
-                self.run_process(transport_state, material, target=origin)
+                self.run_process(transport_state, product, target=origin)
                 yield transport_state.finished_process
                 transport_state.process = None
 
-            eventss = self.get_next_material_for_process(origin, material)
+            eventss = self.get_next_product_for_process(origin, product)
             yield events.AllOf(resource.env, eventss)
             transport_state = resource.get_process(process)
             yield transport_state.finished_process
-            self.run_process(transport_state, material, target=target)
+            self.run_process(transport_state, product, target=target)
             yield transport_state.finished_process
             transport_state.process = None
-            eventss = self.put_material_to_input_queue(target, material)
+            eventss = self.put_product_to_input_queue(target, product)
             yield events.AllOf(resource.env, eventss)
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
-            material.finished_process.succeed()
+            product.finished_process.succeed()
 
     def sort_queue(self, resource: resources.Resource):
         pass
@@ -257,19 +257,19 @@ class TransportController(Controller):
     def run_process(
         self,
         input_state: state.State,
-        material: material.Material,
-        target: material.Location,
+        product: product.Product,
+        target: product.Location,
     ):
         env = input_state.env
         target_location = target.get_location()
         input_state.prepare_for_run()
-        input_state.state_info.log_material(material, state.StateTypeEnum.transport)
+        input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         input_state.state_info.log_target_location(
             target, state.StateTypeEnum.transport
         )
-        material.material_info.log_start_process(
-            material.next_resource,
-            material,
+        product.product_info.log_start_process(
+            product.next_resource,
+            product,
             self.env.now,
             state.StateTypeEnum.transport,
         )

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, parse_obj_as
 from prodsys.simulation import sim, sink
 from prodsys.data_structures import sink_data
 if TYPE_CHECKING:
-    from prodsys.factories import material_factory, queue_factory
+    from prodsys.factories import product_factory, queue_factory
     from prodsys.adapters import adapter
 
 
@@ -18,11 +18,11 @@ class SinkFactory(BaseModel):
 
     Args:
         env (sim.Environment): prodsys simulation environment.
-        material_factory (material_factory.MaterialFactory): Factory that creates material objects.
+        product_factory (product_factory.ProductFactory): Factory that creates product objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
     env: sim.Environment
-    material_factory: material_factory.MaterialFactory
+    product_factory: product_factory.ProductFactory
     queue_factory: queue_factory.QueueFactory
 
     sinks: List[sink.Sink] = Field(default_factory=list, init=False)
@@ -44,7 +44,7 @@ class SinkFactory(BaseModel):
         values = {
             "env": self.env,
             "data": sink_data,
-            "material_factory": self.material_factory,
+            "product_factory": self.product_factory,
         }
         sink_object = parse_obj_as(sink.Sink, values)
         self.add_queues_to_sink(sink_object)
@@ -77,17 +77,17 @@ class SinkFactory(BaseModel):
         """
         return [s for s in self.sinks if s.data.ID in IDs]
 
-    def get_sinks_with_material_type(self, __material_type: str) -> List[sink.Sink]:
+    def get_sinks_with_product_type(self, __product_type: str) -> List[sink.Sink]:
         """
-        Method returns a list of sink objects with the given material type.
+        Method returns a list of sink objects with the given product type.
 
         Args:
-            __material_type (str): Material type that is used to sort the sink objects.
+            __product_type (str): Product type that is used to sort the sink objects.
 
         Returns:
-            List[sink.Sink]: List of sink objects with the given material type.
+            List[sink.Sink]: List of sink objects with the given product type.
         """
-        return [s for s in self.sinks if __material_type == s.data.material_type]
+        return [s for s in self.sinks if __product_type == s.data.product_type]
 
-from prodsys.factories import material_factory, queue_factory   
+from prodsys.factories import product_factory, queue_factory   
 SinkFactory.update_forward_refs()

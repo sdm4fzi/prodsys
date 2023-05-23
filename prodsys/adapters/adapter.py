@@ -7,12 +7,12 @@ from pydantic import BaseModel, validator, ValidationError
 from prodsys import adapters
 
 from prodsys.data_structures import (
+    product_data,
     queue_data,
     resource_data,
     time_model_data,
     state_data,
     processes_data,
-    material_data,
     sink_data,
     source_data,
     scenario_data,
@@ -269,10 +269,10 @@ class ProductionSystemAdapter(ABC, BaseModel):
         seed (int, optional): Seed for the random number generator used in simulation. Defaults to 0.
         time_model_data (List[time_model_data.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
         state_data (List[state_data.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
-        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by materials and provided by resources in the production system. Defaults to [].
+        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
         queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
         resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
-        material_data (List[material_data.MaterialData], optional): List of materials in the production system. Defaults to [].
+        product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to [].
         sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
@@ -286,7 +286,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
-    material_data: List[material_data.MaterialData] = []
+    product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
@@ -587,25 +587,25 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "state_ids": ["Breakdownstate_1"],
                     },
                 ],
-                "material_data": [
+                "product_data": [
                     {
-                        "ID": "Material_1",
-                        "description": "Material 1",
-                        "material_type": "Material_1",
+                        "ID": "Product_1",
+                        "description": "Product 1",
+                        "product_type": "Product_1",
                         "processes": ["P1", "P2", "P3"],
                         "transport_process": "TP1",
                     },
                     {
-                        "ID": "Material_2",
-                        "description": "Material 2",
-                        "material_type": "Material_2",
+                        "ID": "Product_2",
+                        "description": "Product 2",
+                        "product_type": "Product_2",
                         "processes": ["P1", "P2", "P3", "P1"],
                         "transport_process": "TP1",
                     },
                     {
-                        "ID": "Material_3",
-                        "description": "Material 3",
-                        "material_type": "Material_3",
+                        "ID": "Product_3",
+                        "description": "Product 3",
+                        "product_type": "Product_3",
                         "processes": {"P1": ["P2", "P3"], "P2": [], "P3": []},
                         "transport_process": "TP1",
                     },
@@ -615,21 +615,21 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "SK1",
                         "description": "Sink 1",
                         "location": [50.0, 50.0],
-                        "material_type": "Material_1",
+                        "product_type": "Product_1",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK2",
                         "description": "Sink 2",
                         "location": [55.0, 50.0],
-                        "material_type": "Material_2",
+                        "product_type": "Product_2",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK3",
                         "description": "Sink 3",
                         "location": [45.0, 50.0],
-                        "material_type": "Material_3",
+                        "product_type": "Product_3",
                         "input_queues": ["SinkQueue"],
                     },
                 ],
@@ -638,7 +638,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "S1",
                         "description": "Source 1",
                         "location": [0.0, 0.0],
-                        "material_type": "Material_1",
+                        "product_type": "Product_1",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
                         "routing_heuristic": "shortest_queue",
@@ -648,7 +648,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "S2",
                         "description": "Source 2",
                         "location": [30.0, 30.0],
-                        "material_type": "Material_2",
+                        "product_type": "Product_2",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
                         "routing_heuristic": "shortest_queue",
@@ -658,7 +658,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "S3",
                         "description": "Source 3",
                         "location": [40.0, 30.0],
-                        "material_type": "Material_3",
+                        "product_type": "Product_3",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
                         "routing_heuristic": "shortest_queue",
@@ -717,40 +717,40 @@ class ProductionSystemAdapter(ABC, BaseModel):
 
         return resource
 
-    @validator("material_data", each_item=True)
-    def check_materials(cls, material: material_data.MaterialData, values):
+    @validator("product_data", each_item=True)
+    def check_products(cls, product: product_data.ProductData, values):
         all_processes = get_set_of_IDs(values["process_data"])
-        if material.transport_process not in all_processes:
+        if product.transport_process not in all_processes:
             raise ValidationError(
-                f"The transport process {material.transport_process} of material {material.ID} is not a valid process of {all_processes}."
+                f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {all_processes}."
             )
         required_processes = set()
-        if isinstance(material.processes, list) and isinstance(
-            material.processes[0], str
+        if isinstance(product.processes, list) and isinstance(
+            product.processes[0], str
         ):
-            required_processes = set(material.processes)
-        elif isinstance(material.processes, list) and isinstance(
-            material.processes[0], list
+            required_processes = set(product.processes)
+        elif isinstance(product.processes, list) and isinstance(
+            product.processes[0], list
         ):
-            required_processes = set(util.flatten(material.processes))
-        elif isinstance(material.processes, dict):
-            required_processes = set(material.processes.keys())
+            required_processes = set(util.flatten(product.processes))
+        elif isinstance(product.processes, dict):
+            required_processes = set(product.processes.keys())
         if required_processes - all_processes != set():
             raise ValueError(
-                f"The processes {required_processes - all_processes} of material {material.ID} are not a valid processes of {all_processes}."
+                f"The processes {required_processes - all_processes} of product {product.ID} are not a valid processes of {all_processes}."
             )
 
-        return material
+        return product
 
     @validator("sink_data", each_item=True)
     def check_sinks(cls, sink: sink_data.SinkData, values):
         try:
-            materials = get_set_of_IDs(values["material_data"])
+            products = get_set_of_IDs(values["product_data"])
         except KeyError:
-            raise ValueError("Material data is missing or faulty.")
-        if sink.material_type not in materials:
+            raise ValueError("Product data is missing or faulty.")
+        if sink.product_type not in products:
             raise ValueError(
-                f"The material type {sink.material_type} of sink {sink.ID} is not a valid material of {materials}."
+                f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
             )
         if not sink.input_queues:
             input_queue = get_default_queue_for_sink(sink)
@@ -773,12 +773,12 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
             )
         try:
-            materials = get_set_of_IDs(values["material_data"])
+            products = get_set_of_IDs(values["product_data"])
         except KeyError:
-            raise ValueError("Material data is missing or faulty.")
-        if source.material_type not in materials:
+            raise ValueError("Product data is missing or faulty.")
+        if source.product_type not in products:
             raise ValueError(
-                f"The material type {source.material_type} of source {source.ID} is not a valid material of {materials}."
+                f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
             )
         if not source.output_queues:
             output_queue = get_default_queue_for_source(source)
@@ -819,7 +819,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
 
     def validate_proceses_available(self):
         required_processes = set(
-            util.flatten([material.processes for material in self.material_data])
+            util.flatten([product.processes for product in self.product_data])
         )
         available_processes = set()
         for resource in self.resource_data:
@@ -896,7 +896,7 @@ def check_required_processes_available(configuration: adapters.ProductionSystemA
         )
     )
     required = set(
-        util.flatten([material.processes for material in configuration.material_data])
+        util.flatten([product.processes for product in configuration.product_data])
     )
     if required - available != set():
         return False

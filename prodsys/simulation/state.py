@@ -19,7 +19,7 @@ from prodsys.data_structures.state_data import (
 )
 
 if TYPE_CHECKING:
-    from prodsys.simulation import material, resources
+    from prodsys.simulation import product, resources
 
 
 class StateEnum(str, Enum):
@@ -27,8 +27,8 @@ class StateEnum(str, Enum):
     start_interrupt = "start interrupt"
     end_interrupt = "end interrupt"
     end_state = "end state"
-    finished_material = "finished material"
-    created_material = "created material"
+    finished_product = "finished product"
+    created_product = "created product"
 
 class StateTypeEnum(str, Enum):
     production = "Production"
@@ -47,15 +47,15 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _expected_end_time: Optional[float] = 0.0
     _activity: Optional[StateEnum] = None
     _state_type: Optional[StateTypeEnum] = None
-    _material_ID: str = ""
+    _product_ID: str = ""
     _target_ID: str = ""
 
-    def log_target_location(self, target: material.Location, state_type: StateTypeEnum):
+    def log_target_location(self, target: product.Location, state_type: StateTypeEnum):
         self._target_ID = target.data.ID
         self._state_type = state_type
 
-    def log_material(self, _material: material.Material, state_type: StateTypeEnum):
-        self._material_ID = _material.material_data.ID
+    def log_product(self, _product: product.Product, state_type: StateTypeEnum):
+        self._product_ID = _product.product_data.ID
         self._state_type = state_type
 
     def log_start_state(self, start_time: float, expected_end_time: float, state_type: StateTypeEnum):

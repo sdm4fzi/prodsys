@@ -17,6 +17,7 @@ def read_optimization_results_file(filepath: str, label: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: _description_
     """
+    # TODO: rework this with data model for optimization results!
     with open(filepath) as json_file:
         data = json.load(json_file)
     new_data = {}

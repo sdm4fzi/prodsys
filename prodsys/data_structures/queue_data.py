@@ -8,12 +8,12 @@ from pydantic import validator
 
 class QueueData(CoreAsset):
     """
-    Class that represents a queue. If capacity is 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of materials cooresponding to the capacity.
+    Class that represents a queue. If capacity is 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.
 
     Args:
         ID (str): ID of the queue.
         description (str): Description of the queue.
-        capacity (Union[int, float]): Capacity of the queue. If 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of materials cooresponding to the capacity.
+        capacity (Union[int, float]): Capacity of the queue. If 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.
 
     Examples:
         A finite queue with ID "Q1", description "Queue 1" and capacity 10:

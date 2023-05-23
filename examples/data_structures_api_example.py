@@ -59,16 +59,16 @@ transport_resource = prodsys.resource_data.TransportResourceData(
 )
 
 
-# create a material
+# create a product
 
-material = prodsys.material_data.MaterialData(
-    ID="material 1",
-    description="Material 1 data description",
+product = prodsys.product_data.ProductData(
+    ID="product 1",
+    description="Product 1 data description",
     processes=[welding_process.ID],
     transport_process=transport_process.ID
 )
 
-# Create a time model for material arrival in the system and a source that creates the material
+# Create a time model for product arrival in the system and a source that creates the product
 
 arrival_time_model = prodsys.time_model_data.FunctionTimeModelData(
     ID="time model 3",
@@ -83,26 +83,26 @@ source = prodsys.source_data.SourceData(
     ID="source 1",
     description="Source 1 data description",
     location=[0.0, 0.0],
-    material_type="material 1",
+    product_type="product 1",
     time_model_id="time model 3",
     router=prodsys.source_data.RouterType.SimpleRouter,
     routing_heuristic=prodsys.source_data.RoutingHeuristic.random,
 )
 
-# Create a sink to drop the material
+# Create a sink to drop the product
 
 sink = prodsys.sink_data.SinkData(
     ID="sink 1",
     description="Sink 1 data description",
     location=[20.0, 20.0],
-    material_type="material 1",
+    product_type="product 1",
 )
 
 production_system = prodsys.adapters.JsonProductionSystemAdapter(
     time_model_data=[welding_time_model, transport_time_model, arrival_time_model],
     process_data=[welding_process, transport_process],
     resource_data=[machine, transport_resource],
-    material_data=[material],
+    product_data=[product],
     source_data=[source],
     sink_data=[sink],
     )

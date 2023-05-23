@@ -269,25 +269,25 @@
       "state_ids": ["Breakdownstate_1"]
     }
   },
-  "materials": {
+  "products": {
     "0": {
-      "ID": "Material_1",
-      "description": "Material 1",
-      "material_type": "Material_1",
+      "ID": "Product_1",
+      "description": "Product 1",
+      "product_type": "Product_1",
       "processes": ["P1", "P2", "P3"],
       "transport_process": "TP1"
     },
     "1": {
-      "ID": "Material_2",
-      "description": "Material 2",
-      "material_type": "Material_2",
+      "ID": "Product_2",
+      "description": "Product 2",
+      "product_type": "Product_2",
       "processes": ["P1", "P2", "P3", "P1"],
       "transport_process": "TP1"
     },
     "2": {
-      "ID": "Material_3",
-      "description": "Material 3",
-      "material_type": "Material_3",
+      "ID": "Product_3",
+      "description": "Product 3",
+      "product_type": "Product_3",
       "processes": { "P1": ["P2", "P3"], "P2": [], "P3": [] },
       "transport_process": "TP1"
     }
@@ -297,21 +297,21 @@
       "ID": "SK1",
       "description": "Sink 1",
       "location": [50.0, 50.0],
-      "material_type": "Material_1",
+      "product_type": "Product_1",
       "input_queues": ["SinkQueue"]
     },
     "1": {
       "ID": "SK2",
       "description": "Sink 2",
       "location": [55.0, 50.0],
-      "material_type": "Material_2",
+      "product_type": "Product_2",
       "input_queues": ["SinkQueue"]
     },
     "2": {
       "ID": "SK3",
       "description": "Sink 3",
       "location": [45.0, 50.0],
-      "material_type": "Material_3",
+      "product_type": "Product_3",
       "input_queues": ["SinkQueue"]
     }
   },
@@ -320,7 +320,7 @@
       "ID": "S1",
       "description": "Source 1",
       "location": [0.0, 0.0],
-      "material_type": "Material_1",
+      "product_type": "Product_1",
       "time_model_id": "function_time_model_4",
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
@@ -330,7 +330,7 @@
       "ID": "S2",
       "description": "Source 2",
       "location": [30.0, 30.0],
-      "material_type": "Material_2",
+      "product_type": "Product_2",
       "time_model_id": "function_time_model_4",
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
@@ -340,7 +340,7 @@
       "ID": "S3",
       "description": "Source 3",
       "location": [40.0, 30.0],
-      "material_type": "Material_3",
+      "product_type": "Product_3",
       "time_model_id": "function_time_model_4",
       "router": "SimpleRouter",
       "routing_heuristic": "shortest_queue",
