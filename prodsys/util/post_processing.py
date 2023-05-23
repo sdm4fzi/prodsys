@@ -17,6 +17,7 @@ class PostProcessor:
     Class that represents a post processor for the simulation results. It provides methods to read the simulation results from a csv file and to calculate simulation result analysis data and KPIs.
 
     The data frame that contains the raw simulation results contains the following columns:
+        
         -Time: Time of the event
         -Resource: ID fo the Resource that performed the event
         -State: ID of the State of the resource (production states, transport states, breakdown states, setup states)
@@ -68,6 +69,7 @@ class PostProcessor:
     def df_prepared(self) -> pd.DataFrame:
         """
         Adds to self.df_raw the following columns:
+            
             -DateTime: Time of the event
             -Combined_activity: Activity and state of the event combined for easier filtering
             -Product_type: Type of the product
