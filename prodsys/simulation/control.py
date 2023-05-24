@@ -16,6 +16,19 @@ if TYPE_CHECKING:
 
 
 class Controller(ABC, BaseModel):
+    """
+    A controller is responsible for controlling the processes of a resource. The controller is requested by materials requiring processes. The controller decides has a control policy that determines with which sequence requests are processed. 
+
+    Args:
+        control_policy (Callable[[List[request.Request]], None]): The control policy that determines the sequence of requests to be processed.
+        env (sim.Environment): The environment in which the controller is running.
+
+    Attributes:
+        resource (resources.Resource): The resource that is controlled by the controller.
+        requested (events.Event): An event that is triggered when a request is made to the controller.
+        requests (List[request.Request]): A list of requests that are made to the controller.
+        running_processes (List[events.Event]): A list of (simpy) processes that are currently running on the resource.
+    """
     control_policy: Callable[
         [
             List[request.Request],
@@ -42,22 +55,38 @@ class Controller(ABC, BaseModel):
         self.env = resource.env
 
     def request(self, process_request: request.Request) -> None:
+        """
+        Request the controller consider the request in the future for processing.
+
+        Args:
+            process_request (request.Request): The request to be processed.
+        """
         self.requests.append(process_request)
         if not self.requested.triggered:
             self.requested.succeed()
 
     @abstractmethod
     def control_loop(self) -> None:
+        """
+        The control loop is the main process of the controller. It has to run indefinetely.
+        It should repeatedly check if requests are made or a process is finished and then start the next process.
+        """
         pass
 
     @abstractmethod
     def get_next_product_for_process(
         self, resource: resources.Resource, process: process.Process
-    ) -> List[product.Product]:
-        pass
+    ) -> List[events.Event]:
+        """
+        Get the next product for a process. The product is removed (get) from the queues.
 
-    @abstractmethod
-    def sort_queue(self, _resource: resources.Resource):
+        Args:
+            resource (resources.Resource): The resource to take the product from.
+            process (process.Process): The process that is requesting the product.
+
+        Returns:
+            List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+        """
         pass
 
 
@@ -67,6 +96,16 @@ class ProductionController(Controller):
     def get_next_product_for_process(
         self, resource: resources.Resource, product: product.Product
     ) -> List[events.Event]:
+        """
+        Get the next product for a process. The product is removed (get) from the input queues of the resource.
+
+        Args:
+            resource (resources.Resource): The resource to take the product from.
+            product (product.Product): The product that is requesting the product.
+
+        Returns:
+            List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+        """
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
@@ -82,6 +121,16 @@ class ProductionController(Controller):
     def put_product_to_output_queue(
         self, resource: resources.Resource, products: List[product.Product]
     ) -> List[events.Event]:
+        """
+        Place a product to the output queue (put) of the resource.
+
+        Args:
+            resource (resources.Resource): The resource to place the product to.
+            products (List[product.Product]): The products to be placed.
+
+        Returns:
+            List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+        """
         events = []
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.output_queues:
@@ -93,6 +142,21 @@ class ProductionController(Controller):
         return events
 
     def control_loop(self) -> Generator:
+        """
+        The control loop is the main process of the controller. It has to run indefinetely.
+
+        The logic is the control loop of a production resource is the following:
+
+        1. Wait until a request is made or a process is finished.
+        2. If a request is made, add it to the list of requests.
+        3. If a process is finished, remove it from the list of running processes.
+        4. If the resource is full or there are no requests, go to 1.
+        5. Sort the queue according to the control policy.
+        6. Start the next process. Go to 1.
+
+        Yields:
+            Generator: The generator yields when a request is made or a process is finished.
+        """
         while True:
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
@@ -113,6 +177,18 @@ class ProductionController(Controller):
             self.running_processes.append(running_process)
 
     def start_process(self) -> Generator:
+        """
+        Start the next process with the following logic:
+
+        1. Setup the resource for the process.
+        2. Wait until the resource is free for the process.
+        3. Retrieve the product from the queue.
+        4. Run the process and wait until finished.
+        5. Place the product in the output queue.
+
+        Yields:
+            Generator: The generator yields when the process is finished.
+        """
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
         resource = process_request.get_resource()
@@ -138,6 +214,13 @@ class ProductionController(Controller):
                 next_product.finished_process.succeed()
 
     def run_process(self, input_state: state.State, target_product: product.Product):
+        """
+        Run the process of a product. The process is started and the product is logged.
+
+        Args:
+            input_state (state.State): The production state of the process.
+            target_product (product.Product): The product that is processed.
+        """
         env = input_state.env
         input_state.prepare_for_run()
         input_state.state_info.log_product(
@@ -150,9 +233,6 @@ class ProductionController(Controller):
             state.StateTypeEnum.production,
         )
         input_state.process = env.process(input_state.process_state())
-
-    def sort_queue(self, resource: resources.Resource):
-        pass
 
 
 class TransportController(Controller):
@@ -229,7 +309,6 @@ class TransportController(Controller):
 
         yield resource.setup(process)
         with resource.request() as req:
-            self.sort_queue(resource)
             yield req
             if origin.get_location() != resource.get_location():
                 transport_state = resource.get_process(process)
@@ -250,9 +329,6 @@ class TransportController(Controller):
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
             product.finished_process.succeed()
-
-    def sort_queue(self, resource: resources.Resource):
-        pass
 
     def run_process(
         self,
