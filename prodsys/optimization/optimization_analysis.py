@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import numpy as np
 from copy import copy
 
-def read_optimization_results_file(filepath: str, label: str) -> pd.DataFrame:
+def read_optimization_results_file_to_df(filepath: str, label: str) -> pd.DataFrame:
     """
     Function reads the results of an optimization run from a json file and returns a pandas dataframe.
 
@@ -15,9 +15,8 @@ def read_optimization_results_file(filepath: str, label: str) -> pd.DataFrame:
         label (str): Label to specify the utilized optimizer.
 
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: Dataframe containing the optimization results.
     """
-    # TODO: rework this with data model for optimization results!
     with open(filepath) as json_file:
         data = json.load(json_file)
     new_data = {}
@@ -97,7 +96,7 @@ def get_pareto_solutions_from_result_files(file_path: str, ) -> List[str]:
     Returns:
         List[str]: List of IDs of the pareto efficient solutions.
     """
-    df = read_optimization_results_file(file_path, label="optimizer")
+    df = read_optimization_results_file_to_df(file_path, label="optimizer")
     df = df.drop_duplicates(subset=['agg_fitness', 'cost', 'throughput', 'wip', 'optimizer'])
     df["cost"] = df["cost"].astype(float)
     df["agg_fitness"] = df["agg_fitness"].astype(float)
