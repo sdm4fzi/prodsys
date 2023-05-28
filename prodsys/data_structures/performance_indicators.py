@@ -59,7 +59,7 @@ class KPI(BaseModel):
     target: Literal["min", "max"]
     weight: Optional[float] = 1
     value: Optional[float] = None
-    context: Tuple[KPILevelEnum, ...] = None
+    context: Optional[Tuple[KPILevelEnum, ...]] = None
     resource: Optional[str] = None
     product_type: Optional[str] = None
 

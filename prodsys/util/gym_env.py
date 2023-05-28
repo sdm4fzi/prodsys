@@ -110,7 +110,7 @@ class ProductionControlEnv(gym.Env):
             setup_sparse_reward = False
         else:
             to_process = self.resource_controller.requests.pop(queue_index)
-            setup_sparse_reward = self.resource.current_process is None or to_process.process.process_data.ID == self.resource.current_process.process_data.ID
+            setup_sparse_reward = self.resource.current_setup is None or to_process.process.process_data.ID == self.resource.current_setup.process_data.ID
 
         self.resource_controller.requests.insert(0, to_process)
 

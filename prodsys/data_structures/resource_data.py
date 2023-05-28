@@ -57,7 +57,7 @@ class ResourceData(CoreAsset):
         controller (ControllerEnum): Controller of the resource.
         control_policy (Union[ResourceControlPolicy, TransportControlPolicy]): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
-        process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
+        process_capacities (Optional[List[int]], optional): Process capacities of the resource (in sequence of the capacity of the resource). Defaults to None.
         state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
     """
 
@@ -71,14 +71,11 @@ class ResourceData(CoreAsset):
     process_capacities: Optional[List[int]]
     state_ids: Optional[List[str]] = []
 
-    @validator("process_capacities")
+    @validator("process_capacities", always=True)
     def check_process_capacity(cls, v, values):
         if not v:
-            return None
-
-        if len(v) != len(values["process_ids"]) and sum(v) != len(
-            values["process_ids"]
-        ):
+            return [values["capacity"] for _ in values["process_ids"]]
+        if len(v) != len(values["process_ids"]):
             raise ValueError(
                 f"process_capacities {v} must have the same length as processes {values['process_ids']}"
             )

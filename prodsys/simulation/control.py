@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, Field, validator, Extra
-from typing import List, Generator, TYPE_CHECKING
+from typing import List, Generator, TYPE_CHECKING, Union
 
 # from process import Process
 from simpy import events
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class Controller(ABC, BaseModel):
     """
-    A controller is responsible for controlling the processes of a resource. The controller is requested by materials requiring processes. The controller decides has a control policy that determines with which sequence requests are processed. 
+    A controller is responsible for controlling the processes of a resource. The controller is requested by materials requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
 
     Args:
         control_policy (Callable[[List[request.Request]], None]): The control policy that determines the sequence of requests to be processed.
@@ -29,6 +29,7 @@ class Controller(ABC, BaseModel):
         requests (List[request.Request]): A list of requests that are made to the controller.
         running_processes (List[events.Event]): A list of (simpy) processes that are currently running on the resource.
     """
+
     control_policy: Callable[
         [
             List[request.Request],
@@ -40,7 +41,7 @@ class Controller(ABC, BaseModel):
     resource: resources.Resource = Field(init=False, default=None)
     requested: events.Event = Field(init=False, default=None)
     requests: List[request.Request] = Field(init=False, default_factory=list)
-    running_processes: List[events.Event] = []
+    running_processes: List[events.Process] = []
 
     @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
@@ -48,7 +49,7 @@ class Controller(ABC, BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-        extra=Extra.allow
+        extra = Extra.allow
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
@@ -163,18 +164,16 @@ class ProductionController(Controller):
             )
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
-            else:
-                for process in self.running_processes:
-                    if process.triggered:
-                        self.running_processes.remove(process)
-            if (
-                len(self.running_processes) == self.resource.capacity
-                or not self.requests
-            ):
+            for process in self.running_processes:
+                if not process.is_alive:
+                    self.running_processes.remove(process)
+            if self.resource.full or not self.requests:
                 continue
             self.control_policy(self.requests)
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
+            if not self.resource.full:
+                self.requested.succeed()
 
     def start_process(self) -> Generator:
         """
@@ -194,17 +193,26 @@ class ProductionController(Controller):
         resource = process_request.get_resource()
         process = process_request.get_process()
         product = process_request.get_product()
-        yield resource.setup(process)
+
+        yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             eventss = self.get_next_product_for_process(resource, product)
             yield events.AllOf(resource.env, eventss)
-            production_state = resource.get_free_process(process)
-            if production_state is None:
-                production_state = resource.get_process(process)
-            yield production_state.finished_process
-            self.run_process(production_state, product)
-            yield production_state.finished_process
+            possible_states = resource.get_processes(process)
+            while True:
+                production_state = resource.get_free_process(process)
+                if production_state is not None:
+                    break
+                yield events.AnyOf(
+                    self.env,
+                    [
+                        state.process
+                        for state in possible_states
+                        if state.process is not None and state.process.is_alive
+                    ],
+                )
+            yield self.env.process(self.run_process(production_state, product))
             production_state.process = None
             eventss = self.put_product_to_output_queue(resource, [product])
             yield events.AllOf(resource.env, eventss)
@@ -221,7 +229,6 @@ class ProductionController(Controller):
             input_state (state.State): The production state of the process.
             target_product (product.Product): The product that is processed.
         """
-        env = input_state.env
         input_state.prepare_for_run()
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
@@ -232,7 +239,8 @@ class ProductionController(Controller):
             self.env.now,
             state.StateTypeEnum.production,
         )
-        input_state.process = env.process(input_state.process_state())
+        input_state.process = self.env.process(input_state.process_state())
+        yield input_state.process
 
 
 class TransportController(Controller):
@@ -283,19 +291,16 @@ class TransportController(Controller):
             )
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
-            else:
-                for process in self.running_processes:
-                    if process.triggered:
-                        self.running_processes.remove(process)
-
-            if (
-                len(self.running_processes) == self.resource.capacity
-                or not self.requests
-            ):
+            for process in self.running_processes:
+                if not process.is_alive:
+                    self.running_processes.remove(process)
+            if self.resource.full or not self.requests:
                 continue
             self.control_policy(self.requests)
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
+            if not self.resource.full:
+                self.requested.succeed()
 
     def start_process(self) -> Generator:
         yield self.env.timeout(0)
@@ -307,22 +312,47 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
 
-        yield resource.setup(process)
+        yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
-                transport_state = resource.get_process(process)
-                yield transport_state.finished_process
-                self.run_process(transport_state, product, target=origin)
-                yield transport_state.finished_process
+                possible_states = resource.get_processes(process)
+                while True:
+                    transport_state = resource.get_free_process(process)
+                    if transport_state is not None:
+                        break
+                    yield events.AnyOf(
+                        self.env,
+                        [
+                            state.process
+                            for state in possible_states
+                            if state.process is not None and state.process.is_alive
+                        ],
+                    )
+
+                yield self.env.process(
+                    self.run_process(transport_state, product, target=origin)
+                )
                 transport_state.process = None
 
             eventss = self.get_next_product_for_process(origin, product)
             yield events.AllOf(resource.env, eventss)
-            transport_state = resource.get_process(process)
-            yield transport_state.finished_process
-            self.run_process(transport_state, product, target=target)
-            yield transport_state.finished_process
+            possible_states = resource.get_processes(process)
+            while True:
+                transport_state = resource.get_free_process(process)
+                if transport_state is not None:
+                    break
+                yield events.AnyOf(
+                    self.env,
+                    [
+                        state.process
+                        for state in possible_states
+                        if state.process is not None and state.process.is_alive
+                    ],
+                )
+            yield self.env.process(
+                self.run_process(transport_state, product, target=target)
+            )
             transport_state.process = None
             eventss = self.put_product_to_input_queue(target, product)
             yield events.AllOf(resource.env, eventss)
@@ -336,7 +366,14 @@ class TransportController(Controller):
         product: product.Product,
         target: product.Location,
     ):
-        env = input_state.env
+        """
+        Run the process of a product. The process is started and the product is logged.
+
+        Args:
+            input_state (state.State): The transport state of the process.
+            product (product.Product): The product that is transported.
+            target (product.Location): The target of the transport.
+        """
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
@@ -349,9 +386,10 @@ class TransportController(Controller):
             self.env.now,
             state.StateTypeEnum.transport,
         )
-        input_state.process = env.process(
+        input_state.process = self.env.process(
             input_state.process_state(target=target_location)  # type: ignore False
         )
+        yield input_state.process
 
 
 def FIFO_control_policy(requests: List[request.Request]) -> None:

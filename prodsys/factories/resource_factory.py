@@ -53,10 +53,12 @@ def register_production_states(
     states: List[state.ProductionState],
     _env: sim.Environment,
 ):
-    for actual_state in states:
-        copy_state = copy.deepcopy(actual_state)
-        copy_state.env = _env
-        resource.add_production_state(copy_state)
+    for actual_state, process_capacity in zip(states, resource.data.process_capacities):
+        for _ in range(process_capacity):
+            copy_state = copy.deepcopy(actual_state)
+            copy_state.env = _env
+            resource.add_production_state(copy_state)
+
 
 
 def register_production_states_for_processes(
@@ -65,7 +67,7 @@ def register_production_states_for_processes(
     _env: sim.Environment,
 ):
     states: List[state.State] = []
-    for process_instance in resource.processes:
+    for process_instance, capacity in zip(resource.processes, resource.data.process_capacities):
         values = {
             "new_state": {
                 "ID": process_instance.process_data.ID,
@@ -73,9 +75,10 @@ def register_production_states_for_processes(
                 "time_model_id": process_instance.process_data.time_model_id,
             }
         }
-        if isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess):
+        existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
+        if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
-        elif isinstance(process_instance, process.TransportProcess):
+        elif isinstance(process_instance, process.TransportProcess) and not existence_condition:
             state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
@@ -90,17 +93,7 @@ def adjust_process_breakdown_states(
     for process_breakdown_state in process_breakdown_states:
         process_id = process_breakdown_state.state_data.process_id
         production_states = [state_instance for state_instance in resource.production_states if isinstance(state_instance, state.ProductionState) and state_instance.state_data.ID == process_id]
-        
-        process_breakdown_states_to_adjust = [process_breakdown_state]
-
-        if len(production_states) > 1:
-            for _ in range(len(production_states) - 1):
-                copy_state = copy.deepcopy(process_breakdown_state)
-                copy_state.env = _env
-                resource.add_state(copy_state)
-                process_breakdown_states_to_adjust.append(copy_state)
-        for resource_state, process_breakdown_state_to_adjust in zip(production_states, process_breakdown_states_to_adjust):
-            process_breakdown_state_to_adjust.set_production_state(resource_state)
+        process_breakdown_state.set_production_states(production_states)
 
 
 
@@ -138,13 +131,6 @@ class ResourceFactory(BaseModel):
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data.copy(deep=True))
 
-    def adjust_process_capacities(self, resource_data: RESOURCE_DATA_UNION):
-        if resource_data.process_capacities:
-            for process, capacity in zip(
-                resource_data.process_ids, resource_data.process_capacities
-            ):
-                resource_data.process_ids += [process] * (capacity - 1)
-
     def get_queues_for_resource(
         self, resource_data: ProductionResourceData
     ) -> Tuple[List[store.Queue], List[store.Queue]]:
@@ -165,10 +151,7 @@ class ResourceFactory(BaseModel):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.process_ids)
 
-        ids = [proc.process_data.ID for proc in processes]
         values.update({"processes": processes})
-
-        self.adjust_process_capacities(resource_data)
 
         controller_class = get_class_from_str(
             name=resource_data.controller, cls_dict=CONTROLLER_DICT
