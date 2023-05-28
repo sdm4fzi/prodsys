@@ -39,7 +39,12 @@ class Process(ABC, BaseModel):
 
 
 class ProductionProcess(Process):
-    """Class that represents a production process."""
+    """Class that represents a production process.
+    
+    Args:
+        process_data (processes_data.ProductionProcessData): The process data.
+        time_model (time_model.TimeModel): The time model.
+    """
     process_data: processes_data.ProductionProcessData
 
     def get_process_time(self) -> float:
@@ -50,7 +55,13 @@ class ProductionProcess(Process):
     
 
 class CapabilityProcess(Process):
-    """Class that represents a capability process."""
+    """
+    Class that represents a capability process.
+
+    Args:
+        process_data (processes_data.CapabilityProcessData): The process data.
+        time_model (time_model.TimeModel): The time model.    
+    """
     process_data: processes_data.CapabilityProcessData
 
     def get_process_time(self) -> float:
@@ -61,7 +72,13 @@ class CapabilityProcess(Process):
 
 
 class TransportProcess(Process):
-    """Class that represents a transport process."""
+    """
+    Class that represents a transport process.
+    
+    Args:
+        process_data (processes_data.TransportProcessData): The process data.
+        time_model (time_model.TimeModel): The time model.
+    """
     process_data: processes_data.TransportProcessData
 
     def get_process_time(
