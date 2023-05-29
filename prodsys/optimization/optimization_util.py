@@ -19,7 +19,7 @@ from prodsys.adapters.adapter import check_redudant_locations
 from prodsys.adapters.adapter import check_required_processes_available
 from prodsys.adapters.adapter import get_possible_production_processes_IDs
 from prodsys.util.post_processing import PostProcessor
-from prodsys.data_structures import (
+from prodsys.models import (
     resource_data,
     state_data,
     processes_data,

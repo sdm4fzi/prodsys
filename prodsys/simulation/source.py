@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from simpy import events
 
 from prodsys.simulation import router, sim, store, time_model
-from prodsys.data_structures import source_data, product_data
+from prodsys.models import source_data, product_data
 
 if TYPE_CHECKING:
     from prodsys.factories import product_factory

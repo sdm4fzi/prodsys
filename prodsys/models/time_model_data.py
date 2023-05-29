@@ -14,7 +14,7 @@ from typing import List, Literal, Union
 from pydantic import Field
 
 from enum import Enum
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 from prodsys.util.statistical_functions import FunctionTimeModelEnum
 
 

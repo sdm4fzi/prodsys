@@ -4,7 +4,7 @@ from pydantic import validator, Field
 import pydantic
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import core_asset
+from prodsys.models import core_asset
 
 class ExpressObject(ABC):
     """
@@ -14,7 +14,7 @@ class ExpressObject(ABC):
     @abstractmethod
     def to_data_object(self) -> core_asset.CoreAsset:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             core_asset.CoreAsset: An instance of the data object.

@@ -7,7 +7,7 @@ from pydantic import BaseModel, parse_obj_as, Field
 
 
 from prodsys.simulation import router, sim, source
-from prodsys.data_structures import source_data, product_data
+from prodsys.models import source_data, product_data
 
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 class SourceFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.data_structures.source_data.SourceData`.
+    Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.models.source_data.SourceData`.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

@@ -1,11 +1,11 @@
 """
-This module contains the `prodsys.express` API with classes and functions to easily specify all parameters of a production system. This API is completely compatible with `prodsys.data_structures` and every object can be converted to a data object from `prodsys.data_structures` using the `to_data_object` method.
+This module contains the `prodsys.express` API with classes and functions to easily specify all parameters of a production system. This API is completely compatible with `prodsys.models` and every object can be converted to a data object from `prodsys.models` using the `to_data_object` method.
 
-The express API is more convenient to use than the `prodsys.data_structures` API because the express API nests the objects in a tree structure, which makes it easier to work with when instantiating production system programatically. 
+The express API is more convenient to use than the `prodsys.models` API because the express API nests the objects in a tree structure, which makes it easier to work with when instantiating production system programatically. 
 
-However, the express API does not support all features of the `prodsys.data_structures` API and saved data is more complicated to review because of the nesting.
+However, the express API does not support all features of the `prodsys.models` API and saved data is more complicated to review because of the nesting.
 
-Recommended is to use the API for programmatically specifying a production system but saving the data in the `prodsys.data_structures` format with the `ProductionSystemAdapter`.
+Recommended is to use the API for programmatically specifying a production system but saving the data in the `prodsys.models` format with the `ProductionSystemAdapter`.
 
 The following modules are available:
 

@@ -8,11 +8,11 @@ from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
-    from prodsys.data_structures import queue_data
+    from prodsys.models import queue_data
 
 class QueueFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.data_structures` queue objects.
+    Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.models` queue objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

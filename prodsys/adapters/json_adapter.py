@@ -7,7 +7,7 @@ from pydantic import parse_obj_as, BaseModel
 
 from prodsys.adapters import adapter
 
-from prodsys.data_structures import (
+from prodsys.models import (
     product_data,
     queue_data,
     resource_data,

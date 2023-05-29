@@ -4,7 +4,7 @@ from typing import Union, List, Dict
 
 from pydantic import root_validator
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 
 
 class ProductData(CoreAsset):

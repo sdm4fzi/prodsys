@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from simpy.resources import store
 
-from prodsys.data_structures import queue_data
+from prodsys.models import queue_data
 
 from prodsys.simulation import sim
 

@@ -6,7 +6,7 @@ from pydantic import validator, conlist
 
 from enum import Enum
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 
 
 class RouterType(str, Enum):

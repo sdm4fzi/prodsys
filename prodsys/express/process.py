@@ -18,7 +18,7 @@ from abc import ABC
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import processes_data, time_model_data
+from prodsys.models import processes_data, time_model_data
 
 from prodsys.express import time_model, core
 
@@ -86,7 +86,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.ProductionProcessData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             processes_data.ProductionProcessData: Data object of the express object.
@@ -137,7 +137,7 @@ class CapabilityProcess(Process, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.CapabilityProcessData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             processes_data.CapabilityProcessData: Data object of the express object.
@@ -182,7 +182,7 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
 
     def to_data_object(self) -> processes_data.TransportProcessData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             processes_data.TransportProcessData: Data object of the express object.

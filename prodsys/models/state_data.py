@@ -1,5 +1,5 @@
 """
-The `state_data` module contains the `prodsys.data_structure` classes to represent the states that resources 
+The `state_data` module contains the `prodsys.models` classes to represent the states that resources 
 can be in during a simulation.
 
 The following states are possible:
@@ -16,7 +16,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Union
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 
 
 class StateTypeEnum(str, Enum):

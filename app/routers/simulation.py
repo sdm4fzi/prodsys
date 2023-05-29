@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 
 
-from prodsys.data_structures import (
+from prodsys.models import (
     scenario_data
 )
 from app.dependencies import get_adapter, evaluate

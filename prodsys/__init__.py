@@ -2,7 +2,7 @@ from prodsys.util import runner
 from prodsys import adapters
 from prodsys.util import post_processing  # , optimization_util
 
-from prodsys.data_structures import (
+from prodsys.models import (
     processes_data,
     product_data,
     queue_data,

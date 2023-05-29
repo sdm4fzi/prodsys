@@ -9,7 +9,7 @@ from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
 
 from prodsys.simulation import sim, time_model
-from prodsys.data_structures.state_data import (
+from prodsys.models.state_data import (
     StateData,
     BreakDownStateData,
     ProductionStateData,

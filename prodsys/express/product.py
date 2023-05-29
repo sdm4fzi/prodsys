@@ -4,7 +4,7 @@ from uuid import uuid1
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import product_data
+from prodsys.models import product_data
 
 from prodsys.express import process, core
 
@@ -52,7 +52,7 @@ class Product(core.ExpressObject):
 
     def to_data_object(self) -> product_data.ProductData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             product_data.ProductData: An instance of the data object.

@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 
 
-from prodsys.data_structures import (
+from prodsys.models import (
     performance_data,
     performance_indicators
 )

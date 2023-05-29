@@ -125,7 +125,7 @@ def run_evolutionary_algorithm(
     Args:
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         seed (int): Random seed for optimization.
         ngen (int): Number of generations to run the algorithm.
         population_size (int): Number of individuals in each generation.
@@ -242,7 +242,7 @@ def optimize_configuration(
 
     Args:
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (EvolutionaryAlgorithmHyperparameters): Hyperparameters for configuration optimization using an evolutionary algorithm.
     """

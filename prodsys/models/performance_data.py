@@ -4,7 +4,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import Literal, Union, Optional, List, Tuple, TYPE_CHECKING
 
-from prodsys.data_structures.performance_indicators import (
+from prodsys.models.performance_indicators import (
     KPIEnum,
     KPILevelEnum,
     KPI_UNION,

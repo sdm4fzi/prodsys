@@ -4,7 +4,7 @@ from typing import List, Annotated, Dict
 from fastapi import APIRouter, HTTPException, Body
 
 
-from prodsys.data_structures import (
+from prodsys.models import (
     state_data,
 )
 from app.dependencies import get_adapter, get_state

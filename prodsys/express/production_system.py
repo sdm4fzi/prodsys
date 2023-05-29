@@ -6,7 +6,7 @@ from abc import ABC
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import core_asset, source_data, queue_data
+from prodsys.models import core_asset, source_data, queue_data
 import prodsys
 from prodsys.util import util
 
@@ -81,7 +81,7 @@ class ProductionSystem(core.ExpressObject):
 
     def to_data_object(self) -> prodsys.adapters.ProductionSystemAdapter:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             prodsys.adapters.Adapter: An instance of the data object.

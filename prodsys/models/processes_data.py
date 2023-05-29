@@ -1,5 +1,5 @@
 """
-The `processes_data` module contains the `prodsys.data_structure` classes to represent the processes that can 
+The `processes_data` module contains the `prodsys.models` classes to represent the processes that can 
 be performed on products by resources.
 
 The following processes are possible:
@@ -13,7 +13,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Union, Optional
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 
 
 class ProcessTypeEnum(str, Enum):

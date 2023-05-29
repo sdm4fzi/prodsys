@@ -6,14 +6,14 @@ from pydantic import BaseModel, Field
 
 
 from prodsys.simulation import router, sim
-from prodsys.data_structures import product_data
+from prodsys.models import product_data
 from prodsys.factories import process_factory
 from prodsys.simulation import logger, proces_models, process
 
 
 class ProductFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` product objects from `prodsys.data_structures` product objects.
+    Factory class that creates and stores `prodsys.simulation` product objects from `prodsys.models` product objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

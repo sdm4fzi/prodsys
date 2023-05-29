@@ -5,7 +5,7 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import sink_data, queue_data
+from prodsys.models import sink_data, queue_data
 import prodsys
 
 from prodsys.express import core, product
@@ -63,7 +63,7 @@ class Sink(core.ExpressObject):
 
     def to_data_object(self) -> sink_data.SinkData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             sink_data.SinkData: Data object of the express object.

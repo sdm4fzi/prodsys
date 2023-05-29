@@ -4,7 +4,7 @@ from typing import List, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from prodsys.data_structures import time_model_data
+from prodsys.models import time_model_data
 from prodsys.simulation import time_model
 
 if TYPE_CHECKING:
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class TimeModelFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` time model objects based on the given time model data according to `prodsys.data_structures.time_model_data.TIME_MODEL_DATA`.
+    Factory class that creates and stores `prodsys.simulation` time model objects based on the given time model data according to `prodsys.models.time_model_data.TIME_MODEL_DATA`.
 
     Returns:
         _type_: _description_

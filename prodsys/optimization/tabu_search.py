@@ -144,7 +144,7 @@ def run_tabu_search(
     Args:
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         seed (int): Random seed for optimization.
         tabu_size (_type_): Size of the tabu list.
         max_steps (_type_): Maximum number of steps.
@@ -262,7 +262,7 @@ def optimize_configuration(
 
     Args:
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (TabuSearchHyperparameters): Hyperparameters for configuration optimization with tabu search.
     """

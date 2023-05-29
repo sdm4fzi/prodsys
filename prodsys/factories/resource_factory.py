@@ -10,7 +10,7 @@ from prodsys.simulation import process, state
 from prodsys.util.util import get_class_from_str
 
 
-from prodsys.data_structures.resource_data import (
+from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
     ControllerEnum,
@@ -99,7 +99,7 @@ def adjust_process_breakdown_states(
 
 class ResourceFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` resource objects from `prodsys.data_structures` resource objects.
+    Factory class that creates and stores `prodsys.simulation` resource objects from `prodsys.models` resource objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

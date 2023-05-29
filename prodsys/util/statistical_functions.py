@@ -6,7 +6,7 @@ from numpy.random import exponential, normal, lognormal
 from enum import Enum
 
 if TYPE_CHECKING:
-    from prodsys.data_structures.time_model_data import FunctionTimeModelData
+    from prodsys.models.time_model_data import FunctionTimeModelData
 
 class FunctionTimeModelEnum(str, Enum):
     Constant = "constant"

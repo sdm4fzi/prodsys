@@ -6,7 +6,7 @@ from typing import Union, List
 from pydantic import BaseModel
 
 from prodsys.simulation import time_model
-from prodsys.data_structures import processes_data
+from prodsys.models import processes_data
 
 
 class Process(ABC, BaseModel):

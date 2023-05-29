@@ -23,7 +23,7 @@ from prodsys.factories import (
 )
 from prodsys.simulation import logger
 from prodsys.util import post_processing, kpi_visualization
-from prodsys.data_structures import performance_data
+from prodsys.models import performance_data
 
 VERBOSE = 1
 

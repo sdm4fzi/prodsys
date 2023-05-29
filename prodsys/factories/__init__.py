@@ -1,5 +1,5 @@
 """
-The `prodsys.factories` package contains the factory classes to create `prodsys.simulation` objects from `prodsys.data_structures` objects in order to initialize a simulation run.
+The `prodsys.factories` package contains the factory classes to create `prodsys.simulation` objects from `prodsys.models` objects in order to initialize a simulation run.
 
 The following modules are available:
 

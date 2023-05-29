@@ -22,7 +22,7 @@ from prodsys.simulation import (
     state,
 )
 
-from prodsys.data_structures import product_data
+from prodsys.models import product_data
 
 
 class ProductInfo(BaseModel, extra=Extra.allow):

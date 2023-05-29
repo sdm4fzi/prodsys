@@ -14,7 +14,7 @@ from enum import Enum
 
 from pydantic import BaseModel, validator, conlist
 
-from prodsys.data_structures.performance_indicators import KPIEnum
+from prodsys.models.performance_indicators import KPIEnum
 
 
 class ReconfigurationEnum(str, Enum):

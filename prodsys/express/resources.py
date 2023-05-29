@@ -14,7 +14,7 @@ from abc import ABC
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import core_asset, resource_data, queue_data
+from prodsys.models import core_asset, resource_data, queue_data
 import prodsys
 
 from prodsys.express import process, state, core
@@ -92,7 +92,7 @@ class ProductionResource(Resource, core.ExpressObject):
 
     def to_data_object(self) -> resource_data.ProductionResourceData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             resource_data.ProductionResourceData: Data object of the express object.
@@ -157,7 +157,7 @@ class TransportResource(Resource, core.ExpressObject):
 
     def to_data_object(self) -> resource_data.TransportResourceData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             resource_data.TransportResourceData: Data object of the express object.

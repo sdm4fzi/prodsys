@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 
 from prodsys.simulation import state
-from prodsys.data_structures import performance_indicators
+from prodsys.models import performance_indicators
 
 from typing import List
 

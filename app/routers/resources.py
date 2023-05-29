@@ -4,7 +4,7 @@ from typing import List, Annotated
 from fastapi import APIRouter, HTTPException, Body
 
 
-from prodsys.data_structures import resource_data
+from prodsys.models import resource_data
 from app.dependencies import get_adapter, get_resource
 
 # TIME_MODEL_EXAMPLES = {

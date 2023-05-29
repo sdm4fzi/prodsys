@@ -11,7 +11,7 @@ from simpy import events
 from prodsys.simulation import process, sim, store
 
 
-from prodsys.data_structures.resource_data import (
+from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
     TransportResourceData,

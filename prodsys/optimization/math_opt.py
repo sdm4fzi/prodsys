@@ -10,7 +10,7 @@ import random
 
 from pydantic import BaseModel, Field
 from prodsys import adapters
-from prodsys.data_structures import (
+from prodsys.models import (
     resource_data,
     processes_data,
     state_data,
@@ -525,7 +525,7 @@ def run_mathematical_optimization(
     Args:
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
         number_of_solutions (int): Number of solutions to find.
         adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
@@ -585,7 +585,7 @@ def optimize_configuration(
 
     Args:
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
     """

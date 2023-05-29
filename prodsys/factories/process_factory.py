@@ -6,7 +6,7 @@ from pydantic import BaseModel, parse_obj_as
 
 from prodsys.factories import time_model_factory
 from prodsys.simulation import process
-from prodsys.data_structures import processes_data
+from prodsys.models import processes_data
 
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class ProcessFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` process objects based on the given process data according to `prodsys.data_structures.processes_data.PROCESS_UNION`.
+    Factory class that creates and stores `prodsys.simulation` process objects based on the given process data according to `prodsys.models.processes_data.PROCESS_UNION`.
 
     Args:
         time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.

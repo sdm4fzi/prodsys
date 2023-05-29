@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 from pydantic import validator
 
 

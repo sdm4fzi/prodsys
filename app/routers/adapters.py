@@ -4,7 +4,7 @@ from typing import List, Dict
 from fastapi import APIRouter, Depends, HTTPException
 
 import prodsys
-from prodsys.data_structures import (
+from prodsys.models import (
     time_model_data,
 )
 

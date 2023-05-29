@@ -5,7 +5,7 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from prodsys.simulation import sim, store
-from prodsys.data_structures import sink_data
+from prodsys.models import sink_data
 
 if TYPE_CHECKING:
     from prodsys.simulation import product

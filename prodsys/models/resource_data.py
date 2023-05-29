@@ -14,7 +14,7 @@ from enum import Enum
 
 from pydantic import validator, conlist
 
-from prodsys.data_structures.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset
 
 
 class ControllerEnum(str, Enum):

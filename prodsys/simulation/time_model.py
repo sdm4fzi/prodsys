@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import numpy as np
 from pydantic import BaseModel, validator
 
-from prodsys.data_structures.time_model_data import (
+from prodsys.models.time_model_data import (
     FunctionTimeModelData,
     SequentialTimeModelData,
     ManhattanDistanceTimeModelData,

@@ -4,7 +4,7 @@ from typing import List, Annotated
 from fastapi import APIRouter, HTTPException, Body
 
 
-from prodsys.data_structures import processes_data
+from prodsys.models import processes_data
 from app.dependencies import get_adapter, get_process
 
 PROCESSES_EXAMPLES = {

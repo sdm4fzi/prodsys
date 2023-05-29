@@ -14,7 +14,7 @@ from prodsys.optimization import (
     math_opt,
     optimization_analysis,
 )
-from prodsys.data_structures import (
+from prodsys.models import (
     performance_indicators
 )
 from app.dependencies import get_adapter, prepare_adapter_from_optimization, get_configuration_results_adapter_from_filesystem

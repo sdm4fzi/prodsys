@@ -6,7 +6,7 @@ from typing import Dict, List, Any, TYPE_CHECKING
 from pydantic import BaseModel, Field, parse_obj_as
 
 from prodsys.simulation import sim, sink
-from prodsys.data_structures import sink_data
+from prodsys.models import sink_data
 if TYPE_CHECKING:
     from prodsys.factories import product_factory, queue_factory
     from prodsys.adapters import adapter
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class SinkFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` sink objects from `prodsys.data_structures` sink objects.
+    Factory class that creates and stores `prodsys.simulation` sink objects from `prodsys.models` sink objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

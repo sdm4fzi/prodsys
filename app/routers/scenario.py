@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel, Field
 
 
-from prodsys.data_structures import (
+from prodsys.models import (
     scenario_data,
     performance_indicators
 )

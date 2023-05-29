@@ -7,7 +7,7 @@ from pydantic import parse_obj_as, BaseModel
 
 from prodsys.simulation import sim
 from prodsys.factories import time_model_factory
-from prodsys.data_structures import state_data
+from prodsys.models import state_data
 from prodsys.simulation import state
 
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class StateFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` state objects from `prodsys.data_structures` state objects.
+    Factory class that creates and stores `prodsys.simulation` state objects from `prodsys.models` state objects.
 
     Args:
         env (sim.Environment): prodsys simulation environment.

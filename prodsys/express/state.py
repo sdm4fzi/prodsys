@@ -17,7 +17,7 @@ from abc import ABC
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.data_structures import state_data
+from prodsys.models import state_data
 
 from prodsys.express import time_model, core, process
 
@@ -72,7 +72,7 @@ class BreakDownState(State, core.ExpressObject):
 
     def to_data_object(self) -> state_data.BreakDownStateData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             state_data.BreakDownStateData: Data object of the express object.
@@ -136,7 +136,7 @@ class ProcessBreakdownState(State, core.ExpressObject):
 
     def to_data_object(self) -> state_data.ProcessBreakDownStateData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             state_data.ProcessBreakDownStateData: Data object of the express object.
@@ -198,7 +198,7 @@ class SetupState(State, core.ExpressObject):
 
     def to_data_object(self) -> state_data.SetupStateData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             state_data.SetupStateData: Data object of the express object.

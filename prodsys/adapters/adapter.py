@@ -6,7 +6,7 @@ from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator, ValidationError
 from prodsys import adapters
 
-from prodsys.data_structures import (
+from prodsys.models import (
     product_data,
     queue_data,
     resource_data,
@@ -258,7 +258,7 @@ def add_default_queues_to_adapter(
 
 class ProductionSystemAdapter(ABC, BaseModel):
     """
-    A ProductionSystemAdapter serves as a n abstract base class of a data container to represent a production system. It is based on the `prodsys.data_structures` module, but is also compatible with the `prodsys.express` API.
+    A ProductionSystemAdapter serves as a n abstract base class of a data container to represent a production system. It is based on the `prodsys.models` module, but is also compatible with the `prodsys.express` API.
     It is used as the basis for all simulation and optimization algorithms in prodsys and comes with complete data validation. 
     Thereby, it is assured that the expected data is used for simulation and optimization. If the data is not valid, an error is raised with information about the reasons for invalidity.
     The adapter targets easy integration of algorithms with each other in different environments. 

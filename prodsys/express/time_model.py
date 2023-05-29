@@ -15,7 +15,7 @@ from uuid import uuid1
 from pydantic.dataclasses import dataclass
 from pydantic import validator, Field
 
-from prodsys.data_structures import time_model_data
+from prodsys.models import time_model_data
 from prodsys.express import core
 
 @dataclass
@@ -42,7 +42,7 @@ class SequentialTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.SequentialTimeModelData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             time_model_data.SequentialTimeModelData: Data object of the express object.
@@ -83,7 +83,7 @@ class FunctionTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.FunctionTimeModelData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             time_model_data.FunctionTimeModelData: Data object of the express object.
@@ -122,7 +122,7 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
 
     def to_data_object(self) -> time_model_data.ManhattanDistanceTimeModelData:
         """
-        Converts the `prodsys.express` object to a data object from `prodsys.data_structures`.
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
             time_model_data.ManhattanDistanceTimeModelData: Data object of the express object.

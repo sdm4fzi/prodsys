@@ -91,7 +91,7 @@ def run_simulated_annealing(
     Args:
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         seed (int): Random seed for optimization.
         Tmax (int): Maximum temperature
         Tmin (int): Minimum temperature
@@ -179,7 +179,7 @@ def optimize_configuration(
 
     Args:
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.data_structures.scenario_data.ScenarioData`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters to perform a configuration optimization with simulated annealing.
     """

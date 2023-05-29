@@ -4,9 +4,9 @@ import os
 
 from fastapi import HTTPException
 import prodsys
-from prodsys.data_structures import performance_data
+from prodsys.models import performance_data
 
-from .data_structures.projects import Project
+from .models.projects import Project
 
 print("create database")
 database: List[Project] = []
