@@ -16,9 +16,18 @@ if TYPE_CHECKING:
 
 
 VERBOSE = 1
+"""
+Determines whether the simulation should be verbose or not. If set to 1, a progress bar will be shown. Otherwise, no progress bar will be shown.
+"""
 
 @contextlib.contextmanager
-def temp_seed(seed):
+def temp_seed(seed: int):
+    """
+    Context manager for temporarily setting the seed of the random number generators. Is necessary when optimizing with another random seed but still wanting to use the same seed for the simulation.
+
+    Args:
+        seed (int): The seed to set for the simulation run.
+    """
     np_state = np.random.get_state()
     p_state = random.getstate()
     np.random.seed(seed)
@@ -30,13 +39,30 @@ def temp_seed(seed):
         random.setstate(p_state)
 
 class Environment(core.Environment):
-    def __init__(self, seed: int=21) -> None:
+    """
+    Class to represent the simulation environment. It is a subclass of simpy.Environment and adds a progress bar to the simulation.
+
+    Args:
+        seed (int, optional): The seed to set for the simulation run. Defaults to 0.
+
+    Attributes:
+        seed (int): The seed to set for the simulation run.
+        pbar (Any): The progress bar.
+        last_update (int): The last time the progress bar was updated.
+    """
+    def __init__(self, seed: int=0) -> None:
         super().__init__()
         self.seed: int = seed
         self.pbar: Any = None
         self.last_update = 0
 
     def run(self, time_range:int):
+        """
+        Runs the simulation for a given time range.
+
+        Args:
+            time_range (int): The time range to run the simulation for in minutes.
+        """
         with temp_seed(self.seed):
             if VERBOSE == 1:
                 self.pbar = tqdm(total=time_range)
@@ -47,14 +73,25 @@ class Environment(core.Environment):
                 self.pbar.close()
 
     def run_until(self, until: events.Event):
+        """
+        Runs the simulation until a given event.
+
+        Args:
+            until (events.Event): The event to run the simulation until.
+        """
         super().run(until=until)
 
     def request_process_of_resource(self, request: request.Request) -> None:
+        """
+        Requests the process of a resource. Connects requests of products with controllers in the environment.
+
+        Args:
+            request (request.Request): The request to process.
+        """
         if VERBOSE == 1:
             now = round(self.now)
             if now > self.last_update:
                 self.pbar.update(now - self.last_update)
                 self.last_update = now
         controller = request.get_resource().get_controller()
-        # self.process(_controller.request(request))
         controller.request(request)
