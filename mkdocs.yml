@@ -6,6 +6,7 @@ theme:
 
 plugins:
 - search
+- include_dir_to_nav
 - mkdocstrings:
     handlers:
       python:
@@ -15,6 +16,11 @@ plugins:
             - "!^_[^_]"
             - "!^__[^_]"
 
+
+nav:
+- Home: index.md
+- Tutorials: Tutorials
+- Api Reference: API_reference
 
 markdown_extensions:
   - pymdownx.highlight:

@@ -1,0 +1,3 @@
+# Factories
+
+::: prodsys.factories
