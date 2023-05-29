@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import prodsys
-from prodsys.util import gym_env
+from prodsys.control import gym_env
 
 if __name__ == '__main__':
 

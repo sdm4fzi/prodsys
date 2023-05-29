@@ -12,7 +12,7 @@ from prodsys.simulation import request, sim, state
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink
-    from prodsys.util import gym_env
+    from prodsys.control import gym_env
 
 
 class Controller(ABC, BaseModel):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import prodsys
-from prodsys.util import gym_env
+from prodsys.control import gym_env
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure

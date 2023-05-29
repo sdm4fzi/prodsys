@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
 from simpy import events
@@ -18,6 +18,27 @@ if TYPE_CHECKING:
 
 
 class ProductionControlEnv(gym.Env):
+    """
+    Gym environment for controlling a controller of a resource wtih an agent. This environment is an example for implementing a control agent. Adaptions of observation space and reward are needed when aiming for performance.
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): The adapter.
+        resource_id (str): The ID of the resource to control.
+
+    Attributes:
+        adapter (adapters.ProductionSystemAdapter): The adapter.
+        resource_id (str): The ID of the resource to control.
+        runner (runner.Runner): The runner of the adapter.
+        interrupt_simulation_event (events.Event): The event to interrupt the simulation when an agent interaction is needed.
+        resource_controller (control.Controller): The controller of the resource.
+        resource (resources.Resource): The resource to control.
+        observer (observer.ResourceObserver): The observer of the resource.
+        step_count (int): The number of steps taken in the environment.
+        observation_space (spaces.Box): The observation space of the environment.
+        action_space (spaces.Box): The action space of the environment.
+        render_mode (Optional[str], optional): The render mode of the environment. Defaults to None.
+        reward (float): The reward of the environment.
+    """
 
     def __init__(self, adapter: adapters.ProductionSystemAdapter, resource_id: str, render_mode=None):
         self.adapter = adapter
@@ -28,7 +49,7 @@ class ProductionControlEnv(gym.Env):
         self.resource_controller: control.Controller = None
         self.resource: resources.Resource = None
         self.observer: observer.ResourceObserver = None
-        self.step_count = 0
+        self.step_count: int = 0
 
         resource_data = [r for r in self.adapter.resource_data if r.ID == resource_id][0]
         queue = [q for q in self.adapter.queue_data if q.ID == resource_data.input_queues[0]][0]
@@ -42,7 +63,13 @@ class ProductionControlEnv(gym.Env):
         self.render_mode = render_mode
         self.reward = 0
 
-    def _get_obs(self):
+    def _get_obs(self) -> np.ndarray:
+        """
+        Get observation of the environment.
+
+        Returns:
+            np.ndarray: The observation.
+        """
         processes_observation = self.observer.observe_processes()
         encoded_processes = []
         processes = self.resource.data.process_ids
@@ -68,12 +95,22 @@ class ProductionControlEnv(gym.Env):
         
         return np.array(encoded_processes)
 
-    def _get_info(self):
-        return {"infoo": 0}
+    def _get_info(self) -> dict:
+        """
+        Get info of the environment.
+
+        Returns:
+            dict: The info.
+        """
+        return {"info": 0}
 
     def reset(self, seed=None, options=None):
         """
         Reset env for new episode and run until first point of observation.
+
+        Args:
+            seed (Optional[int], optional): The seed for the environment. Defaults to None.
+            options (Optional[dict], optional): The options for the environment. Defaults to None.
         """
 
         super().reset(seed=seed)
@@ -101,8 +138,16 @@ class ProductionControlEnv(gym.Env):
 
         return observation, info
 
-    def step(self, action):
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
+        """
+        Take a step in the environment.
 
+        Args:
+            action (np.ndarray): The output of the agent for actions.
+
+        Returns:
+            Tuple[np.ndarray, float, bool, dict]: The observation, reward, done, and info.
+        """
         queue_index = np.argmax(action)
         if queue_index >= len(self.resource_controller.requests):
             queue_index = np.random.choice([i for i in range(len(self.resource_controller.requests))])
@@ -130,11 +175,35 @@ class ProductionControlEnv(gym.Env):
         return observation, reward, terminated, False, info
 
     def render(self):
+        """
+        Render the environment.
+        """
         if self.render_mode == "human":
             pass
 
 
 class ProductionRoutingEnv(gym.Env):
+    """
+    Gym environment for controlling a router of a product type in a production system with an agent. Serves, at least for now, more as an example to use a routing agent...
+
+    Args:
+        adapter (adapters.ProductionSystemAdapter): The adapter for the production system.
+        render_mode (str, optional): The render mode. Defaults to None.
+
+    Attributes:
+        adapter (adapters.ProductionSystemAdapter): The adapter for the production system.
+        runner (runner.Runner): The runner for the production system.
+        router (router.Router): The router of the product type.
+        possible_resources (List[resources.Resource]): The possible resources for the router.
+        chosen_resource (Optional[resources.Resource]): The chosen resource for the router.
+        interrupt_simulation_event (events.Event): The event for interrupting the simulation.
+        observers (List[observer.ResourceObserver]): The observers for the resources.
+        step_count (int): The step count of the environment.
+        observation_space (gym.spaces.Box): The observation space of the environment.
+        action_space (gym.spaces.Box): The action space of the environment.
+        render_mode (str): The render mode of the environment.
+        reward (float): The reward of the environment.
+    """
 
     def __init__(self, adapter: adapters.ProductionSystemAdapter, render_mode=None):
         self.adapter = adapter
@@ -157,7 +226,13 @@ class ProductionRoutingEnv(gym.Env):
         self.render_mode = render_mode
         self.reward = 0
 
-    def _get_obs(self):
+    def _get_obs(self) -> np.ndarray:
+        """
+        Get observation of the environment.
+
+        Returns:
+            np.ndarray: The observation.
+        """
         available_resources = []
         for obs in self.observers:
             resource_available_status = obs.observe_resource_available()
@@ -165,12 +240,22 @@ class ProductionRoutingEnv(gym.Env):
 
         return np.array(available_resources)
 
-    def _get_info(self):
-        return {"infoo": 0}
+    def _get_info(self) -> dict:
+        """
+        Get info of the environment.
+
+        Returns:
+            dict: The info.
+        """
+        return {"info": 0}
 
     def reset(self, seed=None, options=None):
         """
         Reset env for new episode and run until first point of observation.
+
+        Args:   
+            seed (int, optional): The seed for the environment. Defaults to None.
+            options (dict, optional): The options for the environment. Defaults to None.
         """
 
         super().reset(seed=seed)
@@ -203,12 +288,33 @@ class ProductionRoutingEnv(gym.Env):
         return observation, info
     
     def load_possible_resources(self, resources: List[resources.Resource]):
+        """
+        Load possible resources for the router.
+
+        Args:
+            resources (List[resources.Resource]): The possible resources.
+        """
         self.possible_resources = resources
 
     def get_chosen_resource(self) -> resources.Resource:
+        """
+        Get the chosen resource for the router.
+
+        Returns:
+            resources.Resource: The chosen resource.
+        """
         return self.chosen_resource
 
-    def step(self, action):
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, dict]:
+        """
+        Perform action in the environment.
+
+        Args:
+            action (np.ndarray): The output of the agent based on the last observation.
+
+        Returns:
+            Tuple[np.ndarray, float, bool, dict]: The observation, reward, termination signal, and info.
+        """
 
         resource = np.argmax(action)
 
@@ -240,6 +346,9 @@ class ProductionRoutingEnv(gym.Env):
         return observation, reward, terminated, False, info
 
     def render(self):
+        """
+        Render the environment.
+        """
         if self.render_mode == "human":
             pass
         

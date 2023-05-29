@@ -13,7 +13,7 @@ from prodsys.simulation import resources
 if TYPE_CHECKING:
     from prodsys.simulation import resources, process, product, sink
     from prodsys.factories import resource_factory, sink_factory
-    from prodsys.util import gym_env
+    from prodsys.control import gym_env
 
 
 class Router:
