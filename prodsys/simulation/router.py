@@ -101,7 +101,7 @@ class SimpleRouter(Router):
         for resource in possible_resources:
             if isinstance(resource, resources.ProductionResource):
                 for input_queue in resource.input_queues:
-                    if input_queue.full():  
+                    if input_queue.full:  
                         left_resources = [r for r in left_resources if not r.data.ID==resource.data.ID]
                         break
         if not left_resources:
@@ -174,7 +174,7 @@ class CapabilityRouter(Router):
         for resource in self.resource_factory.resources:
             resource_capabilities = get_resource_capabilities(resource)
 
-            if (target_process.process_data.capability in resource_capabilities) and not any(q.full() for q in resource.input_queues):
+            if (target_process.process_data.capability in resource_capabilities) and not any(q.full for q in resource.input_queues):
                 possible_resources.append(resource)
         if not possible_resources:
             return None

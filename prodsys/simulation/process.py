@@ -90,3 +90,6 @@ class TransportProcess(Process):
         return self.time_model.get_expected_time(*args)
 
 PROCESS_UNION = Union[ProductionProcess, TransportProcess, CapabilityProcess]
+"""
+Union type for all processes.
+"""

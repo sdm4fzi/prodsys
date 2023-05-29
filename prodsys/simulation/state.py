@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
 
 class StateEnum(str, Enum):
+    """
+    Enum for the different types a state can be in.
+    """
     start_state = "start state"
     start_interrupt = "start interrupt"
     end_interrupt = "end interrupt"
@@ -32,6 +35,9 @@ class StateEnum(str, Enum):
 
 
 class StateTypeEnum(str, Enum):
+    """
+    Enum for the different types of states.
+    """
     production = "Production"
     transport = "Transport"
     breakdown = "Breakdown"
@@ -42,6 +48,19 @@ class StateTypeEnum(str, Enum):
 
 
 class StateInfo(BaseModel, extra=Extra.allow):
+    """
+    Class that represents the current event information of a state while simulating.
+
+    Args:
+        ID (str): The ID of the state.
+        resource_ID (str): The ID of the resource the state belongs to.
+        _event_time (Optional[float], optional): The time of the event. Defaults to 0.0.
+        _expected_end_time (Optional[float], optional): The expected end time of the state. Defaults to 0.0.
+        _activity (Optional[StateEnum], optional): The activity of the state. Defaults to None.
+        _state_type (Optional[StateTypeEnum], optional): The type of the state. Defaults to None.
+        _product_ID (str, optional): The ID of the product the state belongs to. Defaults to "".
+        _target_ID (str, optional): The ID of the target the state belongs to. Defaults to "".
+    """
     ID: str
     resource_ID: str
     _event_time: Optional[float] = 0.0
@@ -52,41 +71,98 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _target_ID: str = ""
 
     def log_target_location(self, target: product.Location, state_type: StateTypeEnum):
+        """
+        Logs the target location of a transport state.
+
+        Args:
+            target (product.Location): The target location, either a resource, source or a sink.
+            state_type (StateTypeEnum): The type of the state.
+        """
         self._target_ID = target.data.ID
         self._state_type = state_type
 
     def log_product(self, _product: product.Product, state_type: StateTypeEnum):
+        """
+        Logs the product of a transport or production state.
+
+        Args:
+            _product (product.Product): The product.
+            state_type (StateTypeEnum): The type of the state.
+        """
         self._product_ID = _product.product_data.ID
         self._state_type = state_type
 
     def log_start_state(
         self, start_time: float, expected_end_time: float, state_type: StateTypeEnum
     ):
+        """
+        Logs the start of a state.
+
+        Args:
+            start_time (float): The start time of the state.
+            expected_end_time (float): The expected end time of the state.
+            state_type (StateTypeEnum): The type of the state.
+        """
         self._event_time = start_time
         self._expected_end_time = expected_end_time
         self._activity = StateEnum.start_state
         self._state_type = state_type
 
     def log_start_interrupt_state(self, start_time: float, state_type: StateTypeEnum):
+        """
+        Logs the start of an interrupt of a state.
+
+        Args:
+            start_time (float): The start time of the interruption.
+            state_type (StateTypeEnum): The type of the state.
+        """
         self._event_time = start_time
         self._activity = StateEnum.start_interrupt
         self._state_type = state_type
 
     def log_end_interrupt_state(
-        self, start_time: float, expected_end_time: float, state_type: StateTypeEnum
+        self, end_time: float, expected_end_time: float, state_type: StateTypeEnum
     ):
-        self._event_time = start_time
+        """
+        Logs the end of an interrupt of a state.
+
+        Args:
+            end_time (float): The end time of the interruption.
+            expected_end_time (float): The expected end time of the state.
+            state_type (StateTypeEnum): The type of the state.
+        """
+        self._event_time = end_time
         self._expected_end_time = expected_end_time
         self._activity = StateEnum.end_interrupt
         self._state_type = state_type
 
-    def log_end_state(self, start_time: float, state_type: StateTypeEnum):
-        self._event_time = start_time
+    def log_end_state(self, end_time: float, state_type: StateTypeEnum):
+        """
+        Logs the end of a state.
+
+        Args:
+            end_time (float): The end time of the state.
+            state_type (StateTypeEnum): The type of the state.
+        """
+        self._event_time = end_time
         self._activity = StateEnum.end_state
         self._state_type = state_type
 
 
 class State(ABC, BaseModel):
+    """
+    Abstract class that represents a state of a resource in the simulation. A state has a process that is simulated when the resource starts a state. States can exist in parallel and can interrupt each other.
+
+    Args:
+        state_data (StateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+    """
     state_data: StateData
     time_model: time_model.TimeModel
     env: sim.Environment
@@ -100,6 +176,12 @@ class State(ABC, BaseModel):
         arbitrary_types_allowed = True
 
     def set_resource(self, resource_model: resources.Resource) -> None:
+        """
+        Sets the resource of the state.
+
+        Args:
+            resource_model (resources.Resource): The resource the state belongs to.
+        """
         self.resource = resource_model
         self.state_info = StateInfo(
             ID=self.state_data.ID, resource_ID=self.resource.data.ID
@@ -125,27 +207,62 @@ class State(ABC, BaseModel):
 
     @abstractmethod
     def process_state(self) -> Generator:
+        """
+        Runs a single process of the state. The process is the key component for the behavior of the state while simulating. All the logic of the state is implemented in the process.
+
+        Yields:
+            Generator: The generator of the process.
+        """
         pass
 
     @abstractmethod
     def interrupt_process(self) -> Generator:
+        """
+        Interrupts the process of the state. 
+
+        Yields:
+            Generator: The generator of the process.
+        """
         pass
 
     def activate_state(self):
+        """
+        Activates the state and at start of the simulation.
+        """
         pass
 
     def prepare_for_run(self):
+        """
+        Prepares the state for running the process of a state.
+        """
         pass
 
 
 class ProductionState(State):
+    """
+    Represents a production state of a resource in the simulation. A production state has a process that simulates the production process which takes some time. The production state continues the creation process of a product. If a resource has a higher capacity than 1 for a process, multiple production states exist, that can run in parallel.
+
+    Args:
+        state_data (ProductionStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        start (float, optional): The start time of the state. Defaults to 0.0.
+        done_in (float, optional): The ramaining time for the state to finish. Defaults to 0.0.
+
+    Attributes:
+        interrupt_processed (events.Event, optional): Event that indicates if the state is interruption is over. Defaults to None.
+    """
     state_data: ProductionStateData
     interrupt_processed: events.Event = Field(default=None, init=False)
     start: float = 0.0
     done_in: float = 0.0
 
     def prepare_for_run(self):
-        # self.interrupt_processed = events.Event(self.env).succeed()
         self.finished_process = events.Event(self.env)
 
     def activate_state(self):
@@ -153,10 +270,6 @@ class ProductionState(State):
         self.active = events.Event(self.env).succeed()
 
     def process_state(self) -> Generator:
-        """Runs a single process of a resource.
-        While making a part, the machine may break multiple times.
-        Request a repairman when this happens.
-        """
         self.done_in = self.time_model.get_next_time()
         try:
             yield events.AllOf(self.env, [self.resource.active, self.active])
@@ -183,7 +296,6 @@ class ProductionState(State):
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.production
                 )
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
-        # TODO: fix that processes are not started whilst others are interrupted so that the finished_process event is still unsucceded and only one process is running for each produtionstate
         self.finished_process.succeed()
 
     def update_done_in(self):
@@ -199,13 +311,30 @@ class ProductionState(State):
 
 
 class TransportState(State):
+    """
+    Represents a transport state of a resource in the simulation. A transport state has a process that simulates the transport of a product. The transport state continues the transport process of a product. If a resource has a higher capacity than 1 for a process, multiple transport states exist, that can run in parallel but only with the same target and end location.
+
+    Args:
+        state_data (TransportStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        start (float, optional): The start time of the state. Defaults to 0.0.
+        done_in (float, optional): The ramaining time for the state to finish. Defaults to 0.0.
+
+    Attributes:
+        interrupt_processed (events.Event, optional): Event that indicates if the state is interruption is over. Defaults to None.
+    """
     state_data: TransportStateData
     interrupt_processed: events.Event = Field(default=None, init=False)
     start: float = 0.0
     done_in: float = 0.0
 
     def prepare_for_run(self):
-        # self.interrupt_processed = events.Event(self.env).succeed()
         self.finished_process = events.Event(self.env)
 
     def activate_state(self):
@@ -213,10 +342,6 @@ class TransportState(State):
         self.active = events.Event(self.env).succeed()
 
     def process_state(self, target: List[float]) -> Generator:
-        """Runs a single process of a resource.
-        While making a part, the machine may break multiple times.
-        Request a repairman when this happens.
-        """
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
@@ -261,6 +386,20 @@ class TransportState(State):
 
 
 class BreakDownState(State):
+    """
+    Represents a breakdown state of a resource in the simulation. A breakdown state has a process that simulates the breakdown of a resource. All other running production, transport or setup states get interrupted.
+
+    Args:
+        state_data (BreakDownStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        repair_time_model (time_model.TimeModel, optional): The time model of the repair time. Defaults to None.
+    """
     state_data: BreakDownStateData
     repair_time_model: time_model.TimeModel
 
@@ -291,6 +430,21 @@ class BreakDownState(State):
 
 
 class ProcessBreakDownState(State):
+    """
+    Represents a process breakdown state of a resource in the simulation. A process breakdown state has a process that simulates the breakdown of a process of a resource. Only production states of this type of process get interrupted. Also all setup states get interrupted.
+
+    Args:
+        state_data (ProcessBreakDownStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        production_states (List[State], optional): The production states of the process. Defaults to None.
+        repair_time_model (time_model.TimeModel, optional): The time model of the repair time. Defaults to None.
+    """
     state_data: ProcessBreakDownStateData
     production_states: List[State] = None
     repair_time_model: time_model.TimeModel
@@ -347,13 +501,37 @@ class ProcessBreakDownState(State):
 
 
 class SetupState(State):
+    """
+    Represents a setup state of a resource in the simulation. A setup state has a process that simulates the setup of a resource. This changes the current setup of the resource and allows it processing of other types of processes with their associated production or transport states.
+
+    Args:
+        state_data (SetupStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        start (float, optional): The start time of the state. Defaults to 0.0.
+        done_in (float, optional): The time the state is done in. Defaults to 0.0.
+
+    Attributes:
+        interrupt_processed (events.Event): Event that indicates if the state is interrupted. Defaults to None.
+    """
     state_data: SetupStateData
     start: float = 0.0
     done_in: float = 0.0
     interrupt_processed: events.Event = Field(default=None, init=False)
 
     @property
-    def is_active(self):
+    def is_active(self) -> events.Event:
+        """
+        Indicates whether the state is active.
+
+        Returns:
+            events.Event: Event that indicates if the state is active.
+        """
         return events.AllOf(self.env, [self.active, self.resource.active])
 
     def prepare_for_run(self):
@@ -419,3 +597,6 @@ class SetupState(State):
 STATE_UNION = Union[
     BreakDownState, ProductionState, TransportState, SetupState, ProcessBreakDownState
 ]
+"""
+Union Type of all states.
+"""
