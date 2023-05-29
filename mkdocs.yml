@@ -16,7 +16,6 @@ plugins:
             - "!^_[^_]"
             - "!^__[^_]"
 
-
 nav:
 - Home: index.md
 - Tutorials: Tutorials
