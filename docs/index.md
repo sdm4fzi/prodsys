@@ -17,7 +17,9 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
         ...       # Other markdown pages, images and other files.
         API_reference/
             Express API.md
-            Data structures API.md
+            prodsys Models API.md
             Adapter.md
-            Optimization.md
             Simulation Object Factories.md
+            Simulation.md
+            Optimization.md
+            util.md
