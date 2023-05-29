@@ -28,6 +28,16 @@ from prodsys.models import performance_data
 VERBOSE = 1
 
 def run_simulation(adapter_object: adapter.ProductionSystemAdapter, run_length: int) -> Runner:
+    """
+    Runs the simulation for the given adapter and run length.
+
+    Args:
+        adapter_object (adapter.ProductionSystemAdapter): Adapter containing the production system to simulate.
+        run_length (int): Length of the simulation run.
+
+    Returns:
+        Runner: The runner object after simulation.
+    """
     runner_object = Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(run_length)
@@ -35,7 +45,13 @@ def run_simulation(adapter_object: adapter.ProductionSystemAdapter, run_length: 
 
 
 @contextlib.contextmanager
-def temp_seed(seed):
+def temp_seed(seed: int):
+    """
+    Context manager for temporarily setting the seed of the random number generators. Is necessary when optimizing with another random seed but still wanting to use the same seed for the simulation.
+
+    Args:
+        seed (int): The seed to set for the simulation run.
+    """
     np_state = np.random.get_state()
     p_state = random.getstate()
     np.random.seed(seed)
@@ -48,6 +64,27 @@ def temp_seed(seed):
 
 
 class Runner(BaseModel):
+    """
+    Class to represent the simulation runner. It allows to run the simulation based on a provided adapter.
+
+    Args:
+        adapter (adapter.ProductionSystemAdapter): The adapter containing the production system to simulate.
+
+    Attributes:
+        adapter (adapter.ProductionSystemAdapter): The adapter containing the production system to simulate.
+        env (sim.Environment): The environment to run the simulation in.
+        time_model_factory (time_model_factory.TimeModelFactory): The time model factory to create the time models.
+        state_factory (state_factory.StateFactory): The state factory to create the states.
+        process_factory (process_factory.ProcessFactory): The process factory to create the processes.
+        queue_factory (queue_factory.QueueFactory): The queue factory to create the queues.
+        resource_factory (resource_factory.ResourceFactory): The resource factory to create the resources.
+        sink_factory (sink_factory.SinkFactory): The sink factory to create the sinks.
+        source_factory (source_factory.SourceFactory): The source factory to create the sources.
+        product_factory (product_factory.ProductFactory): The product factory to create the products.
+        event_logger (logger.Logger): The event logger to log the events.
+        time_stamp (str): The time stamp of the simulation run.
+        post_processor (post_processing.PostProcessor): The post processor to process the simulation results.
+    """
     adapter: adapter.ProductionSystemAdapter
     env: sim.Environment = Field(
         None, description="The environment to run the simulation in", init=False
@@ -70,6 +107,9 @@ class Runner(BaseModel):
         arbitrary_types_allowed = True
 
     def initialize_simulation(self):
+        """
+        Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
+        """
         with temp_seed(self.adapter.seed):
 
             self.time_model_factory = time_model_factory.TimeModelFactory()
@@ -129,6 +169,12 @@ class Runner(BaseModel):
             self.source_factory.start_sources()
 
     def run(self, time_range: int):
+        """
+        Runs the simulation for the given time range.
+
+        Args:
+            time_range (int): The time range to run the simulation for.
+        """
 
         t_0 = time.perf_counter()
 
@@ -138,24 +184,41 @@ class Runner(BaseModel):
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
     def get_post_processor(self) -> post_processing.PostProcessor:
+        """
+        Returns the post processor to process the simulation results.
+
+        Returns:
+            post_processing.PostProcessor: The post processor to process the simulation results.
+        """
         if not self.post_processor:
             self.post_processor = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return self.post_processor
 
 
     def print_results(self):
+        """
+        Prints the aggregated simulation results, comprising the average throughput, WIP, throughput time and the time per state of the resources.
+        """
         p = self.get_post_processor()
         kpi_visualization.print_aggregated_data(p)
 
     def plot_results(self):
+        """
+        Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.
+        """
         p = self.get_post_processor()
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
-        kpi_visualization.plot_WIP_with_range(p)
         kpi_visualization.plot_throughput_time_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
+        """
+        Returns the event data of the simulation.
+
+        Returns:
+            List[performance_data.Event]: The event data of the simulation.
+        """
         p = self.get_post_processor()
         df_raw=self.event_logger.get_data_as_dataframe()
         events = []
@@ -175,6 +238,12 @@ class Runner(BaseModel):
         return events
     
     def get_performance_data(self) -> performance_data.Performance:
+        """
+        Returns the performance data of the simulation.
+
+        Returns:
+            performance_data.Performance: The performance data of the simulation.
+        """
         p = self.get_post_processor()
         kpis = []
         kpis += p.WIP_KPIs
@@ -185,12 +254,38 @@ class Runner(BaseModel):
         return performance_data.Performance(kpis=kpis, event_log=event_data)
     
     def get_aggregated_data_simulation_results(self) -> dict:
+        """
+        Returns the aggregated simulation results.
+
+        Returns:
+            dict: The aggregated simulation results.
+        """
         p = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return p.get_aggregated_data()
 
     def save_results_as_csv(self, save_folder="data"):
-        self.event_logger.log_data_to_csv(filepath=f"{save_folder}/{self.time_stamp}.csv")
+        """
+        Saves the simulation results as .csv-file marked with the time_stamp of simulation and the adapter ID if available.
+
+        Args:
+            save_folder (str, optional): The folder to save the results to. Defaults to "data".
+        """
+        save_name = ""
+        if self.adapter.ID:
+            save_name = f"{self.adapter.ID}_"
+        save_name += self.time_stamp
+        self.event_logger.log_data_to_csv(filepath=f"{save_folder}/{save_name}.csv")
 
     def save_results_as_json(self, save_folder="data"):
-        self.event_logger.log_data_to_json(filepath=f"{save_folder}/{self.time_stamp}.json")
+        """
+        Saves the simulation results as .json-file marked with the time_stamp of simulation and the adapter ID if available.
+
+        Args:
+            save_folder (str, optional): The folder to save the results to. Defaults to "data".
+        """
+        save_name = ""
+        if self.adapter.ID:
+            save_name = f"{self.adapter.ID}_"
+        save_name += self.time_stamp
+        self.event_logger.log_data_to_json(filepath=f"{save_folder}/{save_name}.json")
 
