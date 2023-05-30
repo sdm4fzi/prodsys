@@ -475,13 +475,9 @@ class ProcessBreakDownState(State):
             for state in self.production_states + self.resource.setup_states:
                 state.deactivate()
             interrupt_events = []
-            for state in self.production_states:
-                if state.process and state.process.is_alive:
+            for state in self.production_states + self.resource.setup_states:
+                if state.process and state.process.is_alive and state.interrupt_processed.triggered:
                     interrupt_events.append(self.env.process(state.interrupt_process()))
-            interrupt_events += [
-                self.env.process(state.interrupt_process())
-                for state in self.resource.setup_states
-            ]
             yield self.env.all_of(interrupt_events)
             self.state_info.log_start_state(
                 self.env.now, self.env.now + 5, StateTypeEnum.process_breakdown
@@ -543,24 +539,19 @@ class SetupState(State):
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
-        try:
-            yield self.is_active
-            running_processes = [
-                state.process
-                for state in self.resource.production_states
-                if (state.process and state.process.is_alive)
-            ]
-            yield events.AllOf(self.env, running_processes)
-        except exceptions.Interrupt:
-            yield self.is_active
-            self.interrupt_processed.succeed()
-            running_processes = [
-                state.process
-                for state in self.resource.production_states
-                if (state.process and state.process.is_alive)
-            ]
-            yield events.AllOf(self.env, running_processes)
-
+        while True:
+            try:
+                yield self.is_active
+                running_processes = [
+                    state.process
+                    for state in self.resource.production_states
+                    if (state.process and state.process.is_alive)
+                ]
+                yield events.AllOf(self.env, running_processes)
+                break
+            except exceptions.Interrupt:
+                yield self.is_active
+                self.interrupt_processed.succeed()
         self.state_info.log_start_state(
             self.env.now, self.env.now + self.done_in, StateTypeEnum.setup
         )
