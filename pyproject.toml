@@ -31,6 +31,7 @@ mkdocstrings = {version = ">=0.18", extras = ["python-legacy"]}
 mkdocs-material = "^9.1.13"
 mkdocs-include-dir-to-nav = "^1.2.0"
 ipykernel = "^6.23.1"
+nbformat = "^5.8.0"
 
 
 [tool.poetry.group.experimental.dependencies]

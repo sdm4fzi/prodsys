@@ -1,6 +1,6 @@
 # Welcome to prodsys
 
-This is the documentation for the prodsys package, a package for modeling, simulating, and optimizing production systems.
+This is the documentation for the prodsys package, a package for modeling, simulating, and optimizing production systems based on the product, process and resource (PPR) modelling principle.
 
 ## Installation
 

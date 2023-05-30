@@ -154,7 +154,7 @@ class ScenarioInfoData(BaseModel):
         }
 
 
-class Objectives(BaseModel):
+class Objective(BaseModel):
     name: KPIEnum
     weight: float = 1.0
 
@@ -203,7 +203,7 @@ class ScenarioData(BaseModel):
     constraints: ScenarioConstrainsData
     options: ScenarioOptionsData
     info: ScenarioInfoData
-    objectives: List[Objectives]
+    objectives: List[Objective]
 
     class Config:
         use_enum_values = True

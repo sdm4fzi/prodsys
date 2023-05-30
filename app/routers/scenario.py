@@ -118,11 +118,11 @@ async def create_scenario_options(
     return "Sucessfully created scenario options. " + return_string
 
 
-OBJECTIVES_LIST_EXAMPLE = [item["value"] for item in scenario_data.Objectives.Config.schema_extra["examples"].values()]
+OBJECTIVES_LIST_EXAMPLE = [item["value"] for item in scenario_data.Objective.Config.schema_extra["examples"].values()]
 
 
 @router.get("/objectives",
-                response_model=List[scenario_data.Objectives],
+                response_model=List[scenario_data.Objective],
                 responses={
                     200: {
                         "description": "Sucessfully returned objectives",
@@ -145,7 +145,7 @@ async def read_scenario_objectives(project_id: str, adapter_id: str):
 async def create_scenario_objectives(
     project_id: str,
     adapter_id: str,
-    objectives: Annotated[List[scenario_data.Objectives], Body(example=OBJECTIVES_LIST_EXAMPLE)],
+    objectives: Annotated[List[scenario_data.Objective], Body(example=OBJECTIVES_LIST_EXAMPLE)],
 ):
     adapter = get_adapter(project_id, adapter_id)
     return_string = ""
