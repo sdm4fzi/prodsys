@@ -40,7 +40,7 @@ class SequentialTimeModel(core.ExpressObject):
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
 
-    def to_data_object(self) -> time_model_data.SequentialTimeModelData:
+    def to_model(self) -> time_model_data.SequentialTimeModelData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -81,7 +81,7 @@ class FunctionTimeModel(core.ExpressObject):
     scale: float = 0.0
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def to_data_object(self) -> time_model_data.FunctionTimeModelData:
+    def to_model(self) -> time_model_data.FunctionTimeModelData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -120,7 +120,7 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
     reaction_time: float
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def to_data_object(self) -> time_model_data.ManhattanDistanceTimeModelData:
+    def to_model(self) -> time_model_data.ManhattanDistanceTimeModelData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

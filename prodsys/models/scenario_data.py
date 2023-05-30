@@ -20,6 +20,12 @@ from prodsys.models.performance_indicators import KPIEnum
 class ReconfigurationEnum(str, Enum):
     """
     Enum that represents the different levels of reconfigurations that are possible.
+
+    - ProductionCapacity: Reconfiguration of production capacity (number of machines and their configuration)
+    - TransportCapacity: Reconfiguration of transport capacity (number of transport resources and their configuration)
+    - Layout: Reconfiguration of layout (only position of resources)
+    - SequencingLogic: Reconfiguration of sequencing logic (only the control policy of resources)
+    - RoutingLogic: Reconfiguration of routing logic (only the routing heuristic of routers)
     """
 
     PRODUCTION_CAPACITY = "production_capacity"

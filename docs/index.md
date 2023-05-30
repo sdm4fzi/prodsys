@@ -1,6 +1,6 @@
 # Welcome to prodsys
 
-This is the documentation for the prodsys package. A package for modeling, simulating, and optimizing production systems.
+This is the documentation for the prodsys package, a package for modeling, simulating, and optimizing production systems.
 
 ## Installation
 
@@ -52,7 +52,7 @@ Only the sources and sinks that are responsible for creating the housing and sto
 
 ```py
 source = psx.Source(housing, arrival_time_of_housings, location=[0, 0], ID="source")
-sink = psx.Sink(housing, location=[0, 0], ID="sink")
+sink = psx.Sink(housing, location=[20, 20], ID="sink")
 ```
 
 Finally, we can create our production system, run the simulation for 60 minutes and print aggregated simulation results:

@@ -21,6 +21,10 @@ from prodsys.util.statistical_functions import FunctionTimeModelEnum
 class TimeModelEnum(str, Enum):
     """
     Enum that represents the different kind time models.
+
+    - HistoryTimeModel: A time model that is based on a sequence of values.
+    - FunctionTimeModel: A time model that is based on a distribution function which gets sampled.
+    - ManhattanDistanceTimeModel: A time model that is based on the manhattan distance between two nodes and a constant velocity.
     """
 
     HistoryTimeModel = "HistoryTimeModel"

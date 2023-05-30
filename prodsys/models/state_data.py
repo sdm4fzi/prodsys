@@ -22,6 +22,12 @@ from prodsys.models.core_asset import CoreAsset
 class StateTypeEnum(str, Enum):
     """
     Enum that represents the different kind of states.
+
+    - BreakDownState: A state that makes a resource unavailable for a certain time.
+    - ProductionState: A state that represents the time needed to process a product.
+    - TransportState: A state that represents the time needed to transport a product.
+    - SetupState: A state that represents the time needed to change the process of a resource.
+    - ProcessBreakDownState: A state that makes a process unavailable for a certain time but other processes can still be performed.
     """
 
     BreakDownState = "BreakDownState"

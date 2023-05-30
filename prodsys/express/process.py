@@ -84,7 +84,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
         init=False, default=processes_data.ProcessTypeEnum.ProductionProcesses
     )
 
-    def to_data_object(self) -> processes_data.ProductionProcessData:
+    def to_model(self) -> processes_data.ProductionProcessData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -135,7 +135,7 @@ class CapabilityProcess(Process, core.ExpressObject):
         init=False, default=processes_data.ProcessTypeEnum.CapabilityProcesses
     )
 
-    def to_data_object(self) -> processes_data.CapabilityProcessData:
+    def to_model(self) -> processes_data.CapabilityProcessData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -180,7 +180,7 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
         init=False, default=processes_data.ProcessTypeEnum.TransportProcesses
     )
 
-    def to_data_object(self) -> processes_data.TransportProcessData:
+    def to_model(self) -> processes_data.TransportProcessData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

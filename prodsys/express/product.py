@@ -50,7 +50,7 @@ class Product(core.ExpressObject):
     transport_process: process.TransportProcess
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def to_data_object(self) -> product_data.ProductData:
+    def to_model(self) -> product_data.ProductData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

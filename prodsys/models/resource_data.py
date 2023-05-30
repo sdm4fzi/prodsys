@@ -20,6 +20,9 @@ from prodsys.models.core_asset import CoreAsset
 class ControllerEnum(str, Enum):
     """
     Enum that represents the controller of a resource.
+
+    - PipelineController: Pipeline controller.
+    - TransportController: Transport controller.
     """
 
     PipelineController = "PipelineController"
@@ -29,6 +32,10 @@ class ControllerEnum(str, Enum):
 class ResourceControlPolicy(str, Enum):
     """
     Enum that represents the control policy of a resource.
+
+    - FIFO: First in first out.
+    - LIFO: Last in first out.
+    - SPT: Shortest processing time first.
     """
 
     FIFO = "FIFO"
@@ -39,6 +46,9 @@ class ResourceControlPolicy(str, Enum):
 class TransportControlPolicy(str, Enum):
     """
     Enum that represents the control policy of a transport resource.
+
+    - FIFO: First in first out.
+    - SPT_transport: Shortest transport time first.
     """
 
     FIFO = "FIFO"

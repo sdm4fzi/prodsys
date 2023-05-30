@@ -453,7 +453,7 @@ class PostProcessor:
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time)
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
-        )
+        ) * 100
 
         return df_time_per_state
     
@@ -649,12 +649,30 @@ class PostProcessor:
         return data
 
     def get_aggregated_throughput_time_data(self) -> List[float]:
+        """
+        Returns a list of the aggregated throughput time data.
+
+        Returns:
+            List[float]: List of the aggregated throughput time data ordered alphabetically by product type.
+        """
         return list(self.df_aggregated_throughput_time.values)
 
     def get_aggregated_throughput_data(self) -> List[float]:
+        """
+        Returns a list of the aggregated throughput data.
+
+        Returns:
+            List[float]: List of the aggregated throughput data ordered alphabetically by product type.
+        """
         return list(self.df_aggregated_output.values)
 
     def get_aggregated_wip_data(self) -> List[float]:
+        """
+        Returns a list of the aggregated WIP data.
+
+        Returns:
+            List[float]: List of the aggregated WIP data ordered alphabetically by product type.
+        """
         s = self.df_aggregated_WIP.copy()
         s = s.drop(labels=["Total"])
         return list(s.values)

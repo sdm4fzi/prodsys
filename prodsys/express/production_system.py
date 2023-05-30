@@ -79,7 +79,7 @@ class ProductionSystem(core.ExpressObject):
 
     _runner: Optional[prodsys.runner.Runner] = Field(default=None, init=False)
 
-    def to_data_object(self) -> prodsys.adapters.ProductionSystemAdapter:
+    def to_model(self) -> prodsys.adapters.ProductionSystemAdapter:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -116,13 +116,13 @@ class ProductionSystem(core.ExpressObject):
         ]
         time_models = remove_duplicate_items(time_models)
 
-        time_model_data = [time_model.to_data_object() for time_model in time_models]
-        process_data = [process.to_data_object() for process in processes]
-        state_data = [state.to_data_object() for state in states]
-        product_data = [product.to_data_object() for product in products]
-        resource_data = [resource.to_data_object() for resource in self.resources]
-        source_data = [source.to_data_object() for source in self.sources]
-        sink_data = [sink.to_data_object() for sink in self.sinks]
+        time_model_data = [time_model.to_model() for time_model in time_models]
+        process_data = [process.to_model() for process in processes]
+        state_data = [state.to_model() for state in states]
+        product_data = [product.to_model() for product in products]
+        resource_data = [resource.to_model() for resource in self.resources]
+        source_data = [source.to_model() for source in self.sources]
+        sink_data = [sink.to_model() for sink in self.sinks]
 
         queue_data = list(
             util.flatten_object(
@@ -151,8 +151,16 @@ class ProductionSystem(core.ExpressObject):
             queue_data=queue_data,
         )
 
-    def run(self, time_range: float = 2880):
-        self._runner = prodsys.runner.Runner(adapter=self.to_data_object())
+    def run(self, time_range: float = 2880, seed: int = 0):
+        """
+        Runs the simulation of the production system.
+        
+        Args:
+            time_range (float, optional): The time range of the simulation. Defaults to 2880.
+            seed (int, optional): The seed of the simulation. Defaults to 0.
+        """
+        self._runner = prodsys.runner.Runner(adapter=self.to_model())
+        self._runner.adapter.seed = seed
         self._runner.initialize_simulation()
         self._runner.run(time_range)
 
@@ -163,7 +171,7 @@ class ProductionSystem(core.ExpressObject):
         Raises:
             ValueError: If the production system is not valid.
         """
-        adapter = self.to_data_object()
+        adapter = self.to_model()
         adapter.physical_validation()
 
     @property

@@ -12,6 +12,9 @@ from prodsys.models.core_asset import CoreAsset
 class RouterType(str, Enum):
     """
     Enum that represents the router type of a source.
+
+    - SimpleRouter: Simple router routes the product to resources based on IDs of resources.
+    - CapabilityRouter: Capability router routes the product to resources based on capabilites of processes.
     """
     SimpleRouter = "SimpleRouter"
     CapabilityRouter = "CapabilityRouter"

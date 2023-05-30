@@ -61,7 +61,7 @@ class Sink(core.ExpressObject):
 
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
-    def to_data_object(self) -> sink_data.SinkData:
+    def to_model(self) -> sink_data.SinkData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

@@ -12,7 +12,7 @@ class ExpressObject(ABC):
     """
 
     @abstractmethod
-    def to_data_object(self) -> core_asset.CoreAsset:
+    def to_model(self) -> core_asset.CoreAsset:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

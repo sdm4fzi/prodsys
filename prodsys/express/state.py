@@ -70,7 +70,7 @@ class BreakDownState(State, core.ExpressObject):
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.BreakDownState, init=False)
 
-    def to_data_object(self) -> state_data.BreakDownStateData:
+    def to_model(self) -> state_data.BreakDownStateData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -134,7 +134,7 @@ class ProcessBreakdownState(State, core.ExpressObject):
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.ProcessBreakDownState, init=False)
 
-    def to_data_object(self) -> state_data.ProcessBreakDownStateData:
+    def to_model(self) -> state_data.ProcessBreakDownStateData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -196,7 +196,7 @@ class SetupState(State, core.ExpressObject):
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.SetupState, init=False)
 
-    def to_data_object(self) -> state_data.SetupStateData:
+    def to_model(self) -> state_data.SetupStateData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

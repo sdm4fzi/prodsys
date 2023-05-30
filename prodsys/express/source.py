@@ -21,7 +21,7 @@ class Source(core.ExpressObject):
         time_model (time_model.TIME_MODEL_UNION): Time model of the source that determines the inter-arrival time of products.
         location (conlist(float, min_items=2, max_items=2)): Location of the source.
         router (source_data.RouterType, optional): Router of the source. Defaults to source_data.RouterType.SimpleRouter.
-        routing_heuristic (source_data.RoutingHeuristic, optional): Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.shortest_queue.
+        routing_heuristic (source_data.RoutingHeuristic, optional): Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.random.
         ID (str): ID of the source.
     
     Attributes:
@@ -68,7 +68,7 @@ class Source(core.ExpressObject):
     time_model: time_model.TIME_MODEL_UNION
     location: conlist(float, min_items=2, max_items=2)
     router: source_data.RouterType = source_data.RouterType.SimpleRouter
-    routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.shortest_queue
+    routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
@@ -77,7 +77,7 @@ class Source(core.ExpressObject):
     def __post_init_post_parse__(self):
         pass
 
-    def to_data_object(self) -> source_data.SourceData:
+    def to_model(self) -> source_data.SourceData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

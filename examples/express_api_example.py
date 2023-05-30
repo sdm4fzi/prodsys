@@ -16,7 +16,6 @@ p3 = psx.TransportProcess(tm3)
 
 breakdown_state = psx.BreakDownState(bm1, bm2)
 process_breakdown_state = psx.ProcessBreakdownState(bm1, bm2, p1)
-# TODO: Analysis why setup state has such a low percentage!
 setup_state = psx.SetupState(tm1, p1, p2)
 
 r1 = psx.ProductionResource(

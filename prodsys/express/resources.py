@@ -90,7 +90,7 @@ class ProductionResource(Resource, core.ExpressObject):
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
-    def to_data_object(self) -> resource_data.ProductionResourceData:
+    def to_model(self) -> resource_data.ProductionResourceData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -155,7 +155,7 @@ class TransportResource(Resource, core.ExpressObject):
     def __post_init_post_parse__(self):
         self.location = [0.0, 0.0]
 
-    def to_data_object(self) -> resource_data.TransportResourceData:
+    def to_model(self) -> resource_data.TransportResourceData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 

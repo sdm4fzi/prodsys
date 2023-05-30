@@ -19,6 +19,10 @@ from prodsys.models.core_asset import CoreAsset
 class ProcessTypeEnum(str, Enum):
     """
     Enum that represents the different kind of processes.
+
+    - ProductionProcesses: A process that can be performed on a product by a production resource.
+    - TransportProcesses: A process that can be performed on a product by a transport resource.
+    - CapabilityProcesses: A process that can be performed on a product by a resource, based on the capability of the resource.
     """
 
     ProductionProcesses = "ProductionProcesses"
