@@ -1,0 +1,4310 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../API_reference_7_Control/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.13">
+    
+    
+      
+        <title>Util - prodsys Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.85bb2934.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#util" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="prodsys Documentation" class="md-header__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            prodsys Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Util
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="prodsys Documentation" class="md-nav__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    prodsys Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          Tutorials
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Tutorials
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_0_overview/" class="md-nav__link">
+        Tutorials overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_1_modelling_and_simulating_a_production_system/" class="md-nav__link">
+        Modelling a production system
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_2_analyzing_simulation_results/" class="md-nav__link">
+        Analyzing simulation results
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_3_optimizing_a_production_system/" class="md-nav__link">
+        Optimizing a production system
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          Api Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Api Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_0_overview/" class="md-nav__link">
+        API reference overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_1_Models_API/" class="md-nav__link">
+        prodsys Models API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_2_Adapter/" class="md-nav__link">
+        Adapter
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_3_Express_API/" class="md-nav__link">
+        prodsys Express API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_4_factories/" class="md-nav__link">
+        Factories
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_5_Simulation/" class="md-nav__link">
+        Simulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_6_Optimization/" class="md-nav__link">
+        Optimization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_7_Control/" class="md-nav__link">
+        Control
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Util
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Util
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util" class="md-nav__link">
+    prodsys.util
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization" class="md-nav__link">
+    kpi_visualization
+  </a>
+  
+    <nav class="md-nav" aria-label="kpi_visualization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP" class="md-nav__link">
+    plot_WIP()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP_with_range" class="md-nav__link">
+    plot_WIP_with_range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_throughput_time_distribution" class="md-nav__link">
+    plot_throughput_time_distribution()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_throughput_time_over_time" class="md-nav__link">
+    plot_throughput_time_over_time()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_time_per_state_of_resources" class="md-nav__link">
+    plot_time_per_state_of_resources()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.print_aggregated_data" class="md-nav__link">
+    print_aggregated_data()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing" class="md-nav__link">
+    post_processing
+  </a>
+  
+    <nav class="md-nav" aria-label="post_processing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor" class="md-nav__link">
+    PostProcessor
+  </a>
+  
+    <nav class="md-nav" aria-label="PostProcessor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.WIP_KPIs" class="md-nav__link">
+    WIP_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.aggregated_throughput_time_KPIs" class="md-nav__link">
+    aggregated_throughput_time_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP" class="md-nav__link">
+    df_WIP
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_product" class="md-nav__link">
+    df_WIP_per_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_WIP" class="md-nav__link">
+    df_aggregated_WIP
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_output" class="md-nav__link">
+    df_aggregated_output
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_output_and_throughput" class="md-nav__link">
+    df_aggregated_output_and_throughput
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_resource_states" class="md-nav__link">
+    df_aggregated_resource_states
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_throughput_time" class="md-nav__link">
+    df_aggregated_throughput_time
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_finished_product" class="md-nav__link">
+    df_finished_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_prepared" class="md-nav__link">
+    df_prepared
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_resource_states" class="md-nav__link">
+    df_resource_states
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_throughput" class="md-nav__link">
+    df_throughput
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.dynamic_WIP_KPIs" class="md-nav__link">
+    dynamic_WIP_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.dynamic_thoughput_time_KPIs" class="md-nav__link">
+    dynamic_thoughput_time_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.machine_state_KPIS" class="md-nav__link">
+    machine_state_KPIS
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.throughput_and_output_KPIs" class="md-nav__link">
+    throughput_and_output_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_data" class="md-nav__link">
+    get_aggregated_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_data" class="md-nav__link">
+    get_aggregated_throughput_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_time_data" class="md-nav__link">
+    get_aggregated_throughput_time_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_wip_data" class="md-nav__link">
+    get_aggregated_wip_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_eventlog_for_product" class="md-nav__link">
+    get_eventlog_for_product()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.read_df_from_csv" class="md-nav__link">
+    read_df_from_csv()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.save_inductive_petri_net" class="md-nav__link">
+    save_inductive_petri_net()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.runner" class="md-nav__link">
+    runner
+  </a>
+  
+    <nav class="md-nav" aria-label="runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner" class="md-nav__link">
+    Runner
+  </a>
+  
+    <nav class="md-nav" aria-label="Runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.env" class="md-nav__link">
+    env
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_aggregated_data_simulation_results" class="md-nav__link">
+    get_aggregated_data_simulation_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_event_data_of_simulation" class="md-nav__link">
+    get_event_data_of_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_performance_data" class="md-nav__link">
+    get_performance_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_post_processor" class="md-nav__link">
+    get_post_processor()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.initialize_simulation" class="md-nav__link">
+    initialize_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.plot_results" class="md-nav__link">
+    plot_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.print_results" class="md-nav__link">
+    print_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.run" class="md-nav__link">
+    run()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.save_results_as_csv" class="md-nav__link">
+    save_results_as_csv()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.save_results_as_json" class="md-nav__link">
+    save_results_as_json()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.run_simulation" class="md-nav__link">
+    run_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.temp_seed" class="md-nav__link">
+    temp_seed()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions" class="md-nav__link">
+    statistical_functions
+  </a>
+  
+    <nav class="md-nav" aria-label="statistical_functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.FUNCTION_DICT" class="md-nav__link">
+    FUNCTION_DICT
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_constant_list" class="md-nav__link">
+    get_constant_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_exponential_list" class="md-nav__link">
+    get_exponential_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_lognormal_list" class="md-nav__link">
+    get_lognormal_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_normal_list" class="md-nav__link">
+    get_normal_list()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.util" class="md-nav__link">
+    util
+  </a>
+  
+    <nav class="md-nav" aria-label="util">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.flatten" class="md-nav__link">
+    flatten()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.flatten_object" class="md-nav__link">
+    flatten_object()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.get_class_from_str" class="md-nav__link">
+    get_class_from_str()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.get_initial_solution_file_pth" class="md-nav__link">
+    get_initial_solution_file_pth()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.prepare_save_folder" class="md-nav__link">
+    prepare_save_folder()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.read_initial_solutions" class="md-nav__link">
+    read_initial_solutions()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.run_from_ipython" class="md-nav__link">
+    run_from_ipython()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.set_seed" class="md-nav__link">
+    set_seed()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.trivial_process" class="md-nav__link">
+    trivial_process()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util" class="md-nav__link">
+    prodsys.util
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization" class="md-nav__link">
+    kpi_visualization
+  </a>
+  
+    <nav class="md-nav" aria-label="kpi_visualization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP" class="md-nav__link">
+    plot_WIP()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP_with_range" class="md-nav__link">
+    plot_WIP_with_range()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_throughput_time_distribution" class="md-nav__link">
+    plot_throughput_time_distribution()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_throughput_time_over_time" class="md-nav__link">
+    plot_throughput_time_over_time()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_time_per_state_of_resources" class="md-nav__link">
+    plot_time_per_state_of_resources()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.print_aggregated_data" class="md-nav__link">
+    print_aggregated_data()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing" class="md-nav__link">
+    post_processing
+  </a>
+  
+    <nav class="md-nav" aria-label="post_processing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor" class="md-nav__link">
+    PostProcessor
+  </a>
+  
+    <nav class="md-nav" aria-label="PostProcessor">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.WIP_KPIs" class="md-nav__link">
+    WIP_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.aggregated_throughput_time_KPIs" class="md-nav__link">
+    aggregated_throughput_time_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP" class="md-nav__link">
+    df_WIP
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_product" class="md-nav__link">
+    df_WIP_per_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_WIP" class="md-nav__link">
+    df_aggregated_WIP
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_output" class="md-nav__link">
+    df_aggregated_output
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_output_and_throughput" class="md-nav__link">
+    df_aggregated_output_and_throughput
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_resource_states" class="md-nav__link">
+    df_aggregated_resource_states
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_aggregated_throughput_time" class="md-nav__link">
+    df_aggregated_throughput_time
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_finished_product" class="md-nav__link">
+    df_finished_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_prepared" class="md-nav__link">
+    df_prepared
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_resource_states" class="md-nav__link">
+    df_resource_states
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_throughput" class="md-nav__link">
+    df_throughput
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.dynamic_WIP_KPIs" class="md-nav__link">
+    dynamic_WIP_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.dynamic_thoughput_time_KPIs" class="md-nav__link">
+    dynamic_thoughput_time_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.machine_state_KPIS" class="md-nav__link">
+    machine_state_KPIS
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.throughput_and_output_KPIs" class="md-nav__link">
+    throughput_and_output_KPIs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_data" class="md-nav__link">
+    get_aggregated_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_data" class="md-nav__link">
+    get_aggregated_throughput_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_time_data" class="md-nav__link">
+    get_aggregated_throughput_time_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_aggregated_wip_data" class="md-nav__link">
+    get_aggregated_wip_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.get_eventlog_for_product" class="md-nav__link">
+    get_eventlog_for_product()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.read_df_from_csv" class="md-nav__link">
+    read_df_from_csv()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.save_inductive_petri_net" class="md-nav__link">
+    save_inductive_petri_net()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.runner" class="md-nav__link">
+    runner
+  </a>
+  
+    <nav class="md-nav" aria-label="runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner" class="md-nav__link">
+    Runner
+  </a>
+  
+    <nav class="md-nav" aria-label="Runner">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.env" class="md-nav__link">
+    env
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_aggregated_data_simulation_results" class="md-nav__link">
+    get_aggregated_data_simulation_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_event_data_of_simulation" class="md-nav__link">
+    get_event_data_of_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_performance_data" class="md-nav__link">
+    get_performance_data()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.get_post_processor" class="md-nav__link">
+    get_post_processor()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.initialize_simulation" class="md-nav__link">
+    initialize_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.plot_results" class="md-nav__link">
+    plot_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.print_results" class="md-nav__link">
+    print_results()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.run" class="md-nav__link">
+    run()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.save_results_as_csv" class="md-nav__link">
+    save_results_as_csv()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.Runner.save_results_as_json" class="md-nav__link">
+    save_results_as_json()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.run_simulation" class="md-nav__link">
+    run_simulation()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.runner.temp_seed" class="md-nav__link">
+    temp_seed()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions" class="md-nav__link">
+    statistical_functions
+  </a>
+  
+    <nav class="md-nav" aria-label="statistical_functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.FUNCTION_DICT" class="md-nav__link">
+    FUNCTION_DICT
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_constant_list" class="md-nav__link">
+    get_constant_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_exponential_list" class="md-nav__link">
+    get_exponential_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_lognormal_list" class="md-nav__link">
+    get_lognormal_list()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.statistical_functions.get_normal_list" class="md-nav__link">
+    get_normal_list()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.util.util" class="md-nav__link">
+    util
+  </a>
+  
+    <nav class="md-nav" aria-label="util">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.flatten" class="md-nav__link">
+    flatten()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.flatten_object" class="md-nav__link">
+    flatten_object()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.get_class_from_str" class="md-nav__link">
+    get_class_from_str()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.get_initial_solution_file_pth" class="md-nav__link">
+    get_initial_solution_file_pth()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.prepare_save_folder" class="md-nav__link">
+    prepare_save_folder()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.read_initial_solutions" class="md-nav__link">
+    read_initial_solutions()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.run_from_ipython" class="md-nav__link">
+    run_from_ipython()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.set_seed" class="md-nav__link">
+    set_seed()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.util.trivial_process" class="md-nav__link">
+    trivial_process()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="util">Util</h1>
+
+
+  <div class="doc doc-object doc-module">
+
+<a id="prodsys.util"></a>
+    <div class="doc doc-contents first">
+
+      <p>Contains utility functions for the prodsys package.</p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.util.kpi_visualization" class="doc doc-heading">
+        <code>kpi_visualization</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.plot_WIP" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_WIP</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the WIP of the production system over time of the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.plot_WIP_with_range" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_WIP_with_range</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the WIP of the production system over time of the simulation with a range of the WIP based on a standard deviation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.plot_throughput_time_distribution" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_throughput_time_distribution</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the throughput time distribution of the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.plot_throughput_time_over_time" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_throughput_time_over_time</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the throughput time over time of the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.plot_time_per_state_of_resources" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_time_per_state_of_resources</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the time per state of the resources of the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.kpi_visualization.print_aggregated_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">print_aggregated_data</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Prints the aggregated data of the simulation, comprising the throughput, WIP, throughput time and resource states.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.util.post_processing" class="doc doc-heading">
+        <code>post_processing</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.util.post_processing.PostProcessor" class="doc doc-heading">
+        <code>
+PostProcessor        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a post processor for the simulation results. It provides methods to read the simulation results from a csv file and to calculate simulation result analysis data and KPIs.</p>
+<p>The data frame that contains the raw simulation results contains the following columns:</p>
+<div class="language-text highlight"><pre><span></span><code>-Time: Time of the event
+-Resource: ID fo the Resource that performed the event
+-State: ID of the State of the resource (production states, transport states, breakdown states, setup states)
+-State Type: Type of the state according to the prodsys.simulation.state.StateTypeEnum
+-Activity: Activity of the resource according to the prodsys.simulation.state.StateEnum
+-Product: ID of the Product that is processed by the resource only for creation and production states
+-Expected End Time: Expected end time of the state at the beginning of the process
+-Target location: Target location of the product at the end of the process
+</code></pre></div>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>filepath</code></td>
+        <td><code>str</code></td>
+        <td><p>Path to the csv file with the simulation results.</p></td>
+        <td><code>&#39;&#39;</code></td>
+      </tr>
+      <tr>
+        <td><code>df_raw</code></td>
+        <td><code>pd.DataFrame</code></td>
+        <td><p>Data frame with the simulation results.</p></td>
+        <td><code>None</code></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.WIP_KPIs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">WIP_KPIs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of average WIP KPI values for each product type and the whole system.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of average WIP KPI values.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.aggregated_throughput_time_KPIs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">aggregated_throughput_time_KPIs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of average Throughput Time KPI values for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of average Throughput Time KPI values.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_WIP" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_WIP</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the WIP over time in the total production system.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the WIP over time in the total production system.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_WIP_per_product" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_WIP_per_product</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the WIP over time for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the WIP over time for each product type.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_aggregated_WIP" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_aggregated_WIP</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the average WIP for each product type and the whole system.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Dataframe with the average WIP for each product type and the whole system.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_aggregated_output" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_aggregated_output</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the total output for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the total output for each product type.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_aggregated_output_and_throughput" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_aggregated_output_and_throughput</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the average throughput and output for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the average throughput and output for each product type.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_aggregated_resource_states" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_aggregated_resource_states</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the total time spent in each state of each resource. </p>
+<p>There are 4 different states a resource can spend its time:
+    -SB: A resource is in standby state, could process but no product is available
+    -PR: A resource is in productive state and performs a process
+    -UD: A resource is in unscheduled downtime state due to a breakdown
+    -ST: A resource is in setup state</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the total time spent in each state of each resource.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_aggregated_throughput_time" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_aggregated_throughput_time</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the average throughput time for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the average throughput time for each product type.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_finished_product" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_finished_product</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a prepared data frame (df_prepared) with only finished products.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with only finished products.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_prepared" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_prepared</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Adds to self.df_raw the following columns:</p>
+<div class="language-text highlight"><pre><span></span><code>-DateTime: Time of the event
+-Combined_activity: Activity and state of the event combined for easier filtering
+-Product_type: Type of the product
+-State_type: Type of the state according to the StateTypeEnum
+-State_sorting_Index: Index to sort the states in the correct order
+</code></pre></div>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the simulation results and the added columns.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_resource_states" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_resource_states</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the machine states and the time spent in each state. 
+There are 4 different states a resource can spend its time: 
+    -SB: A resource is in standby state, could process but no product is available
+    -PR: A resource is in productive state and performs a process
+    -UD: A resource is in unscheduled downtime state due to a breakdown
+    -ST: A resource is in setup state</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the machine states and the time spent in each state.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_throughput" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_throughput</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the throughput time for each finished product.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the throughput time for each finished product.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.dynamic_WIP_KPIs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">dynamic_WIP_KPIs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of Dynamic WIP KPI values for the WIP over time for each product type and the whole system.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of Dynamic WIP KPI values.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.dynamic_thoughput_time_KPIs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">dynamic_thoughput_time_KPIs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of Dynamic Throughput KPI values for the throughput time of each finished product.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of Dynamic Throughput KPI values.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.machine_state_KPIS" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">machine_state_KPIS</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of KPI values for the time spent in each state of each resource.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of KPI values for the time spent in each state of each resource.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.throughput_and_output_KPIs" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">throughput_and_output_KPIs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">prodsys</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">performance_indicators</span><span class="o">.</span><span class="n">KPI</span><span class="p">]</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of average Throughput and Output KPI values for each product type.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_indicators.KPI]</code></td>
+      <td><p>List of average Throughput and Output KPI values.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.get_aggregated_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_aggregated_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a dictionary with the aggregated data for the simulation results.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>dict</code></td>
+      <td><p>Dictionary with the aggregated data for throughput, wip, throughput time and resource states.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_aggregated_throughput_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of the aggregated throughput data.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>List of the aggregated throughput data ordered alphabetically by product type.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.get_aggregated_throughput_time_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_aggregated_throughput_time_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of the aggregated throughput time data.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>List of the aggregated throughput time data ordered alphabetically by product type.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.get_aggregated_wip_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_aggregated_wip_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of the aggregated WIP data.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>List of the aggregated WIP data ordered alphabetically by product type.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.get_eventlog_for_product" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_eventlog_for_product</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">product_type</span><span class="o">=</span><span class="s1">&#39;Product_1&#39;</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns an event log for a specific product type. It can be further anaylzed with the pm4py library.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>product_type</code></td>
+        <td><code>str</code></td>
+        <td><p>Type of product that should be considered in the event log. Defaults to "Product_1".</p></td>
+        <td><code>&#39;Product_1&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pm4py.event_log.EventLog</code></td>
+      <td><p>Event log for a specific product type.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.read_df_from_csv" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">read_df_from_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath_input</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Reads the simulation results from a csv file.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>filepath_input</code></td>
+        <td><code>str</code></td>
+        <td><p>Path to the csv file with the simulation results. Defaults to None and the at instantiation provided filepath is used.</p></td>
+        <td><code>None</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.save_inductive_petri_net" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_inductive_petri_net</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Saves an inductive petri net for a specific product type, that shows the process model realized in the simulation for finishing the product.</p>
+
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.util.runner" class="doc doc-heading">
+        <code>runner</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.util.runner.Runner" class="doc doc-heading">
+        <code>
+Runner            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class to represent the simulation runner. It allows to run the simulation based on a provided adapter.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter</code></td>
+        <td><code>adapter.ProductionSystemAdapter</code></td>
+        <td><p>The adapter containing the production system to simulate.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Attributes:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter</code></td>
+        <td><code>adapter.ProductionSystemAdapter</code></td>
+        <td><p>The adapter containing the production system to simulate.</p></td>
+      </tr>
+      <tr>
+        <td><code>env</code></td>
+        <td><code>sim.Environment</code></td>
+        <td><p>The environment to run the simulation in.</p></td>
+      </tr>
+      <tr>
+        <td><code>time_model_factory</code></td>
+        <td><code>time_model_factory.TimeModelFactory</code></td>
+        <td><p>The time model factory to create the time models.</p></td>
+      </tr>
+      <tr>
+        <td><code>state_factory</code></td>
+        <td><code>state_factory.StateFactory</code></td>
+        <td><p>The state factory to create the states.</p></td>
+      </tr>
+      <tr>
+        <td><code>process_factory</code></td>
+        <td><code>process_factory.ProcessFactory</code></td>
+        <td><p>The process factory to create the processes.</p></td>
+      </tr>
+      <tr>
+        <td><code>queue_factory</code></td>
+        <td><code>queue_factory.QueueFactory</code></td>
+        <td><p>The queue factory to create the queues.</p></td>
+      </tr>
+      <tr>
+        <td><code>resource_factory</code></td>
+        <td><code>resource_factory.ResourceFactory</code></td>
+        <td><p>The resource factory to create the resources.</p></td>
+      </tr>
+      <tr>
+        <td><code>sink_factory</code></td>
+        <td><code>sink_factory.SinkFactory</code></td>
+        <td><p>The sink factory to create the sinks.</p></td>
+      </tr>
+      <tr>
+        <td><code>source_factory</code></td>
+        <td><code>source_factory.SourceFactory</code></td>
+        <td><p>The source factory to create the sources.</p></td>
+      </tr>
+      <tr>
+        <td><code>product_factory</code></td>
+        <td><code>product_factory.ProductFactory</code></td>
+        <td><p>The product factory to create the products.</p></td>
+      </tr>
+      <tr>
+        <td><code>event_logger</code></td>
+        <td><code>logger.Logger</code></td>
+        <td><p>The event logger to log the events.</p></td>
+      </tr>
+      <tr>
+        <td><code>time_stamp</code></td>
+        <td><code>str</code></td>
+        <td><p>The time stamp of the simulation run.</p></td>
+      </tr>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>The post processor to process the simulation results.</p></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.runner.Runner.env" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">env</span><span class="p">:</span> <span class="n">Environment</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-field"><code>pydantic-field</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>The environment to run the simulation in</p>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.get_aggregated_data_simulation_results" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_aggregated_data_simulation_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns the aggregated simulation results.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>dict</code></td>
+      <td><p>The aggregated simulation results.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.get_event_data_of_simulation" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_event_data_of_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns the event data of the simulation.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[performance_data.Event]</code></td>
+      <td><p>The event data of the simulation.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.get_performance_data" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_performance_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns the performance data of the simulation.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>performance_data.Performance</code></td>
+      <td><p>The performance data of the simulation.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.get_post_processor" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_post_processor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns the post processor to process the simulation results.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>post_processing.PostProcessor</code></td>
+      <td><p>The post processor to process the simulation results.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.initialize_simulation" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">initialize_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.</p>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.plot_results" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.</p>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.print_results" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">print_results</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Prints the aggregated simulation results, comprising the average throughput, WIP, throughput time and the time per state of the resources.</p>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.run" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_range</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Runs the simulation for the given time range.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time_range</code></td>
+        <td><code>int</code></td>
+        <td><p>The time range to run the simulation for.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.save_results_as_csv" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_results_as_csv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_folder</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Saves the simulation results as .csv-file marked with the time_stamp of simulation and the adapter ID if available.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>The folder to save the results to. Defaults to "data".</p></td>
+        <td><code>&#39;data&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.util.runner.Runner.save_results_as_json" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_results_as_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_folder</span><span class="o">=</span><span class="s1">&#39;data&#39;</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Saves the simulation results as .json-file marked with the time_stamp of simulation and the adapter ID if available.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>The folder to save the results to. Defaults to "data".</p></td>
+        <td><code>&#39;data&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.runner.run_simulation" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_simulation</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">,</span> <span class="n">run_length</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Runs the simulation for the given adapter and run length.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapter.ProductionSystemAdapter</code></td>
+        <td><p>Adapter containing the production system to simulate.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>run_length</code></td>
+        <td><code>int</code></td>
+        <td><p>Length of the simulation run.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Runner</code></td>
+      <td><p>The runner object after simulation.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.runner.temp_seed" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">temp_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Context manager for temporarily setting the seed of the random number generators. Is necessary when optimizing with another random seed but still wanting to use the same seed for the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>The seed to set for the simulation run.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.util.statistical_functions" class="doc doc-heading">
+        <code>statistical_functions</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="prodsys.util.statistical_functions.FUNCTION_DICT" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">FUNCTION_DICT</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Dictionary that maps the time model function enum to the corresponding function.</p>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.statistical_functions.get_constant_list" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_constant_list</span><span class="p">(</span><span class="n">time_model_data</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of constant values.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time_model_data</code></td>
+        <td><code>FunctionTimeModelData</code></td>
+        <td><p>The time model data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>A list of constant values.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.statistical_functions.get_exponential_list" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_exponential_list</span><span class="p">(</span><span class="n">time_model_data</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of exponentially distributed values.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time_model_data</code></td>
+        <td><code>FunctionTimeModelData</code></td>
+        <td><p>The time model data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>A list of exponentially distributed values.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.statistical_functions.get_lognormal_list" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_lognormal_list</span><span class="p">(</span><span class="n">time_model_data</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of lognormally distributed values.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time_model_data</code></td>
+        <td><code>FunctionTimeModelData</code></td>
+        <td><p>The time model data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>A list of lognormally distributed values.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.statistical_functions.get_normal_list" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_normal_list</span><span class="p">(</span><span class="n">time_model_data</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a list of normally distributed values.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time_model_data</code></td>
+        <td><code>FunctionTimeModelData</code></td>
+        <td><p>The time model data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>A list of normally distributed values.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.util.util" class="doc doc-heading">
+        <code>util</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.flatten" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">flatten</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Flattens a nested Iterable containing at the lowest level only str or bytes.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>xs</code></td>
+        <td><code>Iterable</code></td>
+        <td><p>The nested list.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Yields:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Iterable</code></td>
+      <td><p>The flattened list.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.flatten_object" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">flatten_object</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Flattens a nested list.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>xs</code></td>
+        <td><code>list</code></td>
+        <td><p>The nested list.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Yields:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>list</code></td>
+      <td><p>The flattened list.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.get_class_from_str" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_class_from_str</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">cls_dict</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns the class for a given name from a dictionary containing classes.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>name</code></td>
+        <td><code>str</code></td>
+        <td><p>Name of the class.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>cls_dict</code></td>
+        <td><code>dict</code></td>
+        <td><p>Dictionary containing classes.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Exceptions:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ValueError</code></td>
+        <td><p>If the class is not implemented.</p></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>_type_</code></td>
+      <td><p>The class.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.get_initial_solution_file_pth" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_initial_solution_file_pth</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Chooses an initial solution file path from initial solution folder path.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>folder_path</code></td>
+        <td><code>str</code></td>
+        <td><p>The folder path where the initial solutions are stored.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>str</code></td>
+      <td><p>The file path of the initial solution.    </p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.prepare_save_folder" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">prepare_save_folder</span><span class="p">(</span><span class="n">file_paths</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Creates a folder if it does not exist.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>file_paths</code></td>
+        <td><code>str</code></td>
+        <td><p>The file path where the folder should be created.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.read_initial_solutions" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">read_initial_solutions</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">base_configuration</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Reads all initial solutions from a folder and returns them as a list of adapters.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>folder_path</code></td>
+        <td><code>str</code></td>
+        <td><p>The folder path where the initial solutions are stored.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>The base configuration for optimization containing the scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[adapters.ProductionSystemAdapter]</code></td>
+      <td><p>List of adapters of the initial solutions.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.run_from_ipython" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_from_ipython</span><span class="p">()</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Checks if the code is run from an ipython notebook.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if run from ipython notebook, False otherwise.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.set_seed" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">set_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Sets the seed for numpy and random.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>The seed.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.util.util.trivial_process" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">trivial_process</span><span class="p">(</span><span class="n">env</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Trivial process that does nothing and is immediately finished.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>env</code></td>
+        <td><code>simpy.Environment</code></td>
+        <td><p>The simulation environment.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Yields:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Generator</code></td>
+      <td><p>0 timeout.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.b4d07000.min.js"></script>
+      
+    
+  </body>
+</html>

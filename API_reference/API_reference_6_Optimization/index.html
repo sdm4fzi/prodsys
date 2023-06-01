@@ -1,0 +1,4698 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../API_reference_5_Simulation/">
+      
+      
+        <link rel="next" href="../API_reference_7_Control/">
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.13">
+    
+    
+      
+        <title>Optimization - prodsys Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.85bb2934.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#optimization" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="prodsys Documentation" class="md-header__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            prodsys Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Optimization
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="prodsys Documentation" class="md-nav__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    prodsys Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          Tutorials
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Tutorials
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_0_overview/" class="md-nav__link">
+        Tutorials overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_1_modelling_and_simulating_a_production_system/" class="md-nav__link">
+        Modelling a production system
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_2_analyzing_simulation_results/" class="md-nav__link">
+        Analyzing simulation results
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_3_optimizing_a_production_system/" class="md-nav__link">
+        Optimizing a production system
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          Api Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Api Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_0_overview/" class="md-nav__link">
+        API reference overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_1_Models_API/" class="md-nav__link">
+        prodsys Models API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_2_Adapter/" class="md-nav__link">
+        Adapter
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_3_Express_API/" class="md-nav__link">
+        prodsys Express API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_4_factories/" class="md-nav__link">
+        Factories
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_5_Simulation/" class="md-nav__link">
+        Simulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Optimization
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Optimization
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization" class="md-nav__link">
+    prodsys.optimization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.VERBOSE" class="md-nav__link">
+    VERBOSE
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm" class="md-nav__link">
+    evolutionary_algorithm
+  </a>
+  
+    <nav class="md-nav" aria-label="evolutionary_algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters" class="md-nav__link">
+    EvolutionaryAlgorithmHyperparameters
+  </a>
+  
+    <nav class="md-nav" aria-label="EvolutionaryAlgorithmHyperparameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters.seed" class="md-nav__link">
+    seed
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.evolutionary_algorithm_optimization" class="md-nav__link">
+    evolutionary_algorithm_optimization()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.run_evolutionary_algorithm" class="md-nav__link">
+    run_evolutionary_algorithm()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt" class="md-nav__link">
+    math_opt
+  </a>
+  
+    <nav class="md-nav" aria-label="math_opt">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptHyperparameters" class="md-nav__link">
+    MathOptHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer" class="md-nav__link">
+    MathOptimizer
+  </a>
+  
+    <nav class="md-nav" aria-label="MathOptimizer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.optimize" class="md-nav__link">
+    optimize()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.save_model" class="md-nav__link">
+    save_model()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.save_results" class="md-nav__link">
+    save_results()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.adjust_number_of_transport_resources" class="md-nav__link">
+    adjust_number_of_transport_resources()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.mathematical_optimization" class="md-nav__link">
+    mathematical_optimization()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.run_mathematical_optimization" class="md-nav__link">
+    run_mathematical_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis" class="md-nav__link">
+    optimization_analysis
+  </a>
+  
+    <nav class="md-nav" aria-label="optimization_analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.get_pareto_solutions_from_result_files" class="md-nav__link">
+    get_pareto_solutions_from_result_files()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.is_pareto_efficient" class="md-nav__link">
+    is_pareto_efficient()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.is_pareto_efficient_simple" class="md-nav__link">
+    is_pareto_efficient_simple()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.read_optimization_results_file_to_df" class="md-nav__link">
+    read_optimization_results_file_to_df()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util" class="md-nav__link">
+    optimization_util
+  </a>
+  
+    <nav class="md-nav" aria-label="optimization_util">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_machine" class="md-nav__link">
+    add_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_process_module" class="md-nav__link">
+    add_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_transport_resource" class="md-nav__link">
+    add_transport_resource()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.adjust_process_capacities" class="md-nav__link">
+    adjust_process_capacities()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.change_control_policy" class="md-nav__link">
+    change_control_policy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.change_routing_policy" class="md-nav__link">
+    change_routing_policy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.check_valid_configuration" class="md-nav__link">
+    check_valid_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.evaluate" class="md-nav__link">
+    evaluate()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_control_policies" class="md-nav__link">
+    get_random_control_policies()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_layout" class="md-nav__link">
+    get_random_layout()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_production_capacity" class="md-nav__link">
+    get_random_production_capacity()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_routing_logic" class="md-nav__link">
+    get_random_routing_logic()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_transport_capacity" class="md-nav__link">
+    get_random_transport_capacity()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_weights" class="md-nav__link">
+    get_weights()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.move_machine" class="md-nav__link">
+    move_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.move_process_module" class="md-nav__link">
+    move_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.random_configuration" class="md-nav__link">
+    random_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.random_configuration_with_initial_solution" class="md-nav__link">
+    random_configuration_with_initial_solution()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_machine" class="md-nav__link">
+    remove_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_process_module" class="md-nav__link">
+    remove_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_transport_resource" class="md-nav__link">
+    remove_transport_resource()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing" class="md-nav__link">
+    simulated_annealing
+  </a>
+  
+    <nav class="md-nav" aria-label="simulated_annealing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization" class="md-nav__link">
+    ProductionSystemOptimization
+  </a>
+  
+    <nav class="md-nav" aria-label="ProductionSystemOptimization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization.energy" class="md-nav__link">
+    energy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization.move" class="md-nav__link">
+    move()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.SimulatedAnnealingHyperparameters" class="md-nav__link">
+    SimulatedAnnealingHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.run_simulated_annealing" class="md-nav__link">
+    run_simulated_annealing()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.simulated_annealing_optimization" class="md-nav__link">
+    simulated_annealing_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search" class="md-nav__link">
+    tabu_search
+  </a>
+  
+    <nav class="md-nav" aria-label="tabu_search">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.TabuSearchHyperparameters" class="md-nav__link">
+    TabuSearchHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.run_tabu_search" class="md-nav__link">
+    run_tabu_search()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.tabu_search_optimization" class="md-nav__link">
+    tabu_search_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_7_Control/" class="md-nav__link">
+        Control
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_8_util/" class="md-nav__link">
+        Util
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization" class="md-nav__link">
+    prodsys.optimization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.VERBOSE" class="md-nav__link">
+    VERBOSE
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm" class="md-nav__link">
+    evolutionary_algorithm
+  </a>
+  
+    <nav class="md-nav" aria-label="evolutionary_algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters" class="md-nav__link">
+    EvolutionaryAlgorithmHyperparameters
+  </a>
+  
+    <nav class="md-nav" aria-label="EvolutionaryAlgorithmHyperparameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters.seed" class="md-nav__link">
+    seed
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.evolutionary_algorithm_optimization" class="md-nav__link">
+    evolutionary_algorithm_optimization()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.evolutionary_algorithm.run_evolutionary_algorithm" class="md-nav__link">
+    run_evolutionary_algorithm()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt" class="md-nav__link">
+    math_opt
+  </a>
+  
+    <nav class="md-nav" aria-label="math_opt">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptHyperparameters" class="md-nav__link">
+    MathOptHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer" class="md-nav__link">
+    MathOptimizer
+  </a>
+  
+    <nav class="md-nav" aria-label="MathOptimizer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.optimize" class="md-nav__link">
+    optimize()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.save_model" class="md-nav__link">
+    save_model()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.MathOptimizer.save_results" class="md-nav__link">
+    save_results()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.adjust_number_of_transport_resources" class="md-nav__link">
+    adjust_number_of_transport_resources()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.mathematical_optimization" class="md-nav__link">
+    mathematical_optimization()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.math_opt.run_mathematical_optimization" class="md-nav__link">
+    run_mathematical_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis" class="md-nav__link">
+    optimization_analysis
+  </a>
+  
+    <nav class="md-nav" aria-label="optimization_analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.get_pareto_solutions_from_result_files" class="md-nav__link">
+    get_pareto_solutions_from_result_files()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.is_pareto_efficient" class="md-nav__link">
+    is_pareto_efficient()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.is_pareto_efficient_simple" class="md-nav__link">
+    is_pareto_efficient_simple()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_analysis.read_optimization_results_file_to_df" class="md-nav__link">
+    read_optimization_results_file_to_df()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util" class="md-nav__link">
+    optimization_util
+  </a>
+  
+    <nav class="md-nav" aria-label="optimization_util">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_machine" class="md-nav__link">
+    add_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_process_module" class="md-nav__link">
+    add_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.add_transport_resource" class="md-nav__link">
+    add_transport_resource()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.adjust_process_capacities" class="md-nav__link">
+    adjust_process_capacities()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.change_control_policy" class="md-nav__link">
+    change_control_policy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.change_routing_policy" class="md-nav__link">
+    change_routing_policy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.check_valid_configuration" class="md-nav__link">
+    check_valid_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.evaluate" class="md-nav__link">
+    evaluate()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_control_policies" class="md-nav__link">
+    get_random_control_policies()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_layout" class="md-nav__link">
+    get_random_layout()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_production_capacity" class="md-nav__link">
+    get_random_production_capacity()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_routing_logic" class="md-nav__link">
+    get_random_routing_logic()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_random_transport_capacity" class="md-nav__link">
+    get_random_transport_capacity()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.get_weights" class="md-nav__link">
+    get_weights()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.move_machine" class="md-nav__link">
+    move_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.move_process_module" class="md-nav__link">
+    move_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.random_configuration" class="md-nav__link">
+    random_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.random_configuration_with_initial_solution" class="md-nav__link">
+    random_configuration_with_initial_solution()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_machine" class="md-nav__link">
+    remove_machine()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_process_module" class="md-nav__link">
+    remove_process_module()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.optimization_util.remove_transport_resource" class="md-nav__link">
+    remove_transport_resource()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing" class="md-nav__link">
+    simulated_annealing
+  </a>
+  
+    <nav class="md-nav" aria-label="simulated_annealing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization" class="md-nav__link">
+    ProductionSystemOptimization
+  </a>
+  
+    <nav class="md-nav" aria-label="ProductionSystemOptimization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization.energy" class="md-nav__link">
+    energy()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.ProductionSystemOptimization.move" class="md-nav__link">
+    move()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.SimulatedAnnealingHyperparameters" class="md-nav__link">
+    SimulatedAnnealingHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.run_simulated_annealing" class="md-nav__link">
+    run_simulated_annealing()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.simulated_annealing.simulated_annealing_optimization" class="md-nav__link">
+    simulated_annealing_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search" class="md-nav__link">
+    tabu_search
+  </a>
+  
+    <nav class="md-nav" aria-label="tabu_search">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.TabuSearchHyperparameters" class="md-nav__link">
+    TabuSearchHyperparameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.optimize_configuration" class="md-nav__link">
+    optimize_configuration()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.run_tabu_search" class="md-nav__link">
+    run_tabu_search()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.tabu_search.tabu_search_optimization" class="md-nav__link">
+    tabu_search_optimization()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="optimization">Optimization</h1>
+
+
+  <div class="doc doc-object doc-module">
+
+<a id="prodsys.optimization"></a>
+    <div class="doc doc-contents first">
+
+      <p>The <code>optimization</code> package of <code>prodsys</code> provides different optimization algorithms for configuration planning of production systems. </p>
+<p>In configuration planning, the goal is to find a configuration of a production system that maximizes a given objective function. The objective function is a function that maps a configuration to a real number. The configuration is a set of parameters that describe the production system. For example, the configuration of a production system could be the number of machines of a certain type. The objective function could be the output of the production system. The goal is then to find the configuration that maximizes the output. With <code>prodsys.optimization</code>, you can use the modelling capacities of  <code>prodsys.adapters</code> to specifiy configurations and optimize them according to a scenario and chosen degrees of freedom for optimization.</p>
+<p>The following degrees of freedom are supported and can be specified by the scenario data attribute <code>transformations</code>:</p>
+<ul>
+<li>Adding or removing production resources</li>
+<li>Adding or removing transport resources</li>
+<li>Adding or removing processes of a production resource</li>
+<li>Changing the position of production resources</li>
+<li>Moving processes between production resources</li>
+<li>Changing the control policy of a production resource</li>
+<li>Changing the control policy of a transport resource</li>
+<li>Changing the routing policy of product types</li>
+</ul>
+<p>The following algorithms are supported:</p>
+<ul>
+<li>Evolutionary Algorithms (NGSGA-II)</li>
+<li>Simulated Annealing</li>
+<li>Tabu Search</li>
+<li>Mathematical optimization (Gurobi, only a restricted set of degrees of freedom is supported)</li>
+</ul>
+<p>Whilst the mathematical optimization uses a mathematical model for evalutation of production system performance, the other algorithms use <code>prodsys.simulation</code> for evaluation. This allows these algorithms to consider more degrees of freedom and optimize according to multiple objectives.</p>
+<p>The following KPIs are supported for objectives in optimization with the simulation based optimization algorithms:</p>
+<ul>
+<li>Minimize the WIP (Work in Progress)</li>
+<li>Minimize the throughput time</li>
+<li>Minimize the reconfiguration cost considering capital expenditure (CAPEX)</li>
+<li>Maximize the output / throughput</li>
+</ul>
+<p>For a more detailed explanation on the algorithms, degrees of freedom and choice of objectives, please consider the following literature: <a href="https://doi.org/10.15488/13440">Paper</a></p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="prodsys.optimization.VERBOSE" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">VERBOSE</span></code>
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>The verbosity level of the optimization algorithms. The higher the level, the more information is printed to the console.</p>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.evolutionary_algorithm" class="doc doc-heading">
+        <code>evolutionary_algorithm</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters" class="doc doc-heading">
+        <code>
+EvolutionaryAlgorithmHyperparameters            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Hyperparameters for configuration optimization using an evolutionary algorithm.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Seed for the random number generator.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>number_of_generations</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of generations to run the algorithm.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>population_size</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of individuals in each generation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>mutation_rate</code></td>
+        <td><code>float</code></td>
+        <td><p>Probability of mutating an individual.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>crossover_rate</code></td>
+        <td><code>float</code></td>
+        <td><p>Probability of crossover between two individuals.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>number_of_processes</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of processes to use for parallelization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.optimization.evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters.seed" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">seed</span><span class="p">:</span> <span class="nb">int</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-field"><code>pydantic-field</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Seed for the random number generator.</p>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.evolutionary_algorithm.evolutionary_algorithm_optimization" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">evolutionary_algorithm_optimization</span><span class="p">(</span><span class="n">base_configuration</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">,</span> <span class="n">save_folder</span><span class="o">=</span><span class="s1">&#39;results&#39;</span><span class="p">,</span> <span class="n">initial_solutions_folder</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize a production system configuration using an evolutionary algorithm.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>production system to optimize.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>EvolutionaryAlgorithmHyperparameters</code></td>
+        <td><p>Hyperparameters for configuration optimization using an evolutionary algorithm.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in. Defaults to "results".</p></td>
+        <td><code>&#39;results&#39;</code></td>
+      </tr>
+      <tr>
+        <td><code>initial_solutions_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".</p></td>
+        <td><code>&#39;&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.evolutionary_algorithm.optimize_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">optimize_configuration</span><span class="p">(</span><span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize a configuration using an evolutionary algorithm.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>EvolutionaryAlgorithmHyperparameters</code></td>
+        <td><p>Hyperparameters for configuration optimization using an evolutionary algorithm.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.evolutionary_algorithm.run_evolutionary_algorithm" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_evolutionary_algorithm</span><span class="p">(</span><span class="n">save_folder</span><span class="p">,</span> <span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">ngen</span><span class="p">,</span> <span class="n">population_size</span><span class="p">,</span> <span class="n">mutation_rate</span><span class="p">,</span> <span class="n">crossover_rate</span><span class="p">,</span> <span class="n">n_processes</span><span class="p">,</span> <span class="n">initial_solutions_folder</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Run an evolutionary algorithm for configuration optimization.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Random seed for optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>ngen</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of generations to run the algorithm.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>population_size</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of individuals in each generation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>mutation_rate</code></td>
+        <td><code>float</code></td>
+        <td><p>Probability of mutating an individual.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>crossover_rate</code></td>
+        <td><code>float</code></td>
+        <td><p>Probability of crossover between two individuals.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>n_processes</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of processes to use for parallelization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>initial_solutions_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".</p></td>
+        <td><code>&#39;&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.math_opt" class="doc doc-heading">
+        <code>math_opt</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.math_opt.MathOptHyperparameters" class="doc doc-heading">
+        <code>
+MathOptHyperparameters            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Hyperparameters for configuration optimization with mathematical optimization. For mathetical optimization, only production capacity is optimized..
+Mathematical optimization is performed with Gurobi, so a valid Gurobi license is required.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>optimization_time_portion</code></td>
+        <td><code>float</code></td>
+        <td><p>Portion of the total time that is used for optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>number_of_solutions</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of solutions that are generated.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>adjusted_number_of_transport_resources</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of transport resources that are used for the optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.math_opt.MathOptimizer" class="doc doc-heading">
+        <code>
+MathOptimizer            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Mathematical optimizer for configuration planning of production systems. For mathetical optimization, only production capacity, cosidering the number of production resources and their processes. Here, only configuration cost can be optimized. However, the mathematical optimization set the expected number of produced products as a constraint, thus allowing for a target output.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Adapter that contains the configuration of the production system to use for optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>optimization_time_portion</code></td>
+        <td><code>float</code></td>
+        <td><p>Portion of the total time that is used for optimization. Can reduce computation time significantly.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.optimization.math_opt.MathOptimizer.optimize" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_solutions</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize the configuration of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>n_solutions</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of solutions to find. Defaults to 1.</p></td>
+        <td><code>1</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.optimization.math_opt.MathOptimizer.save_model" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Saves the optimization model to a file with the name 'MILP.lp'.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the model in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.optimization.math_opt.MathOptimizer.save_results" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">adjusted_number_of_transport_resources</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Saves the results of the optimization, i.e. system configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>) and performance of the found configuration in a simulation run. </p>
+<p>For saving the configuration, some defaults attributes are used for non-found degrees of freedom in the optimization:</p>
+<ul>
+<li>random location of a production resource</li>
+<li>FIFO control policy for a production resource</li>
+<li>FIFO control policy for a transport resource</li>
+</ul>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>adjusted_number_of_transport_resources</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of transport resources that are used for the optimization. Defaults to 1.</p></td>
+        <td><code>1</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.math_opt.adjust_number_of_transport_resources" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">adjust_number_of_transport_resources</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">,</span> <span class="n">number_of_transport_resources</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Adjusts the number of transport resources in the adapter object.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.Adapter</code></td>
+        <td><p>Adapter object.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>number_of_transport_resources</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of transport resources.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.math_opt.mathematical_optimization" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">mathematical_optimization</span><span class="p">(</span><span class="n">base_configuration</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">,</span> <span class="n">save_folder</span><span class="o">=</span><span class="s1">&#39;results&#39;</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize the configuration of the production system with mathematical optimization.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Base configuration for the optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>MathOptHyperparameters</code></td>
+        <td><p>Hyperparameters for configuration optimization with mathematical optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in. Defaults to "results".</p></td>
+        <td><code>&#39;results&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.math_opt.optimize_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">optimize_configuration</span><span class="p">(</span><span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize the configuration of the production system with mathematical optimization.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>MathOptHyperparameters</code></td>
+        <td><p>Hyperparameters for configuration optimization with mathematical optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.math_opt.run_mathematical_optimization" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_mathematical_optimization</span><span class="p">(</span><span class="n">save_folder</span><span class="p">,</span> <span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">optimization_time_portion</span><span class="p">,</span> <span class="n">number_of_solutions</span><span class="p">,</span> <span class="n">adjusted_number_of_transport_resources</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Run a mathematical optimization for configuration planning of production systems. </p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>optimization_time_portion</code></td>
+        <td><code>float</code></td>
+        <td><p>Portion of the total time that is used for optimization. Can reduce computation time significantly.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>number_of_solutions</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of solutions to find.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>adjusted_number_of_transport_resources</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of transport resources that are used when saving the model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.optimization_analysis" class="doc doc-heading">
+        <code>optimization_analysis</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_analysis.get_pareto_solutions_from_result_files" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_pareto_solutions_from_result_files</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Analyses an optimization result file and returns the IDs of the pareto efficient solutions.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>Filepath of the json file containing the optimization results.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[str]</code></td>
+      <td><p>List of IDs of the pareto efficient solutions.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_analysis.is_pareto_efficient" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">is_pareto_efficient</span><span class="p">(</span><span class="n">costs</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Find the pareto-efficient points</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>costs</code></td>
+        <td><code>np.ndarray</code></td>
+        <td><p>An (n_points, n_costs) array</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>np.ndarray</code></td>
+      <td><p>A (n_points, ) boolean array, indicating whether each point is Pareto efficient</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_analysis.is_pareto_efficient_simple" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">is_pareto_efficient_simple</span><span class="p">(</span><span class="n">costs</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Find the pareto-efficient points</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>costs</code></td>
+        <td><code>np.ndarray</code></td>
+        <td><p>An (n_points, n_costs) array</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>np.ndarray</code></td>
+      <td><p>A (n_points, ) boolean array, indicating whether each point is Pareto efficient</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_analysis.read_optimization_results_file_to_df" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">read_optimization_results_file_to_df</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function reads the results of an optimization run from a json file and returns a pandas dataframe.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>filepath</code></td>
+        <td><code>str</code></td>
+        <td><p>Filepath to the json file.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>label</code></td>
+        <td><code>str</code></td>
+        <td><p>Label to specify the utilized optimizer.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Dataframe containing the optimization results.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.optimization_util" class="doc doc-heading">
+        <code>optimization_util</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>Module containts utility functions for the optimization module. These functions can be used to change the production system configuration and evaluate its performance.</p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.add_machine" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">add_machine</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random machine to the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a machine was added, False otherwise (if adding is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.add_process_module" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">add_process_module</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random process module to a random machine of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a process module was added, False otherwise (if adding is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.add_transport_resource" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">add_transport_resource</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random transport resource to the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a transport resource was added, False otherwise (if adding is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.adjust_process_capacities" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">adjust_process_capacities</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adjusts the process capacities of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with adjusted process capacities.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.change_control_policy" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">change_control_policy</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that changes the control policy of a random resource of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if the control policy was changed, False otherwise (if changing is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.change_routing_policy" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">change_routing_policy</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that changes the routing policy of a random source of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.check_valid_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">check_valid_configuration</span><span class="p">(</span><span class="n">configuration</span><span class="p">,</span> <span class="n">base_configuration</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that checks if a configuration is valid.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Configuration to be checked.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Baseline configuration.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if the configuration is valid, False otherwise.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.evaluate" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">evaluate</span><span class="p">(</span><span class="n">base_scenario</span><span class="p">,</span> <span class="n">solution_dict</span><span class="p">,</span> <span class="n">performances</span><span class="p">,</span> <span class="n">individual</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that evaluates a configuration.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_scenario</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Baseline configuration.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>solution_dict</code></td>
+        <td><code>Dict[str, Union[list, str]]</code></td>
+        <td><p>Dictionary containing the solutions of the current and previous generations.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>performances</code></td>
+        <td><code>dict</code></td>
+        <td><p>Dictionary containing the performances of the current and previous generations.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>individual</code></td>
+        <td><code>List[adapters.ProductionSystemAdapter]</code></td>
+        <td><p>List if length 1 containing the configuration to be evaluated.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Exceptions:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ValueError</code></td>
+        <td><p>If the time range is not defined in the scenario data.</p></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[float]</code></td>
+      <td><p>List of the fitness values of the configuration.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_random_control_policies" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_random_control_policies</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that randomly assigns control policies to the machines and transport resources of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with specified scenario data and assigned control policies.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_random_layout" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_random_layout</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that randomly arranges the machines of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with specified scenario data and arranged machines.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_random_production_capacity" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_random_production_capacity</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random number of machines to the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with specified scenario data and added machines.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_random_routing_logic" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_random_routing_logic</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that randomly assigns routing logics to the sources of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with specified scenario data and assigned routing logics.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_random_transport_capacity" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_random_transport_capacity</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random number of transport resources to the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Production system configuration with specified scenario data and added transport resources.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.get_weights" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_weights</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="n">direction</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Get the weights for the objectives of the optimization from an adapter.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>direction</code></td>
+        <td><code>Literal[&amp;quot;min&amp;quot;, &amp;quot;max&amp;quot;]</code></td>
+        <td><p>Optimization target direction of the optimizer.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Tuple[float, ...]</code></td>
+      <td><p>Tuple of weights for the objectives.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.move_machine" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">move_machine</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that moves a random machine to a random position of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a machine was moved, False otherwise (if moving is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.move_process_module" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">move_process_module</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that moves a random process module from a random machine to another random machine of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a process module was moved, False otherwise (if moving is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.random_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">random_configuration</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that creates a random configuration based on a baseline configuration.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>baseline</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Baseline configuration.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Random configuration based on a baseline configuration.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.random_configuration_with_initial_solution" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">random_configuration_with_initial_solution</span><span class="p">(</span><span class="n">initial_adapters</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that creates a random configuration based on an list of initial solutions.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>initial_adapters</code></td>
+        <td><code>List[adapters.ProductionSystemAdapter]</code></td>
+        <td><p>List of initial solutions.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>adapters.ProductionSystemAdapter</code></td>
+      <td><p>Random configuration based on an initial solution.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.remove_machine" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">remove_machine</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that removes a random machine from the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a machine was removed, False otherwise (if removing is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.remove_process_module" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">remove_process_module</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that removes a random process module from a random machine of the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a process module was removed, False otherwise (if removing is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.optimization_util.remove_transport_resource" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">remove_transport_resource</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that removes a random transport resource from the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if a transport resource was removed, False otherwise (if removing is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.simulated_annealing" class="doc doc-heading">
+        <code>simulated_annealing</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.simulated_annealing.ProductionSystemOptimization" class="doc doc-heading">
+        <code>
+ProductionSystemOptimization            (<span title="simanneal.anneal.Annealer">Annealer</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.optimization.simulated_annealing.ProductionSystemOptimization.energy" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">energy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Calculate state's energy</p>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.optimization.simulated_annealing.ProductionSystemOptimization.move" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">move</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Create a state change</p>
+
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.simulated_annealing.SimulatedAnnealingHyperparameters" class="doc doc-heading">
+        <code>
+SimulatedAnnealingHyperparameters            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Hyperparameters to perform a configuration optimization with simulated annealing.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Seed for random number generator</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>Tmax</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum temperature</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>Tmin</code></td>
+        <td><code>int</code></td>
+        <td><p>Minimum temperature</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>steps</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of steps</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>updates</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of updates</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.simulated_annealing.optimize_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">optimize_configuration</span><span class="p">(</span><span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize a configuration with simulated annealing.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>SimulatedAnnealingHyperparameters</code></td>
+        <td><p>Hyperparameters to perform a configuration optimization with simulated annealing.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.simulated_annealing.run_simulated_annealing" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_simulated_annealing</span><span class="p">(</span><span class="n">save_folder</span><span class="p">,</span> <span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">Tmax</span><span class="p">,</span> <span class="n">Tmin</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">updates</span><span class="p">,</span> <span class="n">initial_solution_file_path</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Run a simulated annealing algorithm for configuration optimization.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Random seed for optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>Tmax</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum temperature</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>Tmin</code></td>
+        <td><code>int</code></td>
+        <td><p>Minimum temperature</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>steps</code></td>
+        <td><code>int</code></td>
+        <td><p>Steps for annealing</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>updates</code></td>
+        <td><code>int</code></td>
+        <td><p>Number of updates</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>initial_solution_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path to an initial solution. Defaults to "".</p></td>
+        <td><code>&#39;&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.simulated_annealing.simulated_annealing_optimization" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">simulated_annealing_optimization</span><span class="p">(</span><span class="n">base_configuration</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">,</span> <span class="n">save_folder</span><span class="o">=</span><span class="s1">&#39;results&#39;</span><span class="p">,</span> <span class="n">initial_solution</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize a production system configuration using simulated anealing.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>production system to optimize.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>SimulatedAnnealingHyperparameters</code></td>
+        <td><p>Hyperparameters for simulated annealing.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in. Defaults to "results".</p></td>
+        <td><code>&#39;results&#39;</code></td>
+      </tr>
+      <tr>
+        <td><code>initial_solution</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Initial solution for optimization. Defaults to None.</p></td>
+        <td><code>None</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.optimization.tabu_search" class="doc doc-heading">
+        <code>tabu_search</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.optimization.tabu_search.TabuSearchHyperparameters" class="doc doc-heading">
+        <code>
+TabuSearchHyperparameters            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Hyperparameters for configuration optimization with tabu search.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Seed for random number generator</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>tabu_size</code></td>
+        <td><code>int</code></td>
+        <td><p>Size of tabu list</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_steps</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum number of steps</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_score</code></td>
+        <td><code>float</code></td>
+        <td><p>Maximum score</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.tabu_search.optimize_configuration" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">optimize_configuration</span><span class="p">(</span><span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize configuration with tabu search.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>TabuSearchHyperparameters</code></td>
+        <td><p>Hyperparameters for configuration optimization with tabu search.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.tabu_search.run_tabu_search" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">run_tabu_search</span><span class="p">(</span><span class="n">save_folder</span><span class="p">,</span> <span class="n">base_configuration_file_path</span><span class="p">,</span> <span class="n">scenario_file_path</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">tabu_size</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">max_score</span><span class="p">,</span> <span class="n">initial_solution_file_path</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Runs tabu search optimization.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>base_configuration_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized base configuration (<code>prodsys.adapters.JsonProductionSystemAdapter</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scenario_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path of the serialized scenario (<code>prodsys.models.scenario_data.ScenarioData</code>)</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>seed</code></td>
+        <td><code>int</code></td>
+        <td><p>Random seed for optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>tabu_size</code></td>
+        <td><code>_type_</code></td>
+        <td><p>Size of the tabu list.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_steps</code></td>
+        <td><code>_type_</code></td>
+        <td><p>Maximum number of steps.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_score</code></td>
+        <td><code>_type_</code></td>
+        <td><p>Maximum score to stop optimization.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>initial_solution_file_path</code></td>
+        <td><code>str</code></td>
+        <td><p>File path to an initial solution. Defaults to "".</p></td>
+        <td><code>&#39;&#39;</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.tabu_search.tabu_search_optimization" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">tabu_search_optimization</span><span class="p">(</span><span class="n">base_configuration</span><span class="p">,</span> <span class="n">hyper_parameters</span><span class="p">,</span> <span class="n">save_folder</span><span class="p">,</span> <span class="n">initial_solution</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Optimize a production system configuration using tabu search.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>base_configuration</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>production system to optimize.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>hyper_parameters</code></td>
+        <td><code>SimulatedAnnealingHyperparameters</code></td>
+        <td><p>Hyperparameters for tabu search.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>save_folder</code></td>
+        <td><code>str</code></td>
+        <td><p>Folder to save the results in. Defaults to "results".</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>initial_solution</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Initial solution for optimization. Defaults to None.</p></td>
+        <td><code>None</code></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.b4d07000.min.js"></script>
+      
+    
+  </body>
+</html>

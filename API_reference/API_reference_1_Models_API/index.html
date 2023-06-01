@@ -1,0 +1,5380 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../API_reference_0_overview/">
+      
+      
+        <link rel="next" href="../API_reference_2_Adapter/">
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.13">
+    
+    
+      
+        <title>prodsys Models API - prodsys Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.85bb2934.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#prodsys-models-api" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="prodsys Documentation" class="md-header__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            prodsys Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              prodsys Models API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="prodsys Documentation" class="md-nav__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    prodsys Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          Tutorials
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Tutorials
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_0_overview/" class="md-nav__link">
+        Tutorials overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_1_modelling_and_simulating_a_production_system/" class="md-nav__link">
+        Modelling a production system
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_2_analyzing_simulation_results/" class="md-nav__link">
+        Analyzing simulation results
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_3_optimizing_a_production_system/" class="md-nav__link">
+        Optimizing a production system
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+      
+      
+      <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          Api Reference
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Api Reference
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_0_overview/" class="md-nav__link">
+        API reference overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          prodsys Models API
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        prodsys Models API
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models" class="md-nav__link">
+    prodsys.models
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.core_asset" class="md-nav__link">
+    core_asset
+  </a>
+  
+    <nav class="md-nav" aria-label="core_asset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.core_asset.CoreAsset" class="md-nav__link">
+    CoreAsset
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data" class="md-nav__link">
+    performance_data
+  </a>
+  
+    <nav class="md-nav" aria-label="performance_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data.Event" class="md-nav__link">
+    Event
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data.Performance" class="md-nav__link">
+    Performance
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators" class="md-nav__link">
+    performance_indicators
+  </a>
+  
+    <nav class="md-nav" aria-label="performance_indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.DynamicKPI" class="md-nav__link">
+    DynamicKPI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPI" class="md-nav__link">
+    KPI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPIEnum" class="md-nav__link">
+    KPIEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPILevelEnum" class="md-nav__link">
+    KPILevelEnum
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data" class="md-nav__link">
+    processes_data
+  </a>
+  
+    <nav class="md-nav" aria-label="processes_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.CapabilityProcessData" class="md-nav__link">
+    CapabilityProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProcessData" class="md-nav__link">
+    ProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProcessTypeEnum" class="md-nav__link">
+    ProcessTypeEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProductionProcessData" class="md-nav__link">
+    ProductionProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.TransportProcessData" class="md-nav__link">
+    TransportProcessData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.product_data" class="md-nav__link">
+    product_data
+  </a>
+  
+    <nav class="md-nav" aria-label="product_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.product_data.ProductData" class="md-nav__link">
+    ProductData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.queue_data" class="md-nav__link">
+    queue_data
+  </a>
+  
+    <nav class="md-nav" aria-label="queue_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.queue_data.QueueData" class="md-nav__link">
+    QueueData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data" class="md-nav__link">
+    resource_data
+  </a>
+  
+    <nav class="md-nav" aria-label="resource_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ControllerEnum" class="md-nav__link">
+    ControllerEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ProductionResourceData" class="md-nav__link">
+    ProductionResourceData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ResourceControlPolicy" class="md-nav__link">
+    ResourceControlPolicy
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ResourceData" class="md-nav__link">
+    ResourceData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.TransportControlPolicy" class="md-nav__link">
+    TransportControlPolicy
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.TransportResourceData" class="md-nav__link">
+    TransportResourceData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data" class="md-nav__link">
+    scenario_data
+  </a>
+  
+    <nav class="md-nav" aria-label="scenario_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ReconfigurationEnum" class="md-nav__link">
+    ReconfigurationEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioConstrainsData" class="md-nav__link">
+    ScenarioConstrainsData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioData" class="md-nav__link">
+    ScenarioData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioInfoData" class="md-nav__link">
+    ScenarioInfoData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioOptionsData" class="md-nav__link">
+    ScenarioOptionsData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.sink_data" class="md-nav__link">
+    sink_data
+  </a>
+  
+    <nav class="md-nav" aria-label="sink_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.sink_data.SinkData" class="md-nav__link">
+    SinkData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.source_data" class="md-nav__link">
+    source_data
+  </a>
+  
+    <nav class="md-nav" aria-label="source_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.RouterType" class="md-nav__link">
+    RouterType
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.RoutingHeuristic" class="md-nav__link">
+    RoutingHeuristic
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.SourceData" class="md-nav__link">
+    SourceData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.state_data" class="md-nav__link">
+    state_data
+  </a>
+  
+    <nav class="md-nav" aria-label="state_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.BreakDownStateData" class="md-nav__link">
+    BreakDownStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.ProcessBreakDownStateData" class="md-nav__link">
+    ProcessBreakDownStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.ProductionStateData" class="md-nav__link">
+    ProductionStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.SetupStateData" class="md-nav__link">
+    SetupStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.StateData" class="md-nav__link">
+    StateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.StateTypeEnum" class="md-nav__link">
+    StateTypeEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.TransportStateData" class="md-nav__link">
+    TransportStateData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data" class="md-nav__link">
+    time_model_data
+  </a>
+  
+    <nav class="md-nav" aria-label="time_model_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.FunctionTimeModelData" class="md-nav__link">
+    FunctionTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.ManhattanDistanceTimeModelData" class="md-nav__link">
+    ManhattanDistanceTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.SequentialTimeModelData" class="md-nav__link">
+    SequentialTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.TimeModelEnum" class="md-nav__link">
+    TimeModelEnum
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_2_Adapter/" class="md-nav__link">
+        Adapter
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_3_Express_API/" class="md-nav__link">
+        prodsys Express API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_4_factories/" class="md-nav__link">
+        Factories
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_5_Simulation/" class="md-nav__link">
+        Simulation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_6_Optimization/" class="md-nav__link">
+        Optimization
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_7_Control/" class="md-nav__link">
+        Control
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API_reference_8_util/" class="md-nav__link">
+        Util
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models" class="md-nav__link">
+    prodsys.models
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.core_asset" class="md-nav__link">
+    core_asset
+  </a>
+  
+    <nav class="md-nav" aria-label="core_asset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.core_asset.CoreAsset" class="md-nav__link">
+    CoreAsset
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data" class="md-nav__link">
+    performance_data
+  </a>
+  
+    <nav class="md-nav" aria-label="performance_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data.Event" class="md-nav__link">
+    Event
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_data.Performance" class="md-nav__link">
+    Performance
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators" class="md-nav__link">
+    performance_indicators
+  </a>
+  
+    <nav class="md-nav" aria-label="performance_indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.DynamicKPI" class="md-nav__link">
+    DynamicKPI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPI" class="md-nav__link">
+    KPI
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPIEnum" class="md-nav__link">
+    KPIEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.performance_indicators.KPILevelEnum" class="md-nav__link">
+    KPILevelEnum
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data" class="md-nav__link">
+    processes_data
+  </a>
+  
+    <nav class="md-nav" aria-label="processes_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.CapabilityProcessData" class="md-nav__link">
+    CapabilityProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProcessData" class="md-nav__link">
+    ProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProcessTypeEnum" class="md-nav__link">
+    ProcessTypeEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.ProductionProcessData" class="md-nav__link">
+    ProductionProcessData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.processes_data.TransportProcessData" class="md-nav__link">
+    TransportProcessData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.product_data" class="md-nav__link">
+    product_data
+  </a>
+  
+    <nav class="md-nav" aria-label="product_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.product_data.ProductData" class="md-nav__link">
+    ProductData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.queue_data" class="md-nav__link">
+    queue_data
+  </a>
+  
+    <nav class="md-nav" aria-label="queue_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.queue_data.QueueData" class="md-nav__link">
+    QueueData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data" class="md-nav__link">
+    resource_data
+  </a>
+  
+    <nav class="md-nav" aria-label="resource_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ControllerEnum" class="md-nav__link">
+    ControllerEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ProductionResourceData" class="md-nav__link">
+    ProductionResourceData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ResourceControlPolicy" class="md-nav__link">
+    ResourceControlPolicy
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.ResourceData" class="md-nav__link">
+    ResourceData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.TransportControlPolicy" class="md-nav__link">
+    TransportControlPolicy
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.resource_data.TransportResourceData" class="md-nav__link">
+    TransportResourceData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data" class="md-nav__link">
+    scenario_data
+  </a>
+  
+    <nav class="md-nav" aria-label="scenario_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ReconfigurationEnum" class="md-nav__link">
+    ReconfigurationEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioConstrainsData" class="md-nav__link">
+    ScenarioConstrainsData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioData" class="md-nav__link">
+    ScenarioData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioInfoData" class="md-nav__link">
+    ScenarioInfoData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.scenario_data.ScenarioOptionsData" class="md-nav__link">
+    ScenarioOptionsData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.sink_data" class="md-nav__link">
+    sink_data
+  </a>
+  
+    <nav class="md-nav" aria-label="sink_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.sink_data.SinkData" class="md-nav__link">
+    SinkData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.source_data" class="md-nav__link">
+    source_data
+  </a>
+  
+    <nav class="md-nav" aria-label="source_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.RouterType" class="md-nav__link">
+    RouterType
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.RoutingHeuristic" class="md-nav__link">
+    RoutingHeuristic
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.source_data.SourceData" class="md-nav__link">
+    SourceData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.state_data" class="md-nav__link">
+    state_data
+  </a>
+  
+    <nav class="md-nav" aria-label="state_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.BreakDownStateData" class="md-nav__link">
+    BreakDownStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.ProcessBreakDownStateData" class="md-nav__link">
+    ProcessBreakDownStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.ProductionStateData" class="md-nav__link">
+    ProductionStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.SetupStateData" class="md-nav__link">
+    SetupStateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.StateData" class="md-nav__link">
+    StateData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.StateTypeEnum" class="md-nav__link">
+    StateTypeEnum
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.state_data.TransportStateData" class="md-nav__link">
+    TransportStateData
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data" class="md-nav__link">
+    time_model_data
+  </a>
+  
+    <nav class="md-nav" aria-label="time_model_data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.FunctionTimeModelData" class="md-nav__link">
+    FunctionTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.ManhattanDistanceTimeModelData" class="md-nav__link">
+    ManhattanDistanceTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.SequentialTimeModelData" class="md-nav__link">
+    SequentialTimeModelData
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.models.time_model_data.TimeModelEnum" class="md-nav__link">
+    TimeModelEnum
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="prodsys-models-api">prodsys Models API</h1>
+
+
+  <div class="doc doc-object doc-module">
+
+<a id="prodsys.models"></a>
+    <div class="doc doc-contents first">
+
+      <p>The <code>prodsys.models</code> package contains the data structures to describe a production system's structure and its performance. These data structures are utilized in prodsys to have a common format for all algorithms in simulation, optimization, analysis and the prodsys webserver.
+All of these formats are compatible with the <code>prodsys.express</code> API. However, the conversion works only in one direction: from <code>prodsys.express</code> to <code>prodsys.models</code>. </p>
+<p>The following modules are available:</p>
+<ul>
+<li><code>prodsys.models.core_asset</code>: Contains the abstract base class for data objects.</li>
+<li><code>prodsys.models.product_data</code>: Contains classes to represent products.</li>
+<li><code>prodsys.models.performance_data</code>: Contains classes to represent performance data.</li>
+<li><code>prodsys.models.performance_indicators</code>: Contains classes to represent performance indicators (KPIs).</li>
+<li><code>prodsys.models.processes_data</code>: Contains classes to represent processes.</li>
+<li><code>prodsys.models.queue_data</code>: Contains classes to represent queues.</li>
+<li><code>prodsys.models.resource_data</code>: Contains classes to represent resources.</li>
+<li><code>prodsys.models.scenario_data</code>: Contains classes to represent scenario data.</li>
+<li><code>prodsys.models.sink_data</code>: Contains classes to represent sinks.</li>
+<li><code>prodsys.models.source_data</code>: Contains classes to represent sources.</li>
+<li><code>prodsys.models.state_data</code>: Contains classes to represent states.</li>
+<li><code>prodsys.models.time_model_data</code>: Contains classes to represent time models.</li>
+</ul>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.core_asset" class="doc doc-heading">
+        <code>core_asset</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.core_asset.CoreAsset" class="doc doc-heading">
+        <code>
+CoreAsset            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a the core asset, consisting of an ID and a description.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>The unique ID of the core asset.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>The description of the core asset.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.performance_data" class="doc doc-heading">
+        <code>performance_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_data.Event" class="doc doc-heading">
+        <code>
+Event            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents an event in the event log.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>time</code></td>
+        <td><code>float</code></td>
+        <td><p>Time of the event.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>resource</code></td>
+        <td><code>str</code></td>
+        <td><p>Resource of the event.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>state</code></td>
+        <td><code>str</code></td>
+        <td><p>State of the event.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>state_type</code></td>
+        <td><code>str</code></td>
+        <td><p>State type of the event, representing a state.StateTypeEnum.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>activity</code></td>
+        <td><code>str</code></td>
+        <td><p>Activity of the event, representing a state.StateEnum.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>product</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>Product of the event. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>expected_end_time</code></td>
+        <td><code>Optional[float]</code></td>
+        <td><p>Expected end time of the event. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>target_location</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>Target location of the event. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_data.Performance" class="doc doc-heading">
+        <code>
+Performance            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents the performance of a simulation run.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>event_log</code></td>
+        <td><code>List[Event]</code></td>
+        <td><p>Event log of the simulation run.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>kpis</code></td>
+        <td><code>List[KPI_UNION]</code></td>
+        <td><p>List of KPIs of the simulation run.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.performance_indicators" class="doc doc-heading">
+        <code>performance_indicators</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_indicators.DynamicKPI" class="doc doc-heading">
+        <code>
+DynamicKPI            (<a class="autorefs autorefs-internal" title="prodsys.models.performance_indicators.KPI" href="#prodsys.models.performance_indicators.KPI">KPI</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a dynamic KPI. Not intended for usage but only inheritance.</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_indicators.KPI" class="doc doc-heading">
+        <code>
+KPI            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a KPI. Not intended for usage but only inheritance.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>name</code></td>
+        <td><code>KPIEnum</code></td>
+        <td><p>Name of the KPI.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>target</code></td>
+        <td><code>Literal[&#34;min&#34;, &#34;max&#34;]</code></td>
+        <td><p>Favourable target of the KPI.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>weight</code></td>
+        <td><code>Optional[float]</code></td>
+        <td><p>Weight of the KPI. Defaults to 1.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>value</code></td>
+        <td><code>Optional[float]</code></td>
+        <td><p>Value of the KPI. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>context</code></td>
+        <td><code>Tuple[KPILevelEnum, ...]</code></td>
+        <td><p>Context of the KPI. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>resource</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>Resource of the KPI. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>product_type</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>Product type of the KPI. Defaults to None.    Returns:</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_indicators.KPIEnum" class="doc doc-heading">
+        <code>
+KPIEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different kind of KPIs.</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.performance_indicators.KPILevelEnum" class="doc doc-heading">
+        <code>
+KPILevelEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different kind of KPI levels.</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.processes_data" class="doc doc-heading">
+        <code>processes_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>The <code>processes_data</code> module contains the <code>prodsys.models</code> classes to represent the processes that can 
+be performed on products by resources.</p>
+<p>The following processes are possible:
+- <code>ProductionProcessData</code>: A process that can be performed on a product by a production resource.
+- <code>CapabilityProcessData</code>: A process that can be performed on a product by a resource, based on the capability of the resource.
+- <code>TransportProcessData</code>: A process that can be performed on a product by a transport resource.</p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.processes_data.CapabilityProcessData" class="doc doc-heading">
+        <code>
+CapabilityProcessData            (<a class="autorefs autorefs-internal" title="prodsys.models.processes_data.ProcessData" href="#prodsys.models.processes_data.ProcessData">ProcessData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents capability process data. Capability processes are not compared by their IDs but their Capabilities.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>Literal[ProcessTypeEnum.CapabilityProcesses]</code></td>
+        <td><p>Type of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>capability</code></td>
+        <td><code>str</code></td>
+        <td><p>Capability of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A capability process with ID "P1", description "Process 1", time model ID "function_time_model_1" and capability "C1":
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">processes_data</span><span class="o">.</span><span class="n">CapabilityProcessData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Process 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;CapabilityProcesses&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">capability</span><span class="o">=</span><span class="s2">&quot;C1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.processes_data.ProcessData" class="doc doc-heading">
+        <code>
+ProcessData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents process data. Acts as a base class for all process data classes.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.processes_data.ProcessTypeEnum" class="doc doc-heading">
+        <code>
+ProcessTypeEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different kind of processes.</p>
+<ul>
+<li>ProductionProcesses: A process that can be performed on a product by a production resource.</li>
+<li>TransportProcesses: A process that can be performed on a product by a transport resource.</li>
+<li>CapabilityProcesses: A process that can be performed on a product by a resource, based on the capability of the resource.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.processes_data.ProductionProcessData" class="doc doc-heading">
+        <code>
+ProductionProcessData            (<a class="autorefs autorefs-internal" title="prodsys.models.processes_data.ProcessData" href="#prodsys.models.processes_data.ProcessData">ProcessData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents production process data.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>Literal[ProcessTypeEnum.ProductionProcesses]</code></td>
+        <td><p>Type of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A production process with ID "P1", description "Process 1" and time model ID "function_time_model_1":
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">processes_data</span><span class="o">.</span><span class="n">ProductionProcessData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Process 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;ProductionProcesses&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.processes_data.TransportProcessData" class="doc doc-heading">
+        <code>
+TransportProcessData            (<a class="autorefs autorefs-internal" title="prodsys.models.processes_data.ProcessData" href="#prodsys.models.processes_data.ProcessData">ProcessData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents transport process data.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model of the process</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>Literal[ProcessTypeEnum.TransportProcesses]</code></td>
+        <td><p>Type of the process.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">processes_data</span><span class="o">.</span><span class="n">TransportProcessData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;TP1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Transport Process 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;manhattan_time_model_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;TransportProcesses&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.product_data" class="doc doc-heading">
+        <code>product_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.product_data.ProductData" class="doc doc-heading">
+        <code>
+ProductData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents product data, specifically the required processes and the allows tranport process.</p>
+<p>The processes describe thereby the process model that needs to be completed for the product to be finished. There are three different ways to describe the process model:</p>
+<ul>
+<li>Sequential process model: The processes are given as a list of process IDs. The processes are executed sequentially.</li>
+<li>Adjacency matrix process model: The processes are given as an adjacency matrix that describes the precedence graph of the product.</li>
+<li>Edges process model: The processes are given as a list of edges. The edges describe the precedence graph of the product.</li>
+</ul>
+<p>See the examples for more insights.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the product. If not given, the product type is used. Gets overwritten to the instance product ID, when an instance is created during simulation. </p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the product.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>product_type</code></td>
+        <td><code>str</code></td>
+        <td><p>Type of the product. If not given, the ID is used.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>processes</code></td>
+        <td><code>Union[List[str], List[List[str]], Dict[str, List[str]]]</code></td>
+        <td><p>Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>transport_process</code></td>
+        <td><code>str</code></td>
+        <td><p>Transport process of the product.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Product with sequential process model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">product_data</span><span class="o">.</span><span class="n">ProductData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;product 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">product_type</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">transport_process</span><span class="o">=</span><span class="s2">&quot;TP1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+<p>Product with adjacency matrix process model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">product_data</span><span class="o">.</span><span class="n">ProductData</span><span class="p">(</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Product 1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">product_type</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="s2">&quot;P1&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">],</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="s2">&quot;P2&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;P3&quot;</span><span class="p">],</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="s2">&quot;P3&quot;</span><span class="p">:</span> <span class="p">[],</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="p">},</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">transport_process</span><span class="o">=</span><span class="s2">&quot;TP1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="p">)</span>
+</span></code></pre></div></p>
+<p>Product with graph edges process model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">product_data</span><span class="o">.</span><span class="n">ProductData</span><span class="p">(</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Product 1&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">product_type</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>        <span class="p">[</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P2&quot;</span><span class="p">],</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>        <span class="p">[</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P3&quot;</span><span class="p">],</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>        <span class="p">[</span><span class="s2">&quot;P2&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">],</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="p">[</span><span class="s2">&quot;P3&quot;</span><span class="p">,</span> <span class="s2">&quot;P4&quot;</span><span class="p">],</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="p">],</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">transport_process</span><span class="o">=</span><span class="s2">&quot;TP1&quot;</span><span class="p">,</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.queue_data" class="doc doc-heading">
+        <code>queue_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.queue_data.QueueData" class="doc doc-heading">
+        <code>
+QueueData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a queue. If capacity is 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the queue.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the queue.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>capacity</code></td>
+        <td><code>Union[int, float]</code></td>
+        <td><p>Capacity of the queue. If 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A finite queue with ID "Q1", description "Queue 1" and capacity 10:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">queue_data</span><span class="o">.</span><span class="n">QueueData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Q1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Queue 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</span></code></pre></div>
+An infinite queue with ID "Q1", description "Queue 1" and capacity 0:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">queue_data</span><span class="o">.</span><span class="n">QueueData</span><span class="p">(</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Q1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Queue 1&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.resource_data" class="doc doc-heading">
+        <code>resource_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>In <code>prodsys</code> exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on products. Transport resources are resources that can transport products from one location to another. Both types of resources are represented by the <code>ResourceData</code> class. The <code>ResourceData</code> class is an abstract base class and cannot be instantiated. Instead, the <code>ProductionResourceData</code> and <code>TransportResourceData</code> classes can be used to represent production resources and transport resources, respectively.</p>
+<p>The following resources are available:</p>
+<ul>
+<li><code>ProductionResourceData</code>: Class that represents a production resource.</li>
+<li><code>TransportResourceData</code>: Class that represents a transport resource.</li>
+</ul>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.ControllerEnum" class="doc doc-heading">
+        <code>
+ControllerEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the controller of a resource.</p>
+<ul>
+<li>PipelineController: Pipeline controller.</li>
+<li>TransportController: Transport controller.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.ProductionResourceData" class="doc doc-heading">
+        <code>
+ProductionResourceData            (<a class="autorefs autorefs-internal" title="prodsys.models.resource_data.ResourceData" href="#prodsys.models.resource_data.ResourceData">ResourceData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents production resource data.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>capacity</code></td>
+        <td><code>int</code></td>
+        <td><p>Capacity of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Location of the resource. Has to be a list of length 2.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>controller</code></td>
+        <td><code>Literal[ControllerEnum.PipelineController]</code></td>
+        <td><p>Controller of the resource, has to be a PipelineController.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>control_policy</code></td>
+        <td><code>ResourceControlPolicy</code></td>
+        <td><p>Control policy of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_ids</code></td>
+        <td><code>List[str]</code></td>
+        <td><p>Process IDs of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_capacities</code></td>
+        <td><code>Optional[List[int]]</code></td>
+        <td><p>Process capacities of the resource. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>state_ids</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>State IDs of the resource. Defaults to [].</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>input_queues</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>Input queues of the resource. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>output_queues</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>Output queues of the resource. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Creation of a production resource with a capacity of 2, a location of [10.0, 10.0], a PipelineController and a FIFO control policy:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">ProductionResourceData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;R1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Resource 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">controller</span><span class="o">=</span><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">ControllerEnum</span><span class="o">.</span><span class="n">PipelineController</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">control_policy</span><span class="o">=</span><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">ResourceControlPolicy</span><span class="o">.</span><span class="n">FIFO</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">process_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span> <span class="s2">&quot;P2&quot;</span><span class="p">],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">process_capacities</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">states</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        <span class="s2">&quot;Breakdownstate_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="s2">&quot;Setup_State_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="p">],</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">input_queues</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;IQ1&quot;</span><span class="p">],</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">output_queues</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;OQ1&quot;</span><span class="p">],</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.ResourceControlPolicy" class="doc doc-heading">
+        <code>
+ResourceControlPolicy            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the control policy of a resource.</p>
+<ul>
+<li>FIFO: First in first out.</li>
+<li>LIFO: Last in first out.</li>
+<li>SPT: Shortest processing time first.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.ResourceData" class="doc doc-heading">
+        <code>
+ResourceData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>capacity</code></td>
+        <td><code>int</code></td>
+        <td><p>Capacity of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Location of the resource. Has to be a list of length 2.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>controller</code></td>
+        <td><code>ControllerEnum</code></td>
+        <td><p>Controller of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>control_policy</code></td>
+        <td><code>Union[ResourceControlPolicy, TransportControlPolicy]</code></td>
+        <td><p>Control policy of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_ids</code></td>
+        <td><code>List[str]</code></td>
+        <td><p>Process IDs of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_capacities</code></td>
+        <td><code>Optional[List[int]]</code></td>
+        <td><p>Process capacities of the resource (in sequence of the capacity of the resource). Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>state_ids</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>State IDs of the resource. Defaults to [].</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.TransportControlPolicy" class="doc doc-heading">
+        <code>
+TransportControlPolicy            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the control policy of a transport resource.</p>
+<ul>
+<li>FIFO: First in first out.</li>
+<li>SPT_transport: Shortest transport time first.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.resource_data.TransportResourceData" class="doc doc-heading">
+        <code>
+TransportResourceData            (<a class="autorefs autorefs-internal" title="prodsys.models.resource_data.ResourceData" href="#prodsys.models.resource_data.ResourceData">ResourceData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents transport resource data.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>capacity</code></td>
+        <td><code>int</code></td>
+        <td><p>Capacity of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Location of the resource. Has to be a list of length 2.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>controller</code></td>
+        <td><code>Literal[ControllerEnum.TransportController]</code></td>
+        <td><p>Controller of the resource, has to be a TransportController.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>control_policy</code></td>
+        <td><code>TransportControlPolicy</code></td>
+        <td><p>Control policy of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_ids</code></td>
+        <td><code>List[str]</code></td>
+        <td><p>Process IDs of the resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_capacities</code></td>
+        <td><code>Optional[List[int]]</code></td>
+        <td><p>Process capacities of the resource. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>state_ids</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>State IDs of the resource. Defaults to [].</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Creation of a transport resource with a capacity of 1, a location of [15.0, 15.0], a TransportController and a FIFO control policy:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">TransportResourceData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;TR1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Transport Resource 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mf">15.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">controller</span><span class="o">=</span><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">ControllerEnum</span><span class="o">.</span><span class="n">TransportController</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">control_policy</span><span class="o">=</span><span class="n">prodsys</span><span class="o">.</span><span class="n">resource_data</span><span class="o">.</span><span class="n">TransportControlPolicy</span><span class="o">.</span><span class="n">FIFO</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">process_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;TP1&quot;</span><span class="p">],</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.scenario_data" class="doc doc-heading">
+        <code>scenario_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>This module contains the data structures for the scenario data that is used in optimization to determine the best configuration of a production system. A Scenario constists thereby of:
+- <code>ScenarioConstrainsData</code>: The constraints of the scenario.
+- <code>ScenarioOptionsData</code>: The options of the scenario.
+- <code>ScenarioInfoData</code>: The information of the scenario.
+- 'Objectives': The objectives of the scenario.
+- <code>ScenarioData</code>: The scenario data that contains the constraints, options, information and objectives of the scenario. </p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.scenario_data.ReconfigurationEnum" class="doc doc-heading">
+        <code>
+ReconfigurationEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different levels of reconfigurations that are possible.</p>
+<ul>
+<li>ProductionCapacity: Reconfiguration of production capacity (number of machines and their configuration)</li>
+<li>TransportCapacity: Reconfiguration of transport capacity (number of transport resources and their configuration)</li>
+<li>Layout: Reconfiguration of layout (only position of resources)</li>
+<li>SequencingLogic: Reconfiguration of sequencing logic (only the control policy of resources)</li>
+<li>RoutingLogic: Reconfiguration of routing logic (only the routing heuristic of routers)</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.scenario_data.ScenarioConstrainsData" class="doc doc-heading">
+        <code>
+ScenarioConstrainsData            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents the constraints of a scenario. The maximum limitations aim to limit the complexity of the
+scenario, thus optimization is possible in a reasonable time. However, by setting only a few constraints, the
+complexity of the scenario can be increased. E.g. you set the maximum reconfiguration cost to the targeted value and
+maximum numbers very high. Thereby, the optimization problem is only constrained by reconfiguration cost and not other
+factors.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>max_reconfiguration_cost</code></td>
+        <td><code>float</code></td>
+        <td><p>Maximum reconfiguration cost that can be spend for new production capacity in the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_num_machines</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum number of machines that can be used in the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_num_processes_per_machine</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum number of processes that can be assigned to a machine in the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>max_num_transport_resources</code></td>
+        <td><code>int</code></td>
+        <td><p>Maximum number of transport resources that can be used in the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>target_product_count</code></td>
+        <td><code>Optional[Dict[str, int]]</code></td>
+        <td><p>Target product count for the scenario. Defaults to None. Mapping of product type to target count in the considered time range of the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.scenario_data.ScenarioData" class="doc doc-heading">
+        <code>
+ScenarioData            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a scenario and contraints data about constaints, options, information and objectives of the scenario.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>constraints</code></td>
+        <td><code>ScenarioConstrainsData</code></td>
+        <td><p>Constraints of the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>options</code></td>
+        <td><code>ScenarioOptionsData</code></td>
+        <td><p>Options of the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>info</code></td>
+        <td><code>ScenarioInfoData</code></td>
+        <td><p>Information of the scenario.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>optimize</code></td>
+        <td><code>List[Objectives]</code></td>
+        <td><p>List of KPIs that should be optimized.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Exceptions:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ValueError</code></td>
+        <td><p>If the weights are not specified for all KPIs that should be optimized.</p></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.scenario_data.ScenarioInfoData" class="doc doc-heading">
+        <code>
+ScenarioInfoData            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents the information of a scenario. The information is used to define some parameters that allow
+evaluation of the scenario.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>machine_cost</code></td>
+        <td><code>float</code></td>
+        <td><p>Cost of a machine.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>transport_resource_cost</code></td>
+        <td><code>float</code></td>
+        <td><p>Cost of a transport resource.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_module_cost</code></td>
+        <td><code>float</code></td>
+        <td><p>Cost of a process module.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>breakdown_cost</code></td>
+        <td><code>Optional[float]</code></td>
+        <td><p>Cost of a breakdown. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_range</code></td>
+        <td><code>Optional[int]</code></td>
+        <td><p>Time range of the scenario in minutes to be considered. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>maximum_breakdown_time</code></td>
+        <td><code>Optional[int]</code></td>
+        <td><p>Maximum allowable breakdown time in the scenario in minutes. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.scenario_data.ScenarioOptionsData" class="doc doc-heading">
+        <code>
+ScenarioOptionsData            (<span title="pydantic.main.BaseModel">BaseModel</span>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents the options of a scenario. The options are used to define the deegrees of freedom in the
+optimization scenario, i.e. the different possibilities to adjust the configuration to find a solution with higher
+performance. Options consider possible transformations of the configuration, possible logics of controllers and routers
+and possible positions of machines in the layout.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>transformations</code></td>
+        <td><code>List[ReconfigurationEnum]</code></td>
+        <td><p>List of possible transformations of the configuration.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>machine_controllers</code></td>
+        <td><code>List[Literal[&#34;FIFO&#34;, &#34;LIFO&#34;, &#34;SPT&#34;]]</code></td>
+        <td><p>List of possible controllers for machines.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>transport_controllers</code></td>
+        <td><code>List[Literal[&#34;FIFO&#34;, &#34;SPT_transport&#34;]]</code></td>
+        <td><p>List of possible controllers for transport resources.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>routing_heuristics</code></td>
+        <td><code>List[Literal[&#34;shortest_queue&#34;, &#34;random&#34;, &#34;FIFO&#34;]]</code></td>
+        <td><p>List of possible routing heuristics for sources.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>positions</code></td>
+        <td><code>List[conlist(float, min_items=2, max_items=2)]</code></td>
+        <td><p>List of possible positions for machines in the layout.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Exceptions:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ValueError</code></td>
+        <td><p>If the positions are not a list of tuples of length 2.</p></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.sink_data" class="doc doc-heading">
+        <code>sink_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.sink_data.SinkData" class="doc doc-heading">
+        <code>
+SinkData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a sink.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the sink.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the sink.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Location of the sink. It has to be a list of length 2.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>product_type</code></td>
+        <td><code>str</code></td>
+        <td><p>Product type of the sink.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>input_queues</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>List of input queues of the sink. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A sink with ID "SK1":
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">sink_data</span><span class="o">.</span><span class="n">SinkData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;SK1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Sink 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mf">50.0</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">],</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">product_type</span><span class="o">=</span><span class="s2">&quot;Product_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">input_queues</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;SinkQueue&quot;</span><span class="p">],</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.source_data" class="doc doc-heading">
+        <code>source_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.source_data.RouterType" class="doc doc-heading">
+        <code>
+RouterType            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the router type of a source.</p>
+<ul>
+<li>SimpleRouter: Simple router routes the product to resources based on IDs of resources.</li>
+<li>CapabilityRouter: Capability router routes the product to resources based on capabilites of processes.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.source_data.RoutingHeuristic" class="doc doc-heading">
+        <code>
+RoutingHeuristic            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the routing heuristic of a source.</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.source_data.SourceData" class="doc doc-heading">
+        <code>
+SourceData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a source.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Location of the source. It has to be a list of length 2.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>product_type</code></td>
+        <td><code>str</code></td>
+        <td><p>Product type of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>router</code></td>
+        <td><code>RouterType</code></td>
+        <td><p>Router of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>routing_heuristic</code></td>
+        <td><code>RoutingHeuristic</code></td>
+        <td><p>Routing heuristic of the source.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>output_queues</code></td>
+        <td><code>Optional[List[str]]</code></td>
+        <td><p>List of output queues of the source. Defaults to None.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>A source with ID "S1":
+``` py
+import prodsys
+prodsys.source_data.SourceData(
+    ID="S1",
+    description="Source 1",
+    location=[0.0, 0.0],
+    product_type="Product_1",
+    time_model_id="function_time_model_4",
+    router="SimpleRouter",
+    routing_heuristic="shortest_queue",
+    output_queues=["SourceQueue"],
+)</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.state_data" class="doc doc-heading">
+        <code>state_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>The <code>state_data</code> module contains the <code>prodsys.models</code> classes to represent the states that resources 
+can be in during a simulation.</p>
+<p>The following states are possible:</p>
+<ul>
+<li><code>BreakDownStateData</code>: A state that makes a resource unavailable for a certain time.</li>
+<li><code>ProcessBreakDownStateData</code>: A state that makes a process unavailable for a certain time but other processes can still be performed.</li>
+<li><code>SetupStateData</code>: A state that represents the time needed to change the process of a resource.</li>
+<li><code>ProductionStateData</code>: A state that represents the time needed to process a product.</li>
+<li><code>TransportStateData</code>: A state that represents the time needed to transport a product.     </li>
+</ul>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.BreakDownStateData" class="doc doc-heading">
+        <code>
+BreakDownStateData            (<a class="autorefs autorefs-internal" title="prodsys.models.state_data.StateData" href="#prodsys.models.state_data.StateData">StateData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a breakdown state.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state. Specifies the time interval between breakdowns.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>repair_time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the repair time.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Breakdown state with a function time model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">state_data</span><span class="o">.</span><span class="n">BreakDownStateData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Breakdownstate_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Breakdown state machine 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_5&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">repair_time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_8&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.ProcessBreakDownStateData" class="doc doc-heading">
+        <code>
+ProcessBreakDownStateData            (<a class="autorefs autorefs-internal" title="prodsys.models.state_data.StateData" href="#prodsys.models.state_data.StateData">StateData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a process breakdown state. It is a breakdown state that is connected to a process. Other processes can still be executed while the process breakdown state is activen.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>repair_time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the repair time.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>process_id</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the process that is broken down.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Process breakdown state with a function time model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">state_data</span><span class="o">.</span><span class="n">ProcessBreakDownStateData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;ProcessBreakDownState_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Process Breakdown state machine 1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_7&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">repair_time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_8&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">process_id</span><span class="o">=</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.ProductionStateData" class="doc doc-heading">
+        <code>
+ProductionStateData            (<a class="autorefs autorefs-internal" title="prodsys.models.state_data.StateData" href="#prodsys.models.state_data.StateData">StateData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a production state. By undergoing a production state, the product is processed and continues its process model. Production states don't have to be initialized because they are automatically created when a process is added to a resource.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.SetupStateData" class="doc doc-heading">
+        <code>
+SetupStateData            (<a class="autorefs autorefs-internal" title="prodsys.models.state_data.StateData" href="#prodsys.models.state_data.StateData">StateData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a setup state. By undergoing a setup state, the process is setup.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>origin_setup</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the origin process for the setup.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>target_setup</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the target process for the setup.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Setup state with a function time model:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">state_data</span><span class="o">.</span><span class="n">SetupStateData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;Setup_State_2&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Setup state machine 2&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">time_model_id</span><span class="o">=</span><span class="s2">&quot;function_time_model_2&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">origin_setup</span><span class="o">=</span><span class="s2">&quot;P2&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">target_setup</span><span class="o">=</span><span class="s2">&quot;P1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.StateData" class="doc doc-heading">
+        <code>
+StateData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a state.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.StateTypeEnum" class="doc doc-heading">
+        <code>
+StateTypeEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different kind of states.</p>
+<ul>
+<li>BreakDownState: A state that makes a resource unavailable for a certain time.</li>
+<li>ProductionState: A state that represents the time needed to process a product.</li>
+<li>TransportState: A state that represents the time needed to transport a product.</li>
+<li>SetupState: A state that represents the time needed to change the process of a resource.</li>
+<li>ProcessBreakDownState: A state that makes a process unavailable for a certain time but other processes can still be performed.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.state_data.TransportStateData" class="doc doc-heading">
+        <code>
+TransportStateData            (<a class="autorefs autorefs-internal" title="prodsys.models.state_data.StateData" href="#prodsys.models.state_data.StateData">StateData</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a transport state. By undergoing a transport state, the product is transported and its position is changed. Transport states don't have to be initialized because they are automatically created when a transport process is added to a resource.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>time_model_id</code></td>
+        <td><code>str</code></td>
+        <td><p>Time model ID of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td><code>StateTypeEnum</code></td>
+        <td><p>Type of the state.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.models.time_model_data" class="doc doc-heading">
+        <code>time_model_data</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+      <p>The <code>time_model</code> module contains classes to specify time models in the simulation for the arrival
+of products, performance of processes and transports and the duration of states.</p>
+<p>The following time models are possible:
+- <code>SequentialTimeModelData</code>: A time model that is based on a sequence of values.
+- <code>FunctionTimeModelData</code>: A time model that is based on a distribution function which gets sampled.
+- <code>ManhattanDistanceTimeModelData</code>: A time model that is based on the manhattan distance between two nodes and a constant velocity.</p>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.time_model_data.FunctionTimeModelData" class="doc doc-heading">
+        <code>
+FunctionTimeModelData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a time model that is based on a function and represents the timely values by their distribution function.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>distribution_function</code></td>
+        <td><code>FunctionTimeModelEnum</code></td>
+        <td><p>Zype of the distribution function of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>float</code></td>
+        <td><p>Location parameter of the distribution function.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>scale</code></td>
+        <td><code>float</code></td>
+        <td><p>Scale parameter of the distribution function.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Normal distribution time model with 20 minutes:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">time_model_data</span><span class="o">.</span><span class="n">FunctionTimeModelData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;function_time_model_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;normal distribution time model with 20 minutes&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">distribution_function</span><span class="o">=</span><span class="n">prodsys</span><span class="o">.</span><span class="n">FunctionTimeModelEnum</span><span class="o">.</span><span class="n">normal</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">location</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">scale</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.time_model_data.ManhattanDistanceTimeModelData" class="doc doc-heading">
+        <code>
+ManhattanDistanceTimeModelData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>speed</code></td>
+        <td><code>float</code></td>
+        <td><p>Speed of the transport.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>reaction_time</code></td>
+        <td><code>float</code></td>
+        <td><p>Reaction time of the transport.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Manhattan time model with speed 180 m/min = 3 m/s and reaction time 0.15 minutes:
+``` py
+import prodsys
+time_model_data.ManhattanDistanceTimeModelData(
+    ID="manhattan_time_model_1",
+    description="manhattan time model with speed 180 m/min = 3 m/s",
+    speed=180.0,
+    reaction_time=0.15,
+)</p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.time_model_data.SequentialTimeModelData" class="doc doc-heading">
+        <code>
+SequentialTimeModelData            (<a class="autorefs autorefs-internal" title="prodsys.models.core_asset.CoreAsset" href="#prodsys.models.core_asset.CoreAsset">CoreAsset</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Class that represents a time model that is based on a sequence of values.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>str</code></td>
+        <td><p>ID of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>str</code></td>
+        <td><p>Description of the time model.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>sequence</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>Sequence of time values.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Examples:</strong></p>
+    <p>Sequential time model with 7 time values:
+<div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">prodsys</span><span class="o">.</span><span class="n">time_model_data</span><span class="o">.</span><span class="n">SequentialTimeModelData</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;sequence_time_model_1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Examplary sequence time model&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">sequence</span><span class="o">=</span><span class="p">[</span><span class="mf">25.0</span><span class="p">,</span> <span class="mf">13.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">16.0</span><span class="p">,</span> <span class="mf">17.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">21.0</span><span class="p">],</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</span></code></pre></div></p>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.models.time_model_data.TimeModelEnum" class="doc doc-heading">
+        <code>
+TimeModelEnum            (<span title="str">str</span>, <span title="enum.Enum">Enum</span>)
+        </code>
+
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Enum that represents the different kind time models.</p>
+<ul>
+<li>HistoryTimeModel: A time model that is based on a sequence of values.</li>
+<li>FunctionTimeModel: A time model that is based on a distribution function which gets sampled.</li>
+<li>ManhattanDistanceTimeModel: A time model that is based on the manhattan distance between two nodes and a constant velocity.</li>
+</ul>
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.b4d07000.min.js"></script>
+      
+    
+  </body>
+</html>
