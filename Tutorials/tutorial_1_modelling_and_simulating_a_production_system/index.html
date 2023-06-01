@@ -657,7 +657,7 @@
 <li><strong>Sinks</strong>: Sinks store finished products.</li>
 <li><strong>Production system</strong>: The production system is the container for all components and is used to run the simulation.</li>
 </ul>
-<p>To make these concepts more understandable, we extend the example from the <a href="getting_started.md">getting started</a> section. The production system contains a milling machine, a turning lath and a work center that perform processes on aluminium housings. The transport is thereby performed by a worker.</p>
+<p>To make these concepts more understandable, we extend the example from the <a href="index.md">getting started</a> section. The production system contains a milling machine, a turning lath and a work center that perform processes on aluminium housings. The transport is thereby performed by a worker.</p>
 <p>We will start by importing the express API:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys.express</span> <span class="k">as</span> <span class="nn">psx</span>
 </span></code></pre></div>
@@ -763,7 +763,7 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">model_production_system</span> <span class="o">=</span> <span class="n">production_system</span><span class="o">.</span><span class="n">to_model</span><span class="p">()</span>
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">model_production_system</span><span class="o">.</span><span class="n">process_data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </span></code></pre></div>
-<p>For now, the express API allows all modeling features as the models API but the creation of products that require processes in a sequence according to an assembly precedence graph. This feature is only available in the models API. For more information, refer to the API reference in the documentation. However, using the algorithms provided by <code>prodsys</code> for optimizing or autonomously controlling a production system requires the models API. For a complete overview of the package's modelling functionalities, please see the <a href="API_reference/API_reference_0_overview.md">API reference</a>.</p>
+<p>For now, the express API allows all modeling features as the models API but the creation of products that require processes in a sequence according to an assembly precedence graph. This feature is only available in the models API. For more information, refer to the API reference in the documentation. However, using the algorithms provided by <code>prodsys</code> for optimizing or autonomously controlling a production system requires the models API. For a complete overview of the package's modelling functionalities, please see the <a href="/API_reference/API_reference_0_overview.md">API reference</a>.</p>
 
 
 
