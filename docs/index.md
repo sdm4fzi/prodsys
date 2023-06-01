@@ -63,9 +63,36 @@ production_system.run(60)
 production_system.runner.print_results()
 ```
 
-As we can see, the system produced 39 parts in this hour with an work in progress (WIP ~ number of products in the system) of 4.125 and utilized the milling machine with 79.69% and the worker for 78.57%.
+As we can see, the system produced 39 parts in this hour with an work in progress (WIP ~ number of products in the system) of 4.125 and utilized the milling machine with 79.69% and the worker for 78.57% at the PR percentage, the rest of the time, both resource are in standby (SB). Note that these results stay the same although there are stochastic processes in the simulation. This is caused by seeding the random number generator with a fixed value. If you want to get different results, just specify another value for `seed` parameter from the `run` method.
 
-Note, that this example only covers the most basic functionalities of `prodsys`. For more elaborate guides that cover more of the package's features, please see the [tutorials](Tutorials/tutorial_0_overview.md). For a complete overview of the package's functionality, please see the [API reference](API_reference/API_reference_0_overview.md).
+``` python
+production_system.run(60, seed=1)
+production_system.runner.print_results()
+```
+As expected, the performance of the production system changed quite strongly with the new parameters. The system now produces 26 parts in this hour with an work in progress (WIP ~ number of products in the system) of 1.68. As the arrival process of the housing is modelled by an exponential distribution and we only consider 60 minutes of simulation, this is absolutely expected. 
+
+However, running longer simulations with multiple seeds is absolutely easy with `prodsys`. We average our results at the end to calculate the WIP to expect by utilizing the post_processor of the runner, which stores all events of a simulation and has many useful methods for analyzing the simulation results:
+
+```python
+wip_values = []
+
+for seed in range(5):
+    production_system.run(2000, seed=seed)
+    run_wip = production_system.post_processor.get_aggregated_wip_data()
+    wip_values.append(run_wip)
+
+print("WIP values for the simulation runs:", wip_values)
+```
+
+We can analyze these results easily with numpy seeing that the average WIP is 2.835, which is in between the two first runs, which gives us a more realistic expectation of the system's performance.
+
+```python
+import numpy as np
+wip = np.array(wip_values).mean(axis=0)
+print(wip)
+```
+
+These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](Tutorials/tutorial_0_overview.md). For a complete overview of the package's functionality, please see the [API reference](API_reference/API_reference_0_overview.md).
 
 ## Contributing
 

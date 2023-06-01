@@ -23,4 +23,5 @@ dist/
 .python-version
 optimization_scenarios/
 .vscode/
+examples/tutorials/results/
 

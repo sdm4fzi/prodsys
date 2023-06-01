@@ -27,6 +27,7 @@ from prodsys.models import (
     scenario_data,
 )
 from prodsys.util.util import flatten
+from prodsys import optimization
 
 
 class BreakdownStateNamingConvention(str, Enum):
@@ -44,18 +45,28 @@ def get_breakdown_state_ids_of_machine_with_processes(
     return state_ids
 
 
-def clean_out_breakdown_states_of_resources(adapter_object: adapters.ProductionSystemAdapter):
+def clean_out_breakdown_states_of_resources(
+    adapter_object: adapters.ProductionSystemAdapter,
+):
     for resource in adapter_object.resource_data:
-        if isinstance(resource, resource_data.ProductionResourceData):
+        if isinstance(resource, resource_data.ProductionResourceData) and any(
+            True
+            for state in adapter_object.resource_data
+            if state.ID == BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
+            or state.ID == BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
+        ):
             resource.state_ids = get_breakdown_state_ids_of_machine_with_processes(
                 resource.process_ids
             )
-        elif isinstance(resource, resource_data.TransportResourceData):
+        elif isinstance(resource, resource_data.TransportResourceData) and any(
+            True
+            for state in adapter_object.state_data
+            if state.ID
+            == BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
+        ):
             resource.state_ids = [
                 BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
             ]
-        else:
-            raise ValueError("unknown type of resource for breakdown state handling")
 
 
 def get_weights(
@@ -109,11 +120,15 @@ def crossover(ind1, ind2):
     add_default_queues_to_resources(adapter2)
     clean_out_breakdown_states_of_resources(adapter1)
     clean_out_breakdown_states_of_resources(adapter2)
+    adjust_process_capacities(adapter1)
+    adjust_process_capacities(adapter2)
 
     return ind1, ind2
 
 
-def get_mutation_operations(adapter_object: adapters.ProductionSystemAdapter) -> List[Callable[[adapters.ProductionSystemAdapter], bool]]:
+def get_mutation_operations(
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> List[Callable[[adapters.ProductionSystemAdapter], bool]]:
     mutations_operations = []
     transformations = adapter_object.scenario_data.options.transformations
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
@@ -141,8 +156,9 @@ def mutation(individual):
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
         individual[0].ID = ""
-    add_default_queues_to_resources(individual[0])
+    add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
+    adjust_process_capacities(adapter_object)
 
     return (individual,)
 
@@ -203,7 +219,9 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def add_setup_states_to_machine(adapter_object: adapters.ProductionSystemAdapter, machine_id: str):
+def add_setup_states_to_machine(
+    adapter_object: adapters.ProductionSystemAdapter, machine_id: str
+):
     machine = next(
         resource
         for resource in adapter_object.resource_data
@@ -216,9 +234,14 @@ def add_setup_states_to_machine(adapter_object: adapters.ProductionSystemAdapter
             if not isinstance(state, state_data.SetupStateData)
         ]
     )
-    machine.state_ids = [state for state in machine.state_ids if state in no_setup_state_ids]
+    machine.state_ids = [
+        state for state in machine.state_ids if state in no_setup_state_ids
+    ]
     for state in adapter_object.state_data:
-        if not isinstance(state, state_data.SetupStateData) or state in machine.state_ids:
+        if (
+            not isinstance(state, state_data.SetupStateData)
+            or state in machine.state_ids
+        ):
             continue
         if (
             state.origin_setup in machine.process_ids
@@ -620,10 +643,10 @@ def get_random_control_policies(
 ) -> adapters.ProductionSystemAdapter:
     """
     Function that randomly assigns control policies to the machines and transport resources of the production system.
-    
+
     Args:
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
-        
+
     Returns:
         adapters.ProductionSystemAdapter: Production system configuration with specified scenario data and assigned control policies.
     """
@@ -661,7 +684,10 @@ def get_random_routing_logic(
         source.routing_heuristic = random.choice(possible_routing_logics)
     return adapter_object
 
-def random_configuration_with_initial_solution(initial_adapters: List[adapters.ProductionSystemAdapter]) -> adapters.ProductionSystemAdapter:
+
+def random_configuration_with_initial_solution(
+    initial_adapters: List[adapters.ProductionSystemAdapter],
+) -> adapters.ProductionSystemAdapter:
     """
     Function that creates a random configuration based on an list of initial solutions.
 
@@ -675,7 +701,25 @@ def random_configuration_with_initial_solution(initial_adapters: List[adapters.P
     return random_configuration(adapter_object)
 
 
-def random_configuration(baseline: adapters.ProductionSystemAdapter) -> adapters.ProductionSystemAdapter:
+def adjust_process_capacities(
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> adapters.ProductionSystemAdapter:
+    """
+    Function that adjusts the process capacities of the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Production system configuration with adjusted process capacities.
+    """
+    for resource in adapter_object.resource_data:
+        resource.process_capacities = [resource.capacity] * len(resource.process_ids)
+
+
+def random_configuration(
+    baseline: adapters.ProductionSystemAdapter,
+) -> adapters.ProductionSystemAdapter:
     """
     Function that creates a random configuration based on a baseline configuration.
 
@@ -709,18 +753,21 @@ def random_configuration(baseline: adapters.ProductionSystemAdapter) -> adapters
 
         add_default_queues_to_resources(adapter_object)
         clean_out_breakdown_states_of_resources(adapter_object)
+        adjust_process_capacities(adapter_object)
         if check_valid_configuration(adapter_object, baseline):
             break
 
     return adapter_object
 
+
 def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
     if (
         len(adapters.get_machines(configuration))
         > configuration.scenario_data.constraints.max_num_machines
-    ):  
+    ):
         return False
     return True
+
 
 def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) -> bool:
     if (
@@ -729,6 +776,7 @@ def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) ->
     ) or (len(adapters.get_transport_resources(configuration)) == 0):
         return False
     return True
+
 
 def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -> bool:
     for resource in configuration.resource_data:
@@ -739,9 +787,10 @@ def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -
                 )
             )
             > configuration.scenario_data.constraints.max_num_processes_per_machine
-        ):  
+        ):
             return False
     return True
+
 
 def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
     if not check_redudant_locations(configuration):
@@ -753,7 +802,11 @@ def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
         return False
     return True
 
-def valid_reconfiguration_cost(configuration: adapters.ProductionSystemAdapter, base_configuration: adapters.ProductionSystemAdapter) -> bool:
+
+def valid_reconfiguration_cost(
+    configuration: adapters.ProductionSystemAdapter,
+    base_configuration: adapters.ProductionSystemAdapter,
+) -> bool:
     reconfiguration_cost = get_reconfiguration_cost(
         adapter_object=configuration,
         baseline=base_configuration,
@@ -766,6 +819,7 @@ def valid_reconfiguration_cost(configuration: adapters.ProductionSystemAdapter, 
     ):
         return False
     return True
+
 
 def check_valid_configuration(
     configuration: adapters.ProductionSystemAdapter,
@@ -871,16 +925,9 @@ def evaluate(
                 and not generation == current_generation
                 and adapter_object.ID in solution_dict[generation]
             ):
-                print(
-                    "solution from generation ",
-                    generation,
-                    "with name:",
-                    adapter_object.ID,
-                )
                 return performances[generation][adapter_object.ID]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
-        print("invalid configuration")
         return [-100000 * weight for weight in get_weights(base_scenario, "max")]
 
     runner_object = runner.Runner(adapter=adapter_object)

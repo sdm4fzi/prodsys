@@ -1,7 +1,6 @@
 import json
 import time
 from random import random
-import multiprocessing
 from typing import List
 from functools import partial
 import warnings
@@ -25,10 +24,18 @@ from prodsys.optimization.optimization_util import (
     document_individual,
     get_weights,
 )
-from prodsys.util.util import set_seed, read_initial_solutions
+from prodsys.util.util import set_seed, read_initial_solutions, run_from_ipython
+from prodsys import optimization
 
+
+
+if run_from_ipython():
+    from multiprocessing.pool import ThreadPool as Pool
+else:
+    from multiprocessing.pool import Pool
 
 sim.VERBOSE = 1
+
 
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -77,9 +84,7 @@ def register_functions_in_toolbox(
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
 
-    # toolbox.register('select', tools.selTournament, tournsize=3)
     toolbox.register("select", tools.selNSGA2)
-    # toolbox.register('select', tools.selNSGA3)
 
     return toolbox
 
@@ -100,11 +105,12 @@ def save_population_results(
             "time_stamp": time.perf_counter() - start,
         }
 
-    print("Best Performance: ", max(generation_performances))
-    print(
-        "Average Performance: ",
-        sum(generation_performances) / len(generation_performances),
-    )
+    if optimization.VERBOSE:
+        print("Best Performance: ", max(generation_performances))
+        print(
+            "Average Performance: ",
+            sum(generation_performances) / len(generation_performances),
+        )
 
 
 def run_evolutionary_algorithm(
@@ -134,65 +140,23 @@ def run_evolutionary_algorithm(
         n_processes (int): Number of processes to use for parallelization.
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 
-    set_seed(seed)
-
-    weights = get_weights(base_configuration, "max")
-
-    solution_dict = {"current_generation": "0", "0": []}
-    performances = {}
-    performances["0"] = {}
-    start = time.perf_counter()
-
-    toolbox = register_functions_in_toolbox(
-        base_configuration=base_configuration,
-        solution_dict=solution_dict,
-        performances=performances,
-        weights=weights,
-        initial_solutions_folder=initial_solutions_folder,
+    hyper_parameters = EvolutionaryAlgorithmHyperparameters(
+        seed=seed,
+        number_of_generations=ngen,
+        population_size=population_size,
+        mutation_rate=mutation_rate,
+        crossover_rate=crossover_rate,
+        number_of_processes=n_processes,
     )
 
-    population = toolbox.population(n=population_size)
-
-    pool = multiprocessing.Pool(n_processes)
-    toolbox.register("map", pool.map)
-
-    fitnesses = toolbox.map(toolbox.evaluate, population)
-    save_population_results(
-        population, fitnesses, solution_dict, performances, save_folder, start
+    evolutionary_algorithm_optimization(
+        base_configuration,
+        hyper_parameters,
+        save_folder
     )
-
-    population = toolbox.select(population, len(population))
-
-    for g in range(ngen):
-        current_generation = g + 1
-        print("Generation", current_generation, "________________")
-        solution_dict["current_generation"] = str(current_generation)
-        solution_dict[str(current_generation)] = []
-        performances[str(current_generation)] = {}
-
-        # Vary population
-        offspring = tools.selTournamentDCD(population, len(population))
-        offspring = [toolbox.clone(ind) for ind in offspring]
-        offspring = algorithms.varAnd(
-            offspring, toolbox, cxpb=crossover_rate, mutpb=mutation_rate
-        )
-
-        # Evaluate the individuals
-        fitnesses = toolbox.map(toolbox.evaluate, offspring)
-        save_population_results(
-            offspring, fitnesses, solution_dict, performances, save_folder, start
-        )
-
-        population = toolbox.select(population + offspring, population_size)
-
-        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
-            json.dump(performances, json_file)
-    pool.close()
 
 
 class EvolutionaryAlgorithmHyperparameters(BaseModel):
@@ -257,3 +221,83 @@ def optimize_configuration(
         hyper_parameters.crossover_rate,
         hyper_parameters.number_of_processes,
     )
+
+from prodsys.util import util
+
+def evolutionary_algorithm_optimization(
+        base_configuration: adapters.ProductionSystemAdapter,
+        hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+        save_folder: str = "results",
+        initial_solutions_folder: str = "",
+):
+    """
+    Optimize a production system configuration using an evolutionary algorithm.
+
+    Args:
+        base_configuration (adapters.ProductionSystemAdapter): production system to optimize.
+        hyper_parameters (EvolutionaryAlgorithmHyperparameters): Hyperparameters for configuration optimization using an evolutionary algorithm.
+        save_folder (str): Folder to save the results in. Defaults to "results".
+        initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
+    """
+    base_configuration = base_configuration.copy(deep=True)
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+
+    util.prepare_save_folder(save_folder + "/")
+    set_seed(hyper_parameters.seed)
+
+    weights = get_weights(base_configuration, "max")
+
+    solution_dict = {"current_generation": "0", "0": []}
+    performances = {}
+    performances["0"] = {}
+    start = time.perf_counter()
+
+    toolbox = register_functions_in_toolbox(
+        base_configuration=base_configuration,
+        solution_dict=solution_dict,
+        performances=performances,
+        weights=weights,
+        initial_solutions_folder=initial_solutions_folder,
+    )
+
+    population = toolbox.population(n=hyper_parameters.population_size)
+
+    pool = Pool(hyper_parameters.number_of_processes)
+    toolbox.register("map", pool.map)
+
+    fitnesses = toolbox.map(toolbox.evaluate, population)
+    save_population_results(
+        population, fitnesses, solution_dict, performances, save_folder, start
+    )
+
+    population = toolbox.select(population, len(population))
+
+    for g in range(hyper_parameters.number_of_generations):
+        current_generation = g + 1
+        optimization.VERBOSE = True
+        if optimization.VERBOSE:
+            print("Generation", current_generation, "________________")
+        solution_dict["current_generation"] = str(current_generation)
+        solution_dict[str(current_generation)] = []
+        performances[str(current_generation)] = {}
+
+        # Vary population
+        offspring = tools.selTournamentDCD(population, len(population))
+        offspring = [toolbox.clone(ind) for ind in offspring]
+        offspring = algorithms.varAnd(
+            offspring, toolbox, cxpb=hyper_parameters.crossover_rate, mutpb=hyper_parameters.mutation_rate
+        )
+
+        # Evaluate the individuals
+        fitnesses = toolbox.map(toolbox.evaluate, offspring)
+        save_population_results(
+            offspring, fitnesses, solution_dict, performances, save_folder, start
+        )
+
+        population = toolbox.select(population + offspring, hyper_parameters.population_size)
+
+        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
+            json.dump(performances, json_file)
+    pool.close()
+

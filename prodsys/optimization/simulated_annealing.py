@@ -99,8 +99,6 @@ def run_simulated_annealing(
         updates (int): Number of updates
         initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 
@@ -110,31 +108,15 @@ def run_simulated_annealing(
     else:
         initial_solution = base_configuration.copy(deep=True)
 
-    set_seed(seed)
+    hyper_parameters = SimulatedAnnealingHyperparameters(
+        seed=seed, Tmax=Tmax, Tmin=Tmin, steps=steps, updates=updates)
 
-    weights = get_weights(base_configuration, "min")
-
-    solution_dict = {"current_generation": "0", "0": []}
-    performances = {}
-    performances["0"] = {}
-    start = time.perf_counter()
-
-    pso = ProductionSystemOptimization(
+    simulated_annealing_optimization(
         base_configuration=base_configuration,
+        hyper_parameters=hyper_parameters,
         save_folder=save_folder,
-        performances=performances,
-        solutions_dict=solution_dict,
-        start=start,
-        weights=weights,
-        initial_solution=initial_solution,
+        initial_solution=initial_solution        
     )
-
-    pso.Tmax = Tmax
-    pso.Tmin = Tmin
-    pso.steps = steps
-    pso.updates = updates
-
-    internary, performance = pso.anneal()
 
 
 class SimulatedAnnealingHyperparameters(BaseModel):
@@ -166,6 +148,53 @@ class SimulatedAnnealingHyperparameters(BaseModel):
                 },
             }
         }
+
+
+def simulated_annealing_optimization(
+    base_configuration: adapters.ProductionSystemAdapter,
+    hyper_parameters: SimulatedAnnealingHyperparameters,
+    save_folder: str="results",
+    initial_solution: adapters.ProductionSystemAdapter = None,
+):
+    """
+    Optimize a production system configuration using simulated anealing.
+
+    Args:
+        base_configuration (adapters.ProductionSystemAdapter): production system to optimize.
+        hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters for simulated annealing.
+        save_folder (str): Folder to save the results in. Defaults to "results".
+        initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
+    """
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    if not initial_solution:
+        initial_solution = base_configuration.copy(deep=True)
+
+    set_seed(hyper_parameters.seed)
+
+    weights = get_weights(base_configuration, "min")
+
+    solution_dict = {"current_generation": "0", "0": []}
+    performances = {}
+    performances["0"] = {}
+    start = time.perf_counter()
+
+    pso = ProductionSystemOptimization(
+        base_configuration=base_configuration,
+        save_folder=save_folder,
+        performances=performances,
+        solutions_dict=solution_dict,
+        start=start,
+        weights=weights,
+        initial_solution=initial_solution,
+    )
+
+    pso.Tmax = hyper_parameters.Tmax
+    pso.Tmin = hyper_parameters.Tmin
+    pso.steps = hyper_parameters.steps
+    pso.updates = hyper_parameters.updates
+
+    internary, performance = pso.anneal()
 
 
 def optimize_configuration(

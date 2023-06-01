@@ -151,8 +151,6 @@ def run_tabu_search(
         max_score (_type_): Maximum score to stop optimization.
         initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
 
@@ -162,7 +160,67 @@ def run_tabu_search(
     else:
         initial_solution = base_configuration.copy(deep=True)
 
-    set_seed(seed)
+    hyper_parameters = TabuSearchHyperparameters(
+        seed=seed, tabu_size=tabu_size, max_steps=max_steps, max_score=max_score
+    )
+    tabu_search_optimization(
+        base_configuration=base_configuration,
+        hyper_parameters=hyper_parameters,
+        save_folder=save_folder,
+        initial_solution=initial_solution,
+    )
+
+    
+
+class TabuSearchHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization with tabu search.
+
+
+    Args:
+        seed (int): Seed for random number generator
+        tabu_size (int): Size of tabu list
+        max_steps (int): Maximum number of steps
+        max_score (float): Maximum score
+    """
+
+    seed: int = 0
+    tabu_size: int = 10
+    max_steps: int = 300
+    max_score: float = 500
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Tabu Search Hyperparameters",
+                "value": {
+                    "seed": 0,
+                    "tabu_size": 10,
+                    "max_steps": 300,
+                    "max_score": 500,
+                },
+            }
+        }
+
+def tabu_search_optimization(
+        base_configuration: adapters.ProductionSystemAdapter,
+        hyper_parameters: TabuSearchHyperparameters,
+        save_folder: str,
+        initial_solution: adapters.ProductionSystemAdapter = None,
+):
+    """
+    Optimize a production system configuration using tabu search.
+
+    Args:
+        base_configuration (adapters.ProductionSystemAdapter): production system to optimize.
+        hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters for tabu search.
+        save_folder (str): Folder to save the results in. Defaults to "results".
+        initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
+    """
+    adapters.ProductionSystemAdapter.Config.validate = False
+    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+
+    set_seed(hyper_parameters.seed)
 
     weights = get_weights(base_configuration, "max")
 
@@ -212,43 +270,13 @@ def run_tabu_search(
 
     alg = Algorithm(
         initial_state=initial_solution,
-        tabu_size=tabu_size,
-        max_steps=max_steps,
-        max_score=max_score,
+        tabu_size=hyper_parameters.tabu_size,
+        max_steps=hyper_parameters.max_steps,
+        max_score=hyper_parameters.max_score,
     )
     best_solution, best_objective_value = alg.run()
     print("Best solution: ", best_objective_value)
 
-
-class TabuSearchHyperparameters(BaseModel):
-    """
-    Hyperparameters for configuration optimization with tabu search.
-
-
-    Args:
-        seed (int): Seed for random number generator
-        tabu_size (int): Size of tabu list
-        max_steps (int): Maximum number of steps
-        max_score (float): Maximum score
-    """
-
-    seed: int = 0
-    tabu_size: int = 10
-    max_steps: int = 300
-    max_score: float = 500
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Tabu Search Hyperparameters",
-                "value": {
-                    "seed": 0,
-                    "tabu_size": 10,
-                    "max_steps": 300,
-                    "max_score": 500,
-                },
-            }
-        }
 
 
 def optimize_configuration(

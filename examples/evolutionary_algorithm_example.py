@@ -1,6 +1,6 @@
 from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorithm
 
-seed = 22
+seed = 23
 NGEN = 9
 POPULATION_SIZE = 8
 N_PROCESSES = 8

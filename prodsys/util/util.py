@@ -144,4 +144,18 @@ def flatten_object(xs: list) -> list:
             yield x
 
 
+def run_from_ipython() -> bool:
+    """
+    Checks if the code is run from an ipython notebook.
+
+    Returns:
+        bool: True if run from ipython notebook, False otherwise.
+    """
+    try:
+        __IPYTHON__ # type: ignore
+        return True
+    except NameError:
+        return False
+
+
 

@@ -7,7 +7,14 @@ from typing import Any, TYPE_CHECKING
 import numpy as np
 from simpy import core
 from simpy import events
-from tqdm import tqdm
+
+
+from prodsys.util import util
+
+if util.run_from_ipython():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 # from .factories import state_factory, time_model_factory
 

@@ -535,16 +535,16 @@ def run_mathematical_optimization(
     adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     util.prepare_save_folder(save_folder)
-    model = MathOptimizer(
-        adapter=adapter, optimization_time_portion=optimization_time_portion
-    )
-    model.optimize(n_solutions=number_of_solutions)
-    model.save_model(save_folder=save_folder)
-    model.save_results(
-        save_folder=save_folder,
+    hypter_parameters = MathOptHyperparameters(
+        optimization_time_portion=optimization_time_portion,
+        number_of_solutions=number_of_solutions,
         adjusted_number_of_transport_resources=adjusted_number_of_transport_resources,
     )
-
+    mathematical_optimization(
+        adapter,
+        hypter_parameters,
+        save_folder,
+    )
 
 class MathOptHyperparameters(BaseModel):
     """
@@ -572,6 +572,31 @@ class MathOptHyperparameters(BaseModel):
                 },
             }
         }
+
+
+def mathematical_optimization(
+    base_configuration: adapters.ProductionSystemAdapter,
+    hyper_parameters: MathOptHyperparameters,
+    save_folder: str = "results",
+):
+    """
+    Optimize the configuration of the production system with mathematical optimization.
+
+    Args:
+        base_configuration (adapters.ProductionSystemAdapter): Base configuration for the optimization.
+        hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
+        save_folder (str, optional): Folder to save the results in. Defaults to "results".
+    """
+    util.prepare_save_folder(save_folder)
+    model = MathOptimizer(
+        adapter=base_configuration, optimization_time_portion=hyper_parameters.optimization_time_portion
+    )
+    model.optimize(n_solutions=hyper_parameters.number_of_solutions)
+    model.save_model(save_folder=save_folder)
+    model.save_results(
+        save_folder=save_folder,
+        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
+    )
 
 
 def optimize_configuration(
