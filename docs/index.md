@@ -69,7 +69,8 @@ As we can see, the system produced 39 parts in this hour with an work in progres
 production_system.run(60, seed=1)
 production_system.runner.print_results()
 ```
-As expected, the performance of the production system changed quite strongly with the new parameters. The system now produces 26 parts in this hour with an work in progress (WIP ~ number of products in the system) of 1.68. As the arrival process of the housing is modelled by an exponential distribution and we only consider 60 minutes of simulation, this is absolutely expected. 
+
+As expected, the performance of the production system changed quite strongly with the new parameters. The system now produces 26 parts in this hour with an work in progress (WIP ~ number of products in the system) of 1.68. As the arrival process of the housing is modelled by an exponential distribution and we only consider 60 minutes of simulation, this is absolutely expected.
 
 However, running longer simulations with multiple seeds is absolutely easy with `prodsys`. We average our results at the end to calculate the WIP to expect by utilizing the post_processor of the runner, which stores all events of a simulation and has many useful methods for analyzing the simulation results:
 

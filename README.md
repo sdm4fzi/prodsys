@@ -1,6 +1,6 @@
 # prodsys
 
-prodsys is a python package for modeling, simulating, and optimizing production systems based on the product, process and resource (PPR) modelling principle.
+prodsys is a python package for modeling, simulating, and optimizing production systems based on the product, process and resource (PPR) modelling principle. Have a look at the [documentation](https://sdm4fzi.github.io/prodsys/) for more information.
 
 ## Installation
 
@@ -93,7 +93,9 @@ wip = np.array(wip_values).mean(axis=0)
 print(wip)
 ```
 
-These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](Tutorials/tutorial_0_overview.md). For a complete overview of the package's functionality, please see the [API reference](API_reference/API_reference_0_overview.md).
+These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](https://sdm4fzi.github.io/prodsys/Tutorials/tutorial_0_overview). For a complete overview of the package's functionality, please see the [API reference](https://sdm4fzi.github.io/prodsys/API_reference/API_reference_0_overview/).
+
+
 
 ## Contributing
 

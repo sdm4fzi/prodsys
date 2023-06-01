@@ -141,4 +141,4 @@ runner.print_results()
 
 When comparing the results from the original production system and the new one, we see that a machine was added. However, the machines are still heavily utilized. Most likely, the optimizer did just not find a good solution, because we only ran it for 10 generations and for a small population size. Increasing these will take longer, but will more likely find better solutions.
 
-For a complete overview of the package's functionality, please see the [API reference](API_reference/API_reference_0_overview.md).
+For a complete overview of the package's functionality, please see the [API reference](/API_reference/API_reference_0_overview.md).
