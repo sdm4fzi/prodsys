@@ -95,8 +95,6 @@ print(wip)
 
 These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](https://sdm4fzi.github.io/prodsys/Tutorials/tutorial_0_overview). For a complete overview of the package's functionality, please see the [API reference](https://sdm4fzi.github.io/prodsys/API_reference/API_reference_0_overview/).
 
-
-
 ## Contributing
 
 `prodsys` is a new project and has therefore much room for improvement. Therefore, it would be a pleasure to get feedback or support! If you want to contribute to the package, either create issues on [prodsys' github page](https://github.com/sdm4fzi/prodsys) for discussing new features or contact me directly via [github](https://github.com/SebBehrendt) or [email](mailto:sebastian.behrendt@kit.edu).
