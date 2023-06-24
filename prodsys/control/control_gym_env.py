@@ -134,8 +134,6 @@ class AbstractControlEnv(gym.Env, ABC):
         )
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
-        queue_situation = self.resource.input_queues[0].items[0]
-        print("Reset done", queue_situation)
         self.interrupt_simulation_event = events.Event(self.runner.env)
 
         observation = self.get_observation()
@@ -156,7 +154,9 @@ class AbstractControlEnv(gym.Env, ABC):
         Returns:
             Tuple[np.ndarray, float, bool, dict]: The observation, reward, done, and info.
         """
+        # TODO: implement action masking here!
         queue_index = np.argmax(action)
+
         if queue_index >= len(self.resource_controller.requests):
             queue_index = np.random.choice(
                 [i for i in range(len(self.resource_controller.requests))]
@@ -168,7 +168,6 @@ class AbstractControlEnv(gym.Env, ABC):
             invalid_action = False
 
         self.resource_controller.requests.insert(0, to_process)
-
         self.runner.env.run_until(until=self.interrupt_simulation_event)
         self.step_count += 1
         self.interrupt_simulation_event = events.Event(self.runner.env)
