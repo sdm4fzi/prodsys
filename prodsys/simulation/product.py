@@ -155,9 +155,12 @@ class Product(BaseModel):
     transport_process: process.TransportProcess
     product_router: router.Router
 
-    next_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
+    next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
-    next_resource: Location = Field(default=None, init=False)
+    next_production_resource: Location = Field(default=None, init=False)
+    next_production_resources: List[resources.ProductionResource] = Field(default=None, init=False)
+    next_transport_resource: Optional[resources.TransportResource] = Field(default=None, init=False)
+    next_transport_resources: List[resources.TransportResource] = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
 
@@ -167,17 +170,17 @@ class Product(BaseModel):
     def process_product(self):
         self.finished_process = events.Event(self.env)
         self.product_info.log_create_product(
-            resource=self.next_resource, _product=self, event_time=self.env.now
+            resource=self.next_production_resource, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
         """
         yield self.env.process(self.transport_to_queue_of_resource())
-        while self.next_process:
+        while self.next_prodution_process:
             self.request_process()
             yield self.finished_process
             self.product_info.log_end_process(
-                resource=self.next_resource,
+                resource=self.next_production_resource,
                 _product=self,
                 event_time=self.env.now,
                 state_type=state.StateTypeEnum.production,
@@ -185,20 +188,20 @@ class Product(BaseModel):
             self.finished_process = events.Event(self.env)
             yield self.env.process(self.transport_to_queue_of_resource())
         self.product_info.log_finish_product(
-            resource=self.next_resource, _product=self, event_time=self.env.now
+            resource=self.next_production_resource, _product=self, event_time=self.env.now
         )
-        self.next_resource.register_finished_product(self)
+        self.next_production_resource.register_finished_product(self)
 
     def request_process(self) -> None:
         """
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
         """
-        if self.next_process:
+        if self.next_prodution_process:
             self.env.request_process_of_resource(
                 request.Request(
-                    process=self.next_process,
+                    process=self.next_prodution_process,
                     product=self,
-                    resource=self.next_resource,
+                    resource=self.next_production_resource,
                 )
             )
 
@@ -226,29 +229,32 @@ class Product(BaseModel):
             )
         )
 
-    def set_next_process(self):
+    def set_next_production_process(self):
         """
         Sets the next process of the product object based on the current state of the product and its process model.
         """
         next_possible_processes = self.process_model.get_next_possible_processes()
         if not next_possible_processes:
-            self.next_process = None
+            self.next_prodution_process = None
         else:
-            self.next_process = np.random.choice(next_possible_processes)  # type: ignore
-            self.process_model.update_marking_from_transition(self.next_process)  # type: ignore
+            self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
+            self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
 
     def transport_to_queue_of_resource(self):
         """
         Simpy process that transports the product object to the queue of the next resource.
         """
-        origin_resource = self.next_resource
-        transport_resource = self.product_router.get_next_resource(
-            self.transport_process
+        origin_resource = self.next_production_resource
+        self.product_router.set_next_transport_resources(
+            self
         )
         yield self.env.timeout(0)
-        self.set_next_process()
-        yield self.env.process(self.set_next_resource())
-        self.request_transport(transport_resource, origin_resource, self.next_resource)  # type: ignore False
+        transport_resource = self.next_transport_resources.pop(0)
+        if not transport_resource:
+            raise ValueError("No transport resource found.")
+        self.set_next_production_process()
+        yield self.env.process(self.set_next_production_resource())
+        self.request_transport(transport_resource, origin_resource, self.next_production_resource)  # type: ignore False
         yield self.finished_process
         self.product_info.log_end_process(
             resource=transport_resource,
@@ -258,40 +264,40 @@ class Product(BaseModel):
         )
         self.finished_process = events.Event(self.env)
 
-    def set_next_resource(self):
+    def set_next_production_resource(self):
         """
         Sets the next resource of the product object based on the current state of the product and its process model.
         If no production process is required, the next resource is set to the sink of the product type.
         If no resource can be found with a free input queue, the product object waits until a resource is free.
         """
-        if not self.next_process:
-            self.next_resource = self.product_router.get_sink(
+        if not self.next_prodution_process:
+            self.next_production_resource = self.product_router.get_sink(
                 self.product_data.product_type
             )
         else:
-            self.next_resource = self.product_router.get_next_resource(
-                self.next_process
-            )
+
             while True:
-                if self.next_resource is not None and isinstance(
-                    self.next_resource, resources.ProductionResource
-                ):
-                    self.next_resource.reserve_input_queues()
-                    yield self.env.timeout(0)
-                    break
+                self.product_router.set_next_production_resources(
+                    self
+                )
+                yield self.env.timeout(0)
+                if self.next_production_resources and all(isinstance(
+                    next_resource, resources.ProductionResource
+                ) for next_resource in self.next_production_resources): 
+                    self.next_production_resource = self.next_production_resources.pop(0)
+                    if not any(q.full for q in self.next_production_resource.input_queues):
+                        self.next_production_resource.reserve_input_queues()
+                        break
                 resource_got_free_events = [
                     resource.got_free
                     for resource in self.product_router.get_possible_resources(
-                        self.next_process
+                        self.next_prodution_process
                     )
                 ]
                 yield events.AnyOf(self.env, resource_got_free_events)
                 for resource in self.product_router.get_possible_resources(
-                    self.next_process
+                    self.next_prodution_process
                 ):
                     if resource.got_free.triggered:
                         resource.got_free = events.Event(self.env)
 
-                self.next_resource = self.product_router.get_next_resource(
-                    self.next_process
-                )

@@ -485,7 +485,7 @@ class PostProcessor:
             )
         return KPIs
 
-    def get_WIP_KPI(self, df) -> pd.DataFrame:
+    def get_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         CREATED_CONDITION = df["Activity"] == "created product"
         FINISHED_CONDITION = df["Activity"] == "finished product"
 
@@ -526,6 +526,41 @@ class PostProcessor:
             df_temp = self.get_WIP_KPI(df_temp)
 
             df = df.combine_first(df_temp)
+
+        return df
+    
+    def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        CREATED_CONDITION = df["Activity"] == "created product"
+        FINISHED_CONDITION = df["Activity"] == "finished product"
+
+        df["WIP_Increment"] = 0
+        df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
+        df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
+        df.loc[CREATED_CONDITION | FINISHED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION | FINISHED_CONDITION, "Resource"]
+        
+        MOVE_AWAY_CONDITION = (df["Empty Transport"] == False) & (df["Activity"] == "start state")
+        MOVE_IN_CONDITION = (df["Empty Transport"] == False) & (df["Activity"] == "end state")
+
+        df.loc[MOVE_AWAY_CONDITION, "WIP_Increment"] = -1
+        df.loc[MOVE_AWAY_CONDITION, "WIP_resource"] = df.loc[MOVE_AWAY_CONDITION, "Origin location"]
+        df.loc[MOVE_IN_CONDITION, "WIP_Increment"] = 1
+        df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[MOVE_IN_CONDITION, "Target location"]
+
+        df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
+
+        return df
+    
+    @cached_property
+    def df_WIP_per_resource(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each resource.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each resource.
+        """
+        df = self.df_resource_states.copy()
+        # df = self.get_df_with_product_entries(df).copy()
+        df = self.get_WIP_per_resource_KPI(df)
 
         return df
     

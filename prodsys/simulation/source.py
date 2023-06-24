@@ -69,7 +69,7 @@ class Source(BaseModel):
             yield events.AllOf(self.env, available_events_events)
 
             product.process = self.env.process(product.process_product())
-            product.next_resource = self
+            product.next_production_resource = self
 
     def get_location(self) -> List[float]:
         """

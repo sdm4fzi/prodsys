@@ -6,7 +6,6 @@ import time
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
-
 from stable_baselines3.common.callbacks import BaseCallback
 
 import numpy as np
@@ -14,11 +13,11 @@ import numpy as np
 from gymnasium import spaces
 
 import prodsys
-from prodsys.control import control_gym_env
+from prodsys.control import sequencing_control_env
 from prodsys.simulation import request
 
 
-class ProductionControlEnv(control_gym_env.AbstractControlEnv):
+class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
     def get_observation(self) -> np.ndarray:
         """
         Function that utilizes the ResourceObserver of the environment class to get an array of observations of processes performed by the resource and in the queue of the resource. The observatino has a dimension CxP, where c is the capacity of resource and queue and P the number of processes.
@@ -64,17 +63,17 @@ class ProductionControlEnv(control_gym_env.AbstractControlEnv):
     
     def get_reward(self, processed_request: request.Request, invalid_action: bool = False) -> float:
         if invalid_action:
-            return -1
+            reward = -1
         else:
-            setup_sparse_reward = (
+            reward = (
                 self.resource.current_setup is None
                 or processed_request.process.process_data.ID
                 == self.resource.current_setup.process_data.ID
             )
-            if self.step_count % 10 == 0:
-                return self.resource.input_queues[0].capacity - len(self.resource_controller.requests) + setup_sparse_reward 
-            else:
-                return setup_sparse_reward
+        if self.step_count % 10 == 0:
+            reward += self.resource.input_queues[0].capacity - len(self.resource_controller.requests) 
+        
+        return reward
 
 
 
@@ -89,9 +88,7 @@ class TensorboardCallback(BaseCallback):
 
     def _on_step(self) -> bool:                
         self.logger.record('reward', self.training_env.get_attr('reward')[0])
-        self.logger.record('step_count', self.training_env.get_attr('step_count')[0])
         self.logger.record('time', self.training_env.get_attr('runner')[0].env.now)
-
         return True
 
 if __name__ == '__main__':
@@ -105,7 +102,7 @@ if __name__ == '__main__':
     action_space = spaces.Box(0, 1, shape=(queue.capacity,), dtype=float)
     env = ProductionControlEnv(adapter, "R2", observation_space=observation_space, action_space=action_space, render_mode="human")
     
-    tmp_path = os.getcwd() + "/tensorboard_log/sb3_log" + time.strftime("%Y%m%d-%H%M%S")
+    tmp_path = os.getcwd() + "/tensorboard_log/sequencing" + time.strftime("%Y%m%d-%H%M%S")
     new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 
     model = PPO(env=env, policy='MlpPolicy', verbose=1)

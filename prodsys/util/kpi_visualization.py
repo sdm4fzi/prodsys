@@ -158,6 +158,34 @@ def plot_WIP(post_processor: post_processing.PostProcessor):
 
     fig.show()
 
+def plot_WIP_per_resource(post_processor: post_processing.PostProcessor):
+    """
+    Plots the WIP of the production system and the resources in the production system over time of the simulation.
+
+    Args:
+        post_processor (post_processing.PostProcessor): Post processor of the simulation.
+    """
+    df = post_processor.df_WIP.copy()
+    fig = px.scatter(df, x="Time", y="WIP")
+    df["Resource"] = "Total"
+
+    df_per_resource = post_processor.df_WIP_per_resource.copy()
+    df_per_resource["Resource"] = df_per_resource["WIP_resource"]
+
+    df = pd.concat([df, df_per_resource])
+    fig = px.scatter(
+        df,
+        x="Time",
+        y="WIP",
+        color="Resource",
+        trendline="expanding",
+        opacity=0.01,
+    )
+    fig.data = [t for t in fig.data if t.mode == "lines"]
+    fig.update_traces(showlegend=True)
+
+    fig.show()
+
 def print_aggregated_data(post_processor: post_processing.PostProcessor):
     """
     Prints the aggregated data of the simulation, comprising the throughput, WIP, throughput time and resource states.

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import resources, request
 
 
-class AbstractControlEnv(gym.Env, ABC):
+class AbstractSequencingControlEnv(gym.Env, ABC):
     """
     Abstract Gym environment for controlling a controller of a resource wtih an agent.
     This class defines the methods that need to be implemented in order to use a Reinforcement learning agent for production control.
@@ -93,6 +93,10 @@ class AbstractControlEnv(gym.Env, ABC):
     def get_reward(self, processed_request: request.Request, invalid_action:bool=False) -> float:
         """
         Get reward of the environment.
+
+        Args:
+            processed_request (request.Request): The processed request of the last step.
+            invalid_action (bool, optional): Whether the last action was invalid. Defaults to False.
 
         Returns:
             float: The reward.
@@ -225,111 +229,3 @@ class AbstractControlEnv(gym.Env, ABC):
             shape (Tuple[int, ...]): The shape of the action space.
         """
         self.action_space = spaces.Box(0, 1, shape=shape, dtype=float)
-
-
-class FunctionalControlEnv(AbstractControlEnv):
-    """
-    Gym environment for controlling a controller of a resource wtih an agent. This environment allows to pass function for getting observation, info, reward, and termination condition, which makes it easy to use by exchanging single functions.
-    
-    Args:
-        adapter (adapters.ProductionSystemAdapter): The adapter.
-        resource_id (str): The ID of the resource to control.
-        observation_space (Optional[spaces.Space], optional): The observation space of the environment.
-        action_space (Optional[spaces.Space], optional): The action space of the environment.
-        render_mode (Optional[str], optional): The render mode of the environment. Defaults to None.
-
-    Attributes:
-        adapter (adapters.ProductionSystemAdapter): The adapter.
-        resource_id (str): The ID of the resource to control.
-        observation_space (Optional[spaces.Space], optional): The observation space of the environment.
-        action_space (Optional[spaces.Space], optional): The action space of the environment.
-        render_mode (Optional[str], optional): The render mode of the environment. Defaults to None.
-        runner (runner.Runner): The runner of the adapter.
-        interrupt_simulation_event (events.Event): The event to interrupt the simulation when an agent interaction is needed.
-        resource_controller (control.Controller): The controller of the resource.
-        resource (resources.Resource): The resource to control.
-        observer (observer.ResourceObserver): The observer of the resource.
-        step_count (int): The number of steps taken in the environment.
-        reward (float): The reward of the environment.
-        _get_observation (Optional[Callable[[observer.ResourceObserver], np.ndarray]]): The function for getting the observation.
-        _get_info (Optional[Callable[[observer.ResourceObserver], dict]]): The function for getting the info.
-        _get_reward (Optional[Callable[[observer.ResourceObserver, request.Request, Optional[bool]], float]]): The function for getting the reward.
-        _get_termination_condition (Optional[Callable[[observer.ResourceObserver], bool]]): The function for getting the termination condition.
-    """
-
-    def __init__(
-        self,
-        adapter: adapters.ProductionSystemAdapter,
-        resource_id: str,
-        observation_space: Optional[spaces.Space] = None,
-        action_space: Optional[spaces.Space] = None,
-        render_mode: Optional[str]=None,
-    ):
-        super().__init__(adapter, resource_id, observation_space, action_space, render_mode)
-        self._get_observation: Optional[Callable[[observer.ResourceObserver], np.ndarray]] = None
-        self._get_info: Optional[Callable[[observer.ResourceObserver], dict]] = None
-        self._get_reward: Optional[Callable[[observer.ResourceObserver, request.Request, Optional[bool]], float]] = None
-        self._get_termination_condition: Optional[Callable[[observer.ResourceObserver], bool]] = None
-
-    def get_observation(self) -> np.ndarray:
-        """
-        Get observation of the environment.
-
-        Returns:
-            np.ndarray: The observation.
-        """
-        return self._get_observation(self.observer)
-    
-    def get_info(self) -> dict:
-        """
-        Get info of the environment.
-
-        Returns:
-            dict: The info.
-        """
-        return self._get_info(self.observer)
-    
-    def get_reward(self, processed_request: request.Request, invalid_action:bool=False) -> float:
-        """
-        Get reward of the environment.
-
-        Returns:
-            float: The reward.
-        """
-        return self._get_reward(self.observer, processed_request, invalid_action)
-    
-    def get_termination_condition(self) -> bool:
-        """
-        Get termination condition of the environment.
-
-        Returns:
-            bool: The termination condition.
-        """
-        return self._get_termination_condition(self.observer)
-    
-    def set_observation_function(self, function: Callable[[observer.ResourceObserver], np.ndarray]):
-        """
-        Set the function for getting the observation.
-
-        Args:
-            function (Callable[[observer.ResourceObserver], np.ndarray]): The function for getting the observation.
-        """
-        self._get_observation = function
-
-    def set_info_function(self, function: Callable[[observer.ResourceObserver], dict]):
-        """
-        Set the function for getting the info.
-
-        Args:
-            function (Callable[[observer.ResourceObserver], dict]): The function for getting the info.
-        """
-        self._get_info = function
-
-    def set_reward_function(self, function: Callable[[observer.ResourceObserver, request.Request, Optional[bool]], float]):
-        """
-        Set the function for getting the reward.
-
-        Args:
-            function (Callable[[observer.ResourceObserver, Optional[bool]], float]): The function for getting the reward.
-        """
-        self._get_reward = function

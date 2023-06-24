@@ -126,7 +126,9 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Activity": state_info._activity,
         "Expected End Time": state_info._expected_end_time,
         "Product": state_info._product_ID,
+        "Origin location": state_info._origin_ID,
         "Target location": state_info._target_ID,
+        "Empty Transport": state_info._empty_transport,
     }
     data.append(item)
 

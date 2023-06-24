@@ -209,6 +209,7 @@ class Runner(BaseModel):
         p = self.get_post_processor()
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
+        kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
 

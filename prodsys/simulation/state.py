@@ -69,8 +69,10 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _state_type: Optional[StateTypeEnum] = None
     _product_ID: str = ""
     _target_ID: str = ""
+    _origin_ID: str = ""
+    _empty_transport: Optional[bool] = None
 
-    def log_target_location(self, target: product.Location, state_type: StateTypeEnum):
+    def log_transport(self, origin: Optional[product.Location], target: product.Location, state_type: StateTypeEnum, empty_transport: bool):
         """
         Logs the target location of a transport state.
 
@@ -78,8 +80,13 @@ class StateInfo(BaseModel, extra=Extra.allow):
             target (product.Location): The target location, either a resource, source or a sink.
             state_type (StateTypeEnum): The type of the state.
         """
+        if not origin:
+            self._origin_ID = None
+        else:
+            self._origin_ID = origin.data.ID
         self._target_ID = target.data.ID
         self._state_type = state_type
+        self._empty_transport = empty_transport
 
     def log_product(self, _product: product.Product, state_type: StateTypeEnum):
         """

@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, Field, validator, Extra
-from typing import List, Generator, TYPE_CHECKING, Union
+from typing import List, Generator, TYPE_CHECKING, Union, Optional
 
 # from process import Process
 from simpy import events
@@ -12,7 +12,7 @@ from prodsys.simulation import request, sim, state
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink
-    from prodsys.control import gym_env
+    from prodsys.control import sequencing_control_env
 
 
 class Controller(ABC, BaseModel):
@@ -237,7 +237,7 @@ class ProductionController(Controller):
             target_product, state.StateTypeEnum.production
         )
         target_product.product_info.log_start_process(
-            target_product.next_resource,
+            target_product.next_production_resource,
             target_product,
             self.env.now,
             state.StateTypeEnum.production,
@@ -258,6 +258,7 @@ class TransportController(Controller):
         ],
         None,
     ]
+    _current_position: Optional[product.Location] = Field(init=False, default=None)
 
     def get_next_product_for_process(
         self, resource: product.Location, product: product.Product
@@ -333,6 +334,7 @@ class TransportController(Controller):
         Yields:
             Generator: The generator yields when a request is made or a process is finished.
         """
+        self._current_position = self.resource
         while True:
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
@@ -399,8 +401,9 @@ class TransportController(Controller):
                     )
 
                 yield self.env.process(
-                    self.run_process(transport_state, product, target=origin)
+                    self.run_process(transport_state, product, target=origin, empty_transport=True)
                 )
+                self._current_position = origin
                 transport_state.process = None
 
             eventss = self.get_next_product_for_process(origin, product)
@@ -421,6 +424,7 @@ class TransportController(Controller):
             yield self.env.process(
                 self.run_process(transport_state, product, target=target)
             )
+            self._current_position = target
             transport_state.process = None
             eventss = self.put_product_to_input_queue(target, product)
             yield events.AllOf(resource.env, eventss)
@@ -433,6 +437,7 @@ class TransportController(Controller):
         input_state: state.State,
         product: product.Product,
         target: product.Location,
+        empty_transport: bool = False,
     ):
         """
         Run the process of a product. The process is started and the product is logged.
@@ -445,11 +450,14 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        input_state.state_info.log_target_location(
-            target, state.StateTypeEnum.transport
+
+        input_state.state_info.log_transport(
+            self._current_position,
+            target, state.StateTypeEnum.transport,
+            empty_transport=empty_transport
         )
         product.product_info.log_start_process(
-            product.next_resource,
+            product.next_production_resource,
             product,
             self.env.now,
             state.StateTypeEnum.transport,
@@ -505,7 +513,7 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
 
 
 def agent_control_policy(
-    gym_env: gym_env.ProductionControlEnv, requests: List[request.Request]
+    gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request.Request]
 ) -> None:
     """
     Sort the requests according to the agent's policy.
