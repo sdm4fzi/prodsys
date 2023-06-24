@@ -109,4 +109,4 @@ The package is licensed under the [MIT license](LICENSE).
 
 We extend our sincere thanks to the German Federal Ministry for Economic Affairs and Climate Action
 (BMWK) for supporting this research project 13IK001ZF “Software-Defined Manufacturing for the
-automotive and supplying industry  [https://www.sdm4fzi.de/](https://www.sdm4fzi.de/)”.
+automotive and supplying industry [https://www.sdm4fzi.de/](https://www.sdm4fzi.de/).
