@@ -1,4 +1,9 @@
-# Welcome to prodsys
+# prodsys - modeling, simulating and optimizing production systems
+
+![Build-sucess](https://img.shields.io/badge/build-success-green)
+![PyPI](https://img.shields.io/pypi/v/prodsys)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/prodsys)
+![Docu](https://img.shields.io/badge/docu-full-green)
 
 This is the documentation for the prodsys package, a package for modeling, simulating, and optimizing production systems based on the product, process and resource (PPR) modelling principle.
 
