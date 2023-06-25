@@ -274,6 +274,20 @@
 
             
           
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Tutorials/tutorial_4_optimizing_production_control/" class="md-nav__link">
+        Optimizing production control
+      </a>
+    </li>
+  
+
+            
+          
         </ul>
       </nav>
     </li>
@@ -485,6 +499,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP_per_resource" class="md-nav__link">
+    plot_WIP_per_resource()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.util.kpi_visualization.plot_WIP_with_range" class="md-nav__link">
     plot_WIP_with_range()
   </a>
@@ -564,6 +585,13 @@
           <li class="md-nav__item">
   <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_product" class="md-nav__link">
     df_WIP_per_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_resource" class="md-nav__link">
+    df_WIP_per_resource
   </a>
   
 </li>
@@ -1023,6 +1051,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prodsys.util.kpi_visualization.plot_WIP_per_resource" class="md-nav__link">
+    plot_WIP_per_resource()
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.util.kpi_visualization.plot_WIP_with_range" class="md-nav__link">
     plot_WIP_with_range()
   </a>
@@ -1102,6 +1137,13 @@
           <li class="md-nav__item">
   <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_product" class="md-nav__link">
     df_WIP_per_product
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.util.post_processing.PostProcessor.df_WIP_per_resource" class="md-nav__link">
+    df_WIP_per_resource
   </a>
   
 </li>
@@ -1604,6 +1646,45 @@
 
 
 
+<h3 id="prodsys.util.kpi_visualization.plot_WIP_per_resource" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">plot_WIP_per_resource</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Plots the WIP of the production system and the resources in the production system over time of the simulation.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>post_processor</code></td>
+        <td><code>post_processing.PostProcessor</code></td>
+        <td><p>Post processor of the simulation.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
 <h3 id="prodsys.util.kpi_visualization.plot_WIP_with_range" class="doc doc-heading">
 <code class="highlight language-python"><span class="n">plot_WIP_with_range</span><span class="p">(</span><span class="n">post_processor</span><span class="p">)</span></code>
 
@@ -2043,6 +2124,45 @@ PostProcessor        </code>
     <tr>
       <td><code>pd.DataFrame</code></td>
       <td><p>Data frame with the WIP over time for each product type.</p></td>
+    </tr>
+  </tbody>
+</table>    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="prodsys.util.post_processing.PostProcessor.df_WIP_per_resource" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">df_WIP_per_resource</span><span class="p">:</span> <span class="n">DataFrame</span></code>
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-cached"><code>cached</code></small>
+      <small class="doc doc-property doc-property-property"><code>property</code></small>
+      <small class="doc doc-property doc-property-writable"><code>writable</code></small>
+  </span>
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Returns a data frame with the WIP over time for each resource.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>pd.DataFrame</code></td>
+      <td><p>Data frame with the WIP over time for each resource.</p></td>
     </tr>
   </tbody>
 </table>    </div>
@@ -2573,6 +2693,7 @@ There are 4 different states a resource can spend its time:
 </table>    </div>
 
   </div>
+
 
 
 
