@@ -102,11 +102,11 @@ if __name__ == '__main__':
     action_space = spaces.Box(0, 1, shape=(queue.capacity,), dtype=float)
     env = ProductionControlEnv(adapter, "R2", observation_space=observation_space, action_space=action_space, render_mode="human")
     
-    tmp_path = os.getcwd() + "/tensorboard_log/sequencing" + time.strftime("%Y%m%d-%H%M%S")
+    tmp_path = os.getcwd() + "\\tensorboard_log\\sequencing\\" + time.strftime("%Y%m%d-%H%M%S")
     new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 
     model = PPO(env=env, policy='MlpPolicy', verbose=1)
     model.set_logger(new_logger)
     model.learn(total_timesteps=1000000, callback=TensorboardCallback())
 
-    # Start Tensorboard with: tensorboard --logdir tensorboard_log
+    # Start Tensorboard with: tensorboard --logdir tensorboard_log\control

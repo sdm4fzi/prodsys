@@ -2,7 +2,7 @@
 
 In the following tutorial, we will explore the analysis capabilities of `prodsys` for examining simulation results. In `prodsys`, every single of a simulation run get's tracked and logged, thus allowing to review the complete event log of a simulation run, as in the real world. Similarly, all KPIs can be calculated in the post processing. This allows for a very flexible analysis of the simulation results. `prodsys` allready provides many utility functions for calculating KPIs and plotting the results. In this tutorial, we will explore some of them.
 
-For this example, we will use another production system which we will load from a json-file, which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
+For this example, we will use another production system which we will load from a json-file (example_configuration.json), which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys/tree/main/examples/tutorials). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
 
 ```python
 import prodsys
@@ -68,7 +68,7 @@ from prodsys.util import kpi_visualization
 kpi_visualization.plot_time_per_state_of_resources(post_processor)
 ```
 
-We can observe, that the resources in the production system are not really heavily utilized, since their productive (PR) percentage is lower than 50%. Let's plot the WIP KPI and see if this aligns with our first observations:
+We can observe, that the resources in the production system are not really heavily utilized, since their productive (PR) percentage is lower than 50% for all resources but R2. Let's plot the WIP KPI and see if this aligns with our first observations:
 
 ```python
 from prodsys.util import kpi_visualization
@@ -76,7 +76,13 @@ from prodsys.util import kpi_visualization
 kpi_visualization.plot_WIP(post_processor)
 ```
 
-We can see that the production system has at first a stable WIP at around a total of 10 but at roughly 3000 minutes, the WIP suddenly increases and does not stabilize anymore. This suggest, that our system is running very full with semi-finished material. Let's also look at the throughput time of the products:
+We can see that the production system has at first a stable WIP at around a total of 7 but at roughly 5000 minutes, the WIP starts increasing and does not stabilize anymore. This suggest, that our system is running very full with semi-finished material. We can look more closely at the WIP when considering the WIP at the different resources over time:
+
+``` python
+kpi_visualization.plot_WIP_per_resource(post_processor)
+```
+
+When observing the WIP per resource, we can observe that WIP at the resources increase steadily until ca. 15500 minutes. Then, suddenly, the WIP curve stops. This is a strong indicator that a Deadlock occured, where all positions of the queues are full and transports are blocked, because their target is blocked. This, is caused as products can have re-entrant flow in this example, thus blocking each other. Let's also look at the throughput time of the products:
 
 ```python
 kpi_visualization.plot_throughput_time_over_time(post_processor)
@@ -118,4 +124,4 @@ new_post_processor = runner.get_post_processor()
 kpi_visualization.plot_WIP(new_post_processor)
 ```
 
-If we look at the results again, we see that the production system WIP increases even stronger without limited queues. This suggests that both cases were True. At first, the production system got fuller without limited queues which suggest that some queues overflowed when limited causing some blocking. Additionally, we see that the WIP still increases over time, thus the production system requires more resources or another configuration to satisfy the arrival processes. `prodsys` provides also some functionality to optimize production system configuration. See the optimization example for more detailed information. For a complete overview of the package's ies for simulation analysis, please see the [API reference](/API_reference/API_reference_0_overview.md).
+If we look at the results again, we see that the production system WIP increases not as strong as without limited queues. This suggests that both cases were True. At first, the production system got fuller without limited queues which suggest that some queues overflowed when limited causing some blocking. Additionally, we see that the WIP still increases over time, thus the production system requires more resources or another configuration to satisfy the arrival processes. `prodsys` provides also some functionality to optimize production system configuration. See the optimization example for more detailed information. For a complete overview of the package's ies for simulation analysis, please see the [API reference](/API_reference/API_reference_0_overview.md).

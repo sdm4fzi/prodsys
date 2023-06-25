@@ -26,7 +26,7 @@
       "ID": "function_time_model_4",
       "description": "exponential distribution time model with 100 minutes",
       "distribution_function": "exponential",
-      "location": 70.0,
+      "location": 80.0,
       "scale": 0.0
     },
     "4": {
@@ -158,7 +158,7 @@
     "2": {
       "ID": "OQ2",
       "description": "Output-queue 2 for R2",
-      "capacity": 10
+      "capacity": 20
     },
     "3": {
       "ID": "IQ2",
@@ -183,7 +183,7 @@
     "7": {
       "ID": "IQ9",
       "description": "Input-queue 1 for R2",
-      "capacity": 10
+      "capacity": 20
     }
   },
   "resources": {

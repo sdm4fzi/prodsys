@@ -26,7 +26,7 @@
       "ID": "function_time_model_4",
       "description": "exponential distribution time model with 100 minutes",
       "distribution_function": "exponential",
-      "location": 52.0,
+      "location": 70.0,
       "scale": 0.0
     },
     "4": {

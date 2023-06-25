@@ -2,14 +2,12 @@
 
 This tutorial will guide you through the optimization functionalities of `prodsys` to optimize the configuration of a production system. With the `prodsys.optimization` package, we can utilize meta-heuristics and mathematical optimization for this task. All algorithms can be conviently used with the `prodsys.models` API.
 
-For this example, we will use a production system which we will load from a json-file, which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
-
-Let's start at first by loading our production system:
+For this example, we will use a production system which we will load from a json-file (base_configuration.json), which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys/tree/main/examples/tutorials). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
 
 ```python
 import prodsys
 from prodsys.simulation import sim
-# sim.VERBOSE = 0
+sim.VERBOSE = 0
 
 production_system = prodsys.adapters.JsonProductionSystemAdapter()
 production_system.read_data('base_configuration.json')
@@ -22,7 +20,7 @@ runner.run(2880)
 runner.print_results()
 ```
 
-As already concluded in the seccond tutorial, production system configurations can be suboptimal for a certain load of products. In this example, we also see that resoures M2, M3, M4 are very heavily utilized, whereas resource M1 has only a productivy of 33.4%. In order to satify the product needs of our customers and to balance the load on the resources more evenly, we want to find a more suitable configuration with the `prodsys.optimization` package. However, for starting optimization, we also need to provide an optimization scenario, that models constraints, options, information and the objectives. Let's start by creating the constraints of the scenario with the `prodsys.models` API:
+As already concluded in the seccond tutorial, production system configurations can be suboptimal for a certain load of products. In this example, we also see that resoures M2, M3, M4 are very heavily utilized, whereas resource M1 has only a productivy of 34.4%. In order to satify the product needs of our customers and to balance the load on the resources more evenly, we want to find a more suitable configuration with the `prodsys.optimization` package. However, for starting optimization, we also need to provide an optimization scenario, that models constraints, options, information and the objectives. Let's start by creating the constraints of the scenario with the `prodsys.models` API:
 
 ```python
 from prodsys.models import scenario_data
@@ -139,6 +137,6 @@ runner.run(2880)
 runner.print_results()
 ```
 
-When comparing the results from the original production system and the new one, we see that a machine was added. However, the machines are still heavily utilized. Most likely, the optimizer did just not find a good solution, because we only ran it for 10 generations and for a small population size. Increasing these will take longer, but will more likely find better solutions.
+When comparing the results from the original production system and the new one, we see that two machines were added. However, the machines are still heavily utilized. Most likely, the optimizer did just not find a good solution, because we only ran it for 10 generations and for a small population size. Increasing these will take longer, but will more likely find better solutions.
 
 For a complete overview of the package's functionality, please see the [API reference](/API_reference/API_reference_0_overview.md).

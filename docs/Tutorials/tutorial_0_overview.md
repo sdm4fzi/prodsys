@@ -5,6 +5,7 @@ This section contains a series of tutorials that will guide you through the proc
 - [Tutorial 1: Modelling and simulating a production system](tutorial_1_modelling_and_simulating_a_production_system.md)
 - [Tutorial 2: Analyzing simulation results](tutorial_2_analyzing_simulation_results.md)
 - [Tutorial 3: Optimizing a production system](tutorial_3_optimizing_a_production_system.md)
+- [Tutorial 4: Optimizing production control](tutorial_4_optimizing_production_control.md)
 
 All of the tutorials are also on the [github page of prodsys](https://github.com/sdm4fzi/prodsys) in the examples folder as jupyter notebooks available, so that you can run them yourself.
 

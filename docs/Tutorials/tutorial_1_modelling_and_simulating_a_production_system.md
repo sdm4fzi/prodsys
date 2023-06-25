@@ -134,7 +134,7 @@ production_system.run(1000)
 production_system.runner.print_results()
 ```
 
-Now we see, that the work center is 4.4% of the time unavailable due to unscheduled downtime.
+Now we see, that the work center is 6.1% of the time unavailable due to unscheduled downtime.
 
 ## Changing the logic of the production system
 
