@@ -14,4 +14,4 @@ from prodsys.models import (
     time_model_data,
 )
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
