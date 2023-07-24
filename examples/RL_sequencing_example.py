@@ -109,4 +109,4 @@ if __name__ == '__main__':
     model.set_logger(new_logger)
     model.learn(total_timesteps=1000000, callback=TensorboardCallback())
 
-    # Start Tensorboard with: tensorboard --logdir tensorboard_log\control
+    # Start Tensorboard with: tensorboard --logdir tensorboard_log\sequncing

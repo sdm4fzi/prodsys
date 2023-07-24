@@ -8,12 +8,12 @@ import json
 import prodsys
 from prodsys.util import util
 from prodsys.optimization import (
-    evolutionary_algorithm_optimization,
-    simulated_annealing_optimization,
-    tabu_search_optimization,
+    simulated_annealing,
+    tabu_search,
     math_opt,
     optimization_analysis,
 )
+from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters, optimize_configuration
 from prodsys.models import (
     performance_indicators
 )
@@ -27,9 +27,9 @@ router = APIRouter(
 )
 
 HYPERPARAMETER_EXAMPLES = {
-    "Evolutionary algorithm": evolutionary_algorithm_optimization.EvolutionaryAlgorithmHyperparameters.Config.schema_extra["example"],
-    "Simulated annealing": simulated_annealing_optimization.SimulatedAnnealingHyperparameters.Config.schema_extra["example"],
-    "Tabu search": tabu_search_optimization.TabuSearchHyperparameters.Config.schema_extra["example"],
+    "Evolutionary algorithm": EvolutionaryAlgorithmHyperparameters.Config.schema_extra["example"],
+    "Simulated annealing": simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra["example"],
+    "Tabu search": tabu_search.TabuSearchHyperparameters.Config.schema_extra["example"],
     "Mathematical optimization": math_opt.MathOptHyperparameters.Config.schema_extra["example"],
 }
 
@@ -41,9 +41,9 @@ async def run_configuration_optimization(
     project_id: str,
     adapter_id: str,
     hyper_parameters: Annotated[Union[
-        evolutionary_algorithm_optimization.EvolutionaryAlgorithmHyperparameters,
-        simulated_annealing_optimization.SimulatedAnnealingHyperparameters,
-        tabu_search_optimization.TabuSearchHyperparameters,
+        EvolutionaryAlgorithmHyperparameters,
+        simulated_annealing.SimulatedAnnealingHyperparameters,
+        tabu_search.TabuSearchHyperparameters,
         math_opt.MathOptHyperparameters,
     ], Body(examples=HYPERPARAMETER_EXAMPLES)],
 ):
@@ -60,15 +60,15 @@ async def run_configuration_optimization(
     adapter.write_scenario_data(scenario_file_path)
 
     if isinstance(
-        hyper_parameters, evolutionary_algorithm_optimization.EvolutionaryAlgorithmHyperparameters
+        hyper_parameters, EvolutionaryAlgorithmHyperparameters
     ):
-        optimization_func = evolutionary_algorithm_optimization.optimize_configuration
+        optimization_func = optimize_configuration
     elif isinstance(
-        hyper_parameters, simulated_annealing_optimization.SimulatedAnnealingHyperparameters
+        hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters
     ):
-        optimization_func = simulated_annealing_optimization.optimize_configuration
-    elif isinstance(hyper_parameters, tabu_search_optimization.TabuSearchHyperparameters):
-        optimization_func = tabu_search_optimization.optimize_configuration
+        optimization_func = simulated_annealing.optimize_configuration
+    elif isinstance(hyper_parameters, tabu_search.TabuSearchHyperparameters):
+        optimization_func = tabu_search.optimize_configuration
     elif isinstance(hyper_parameters, math_opt.MathOptHyperparameters):
         optimization_func = math_opt.optimize_configuration
     else:

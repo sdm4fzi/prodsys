@@ -1,14 +1,11 @@
 FROM python:3.11
+RUN pip install "poetry==1.4.2"
+
+
 WORKDIR /code
-COPY ./requirements.txt /code/requirements.txt
+COPY . /code
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-
-COPY ./app.py /code/app.py
-COPY ./conf /code/conf
-COPY ./examples /code/examples
-COPY ./prodsys /code/prodsys
-COPY ./app /code/app
+RUN poetry install --no-interaction --no-ansi
 
 EXPOSE 8000
 
