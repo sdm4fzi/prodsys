@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import hydra
 from omegaconf import DictConfig
 import uvicorn
+import os
 
 from app.routers import (
     projects,
@@ -73,7 +74,7 @@ async def root():
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def prodsys_app(cfg: DictConfig) -> None:
-    uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
+    uvicorn.run(app, root_path=os.environ.get("ROOT_PATH"), host=cfg.fastapi.host, port=cfg.fastapi.port)
 
 if __name__ == "__main__":
     prodsys_app()
