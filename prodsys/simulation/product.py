@@ -245,25 +245,47 @@ class Product(BaseModel):
         Simpy process that transports the product object to the queue of the next resource.
         """
         origin_resource = self.next_production_resource
-        self.product_router.set_next_transport_resources(
-            self
-        )
-        yield self.env.timeout(0)
-        transport_resource = self.next_transport_resources.pop(0)
-        if not transport_resource:
-            raise ValueError("No transport resource found.")
-        self.next_transport_resource = transport_resource
+        yield self.env.process(self.set_next_transport_resource())
         self.set_next_production_process()
         yield self.env.process(self.set_next_production_resource())
-        self.request_transport(transport_resource, origin_resource, self.next_production_resource)  # type: ignore False
+        self.request_transport(self.next_transport_resource, origin_resource, self.next_production_resource)  # type: ignore False
         yield self.finished_process
         self.product_info.log_end_process(
-            resource=transport_resource,
+            resource=self.next_transport_resource,
             _product=self,
             event_time=self.env.now,
             state_type=state.StateTypeEnum.transport,
         )
         self.finished_process = events.Event(self.env)
+
+    def set_next_transport_resource(self):
+        """
+        Sets the next transport resource of the product object.
+        If no free resource can be found, the product object waits until a resource is free.
+        """
+        while True:
+            self.product_router.set_next_transport_resources(
+                self
+            )
+            yield self.env.timeout(0)
+            if self.next_transport_resources and all(isinstance(
+                next_resource, resources.TransportResource
+            ) for next_resource in self.next_transport_resources): 
+                self.next_transport_resource = self.next_transport_resources.pop(0)
+                break
+            resource_got_free_events = [
+                resource.got_free
+                for resource in self.product_router.get_possible_resources(
+                    self.transport_process
+                )
+            ]
+            yield events.AnyOf(self.env, resource_got_free_events)
+            for resource in self.product_router.get_possible_resources(
+                self.transport_process
+            ):
+                if resource.got_free.triggered:
+                    resource.got_free = events.Event(self.env)
+    
 
     def set_next_production_resource(self):
         """
