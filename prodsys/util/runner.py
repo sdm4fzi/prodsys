@@ -22,7 +22,7 @@ from prodsys.factories import (
     source_factory,
 )
 from prodsys.simulation import logger
-from prodsys.util import post_processing, kpi_visualization
+from prodsys.util import post_processing, kpi_visualization, util
 from prodsys.models import performance_data
 
 VERBOSE = 1
@@ -271,6 +271,7 @@ class Runner(BaseModel):
         Args:
             save_folder (str, optional): The folder to save the results to. Defaults to "data".
         """
+        util.prepare_save_folder(save_folder + "/")
         save_name = ""
         if self.adapter.ID:
             save_name = f"{self.adapter.ID}_"
@@ -284,6 +285,7 @@ class Runner(BaseModel):
         Args:
             save_folder (str, optional): The folder to save the results to. Defaults to "data".
         """
+        util.prepare_save_folder(save_folder + "/")
         save_name = ""
         if self.adapter.ID:
             save_name = f"{self.adapter.ID}_"
