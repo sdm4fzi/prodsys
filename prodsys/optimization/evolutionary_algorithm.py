@@ -262,9 +262,11 @@ def evolutionary_algorithm_optimization(
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)
-
-    pool = Pool(hyper_parameters.number_of_processes)
-    toolbox.register("map", pool.map)
+    if hyper_parameters.number_of_processes > 1:
+        pool = Pool(hyper_parameters.number_of_processes)
+        toolbox.register("map", pool.map)
+    else:
+        toolbox.register("map", map)
 
     fitnesses = toolbox.map(toolbox.evaluate, population)
     save_population_results(
@@ -299,5 +301,6 @@ def evolutionary_algorithm_optimization(
 
         with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
-    pool.close()
+    if hyper_parameters.number_of_processes > 1:
+        pool.close()
 
