@@ -153,7 +153,8 @@ class TransportResource(Resource, core.ExpressObject):
     # ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def __post_init_post_parse__(self):
-        self.location = [0.0, 0.0]
+        if not self.location:
+            self.location = [0.0, 0.0]
 
     def to_model(self) -> resource_data.TransportResourceData:
         """

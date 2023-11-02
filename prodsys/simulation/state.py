@@ -81,7 +81,7 @@ class StateInfo(BaseModel, extra=Extra.allow):
             state_type (StateTypeEnum): The type of the state.
         """
         if not origin:
-            self._origin_ID = None
+            self._origin_ID = "Loading station"
         else:
             self._origin_ID = origin.data.ID
         self._target_ID = target.data.ID

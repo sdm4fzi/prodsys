@@ -50,19 +50,25 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     fig.show()
 
 
-def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor):
+def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor, normalized: bool=True):
     """
     Plots the time per state of the resources of the simulation.
 
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
+        normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_aggregated_resource_states
+
+    if normalized:
+        y_column = "percentage"
+    else:
+        y_column = "time_increment"
 
     fig = px.bar(
         df_time_per_state,
         x="Resource",
-        y="time_increment",
+        y=y_column,
         color="Time_type",
         color_discrete_map={
             "PR": "green",
