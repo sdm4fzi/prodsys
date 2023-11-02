@@ -889,6 +889,17 @@ def get_possible_production_processes_IDs(
     return [tuple(value) for value in process_dict.values()]
 
 
+def get_possible_transport_processes_IDs(
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> List[str]:
+    possible_processes = adapter_object.process_data
+    # TODO: potentially make it work with capability processes for transpors
+    return [
+        process.ID
+        for process in possible_processes
+        if isinstance(process, processes_data.TransportProcessData)
+    ]
+
 def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
     available = set(
         util.flatten(

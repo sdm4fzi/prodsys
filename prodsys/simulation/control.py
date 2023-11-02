@@ -436,7 +436,10 @@ class TransportController(Controller):
             yield events.AllOf(resource.env, eventss)
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
+            if not resource.got_free.triggered:
+                resource.got_free.succeed()
             product.finished_process.succeed()
+
 
     def run_process(
         self,

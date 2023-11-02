@@ -26,3 +26,4 @@ optimization_scenarios/
 examples/tutorials/results/
 site/
 tensorboard_log/
+results/

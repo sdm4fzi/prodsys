@@ -8,6 +8,7 @@ import random
 from copy import deepcopy
 from typing import Dict, List, Union, Tuple, Literal, Callable
 from enum import Enum
+import logging
 
 from uuid import uuid1
 from collections.abc import Iterable
@@ -17,7 +18,7 @@ from prodsys import adapters, runner
 from prodsys.adapters.adapter import add_default_queues_to_resources
 from prodsys.adapters.adapter import check_redudant_locations
 from prodsys.adapters.adapter import check_required_processes_available
-from prodsys.adapters.adapter import get_possible_production_processes_IDs
+from prodsys.adapters.adapter import get_possible_production_processes_IDs, get_possible_transport_processes_IDs
 from prodsys.util.post_processing import PostProcessor
 from prodsys.models import (
     resource_data,
@@ -270,6 +271,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
         if isinstance(resource, resource_data.TransportResourceData)
     ]
     transport_resource_id = str(uuid1())
+    possible_processes = get_possible_transport_processes_IDs(adapter_object)
+    transport_process = random.choice(possible_processes)
     while transport_resource_id in transport_resource_ids:
         transport_resource_id = str(uuid1())
     adapter_object.resource_data.append(
@@ -280,7 +283,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
             location=(0.0, 0.0),
             controller="TransportController",
             control_policy=control_policy,
-            process_ids=["TP1"],
+            process_ids=[transport_process],
         )
     )
     return True
@@ -734,6 +737,7 @@ def random_configuration(
         adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
     """
     transformations = baseline.scenario_data.options.transformations
+    invalid_configuration_counter = 0
     while True:
         adapter_object = baseline.copy(deep=True)
         if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
@@ -760,7 +764,9 @@ def random_configuration(
         adjust_process_capacities(adapter_object)
         if check_valid_configuration(adapter_object, baseline):
             break
-
+        invalid_configuration_counter += 1
+        if invalid_configuration_counter % 1000 == 0:
+            logging.warning(f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?")
     return adapter_object
 
 
