@@ -470,7 +470,9 @@ def change_control_policy(adapter_object: adapters.ProductionSystemAdapter) -> b
         possible_control_policies = deepcopy(
             adapter_object.scenario_data.options.transport_controllers
         )
-
+    
+    if len(possible_control_policies) < 2:
+        return False
     possible_control_policies.remove(resource.control_policy)
     new_control_policy = random.choice(possible_control_policies)
     resource.control_policy = new_control_policy
@@ -488,9 +490,11 @@ def change_routing_policy(adapter_object: adapters.ProductionSystemAdapter) -> N
     possible_routing_policies = deepcopy(
         adapter_object.scenario_data.options.routing_heuristics
     )
-
+    if len(possible_routing_policies) < 2:
+        return False
     possible_routing_policies.remove(source.routing_heuristic)
     source.routing_heuristic = random.choice(possible_routing_policies)
+    return True
 
 
 def get_grouped_processes_of_machine(
