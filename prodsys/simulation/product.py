@@ -252,6 +252,7 @@ class Product(BaseModel):
         transport_resource = self.next_transport_resources.pop(0)
         if not transport_resource:
             raise ValueError("No transport resource found.")
+        self.next_transport_resource = transport_resource
         self.set_next_production_process()
         yield self.env.process(self.set_next_production_resource())
         self.request_transport(transport_resource, origin_resource, self.next_production_resource)  # type: ignore False

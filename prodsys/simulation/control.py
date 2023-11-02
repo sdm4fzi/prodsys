@@ -42,6 +42,7 @@ class Controller(ABC, BaseModel):
     requested: events.Event = Field(init=False, default=None)
     requests: List[request.Request] = Field(init=False, default_factory=list)
     running_processes: List[events.Process] = []
+    reserved_requests_count: int = 0
 
     @validator("requested", pre=True, always=True)
     def init_requested(cls, v, values):
@@ -170,9 +171,10 @@ class ProductionController(Controller):
             for process in self.running_processes:
                 if not process.is_alive:
                     self.running_processes.remove(process)
-            if self.resource.full or not self.requests:
+            if self.resource.full or not self.requests or self.reserved_requests_count == len(self.requests):
                 continue
             self.control_policy(self.requests)
+            # print(f"{self.resource.data.ID}: {[request.product.product_data.ID for request in self.requests]}")
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
@@ -191,8 +193,11 @@ class ProductionController(Controller):
         Yields:
             Generator: The generator yields when the process is finished.
         """
+        # TODO: reserve here request already
+        self.reserved_requests_count += 1
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
+        self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()
         product = process_request.get_product()
@@ -381,7 +386,7 @@ class TransportController(Controller):
         product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
-
+        # print(f"resource: {resource.data.ID} {resource.get_location()}, origin: {origin.data.ID} {origin.get_location()}, target: {target.data.ID} {target.get_location()}")
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
@@ -399,7 +404,7 @@ class TransportController(Controller):
                             if state.process is not None and state.process.is_alive
                         ],
                     )
-
+                # print("get to origin")
                 yield self.env.process(
                     self.run_process(transport_state, product, target=origin, empty_transport=True)
                 )
@@ -421,8 +426,9 @@ class TransportController(Controller):
                         if state.process is not None and state.process.is_alive
                     ],
                 )
+            # print("get to target")
             yield self.env.process(
-                self.run_process(transport_state, product, target=target)
+                self.run_process(transport_state, product, target=target, empty_transport=False)
             )
             self._current_position = target
             transport_state.process = None
@@ -437,7 +443,7 @@ class TransportController(Controller):
         input_state: state.State,
         product: product.Product,
         target: product.Location,
-        empty_transport: bool = False,
+        empty_transport: bool,
     ):
         """
         Run the process of a product. The process is started and the product is logged.
@@ -450,14 +456,18 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-
+        if self._current_position.data.ID is self.resource.data.ID:
+            origin = None
+            # print("___________________", empty_transport)
+        else:
+            origin = self._current_position
         input_state.state_info.log_transport(
-            self._current_position,
+            origin,
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
         product.product_info.log_start_process(
-            product.next_production_resource,
+            product.next_transport_resource,
             product,
             self.env.now,
             state.StateTypeEnum.transport,

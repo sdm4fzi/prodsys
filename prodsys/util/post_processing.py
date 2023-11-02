@@ -51,17 +51,36 @@ class PostProcessor:
         self.df_raw.drop(columns=["Unnamed: 0"], inplace=True)
 
     def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        This function returns a data frame with the conditions wether a row in the data frame belongs to a interface state or not.
+        Hereby, an interface state belongs to a state, where a resource does not perform a process, i.e. either setup, breakdown or creation (source) or finish (sink) of products. 
+
+        Args:
+            df (pd.DataFrame): Data frame with the simulation results.
+
+        Returns:
+            pd.DataFrame: Data frame with the conditions wether a row in the data frame belongs to a process state or not.
+        """
+        # TODO: also consider state.StateTypeEnum.process_breakdown for data analysis in the future
         return df["State Type"].isin(
-            [state.StateTypeEnum.source, state.StateTypeEnum.sink]
+            [state.StateTypeEnum.source, state.StateTypeEnum.sink,state.StateTypeEnum.breakdown, state.StateTypeEnum.setup]
         )
 
     def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        This function returns a data frame with the conditions wether a row in the data frame belongs to a process state or not.
+        Hereby, a process state belongs to a state, where a resource performs a process, i.e. either production or transport. 
+
+        Args:
+            df (pd.DataFrame): Data frame with the simulation results.
+
+        Returns:
+            pd.DataFrame: Data frame with the conditions wether a row in the data frame belongs to a process state or not.
+        """
         return df["State Type"].isin(
             [
                 state.StateTypeEnum.production,
                 state.StateTypeEnum.transport,
-                state.StateTypeEnum.breakdown,
-                state.StateTypeEnum.setup,
             ]
         )
 
@@ -92,8 +111,8 @@ class PostProcessor:
             "State_type",
         ] = "Process State"
 
-        df.loc[df["State"].str.contains("Breakdown"), "State_type"] = "Breakdown State"
-        df = df.loc[df["State_type"] != "ProcessBreakdown"]
+        # TODO: remove this, if processbreakdown is added
+        df = df.loc[df["State Type"] != state.StateTypeEnum.process_breakdown]
 
         COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
         STATE_SORTING_INDEX = {
@@ -365,11 +384,13 @@ class PostProcessor:
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
             & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
         )
         negative_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "end state")
             & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
         )
 
         df["Increment"] = 0
@@ -378,8 +399,10 @@ class PostProcessor:
 
         df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
 
+        df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
+        resource_types_dict = pd.Series(df_resource_types["State Type"].values, index=df_resource_types["Resource"].values).to_dict()
         for resource in df["Resource"].unique():
-            if "source" in resource or "sink" in resource:
+            if resource_types_dict[resource] in {state.StateTypeEnum.source, state.StateTypeEnum.sink}:
                 continue
             example_row = (
                 df.loc[
@@ -407,10 +430,10 @@ class PostProcessor:
             | (df["State_sorting_Index"] == 3)
             | ((df["State_sorting_Index"] == 4) & df["Used_Capacity"] != 0)
         )
-        DOWN_CONDITION = (df["State_sorting_Index"] == 6) | (
+        DOWN_CONDITION = ((df["State_sorting_Index"] == 6) | (
             df["State_sorting_Index"] == 8
-        )
-        SETUP_CONDITION = ((df["State_sorting_Index"] == 5)) & (
+        )) & (df["State Type"] == state.StateTypeEnum.breakdown)
+        SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
             df["State Type"] == state.StateTypeEnum.setup
         )
 
@@ -530,8 +553,8 @@ class PostProcessor:
         return df
     
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        CREATED_CONDITION = df["Activity"] == "created product"
-        FINISHED_CONDITION = df["Activity"] == "finished product"
+        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
+        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
 
         df["WIP_Increment"] = 0
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
