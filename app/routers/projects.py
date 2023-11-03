@@ -9,7 +9,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-PROJECT_LIST_EXAMPLE = [Project.Config.schema_extra["example"]["value"]]
+PROJECT_LIST_EXAMPLE = [Project.Config.schema_extra["example"]]
 
 
 @router.get(
@@ -29,6 +29,7 @@ async def read_projects() -> List[Project]:
 
 @router.put("/{project_id}")
 async def create_project(
+    project_id: str,
     project: Project,
 ) -> str:
     database.append(project)
