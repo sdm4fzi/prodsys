@@ -77,6 +77,7 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
             "ST": "blue",
         },
     )
+    # TODO: use here write_html ->     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=True)
     fig.show()
 
 
