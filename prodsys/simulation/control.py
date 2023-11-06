@@ -193,7 +193,6 @@ class ProductionController(Controller):
         Yields:
             Generator: The generator yields when the process is finished.
         """
-        # TODO: reserve here request already
         self.reserved_requests_count += 1
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)

@@ -28,7 +28,9 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
     fig = ff.create_distplot(
         values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
     )
-    fig.show()
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=True)
 
 def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor):
     """
@@ -47,8 +49,9 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
-    fig.show()
-
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput.html"), auto_open=True)
 
 def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor, normalized: bool=True):
     """
@@ -77,9 +80,9 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
             "ST": "blue",
         },
     )
-    # TODO: use here write_html ->     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=True)
-    fig.show()
-
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_states.html"), auto_open=True)
 
 def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
     """
@@ -136,7 +139,9 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
             showlegend=False,
         )
 
-    fig.show()
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_with_range.html"), auto_open=True)
 
 def plot_WIP(post_processor: post_processing.PostProcessor):
     """
@@ -163,7 +168,9 @@ def plot_WIP(post_processor: post_processing.PostProcessor):
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
 
-    fig.show()
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP.html"), auto_open=True)
 
 def plot_WIP_per_resource(post_processor: post_processing.PostProcessor):
     """
@@ -191,7 +198,9 @@ def plot_WIP_per_resource(post_processor: post_processing.PostProcessor):
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
 
-    fig.show()
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_per_resource.html"), auto_open=True)
 
 def print_aggregated_data(post_processor: post_processing.PostProcessor):
     """
