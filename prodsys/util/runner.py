@@ -223,7 +223,11 @@ class Runner(BaseModel):
         p = self.get_post_processor()
         df_raw=self.event_logger.get_data_as_dataframe()
         events = []
+        df_raw["Expected End Time"].fillna(value=-1, inplace=True)
+        df_raw["Target location"].fillna(value="", inplace=True)
+        df_raw["Product"].fillna(value="", inplace=True)
         for index, row in df_raw.iterrows():
+            
             events.append(
                 performance_data.Event(
                     time=row["Time"],

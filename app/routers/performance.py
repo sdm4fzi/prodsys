@@ -70,10 +70,11 @@ async def get_static_results(project_id: str, adapter_id: str):
         404: {"description": "No events found"},
     }
 )
-async def get_event_results(project_id: str, adapter_id: str):
+async def get_event_results(project_id: str, adapter_id: str, num_events: int = 10, offset: int = 0):
     result = get_result(project_id, adapter_id)
-    return result.event_log
-
+    if offset + num_events > len(result.event_log):
+        raise HTTPException(404, f"Only {len(result.event_log)} events found. Offset {offset} and num_events {num_events} are too large.")
+    return result.event_log[offset:offset+num_events]
 
 @router.get(
     "/{kpi}",
