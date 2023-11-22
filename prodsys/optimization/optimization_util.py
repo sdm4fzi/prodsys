@@ -103,7 +103,7 @@ def crossover(ind1, ind2):
     machines_2 = adapters.get_machines(adapter2)
     transport_resources_1 = adapters.get_transport_resources(adapter1)
     transport_resources_2 = adapters.get_transport_resources(adapter2)
-    if "machine " in crossover_type:
+    if "machine" in crossover_type:
         adapter1.resource_data = transport_resources_1
         adapter2.resource_data = transport_resources_2
         if crossover_type == "partial_machine":
