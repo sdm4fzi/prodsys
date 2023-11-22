@@ -441,14 +441,14 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
-    machine = random.choice(possible_machines)
+    moved_machine = random.choice(possible_machines)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
-    for machine in adapter_object.resource_data:
+    for machine in possible_machines:
         if machine.location in possible_positions:
             possible_positions.remove(machine.location)
     if not possible_positions:
         return False
-    machine.location = random.choice(possible_positions)
+    moved_machine.location = random.choice(possible_positions)
     return True
 
 
