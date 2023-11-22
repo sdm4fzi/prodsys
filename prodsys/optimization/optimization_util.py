@@ -107,7 +107,7 @@ def crossover(ind1, ind2):
         adapter1.resource_data = transport_resources_1
         adapter2.resource_data = transport_resources_2
         if crossover_type == "partial_machine":
-            min_length = max(len(machines_1, machines_2))
+            min_length = min(len(machines_1),len(machines_2))
             machines_1 = machines_1[:min_length] + machines_2[min_length:]
             machines_2 = machines_2[:min_length] + machines_1[min_length:]
         adapter1.resource_data += machines_2
