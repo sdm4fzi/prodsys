@@ -103,11 +103,11 @@ def crossover(ind1, ind2):
     machines_2 = adapters.get_machines(adapter2)
     transport_resources_1 = adapters.get_transport_resources(adapter1)
     transport_resources_2 = adapters.get_transport_resources(adapter2)
-    if "machine " in crossover_type:
+    if "machine" in crossover_type:
         adapter1.resource_data = transport_resources_1
         adapter2.resource_data = transport_resources_2
         if crossover_type == "partial_machine":
-            min_length = max(len(machines_1, machines_2))
+            min_length = min(len(machines_1),len(machines_2))
             machines_1 = machines_1[:min_length] + machines_2[min_length:]
             machines_2 = machines_2[:min_length] + machines_1[min_length:]
         adapter1.resource_data += machines_2
@@ -441,14 +441,14 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     possible_machines = adapters.get_machines(adapter_object)
     if not possible_machines:
         return False
-    machine = random.choice(possible_machines)
+    moved_machine = random.choice(possible_machines)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
-    for machine in adapter_object.resource_data:
+    for machine in possible_machines:
         if machine.location in possible_positions:
             possible_positions.remove(machine.location)
     if not possible_positions:
         return False
-    machine.location = random.choice(possible_positions)
+    moved_machine.location = random.choice(possible_positions)
     return True
 
 
