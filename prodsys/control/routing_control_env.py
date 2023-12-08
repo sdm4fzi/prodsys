@@ -176,13 +176,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             Tuple[np.ndarray, float, bool, dict]: The observation, reward, done, and info.
         """
         # TODO: implement action masking here!
-        list_resource_IDs = sorted({observer.resource.data.ID for observer in self.observers})
-        possible_resources = [int(resource in [r.data.ID for r in self.possible_resources]) for resource in list_resource_IDs]
-        #Random Heuristic
-        #possible_indices = [i for i, value in enumerate(possible_resources) if value == 1]
-        #resource_index = np.random.choice(possible_indices)
-        #RL-Agent Decision
-        resource_index = np.argmax(action*possible_resources)
+        resource_index = np.argmax(action)
 
         self.chosen_resource = self.runner.resource_factory.resources[resource_index]
         if not self.chosen_resource.data.ID in [r.data.ID for r in self.possible_resources]:
