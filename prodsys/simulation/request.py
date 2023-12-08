@@ -27,11 +27,16 @@ class Request:
 
     def get_process(self) -> process.PROCESS_UNION:
         """
-        Returns the process of the request.
+        Returns the process or the capability process of the request 
 
         Returns:
             process.PROCESS_UNION: The process.
         """
+        if hasattr(self.process.process_data, 'capability'):
+            for process in self.resource.processes:
+                if process.process_data.capability == self.process.process_data.capability:
+                    self.process = process
+
         return self.process
 
     def get_product(self) -> product.Product:
