@@ -32,7 +32,7 @@ class Request:
         Returns:
             process.PROCESS_UNION: The process.
         """
-        if hasattr(self.process.process_data, 'capability'):
+        if isinstance(self.process, process.CapabilityProcess):
             for process in self.resource.processes:
                 if process.process_data.capability == self.process.process_data.capability:
                     self.process = process
