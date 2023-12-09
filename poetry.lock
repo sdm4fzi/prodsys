@@ -3706,7 +3706,7 @@ anyio = ">=3.0.0"
 
 [[package]]
 name = "wcwidth"
-version = "0.2.6"
+version = "0.2.7"
 description = "Measures the displayed width of unicode strings in a terminal"
 category = "dev"
 optional = false
