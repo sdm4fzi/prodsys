@@ -33,9 +33,9 @@ class Request:
             process.PROCESS_UNION: The process.
         """
         if isinstance(self.process, process.CapabilityProcess):
-            for process in self.resource.processes:
-                if process.process_data.capability == self.process.process_data.capability:
-                    self.process = process
+            for resource_process in self.resource.processes:
+                if resource_process.process_data.capability == self.process.process_data.capability:
+                    self.process = resource_process
 
         return self.process
 
