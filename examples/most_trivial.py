@@ -7,7 +7,7 @@ t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
 p1 = psx.ProductionProcess(t1, "p1")
 p2 = psx.ProductionProcess(t2, "p2")
 
-t3 = psx.FunctionTimeModel("constant", 1, ID="t3")
+t3 = psx.FunctionTimeModel("constant", 0.2, ID="t3")
 
 tp = psx.TransportProcess(t3, "tp")
 
@@ -36,10 +36,14 @@ source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
 
 
 system = psx.ProductionSystem([machine, transport], [source1, source2], [sink1, sink2])
+model = system.to_model()
+from prodsys import runner
+runner_instance = runner.Runner(adapter=model)
+runner_instance.initialize_simulation()
+system.run(1000)
 
-system.run(10000)
+runner_instance = system.runner
 
-runnner = system.runner
-
-runnner.print_results()
-runnner.save_results_as_csv("examples")
+runner_instance.print_results()
+# runner_instance.plot_results()
+runner_instance.save_results_as_csv("examples")

@@ -26,7 +26,7 @@
       "ID": "function_time_model_4",
       "description": "exponential distribution time model with 100 minutes",
       "distribution_function": "exponential",
-      "location": 52.0,
+      "location": 70.0,
       "scale": 0.0
     },
     "4": {
@@ -148,27 +148,27 @@
     "0": {
       "ID": "IQ1",
       "description": "Input-queue 1 for R1",
-      "capacity": 10
+      "capacity": 0
     },
     "1": {
       "ID": "OQ1",
       "description": "Output-queue 1 for R1",
-      "capacity": 10
+      "capacity": 0
     },
     "2": {
       "ID": "OQ2",
       "description": "Output-queue 2 for R2",
-      "capacity": 10
+      "capacity": 0
     },
     "3": {
       "ID": "IQ2",
       "description": "Input-queue 2 for R3",
-      "capacity": 10
+      "capacity": 0
     },
     "4": {
       "ID": "OQ3",
       "description": "Output-queue 3 for R3",
-      "capacity": 10
+      "capacity": 0
     },
     "5": {
       "ID": "SourceQueue",
@@ -183,7 +183,7 @@
     "7": {
       "ID": "IQ9",
       "description": "Input-queue 1 for R2",
-      "capacity": 10
+      "capacity": 0
     }
   },
   "resources": {

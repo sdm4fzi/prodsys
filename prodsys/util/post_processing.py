@@ -274,9 +274,13 @@ class PostProcessor:
             pd.DataFrame: Data frame with the average throughput time for each product type.
         """
         df = self.df_throughput.copy()
+        print(len(df))
         max_time = df["End_time"].max()
+        print(df["Start_time"].max())
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
+        print(len(df))
         df = df.groupby(by=["Product_type"])["Throughput_time"].mean()
+        print(len(df))
         return df
     
     @cached_property
@@ -459,6 +463,7 @@ class PostProcessor:
             pd.DataFrame: Data frame with the total time spent in each state of each resource.
         """
         df = self.df_resource_states.copy()
+        df = df.loc[df["Time_type"] != "na"]
 
         df_time_per_state = df.groupby(["Resource", "Time_type"])[
             "time_increment"
