@@ -3,10 +3,15 @@ from prodsys.adapters import JsonProductionSystemAdapter
 import prodsys.express as psx
 from prodsys import runner
 
-# Define the path to your test configuration file. This should be similar to example_simulation.py.
 @pytest.fixture
 def simulation_adapter() -> JsonProductionSystemAdapter:
-    # Set up the simulation system using JsonProductionSystemAdapter
+
+    # TODO: Add tests for the following:
+    # - Test running simulation
+    # - Test performance KPIs (e.g. throughput, cycle time, etc.)
+    # - Test utilization KPIs (e.g. machine utilization, transport utilization, etc.)
+    # - Test setup KPIs (e.g. setup time, setup count, etc.)
+    # - Test WIP KPIs (e.g. WIP, WIP per product, etc.)
 
 
     t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
