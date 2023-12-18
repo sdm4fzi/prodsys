@@ -4,6 +4,15 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional, Union, TYPE_CHECKING, Generator, List
 
+import logging
+from prodsys.config import logging_config
+
+# Set up logging using the configuration
+logging_config.setup_logging()
+
+# Create a logger for the module
+logger = logging.getLogger(__name__)
+
 from simpy import events
 from simpy import exceptions
 from pydantic import BaseModel, Extra, root_validator, Field
@@ -279,8 +288,10 @@ class ProductionState(State):
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
         try:
+            logger.debug({"ID": self.state_data.ID, "event": "wait for activation or activation of resource"})
             yield events.AllOf(self.env, [self.resource.active, self.active])
         except exceptions.Interrupt:
+            logger.debug({"ID": self.state_data.ID, "event": "interrupted while waiting for activation or activation of resource"})
             yield events.AllOf(self.env, [self.active, self.resource.active])
             self.interrupt_processed.succeed()
         self.state_info.log_start_state(
@@ -289,6 +300,7 @@ class ProductionState(State):
         while self.done_in:
             try:
                 self.start = self.env.now
+                logger.debug({"ID": self.state_data.ID, "event": f"starting process that ends in {self.done_in}"})
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -297,11 +309,14 @@ class ProductionState(State):
                     self.env.now, StateTypeEnum.production
                 )
                 self.update_done_in()
+                logger.debug({"ID": self.state_data.ID, "event": f"interrupted process that ends in {self.done_in}"})
                 yield events.AllOf(self.env, [self.active, self.resource.active])
+                logger.debug({"ID": self.state_data.ID, "event": f"process that ends in {self.done_in} interrupt over"})
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.production
                 )
+        logger.debug({"ID": self.state_data.ID, "event": "process finished"})
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
         self.finished_process.succeed()
 
@@ -311,7 +326,9 @@ class ProductionState(State):
             self.done_in = 0
 
     def interrupt_process(self) -> Generator:
+        logger.debug({"ID": self.state_data.ID, "event": "waiting for interrupt to be processed"})
         yield self.interrupt_processed
+        logger.debug({"ID": self.state_data.ID, "event": "interrupt processed"})
         if self.process and self.process.is_alive:
             self.interrupt_processed = events.Event(self.env)
             self.process.interrupt()
