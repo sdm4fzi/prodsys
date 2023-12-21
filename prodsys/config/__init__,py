@@ -1,0 +1,6 @@
+import logging
+from typing import Literal
+
+LOGGING_LEVEL = logging.WARNING
+LOGGING_TYPE: Literal["console", "file"] = 'console'
+LOG_FILE_LOCATION = "prodsys.log"
