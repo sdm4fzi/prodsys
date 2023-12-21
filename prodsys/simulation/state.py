@@ -7,10 +7,7 @@ from typing import Optional, Union, TYPE_CHECKING, Generator, List
 import logging
 from prodsys.config import logging_config
 
-# Set up logging using the configuration
 logging_config.setup_logging()
-
-# Create a logger for the module
 logger = logging.getLogger(__name__)
 
 from simpy import events
