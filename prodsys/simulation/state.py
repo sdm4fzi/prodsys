@@ -288,10 +288,10 @@ class ProductionState(State):
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
         try:
-            logger.debug({"ID": self.state_data.ID, "event": "wait for activation or activation of resource"})
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "wait for activation or activation of resource before process"})
             yield events.AllOf(self.env, [self.resource.active, self.active])
         except exceptions.Interrupt:
-            logger.debug({"ID": self.state_data.ID, "event": "interrupted while waiting for activation or activation of resource"})
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupted while waiting for activation or activation of resource"})
             yield events.AllOf(self.env, [self.active, self.resource.active])
             self.interrupt_processed.succeed()
         self.state_info.log_start_state(
@@ -300,7 +300,7 @@ class ProductionState(State):
         while self.done_in:
             try:
                 self.start = self.env.now
-                logger.debug({"ID": self.state_data.ID, "event": f"starting process that ends in {self.done_in}"})
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"starting process that ends in {self.done_in}"})
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -309,14 +309,14 @@ class ProductionState(State):
                     self.env.now, StateTypeEnum.production
                 )
                 self.update_done_in()
-                logger.debug({"ID": self.state_data.ID, "event": f"interrupted process that ends in {self.done_in}"})
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"interrupted process that ends in {self.done_in}"})
                 yield events.AllOf(self.env, [self.active, self.resource.active])
-                logger.debug({"ID": self.state_data.ID, "event": f"process that ends in {self.done_in} interrupt over"})
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"process that ends in {self.done_in} interrupt over"})
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.production
                 )
-        logger.debug({"ID": self.state_data.ID, "event": "process finished"})
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "process finished"})
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
         self.finished_process.succeed()
 
@@ -326,9 +326,9 @@ class ProductionState(State):
             self.done_in = 0
 
     def interrupt_process(self) -> Generator:
-        logger.debug({"ID": self.state_data.ID, "event": "waiting for interrupt to be processed"})
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "waiting for interrupt to be processed"})
         yield self.interrupt_processed
-        logger.debug({"ID": self.state_data.ID, "event": "interrupt processed"})
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupt processed"})
         if self.process and self.process.is_alive:
             self.interrupt_processed = events.Event(self.env)
             self.process.interrupt()
@@ -370,8 +370,10 @@ class TransportState(State):
             origin=self.resource.get_location(), target=target
         )
         try:
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "wait for activation or activation of resource before process"})
             yield events.AllOf(self.env, [self.resource.active, self.active])
         except exceptions.Interrupt:
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupted while waiting for activation or activation of resource"})
             yield events.AllOf(self.env, [self.active, self.resource.active])
             self.interrupt_processed.succeed()
         self.state_info.log_start_state(
@@ -380,6 +382,7 @@ class TransportState(State):
         while self.done_in:
             try:
                 self.start = self.env.now
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"starting process that ends in {self.done_in}"})
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -388,12 +391,15 @@ class TransportState(State):
                     self.env.now, StateTypeEnum.transport
                 )
                 self.update_done_in()
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"interrupted process that ends in {self.done_in}"})
                 yield events.AllOf(self.env, [self.active, self.resource.active])
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"process that ends in {self.done_in} interrupt over"})
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.transport
                 )
         self.resource.location = target
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "process finished"})
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
         self.finished_process.succeed()
 
@@ -403,7 +409,9 @@ class TransportState(State):
             self.done_in = 0
 
     def interrupt_process(self) -> Generator:
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "waiting for interrupt to be processed"})
         yield self.interrupt_processed
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupt processed"})
         if self.process and self.process.is_alive:
             self.interrupt_processed = events.Event(self.env)
             self.process.interrupt()
@@ -435,13 +443,18 @@ class BreakDownState(State):
     def process_state(self) -> Generator:
         while True:
             yield self.env.process(self.wait_for_breakdown())
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "breakdown, waiting for active resource"})
             yield self.resource.active
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "resource is active, interrupting states"})
             self.resource.active = events.Event(self.env)
             yield self.env.process(self.resource.interrupt_states())
+            breakdown_time = self.repair_time_model.get_next_time()
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"interrupted states, starting breakdown for {breakdown_time}"})
             self.state_info.log_start_state(
-                self.env.now, self.env.now + 15, StateTypeEnum.breakdown
+                self.env.now, self.env.now + breakdown_time, StateTypeEnum.breakdown
             )
-            yield self.env.timeout(self.repair_time_model.get_next_time())
+            yield self.env.timeout(breakdown_time)
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "breakdown finished"})
             self.resource.activate()
             self.state_info.log_end_state(self.env.now, StateTypeEnum.breakdown)
 
@@ -493,9 +506,11 @@ class ProcessBreakDownState(State):
     def process_state(self) -> Generator:
         while True:
             yield self.env.process(self.wait_for_breakdown())
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "breakdown, waiting for active resource"})
             yield events.AllOf(
                 self.env, [state.active for state in self.production_states]
             )
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "resource is active, interrupting states"})
             for state in self.production_states + self.resource.setup_states:
                 state.deactivate()
             interrupt_events = []
@@ -503,12 +518,16 @@ class ProcessBreakDownState(State):
                 if state.process and state.process.is_alive and state.interrupt_processed.triggered:
                     interrupt_events.append(self.env.process(state.interrupt_process()))
             yield self.env.all_of(interrupt_events)
+            repair_time = self.repair_time_model.get_next_time()
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"interrupted states, starting breakdown for {repair_time}"})
             self.state_info.log_start_state(
-                self.env.now, self.env.now + 5, StateTypeEnum.process_breakdown
+                self.env.now, self.env.now + repair_time, StateTypeEnum.process_breakdown
             )
-            yield self.env.timeout(self.repair_time_model.get_next_time())
+            yield self.env.timeout(repair_time)
             self.state_info.log_end_state(self.env.now, StateTypeEnum.process_breakdown)
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "breakdown finished, waiting for active resource"})
             yield self.resource.active
+            logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "resource is active, activating states"})
             for state in self.production_states + self.resource.setup_states:
                 state.activate()
 
@@ -565,15 +584,18 @@ class SetupState(State):
         self.done_in = self.time_model.get_next_time()
         while True:
             try:
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "wait for activation or activation of resource before process"})
                 yield self.is_active
                 running_processes = [
                     state.process
                     for state in self.resource.production_states
                     if (state.process and state.process.is_alive)
                 ]
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"waiting for running processes to finish"})
                 yield events.AllOf(self.env, running_processes)
                 break
             except exceptions.Interrupt:
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupted while waiting for activation or activation of resource"})
                 yield self.is_active
                 self.interrupt_processed.succeed()
         self.state_info.log_start_state(
@@ -582,6 +604,7 @@ class SetupState(State):
         while self.done_in:
             try:
                 self.start = self.env.now
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"starting process that ends in {self.done_in}"})
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0
             except exceptions.Interrupt:
@@ -589,11 +612,14 @@ class SetupState(State):
                     self.env.now, StateTypeEnum.setup
                 )
                 self.update_done_in()
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"interrupted process that ends in {self.done_in}"})
                 yield events.AllOf(self.env, [self.active, self.resource.active])
+                logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"process that ends in {self.done_in} interrupt over"})
                 self.interrupt_processed.succeed()
                 self.state_info.log_end_interrupt_state(
                     self.env.now, self.env.now + self.done_in, StateTypeEnum.setup
                 )
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "process finished"})
         self.state_info.log_end_state(self.env.now, StateTypeEnum.setup)
         self.finished_process.succeed()
 
@@ -603,7 +629,9 @@ class SetupState(State):
             self.done_in = 0
 
     def interrupt_process(self) -> Generator:
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "waiting for interrupt to be processed"})
         yield self.interrupt_processed
+        logger.debug({"ID": self.state_data.ID, "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "interrupt processed"})
         if self.process and self.process.is_alive:
             self.interrupt_processed = events.Event(self.env)
             self.process.interrupt()

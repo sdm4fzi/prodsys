@@ -4,4 +4,4 @@ import sys
 import logging.config
 
 def setup_logging():
-    logging.config.fileConfig('prodsys/config/logging.ini')
+    logging.config.fileConfig("prodsys/config/logging.ini")

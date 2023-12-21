@@ -27,3 +27,4 @@ examples/tutorials/results/
 site/
 tensorboard_log/
 results/
+logs/*
