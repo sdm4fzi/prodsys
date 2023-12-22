@@ -274,6 +274,7 @@ def shortest_queue_routing_heuristic(
     if any(not isinstance(resource, resources.ProductionResource) for resource in possible_resources):
         random_routing_heuristic(possible_resources)
         return
+    np.random.shuffle(possible_resources)
     possible_resources.sort(key=lambda x: sum([len(q.items) for q in x.input_queues]))
 
 
