@@ -63,6 +63,7 @@ def get_lognormal_list(time_model_data: FunctionTimeModelData) -> List[float]:
     Returns:
         List[float]: A list of lognormally distributed values.
     """
+    # TODO: check if these values are correct for location and scale
     return list(lognormal(time_model_data.location, time_model_data.scale, time_model_data.batch_size))
 
 FUNCTION_DICT: Dict[str, Callable[[float, float, int], List[float]]] = {
