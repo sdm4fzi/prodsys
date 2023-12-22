@@ -6,6 +6,12 @@ from typing import List, Generator, Optional, Union
 from pydantic import BaseModel, Field, Extra
 import random
 
+import logging
+from prodsys.conf import logging_config
+
+logging_config.setup_logging()
+logger = logging.getLogger(__name__)
+
 from simpy.resources import resource
 from simpy import events
 from prodsys.simulation import process, sim, store
@@ -275,7 +281,10 @@ class Resource(BaseModel, ABC, resource.Resource):
         for state in self.setup_states + self.production_states:
             if state.process and state.interrupt_processed.triggered:
                 eventss.append(self.env.process(state.interrupt_process()))
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start interrupting processes of resource"})
         yield events.AllOf(self.env, eventss)
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Interrupted processes of resource"})
+
 
     def get_free_of_setups(self) -> Generator:
         """
@@ -289,7 +298,9 @@ class Resource(BaseModel, ABC, resource.Resource):
             for state in self.setup_states
             if (state.process and state.process.is_alive)
         ]
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start waiting for free of setups"})
         yield events.AllOf(self.env, running_setups)
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Finished waiting for free of setups"})
 
     def get_free_of_processes_in_preparation(self) -> Generator:
         """
@@ -303,7 +314,9 @@ class Resource(BaseModel, ABC, resource.Resource):
             for state in self.production_states
             if (state.process and state.process.is_alive)
         ]
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start waiting for free of processes in preparation"})
         yield events.AllOf(self.env, running_processes)
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Finished waiting for free of processes in preparation"})
 
     def setup(self, _process: process.PROCESS_UNION) -> Generator:
         """
@@ -339,7 +352,9 @@ class Resource(BaseModel, ABC, resource.Resource):
                 yield self.env.process(self.get_free_of_setups())
                 input_state.prepare_for_run()
                 input_state.process = self.env.process(input_state.process_state())
+                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "process": _process.process_data.ID, "event": f"Start setup process"})
                 yield input_state.process
+                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "process": _process.process_data.ID, "event": f"Finished setup process"})
                 input_state.process = None
                 self.current_setup = _process
                 self.unreserve_setup()

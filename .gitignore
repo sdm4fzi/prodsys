@@ -28,3 +28,4 @@ site/
 tensorboard_log/
 results/
 logs/*
+plots/*

@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Optional, Union, TYPE_CHECKING, Generator, List
 
 import logging
-from prodsys.config import logging_config
+from prodsys.conf import logging_config
 
 logging_config.setup_logging()
 logger = logging.getLogger(__name__)
