@@ -3,11 +3,12 @@ import sys
 import logging.config
 from datetime import datetime
 from typing import Literal
+import os
 
 LOGGING_LEVEL = logging.WARNING
 LOGGING_HANDLER: Literal["null", "console", "file"] = "console"
 LOG_FILE_NAME = f'logs/prodsys_debug_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
-
+CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), "logging.ini")
 
 logging_handler_dict = {
     "console": "consoleHandler",
@@ -23,7 +24,7 @@ class DelayedRotatingFileHandler(logging.handlers.RotatingFileHandler):
 def setup_logging():
         
     logging.config.fileConfig(
-        "prodsys/conf/logging.ini",
+        CONFIG_LOCATION,
         defaults={
             "logfilename": LOG_FILE_NAME,
             "loglevel": logging.getLevelName(LOGGING_LEVEL),
