@@ -8,7 +8,7 @@ from typing import List, Union, Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field, Extra
 
 import logging
-from prodsys.config import logging_config
+from prodsys.conf import logging_config
 
 logging_config.setup_logging()
 logger = logging.getLogger(__name__)

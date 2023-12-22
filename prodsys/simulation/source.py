@@ -5,6 +5,12 @@ from typing import List, TYPE_CHECKING, Tuple, Generator
 from pydantic import BaseModel, Field
 from simpy import events
 
+import logging
+from prodsys.conf import logging_config
+
+logging_config.setup_logging()
+logger = logging.getLogger(__name__)
+
 from prodsys.simulation import router, sim, store, time_model
 from prodsys.models import source_data, product_data
 
@@ -63,11 +69,12 @@ class Source(BaseModel):
             product = self.product_factory.create_product(
                 self.product_data, self.router
             )
+            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Created product"})
             available_events_events = []
             for queue in self.output_queues:
                 available_events_events.append(queue.put(product.product_data))
             yield events.AllOf(self.env, available_events_events)
-
+            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Put product in output queue"})
             product.process = self.env.process(product.process_product())
             product.next_production_resource = self
 
