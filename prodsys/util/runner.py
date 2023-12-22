@@ -110,6 +110,7 @@ class Runner(BaseModel):
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
+        self.adapter.physical_validation()
         with temp_seed(self.adapter.seed):
 
             self.time_model_factory = time_model_factory.TimeModelFactory()

@@ -120,11 +120,11 @@ class PostProcessor:
         STATE_SORTING_INDEX = {
             "0": ["Interface State", "finished product", 1],
             "1": ["Interface State", "created product", 2],
-            "2": ["Process State", "end interrupt", 3],
-            "3": ["Process State", "end state", 4],
-            "4": ["Process State", "start state", 5],
-            "5": ["Process State", "start interrupt", 6],
-            "6": ["Interface State", "end state", 7],
+            "2": ["Interface State", "end state", 3],
+            "3": ["Process State", "end interrupt", 4],
+            "4": ["Process State", "end state", 5],
+            "5": ["Process State", "start state", 6],
+            "6": ["Process State", "start interrupt", 7],
             "7": ["Interface State", "start state", 8],
         }
 
@@ -276,13 +276,9 @@ class PostProcessor:
             pd.DataFrame: Data frame with the average throughput time for each product type.
         """
         df = self.df_throughput.copy()
-        print(len(df))
         max_time = df["End_time"].max()
-        print(df["Start_time"].max())
         df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
-        print(len(df))
         df = df.groupby(by=["Product_type"])["Throughput_time"].mean()
-        print(len(df))
         return df
     
     @cached_property
@@ -414,8 +410,8 @@ class PostProcessor:
                 df.loc[
                     (df["Resource"] == resource)
                     & (
-                        ((df["State_sorting_Index"] == 4) & (df["Used_Capacity"] == 0))
-                        | (df["State_sorting_Index"] == 7)
+                        ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0))
+                        | (df["State_sorting_Index"] == 3)
                     )
                 ]
                 .copy()
@@ -429,14 +425,14 @@ class PostProcessor:
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
-            (df["State_sorting_Index"] == 4) & (df["Used_Capacity"] == 0)
-        ) | (df["State_sorting_Index"] == 7)
+            (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
+        ) | (df["State_sorting_Index"] == 3)
         PRODUCTIVE_CONDITION = (
-            (df["State_sorting_Index"] == 5)
-            | (df["State_sorting_Index"] == 3)
-            | ((df["State_sorting_Index"] == 4) & df["Used_Capacity"] != 0)
+            (df["State_sorting_Index"] == 6)
+            | (df["State_sorting_Index"] == 4)
+            | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
         )
-        DOWN_CONDITION = ((df["State_sorting_Index"] == 6) | (
+        DOWN_CONDITION = ((df["State_sorting_Index"] == 7) | (
             df["State_sorting_Index"] == 8
         )) & (df["State Type"] == state.StateTypeEnum.breakdown)
         SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
@@ -567,7 +563,6 @@ class PostProcessor:
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
         df.loc[CREATED_CONDITION | FINISHED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION | FINISHED_CONDITION, "Resource"]
-        
         MOVE_AWAY_CONDITION = (df["Empty Transport"] == False) & (df["Activity"] == "start state")
         MOVE_IN_CONDITION = (df["Empty Transport"] == False) & (df["Activity"] == "end state")
 
@@ -577,7 +572,12 @@ class PostProcessor:
         df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[MOVE_IN_CONDITION, "Target location"]
 
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
-
+        
+        # remove bug that sinks have resource WIP!
+        df_temp = df[["State", "State Type"]].drop_duplicates()
+        sinks = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.sink, "State"].unique()
+        df = df.loc[~df["WIP_resource"].isin(sinks)]
+        
         return df
     
     @cached_property

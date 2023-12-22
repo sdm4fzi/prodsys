@@ -237,7 +237,7 @@
     },
     "3": {
       "ID": "R4",
-      "description": "Resource 3",
+      "description": "Resource 4",
       "capacity": 2,
       "location": [10.0, 20.0],
       "controller": "PipelineController",
@@ -343,7 +343,7 @@
       "product_type": "Product_3",
       "time_model_id": "function_time_model_4",
       "router": "SimpleRouter",
-      "routing_heuristic": "shortest_queue",
+      "routing_heuristic": "random",
       "output_queues": ["SourceQueue"]
     }
   }
