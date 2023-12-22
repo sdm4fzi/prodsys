@@ -187,7 +187,6 @@ class ProductionController(Controller):
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
-                # TODO: check if this is necessary
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
                 self.requested.succeed()
 
@@ -281,7 +280,7 @@ class TransportController(Controller):
         ],
         None,
     ]
-    _current_position: Optional[product.Location] = Field(init=False, default=None)
+    _current_location: Optional[product.Location] = Field(init=False, default=None)
 
     def get_next_product_for_process(
         self, resource: product.Location, product: product.Product
@@ -357,7 +356,7 @@ class TransportController(Controller):
         Yields:
             Generator: The generator yields when a request is made or a process is finished.
         """
-        self._current_position = self.resource
+        self.update_location(self.resource)
         while True:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
             yield events.AnyOf(
@@ -377,6 +376,16 @@ class TransportController(Controller):
             if not self.resource.full:
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
                 self.requested.succeed()
+
+    def update_location(self, location: product.Location) -> None:
+        """
+        Set the current position of the transport resource.
+
+        Args:
+            position (product.Location): The current position.
+        """
+        self._current_location = location
+        self.resource.set_location(location.data.location)
 
     def start_process(self) -> Generator:
         """
@@ -399,7 +408,6 @@ class TransportController(Controller):
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        # TODO: check if reserved_requests_count is necessary here
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
 
@@ -413,6 +421,7 @@ class TransportController(Controller):
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
                 while True:
                     transport_state = resource.get_free_process(process)
@@ -431,7 +440,7 @@ class TransportController(Controller):
                 yield self.env.process(
                     self.run_process(transport_state, product, target=origin, empty_transport=True)
                 )
-                self._current_position = origin
+                self.update_location(origin)
                 transport_state.process = None
 
             eventss = self.get_next_product_for_process(origin, product)
@@ -455,7 +464,7 @@ class TransportController(Controller):
             yield self.env.process(
                 self.run_process(transport_state, product, target=target, empty_transport=False)
             )
-            self._current_position = target
+            self.update_location(target)
             transport_state.process = None
             eventss = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
@@ -486,10 +495,10 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        if self._current_position.data.ID is self.resource.data.ID:
+        if self._current_location.data.ID is self.resource.data.ID:
             origin = None
         else:
-            origin = self._current_position
+            origin = self._current_location
         input_state.state_info.log_transport(
             origin,
             target, state.StateTypeEnum.transport,
