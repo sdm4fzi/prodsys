@@ -148,32 +148,32 @@
     "0": {
       "ID": "IQ1",
       "description": "Input-queue 1 for R1",
-      "capacity": 0
+      "capacity": 20
     },
     "1": {
       "ID": "OQ1",
       "description": "Output-queue 1 for R1",
-      "capacity": 0
+      "capacity": 20
     },
     "2": {
       "ID": "OQ2",
       "description": "Output-queue 2 for R2",
-      "capacity": 0
+      "capacity": 20
     },
     "3": {
       "ID": "IQ2",
       "description": "Input-queue 2 for R3",
-      "capacity": 0
+      "capacity": 20
     },
     "4": {
       "ID": "OQ3",
       "description": "Output-queue 3 for R3",
-      "capacity": 0
+      "capacity": 20
     },
     "5": {
       "ID": "SourceQueue",
       "description": "Output-Queue for all sources",
-      "capacity": 0
+      "capacity": 20
     },
     "6": {
       "ID": "SinkQueue",
@@ -183,7 +183,7 @@
     "7": {
       "ID": "IQ9",
       "description": "Input-queue 1 for R2",
-      "capacity": 0
+      "capacity": 20
     }
   },
   "resources": {
