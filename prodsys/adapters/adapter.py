@@ -915,6 +915,7 @@ def get_possible_transport_processes_IDs(
     ]
 
 def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
+    # FIXME: resolve for capability processes!
     available = set(
         util.flatten(
             [resource.process_ids for resource in adapters.get_machines(configuration)]
