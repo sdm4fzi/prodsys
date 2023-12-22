@@ -4,6 +4,13 @@ from abc import ABC, abstractmethod
 import warnings
 from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator, ValidationError
+
+import logging
+from prodsys.conf import logging_config
+
+logging_config.setup_logging()
+logger = logging.getLogger(__name__)
+
 from prodsys import adapters
 
 from prodsys.models import (
@@ -763,6 +770,13 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 raise ValueError(
                     f"The queue {q} of sink {sink.ID} is not a valid queue of {queues}."
                 )
+            for queue in values["queue_data"]:
+                if queue.ID == q:
+                    if queue.capacity != 0:
+                        logger.warning(
+                            f"The capacity of the queue {queue.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
+                        )
+                        queue.capacity = 0
         return sink
 
     @validator("source_data", each_item=True)

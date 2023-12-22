@@ -3,6 +3,12 @@ from __future__ import annotations
 
 from simpy.resources import store
 
+import logging
+from prodsys.conf import logging_config
+
+logging_config.setup_logging()
+logger = logging.getLogger(__name__)
+
 from prodsys.models import queue_data
 
 from prodsys.simulation import sim
@@ -39,6 +45,7 @@ class Queue(store.FilterStore):
         Returns:
             bool: True if the queue is full, False otherwise.
         """
+        logger.debug({"ID": self.queue_data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
         return (self.capacity - self._pending_put - len(self.items)) <= 0
     
     def reserve(self) -> None:
