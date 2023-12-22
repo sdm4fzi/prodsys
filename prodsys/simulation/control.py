@@ -206,7 +206,6 @@ class ProductionController(Controller):
         self.reserved_requests_count += 1
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process"})
         yield self.env.timeout(0)
-        # FIXME: resolve that only requests with correct resource are considered!
         process_request = self.requests.pop(0)
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from prodsys.simulation import process as prodsys_process
+
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, resources
 
@@ -25,6 +27,11 @@ class Request:
         self.product = product
         self.resource = resource
 
+        if isinstance(self.process, prodsys_process.CapabilityProcess):
+            for resource_process in self.resource.processes:
+                if isinstance(resource_process, prodsys_process.CapabilityProcess) and resource_process.process_data.capability == self.process.process_data.capability:
+                    self.process = resource_process
+
     def get_process(self) -> process.PROCESS_UNION:
         """
         Returns the process or the capability process of the request 
@@ -32,11 +39,6 @@ class Request:
         Returns:
             process.PROCESS_UNION: The process.
         """
-        if hasattr(self.process.process_data, "capability"):
-            for resource_process in self.resource.processes:
-                if resource_process.process_data.capability == self.process.process_data.capability:
-                    self.process = resource_process
-
         return self.process
 
     def get_product(self) -> product.Product:
