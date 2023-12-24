@@ -907,7 +907,6 @@ def get_possible_transport_processes_IDs(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> List[str]:
     possible_processes = adapter_object.process_data
-    # TODO: make it work with capability processes for transport
     return [
         process.ID
         for process in possible_processes

@@ -225,6 +225,7 @@ class CapabilityRouter(Router):
         Returns:
             List[resources.Resource]: _description_
         """
+        # TODO: resolve this hack by creating a single router, that allows to route capability, production and transport processes.
         if isinstance(requested_process, process.TransportProcess):
             return self.get_free_resources_per_ID(requested_process)
         elif not isinstance(requested_process, process.CapabilityProcess):
