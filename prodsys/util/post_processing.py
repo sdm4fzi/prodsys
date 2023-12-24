@@ -9,8 +9,6 @@ from typing import List
 import pandas as pd
 
 WARM_UP_CUT_OFF = 0.15
-# FIXME: make problems with pandas and interface states working
-# FIXME: remove all convetions with naming states
 
 
 @dataclass
