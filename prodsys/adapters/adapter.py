@@ -907,23 +907,81 @@ def get_possible_transport_processes_IDs(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> List[str]:
     possible_processes = adapter_object.process_data
-    # TODO: potentially make it work with capability processes for transpors
+    # TODO: make it work with capability processes for transport
     return [
         process.ID
         for process in possible_processes
         if isinstance(process, processes_data.TransportProcessData)
     ]
 
-def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
-    # FIXME: resolve for capability processes!
-    available = set(
-        util.flatten(
-            [resource.process_ids for resource in adapters.get_machines(configuration)]
-        )
-    )
-    required = set(
-        util.flatten([product.processes for product in configuration.product_data])
-    )
+
+def get_production_processes_from_ids(
+    adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for process_id in process_ids:
+        for process in adapter_object.process_data:
+            if process.ID == process_id and isinstance(process, processes_data.ProductionProcessData):
+                processes.append(process)
+    return processes
+
+
+def get_transport_processes_from_ids(
+    adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for process_id in process_ids:
+        for process in adapter_object.process_data:
+            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData):
+                processes.append(process)
+    return processes
+
+def get_capability_processes_from_ids(
+        adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for process_id in process_ids:
+        for process in adapter_object.process_data:
+            if process.ID == process_id and isinstance(process, processes_data.CapabilityProcessData):
+                processes.append(process)
+    return processes
+
+
+def check_production_processes_available(available: List[processes_data.ProductionProcessData], required: List[processes_data.ProductionProcessData]) -> bool:
+    available = set([process.ID for process in available])
+    required = set([process.ID for process in required])
     if required - available != set():
+        return False
+    return True
+
+def check_transport_processes_available(available: List[processes_data.TransportProcessData], required: List[processes_data.TransportProcessData]) -> bool:
+    available = set([process.ID for process in available])
+    required = set([process.ID for process in required])
+    if required - available != set():
+        return False
+    return True
+
+def check_capability_processes_available(available: List[processes_data.CapabilityProcessData], required: List[processes_data.CapabilityProcessData]) -> bool:
+    available = set([process.capability for process in available])
+    required = set([process.capability for process in required])
+    if required - available != set():
+        return False
+    return True
+
+def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
+    available = util.flatten([resource.process_ids for resource in adapters.get_machines(configuration)])
+    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data])
+    required_production_processes = get_production_processes_from_ids(configuration, required)
+    required_transport_processes = get_transport_processes_from_ids(configuration, required)
+    required_capability_processes = get_capability_processes_from_ids(configuration, required)
+    available_production_processes = get_production_processes_from_ids(configuration, available)
+    available_transport_processes = get_transport_processes_from_ids(configuration, available)
+    available_capability_processes = get_capability_processes_from_ids(configuration, available)
+
+    if not check_production_processes_available(available_production_processes, required_production_processes):
+        return False
+    if not check_transport_processes_available(available_transport_processes, required_transport_processes):
+        return False
+    if not check_capability_processes_available(available_capability_processes, required_capability_processes):
         return False
     return True
