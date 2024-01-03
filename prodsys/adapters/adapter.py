@@ -293,6 +293,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
+    process_module_data: List[resource_data.ProcessModuleData] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
@@ -594,6 +595,13 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "state_ids": ["Breakdownstate_1"],
                     },
                 ],
+                "process_module_data": [
+                    {
+                        "ID": "PM1",
+                        "description": "Process Module 1",
+                        "process_ids": ["P1", "P2"]
+                    }
+                ],
                 "product_data": [
                     {
                         "ID": "Product_1",
@@ -723,6 +731,16 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 values["queue_data"] += input_queues + output_queues
 
         return resource
+    
+    @validator("process_module_data", each_item=True)	
+    def check_process_modules(cls, process_module: resource_data.ProcessModuleData, values):
+        processes = get_set_of_IDs(values["process_data"])
+        for process in process_module.process_ids:
+            if process not in processes:
+                raise ValueError(
+                    f"The process {process} of process module {process_module.ID} is not a valid process of {processes}."
+                )
+        return process_module
 
     @validator("product_data", each_item=True)
     def check_products(cls, product: product_data.ProductData, values):
@@ -854,8 +872,10 @@ class ProductionSystemAdapter(ABC, BaseModel):
         """
         if not check_redudant_locations(self):
             raise ValueError(f"Multiple objects are positioned at the same location.")
-        if not check_required_processes_available(self):
-            raise ValueError(f"Not all required process are available.")
+        if not check_required_processes_in_resources_available(self):
+            raise ValueError(f"Not all required process are available at resources.")
+        if not check_required_processes_in_resources_available(self):
+            raise ValueError(f"Not all required process are available at resources.")
 
 
 def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float]]:
@@ -879,28 +899,34 @@ def check_redudant_locations(adapter: adapters.ProductionSystemAdapter) -> bool:
 def get_possible_production_processes_IDs(
     adapter_object: adapters.ProductionSystemAdapter,
 ) -> Union[List[str], List[Tuple[str, ...]]]:
-    possible_processes = adapter_object.process_data
-    if not any(
-        process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
-        for process in possible_processes
-    ):
+    if not adapter_object.process_module_data:
+        possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data.TransportProcessData)]   
+        if not (all(
+            process.type == processes_data.ProcessTypeEnum.ProductionProcesses
+            for process in possible_processes
+        ) or all(
+            process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
+            for process in possible_processes
+        )):
+            raise ValueError(
+                f"Multiple process types in the same production system are not allowed."
+            )
+        if any(
+            process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
+            for process in possible_processes
+        ):
+            capabilities = set()
+            for process in possible_processes:
+                if process.capability in capabilities:
+                    raise ValueError(
+                        f"Multiple capability processes with the same capability {process.capability} are not allowed."
+                    )
+                capabilities.add(process.capability)
         return [
             process.ID
             for process in possible_processes
-            if isinstance(process, processes_data.ProductionProcessData)
         ]
-    capability_processes = [
-        process
-        for process in possible_processes
-        if isinstance(process, processes_data.CapabilityProcessData)
-        and process.time_model_id is not None
-    ]
-    process_dict = {}
-    for process in capability_processes:
-        if not process.capability in process_dict.keys():
-            process_dict[process.capability] = []
-        process_dict[process.capability].append(process.ID)
-    return [tuple(value) for value in process_dict.values()]
+    return [tuple(process_module.process_ids) for process_module in adapter_object.process_module_data]
 
 
 def get_possible_transport_processes_IDs(
@@ -967,9 +993,11 @@ def check_capability_processes_available(available: List[processes_data.Capabili
         return False
     return True
 
-def check_required_processes_available(configuration: adapters.ProductionSystemAdapter) -> bool:
-    available = util.flatten([resource.process_ids for resource in adapters.get_machines(configuration)])
-    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data])
+def check_required_processes_in_resources_available(configuration: adapters.ProductionSystemAdapter) -> bool:
+    available = list(util.flatten([resource.process_ids for resource in configuration.resource_data]))
+    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
+    required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
+    required = list(required) + list(required_dict_processes)
     required_production_processes = get_production_processes_from_ids(configuration, required)
     required_transport_processes = get_transport_processes_from_ids(configuration, required)
     required_capability_processes = get_capability_processes_from_ids(configuration, required)
@@ -982,5 +1010,22 @@ def check_required_processes_available(configuration: adapters.ProductionSystemA
     if not check_transport_processes_available(available_transport_processes, required_transport_processes):
         return False
     if not check_capability_processes_available(available_capability_processes, required_capability_processes):
+        return False
+    return True
+
+
+def check_required_processes_in_process_modules_available(configuration: adapters.ProductionSystemAdapter) -> bool:
+    available_process_module_processes = list(util.flatten([process_module.process_ids for process_module in configuration.process_module_data]))
+    if not available_process_module_processes:
+        return True
+    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
+    required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
+    required = list(required) + list(required_dict_processes)
+    required_production_processes = get_production_processes_from_ids(configuration, required)
+    required_capability_processes = get_capability_processes_from_ids(configuration, required)
+
+    if not check_production_processes_available(available_process_module_processes, required_production_processes):
+        return False
+    if not check_capability_processes_available(available_process_module_processes, required_capability_processes):
         return False
     return True

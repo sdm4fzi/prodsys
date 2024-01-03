@@ -17,7 +17,7 @@ from pydantic import parse_obj_as
 from prodsys import adapters, runner
 from prodsys.adapters.adapter import add_default_queues_to_resources
 from prodsys.adapters.adapter import check_redudant_locations
-from prodsys.adapters.adapter import check_required_processes_available
+from prodsys.adapters.adapter import check_required_processes_in_resources_available
 from prodsys.adapters.adapter import get_possible_production_processes_IDs, get_possible_transport_processes_IDs
 from prodsys.util.post_processing import PostProcessor
 from prodsys.models import (
@@ -49,6 +49,7 @@ def get_breakdown_state_ids_of_machine_with_processes(
 def clean_out_breakdown_states_of_resources(
     adapter_object: adapters.ProductionSystemAdapter,
 ):
+    # FIXME: Resolve problem if BST, BSM and BSP are not given!
     for resource in adapter_object.resource_data:
         if isinstance(resource, resource_data.ProductionResourceData) and any(
             True
@@ -349,17 +350,6 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemAdapter) 
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
     return True
-
-
-def get_processes_by_capabilities(
-    check_processes: List[processes_data.PROCESS_DATA_UNION],
-) -> Dict[str, List[str]]:
-    processes_by_capability = {}
-    for process in check_processes:
-        if process.capability not in processes_by_capability:
-            processes_by_capability[process.capability] = []
-        processes_by_capability[process.capability].append(process.ID)
-    return processes_by_capability
 
 
 def remove_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
@@ -851,7 +841,7 @@ def check_valid_configuration(
         return False
     if not valid_num_process_modules(configuration):
         return False
-    if not check_required_processes_available(configuration):
+    if not check_required_processes_in_resources_available(configuration):
         return False
     if not valid_positions(configuration):
         return False

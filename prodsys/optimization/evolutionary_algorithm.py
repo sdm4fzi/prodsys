@@ -239,6 +239,7 @@ def evolutionary_algorithm_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
+    # TODO: add here check for process modules
     base_configuration = base_configuration.copy(deep=True)
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
