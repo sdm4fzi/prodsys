@@ -1036,7 +1036,6 @@ def evaluate(
 
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     current_generation = solution_dict["current_generation"]
-    adapter_object.write_data("examples/reference_model_test/faulty_config.json")
     if adapter_object.ID:
         for generation in solution_dict.keys():
             if (
