@@ -7,9 +7,6 @@ from pydantic import BaseModel, Field, Extra
 import random
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
@@ -268,21 +265,21 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         Activates the resource after a breakdwon.
         """
+        if any([state_instance.active_breakdown for state_instance in self.states if isinstance(state_instance, state.BreakDownState)]):
+            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Breakdown still active that blocks activation of resource"})
+            return
         self.active.succeed()
 
-    def interrupt_states(self) -> Generator:
+    def interrupt_states(self):
         """
         Interrupts the states of the resource.
-
-        Yields:
-            Generator: The generator of the interrupt, which is yielded when the interrupt is finished.
         """
-        eventss: List[events.Event] = []
-        for state in self.setup_states + self.production_states:
-            if state.process and state.interrupt_processed.triggered:
-                eventss.append(self.env.process(state.interrupt_process()))
         logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start interrupting processes of resource"})
-        yield events.AllOf(self.env, eventss)
+        if self.active.triggered:
+            self.active = events.Event(self.env)
+        for state_instance in self.setup_states + self.production_states:
+            if state_instance.process and state_instance.process.is_alive and not state_instance.interrupted:
+                state_instance.interrupt_process()
         logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Interrupted processes of resource"})
 
 
@@ -404,7 +401,6 @@ class ProductionResource(Resource):
     def unreserve_input_queues(self):
         for input_queue in self.input_queues:
             input_queue.unreseve()
-
 
 class TransportResource(Resource):
     """

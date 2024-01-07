@@ -6,9 +6,6 @@ from pydantic import BaseModel, Field, validator, Extra
 from typing import List, Generator, TYPE_CHECKING, Union, Optional
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
 
 # from process import Process
@@ -258,7 +255,7 @@ class ProductionController(Controller):
             target_product, state.StateTypeEnum.production
         )
         target_product.product_info.log_start_process(
-            target_product.next_production_resource,
+            self.resource,
             target_product,
             self.env.now,
             state.StateTypeEnum.production,
@@ -445,6 +442,7 @@ class TransportController(Controller):
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, eventss)
+            product.update_location(self.resource)
             possible_states = resource.get_processes(process)
             while True:
                 transport_state = resource.get_free_process(process)
@@ -468,6 +466,7 @@ class TransportController(Controller):
             eventss = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
             yield events.AllOf(resource.env, eventss)
+            product.update_location(target)
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
             if not resource.got_free.triggered:
@@ -504,7 +503,7 @@ class TransportController(Controller):
             empty_transport=empty_transport
         )
         product.product_info.log_start_process(
-            product.next_transport_resource,
+            self.resource,
             product,
             self.env.now,
             state.StateTypeEnum.transport,

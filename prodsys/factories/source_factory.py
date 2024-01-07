@@ -59,8 +59,8 @@ class SourceFactory(BaseModel):
                 if product_d.product_type == values.product_type:
                     self.add_source(values, product_d)
 
-    def get_router(self, router_type: str, routing_heuristic: str):
-        return router.ROUTERS[router_type](
+    def get_router(self, routing_heuristic: str):
+        return router.Router(
             self.resource_factory,
             self.sink_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
@@ -71,7 +71,7 @@ class SourceFactory(BaseModel):
         source_data: source_data.SourceData,
         product_data_of_source: product_data.ProductData,
     ):
-        router = self.get_router(source_data.router, source_data.routing_heuristic)
+        router = self.get_router(source_data.routing_heuristic)
 
         time_model = self.time_model_factory.get_time_model(source_data.time_model_id)
 

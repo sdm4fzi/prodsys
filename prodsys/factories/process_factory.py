@@ -31,12 +31,17 @@ class ProcessFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the process data.
         """
         for process_data in adapter.process_data:
-            self.add_processes(process_data)
+            self.add_processes(process_data, adapter)
 
-    def add_processes(self, process_data: processes_data.PROCESS_DATA_UNION):
+    def add_processes(self, process_data: processes_data.PROCESS_DATA_UNION, adapter: adapter.ProductionSystemAdapter):
         values = {}
-        time_model = self.time_model_factory.get_time_model(process_data.time_model_id)
-        values.update({"time_model": time_model, "process_data": process_data})
+        if not (isinstance(process_data, processes_data.CompoundProcessData) or isinstance(process_data, processes_data.RequiredCapabilityProcessData)):
+            time_model = self.time_model_factory.get_time_model(process_data.time_model_id)
+            values.update({"time_model": time_model})
+        values.update({"process_data": process_data})
+        if isinstance(process_data, processes_data.CompoundProcessData):
+            contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
+            values.update({"contained_processes_data": contained_processes_data})
         self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:

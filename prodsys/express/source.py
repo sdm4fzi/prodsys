@@ -20,7 +20,6 @@ class Source(core.ExpressObject):
         product (product.Product): Product of the source.
         time_model (time_model.TIME_MODEL_UNION): Time model of the source that determines the inter-arrival time of products.
         location (conlist(float, min_items=2, max_items=2)): Location of the source.
-        router (source_data.RouterType, optional): Router of the source. Defaults to source_data.RouterType.SimpleRouter.
         routing_heuristic (source_data.RoutingHeuristic, optional): Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.random.
         ID (str): ID of the source.
     
@@ -67,7 +66,6 @@ class Source(core.ExpressObject):
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
     location: conlist(float, min_items=2, max_items=2)
-    router: source_data.RouterType = source_data.RouterType.SimpleRouter
     routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
@@ -90,7 +88,6 @@ class Source(core.ExpressObject):
             location=self.location,
             product_type=self.product.ID,
             time_model_id=self.time_model.ID,
-            router=self.router,
             routing_heuristic=self.routing_heuristic,
         )
         self._output_queues = [prodsys.adapters.get_default_queue_for_source(source)]

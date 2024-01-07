@@ -4,6 +4,8 @@ from random import random
 from typing import List
 from functools import partial
 import warnings
+import logging
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -23,6 +25,8 @@ from prodsys.optimization.optimization_util import (
     random_configuration_with_initial_solution,
     document_individual,
     get_weights,
+    check_breakdown_states_available,
+    create_default_breakdown_states,
 )
 from prodsys.util.util import set_seed, read_initial_solutions, run_from_ipython
 from prodsys import optimization
@@ -142,6 +146,10 @@ def run_evolutionary_algorithm(
     """
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+    if not adapters.check_for_clean_compound_processes(base_configuration):
+        logger.info("Compound processes are not clean. This may lead to unexpected results.")
+    if not check_breakdown_states_available(base_configuration):
+        create_default_breakdown_states(base_configuration)
 
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=seed,
@@ -239,7 +247,6 @@ def evolutionary_algorithm_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
-    # TODO: add here check for process modules
     base_configuration = base_configuration.copy(deep=True)
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
@@ -280,7 +287,7 @@ def evolutionary_algorithm_optimization(
         current_generation = g + 1
         optimization.VERBOSE = True
         if optimization.VERBOSE:
-            print("Generation", current_generation, "________________")
+            print(f"\nGeneration: {current_generation}")
         solution_dict["current_generation"] = str(current_generation)
         solution_dict[str(current_generation)] = []
         performances[str(current_generation)] = {}

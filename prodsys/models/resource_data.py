@@ -55,30 +55,6 @@ class TransportControlPolicy(str, Enum):
     SPT_transport = "SPT_transport"
 
 
-class ProcessModuleData(CoreAsset):
-    """
-    Class that represents a process module, representing all processes that can be performed by equipping a resource with this process module.
-    
-    Args:
-        ID (str): ID of the process module.
-        description (str): Description of the process module.
-        process_ids (List[str]): Process IDs of the process module.
-    """
-    process_ids: List[str]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Process Module",
-                "value": {
-                    "ID": "PM1",
-                    "description": "Process Module 1",
-                    "process_ids": ["P1", "P2"],
-                },
-            }
-        }
-
-
 class ResourceData(CoreAsset):
     """
     Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.

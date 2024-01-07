@@ -31,7 +31,7 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=List[processes_data.ProcessData],
+    response_model=List[processes_data.PROCESS_DATA_UNION],
     responses={
         200: {
             "description": "Sucessfully returned processes",
@@ -51,7 +51,7 @@ async def create_process(
     project_id: str,
     adapter_id: str,
     process_id,
-    process: Annotated[processes_data.ProcessData, Body(examples=PROCESSES_EXAMPLES)],
+    process: Annotated[processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_EXAMPLES)],
 ):
     if process.ID != process_id:
         raise HTTPException(404, "Process ID must not be changed")
@@ -62,7 +62,7 @@ async def create_process(
 
 @router.get(
     "/{process_id}",
-    response_model=processes_data.ProcessData,
+    response_model=processes_data.PROCESS_DATA_UNION,
     responses={
         200: {
             "description": "Sucessfully returned process",

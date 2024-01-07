@@ -14,6 +14,7 @@ from prodsys.adapters.adapter import (
     get_transport_resources,
     get_set_of_IDs,
     get_possible_production_processes_IDs,
-    add_default_queues_to_adapter
+    add_default_queues_to_adapter,
+    check_for_clean_compound_processes
 )
 from prodsys.adapters.json_adapter import JsonProductionSystemAdapter

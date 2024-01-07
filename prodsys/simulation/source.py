@@ -6,9 +6,6 @@ from pydantic import BaseModel, Field
 from simpy import events
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
 
 from prodsys.simulation import router, sim, store, time_model
@@ -75,8 +72,8 @@ class Source(BaseModel):
                 available_events_events.append(queue.put(product.product_data))
             yield events.AllOf(self.env, available_events_events)
             logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Put product in output queue"})
+            product.update_location(self)
             product.process = self.env.process(product.process_product())
-            product.next_production_resource = self
 
     def get_location(self) -> List[float]:
         """
