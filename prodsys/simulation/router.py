@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import List, TYPE_CHECKING, Optional
+from typing import List, TYPE_CHECKING, Optional, Generator
+
+import logging
+logger = logging.getLogger(__name__)
+
 import numpy as np
 
 from simpy import events
 
 from prodsys.simulation import process
 from prodsys.simulation import resources
+from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
@@ -38,9 +42,82 @@ class Router:
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.routing_heuristic: Callable[[List[resources.Resource]]] = routing_heuristic
 
-    @abstractmethod
+
+    def route_request(self, processing_request: request.Request) -> Generator:
+        """
+        Routes a processing request to a resource and assigns the resource to the request.
+
+        Args:
+            request (request.Request): The request.
+
+        Returns:
+            Generator: A generator that yields when the request is routed.
+        """
+        possible_resources = self.get_possible_resources(processing_request)
+        if not possible_resources:
+            raise ValueError(f"No possible production resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID}.")
+        if not isinstance(processing_request, request.TransportResquest):
+            possible_resources = [
+                resource
+                for resource in possible_resources
+                if self.can_reach_resource(
+                    product=processing_request.product,
+                    resource=resource,
+                )
+            ]
+        if not possible_resources:
+            raise ValueError(f"No possible transport resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID} to reach any destinations from resource {processing_request.product.current_location.data.ID}.")
+
+        while True:
+            free_resources = self.get_free_resources(possible_resources)
+            self.routing_heuristic(free_resources)
+            # make timeout of 0 to make sure not two waiting requests are triggered at the same time and request the same resource
+            yield processing_request.product.env.timeout(0)
+            if free_resources:
+                break
+            logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Waiting for free resources."})
+            yield events.AnyOf(
+                processing_request.product.env,
+                [resource.got_free for resource in possible_resources],
+            )
+            logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Free resources available."})
+
+
+        if not free_resources:
+            raise ValueError("No free resources available, Error in Event handling of routing to resources.")
+        routed_resource = free_resources[0]
+        if isinstance(routed_resource, resources.ProductionResource):
+            routed_resource.reserve_input_queues()
+        processing_request.set_resource(routed_resource)
+                
+    def can_reach_resource(
+        self, product: product.Product, resource: resources.Resource
+    ) -> bool:
+        """
+        Checks if a product can reach a resource.
+
+        Args:
+            product (product.Product): The product.
+            resource (resources.Resource): The resource.
+
+        Returns:
+            bool: True if the product can reach the resource, False otherwise.
+        """
+        # TODO: check, if this logic works with LinkTransportProcesses
+        temporary_transport_request = request.TransportResquest(
+            process=product.transport_process,
+            product=product,
+            origin=product.current_location,
+            target = resource
+        )
+        possible_transport_resources = self.get_possible_resources(temporary_transport_request)
+        if not possible_transport_resources:
+            return False
+        else:
+            return True
+
     def get_free_resources(
-        self, requested_process: process.Process
+        self, possible_resources: List[resources.Resource]
     ) -> List[resources.Resource]:
         """
         Abstract mehtod that returns a list of resources that have space in their input queues for the requested process.
@@ -51,34 +128,7 @@ class Router:
         Returns:
             List[resources.Resource]: A list of resources that have space in their input queues for the requested process.
         """
-        pass
-
-    
-    def set_next_production_resources(self, product_to_route: product.Product):
-        """
-        Sets the next resources for a product requring a production process. Resources that have full input queues are not considered.
-
-        Args:
-            product_to_route (product.Product): The product to route.
-        """
-        free_resources = self.get_free_resources(
-            product_to_route.next_prodution_process
-        )
-        product_to_route.next_production_resources = free_resources
-        if free_resources:
-            self.routing_heuristic(free_resources)
-
-    def set_next_transport_resources(self, product_to_route: product.Product):
-        """
-        Sets the next resources for a product requring a transport process.
-
-        Args:
-            product_to_route (product.Product): _description_
-        """
-        free_resources = self.get_free_resources(product_to_route.transport_process)
-        product_to_route.next_transport_resources = free_resources
-        if free_resources:
-            self.routing_heuristic(free_resources)
+        return [resource for resource in possible_resources if isinstance(resource, resources.TransportResource) or (isinstance(resource, resources.ProductionResource) and not any(q.full for q in resource.input_queues))]
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """
@@ -95,150 +145,22 @@ class Router:
         return chosen_sink  # type: ignore False
 
     def get_possible_resources(
-        self, target_process: process.Process
+        self, processing_request: request.Request
     ) -> List[resources.Resource]:
         """
-        Returns a list of possible resources for a process.
+        Returns a list of possible resources for a processing request.
 
         Args:
-            target_process (process.Process): The process required by the product that needs to be routed.
-
+            processing_request (request.Request): The processing request.
         Returns:
             List[resources.Resource]: A list of possible resources for the process.
         """
-        possible_resources = self.resource_factory.get_resources_with_process(
-            target_process
-        )
-        return possible_resources
-
-
-class SimpleRouter(Router):
-    """
-    Simple router that routes products based on the IDs of the processes.
-
-    Args:
-        resource_factory (resource_factory.ResourceFactory): The resource factory of the production system.
-        sink_factory (sink_factory.SinkFactory): The sink factory of the production system.
-        routing_heuristic (Callable[[List[resources.Resource]], resources.Resource]): The routing heuristic to be used, needs to be a callable that takes a list of resources and returns a resource.
-    """
-
-    def get_free_resources(
-        self, requested_process: process.Process
-    ) -> List[resources.Resource]:
-        """
-        Returns a list of resources that have space in their input queues for the requested process.
-
-        Args:
-            requested_process (process.Process): The requested process.
-
-        Returns:
-            List[resources.Resource]: A list of resources that have space in their input queues for the requested process.
-        """
-        possible_resources = self.resource_factory.get_resources_with_process(
-            requested_process
-        )
-        left_resources = [resource for resource in possible_resources]
-
-        for resource in possible_resources:
-            if isinstance(resource, resources.ProductionResource):
-                for input_queue in resource.input_queues:
-                    if input_queue.full:
-                        left_resources = [
-                            r
-                            for r in left_resources
-                            if not r.data.ID == resource.data.ID
-                        ]
-                        break
-        return left_resources
-
-
-
-def get_resource_capabilities(resource: resources.Resource) -> List[str]:
-    """
-    Returns a list of capabilities of a resource.
-
-    Args:
-        resource (resources.Resource): The resource.
-
-    Returns:
-        List[str]: A list of capabilities of the resource.
-    """
-    capabilities = []
-    for resource_process in resource.processes:
-        if isinstance(resource_process, process.CapabilityProcess):
-            capabilities.append(resource_process.process_data.capability)
-
-    return capabilities
-
-
-class CapabilityRouter(Router):
-    """
-    Router that routes products based on the capabilities of the processes.
-
-    Args:
-        resource_factory (resource_factory.ResourceFactory): The resource factory of the production system.
-        sink_factory (sink_factory.SinkFactory): The sink factory of the production system.
-        routing_heuristic (Callable[[List[resources.Resource]], resources.Resource]): The routing heuristic to be used, needs to be a callable that takes a list of resources and returns a resource.
-    """
-
-    def get_free_resources_per_ID(
-        self, requested_process: process.Process
-    ) -> List[resources.Resource]:
-        """
-        Returns a list of resources that have space in their input queues for the requested process.
-
-        Args:
-            requested_process (process.Process): The requested process.
-
-        Returns:
-            List[resources.Resource]: A list of resources that have space in their input queues for the requested process.
-        """
-        possible_resources = self.resource_factory.get_resources_with_process(
-            requested_process
-        )
-        left_resources = [resource for resource in possible_resources]
-
-        for resource in possible_resources:
-            if isinstance(resource, resources.ProductionResource):
-                for input_queue in resource.input_queues:
-                    if input_queue.full:
-                        left_resources = [
-                            r
-                            for r in left_resources
-                            if not r.data.ID == resource.data.ID
-                        ]
-                        break
-        return left_resources
-
-    def get_free_resources(
-        self, requested_process: process.Process
-    ) -> List[resources.Resource]:
-        """
-        Returns a list of resources that have space in their input queues for the requested process.
-
-        Args:
-            requested_process (process.Process): The requested process.
-
-        Raises:
-            ValueError: If the requested process is not a CapabilityProcess.
-
-        Returns:
-            List[resources.Resource]: _description_
-        """
-        # TODO: resolve this hack by creating a single router, that allows to route capability, production and transport processes.
-        if isinstance(requested_process, process.TransportProcess):
-            return self.get_free_resources_per_ID(requested_process)
-        elif not isinstance(requested_process, process.CapabilityProcess):
-            raise ValueError(
-                "CapabilityRouter can only be used with CapabilityProcess or TransportProcess"
-            )
+        # TODO: maybe make result of function in dict and save it after instantiation. 
         possible_resources = []
         for resource in self.resource_factory.resources:
-            resource_capabilities = get_resource_capabilities(resource)
-            if (
-                requested_process.process_data.capability in resource_capabilities
-            ) and not any(q.full for q in resource.input_queues):
-                possible_resources.append(resource)
+            for process in resource.processes:
+                if process.matches_request(processing_request):
+                    possible_resources.append(resource)
         return possible_resources
 
 
@@ -305,12 +227,4 @@ ROUTING_HEURISTIC = {
 }
 """
 A dictionary of available routing heuristics.
-"""
-
-ROUTERS = {
-    "SimpleRouter": SimpleRouter,
-    "CapabilityRouter": CapabilityRouter,
-}
-"""
-A dictionary of available routers.
 """

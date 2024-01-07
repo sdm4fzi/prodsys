@@ -3,14 +3,11 @@ from __future__ import annotations
 from abc import ABC
 from enum import Enum
 from collections.abc import Iterable
-from typing import List, Union, Optional, TYPE_CHECKING
+from typing import List, Union, Optional, TYPE_CHECKING, Generator
 
 from pydantic import BaseModel, Field, Extra
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -163,81 +160,111 @@ class Product(BaseModel):
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
-    next_production_resource: Location = Field(default=None, init=False)
-    next_production_resources: List[resources.ProductionResource] = Field(default=None, init=False)
-    next_transport_resource: Optional[resources.TransportResource] = Field(default=None, init=False)
-    next_transport_resources: List[resources.TransportResource] = Field(default=None, init=False)
+    current_location: Location = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
 
     class Config:
         arbitrary_types_allowed = True
 
+    def update_location(self, resource: Location):
+        """
+        Updates the location of the product object.
+
+        Args:
+            resource (Location): Location of the product object.
+        """
+        self.current_location = resource
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
+
     def process_product(self):
         self.finished_process = events.Event(self.env)
         self.product_info.log_create_product(
-            resource=self.next_production_resource, _product=self, event_time=self.env.now
+            resource=self.current_location, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
         """
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
-        yield self.env.process(self.transport_to_queue_of_resource())
+        self.set_next_production_process()
         while self.next_prodution_process:
-            self.request_process()
-            yield self.finished_process
-            self.product_info.log_end_process(
-                resource=self.next_production_resource,
-                _product=self,
-                event_time=self.env.now,
-                state_type=state.StateTypeEnum.production,
-            )
-            self.finished_process = events.Event(self.env)
-            yield self.env.process(self.transport_to_queue_of_resource())
+            production_request = self.get_request_for_production_process()
+            yield self.env.process(self.product_router.route_request(production_request))
+            transport_request = self.get_request_for_transport_process(production_request)
+            yield self.env.process(self.product_router.route_request(transport_request))
+            yield self.env.process(self.request_process(transport_request))
+            yield self.env.process(self.request_process(production_request))
+            self.set_next_production_process()
+        transport_to_sink_request = self.get_request_for_transport_to_sink()
+        yield self.env.process(self.product_router.route_request(transport_to_sink_request))
+        yield self.env.process(self.request_process(transport_to_sink_request))
         self.product_info.log_finish_product(
-            resource=self.next_production_resource, _product=self, event_time=self.env.now
+            resource=self.current_location, _product=self, event_time=self.env.now
         )
-        self.next_production_resource.register_finished_product(self)
+        self.current_location.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
 
-    def request_process(self) -> None:
+    def get_request_for_production_process(self) -> request.Request:
+        """
+        Returns a request for the next production process of the product object.
+
+        Returns:
+            request.Request: The request for the next production process.
+        """
+        return request.Request(
+            process=self.next_prodution_process,
+            product=self,
+        )
+    
+    def get_request_for_transport_process(self, production_request: request.Request) -> request.Request:
+        """
+        Returns a request for the next transport process of the product object.
+
+        Returns:
+            request.Request: The request for the next transport process.
+        """
+        return request.TransportResquest(
+            process=self.transport_process,
+            product=self,
+            origin=self.current_location,
+            target=production_request.resource,
+        )
+    
+    def get_request_for_transport_to_sink(self) -> request.Request:
+        """
+        Returns a request for the transport to the sink of the product object.
+
+        Returns:
+            request.Request: The request for the transport to the sink.
+        """
+        return request.TransportResquest(
+            process=self.transport_process,
+            product=self,
+            origin=self.current_location,
+            target=self.product_router.get_sink(self.product_data.product_type),
+        )
+
+    def request_process(self, processing_request: request.Request) -> Generator:
         """
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
         """
-        if self.next_prodution_process:
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.next_production_resource.data.ID, "event": f"Request process {self.next_prodution_process.process_data.ID}"})
-            self.env.request_process_of_resource(
-                request.Request(
-                    process=self.next_prodution_process,
-                    product=self,
-                    resource=self.next_production_resource,
-                )
-            )
-
-    def request_transport(
-        self,
-        transport_resource: resources.TransportResource,
-        origin_resource: Location,
-        target_resource: Location,
-    ) -> None:
-        """
-        Requests the transport of the product object from the origin resource to the target resource by creating a transport request event and registering it at the environment.
-
-        Args:
-            transport_resource (resources.TransportResource): Transport resource that is used to transport the product object.
-            origin_resource (Location): Location (either a resource, source or sink) where the product object is currently at.
-            target_resource (Location): Location (either a resource, source or sink) where the product object is transported to.
-        """
-        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": transport_resource.data.ID, "event": f"Request transport from {origin_resource.data.ID} to {target_resource.data.ID}"})
+        if isinstance(processing_request, request.TransportResquest):
+            type_ = state.StateTypeEnum.transport
+        else:
+            type_ = state.StateTypeEnum.production
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
         self.env.request_process_of_resource(
-            request.TransportResquest(
-                process=self.transport_process,
-                product=self,
-                resource=transport_resource,
-                origin=origin_resource,
-                target=target_resource,
-            )
+            request=processing_request
         )
+        yield self.finished_process
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
+        self.product_info.log_end_process(
+            resource=processing_request.resource,
+            _product=self,
+            event_time=self.env.now,
+            state_type=type_,
+        )
+        self.finished_process = events.Event(self.env)
 
     def set_next_production_process(self):
         """
@@ -251,95 +278,3 @@ class Product(BaseModel):
             self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
             self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
-
-    def transport_to_queue_of_resource(self):
-        """
-        Simpy process that transports the product object to the queue of the next resource.
-        """
-        origin_resource = self.next_production_resource
-        yield self.env.process(self.set_next_transport_resource())
-        self.set_next_production_process()
-        yield self.env.process(self.set_next_production_resource())
-        self.request_transport(self.next_transport_resource, origin_resource, self.next_production_resource)  # type: ignore False
-        yield self.finished_process
-        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.next_transport_resource.data.ID, "event": f"Finished transport to {self.next_production_resource.data.ID}"})
-        self.product_info.log_end_process(
-            resource=self.next_transport_resource,
-            _product=self,
-            event_time=self.env.now,
-            state_type=state.StateTypeEnum.transport,
-        )
-        self.finished_process = events.Event(self.env)
-
-    def set_next_transport_resource(self):
-        """
-        Sets the next transport resource of the product object.
-        If no free resource can be found, the product object waits until a resource is free.
-        """
-        while True:
-            self.product_router.set_next_transport_resources(
-                self
-            )
-            yield self.env.timeout(0)
-            if self.next_transport_resources and all(isinstance(
-                next_resource, resources.TransportResource
-            ) for next_resource in self.next_transport_resources): 
-                self.next_transport_resource = self.next_transport_resources.pop(0)
-                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.next_transport_resource.data.ID, "event": f"Routed to next resource."})
-                break
-            resource_got_free_events = [
-                resource.got_free
-                for resource in self.product_router.get_possible_resources(
-                    self.transport_process
-                )
-            ]
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Waiting for free resource."})
-            yield events.AnyOf(self.env, resource_got_free_events)
-            for resource in self.product_router.get_possible_resources(
-                self.transport_process
-            ):
-                if resource.got_free.triggered:
-                    resource.got_free = events.Event(self.env)
-    
-
-    def set_next_production_resource(self):
-        """
-        Sets the next resource of the product object based on the current state of the product and its process model.
-        If no production process is required, the next resource is set to the sink of the product type.
-        If no resource can be found with a free input queue, the product object waits until a resource is free.
-        """
-        if not self.next_prodution_process:
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Set sink as next resource"})
-            self.next_production_resource = self.product_router.get_sink(
-                self.product_data.product_type
-            )
-        else:
-
-            while True:
-                self.product_router.set_next_production_resources(
-                    self
-                )
-                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Got possible production resources {[resource.data.ID for resource in self.next_production_resources]}"})
-                yield self.env.timeout(0)
-                if self.next_production_resources and all(isinstance(
-                    next_resource, resources.ProductionResource
-                ) for next_resource in self.next_production_resources): 
-                    self.next_production_resource = self.next_production_resources.pop(0)
-                    if not any(q.full for q in self.next_production_resource.input_queues):
-                        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.next_production_resource.data.ID, "event": f"Routed to next resource."})
-                        self.next_production_resource.reserve_input_queues()
-                        break
-                resource_got_free_events = [
-                    resource.got_free
-                    for resource in self.product_router.get_possible_resources(
-                        self.next_prodution_process
-                    )
-                ]
-                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Waiting for free resource."})
-                yield events.AnyOf(self.env, resource_got_free_events)
-                for resource in self.product_router.get_possible_resources(
-                    self.next_prodution_process
-                ):
-                    if resource.got_free.triggered:
-                        resource.got_free = events.Event(self.env)
-

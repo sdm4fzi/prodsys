@@ -8,18 +8,6 @@ from enum import Enum
 
 from prodsys.models.core_asset import CoreAsset
 
-
-class RouterType(str, Enum):
-    """
-    Enum that represents the router type of a source.
-
-    - SimpleRouter: Simple router routes the product to resources based on IDs of resources.
-    - CapabilityRouter: Capability router routes the product to resources based on capabilites of processes.
-    """
-    SimpleRouter = "SimpleRouter"
-    CapabilityRouter = "CapabilityRouter"
-
-
 class RoutingHeuristic(str, Enum):
     """
     Enum that represents the routing heuristic of a source.
@@ -61,7 +49,6 @@ class SourceData(CoreAsset):
     location: conlist(float, min_items=2, max_items=2)
     product_type: str
     time_model_id: str
-    router: RouterType
     routing_heuristic: RoutingHeuristic
     output_queues: Optional[List[str]]
 

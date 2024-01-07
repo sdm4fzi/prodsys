@@ -11,7 +11,7 @@ The following processes are possible:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Union, Optional
+from typing import Literal, Union, Optional, List
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -28,6 +28,8 @@ class ProcessTypeEnum(str, Enum):
     ProductionProcesses = "ProductionProcesses"
     TransportProcesses = "TransportProcesses"
     CapabilityProcesses = "CapabilityProcesses"
+    CompoundProcesses = "CompoundProcesses"
+    RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -133,7 +135,6 @@ class CapabilityProcessData(ProcessData):
             }
         }
 
-
 class TransportProcessData(ProcessData):
     """
     Class that represents transport process data.
@@ -173,6 +174,74 @@ class TransportProcessData(ProcessData):
         }
 
 
+class CompoundProcessData(CoreAsset):
+    """
+    Class that represents a compound process. A compound process is a container for multiple processes that belong together, e.g. if a hardware module enables all processes of a CompoundProcess or if multiple similar processes can be performed.
+    
+    Args:
+        ID (str): ID of the process module.
+        description (str): Description of the process module.
+        process_ids (List[str]): Process IDs of the process module.
+    """
+    process_ids: List[str]
+    type: Literal[ProcessTypeEnum.CompoundProcesses]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Compound Process",
+                "value": {
+                    "ID": "CP1",
+                    "description": "Compound Process 1",
+                    "process_ids": ["P1", "P2"],
+                    "type": "CompoundProcesses",
+                },
+            }
+        }
+
+
+
+class RequiredCapabilityProcessData(CoreAsset):
+    """
+    Class that represents required capability process data. Capability processes are not compared by their IDs but their Capabilities. The required capability process data does not specify a time model ID, as it is not a process that can be performed, but a capability that is required.
+
+    Args:
+        ID (str): ID of the process.
+        description (str): Description of the process.
+        type (Literal[ProcessTypeEnum.CapabilityProcesses]): Type of the process.
+        capability (str): Capability of the process.
+
+    Examples:
+        A required capability process with ID "P1", description "Process 1", and capability "C1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.CapabilityProcessData(
+            ID="P1",
+            description="Process 1",
+            type="RequiredCapabilityProcesses",
+            capability="C1",
+        )
+        ```
+    """
+
+    type: Literal[ProcessTypeEnum.RequiredCapabilityProcesses]
+    capability: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Required Capability process",
+                "value": {
+                    "ID": "P1",
+                    "description": "Process 1",
+                    "type": "RequiredCapabilityProcesses",
+                    "capability": "C1",
+                },
+            }
+        }
+
+
 PROCESS_DATA_UNION = Union[
+    CompoundProcessData, RequiredCapabilityProcessData,
     ProductionProcessData, TransportProcessData, CapabilityProcessData
 ]

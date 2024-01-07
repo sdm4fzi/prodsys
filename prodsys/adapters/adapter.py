@@ -6,12 +6,7 @@ from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator, ValidationError
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
-
-from prodsys import adapters
 
 from prodsys.models import (
     product_data,
@@ -108,26 +103,26 @@ def get_default_queues_for_resource(
 
 
 def remove_queues_from_resource(
-    machine: resource_data.ProductionResourceData, adapter: adapters.ProductionSystemAdapter
-) -> adapters.ProductionSystemAdapter:
+    machine: resource_data.ProductionResourceData, adapter: ProductionSystemAdapter
+) -> ProductionSystemAdapter:
     if machine.input_queues or machine.output_queues:
         for queue_ID in machine.input_queues + machine.output_queues:
             for queue in adapter.queue_data:
                 if queue.ID == queue_ID:
                     adapter.queue_data.remove(queue)
                     break
-        for machine in adapters.get_machines(adapter):
+        for machine in get_machines(adapter):
             machine.input_queues = []
             machine.output_queues = []
         return adapter
 
 
-def remove_unused_queues_from_adapter(adapter: adapters.ProductionSystemAdapter) -> adapters.ProductionSystemAdapter:
+def remove_unused_queues_from_adapter(adapter: ProductionSystemAdapter) -> ProductionSystemAdapter:
     for queue in adapter.queue_data:
         if not any(
             [
                 queue.ID in machine.input_queues + machine.output_queues
-                for machine in adapters.get_machines(adapter)
+                for machine in get_machines(adapter)
                 if machine.input_queues or machine.output_queues
             ]
             + [queue.ID in source.output_queues for source in adapter.source_data]
@@ -138,26 +133,26 @@ def remove_unused_queues_from_adapter(adapter: adapters.ProductionSystemAdapter)
 
 
 def add_default_queues_to_resources(
-    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
-) -> adapters.ProductionSystemAdapter:
+    adapter: ProductionSystemAdapter, queue_capacity=0.0
+) -> ProductionSystemAdapter:
     """
     Convenience function to add default queues to all machines in the adapter.
 
     Args:
-        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
+        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
-    for machine in adapters.get_machines(adapter):
+    for machine in get_machines(adapter):
         remove_queues_from_resource(machine, adapter)
         remove_unused_queues_from_adapter(adapter)
-        input_queues, output_queues = adapters.get_default_queues_for_resource(
+        input_queues, output_queues = get_default_queues_for_resource(
             machine, queue_capacity
         )
-        machine.input_queues = list(adapters.get_set_of_IDs(input_queues))
-        machine.output_queues = list(adapters.get_set_of_IDs(output_queues))
+        machine.input_queues = list(get_set_of_IDs(input_queues))
+        machine.output_queues = list(get_set_of_IDs(output_queues))
         adapter.queue_data += input_queues + output_queues
     return adapter
 
@@ -183,22 +178,22 @@ def get_default_queue_for_source(
 
 
 def add_default_queues_to_sources(
-    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
-) -> adapters.ProductionSystemAdapter:
+    adapter: ProductionSystemAdapter, queue_capacity=0.0
+) -> ProductionSystemAdapter:
     """
     Convenience function to add default queues to all sources in the adapter.
 
     Args:
-        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sources
+        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sources
     """
     for source in adapter.source_data:
         if not source.output_queues:
             output_queues = [get_default_queue_for_source(source, queue_capacity)]
-            source.output_queues = list(adapters.get_set_of_IDs(output_queues))
+            source.output_queues = list(get_set_of_IDs(output_queues))
             adapter.queue_data += output_queues
     return adapter
 
@@ -224,38 +219,38 @@ def get_default_queue_for_sink(
 
 
 def add_default_queues_to_sinks(
-    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
-) -> adapters.ProductionSystemAdapter:
+    adapter: ProductionSystemAdapter, queue_capacity=0.0
+) -> ProductionSystemAdapter:
     """
     Convenience function to add default queues to all sinks in the adapter.
 
     Args:
-        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sinks
+        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sinks
     """
     for sink in adapter.sink_data:
         if not sink.input_queues:
             input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
-            sink.input_queues = list(adapters.get_set_of_IDs(input_queues))
+            sink.input_queues = list(get_set_of_IDs(input_queues))
             adapter.queue_data += input_queues
     return adapter
 
 
 def add_default_queues_to_adapter(
-    adapter: adapters.ProductionSystemAdapter, queue_capacity=0.0
-) -> adapters.ProductionSystemAdapter:
+    adapter: ProductionSystemAdapter, queue_capacity=0.0
+) -> ProductionSystemAdapter:
     """
     Convenience function to add default queues to all machines, sources and sinks in the adapter.
 
     Args:
-        adapter (adapters.ProductionSystemAdapter): ProductionSystemAdapter object
+        adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        adapters.ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines, sources and sinks
+        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines, sources and sinks
     """
     adapter = add_default_queues_to_resources(adapter, queue_capacity)
     adapter = add_default_queues_to_sources(adapter, queue_capacity)
@@ -286,6 +281,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
+    # TODO: add check, that throws an error, if items have the same ID!
     ID: str = ""
     seed: int = 0
     time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
@@ -293,7 +289,6 @@ class ProductionSystemAdapter(ABC, BaseModel):
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
-    process_module_data: List[resource_data.ProcessModuleData] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
@@ -595,13 +590,6 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "state_ids": ["Breakdownstate_1"],
                     },
                 ],
-                "process_module_data": [
-                    {
-                        "ID": "PM1",
-                        "description": "Process Module 1",
-                        "process_ids": ["P1", "P2"]
-                    }
-                ],
                 "product_data": [
                     {
                         "ID": "Product_1",
@@ -695,6 +683,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
 
     @validator("process_data", each_item=True)
     def check_processes(cls, process: processes_data.PROCESS_DATA_UNION, values):
+        if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):
+            return process
         time_models = get_set_of_IDs(values["time_model_data"])
         if process.time_model_id not in time_models:
             raise ValueError(
@@ -731,16 +721,6 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 values["queue_data"] += input_queues + output_queues
 
         return resource
-    
-    @validator("process_module_data", each_item=True)	
-    def check_process_modules(cls, process_module: resource_data.ProcessModuleData, values):
-        processes = get_set_of_IDs(values["process_data"])
-        for process in process_module.process_ids:
-            if process not in processes:
-                raise ValueError(
-                    f"The process {process} of process module {process_module.ID} is not a valid process of {processes}."
-                )
-        return process_module
 
     @validator("product_data", each_item=True)
     def check_products(cls, product: product_data.ProductData, values):
@@ -882,8 +862,8 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
     return [list(x) for x in set(tuple(x) for x in input_list)]
 
 
-def check_redudant_locations(adapter: adapters.ProductionSystemAdapter) -> bool:
-    machine_locations = [machine.location for machine in adapters.get_machines(adapter)]
+def check_redudant_locations(adapter: ProductionSystemAdapter) -> bool:
+    machine_locations = [machine.location for machine in get_machines(adapter)]
     source_locations = remove_duplicate_locations(
         [source.location for source in adapter.source_data]
     )
@@ -896,41 +876,30 @@ def check_redudant_locations(adapter: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
+def check_for_clean_compound_processes(
+        adapter_object: ProductionSystemAdapter,
+) -> bool:
+    possible_production_processes_ids = get_possible_production_processes_IDs(adapter_object)
+    if any(isinstance(process_id, tuple) for process_id in possible_production_processes_ids) and any(isinstance(process_id, str) for process_id in possible_production_processes_ids):
+        return False
+    return True
+
 def get_possible_production_processes_IDs(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: ProductionSystemAdapter,
 ) -> Union[List[str], List[Tuple[str, ...]]]:
-    if not adapter_object.process_module_data:
-        possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data.TransportProcessData)]   
-        if not (all(
-            process.type == processes_data.ProcessTypeEnum.ProductionProcesses
-            for process in possible_processes
-        ) or all(
-            process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
-            for process in possible_processes
-        )):
-            raise ValueError(
-                f"Multiple process types in the same production system are not allowed."
-            )
-        if any(
-            process.type == processes_data.ProcessTypeEnum.CapabilityProcesses
-            for process in possible_processes
-        ):
-            capabilities = set()
-            for process in possible_processes:
-                if process.capability in capabilities:
-                    raise ValueError(
-                        f"Multiple capability processes with the same capability {process.capability} are not allowed."
-                    )
-                capabilities.add(process.capability)
-        return [
-            process.ID
-            for process in possible_processes
-        ]
-    return [tuple(process_module.process_ids) for process_module in adapter_object.process_module_data]
+    possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data.TransportProcessData) and not isinstance(process, processes_data.RequiredCapabilityProcessData)]  
+    compund_processes = [process for process in adapter_object.process_data if isinstance(process, processes_data.CompoundProcessData)]
+    compound_process_id_tuples = [tuple(compound_process.process_ids) for compound_process in compund_processes]
+
+    compound_processes_ids = set([compound_process.ID for compound_process in compund_processes])
+    compound_processes_contained_process_ids = set(util.flatten(compound_process_id_tuples))
+    individual_processes_ids = [process.ID for process in possible_processes if process.ID not in compound_processes_contained_process_ids and process.ID not in compound_processes_ids]
+    
+    return individual_processes_ids + compound_process_id_tuples
 
 
 def get_possible_transport_processes_IDs(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: ProductionSystemAdapter,
 ) -> List[str]:
     possible_processes = adapter_object.process_data
     return [
@@ -941,7 +910,7 @@ def get_possible_transport_processes_IDs(
 
 
 def get_production_processes_from_ids(
-    adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemAdapter, process_ids: List[str]
 ) -> List[processes_data.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -952,7 +921,7 @@ def get_production_processes_from_ids(
 
 
 def get_transport_processes_from_ids(
-    adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemAdapter, process_ids: List[str]
 ) -> List[processes_data.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -962,13 +931,91 @@ def get_transport_processes_from_ids(
     return processes
 
 def get_capability_processes_from_ids(
-        adapter_object: adapters.ProductionSystemAdapter, process_ids: List[str]
+        adapter_object: ProductionSystemAdapter, process_ids: List[str]
 ) -> List[processes_data.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
             if process.ID == process_id and isinstance(process, processes_data.CapabilityProcessData):
                 processes.append(process)
+    return processes
+
+
+def get_compound_processes_from_ids(
+    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for process_id in process_ids:
+        for process in adapter_object.process_data:
+            if process.ID == process_id and isinstance(process, processes_data.CompoundProcessData):
+                processes.append(process)
+    return processes
+
+
+def get_required_capability_processes_from_ids(
+    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for process_id in process_ids:
+        for process in adapter_object.process_data:
+            if process.ID == process_id and isinstance(process, processes_data.RequiredCapabilityProcessData):
+                processes.append(process)
+    return processes
+
+def get_contained_production_processes_from_compound_processes(
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for compound_process in compound_processes:
+        for process_id in compound_process.process_ids:
+            processes = get_production_processes_from_ids(adapter_object, [process_id])
+            if len(processes) > 1:
+                raise ValueError(f"Multiple processes with ID {process_id} found.")
+            if processes:
+                process = processes[0]
+                processes.append(process)
+    return processes
+
+def get_contained_capability_processes_from_compound_processes(
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for compound_process in compound_processes:
+        for process_id in compound_process.process_ids:
+            processes = get_capability_processes_from_ids(adapter_object, [process_id])
+            if len(processes) > 1:
+                raise ValueError(f"Multiple processes with ID {process_id} found.")
+            if processes:
+                process = processes[0]
+                processes.append(process)
+    return processes
+
+def get_contained_transport_processes_from_compound_processes(
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for compound_process in compound_processes:
+        for process_id in compound_process.process_ids:
+            processes = get_transport_processes_from_ids(adapter_object, [process_id])
+            if len(processes) > 1:
+                raise ValueError(f"Multiple processes with ID {process_id} found.")
+            if processes:
+                process = processes[0]
+                processes.append(process)
+    return processes
+    
+
+def get_contained_required_capability_processes_from_compound_processes(
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
+) -> List[processes_data.PROCESS_DATA_UNION]:
+    processes = []
+    for compound_process in compound_processes:
+        for process_id in compound_process.process_ids:
+            processes = get_required_capability_processes_from_ids(adapter_object, [process_id])
+            if len(processes) > 1:
+                raise ValueError(f"Multiple processes with ID {process_id} found.")
+            process = processes[0]
+            processes.append(process)
     return processes
 
 
@@ -993,39 +1040,44 @@ def check_capability_processes_available(available: List[processes_data.Capabili
         return False
     return True
 
-def check_required_processes_in_resources_available(configuration: adapters.ProductionSystemAdapter) -> bool:
+def check_required_processes_in_resources_available(configuration: ProductionSystemAdapter) -> bool:
     available = list(util.flatten([resource.process_ids for resource in configuration.resource_data]))
     required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
     required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
     required = list(required) + list(required_dict_processes)
+
     required_production_processes = get_production_processes_from_ids(configuration, required)
     required_transport_processes = get_transport_processes_from_ids(configuration, required)
     required_capability_processes = get_capability_processes_from_ids(configuration, required)
+    required_capability_processes += get_required_capability_processes_from_ids(configuration, required)
     available_production_processes = get_production_processes_from_ids(configuration, available)
     available_transport_processes = get_transport_processes_from_ids(configuration, available)
     available_capability_processes = get_capability_processes_from_ids(configuration, available)
+    available_required_capability_processes = get_required_capability_processes_from_ids(configuration, available)
+    if available_required_capability_processes:
+        raise ValueError(f"Required capability processes {available_required_capability_processes} should not be available for resources since no time model is given.")
+
+
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    for compound_process in compound_processes:
+        if not all(process_id in all_process_ids for process_id in compound_process.process_ids):
+            raise ValueError(f"Compound process {compound_process.ID} contains processes that are not available in the data.")
+    required_compound_processes = get_compound_processes_from_ids(configuration, required)
+    available_compound_processes = get_compound_processes_from_ids(configuration, available)
+
+    required_production_processes += get_contained_production_processes_from_compound_processes(configuration, required_compound_processes)
+    required_transport_processes += get_contained_transport_processes_from_compound_processes(configuration, required_compound_processes)
+    required_capability_processes += get_contained_capability_processes_from_compound_processes(configuration, required_compound_processes)
+    required_capability_processes += get_contained_required_capability_processes_from_compound_processes(configuration, required_compound_processes)
+    available_production_processes += get_contained_production_processes_from_compound_processes(configuration, available_compound_processes)
+    available_transport_processes += get_contained_transport_processes_from_compound_processes(configuration, available_compound_processes)
+    available_capability_processes += get_contained_capability_processes_from_compound_processes(configuration, available_compound_processes)
 
     if not check_production_processes_available(available_production_processes, required_production_processes):
         return False
     if not check_transport_processes_available(available_transport_processes, required_transport_processes):
         return False
     if not check_capability_processes_available(available_capability_processes, required_capability_processes):
-        return False
-    return True
-
-
-def check_required_processes_in_process_modules_available(configuration: adapters.ProductionSystemAdapter) -> bool:
-    available_process_module_processes = list(util.flatten([process_module.process_ids for process_module in configuration.process_module_data]))
-    if not available_process_module_processes:
-        return True
-    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
-    required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
-    required = list(required) + list(required_dict_processes)
-    required_production_processes = get_production_processes_from_ids(configuration, required)
-    required_capability_processes = get_capability_processes_from_ids(configuration, required)
-
-    if not check_production_processes_available(available_process_module_processes, required_production_processes):
-        return False
-    if not check_capability_processes_available(available_process_module_processes, required_capability_processes):
         return False
     return True

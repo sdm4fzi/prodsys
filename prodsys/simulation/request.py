@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from prodsys.simulation import process as prodsys_process
 
@@ -21,16 +21,23 @@ class Request:
         self,
         process: process.PROCESS_UNION,
         product: product.Product,
-        resource: resources.Resource,
     ):
         self.process = process
         self.product = product
-        self.resource = resource
+        self.resource: Optional[resources.Resource] = None
 
-        if isinstance(self.process, prodsys_process.CapabilityProcess):
-            for resource_process in self.resource.processes:
-                if isinstance(resource_process, prodsys_process.CapabilityProcess) and resource_process.process_data.capability == self.process.process_data.capability:
-                    self.process = resource_process
+    def set_resource(self, resource: resources.Resource):
+        """
+        Sets the resource of the request.
+
+        Args:
+            resource (resources.Resource): The resource.
+        """
+        self.resource = resource
+        for process in self.resource.processes:
+            if process.matches_request(self):
+                # TODO: check whether this needs adaption for compound processes...
+                self.process = process
 
     def get_process(self) -> process.PROCESS_UNION:
         """
@@ -75,13 +82,12 @@ class TransportResquest(Request):
         self,
         process: process.TransportProcess,
         product: product.Product,
-        resource: resources.TransportResource,
         origin: product.Location,
         target: product.Location,
     ):
         self.process: process.TransportProcess = process
         self.product: product.Product = product
-        self.resource: resources.TransportResource = resource
+        self.resource: resources.TransportResource = None
         self.origin: product.Location = origin
         self.target: product.Location = target
 

@@ -1,3 +1,4 @@
+from prodsys.conf.logging_config import set_logging
 from prodsys.util import runner
 from prodsys import adapters
 from prodsys.util import post_processing  # , optimization_util
@@ -14,4 +15,4 @@ from prodsys.models import (
     time_model_data,
 )
 
-VERSION = "0.3.2"
+VERSION = "0.4.0"

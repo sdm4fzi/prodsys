@@ -4,6 +4,9 @@ from random import randint, random, shuffle
 from collections import deque
 from numpy import argmax
 
+import logging
+logger = logging.getLogger(__name__)
+
 import json
 import time
 
@@ -19,6 +22,8 @@ from prodsys.optimization.optimization_util import (
     random_configuration,
     document_individual,
     get_weights,
+    check_breakdown_states_available,
+    create_default_breakdown_states
 )
 from prodsys.util.util import set_seed
 
@@ -153,6 +158,10 @@ def run_tabu_search(
     """
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+    if not adapters.check_for_clean_compound_processes(base_configuration):
+        logger.info("Compound processes are not clean. This may lead to unexpected results.")
+    if not check_breakdown_states_available(base_configuration):
+        create_default_breakdown_states(base_configuration)
 
     if initial_solution_file_path:
         initial_solution = adapters.JsonProductionSystemAdapter()

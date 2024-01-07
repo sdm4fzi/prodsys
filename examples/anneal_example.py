@@ -6,7 +6,7 @@ BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json
 SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 
 TMAX = 10000
-TMIN = 0.67
+TMIN = 1
 STEPS = 4000
 UPDATES = 300
 

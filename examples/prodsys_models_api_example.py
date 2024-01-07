@@ -85,7 +85,6 @@ source = prodsys.source_data.SourceData(
     location=[0.0, 0.0],
     product_type="product 1",
     time_model_id="time model 3",
-    router=prodsys.source_data.RouterType.SimpleRouter,
     routing_heuristic=prodsys.source_data.RoutingHeuristic.random,
 )
 

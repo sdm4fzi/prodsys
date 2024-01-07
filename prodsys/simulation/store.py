@@ -4,9 +4,6 @@ from __future__ import annotations
 from simpy.resources import store
 
 import logging
-from prodsys.conf import logging_config
-
-logging_config.setup_logging()
 logger = logging.getLogger(__name__)
 
 from prodsys.models import queue_data

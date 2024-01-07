@@ -7,6 +7,8 @@ import time
 from copy import deepcopy
 import json
 import random
+import logging
+logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, Field
 from prodsys import adapters
@@ -534,6 +536,10 @@ def run_mathematical_optimization(
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
+    if not adapters.check_for_clean_compound_processes(adapter):
+        raise ValueError("Currently, compound processes are not implemented in mathematical optimization.")
+    if not optimization_util.check_breakdown_states_available(adapter):
+        optimization_util.create_default_breakdown_states(adapter)
     util.prepare_save_folder(save_folder)
     hypter_parameters = MathOptHyperparameters(
         optimization_time_portion=optimization_time_portion,
