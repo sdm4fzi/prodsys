@@ -218,8 +218,34 @@ class RequiredCapabilityProcess(Process):
         raise NotImplementedError(
             "RequiredCapabilityProcess does not have a process time."
         )
+    
 
-# TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
+class TransportLinkProcess(Process):
+    """
+    Class that represents a transport link process.
+    """
+
+    # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
+
+    def matches_request(self, request: request.Request) -> bool:
+        # 1. check if request is a transport request (if not, return False)
+        # 2. check if transport request is a link request (if not, return False)
+
+        # 3. check for compatibility -> transport links can links from origin to target of resquest
+        # path: List[Links] = path_finder.find_path(request.origin, request.target, self.links)
+        # return not path:
+        #     return False
+        # 4. set path of request
+        # request.path = path
+        # return True
+        pass
+    
+    def get_process_time(self) -> float:
+        # TODO: calculate based on request and path
+        pass
+
+    def get_expected_process_time(self) -> float:
+        pass
 
 PROCESS_UNION = Union[
     CompoundProcess,
