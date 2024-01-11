@@ -439,6 +439,8 @@ class TransportController(Controller):
                 self.update_location(origin)
                 transport_state.process = None
 
+            # TODO: drive along nodes of path
+
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, eventss)
