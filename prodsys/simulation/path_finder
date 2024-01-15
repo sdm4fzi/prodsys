@@ -4,7 +4,7 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 
 from prodsys.simulation import request
 
-#TODO: How to integrate the Links?
+#TODO: How to integrate the Links? Just as model or also in simulaiton?
 #TODO: Is it really the solution to just have the LinkNode?
 
 # Is it fine to let it stay here just like this?

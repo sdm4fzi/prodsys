@@ -412,6 +412,7 @@ class TransportController(Controller):
         product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
+        path = process_request.get_path()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
@@ -440,6 +441,16 @@ class TransportController(Controller):
                 transport_state.process = None
 
             # TODO: drive along nodes of path
+            # 1. Iterate through the links in the path
+            for link in path:
+                # 2. Start of drive
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {link.from_position.data.ID} to {link.to_position.data.ID}"})
+                # 3. Simulate driving along the link
+                yield self.env.process(self.run_process(transport_state, product, target=link.to_position))
+                # 4. Update location
+                self.update_location(link.to_position)
+                # 5. End of drive
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {link.to_position.data.ID}"})
 
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
