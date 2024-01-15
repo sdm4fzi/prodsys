@@ -5,7 +5,7 @@ from typing import Union, List, Optional
 
 from pydantic import BaseModel
 
-from prodsys.simulation import time_model, request
+from prodsys.simulation import time_model, request, path_finder
 from prodsys.models import processes_data
 
 
@@ -228,13 +228,19 @@ class TransportLinkProcess(Process):
     # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
 
     def matches_request(self, request: request.Request) -> bool:
+
         # 1. check if request is a transport request (if not, return False)
         # 2. check if transport request is a link request (if not, return False)
+        requested_process = request.process
+        if not isinstance(requested_process, TransportLinkProcess) or not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
 
         # 3. check for compatibility -> transport links can links from origin to target of resquest
-        # path: List[Links] = path_finder.find_path(request.origin, request.target, self.links)
-        # return not path:
-        #     return False
+        path = path_finder.find_path(request.origin, request.target, self.links)
+        if not path:
+            return ValueError("No path between the origin and target of the request.")
         # 4. set path of request
         # request.path = path
         # return True
