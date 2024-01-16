@@ -5,7 +5,7 @@ from typing import Union, List, Optional
 
 from pydantic import BaseModel
 
-from prodsys.simulation import time_model, request
+from prodsys.simulation import time_model, request, path_finder
 from prodsys.models import processes_data
 
 
@@ -228,24 +228,39 @@ class TransportLinkProcess(Process):
     # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
 
     def matches_request(self, request: request.Request) -> bool:
+
         # 1. check if request is a transport request (if not, return False)
         # 2. check if transport request is a link request (if not, return False)
+        requested_process = request.process
+        if not isinstance(requested_process, TransportLinkProcess) or not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
 
         # 3. check for compatibility -> transport links can links from origin to target of resquest
-        # path: List[Links] = path_finder.find_path(request.origin, request.target, self.links)
-        # return not path:
-        #     return False
+        path = path_finder.find_path(requested_process.origin, requested_process.target, self.links)
+        if not path:
+            return ValueError("No path between the origin and target of the request.")
         # 4. set path of request
-        # request.path = path
-        # return True
-        pass
+        else:
+            requested_process.path = path
+            return True
     
-    def get_process_time(self) -> float:
-        # TODO: calculate based on request and path
-        pass
+    def get_process_time(self, request: request.Request) -> float:
+        # 1. get the path of the request
+        path = request.path
+        total_time = 0
+        # 2. calculate the time for every link
+        # 3. sum up the times through iteration
+        for link in path:
+            time = self.time_model.get_next_time(origin=link.from_position, target=link.to_position)
+            total_time += time
+        return total_time
 
-    def get_expected_process_time(self) -> float:
-        pass
+    def get_expected_process_time(self, *args) -> float:
+        return self.time_model.get_expected_time(*args)
+    
+#TODO: Make the same for TransportRouteProcess
 
 PROCESS_UNION = Union[
     CompoundProcess,
@@ -253,6 +268,7 @@ PROCESS_UNION = Union[
     ProductionProcess,
     TransportProcess,
     CapabilityProcess,
+    TransportLinkProcess,
 ]
 """
 Union type for all processes.
