@@ -118,7 +118,7 @@ async def create_scenario_options(
     return "Sucessfully created scenario options. " + return_string
 
 
-OBJECTIVES_LIST_EXAMPLE = [item["value"] for item in scenario_data.Objective.Config.schema_extra["examples"].values()]
+OBJECTIVES_LIST_EXAMPLE = [item for item in scenario_data.Objective.Config.schema_extra["examples"]]
 
 
 @router.get("/objectives",

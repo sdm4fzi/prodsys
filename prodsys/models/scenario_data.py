@@ -160,29 +160,20 @@ class Objective(BaseModel):
 
     class Config:
         schema_extra = {
-            "examples": {
-                "cost": {
-                    "summary": "Cost",
-                    "value": {
-                        "name": KPIEnum.COST,
-                        "weight": 0.6,
-                    },
+            "examples": [
+                {
+                    "name": KPIEnum.COST,
+                    "weight": 0.6,
                 },
-                "throughput": {
-                    "summary": "Throughput",
-                    "value": {
-                        "name": KPIEnum.THROUGHPUT,
-                        "weight": 0.1,
-                    },
+                {
+                    "name": KPIEnum.THROUGHPUT,
+                    "weight": 0.1,
                 },
-                "WIP": {
-                    "summary": "WIP",
-                    "value": {
-                        "name": KPIEnum.WIP,
-                        "weight": 0.5,
-                    },
+                {
+                    "name": KPIEnum.WIP,
+                    "weight": 0.5,
                 },
-            }
+            ]
         }
 
 
