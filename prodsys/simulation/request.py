@@ -126,3 +126,13 @@ class TransportResquest(Request):
             product.Location: The target location.
         """
         return self.target
+    
+
+    def get_path(self) -> process.TransportLinkProcess:
+        """
+        Returns the path process of the transport request.
+
+        Returns:
+            process.TransportLinkProcess: The path process.
+        """
+        return self.process.path

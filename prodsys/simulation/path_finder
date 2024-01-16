@@ -1,0 +1,169 @@
+from typing import List
+from pathfinding.core.graph import Graph, GraphNode
+from pathfinding.finder.dijkstra import DijkstraFinder
+
+from prodsys.simulation import request
+
+#TODO: How to integrate the Links? Just as model or also in simulaiton?
+#TODO: Is it really the solution to just have the LinkNode?
+
+# Is it fine to let it stay here just like this?
+class LinkNode:
+    def __init__(self, id, position):
+        self.id = id
+        self.position = position
+
+class path_finder:
+    
+    # 1. Define a list of GraphNodes
+    nodes = []
+    # 2. Define a list of PositionNodes which includes also the position
+    position_nodes = []
+    
+
+    def find_path(self, origin: request.origin, target: request.target, links: links):
+
+        # 1. Calculates the edges
+        edges = self.process_links_to_edges(links, self.position_nodes, self.nodes, self.calculate_cost)
+        graph = Graph(edges=edges, bi_directional=True)
+
+        # 2. Transforms the origin & target location
+        origin, target = self.origin_target_to_graphnode(origin, target, links, graph)
+
+        # 3. Calculates the find_graphNode_path
+        graphnode_path = self.find_graphnode_path(origin, target, graph)
+
+        # 4. Transform the nodes of the path given from find_graphnode_path to a list of links
+        path = self.node_path_to_link_path()
+        
+        return path
+    
+
+    def find_graphnode_path(self, origin: GraphNode, target: GraphNode, links: Graph) -> List[GraphNode]:
+        # maybe we can use the Nodes here for our logging
+        finder = DijkstraFinder()
+        path, _ = finder.find_path(origin, target, links)
+        return path
+    
+
+    def process_links_to_edges(self):
+        # Edges have startnode, endnode and cost, thats why links need to be transformed
+        # With the edges it is possible to construct the Graph
+
+        # 1. An empty list of edges is created
+        edges = []
+        # 2. Iterate through the links list
+        for link in links:
+            # 3. Define a start_node & end_node as a Graphnode (just ID)
+            start_node = None
+            end_node = None
+            # 4. Define a position_start_node and position_end_node, which also includes the position (ID + position)
+            position_start_node = None
+            position_end_node = None
+            # 5. If the position and ID of the link already exist in the lists, do nothing
+            for node1 in self.position_nodes:
+                for nodea in self.nodes:
+                    if node1.position == link.from_position and node1.id == nodea.id:
+                        position_start_node = node1
+                        start_node = nodea
+                        break
+
+            # 6. if no node exists with the location and link, then add the nodes to the lists    
+            if position_start_node is None:
+                position_start_node = LinkNode(id = link.id +"_start", position = link.from_position)
+                start_node = GraphNode(node_id = link.id + "_start")
+                self.position_nodes.append(position_start_node)
+                self.nodes.append(start_node)          
+
+            # 7. If the position and ID of the link already exist in the lists, do nothing
+            for node2 in self.position_nodes:
+                for nodeb in self.nodes:
+                    if node2.position == link.to_position and node2.id == nodeb.id:
+                        position_end_node = node2
+                        end_node = nodeb
+                        break
+                    
+            # 8. if no node exists with the location and link, then add the nodes to the lists
+            if position_end_node is None:
+                position_end_node = LinkNode(id = link.id +"_end", position = link.to_position)
+                end_node = GraphNode(node_id = link.id + "_end")
+                self.position_nodes.append(position_end_node)
+                self.nodes.append(end_node)
+
+            # 9. Calculate the cost between the nodes and add the edge to the list
+            cost = self.calculate_cost(position_start_node, position_end_node)       
+            edge = (start_node, end_node, cost)
+            edges.append(edge)                     
+          
+        return edges
+    
+
+    def calculate_cost(self, node1, node2):
+        # Calculates the costs between two nodes for the edge
+        return abs(node1.position[0] - node2.position[0]) + abs(node1.position[1] - node2.position[1])
+    
+
+    def origin_target_to_graphnode(self, origin: request.origin, target: request.target, graph):
+        # Transform the origin & target location of the request in a GraphNode
+
+        # 1. Check if the origin & target position is also a Link position
+        matching_nodes = []
+        for node in self.position_nodes:
+                if node.position == origin or node.position == target:
+                        matching_nodes.append(node)
+
+        if len(matching_nodes) != 2:
+            return ValueError("The origin or Target has no Link Position")
+        
+        origin, target = matching_nodes
+
+        # 2. Find the corresponding GraphNode for the origin & target position
+        matching_graphnodes = []
+        for node in graph.nodes.values():
+                if node.id == origin.id or node.id == target.id:
+                        matching_graphnodes.append(node)
+        
+        origin, target = matching_graphnodes
+
+        return origin, target
+    
+
+    def node_path_to_link_path(self, path):
+        # Transform the nodes of the path given from find_graphnode_path to a list of links
+
+        # 1. Create a list of the node ids (GraphNode) in order of the path: path_id
+        path_id = []
+        for node in path:
+             path_id.append(node.node_id)
+
+        # 2. Create a list of nodes with positions (position nodes) in order of the path: path_id_position
+        path_id_position = []
+        for id, position in enumerate(self.position_nodes):
+             if id in path_id:
+                     path_id_position.append(id)
+
+        # 3. Create an empty list of links: link_path
+        link_path = []
+
+        # 4. Iterate through the list path_id_position and match it with links
+        for i in range(len(path_id_position)-1):
+             for j, link in enumerate(links):
+                     if (
+                          link.from_position == self.position_nodes[path_id_position[i]].position
+                          and link.to_position == self.position_nodes[path_id_position[i+1]].position
+                     ) or (
+                          link.from_position == self.position_nodes[path_id_position[i+1]].position
+                          and link.to_position == self.position_nodes[path_id_position[i]].position
+                     ):
+                          link_path.append(link)
+                          break
+                     
+        return link_path
+    
+    
+
+
+
+    
+
+    
