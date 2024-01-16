@@ -20,7 +20,7 @@ class ProductData(CoreAsset):
     See the examples for more insights.
 
     Args:
-        ID (str): ID of the product. If not given, the product type is used. Gets overwritten to the instance product ID, when an instance is created during simulation. 
+        ID (str): ID of the product. If not given, the product type is used. Gets overwritten to the instance product ID, when an instance is created during simulation.
         description (str): Description of the product.
         product_type (str): Type of the product. If not given, the ID is used.
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
@@ -40,7 +40,7 @@ class ProductData(CoreAsset):
         ```
 
         Product with adjacency matrix process model:
-        ``` py  
+        ``` py
         import prodsys
         prodsys.product_data.ProductData(
             ID="Product_1",
@@ -72,6 +72,7 @@ class ProductData(CoreAsset):
         )
         ```
     """
+
     product_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     transport_process: str
@@ -86,22 +87,17 @@ class ProductData(CoreAsset):
 
     class Config:
         schema_extra = {
-            "examples": {
-                "Product with sequential process model": {
-                    "summary": "Normal Product Model with sequential processes",
-                    "value": {
+            "examples": [
+                {
                     "ID": "Product_1",
-                    "description": "Product 1",
+                    "description": "Product with sequential process",
                     "product_type": "Product_1",
                     "processes": ["P1", "P2", "P3"],
                     "transport_process": "TP1",
-                    }
                 },
-                "Product with adjacency matrix process model": {
-                    "summary": "Product Model with adjacency matrix",
-                    "value": {
+                {
                     "ID": "Product_1",
-                    "description": "Product 1",
+                    "description": "Process with adjacency matrix process",
                     "product_type": "Product_1",
                     "processes": {
                         "P1": ["P2", "P3"],
@@ -109,13 +105,10 @@ class ProductData(CoreAsset):
                         "P3": [],
                     },
                     "transport_process": "TP1",
-                    }
                 },
-                "Product with graph edges process model": {
-                    "summary": "Product Model with edges",
-                    "value": {
+                {
                     "ID": "Product_1",
-                    "description": "Product 1",
+                    "description": "Process with graph edges process",
                     "product_type": "Product_1",
                     "processes": [
                         ["P1", "P2"],
@@ -124,7 +117,6 @@ class ProductData(CoreAsset):
                         ["P3", "P4"],
                     ],
                     "transport_process": "TP1",
-                    }
                 },
-            }
+            ]
         }

@@ -134,13 +134,6 @@
             "time_model_id": "ftbs2",
             "type": "BreakDownState",
             "repair_time_model_id": "ftr2"
-        },
-        {
-            "ID": "BSP",
-            "description": "Breakdownstate for process modules",
-            "time_model_id": "ftbs3",
-            "type": "BreakDownState",
-            "repair_time_model_id": "ftr3"
         }
     ],
     "process_data": [
@@ -259,9 +252,7 @@
                 1
             ],
             "state_ids": [
-                "BSM",
-                "BSP",
-                "BSP"
+                "BSM"
             ],
             "input_queues": [
                 "M1_default_input_queue"
@@ -289,9 +280,7 @@
                 1
             ],
             "state_ids": [
-                "BSM",
-                "BSP",
-                "BSP"
+                "BSM"
             ],
             "input_queues": [
                 "M2_default_input_queue"
@@ -317,8 +306,7 @@
                 1
             ],
             "state_ids": [
-                "BSM",
-                "BSP"
+                "BSM"
             ],
             "input_queues": [
                 "M3_default_input_queue"
@@ -346,8 +334,7 @@
                 1
             ],
             "state_ids": [
-                "BSM",
-                "BSP"
+                "BSM"
             ],
             "input_queues": [
                 "M4_default_input_queue"

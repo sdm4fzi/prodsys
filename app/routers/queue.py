@@ -9,7 +9,7 @@ from prodsys.models import (
 )
 from app.dependencies import get_adapter, get_queue_data
 
-QUEUE_LIST_EXAMPLE = [item["value"] for item in queue_data.QueueData.Config.schema_extra["examples"].values()]
+QUEUE_LIST_EXAMPLE = [item for item in queue_data.QueueData.Config.schema_extra["examples"]]
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/queues",
