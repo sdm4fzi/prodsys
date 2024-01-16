@@ -10,7 +10,7 @@ readme = ["README.md", "LICENSE"]
 python = ">=3.9, <3.13"
 pydantic = "^1.10.7"
 simpy = "^4.0.1"
-fastapi = "0.99"
+fastapi = "0.99.1"
 uvicorn = {extras = ["standard"], version = "^0.21.1"}
 deap = "^1.3.3"
 simanneal = "^0.5.0"
