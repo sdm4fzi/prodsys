@@ -78,7 +78,8 @@ def register_production_states_for_processes(
         existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
         if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
-        elif isinstance(process_instance, process.TransportProcess) and not existence_condition:
+        elif (isinstance(process_instance, process.TransportProcess) or isinstance(process_instance, process.RouteTransportProcess)or 
+              isinstance(process_instance, process.LinkTransportProcess))and not existence_condition:
             state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)

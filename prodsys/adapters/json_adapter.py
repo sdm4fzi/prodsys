@@ -15,6 +15,7 @@ from prodsys.models import (
     resource_data,
     time_model_data,
     state_data,
+    links_data,
     processes_data,
     sink_data,
     source_data,
@@ -68,6 +69,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.queue_data = self.create_objects_from_configuration_data_old(data["queues"], queue_data.QueueData)
         self.resource_data = self.create_objects_from_configuration_data_old(data["resources"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data_old(data["products"], product_data.ProductData)
+        self.link_data = self.create_objects_from_configuration_data(data["links"], links_data.LinkData)
         self.sink_data = self.create_objects_from_configuration_data_old(data["sinks"], sink_data.SinkData)
         self.source_data = self.create_objects_from_configuration_data_old(data["sources"], source_data.SourceData)
         if scenario_file_path:
@@ -137,6 +139,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
                 "process_data": self.get_list_of_dict_objects(self.process_data),
                 "queue_data": self.get_list_of_dict_objects(self.queue_data),
                 "resource_data": self.get_list_of_dict_objects(self.resource_data),
+                "links": self.get_dict_of_list_objects(self.link_data),
                 "product_data": self.get_list_of_dict_objects(self.product_data),
                 "sink_data": self.get_list_of_dict_objects(self.sink_data),
                 "source_data": self.get_list_of_dict_objects(self.source_data)

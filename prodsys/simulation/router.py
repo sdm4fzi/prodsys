@@ -14,6 +14,7 @@ from simpy import events
 from prodsys.simulation import process
 from prodsys.simulation import resources
 from prodsys.simulation import request
+from prodsys.simulation import link
 
 
 if TYPE_CHECKING:

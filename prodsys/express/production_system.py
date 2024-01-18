@@ -15,6 +15,7 @@ from prodsys.express import (
     product,
     resources,
     source,
+    link,
     sink,
     process,
     time_model,
@@ -29,6 +30,7 @@ def remove_duplicate_items(
             source.Source,
             sink.Sink,
             product.Product,
+            link.Link,
             state.STATE_UNION,
             process.PROCESS_UNION,
             time_model.TIME_MODEL_UNION,
@@ -40,6 +42,7 @@ def remove_duplicate_items(
         source.Source,
         sink.Sink,
         product.Product,
+        link.Link,
         state.STATE_UNION,
         process.PROCESS_UNION,
         time_model.TIME_MODEL_UNION,
@@ -98,6 +101,14 @@ class ProductionSystem(core.ExpressObject):
         )
         processes = remove_duplicate_items(processes)
 
+        links = [
+            link
+            for process in processes
+            if hasattr(process, "links")
+            for link in process.links
+        ]
+        links = remove_duplicate_items(links)
+
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
         )
@@ -119,6 +130,7 @@ class ProductionSystem(core.ExpressObject):
         time_model_data = [time_model.to_model() for time_model in time_models]
         process_data = [process.to_model() for process in processes]
         state_data = [state.to_model() for state in states]
+        link_data = [link.to_model() for link in links]
         product_data = [product.to_model() for product in products]
         resource_data = [resource.to_model() for resource in self.resources]
         source_data = [source.to_model() for source in self.sources]
@@ -145,6 +157,7 @@ class ProductionSystem(core.ExpressObject):
             process_data=process_data,
             state_data=state_data,
             product_data=product_data,
+            link_data=link_data,
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,

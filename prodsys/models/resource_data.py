@@ -9,7 +9,7 @@ The following resources are available:
 
 from __future__ import annotations
 
-from typing import Literal, Union, List, Tuple, Optional
+from typing import Literal, Union, List, Tuple, Optional, Dict
 from enum import Enum
 
 from pydantic import validator, conlist

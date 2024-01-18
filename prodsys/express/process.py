@@ -20,7 +20,7 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.models import processes_data, time_model_data
 
-from prodsys.express import time_model, core
+from prodsys.express import time_model, core, link
 
 @dataclass
 class Process(ABC):
@@ -194,10 +194,45 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type
         )
     
+@dataclass
+class LinkTransportProcess(DefaultProcess, core.ExpressObject):
+
+    links: List[link.Link] = Field(default_factory=list)
+    type: processes_data.ProcessTypeEnum = Field(
+        init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
+    )
+
+    def to_model(self) -> processes_data.LinkTransportProcessData:
+        return processes_data.LinkTransportProcessData(
+            time_model_id=self.time_model.ID,
+            ID=self.ID,
+            description="",
+            type=self.type,
+            links=[link.ID for link in self.links],
+        )  
+
+@dataclass
+class RouteTransportProcess(LinkTransportProcess, core.ExpressObject):
+
+    type: processes_data.ProcessTypeEnum = Field(
+        init=False, default=processes_data.ProcessTypeEnum.RouteTransportProcesses
+    )
+
+    def to_model(self) -> processes_data.RouteTransportProcessData:
+        return processes_data.RouteTransportProcessData(
+            time_model_id=self.time_model.ID,
+            ID=self.ID,
+            description="",
+            type=self.type,
+            links=[link.ID for link in self.links],
+        )  
+    
 
 PROCESS_UNION = Union[
     ProductionProcess,
     CapabilityProcess,
     TransportProcess,
+    LinkTransportProcess,
+    RouteTransportProcess,
 ]
 

@@ -1,8 +1,11 @@
-from typing import List
+from typing import List, TYPE_CHECKING, Optional
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 
-from prodsys.simulation import request
+from prodsys.simulation import request, link
+
+if TYPE_CHECKING:
+    from prodsys.simulation import product, process, resources, request
 
 #TODO: How to integrate the Links? Just as model or also in simulaiton?
 #TODO: Is it really the solution to just have the LinkNode?
@@ -13,15 +16,19 @@ class LinkNode:
         self.id = id
         self.position = position
 
-class path_finder:
+class Pathfinder:
     
-    # 1. Define a list of GraphNodes
-    nodes = []
-    # 2. Define a list of PositionNodes which includes also the position
-    position_nodes = []
-    
+    def __init__(self):
 
-    def find_path(self, origin: request.origin, target: request.target, links: links):
+        # 1. Define a list of GraphNodes
+        self.nodes = []
+        # 2. Define a list of PositionNodes which includes also the position
+        self.position_nodes = []
+
+        self.origin: Optional[request.TransportResquest.origin] = None
+        self.target: Optional[request.TransportResquest.target] = None
+
+    def find_path(self, origin: request.TransportResquest, target: request.TransportResquest, links: link.Link):
 
         # 1. Calculates the edges
         edges = self.process_links_to_edges(links, self.position_nodes, self.nodes, self.calculate_cost)
@@ -34,8 +41,8 @@ class path_finder:
         graphnode_path = self.find_graphnode_path(origin, target, graph)
 
         # 4. Transform the nodes of the path given from find_graphnode_path to a list of links
-        path = self.node_path_to_link_path()
-        
+        path = self.node_path_to_link_path(graphnode_path)
+
         return path
     
 
@@ -46,7 +53,7 @@ class path_finder:
         return path
     
 
-    def process_links_to_edges(self):
+    def process_links_to_edges(self, links: link.Link):
         # Edges have startnode, endnode and cost, thats why links need to be transformed
         # With the edges it is possible to construct the Graph
 
@@ -103,7 +110,7 @@ class path_finder:
         return abs(node1.position[0] - node2.position[0]) + abs(node1.position[1] - node2.position[1])
     
 
-    def origin_target_to_graphnode(self, origin: request.origin, target: request.target, graph):
+    def origin_target_to_graphnode(self, origin: request.TransportResquest, target: request.TransportResquest, graph):
         # Transform the origin & target location of the request in a GraphNode
 
         # 1. Check if the origin & target position is also a Link position
