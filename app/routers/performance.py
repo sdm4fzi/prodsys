@@ -27,7 +27,7 @@ KPI_EXAMPLES = {
 
 KPI_LIST_EXAMPLE = [item["value"] for item in KPI_EXAMPLES.values()]
 
-EVENT_LIST_EXAMPLE = [item["value"] for item in performance_data.Event.Config.schema_extra["examples"].values()]
+EVENT_LIST_EXAMPLE = [item for item in performance_data.Event.Config.schema_extra["examples"]]
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/results",

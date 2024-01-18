@@ -146,10 +146,6 @@ def run_evolutionary_algorithm(
     """
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
-    if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.info("Compound processes are not clean. This may lead to unexpected results.")
-    if not check_breakdown_states_available(base_configuration):
-        create_default_breakdown_states(base_configuration)
 
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=seed,
@@ -247,9 +243,13 @@ def evolutionary_algorithm_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
-    base_configuration = base_configuration.copy(deep=True)
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    base_configuration = base_configuration.copy(deep=True)
+    if not adapters.check_for_clean_compound_processes(base_configuration):
+        logger.info("Compound processes are not clean. This may lead to unexpected results.")
+    if not check_breakdown_states_available(base_configuration):
+        create_default_breakdown_states(base_configuration)
 
     util.prepare_save_folder(save_folder + "/")
     set_seed(hyper_parameters.seed)
