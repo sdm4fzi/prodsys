@@ -14,6 +14,7 @@ from prodsys.models import (
     resource_data,
     time_model_data,
     state_data,
+    links_data,
     processes_data,
     sink_data,
     source_data,
@@ -288,6 +289,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
+    link_data: List[links_data.LinkData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []

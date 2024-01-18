@@ -88,6 +88,7 @@ class TransportResquest(Request):
         self.process: process.TransportProcess = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = None
+        self.path: None
         self.origin: product.Location = origin
         self.target: product.Location = target
 

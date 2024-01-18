@@ -155,7 +155,7 @@ class Product(BaseModel):
     env: sim.Environment
     product_data: product_data.ProductData
     process_model: proces_models.ProcessModel
-    transport_process: process.TransportProcess
+    transport_process: Union[process.RouteTransportProcess, process.LinkTransportProcess, process.TransportProcess]
     product_router: router.Router
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)

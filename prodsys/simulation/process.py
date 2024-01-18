@@ -5,7 +5,7 @@ from typing import Union, List, Optional
 
 from pydantic import BaseModel
 
-from prodsys.simulation import time_model, request, path_finder
+from prodsys.simulation import path_finder, time_model, request, link
 from prodsys.models import processes_data
 
 
@@ -153,6 +153,8 @@ class CompoundProcess(Process):
             processes_data.TransportProcessData,
             processes_data.CapabilityProcessData,
             processes_data.RequiredCapabilityProcessData,
+            processes_data.LinkTransportProcessData,
+            processes_data.RouteTransportProcessData,
         ]
     ]
 
@@ -160,7 +162,7 @@ class CompoundProcess(Process):
         requested_process = request.process
         if isinstance(requested_process, ProductionProcess) or isinstance(
             requested_process, TransportProcess
-        ):
+        ) or isinstance(requested_process, LinkTransportProcess) or isinstance(requested_process, RouteTransportProcess):
             return requested_process.process_data.ID in self.process_data.process_ids
         elif isinstance(requested_process, CapabilityProcess) or isinstance(
             requested_process, RequiredCapabilityProcess
@@ -220,25 +222,74 @@ class RequiredCapabilityProcess(Process):
         )
     
 
-class TransportLinkProcess(Process):
+class LinkTransportProcess(Process):
+    """
+    Class that represents a transport link process.
+    """
+
+    # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
+    process_datax: processes_data.LinkTransportProcessData
+
+    def matches_request(self, request: request.Request) -> bool:
+
+        # 1. check if request is a transport request (if not, return False)
+        # 2. check if transport request is a link request (if not, return False)
+        pathfinding_process = path_finder.Pathfinder()
+        requested_process = request.process
+        if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
+        
+        if isinstance(requested_process, LinkTransportProcess):
+            requestx = request.TransportResquest()
+
+            # 3. check for compatibility -> transport links can links from origin to target of resquest
+            path = pathfinding_process.find_path(requestx.origin, request.target, requested_process.process_datax.links)
+            if not path:
+                return ValueError("No path between the origin and target of the request.")
+            # 4. set path of request
+            else:
+                request.path = path
+                return requested_process.process_datax.ID == self.process_data.ID
+        
+        return self.process_data.ID in requested_process.process_data.process_ids
+    
+    def get_process_time(self, request: request.TransportResquest) -> float:
+        # 1. get the path of the request
+        path = request.path
+        total_time = 0
+        # 2. calculate the time for every link
+        # 3. sum up the times through iteration
+        for link in path:
+            time = self.time_model.get_next_time(origin=link.from_position, target=link.to_position)
+            total_time += time
+        return total_time
+
+    def get_expected_process_time(self, *args) -> float:
+        return self.time_model.get_expected_time(*args)
+    
+    
+class RouteTransportProcess(Process):
     """
     Class that represents a transport link process.
     """
 
     # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associatd data models.
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request.TransportResquest) -> bool:
 
         # 1. check if request is a transport request (if not, return False)
         # 2. check if transport request is a link request (if not, return False)
+        pathfinding_process = path_finder.Pathfinder()
         requested_process = request.process
-        if not isinstance(requested_process, TransportLinkProcess) or not isinstance(
+        if not isinstance(requested_process, RouteTransportProcess) or not isinstance(
             requested_process, CompoundProcess
         ):
             return False
 
         # 3. check for compatibility -> transport links can links from origin to target of resquest
-        path = path_finder.find_path(requested_process.origin, requested_process.target, self.links)
+        path = pathfinding_process.find_path(request.origin, request.target, self.links)
         if not path:
             return ValueError("No path between the origin and target of the request.")
         # 4. set path of request
@@ -259,8 +310,6 @@ class TransportLinkProcess(Process):
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
-    
-#TODO: Make the same for TransportRouteProcess
 
 PROCESS_UNION = Union[
     CompoundProcess,
@@ -268,7 +317,8 @@ PROCESS_UNION = Union[
     ProductionProcess,
     TransportProcess,
     CapabilityProcess,
-    TransportLinkProcess,
+    LinkTransportProcess,
+    RouteTransportProcess,
 ]
 """
 Union type for all processes.
