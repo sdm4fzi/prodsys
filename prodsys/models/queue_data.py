@@ -40,22 +40,16 @@ class QueueData(CoreAsset):
 
     class Config:
         schema_extra = {
-            "examples": {
-                "Finite Queue": {
-                    "summary": "Finite Queue",
-                    "value": {
-                        "ID": "Q1",
-                        "description": "Queue 1",
-                        "capacity": 10,
-                    },
+            "examples": [
+                {
+                    "ID": "Q1",
+                    "description": "Finte Queue",
+                    "capacity": 10,
                 },
-                "Infinite Queue": {
-                    "summary": "Infinite Queue",
-                    "value": {
-                        "ID": "Q1",
-                        "description": "Queue 1",
-                        "capacity": 0.0,
-                    },
+                {
+                    "ID": "Q1",
+                    "description": "Infinite Queue",
+                    "capacity": 0.0,
                 },
-            }
+            ]
         }

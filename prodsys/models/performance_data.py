@@ -40,34 +40,28 @@ class Event(BaseModel):
 
     class Config:
         schema_extra = {
-            "examples": {
-                "Process starts event": {
-                    "summary": "Process starts event",
-                    "value": {
-                        "time": 12.0,
-                        "resource": "R1",
-                        "state": "P1",
-                        "state_type": "Production",
-                        "activity": "start state",
-                        "product": "Product_1_12",
-                        "expected_end_time": 24.3,
-                        "target_location": None,
-                    },
+            "examples": [
+                {
+                    "time": 12.0,
+                    "resource": "R1",
+                    "state": "P1",
+                    "state_type": "Production",
+                    "activity": "start state",
+                    "product": "Product_1_12",
+                    "expected_end_time": 24.3,
+                    "target_location": None,
                 },
-                "Process ends event": {
-                    "summary": "Process ends event",
-                    "value": {
-                        "time": 24.3,
-                        "resource": "R1",
-                        "state": "P1",
-                        "state_type": "Production",
-                        "activity": "end state",
-                        "product": "Product_1_12",
-                        "expected_end_time": None,
-                        "target_location": None,
-                    },
+                {
+                    "time": 24.3,
+                    "resource": "R1",
+                    "state": "P1",
+                    "state_type": "Production",
+                    "activity": "end state",
+                    "product": "Product_1_12",
+                    "expected_end_time": None,
+                    "target_location": None,
                 },
-            }
+            ]
         }
 
 
