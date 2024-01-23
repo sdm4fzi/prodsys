@@ -25,7 +25,7 @@ from prodsys.simulation import (
     state,
 )
 
-from prodsys.models import product_data
+from prodsys.models import product_data, links_data
 
 
 class ProductInfo(BaseModel, extra=Extra.allow):
@@ -136,8 +136,8 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-
-Location = Union[resources.Resource, source.Source, sink.Sink]
+#TODO: Add knots, add interface for all classes location get position
+Location = Union[resources.Resource, source.Source, sink.Sink, links_data.Node]
 
 
 class Product(BaseModel):
@@ -155,7 +155,7 @@ class Product(BaseModel):
     env: sim.Environment
     product_data: product_data.ProductData
     process_model: proces_models.ProcessModel
-    transport_process: Union[process.RouteTransportProcess, process.LinkTransportProcess, process.TransportProcess]
+    transport_process: Union[process.LinkTransportProcess, process.TransportProcess]
     product_router: router.Router
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)

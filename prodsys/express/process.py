@@ -210,22 +210,6 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type,
             links=[link.ID for link in self.links],
         )  
-
-@dataclass
-class RouteTransportProcess(LinkTransportProcess, core.ExpressObject):
-
-    type: processes_data.ProcessTypeEnum = Field(
-        init=False, default=processes_data.ProcessTypeEnum.RouteTransportProcesses
-    )
-
-    def to_model(self) -> processes_data.RouteTransportProcessData:
-        return processes_data.RouteTransportProcessData(
-            time_model_id=self.time_model.ID,
-            ID=self.ID,
-            description="",
-            type=self.type,
-            links=[link.ID for link in self.links],
-        )  
     
 
 PROCESS_UNION = Union[
@@ -233,6 +217,5 @@ PROCESS_UNION = Union[
     CapabilityProcess,
     TransportProcess,
     LinkTransportProcess,
-    RouteTransportProcess,
 ]
 

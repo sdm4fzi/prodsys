@@ -31,7 +31,6 @@ class ProcessTypeEnum(str, Enum):
     CompoundProcesses = "CompoundProcesses"
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
-    RouteTransportProcesses = "RouteTransportProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -287,51 +286,7 @@ class LinkTransportProcessData(ProcessData):
             }
         }
 
-class RouteTransportProcessData(LinkTransportProcessData):
-    """
-    Class that represents a route transport process data.
-
-    Args:
-        ID (str): ID of the process.
-        description (str): Description of the process.
-        type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        links_data (List[LinkData]): List of link data.
-
-    Examples:
-        A transport process with ID "TP1", description "Transport Process 1",
-        type "LinkTransportProcesses", and link_data LinkData(link="link1"):
-        ``` py
-        import prodsys
-        prodsys.processes_data.LinkTransportProcessData(
-            ID="TP1",
-            description="Transport Process 1",
-            type="LinkTransportProcesses",
-            links_data=[LinkData(link="link1")],
-        )
-        ```
-    """
-    #Reihenfolge Liste sortieren, Boolean true? 
-    type: Literal[ProcessTypeEnum.RouteTransportProcesses]
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Transport process",
-                "value": {
-                    "ID": "TP1",
-                    "description": "Transport Process 1",
-                    "type": "RouteTransportProcesses",
-                    "links_data": [
-                        {"link": "link1"},
-                        {"link": "link2"},
-                        {"link": "link3"}
-                    ],
-                },
-            }
-        }
-
-
 PROCESS_DATA_UNION = Union[
     CompoundProcessData, RequiredCapabilityProcessData,
-    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData, RouteTransportProcessData
+    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData
 ]

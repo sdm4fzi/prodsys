@@ -99,6 +99,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
         self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)
+        self.link_data = self.create_objects_from_configuration_data(data["links_data"], links_data.LinkData)
         self.source_data = self.create_objects_from_configuration_data(data["source_data"], source_data.SourceData)
         if scenario_file_path:
             self.read_scenario(scenario_file_path)
@@ -139,7 +140,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
                 "process_data": self.get_list_of_dict_objects(self.process_data),
                 "queue_data": self.get_list_of_dict_objects(self.queue_data),
                 "resource_data": self.get_list_of_dict_objects(self.resource_data),
-                "links": self.get_dict_of_list_objects(self.link_data),
+                "links_data": self.get_dict_of_list_objects(self.links_data),
                 "product_data": self.get_list_of_dict_objects(self.product_data),
                 "sink_data": self.get_list_of_dict_objects(self.sink_data),
                 "source_data": self.get_list_of_dict_objects(self.source_data)

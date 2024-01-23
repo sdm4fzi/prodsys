@@ -33,7 +33,7 @@ timer_model_interarrival_time2 = psx.FunctionTimeModel(
     distribution_function="constant", location=42 / 60, ID="time_model_source02"
 )
 
-link01 = psx.Link(from_position=[-1, 0], to_position=[0, 0], ID="link01")
+link01 = psx.Link(from_position=[-1, 0], to_position=[0 , 0], ID="link01")
 link02 = psx.Link(from_position=[0, 0], to_position=[0, 2], ID="link02")
 link03 = psx.Link(from_position=[0, 2], to_position=[5, 2], ID="link03")
 link04 = psx.Link(from_position=[5, 0], to_position=[5, 2], ID="link04")
@@ -48,6 +48,8 @@ link12 = psx.Link(from_position=[-1, 10], to_position=[0, 10], ID="link12")
 link13 = psx.Link(from_position=[10, 0], to_position=[10, 2], ID="link13")
 link14 = psx.Link(from_position=[0, 2], to_position=[0, 8], ID="link14")
 
+
+#TODO: Das kann ich noch entfernen und es soll automatisch von allen Links erstellt werden
 ltp01 = psx.LinkTransportProcess(
     links=[
         link01,
@@ -68,12 +70,6 @@ ltp01 = psx.LinkTransportProcess(
     time_model=time_model_agv,
     ID="ltp01",
     type="LinkTransportProcesses",
-)
-rt01 = psx.RouteTransportProcess(
-    links=[link13, link06, link07],
-    time_model=time_model_agv,
-    ID="rt01",
-    type="RouteTransportProcesses",
 )
 
 productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
@@ -117,7 +113,7 @@ machine06 = psx.ProductionResource(
 
 # Während hier der AGV eben alle Routen fahren kann
 agv01 = psx.TransportResource(
-    location= [0,0],
+    location= [-1,0],
     ID="agv01",
     processes=[ltp01],
 )
@@ -132,7 +128,7 @@ agv02 = psx.TransportResource(
 # Das heißt wir brauchen ein Matching
 agv03 = psx.TransportResource(
     ID="agv03",
-    processes=[rt01],
+    processes=[ltp01],
 )
 
 product01 = psx.Product(
@@ -162,17 +158,17 @@ source01 = psx.Source(
     product=product01,
     ID="source01",
     time_model=timer_model_interarrival_time,
-    location=(-1, 0),
+    location=[-1, 0],
 )
-sink01 = psx.Sink(product=product01, ID="sink01", location=(-1, 10))
+sink01 = psx.Sink(product=product01, ID="sink01", location=[-1, 10])
 
 source02 = psx.Source(
     product=product02,
     ID="source02",
     time_model=timer_model_interarrival_time2,
-    location=(-1, 0),
+    location=[-1, 0],
 )
-sink02 = psx.Sink(product=product02, ID="sink02", location=(-1, 10))
+sink02 = psx.Sink(product=product02, ID="sink02", location=[-1, 10])
 
 productionsystem = psx.ProductionSystem(
     resources=[
