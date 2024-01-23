@@ -166,6 +166,8 @@ class Runner(BaseModel):
             )
             self.source_factory.create_sources(self.adapter)
 
+            # TODO: create link transport processes and adjust dummyLinkTransportProcesses 
+
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 

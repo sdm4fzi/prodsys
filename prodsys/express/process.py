@@ -10,13 +10,16 @@ The following processes are possible:
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from uuid import uuid1
 
 from abc import ABC
 
 from pydantic import Field
 from pydantic.dataclasses import dataclass
+from prodsys.express.resources import Node, Resource
+from prodsys.express.sink import Sink
+from prodsys.express.source import Source
 
 from prodsys.models import processes_data, time_model_data
 
@@ -194,21 +197,29 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type
         )
     
+
+Location = Node | Resource | Sink | Source
+    
 @dataclass
 class LinkTransportProcess(DefaultProcess, core.ExpressObject):
 
-    links: List[link.Link] = Field(default_factory=list)
+    links: Union[List[List[Location]], Dict[Location, List[Location]]] = Field(default_factory=list)
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
+        if isinstance(self.links, list):
+            return_links = [[link.ID for link in link_list] for link_list in self.links]
+        else:
+            return_links = {link.ID: [link.ID for link in link_list] for link, link_list in self.links.items()}
         return processes_data.LinkTransportProcessData(
             time_model_id=self.time_model.ID,
             ID=self.ID,
             description="",
             type=self.type,
-            links=[link.ID for link in self.links],
+            links=return_links,
         )  
     
 

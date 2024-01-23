@@ -16,11 +16,26 @@ from prodsys.simulation import process, sim, store
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
+    NodeData,
     ProductionResourceData,
     TransportResourceData,
 )
 from prodsys.simulation import control, state
 from prodsys.util import util
+
+
+class NodeSimulationWrapper(BaseModel):
+    data: NodeData
+
+
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the resource.
+
+        Returns:
+            List[float]: The location of the resource. Has to have length 2.
+        """
+        return self.data.location
 
 
 class Resource(BaseModel, ABC, resource.Resource):

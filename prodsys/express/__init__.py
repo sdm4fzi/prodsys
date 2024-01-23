@@ -32,9 +32,8 @@ from prodsys.express.process import (
     LinkTransportProcess,
 )
 from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState
-from prodsys.express.resources import ProductionResource, TransportResource
+from prodsys.express.resources import ProductionResource, TransportResource, Node
 from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
-from prodsys.express.link import Link
 from prodsys.express.production_system import ProductionSystem

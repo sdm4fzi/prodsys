@@ -8,6 +8,8 @@ from typing import List, Union, Optional, TYPE_CHECKING, Generator
 from pydantic import BaseModel, Field, Extra
 
 import logging
+
+from prodsys.express.resources import Node
 logger = logging.getLogger(__name__)
 
 import numpy as np
@@ -136,8 +138,9 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-#TODO: Add knots, add interface for all classes location get position
-Location = Union[resources.Resource, source.Source, sink.Sink, links_data.Node]
+
+
+Location = Union[resources.Resource, source.Source, sink.Sink, resources.NodeSimulationWrapper]
 
 
 class Product(BaseModel):

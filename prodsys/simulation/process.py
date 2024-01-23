@@ -4,9 +4,12 @@ from abc import ABC, abstractmethod
 from typing import Union, List, Optional
 
 from pydantic import BaseModel
+from prodsys.models.resource_data import ResourceData
+from prodsys.models.source_data import SourceData
 
 from prodsys.simulation import path_finder, time_model, request
 from prodsys.models import links_data, processes_data
+from prodsys.simulation.product import Location
 
 
 class Process(ABC, BaseModel):
@@ -228,6 +231,7 @@ class LinkTransportProcess(Process):
 
     # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associated data models.
     process_data: processes_data.LinkTransportProcessData
+    links: List[List[Location, Location]]
 
     def matches_request(self, request: request.Request) -> bool:
 

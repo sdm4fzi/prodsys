@@ -250,7 +250,7 @@ class LinkTransportProcessData(ProcessData):
         ID (str): ID of the process.
         description (str): Description of the process.
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        links (List[LinkData]): List of link data.
+        links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1",
@@ -267,7 +267,7 @@ class LinkTransportProcessData(ProcessData):
     """
 
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
-    links: Union[List[str], List[List[str]], Dict[str, List[str]]]
+    links: Union[List[List[str]], Dict[str, List[str]]]
 
     class Config:
         schema_extra = {
@@ -277,11 +277,7 @@ class LinkTransportProcessData(ProcessData):
                     "ID": "TP1",
                     "description": "Transport Process 1",
                     "type": "RouteTransportProcesses",
-                    "links": [
-                        {"link": "link1"},
-                        {"link": "link2"},
-                        {"link": "link3"}
-                    ],
+                    "links": [["Resource1", "Node2"], ["Node2", "Resource1"]],
                 },
             }
         }
