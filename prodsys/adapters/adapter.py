@@ -14,7 +14,6 @@ from prodsys.models import (
     resource_data,
     time_model_data,
     state_data,
-    links_data,
     processes_data,
     sink_data,
     source_data,

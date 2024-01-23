@@ -383,6 +383,11 @@ class TransportController(Controller):
         self._current_location = location
         self.resource.set_location(location.data.location)
 
+
+    def run_process_steps(self):
+        # 1. if no link transport process -> start_process
+        # 2. if link transport process -> start x times start_process
+
     def start_process(self) -> Generator:
         """
         Start the next process.
