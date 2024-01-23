@@ -14,7 +14,6 @@ from simpy import events
 from prodsys.simulation import process
 from prodsys.simulation import resources
 from prodsys.simulation import request
-from prodsys.simulation import link
 
 
 if TYPE_CHECKING:
@@ -58,14 +57,12 @@ class Router:
         if not possible_resources:
             raise ValueError(f"No possible production resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID}.")
         if not isinstance(processing_request, request.TransportResquest):
-            possible_resources = [
-                resource
-                for resource in possible_resources
-                if self.can_reach_resource(
-                    product=processing_request.product,
-                    resource=resource,
-                )
-            ]
+            for resource in possible_resources:
+                if self.can_reach_resource(product=processing_request.product, resource=resource): 
+                    possible_resources.append(resource)
+                else:
+                    break
+            
         if not possible_resources:
             raise ValueError(f"No possible transport resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID} to reach any destinations from resource {processing_request.product.current_location.data.ID}.")
 

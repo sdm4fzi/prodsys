@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List, Union
 
 from prodsys.simulation import process as prodsys_process
 
@@ -80,19 +80,20 @@ class TransportResquest(Request):
     """
     def __init__(
         self,
-        process: process.TransportProcess,
+        process: Union[process.TransportProcess, process.LinkTransportProcess],
         product: product.Product,
         origin: product.Location,
         target: product.Location,
+        path = None,
     ):
-        self.process: process.TransportProcess = process
+        self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = None
-        self.path: None
+        self.path = path,
         self.origin: product.Location = origin
         self.target: product.Location = target
 
-    def get_process(self) -> process.TransportProcess:
+    def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
         Returns the transport process of the transport request.
 
@@ -128,12 +129,12 @@ class TransportResquest(Request):
         """
         return self.target
     
-
-    def get_path(self) -> process.TransportLinkProcess:
+    #TODO: How to get here the path
+    def get_path(self) -> process.LinkTransportProcess:
         """
         Returns the path process of the transport request.
 
         Returns:
             process.TransportLinkProcess: The path process.
         """
-        return self.process.path
+        return self.path

@@ -30,7 +30,6 @@ from prodsys.express.process import (
     CapabilityProcess,
     TransportProcess,
     LinkTransportProcess,
-    RouteTransportProcess,
 )
 from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState
 from prodsys.express.resources import ProductionResource, TransportResource

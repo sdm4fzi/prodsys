@@ -144,7 +144,7 @@ class TransportResource(Resource, core.ExpressObject):
         )
         ```
     """
-    processes: List[Union[process.RouteTransportProcess, process.LinkTransportProcess, process.TransportProcess]]
+    processes: List[Union[process.LinkTransportProcess, process.TransportProcess]]
     location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list)
     # capacity: int = 1
     # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
