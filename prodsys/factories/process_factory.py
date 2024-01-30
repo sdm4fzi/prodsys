@@ -92,7 +92,6 @@ class ProcessFactory(BaseModel):
         if not pr:
             raise ValueError(f"Process with ID {ID} not found")
         return pr.pop()
-    
 
 
 from prodsys.simulation import process
