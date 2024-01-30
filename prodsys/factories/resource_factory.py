@@ -14,7 +14,7 @@ from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
     ControllerEnum,
-    ResourceControlPolicy, TransportControlPolicy
+    ResourceControlPolicy, TransportControlPolicy, NodeData
 )
 from prodsys.factories import process_factory, state_factory, queue_factory
 
@@ -113,6 +113,8 @@ class ResourceFactory(BaseModel):
     state_factory: state_factory.StateFactory
     queue_factory: queue_factory.QueueFactory
 
+    nodes_data: List[NodeData] = []
+    nodes: List[resources.NodeSimulationWrapper] = []
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[resources.RESOURCE_UNION] = []
     controllers: List[
@@ -121,6 +123,19 @@ class ResourceFactory(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    #TODO: how can i include the location here?
+    def create_nodes(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates node objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): Adapter that contains the node data.
+        """
+        # Add the location of node with get_location
+        for node_data in adapter.nodes_data:
+            self.nodes.append(
+                parse_obj_as(NodeData, node_data))
 
     def create_resources(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -204,6 +219,19 @@ class ResourceFactory(BaseModel):
             resources.RESOURCE_UNION: Resource object with the given ID.
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
+
+    def get_node(self, ID: str) -> resources.NodeSimulationWrapper:
+        """
+        Method returns a node object with the given ID.
+
+        Args:
+            ID (str): ID of the node object.
+
+        Returns:
+            resources.NodeSimulationWrapper: Node object with the given ID.
+        """
+        return [n for n in self.nodes if n.ID == ID].pop()
+
 
     def get_controller_of_resource(
         self, _resource: resources.Resource

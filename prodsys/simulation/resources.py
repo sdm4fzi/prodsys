@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List, Generator, Optional, Union
+from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
 from pydantic import BaseModel, Field, Extra
 import random
@@ -11,16 +11,32 @@ logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
 from simpy import events
-from prodsys.simulation import process, sim, store
+from prodsys.simulation import sim, store
+if TYPE_CHECKING:
+    from prodsys.simulation import process, control, state
 
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
+    NodeData,
     ProductionResourceData,
     TransportResourceData,
 )
-from prodsys.simulation import control, state
 from prodsys.util import util
+
+
+class NodeSimulationWrapper(BaseModel):
+    data: NodeData
+
+
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the resource.
+
+        Returns:
+            List[float]: The location of the resource. Has to have length 2.
+        """
+        return self.data.location
 
 
 class Resource(BaseModel, ABC, resource.Resource):
@@ -425,3 +441,9 @@ class TransportResource(Resource):
 
 RESOURCE_UNION = Union[ProductionResource, TransportResource]
 """ Union Type for Resources. """
+
+from prodsys.simulation import process, control, state
+Resource.update_forward_refs()
+ProductionResource.update_forward_refs()
+TransportResource.update_forward_refs()
+NodeSimulationWrapper.update_forward_refs()

@@ -10,17 +10,17 @@ The following processes are possible:
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from uuid import uuid1
 
 from abc import ABC
 
-from pydantic import Field
+from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
 from prodsys.models import processes_data, time_model_data
 
-from prodsys.express import time_model, core, link
+from prodsys.express import time_model, core
 
 @dataclass
 class Process(ABC):
@@ -150,7 +150,6 @@ class CapabilityProcess(Process, core.ExpressObject):
             type=self.type
         )
 
-
 @dataclass
 class TransportProcess(DefaultProcess, core.ExpressObject):
     """
@@ -193,24 +192,34 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             description="",
             type=self.type
         )
-    
+
+Location: "resources.Node" | "resources.Resource" | "source.Source" | "sink.Sink" 
+
 @dataclass
 class LinkTransportProcess(DefaultProcess, core.ExpressObject):
 
-    links: List[link.Link] = Field(default_factory=list)
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    links: Union[List[List[Location]] , Dict[Location, List[Location]]] = Field(default_factory=list)
+
+    #TODO: Falls es schon Ressourcen, SInks & Sources gibt, dann mache
+    # sowas wie die update function. Aber wie kann ich sowas testen ohne
+    # schon davor einen import zu haben.
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
+        if isinstance(self.links, list):
+            return_links = [[link.ID for link in link_list] for link_list in self.links]
+        else:
+            return_links = {link.ID: [link.ID for link in link_list] for link, link_list in self.links.items()}
         return processes_data.LinkTransportProcessData(
             time_model_id=self.time_model.ID,
             ID=self.ID,
             description="",
             type=self.type,
-            links=[link.ID for link in self.links],
-        )  
-    
+            links=return_links,
+        )       
 
 PROCESS_UNION = Union[
     ProductionProcess,

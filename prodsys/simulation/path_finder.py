@@ -3,7 +3,6 @@ from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 
 from prodsys.simulation import request
-from prodsys.models import links_data
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, resources, request
@@ -17,12 +16,12 @@ class Pathfinder:
         self.nodes: List[GraphNode] = {}
         # 2. Define a list of PositionNodes which includes also the position
         #TODO: return the position_nodes list also as a path for the Controller
-        self.position_nodes: List[links_data.Node] = {}
+        self.position_nodes = {}
 
-    def find_path(self, request: request.TransportResquest, links: List[str]):
+    def find_path(self, request: request.TransportResquest):
 
         # 1. Calculates the edges
-        edges = self.process_links_to_edges(links)
+        edges = self.process_links_to_edges(request)
         graph = Graph(edges=edges, bi_directional=True)
 
         # 2. Transforms the origin & target location
@@ -37,13 +36,13 @@ class Pathfinder:
         return path
     
 
-    def process_links_to_edges(self, links: List[str]):
+    def process_links_to_edges(self, request: request.TransportResquest):
         # Edges have startnode, endnode and cost, thats why links need to be transformed
         # With the edges it is possible to construct the Graph
 
         # 1. An empty list of edges is created
         edges = []
-        links2 = [links_data.LinkData]
+        links2 = request.process.process_data.links
         # 2. Iterate through all defined links
         for link in links:
             for b in links2:
@@ -94,7 +93,7 @@ class Pathfinder:
         return edges
         
 
-    def calculate_cost(self, node1:links_data.Node, node2: links_data.Node):
+    def calculate_cost(self, node1, node2):
         # Calculates the costs between two nodes for the edge
         return abs(node1.location[0] - node2.location[0]) + abs(node1.location[1] - node2.location[1])
     
@@ -131,7 +130,7 @@ class Pathfinder:
         return path
     
 
-    def node_path_to_link_path(self, path: List[GraphNode], links: List[links_data.LinkData]):
+    def node_path_to_link_path(self, path: List[GraphNode], links):
         # Transform the nodes of the path given from find_graphnode_path to a list of links
 
         # 1. Create a list of the node ids (GraphNode) in order of the path: path_id

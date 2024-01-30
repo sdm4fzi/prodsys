@@ -13,11 +13,46 @@ from abc import ABC
 
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
+import dataclasses
 
 from prodsys.models import core_asset, resource_data, queue_data
 import prodsys
 
-from prodsys.express import process, state, core
+from prodsys.express import process, core, state
+
+@dataclass
+class Node(core.ExpressObject):
+        """
+        Represents a node data object of a link.
+
+        Attributes:
+                location (List[float]): Location of the node. It has to be a list of length 2.
+        """
+        location: conlist(float, min_items=2, max_items=2)
+        ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+        class Config:
+                schema_extra = {
+                "example": {
+                        "summary": "Node",
+                        "value": {
+                        "ID": "N1",
+                        "description": "Node 1",
+                        "location": [0.0, 0.0],
+                        },
+                }
+            }
+                
+        def to_model(self) -> resource_data.NodeData:
+             """
+             Function returns a NodeData object from the Node object.
+             """
+             return resource_data.NodeData(
+                  ID = self.ID,
+                  location=self.location,
+                  description="",)
+
+
 
 @dataclass
 class Resource(ABC):
