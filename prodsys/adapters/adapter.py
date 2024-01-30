@@ -14,7 +14,6 @@ from prodsys.models import (
     resource_data,
     time_model_data,
     state_data,
-    links_data,
     processes_data,
     sink_data,
     source_data,
@@ -289,7 +288,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
-    links_data: List[links_data.LinkData] = []
+    nodes_data: List[resource_data.NodeData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
@@ -683,6 +682,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
             )
         return state
 
+    #TODO: Add validator for nodes_data
     @validator("process_data", each_item=True)
     def check_processes(cls, process: processes_data.PROCESS_DATA_UNION, values):
         if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):

@@ -20,6 +20,7 @@ from prodsys.factories import (
     product_factory,
     sink_factory,
     source_factory,
+    linktransportprocess_factory,
 )
 from prodsys.simulation import logger
 from prodsys.util import post_processing, kpi_visualization, util
@@ -94,6 +95,7 @@ class Runner(BaseModel):
     )
     state_factory: state_factory.StateFactory = Field(init=False, default=None)
     process_factory: process_factory.ProcessFactory = Field(init=False, default=None)
+    linktransportprocess_factory: linktransportprocess_factory.LinkTransportProcessFactory = Field(init=False, default=None)
     queue_factory: queue_factory.QueueFactory = Field(init=False, default=None)
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
@@ -139,6 +141,8 @@ class Runner(BaseModel):
             )
             self.resource_factory.create_resources(self.adapter)
 
+            self.resource_factory.create_nodes(self.adapter)
+
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, process_factory=self.process_factory
             )
@@ -165,6 +169,14 @@ class Runner(BaseModel):
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
+
+            self.linktransportprocess_factory = linktransportprocess_factory.LinkTransportProcessFactory(
+                time_model_factory=self.time_model_factory,
+                source_factory=self.source_factory,
+                sink_factory=self.sink_factory,
+                resource_factory=self.resource_factory,
+            )
+            self.linktransportprocess_factory.create_processes(self.adapter) 
 
             self.resource_factory.start_resources()
             self.source_factory.start_sources()

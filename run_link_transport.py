@@ -33,40 +33,25 @@ timer_model_interarrival_time2 = psx.FunctionTimeModel(
     distribution_function="constant", location=42 / 60, ID="time_model_source02"
 )
 
-link01 = psx.Link(from_position=[-1, 0], to_position=[0 , 0], ID="link01")
-link02 = psx.Link(from_position=[0, 0], to_position=[0, 2], ID="link02")
-link03 = psx.Link(from_position=[0, 2], to_position=[5, 2], ID="link03")
-link04 = psx.Link(from_position=[5, 0], to_position=[5, 2], ID="link04")
-link05 = psx.Link(from_position=[5, 2], to_position=[10, 2], ID="link05")
-link06 = psx.Link(from_position=[10, 2], to_position=[10, 8], ID="link06")
-link07 = psx.Link(from_position=[10, 8], to_position=[10, 10], ID="link07")
-link08 = psx.Link(from_position=[5, 8], to_position=[10, 8], ID="link08")
-link09 = psx.Link(from_position=[5, 8], to_position=[5, 10], ID="link09")
-link10 = psx.Link(from_position=[0, 8], to_position=[5, 8], ID="link10")
-link11 = psx.Link(from_position=[0, 8], to_position=[0, 10], ID="link11")
-link12 = psx.Link(from_position=[-1, 10], to_position=[0, 10], ID="link12")
-link13 = psx.Link(from_position=[10, 0], to_position=[10, 2], ID="link13")
-link14 = psx.Link(from_position=[0, 2], to_position=[0, 8], ID="link14")
+node1 = psx.Node(location=[0, 0], ID="node1")
+node2 = psx.Node(location=[0, 2], ID="node2")
+node3 = psx.Node(location=[5, 2], ID="node3")
+node4 = psx.Node(location=[5, 0], ID="node4")
+node5 = psx.Node(location=[10, 2], ID="node5")
+node6 = psx.Node(location=[10, 8], ID="node6")
+node7 = psx.Node(location=[10, 10], ID="node7")
+node8 = psx.Node(location=[5, 8], ID="node8")
+node9 = psx.Node(location=[5, 10], ID="node9")
+node10 = psx.Node(location=[0, 8], ID="node10")
+node11 = psx.Node(location=[0, 10], ID="node11")
+node12 = psx.Node(location=[10, 0], ID="node13")
+node13 = psx.Node(location=[0, 8], ID="node14")
+
+
 
 
 #TODO: Das kann ich noch entfernen und es soll automatisch von allen Links erstellt werden
 ltp01 = psx.LinkTransportProcess(
-    links=[
-        link01,
-        link02,
-        link03,
-        link04,
-        link05,
-        link06,
-        link07,
-        link08,
-        link09,
-        link10,
-        link11,
-        link12,
-        link13,
-        link14,
-    ],
     time_model=time_model_agv,
     ID="ltp01",
     type="LinkTransportProcesses",
@@ -169,6 +154,21 @@ source02 = psx.Source(
     location=[-1, 0],
 )
 sink02 = psx.Sink(product=product02, ID="sink02", location=[-1, 10])
+
+# TODO: maybe set links with method after definition of components of links
+ltp01.links += [[node2, node1],
+        [node2, node3],
+        [node3, node2],
+        [node3, node4],
+        [node4, node5],
+        [node5, node4],
+        [node5, node6],
+        [node6, node5],
+        [node6, node7],
+        [node7, node6],
+        [node7, node8],
+        [node8, node7],
+        [node8, node9],[node1, node2], [source01, node1], [node1, source01], [node9, sink01], [sink01, node9]]
 
 productionsystem = psx.ProductionSystem(
     resources=[

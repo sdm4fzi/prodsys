@@ -10,7 +10,6 @@ from prodsys.models import (
     resource_data,
     scenario_data,
     sink_data,
-    links_data,
     source_data,
     state_data,
     time_model_data,

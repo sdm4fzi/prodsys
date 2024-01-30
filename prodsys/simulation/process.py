@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Union, List, Optional
+from typing import TYPE_CHECKING, Union, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from prodsys.models.resource_data import ProductionResourceData
+from prodsys.models.source_data import SourceData
+from prodsys.models.resource_data import NodeData
+from prodsys.models.sink_data import SinkData
+
+if TYPE_CHECKING:
+    from prodsys.simulation import resources, source, sink
 
 from prodsys.simulation import path_finder, time_model, request
-from prodsys.models import links_data, processes_data
+
+from prodsys.models import processes_data
 
 
 class Process(ABC, BaseModel):
@@ -219,16 +227,15 @@ class RequiredCapabilityProcess(Process):
         raise NotImplementedError(
             "RequiredCapabilityProcess does not have a process time."
         )
-    
 
+# evtl. circular import, muss ich checken
 class LinkTransportProcess(Process):
     """
     Class that represents a transport link process.
     """
-
     # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associated data models.
     process_data: processes_data.LinkTransportProcessData
-
+    links: Optional[List[List[Union[resources.NodeData, resources.Resource, source.Source, sink.Sink]]]]
     def matches_request(self, request: request.Request) -> bool:
 
         # 1. check if request is a transport request (if not, return False)
@@ -242,9 +249,9 @@ class LinkTransportProcess(Process):
         if isinstance(requested_process, LinkTransportProcess):
         
             # 3. check for compatibility -> transport links can links from origin to target of resquest
-            pathfinder = path_finder.Pathfinder()
+            pathfinder = path_finder.Pathfinder(request)
             # Ich muss hier alle link objekte übergeben, weil der LinkTransportProcess nur die ids hat
-            path = pathfinder.find_path(request, requested_process.process_data.links)
+            path = pathfinder.find_path(request)
             if not path:
                 return ValueError("No path between the origin and target of the request.")
             # 4. set path of request
@@ -285,3 +292,5 @@ PROCESS_UNION = Union[
 """
 Union type for all processes.
 """
+from prodsys.simulation import resources, source, sink
+LinkTransportProcess.update_forward_refs()
