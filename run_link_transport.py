@@ -33,19 +33,12 @@ timer_model_interarrival_time2 = psx.FunctionTimeModel(
     distribution_function="constant", location=42 / 60, ID="time_model_source02"
 )
 
-node1 = psx.Node(location=[0, 0], ID="node1")
-node2 = psx.Node(location=[0, 2], ID="node2")
-node3 = psx.Node(location=[5, 2], ID="node3")
-node4 = psx.Node(location=[5, 0], ID="node4")
-node5 = psx.Node(location=[10, 2], ID="node5")
-node6 = psx.Node(location=[10, 8], ID="node6")
-node7 = psx.Node(location=[10, 10], ID="node7")
-node8 = psx.Node(location=[5, 8], ID="node8")
-node9 = psx.Node(location=[5, 10], ID="node9")
-node10 = psx.Node(location=[0, 8], ID="node10")
-node11 = psx.Node(location=[0, 10], ID="node11")
-node12 = psx.Node(location=[10, 0], ID="node13")
-node13 = psx.Node(location=[0, 8], ID="node14")
+node1 = psx.Node(location=[0, 2], ID="node2")
+node2 = psx.Node(location=[5, 2], ID="node3")
+node3 = psx.Node(location=[10, 2], ID="node5")
+node4 = psx.Node(location=[10, 8], ID="node6")
+node5 = psx.Node(location=[5, 8], ID="node8")
+node6 = psx.Node(location=[0, 8], ID="node10")
 
 
 
@@ -66,32 +59,32 @@ productionprocess06 = psx.ProductionProcess(time_model=time_model_machine6, ID="
 
 
 machine01 = psx.ProductionResource(
-    ID="r01",
+    ID="resource01",
     processes=[productionprocess01],
     location=[0, 0],
 )
 machine02 = psx.ProductionResource(
-    ID="r02",
+    ID="resource02",
     processes=[productionprocess02],
     location=[5, 0],
 )
 machine03 = psx.ProductionResource(
-    ID="r03",
+    ID="resource03",
     processes=[productionprocess03],
     location=[10, 0],
 )
 machine04 = psx.ProductionResource(
-    ID="r04",
+    ID="resource04",
     processes=[productionprocess04],
     location=[10, 10],
 )
 machine05 = psx.ProductionResource(
-    ID="r05",
+    ID="resource05",
     processes=[productionprocess05],
     location=[5, 10],
 )
 machine06 = psx.ProductionResource(
-    ID="r06",
+    ID="resource06",
     processes=[productionprocess06],
     location=[0, 10],
 )
@@ -156,19 +149,21 @@ source02 = psx.Source(
 sink02 = psx.Sink(product=product02, ID="sink02", location=[-1, 10])
 
 # TODO: maybe set links with method after definition of components of links
-ltp01.links += [[node2, node1],
-        [node2, node3],
-        [node3, node2],
-        [node3, node4],
-        [node4, node5],
-        [node5, node4],
-        [node5, node6],
-        [node6, node5],
-        [node6, node7],
-        [node7, node6],
-        [node7, node8],
-        [node8, node7],
-        [node8, node9],[node1, node2], [source01, node1], [node1, source01], [node9, sink01], [sink01, node9]]
+ltp01.links += [[source02,machine01],
+                [source01, machine01], 
+                [machine01, node1],
+                [node1, node2],
+                [node2, machine02],
+                [node2, node3],
+                [node3, machine03],
+                [node3, node4],
+                [node4, machine04],
+                [node4, node5],
+                [node5, machine05],
+                [node5, node6],
+                [node6, machine06],
+                [machine06, sink01],
+                [machine06, sink02]]
 
 productionsystem = psx.ProductionSystem(
     resources=[

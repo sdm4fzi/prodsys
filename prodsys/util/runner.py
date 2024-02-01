@@ -176,8 +176,12 @@ class Runner(BaseModel):
                 sink_factory=self.sink_factory,
                 resource_factory=self.resource_factory,
             )
-            self.linktransportprocess_factory.create_processes(self.adapter) 
+            self.linktransportprocess_factory.create_processes(self.adapter)
 
+            # update everywhere the process_factories 
+            self.process_factory = self.linktransportprocess_factory
+            self.product_factory.process_factory = self.linktransportprocess_factory
+            self.resource_factory.process_factory = self.linktransportprocess_factory
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 

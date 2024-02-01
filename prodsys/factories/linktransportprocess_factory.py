@@ -52,6 +52,7 @@ class LinkTransportProcessFactory(BaseModel):
             for link in process_data.links:
                 nodes_list = []
                 for node in link:
+                    #TODO: nicht sauber gelöst mit wording
                     if "resource" in node:
                         nodes_list.append(self.resource_factory.get_resource(node))
                     elif "source" in node:
@@ -66,7 +67,6 @@ class LinkTransportProcessFactory(BaseModel):
             
         # 5. Add LinkTransportProcessData to processes of LinkTransportProcessFactory
         x = parse_obj_as(process.PROCESS_UNION, values)
-        print(x)
         self.processes.append(x)
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
