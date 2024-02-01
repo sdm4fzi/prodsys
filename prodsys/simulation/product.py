@@ -136,7 +136,7 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-
+Location= Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]
 
 class Product(BaseModel):
     """
@@ -158,14 +158,14 @@ class Product(BaseModel):
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
-    current_location: Union[resources.NodeData, resources.Resource, source.Source, sink.Sink] = Field(default=None, init=False)
+    current_location: Location = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
 
     class Config:
         arbitrary_types_allowed = True
 
-    def update_location(self, resource: Union[resources.NodeData, resources.Resource, source.Source, sink.Sink]):
+    def update_location(self, resource: Location):
         """
         Updates the location of the product object.
 
