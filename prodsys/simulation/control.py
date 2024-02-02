@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import request, sim, state
+from prodsys.simulation import path_finder, request, sim, state
+
+from prodsys.simulation.process import LinkTransportProcess
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink
@@ -420,15 +422,19 @@ class TransportController(Controller):
         process_request = self.requests.pop(0)
 
         resource = process_request.get_resource()
-        process = process_request.get_process()
+        process= process_request.get_process()
         product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
         # hier muss ich ja eigentlich zwei Pfade übergeben, einmal hin zu der Resource und dann den Transport.
-        path_to_origin = process_request.get_path_to_origin()
         path_to_target = process_request.get_path_to_target()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
         
+        #TODO: only do that if the agv resource has not the same location as the origin
+        pathfinder = path_finder.Pathfinder()
+        which_path: bool = True
+        path_to_origin = pathfinder.find_path(process_request, which_path)
+
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
@@ -457,7 +463,7 @@ class TransportController(Controller):
                 
             #TODO: if it is a LinkTransportProcess go over Links to the origin, meaning the start Productionsresource
             # genauso wie ich auch hier aus der Request den Pfad brauche
-            if isinstance(process, process.LinkTransportProcess):
+            if isinstance(process, LinkTransportProcess):
                 for node, next_node in zip(path_to_origin, path_to_origin[1:]):
                     # 2. Start of drive
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
@@ -506,9 +512,10 @@ class TransportController(Controller):
 
             #TODO: falls es ein LinkTransportProcess ist dann ist die target der nächste Link, aber hier brauche ich aus
             # der Request den Pfad
-            if isinstance(process, process.LinkTransportProcess):
+            if isinstance(process, LinkTransportProcess):
                 for node, next_node in zip(path_to_target, path_to_target[1:]):
                     # 2. Start of drive
+                    #TODO: Hier geht es gerade in den Error rein
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
                     # 3. Simulate driving along the link
                     yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False))

@@ -54,20 +54,23 @@ class Router:
             Generator: A generator that yields when the request is routed.
         """
         possible_resources = self.get_possible_resources(processing_request)
+        possible_resources_reached = []
         if not possible_resources:
             raise ValueError(f"No possible production resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID}.")
         if not isinstance(processing_request, request.TransportResquest):
             for resource in possible_resources:
                 if self.can_reach_resource(product=processing_request.product, resource=resource): 
-                    possible_resources.append(resource)
+                    possible_resources_reached.append(resource)
                 else:
                     break
-            
-        if not possible_resources:
+        else:
+            possible_resources_reached = possible_resources
+         
+        if not possible_resources_reached:
             raise ValueError(f"No possible transport resources found for request of product {processing_request.product.product_data.ID} and process {processing_request.process.process_data.ID} to reach any destinations from resource {processing_request.product.current_location.data.ID}.")
 
         while True:
-            free_resources = self.get_free_resources(possible_resources)
+            free_resources = self.get_free_resources(possible_resources_reached)
             self.routing_heuristic(free_resources)
             # make timeout of 0 to make sure not two waiting requests are triggered at the same time and request the same resource
             yield processing_request.product.env.timeout(0)
@@ -76,7 +79,7 @@ class Router:
             logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Waiting for free resources."})
             yield events.AnyOf(
                 processing_request.product.env,
-                [resource.got_free for resource in possible_resources],
+                [resource.got_free for resource in possible_resources_reached],
             )
             logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Free resources available."})
 
