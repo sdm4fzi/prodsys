@@ -430,16 +430,18 @@ class TransportController(Controller):
         path_to_target = process_request.get_path_to_target()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
         
-        #TODO: only do that if the agv resource has not the same location as the origin
-        pathfinder = path_finder.Pathfinder()
-        which_path: bool = True
-        path_to_origin = pathfinder.find_path(process_request, which_path)
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             #Hier zu erst der Weg von dem AGV zu der Origin
             if origin.get_location() != resource.get_location():
+
+                #TODO: only do that if the agv resource has not the same location as the origin
+                pathfinder = path_finder.Pathfinder()
+                which_path: bool = True
+                path_to_origin = pathfinder.find_path(process_request, which_path)
+
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 # Outputs possible states for the AGV
                 possible_states = resource.get_processes(process)
