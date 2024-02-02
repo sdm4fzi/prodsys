@@ -106,27 +106,40 @@ class Pathfinder:
         matching_nodes = []
         #TODO: Aktuelle haben wir noch nicht das Problem das origin oder target ein Node sind
         # Sobald das der Fall ist dann muss die else mit .data. angepasst werden
-        if which_path == True:
-            given_links_list = request.process.links
-            for link in given_links_list:
-                for nodex in link:
-                    # error
-                    if nodex.location == request.resource.get_location():
+        
+        given_links_list = request.process.links
+        for link in given_links_list:
+            for nodex in link:
+                # path is from agv to origin
+                if which_path == True:
+                    if isinstance(nodex, (resources.NodeData)):
                         for node in graph.nodes.values():
-                            if isinstance(node, (sink.Sink, source.Source, resources.Resource)):
-                                if node.node_id == nodex.ID or node.node_id == request.origin.data.ID:
-                                    matching_nodes.append(node)
-                            else:
-                                if node.node_id == nodex.ID or node.node_id == request.target.data.ID:
-                                    matching_nodes.append(node)
-        else:
-            for node in graph.nodes.values():
-                if isinstance(node, (sink.Sink, source.Source, resources.Resource)):
-                    if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
-                        matching_nodes.append(node)
+                            if nodex.ID == node.node_id:
+                                # whether the agv is already at the origin then we wont be in this function
+                                # or he at another station or node and we get his location so he moves to me
+                                if (nodex.location == request.resource.get_location()) or (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID):
+                                    if node not in matching_nodes:
+                                        matching_nodes.append(node)
+                    else:
+                        for node in graph.nodes.values():
+                            if nodex.data.ID == node.node_id:
+                                if (nodex.data.location == request.resource.get_location()) or (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
+                                    if node not in matching_nodes:
+                                        matching_nodes.append(node)
+                # path is from origin to target
                 else:
-                    if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
-                        matching_nodes.append(node)
+                    if isinstance(nodex, (resources.NodeData)):
+                        for node in graph.nodes.values():
+                            if nodex.ID == node.node_id:
+                                if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
+                                    if node not in matching_nodes:
+                                        matching_nodes.append(node)
+                    else:
+                        for node in graph.nodes.values():
+                            if nodex.data.ID == node.node_id:
+                                if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
+                                    if node not in matching_nodes:
+                                        matching_nodes.append(node)
 
         if len(matching_nodes) != 2:
             return ValueError("The origin or Target has no Link Position")
