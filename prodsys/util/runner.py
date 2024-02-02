@@ -135,16 +135,17 @@ class Runner(BaseModel):
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
-                process_factory=self.process_factory,
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
+                process_factory= self.process_factory
             )
             self.resource_factory.create_resources(self.adapter)
 
             self.resource_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env, process_factory=self.process_factory
+                env=self.env,
+                process_factory= self.process_factory
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -178,10 +179,43 @@ class Runner(BaseModel):
             )
             self.linktransportprocess_factory.create_processes(self.adapter)
 
-            # update everywhere the process_factories 
-            self.process_factory = self.linktransportprocess_factory
-            self.product_factory.process_factory = self.linktransportprocess_factory
-            self.resource_factory.process_factory = self.linktransportprocess_factory
+            # insert everywhere the linktransportprocess_factories
+
+            self.resource_factory = resource_factory.ResourceFactory(
+                env=self.env,
+                state_factory=self.state_factory,
+                queue_factory=self.queue_factory,
+                process_factory= self.linktransportprocess_factory
+            )
+            self.resource_factory.create_resources(self.adapter)
+
+            self.product_factory = product_factory.ProductFactory(
+                env=self.env,
+                process_factory= self.linktransportprocess_factory
+            )
+            self.sink_factory = sink_factory.SinkFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                queue_factory=self.queue_factory,
+            )
+
+            self.sink_factory.create_sinks(self.adapter)
+
+            self.event_logger = logger.EventLogger()
+            self.event_logger.observe_resource_states(self.resource_factory)
+
+            self.product_factory.event_logger = self.event_logger
+
+            self.source_factory = source_factory.SourceFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                time_model_factory=self.time_model_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                sink_factory=self.sink_factory,
+            )
+            self.source_factory.create_sources(self.adapter)
+
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 

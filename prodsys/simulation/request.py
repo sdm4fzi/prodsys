@@ -95,6 +95,17 @@ class TransportResquest(Request):
         self.origin: product.Location = origin
         self.target: product.Location = target
 
+    def set_resource(self, resource: resources.Resource):
+        """
+        Sets the resource of the transport request.
+        
+        Args:
+            resource (resources.TransportResource): The resource.
+        """
+        self.resource = resource
+
+
+
     def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
         Returns the transport process of the transport request.

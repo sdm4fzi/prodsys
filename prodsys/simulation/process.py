@@ -248,7 +248,8 @@ class LinkTransportProcess(Process):
             # 3. check for compatibility -> transport links can links from origin to target of resquest
             pathfinder = path_finder.Pathfinder()
             # Ich muss hier alle link objekte übergeben, weil der LinkTransportProcess nur die ids hat
-            path = pathfinder.find_path(request)
+            which_path: bool = False
+            path = pathfinder.find_path(request, which_path)
             if not path:
                 return ValueError("No path between the origin and target of the request.")
             # 4. set path of request
@@ -259,7 +260,7 @@ class LinkTransportProcess(Process):
         return self.process_data.ID in requested_process.process_data.process_ids
     
     def add_path_to_request(self, request: request.TransportResquest, path: List[processes_data.LinkTransportProcessData.links]):
-        request.path = path
+        request.path_to_target = path
         return request
     
     def get_process_time(self, request: request.TransportResquest) -> float:

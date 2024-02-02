@@ -16,14 +16,14 @@ class Pathfinder:
         self.nodes: List[GraphNode] = []
         self.node_loc: List[Union[resources.NodeData, sink.Sink, source.Source]] = []
 
-    def find_path(self, request: request.TransportResquest):
+    def find_path(self, request: request.TransportResquest, which_path: bool):
 
         # 1. Calculates the edges
         edges = self.process_links_to_edges(request)
         graph = Graph(edges=edges, bi_directional=True)
 
         # 2. Transforms the origin & target location
-        origin, target = self.origin_target_to_graphnode(request, graph)
+        origin, target = self.origin_target_to_graphnode(request, graph, which_path)
 
         # 3. Calculates the find_graphNode_path
         g_path = self.find_graphnode_path(origin, target, graph)
@@ -99,18 +99,33 @@ class Pathfinder:
         return abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])
     
 
-    def origin_target_to_graphnode(self, request: request.TransportResquest, graph: Graph):
+    def origin_target_to_graphnode(self, request: request.TransportResquest, graph: Graph, which_path: bool):
         from prodsys.simulation import resources, sink, source
 
         # 1. Check if the origin & target position is also a Link position
         matching_nodes = []
-
-        for node in graph.nodes.values():
+        #TODO: Aktuelle haben wir noch nicht das Problem das origin oder target ein Node sind
+        # Sobald das der Fall ist dann muss die else mit .data. angepasst werden
+        if which_path == True:
+            given_links_list = request.process.links
+            for link in given_links_list:
+                for nodex in link:
+                    # error
+                    if nodex.location == request.resource.get_location():
+                        for node in graph.nodes.values():
+                            if isinstance(node, (sink.Sink, source.Source, resources.Resource)):
+                                if node.node_id == nodex.ID or node.node_id == request.origin.data.ID:
+                                    matching_nodes.append(node)
+                            else:
+                                if node.node_id == nodex.ID or node.node_id == request.target.data.ID:
+                                    matching_nodes.append(node)
+        else:
+            for node in graph.nodes.values():
                 if isinstance(node, (sink.Sink, source.Source, resources.Resource)):
                     if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
                         matching_nodes.append(node)
                 else:
-                     if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
+                    if node.node_id == request.origin.data.ID or node.node_id == request.target.data.ID:
                         matching_nodes.append(node)
 
         if len(matching_nodes) != 2:
