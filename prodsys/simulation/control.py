@@ -383,7 +383,7 @@ class TransportController(Controller):
             position (product.Location): The current position.
         """
         self._current_location = location
-        self.resource.set_location(location.data.location)
+        self.resource.set_location(getattr(getattr(location, 'data', {}), 'location', getattr(location, 'location', None)))
 
 
     def run_process_steps(self):
@@ -429,7 +429,6 @@ class TransportController(Controller):
         # hier muss ich ja eigentlich zwei Pfade übergeben, einmal hin zu der Resource und dann den Transport.
         path_to_target = process_request.get_path_to_target()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
-        
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
@@ -463,28 +462,38 @@ class TransportController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
                 
                 
-            #TODO: if it is a LinkTransportProcess go over Links to the origin, meaning the start Productionsresource
-            # genauso wie ich auch hier aus der Request den Pfad brauche
-            if isinstance(process, LinkTransportProcess):
-                for node, next_node in zip(path_to_origin, path_to_origin[1:]):
-                    # 2. Start of drive
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
-                    # 3. Simulate driving along the link
-                    yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True))
-                    # 4. Update location
-                    self.update_location(next_node)
-                    # 5. End of drive
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
+                #TODO: if it is a LinkTransportProcess go over Links to the origin, meaning the start Productionsresource
+                # genauso wie ich auch hier aus der Request den Pfad brauche
+                if isinstance(process, LinkTransportProcess):
+                    for node, next_node in zip(path_to_origin, path_to_origin[1:]):
+                        # 2. Start of drive & log it
+                        if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
+                        elif (isinstance(node, resources.NodeData) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.data.ID}"})
+                        elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, resources.NodeData)):
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.ID}"})
+                        elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
+                        # 3. Simulate driving along the link
+                        yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True))
+                        # 4. Update location
+                        self.update_location(next_node)
+                        # 5. End of drive
+                        if (isinstance(next_node, resources.NodeData)):
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
+                        else:
+                            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
+                        transport_state.process = None
+                else:
+                    yield self.env.process(
+                        self.run_process(transport_state, product, target=origin, empty_transport=True)
+                    )
+                    # update the next location
+                    self.update_location(origin)
                     transport_state.process = None
-            else:
-                yield self.env.process(
-                    self.run_process(transport_state, product, target=origin, empty_transport=True)
-                )
-                # update the next location
-                self.update_location(origin)
 
-
-            transport_state.process = None
+                    
             # get next product on the queue of resource
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
@@ -517,14 +526,24 @@ class TransportController(Controller):
             if isinstance(process, LinkTransportProcess):
                 for node, next_node in zip(path_to_target, path_to_target[1:]):
                     # 2. Start of drive
-                    #TODO: Hier geht es gerade in den Error rein
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
+                    if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
+                    elif (isinstance(node, resources.NodeData) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.data.ID}"})
+                    elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, resources.NodeData)):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.ID}"})
+                    elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
+                    
                     # 3. Simulate driving along the link
                     yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False))
                     # 4. Update location
                     self.update_location(next_node)
                     # 5. End of drive
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
+                    if (isinstance(next_node, resources.NodeData)):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
+                    else:
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
             else:
                 yield self.env.process(
                     self.run_process(transport_state, product, target=target, empty_transport=False)
@@ -568,7 +587,7 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        if self._current_location.data.ID is self.resource.data.ID:
+        if getattr(getattr(self._current_location, 'data', {}), 'ID', getattr(self._current_location, 'ID', None)) is self.resource.data.ID:
             origin = None
         else:
             origin = self._current_location

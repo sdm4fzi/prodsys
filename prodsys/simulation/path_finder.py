@@ -24,6 +24,7 @@ class Pathfinder:
 
         # 2. Transforms the origin & target location
         origin, target = self.origin_target_to_graphnode(request, graph, which_path)
+        #print(origin, target)
 
         # 3. Calculates the find_graphNode_path
         g_path = self.find_graphnode_path(origin, target, graph)
@@ -110,8 +111,7 @@ class Pathfinder:
         given_links_list = request.process.links
         for link in given_links_list:
             for nodex in link:
-                # path is from agv to origin
-                if which_path == True:
+                if which_path == True: # path from agv to origin
                     if isinstance(nodex, (resources.NodeData)):
                         for node in graph.nodes.values():
                             if nodex.ID == node.node_id:
@@ -126,8 +126,7 @@ class Pathfinder:
                                 if (nodex.data.location == request.resource.get_location()) or (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
                                     if node not in matching_nodes:
                                         matching_nodes.append(node)
-                # path is from origin to target
-                else:
+                else: # path from origin to target
                     if isinstance(nodex, (resources.NodeData)):
                         for node in graph.nodes.values():
                             if nodex.ID == node.node_id:
@@ -145,6 +144,7 @@ class Pathfinder:
             return ValueError("The origin or Target has no Link Position")
         
         origin, target = matching_nodes
+        print(origin, target)
 
         return origin, target
     
@@ -162,20 +162,19 @@ class Pathfinder:
         # 1. Create a list of the node ids (GraphNode) in order of the path: path_id
         given_links_list = request.process.links
         path = []
-        seen_ids = []
+        seen_ids = [] # no node several times  in the path
 
         for node in g_path:
             for link in given_links_list:
                 for node_link in link:
-                    if isinstance(node_link, (sink.Sink, source.Source, resources.Resource)):
+                    if isinstance(node_link, (resources.NodeData)):
+                        if node.node_id == node_link.ID and node_link.ID not in seen_ids:
+                            path.append(node_link)
+                            seen_ids.append(node_link.ID)
+                    elif isinstance(node_link, (sink.Sink, source.Source, resources.Resource)):
                         if node.node_id == node_link.data.ID and node_link.data.ID not in seen_ids:
                             path.append(node_link)
                             seen_ids.append(node_link.data.ID)
-                            
-                    elif isinstance(node_link, (resources.NodeData)):
-                        if node.node_id == node_link.ID and node_link.data.ID not in seen_ids:
-                            path.append(node_link)
-                            seen_ids.append(node_link.ID)
 
         return path
     

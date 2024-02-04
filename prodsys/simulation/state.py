@@ -86,8 +86,8 @@ class StateInfo(BaseModel, extra=Extra.allow):
         if not origin:
             self._origin_ID = "Loading station"
         else:
-            self._origin_ID = origin.data.ID
-        self._target_ID = target.data.ID
+            self._origin_ID = getattr(getattr(origin, 'data', {}), 'ID', getattr(origin, 'ID', None))
+        self._target_ID = getattr(getattr(target, 'data', {}), 'ID', getattr(target, 'ID', None))
         self._state_type = state_type
         self._empty_transport = empty_transport
 
