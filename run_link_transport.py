@@ -1,7 +1,7 @@
 import prodsys.express as psx
 
 time_model_agv = psx.FunctionTimeModel(
-    distribution_function="constant", location=62 / 60, ID="time_model_ap01"
+    distribution_function="constant", location=1, ID="time_model_ap01"
 )
 
 time_model_conveyor = psx.FunctionTimeModel(
@@ -9,25 +9,25 @@ time_model_conveyor = psx.FunctionTimeModel(
 )
 
 time_model_machine1 = psx.FunctionTimeModel(
-    distribution_function="constant", location=47 / 60, ID="time_model_ap23"
+    distribution_function="constant", location=62 / 60, ID="time_model_ap23"
 )
 time_model_machine2 = psx.FunctionTimeModel(
     distribution_function="constant", location=47 / 60, ID="time_model_ap23"
 )
 time_model_machine3 = psx.FunctionTimeModel(
-    distribution_function="constant", location=47 / 60, ID="time_model_ap23"
+    distribution_function="constant", location=32 / 60, ID="time_model_ap23"
 )
 time_model_machine4 = psx.FunctionTimeModel(
-    distribution_function="constant", location=47 / 60, ID="time_model_ap23"
+    distribution_function="constant", location=22 / 60, ID="time_model_ap23"
 )
 time_model_machine5 = psx.FunctionTimeModel(
-    distribution_function="constant", location=47 / 60, ID="time_model_ap23"
+    distribution_function="constant", location=52 / 60, ID="time_model_ap23"
 )
 time_model_machine6 = psx.FunctionTimeModel(
-    distribution_function="constant", location=47 / 60, ID="time_model_ap23"
+    distribution_function="constant", location=57 / 60, ID="time_model_ap23"
 )
 timer_model_interarrival_time = psx.FunctionTimeModel(
-    distribution_function="constant", location=40 / 60, ID="time_model_source01"
+    distribution_function="constant", location=5, ID="time_model_source01"
 )
 timer_model_interarrival_time2 = psx.FunctionTimeModel(
     distribution_function="constant", location=42 / 60, ID="time_model_source02"
@@ -121,16 +121,16 @@ product01 = psx.Product(
     transport_process=ltp01,
     ID="product01",
 )
-product02 = psx.Product(
-    processes=[
-        productionprocess01,
-        productionprocess02,
-        productionprocess05,
-        productionprocess06,
-    ],
-    transport_process=ltp01,
-    ID="product02",
-)
+# product02 = psx.Product(
+#     processes=[
+#         productionprocess01,
+#         productionprocess02,
+#         productionprocess05,
+#         productionprocess06,
+#     ],
+#     transport_process=ltp01,
+#     ID="product02",
+# )
 
 source01 = psx.Source(
     product=product01,
@@ -140,17 +140,16 @@ source01 = psx.Source(
 )
 sink01 = psx.Sink(product=product01, ID="sink01", location=[-1, 10])
 
-source02 = psx.Source(
-    product=product02,
-    ID="source02",
-    time_model=timer_model_interarrival_time2,
-    location=[-1, 0],
-)
-sink02 = psx.Sink(product=product02, ID="sink02", location=[-1, 10])
+# source02 = psx.Source(
+#     product=product02,
+#     ID="source02",
+#     time_model=timer_model_interarrival_time2,
+#     location=[-1, 0],
+# )
+# sink02 = psx.Sink(product=product02, ID="sink02", location=[-1, 10])
 
 # TODO: maybe set links with method after definition of components of links
-ltp01.links += [[source02,machine01],
-                [source01, machine01], 
+ltp01.links += [[source01, machine01], 
                 [machine01, node1],
                 [node1, node2],
                 [node2, machine02],
@@ -162,8 +161,7 @@ ltp01.links += [[source02,machine01],
                 [node5, machine05],
                 [node5, node6],
                 [node6, machine06],
-                [machine06, sink01],
-                [machine06, sink02]]
+                [machine06, sink01]]
 
 productionsystem = psx.ProductionSystem(
     resources=[
@@ -177,11 +175,11 @@ productionsystem = psx.ProductionSystem(
         machine05,
         machine06,
     ],
-    sources=[source01, source02],
-    sinks=[sink01, sink02],
+    sources=[source01],
+    sinks=[sink01],
     ID="productionsystem01",
 )
 
 productionsystem.validate()
-productionsystem.run(time_range=8 * 60)
+productionsystem.run(time_range=16 * 60)
 productionsystem.runner.print_results()
