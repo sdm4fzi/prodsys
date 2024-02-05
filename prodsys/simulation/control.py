@@ -16,7 +16,7 @@ from prodsys.simulation import path_finder, request, sim, state
 from prodsys.simulation.process import LinkTransportProcess
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, state, resources, request, sink
+    from prodsys.simulation import product, process, state, resources, request, sink, source
     from prodsys.control import sequencing_control_env
 
 
@@ -484,16 +484,15 @@ class TransportController(Controller):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
                         else:
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
-                        transport_state.process = None
                 else:
                     yield self.env.process(
                         self.run_process(transport_state, product, target=origin, empty_transport=True)
                     )
-                    # update the next location
-                    self.update_location(origin)
-                    transport_state.process = None
+                # update the next location
+                self.update_location(origin)
+                transport_state.process = None
 
-                    
+            #TODO: If resource is at the location of the origin, then we can start the production process        
             # get next product on the queue of resource
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
@@ -521,8 +520,6 @@ class TransportController(Controller):
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
 
 
-            #TODO: falls es ein LinkTransportProcess ist dann ist die target der nächste Link, aber hier brauche ich aus
-            # der Request den Pfad
             if isinstance(process, LinkTransportProcess):
                 for node, next_node in zip(path_to_target, path_to_target[1:]):
                     # 2. Start of drive
@@ -548,10 +545,9 @@ class TransportController(Controller):
                 yield self.env.process(
                     self.run_process(transport_state, product, target=target, empty_transport=False)
                 )
-                self.update_location(target)
 
-
-            # bis hier immer updates
+                
+            self.update_location(target)
             transport_state.process = None
             eventss = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
@@ -587,8 +583,17 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        if getattr(getattr(self._current_location, 'data', {}), 'ID', getattr(self._current_location, 'ID', None)) is self.resource.data.ID:
+        if isinstance(self._current_location, source.Source):
             origin = None
+        elif isinstance(self._current_location, resources.TransportResource):
+            for link in product.transport_process.links:
+                for node in link:
+                    if isinstance(node, (resources.Resource, sink.Sink, source.Source)):
+                        if self.resource.data.location == node.data.location:
+                            origin = node
+                    else:
+                        if self.resource.data.location == node.location:
+                            origin = node
         else:
             origin = self._current_location
         input_state.state_info.log_transport(

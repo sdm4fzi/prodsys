@@ -263,6 +263,7 @@ class LinkTransportProcess(Process):
         request.path_to_target = path
         return request
     
+    #TODO: Adjust this function
     def get_process_time(self, request: request.TransportResquest) -> float:
         # 1. get the path of the request
         path = request.path
