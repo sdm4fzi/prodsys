@@ -254,15 +254,12 @@ class LinkTransportProcess(Process):
         request.path_to_target = path
         return request
     
-    #TODO: Adjust this function
     def get_process_time(self, request: request.TransportResquest) -> float:
-        # 1. get the path of the request
-        path = request.path
+        # function not used
+        path = request.path_to_target
         total_time = 0
-        # 2. calculate the time for every link
-        # 3. sum up the times through iteration
         for link in path:
-            time = self.time_model.get_next_time(origin=link.from_position, target=link.to_position)
+            time = self.time_model.get_next_time(origin= link[0].location, target=link[1].location)
             total_time += time
         return total_time
 
