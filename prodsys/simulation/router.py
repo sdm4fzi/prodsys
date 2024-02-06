@@ -72,7 +72,6 @@ class Router:
         while True:
             free_resources = self.get_free_resources(possible_resources_reached)
             self.routing_heuristic(free_resources)
-            # make timeout of 0 to make sure not two waiting requests are triggered at the same time and request the same resource
             yield processing_request.product.env.timeout(0)
             if free_resources:
                 break
@@ -104,7 +103,6 @@ class Router:
         Returns:
             bool: True if the product can reach the resource, False otherwise.
         """
-        # TODO: check, if this logic works with LinkTransportProcesses
         temporary_transport_request = request.TransportResquest(
             process=product.transport_process,
             product=product,

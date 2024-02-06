@@ -46,13 +46,11 @@ class LinkTransportProcessFactory(BaseModel):
             contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
-        # 3. Transform Dict_Links to List_links (brauchen wir gerade noch nicht)
-        # 4. Assign values.update({"links": ...}) to LinkTransportProcessData
             links_list = []
             for link in process_data.links:
                 nodes_list = []
                 for node in link:
-                    #TODO: nicht sauber gelöst mit wording
+                    #TODO:: Not solved clean, just with IDs
                     if "resource" in node:
                         nodes_list.append(self.resource_factory.get_resource(node))
                     elif "source" in node:
@@ -63,9 +61,7 @@ class LinkTransportProcessFactory(BaseModel):
                         nodes_list.append(self.resource_factory.get_node(node))
                 links_list.append(nodes_list)
             values.update({"links": links_list})      
-        #TODO: Continue here - why do we have in the processes also production_processes? How can i make use of the values?
-            
-        # 5. Add LinkTransportProcessData to processes of LinkTransportProcessFactory
+
         x = parse_obj_as(process.PROCESS_UNION, values)
         self.processes.append(x)
 

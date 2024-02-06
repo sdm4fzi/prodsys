@@ -368,10 +368,14 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self, target: List[float]) -> Generator:
+    def process_state(self, target: List[float], bol: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
+        if bol == True:
+            self.done_in -= self.time_model.time_model_data.reaction_time
+        else:
+            self.done_in
         while True:
             try:
                 if self.interrupted:

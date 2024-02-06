@@ -98,19 +98,14 @@ class ProductionSystem(core.ExpressObject):
         )
         processes = remove_duplicate_items(processes)
 
-        #TODO: Nodes hinzufügen oder was wollen wir? Aktell haben wir auch Source/Sink/Resource dabei als Node
         nodes = []
         for process in processes:
-            # liste von links
             if not hasattr(process, "links"):
                 continue
-                # list von nodes in link
             for link in process.links:
-                # only node
                 for node in link:
                     nodes.append(node)
         
-        #nodes = util.flatten_object(nodes)
         nodes = remove_duplicate_items(nodes)
 
         states = list(
@@ -134,7 +129,6 @@ class ProductionSystem(core.ExpressObject):
         time_model_data = [time_model.to_model() for time_model in time_models]
         process_data = [process.to_model() for process in processes]
         state_data = [state.to_model() for state in states]
-        #Hier habe ich das Problem dass 
         nodes_data = [node.to_model() for node in nodes]
         product_data = [product.to_model() for product in products]
         resource_data = [resource.to_model() for resource in self.resources]

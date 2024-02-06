@@ -417,7 +417,6 @@ class TransportController(Controller):
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        # Beim LinkTransportProcess nur für den ersten Link
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
 
@@ -426,31 +425,25 @@ class TransportController(Controller):
         product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
-        # hier muss ich ja eigentlich zwei Pfade übergeben, einmal hin zu der Resource und dann den Transport.
         path_to_target = process_request.get_path_to_target()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            #Hier zu erst der Weg von dem AGV zu der Origin
             if origin.get_location() != resource.get_location():
 
-                #TODO: only do that if the agv resource has not the same location as the origin
                 pathfinder = path_finder.Pathfinder()
                 which_path: bool = True
                 path_to_origin = pathfinder.find_path(process_request, which_path)
 
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
-                # Outputs possible states for the AGV
                 possible_states = resource.get_processes(process)
                 while True:
-                    # returns an empty state for the AGV, if not break and do it until finding one
                     transport_state = resource.get_free_process(process)
                     if transport_state is not None:
                         break
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process"})
-                    # we have an event if the state process is not empty
                     yield events.AnyOf(
                         self.env,
                         [
@@ -460,13 +453,9 @@ class TransportController(Controller):
                         ],
                     )
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
-                
-                
-                #TODO: if it is a LinkTransportProcess go over Links to the origin, meaning the start Productionsresource
-                # genauso wie ich auch hier aus der Request den Pfad brauche
+
                 if isinstance(process, LinkTransportProcess):
                     for node, next_node in zip(path_to_origin, path_to_origin[1:]):
-                        # 2. Start of drive & log it
                         if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
                         elif (isinstance(node, resources.NodeData) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
@@ -475,11 +464,8 @@ class TransportController(Controller):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.ID}"})
                         elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
-                        # 3. Simulate driving along the link
                         yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True))
-                        # 4. Update location
                         self.update_location(next_node)
-                        # 5. End of drive
                         if (isinstance(next_node, resources.NodeData)):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
                         else:
@@ -488,26 +474,19 @@ class TransportController(Controller):
                     yield self.env.process(
                         self.run_process(transport_state, product, target=origin, empty_transport=True)
                     )
-                # update the next location
                 self.update_location(origin)
                 transport_state.process = None
 
-            #TODO: If resource is at the location of the origin, then we can start the production process        
-            # get next product on the queue of resource
             eventss = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
-            # wir bekommen das nächste Produkt und haben das als event
             yield events.AllOf(resource.env, eventss)
-            # Der AGV fährt zu der Abhol location schon vorher, nur wird jetzt die Produkt Location noch geupdated
             product.update_location(self.resource)
             possible_states = resource.get_processes(process)
             while True:
-                # wait until the transport resource is free
                 transport_state = resource.get_free_process(process)
                 if transport_state is not None:
                     break
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process"})
-                # The transportprocess is an event
                 yield events.AnyOf(
                     self.env,
                     [
@@ -516,13 +495,11 @@ class TransportController(Controller):
                         if state.process is not None and state.process.is_alive
                     ],
                 )
-            # start the transprt process
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
 
 
             if isinstance(process, LinkTransportProcess):
                 for node, next_node in zip(path_to_target, path_to_target[1:]):
-                    # 2. Start of drive
                     if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
                     elif (isinstance(node, resources.NodeData) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
@@ -532,11 +509,8 @@ class TransportController(Controller):
                     elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
                     
-                    # 3. Simulate driving along the link
                     yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False))
-                    # 4. Update location
                     self.update_location(next_node)
-                    # 5. End of drive
                     if (isinstance(next_node, resources.NodeData)):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
                     else:
@@ -551,16 +525,12 @@ class TransportController(Controller):
             transport_state.process = None
             eventss = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
-            # product is queued with the event
             yield events.AllOf(resource.env, eventss)
-            # product location is updated
             product.update_location(target)
             if isinstance(target, resources.ProductionResource):
-                # delete the saved spot for the product in input queue
                 target.unreserve_input_queues()
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
-                # finished process
             product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
 
@@ -607,9 +577,24 @@ class TransportController(Controller):
             self.env.now,
             state.StateTypeEnum.transport,
         )
-        input_state.process = self.env.process(
-            input_state.process_state(target=target_location)  # type: ignore False
-        )
+        flag = False
+        for link in product.transport_process.links:
+            if flag:
+                break
+            for node in link:
+                if isinstance(node, (resources.NodeData)):
+                    if self.resource.data.location == node.location:
+                        input_state.process = self.env.process(
+                                input_state.process_state(target=target_location, bol = True)  # type: ignore False
+                        )
+                        flag = True
+                else:
+                    if self.resource.data.location == node.data.location:
+                        input_state.process = self.env.process(
+                                input_state.process_state(target=target_location, bol = False)  # type: ignore False
+                        )
+                        flag = True
+                        
         yield input_state.process
 
 

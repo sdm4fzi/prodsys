@@ -124,7 +124,6 @@ class ResourceFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    #TODO: how can i include the location here?
     def create_nodes(self, adapter: adapter.ProductionSystemAdapter):
         """
         Creates node objects based on the given adapter.
@@ -132,7 +131,7 @@ class ResourceFactory(BaseModel):
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the node data.
         """
-        # Add the location of node with get_location
+        
         for node_data in adapter.nodes_data:
             self.nodes.append(
                 parse_obj_as(NodeData, node_data))
