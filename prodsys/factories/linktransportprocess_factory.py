@@ -50,15 +50,16 @@ class LinkTransportProcessFactory(BaseModel):
             for link in process_data.links:
                 nodes_list = []
                 for node in link:
-                    #TODO:: Not solved clean, just with IDs
-                    if "resource" in node:
+                    try:
                         nodes_list.append(self.resource_factory.get_resource(node))
-                    elif "source" in node:
-                        nodes_list.append(self.source_factory.get_source(node))
-                    elif "sink" in node:
-                        nodes_list.append(self.sink_factory.get_sink(node))
-                    else:
-                        nodes_list.append(self.resource_factory.get_node(node))
+                    except Exception:
+                        try:
+                            nodes_list.append(self.source_factory.get_source(node))
+                        except Exception:
+                            try:
+                                nodes_list.append(self.sink_factory.get_sink(node))
+                            except Exception:
+                                nodes_list.append(self.resource_factory.get_node(node))
                 links_list.append(nodes_list)
             values.update({"links": links_list})      
 
