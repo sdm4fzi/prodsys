@@ -5,7 +5,7 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 from prodsys.simulation import request
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, resources, request, sink, source
+    from prodsys.simulation import resources, request, sink, source
 
     
 class Pathfinder:
@@ -18,7 +18,7 @@ class Pathfinder:
     def find_path(self, request: request.TransportResquest, which_path: bool):
 
         edges = self.process_links_to_edges(request)
-        graph = Graph(edges=edges, bi_directional=True)
+        graph = Graph(edges=edges, bi_directional = True)
         origin, target = self.origin_target_to_graphnode(request, graph, which_path)
         g_path = self.find_graphnode_path(origin, target, graph)
         path = self.node_path_to_link_path(g_path, request)
@@ -30,11 +30,11 @@ class Pathfinder:
         from prodsys.simulation import resources, sink, source
 
         given_links_list = request.process.links
-        pathfinder_links = []
+        pathfinder_edges = []
 
         for link in given_links_list:
-            nn: List[Union[resources.NodeData, resources.Resource, sink.Sink, source.Source]] = []
-            bb: List[GraphNode] = []
+            link_edge: List[Union[resources.NodeData, resources.Resource, sink.Sink, source.Source]] = []
+            graphnode_edge: List[GraphNode] = []
             for b_node in link:
 
                 node = None
@@ -54,26 +54,25 @@ class Pathfinder:
                     self.nodes.append(node)
                     self.node_loc.append(b_node)
                     
-                nn.append(b_node)
-                bb.append(node)
+                link_edge.append(b_node)
+                graphnode_edge.append(node)
 
-            if isinstance(nn[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(nn[1], ( sink.Sink, source.Source, resources.Resource)):
-                cost = self.calculate_cost(nn[0].data.location, nn[1].data.location)
-            elif isinstance(nn[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(nn[1], (resources.NodeData)):
-                cost = self.calculate_cost(nn[0].data.location, nn[1].location)
-            elif isinstance(nn[0], (resources.NodeData)) and isinstance(nn[1], ( sink.Sink, source.Source, resources.Resource)):
-                cost = self.calculate_cost(nn[0].location, nn[1].data.location)
+            if isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], ( sink.Sink, source.Source, resources.Resource)):
+                cost = self.calculate_cost(link_edge[0].data.location, link_edge[1].data.location)
+            elif isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], (resources.NodeData)):
+                cost = self.calculate_cost(link_edge[0].data.location, link_edge[1].location)
+            elif isinstance(link_edge[0], (resources.NodeData)) and isinstance(link_edge[1], ( sink.Sink, source.Source, resources.Resource)):
+                cost = self.calculate_cost(link_edge[0].location, link_edge[1].data.location)
             else:
-                cost = self.calculate_cost(nn[0].location, nn[1].location)
+                cost = self.calculate_cost(link_edge[0].location, link_edge[1].location)
 
-            edge = (bb[0], bb[1], cost)
-            pathfinder_links.append(edge)
+            edge = (graphnode_edge[0], graphnode_edge[1], cost)
+            pathfinder_edges.append(edge)
 
-        return pathfinder_links
+        return pathfinder_edges
         
 
     def calculate_cost(self, node1, node2):
-        # Calculates the costs between two nodes for the edge
         return abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])
     
 
@@ -127,7 +126,7 @@ class Pathfinder:
         return origin, target
     
     def find_graphnode_path(self, origin: GraphNode, target: GraphNode, graph: Graph) -> List[GraphNode]:
-        # maybe we can use the Nodes here for our logging
+
         finder = DijkstraFinder()
         path, _ = finder.find_path(origin, target, graph)
         return path
@@ -135,9 +134,7 @@ class Pathfinder:
 
     def node_path_to_link_path(self, g_path: List[GraphNode], request: request.TransportResquest):
         from prodsys.simulation import resources, sink, source
-        # Transform the nodes of the path given from find_graphnode_path to a list of links
 
-        # 1. Create a list of the node ids (GraphNode) in order of the path: path_id
         given_links_list = request.process.links
         path = []
         seen_ids = [] # no node several times  in the path
@@ -155,11 +152,4 @@ class Pathfinder:
                             seen_ids.append(node_link.data.ID)
 
         return path
-    
-    
-
-
-
-    
-
     

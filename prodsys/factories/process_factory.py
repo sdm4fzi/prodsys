@@ -45,17 +45,7 @@ class ProcessFactory(BaseModel):
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})  
-
-        # TODO: copy this factory class to LinkTransportProcessFactory -> only to update links
-        # 1. Add resource-, source- and sink-factory to LinkTransportProcessFactory
-        # 2. Adjust add_processes method to set also values.update({"links": ...}) -> search for resources, sources and sinks per id in factory
-        # 3. Transform Dict_Links to List_links 
-        # 4. Assign values.update({"links": ...}) to LinkTransportProcessData
-        # 5. Add LinkTransportProcessData to processes of LinkTransportProcessFactory
-        #TODO: hier ist das problem: Es wird nicht appended
-        x = parse_obj_as(process.PROCESS_UNION, values)
-        print(x)
-        self.processes.append(x)
+        self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """

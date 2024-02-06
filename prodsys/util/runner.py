@@ -179,7 +179,7 @@ class Runner(BaseModel):
             )
             self.linktransportprocess_factory.create_processes(self.adapter)
 
-            # insert everywhere the linktransportprocess_factories
+            #TODO: Correct solution to overwrite all!?
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,

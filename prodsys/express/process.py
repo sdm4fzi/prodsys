@@ -22,6 +22,9 @@ from prodsys.models import processes_data, time_model_data
 
 from prodsys.express import time_model, core
 
+if TYPE_CHECKING:
+    from prodsys.simulation import resources, source, sink
+
 @dataclass
 class Process(ABC):
     """
@@ -193,7 +196,6 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type
         )
 
-Location: "resources.Node" | "resources.Resource" | "source.Source" | "sink.Sink" 
 
 @dataclass
 class LinkTransportProcess(DefaultProcess, core.ExpressObject):
@@ -202,11 +204,7 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    links: Union[List[List[Location]] , Dict[Location, List[Location]]] = Field(default_factory=list)
-
-    #TODO: Falls es schon Ressourcen, SInks & Sources gibt, dann mache
-    # sowas wie die update function. Aber wie kann ich sowas testen ohne
-    # schon davor einen import zu haben.
+    links: Union[List[List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]] , Dict[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink], List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]]] = Field(default_factory=list)
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
         if isinstance(self.links, list):

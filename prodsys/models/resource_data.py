@@ -77,10 +77,10 @@ class NodeData(CoreAsset):
                 }
         def get_location(self) -> List[float]:
             """
-            Returns the location of the resource.
+            Returns the location of the node.
 
             Returns:
-                List[float]: The location of the resource. Has to have length 2.
+                List[float]: The location of the node. Has to have length 2.
             """
             return self.location
 

@@ -244,7 +244,7 @@ class RequiredCapabilityProcessData(CoreAsset):
 
 class LinkTransportProcessData(ProcessData):
     """
-    Class that represents a route transport process data.
+    Class that represents all link transport process data.
 
     Args:
         ID (str): ID of the process.

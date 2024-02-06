@@ -225,34 +225,25 @@ class RequiredCapabilityProcess(Process):
             "RequiredCapabilityProcess does not have a process time."
         )
 
-# evtl. circular import, muss ich checken
 class LinkTransportProcess(Process):
     """
     Class that represents a transport link process.
     """
-    # TODO: Implement LinkTransportProcess and RouteTransportProcess and their associated data models.
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[resources.NodeData, source.Source, sink.Sink, resources.ProductionResource]]]]
     def matches_request(self, request: request.Request) -> bool:
 
-        # 1. check if request is a transport request (if not, return False)
-        # 2. check if transport request is a link request (if not, return False)
         requested_process = request.process
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
             requested_process, CompoundProcess
         ):
             return False
-        
         if isinstance(requested_process, LinkTransportProcess):
-        
-            # 3. check for compatibility -> transport links can links from origin to target of resquest
             pathfinder = path_finder.Pathfinder()
-            # Ich muss hier alle link objekte übergeben, weil der LinkTransportProcess nur die ids hat
             which_path: bool = False
             path = pathfinder.find_path(request, which_path)
             if not path:
                 return ValueError("No path between the origin and target of the request.")
-            # 4. set path of request
             else:
                 self.add_path_to_request(request, path)
                 return requested_process.process_data.ID == self.process_data.ID
