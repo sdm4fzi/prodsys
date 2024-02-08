@@ -1,20 +1,33 @@
-ARG APP_VERSION=0.4.3
+FROM python:3.11-buster as builder
 
-FROM python:3.11-slim
+RUN pip install poetry
 
-# Set the working directory in the container
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
 WORKDIR /app
 
-# Copy the poetry files into the container
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml poetry.lock ./
+RUN touch README.md
 
-# Install dependencies using Poetry
-RUN pip install prodsys==0.4.3
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --without dev
 
+FROM python:3.11-slim-buster as runtime
 
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
 
-COPY . /app
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+WORKDIR /app
+
+COPY prodsys prodsys/
+COPY conf conf/
+COPY app app/
+COPY app.py .
 
 EXPOSE 8000
 
-CMD ["python", "app.py", "fastapi=linux"]
+ENTRYPOINT ["python", "app.py", "fastapi=linux"]
