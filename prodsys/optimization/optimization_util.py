@@ -1050,19 +1050,25 @@ def evaluate(
     if not check_valid_configuration(adapter_object, base_scenario):
         # TODO: check if this function is always correct, either max or min for all algorithms?
         return [-100000 * weight for weight in get_weights(base_scenario, "max")]
-    runner_object = runner.Runner(adapter=adapter_object)
-    runner_object.initialize_simulation()
-    if not adapter_object.scenario_data.info.time_range:
-        raise ValueError("time_range is not defined in scenario_data")
-    runner_object.run(adapter_object.scenario_data.info.time_range)
-    df = runner_object.event_logger.get_data_as_dataframe()
-    p = PostProcessor(df_raw=df)
 
-    fitness = []
-    for objective in adapter_object.scenario_data.objectives:
-        if objective.name == performance_indicators.KPIEnum.COST:
-            fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
-            continue
-        fitness.append(KPI_function_dict[objective.name](p))
+    fitness_values = []
 
-    return fitness
+    for seed in [1, 2, 3, 4, 5]:
+        runner_object = runner.Runner(adapter=adapter_object) 
+        if not adapter_object.scenario_data.info.time_range:
+            raise ValueError("time_range is not defined in scenario_data")
+        adapter_object.seed = seed
+        runner_object.initialize_simulation()
+        runner_object.run(adapter_object.scenario_data.info.time_range)
+        df = runner_object.event_logger.get_data_as_dataframe()
+        p = PostProcessor(df_raw=df)
+        fitness = []
+        for objective in adapter_object.scenario_data.objectives:
+            if objective.name == performance_indicators.KPIEnum.COST:
+                fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
+                continue
+            fitness.append(KPI_function_dict[objective.name](p))
+        fitness_values.append(fitness)
+    
+    mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
+    return mean_fitness
