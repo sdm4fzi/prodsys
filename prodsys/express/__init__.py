@@ -28,6 +28,7 @@ from prodsys.express.time_model import (
 from prodsys.express.process import (
     ProductionProcess,
     CapabilityProcess,
+    RequiredCapabilityProcess,
     TransportProcess,
     LinkTransportProcess,
 )

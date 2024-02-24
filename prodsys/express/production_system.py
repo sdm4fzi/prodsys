@@ -92,7 +92,8 @@ class ProductionSystem(core.ExpressObject):
         products = remove_duplicate_items(products)
         processes = list(
             util.flatten_object(
-                [product.processes for product in products]
+                [product.processes for product in products]+
+                [product.transport_process for product in products]
                 + [resource.processes for resource in self.resources]
             )
         )

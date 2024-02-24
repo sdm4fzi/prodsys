@@ -205,6 +205,7 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
     )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     links: Union[List[List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]] , Dict[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink], List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]]] = Field(default_factory=list)
+    capability: Optional[str] = Field(default_factory=str)
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
         if isinstance(self.links, list):
@@ -217,12 +218,34 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
             description="",
             type=self.type,
             links=return_links,
+            capability=self.capability,
         )       
+    
+
+@dataclass
+class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
+    type: processes_data.ProcessTypeEnum = Field(
+        init=False, default=processes_data.ProcessTypeEnum.RequiredCapabilityProcesses
+    )
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    capability: Optional[str] = Field(default_factory=str)
+
+    def to_model(self) -> processes_data.RequiredCapabilityProcessData:
+        return processes_data.RequiredCapabilityProcessData(
+            ID=self.ID,
+            time_model = self.time_model.ID,
+            description="",
+            type=self.type,
+            capability=self.capability,
+        )
+
+
 
 PROCESS_UNION = Union[
     ProductionProcess,
     CapabilityProcess,
     TransportProcess,
+    RequiredCapabilityProcess,
     LinkTransportProcess,
 ]
 

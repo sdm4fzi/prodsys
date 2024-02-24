@@ -234,24 +234,41 @@ class LinkTransportProcess(Process):
     def matches_request(self, request: request.Request) -> bool:
 
         requested_process = request.process
+
+        if isinstance(requested_process, RequiredCapabilityProcess):
+            if requested_process.process_data.capability == self.process_data.capability:
+                pathfinder = path_finder.Pathfinder()
+                which_path: bool = False
+                path = pathfinder.find_path(request, which_path, self)
+                if not path:
+                    return False
+                else:
+                    self.add_path_to_request(request, path)
+                    return requested_process.process_data.capability == self.process_data.capability
+            else:
+                return False
+            
+
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
             requested_process, CompoundProcess
         ):
             return False
+        
         if isinstance(requested_process, LinkTransportProcess):
             pathfinder = path_finder.Pathfinder()
             which_path: bool = False
-            path = pathfinder.find_path(request, which_path)
+            path = pathfinder.find_path(request, which_path, self)
             if not path:
-                return ValueError("No path between the origin and target of the request.")
+                return False
             else:
                 self.add_path_to_request(request, path)
-                return requested_process.process_data.ID == self.process_data.ID
+                return requested_process.process_data.ID == self.process_data.ID            
         
-        return self.process_data.ID in requested_process.process_data.process_ids
+        #TODO: Das passt noch nicht für die RequiredCapabilityProcesses
+        #return self.process_data.ID in requested_process.process_data.process_ids
     
     def add_path_to_request(self, request: request.TransportResquest, path: List[processes_data.LinkTransportProcessData.links]):
-        request.path_to_target = path
+        request.path_to_target['path'].append(path)
         return request
     
     def get_process_time(self, request: request.TransportResquest) -> float:

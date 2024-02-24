@@ -269,6 +269,7 @@ class LinkTransportProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: Union[List[List[str]], Dict[str, List[str]]]
+    capability: str
 
     class Config:
         schema_extra = {

@@ -72,6 +72,7 @@ class Router:
         while True:
             free_resources = self.get_free_resources(possible_resources_reached)
             self.routing_heuristic(free_resources)
+            # hier jump out
             yield processing_request.product.env.timeout(0)
             if free_resources:
                 break
@@ -86,6 +87,11 @@ class Router:
         if not free_resources:
             raise ValueError("No free resources available, Error in Event handling of routing to resources.")
         routed_resource = free_resources[0]
+        if isinstance(routed_resource, resources.TransportResource):
+            for i,x in enumerate(processing_request.path_to_target['resource_ID']):
+                if x == routed_resource.data.ID:
+                    processing_request.path_to_target_true = processing_request.path_to_target['path'][i]
+                    break
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
         processing_request.set_resource(routed_resource)
@@ -156,10 +162,15 @@ class Router:
         """
         # TODO: maybe make result of function in dict and save it after instantiation. 
         possible_resources = []
+        if isinstance(processing_request, request.TransportResquest):
+            processing_request.path_to_target['resource_ID'] = []
+            processing_request.path_to_target['path'] = []
         for resource in self.resource_factory.resources:
             for process in resource.processes:
                 if process.matches_request(processing_request):
                     possible_resources.append(resource)
+                    if isinstance(processing_request, request.TransportResquest) and isinstance(resource, resources.TransportResource):
+                        processing_request.path_to_target['resource_ID'].append(resource.data.ID)
         return possible_resources
 
 
