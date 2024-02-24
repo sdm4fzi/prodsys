@@ -5,7 +5,7 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 from prodsys.simulation import request
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, request, sink, source
+    from prodsys.simulation import resources, request, sink, source, process
 
     
 class Pathfinder:
@@ -15,21 +15,24 @@ class Pathfinder:
         self.nodes: List[GraphNode] = []
         self.node_loc: List[Union[resources.NodeData, sink.Sink, source.Source]] = []
 
-    def find_path(self, request: request.TransportResquest, which_path: bool):
+    def find_path(self, request: request.TransportResquest, which_path: bool, self_obj):
 
-        edges = self.process_links_to_edges(request)
+        given_links_list = self_obj.links
+
+        edges = self.process_links_to_edges(request, given_links_list= given_links_list)
         graph = Graph(edges=edges, bi_directional = True)
-        origin, target = self.origin_target_to_graphnode(request, graph, which_path)
+        origin, target = self.origin_target_to_graphnode(request, graph, which_path, given_links_list= given_links_list)
+        if origin is None or target is None:
+            return False
         g_path = self.find_graphnode_path(origin, target, graph)
-        path = self.node_path_to_link_path(g_path, request)
+        path = self.node_path_to_link_path(g_path, request, given_links_list= given_links_list)
 
         return path
     
 
-    def process_links_to_edges(self, request: request.TransportResquest):
+    def process_links_to_edges(self, request: request.TransportResquest, given_links_list):
         from prodsys.simulation import resources, sink, source
 
-        given_links_list = request.process.links
         pathfinder_edges = []
 
         for link in given_links_list:
@@ -76,11 +79,10 @@ class Pathfinder:
         return abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])
     
 
-    def origin_target_to_graphnode(self, request: request.TransportResquest, graph: Graph, which_path: bool):
+    def origin_target_to_graphnode(self, request: request.TransportResquest, graph: Graph, which_path: bool, given_links_list):
         from prodsys.simulation import resources
 
         origin, target = None, None
-        given_links_list = request.process.links
 
         for link in given_links_list:
             for nodex in link:
@@ -129,13 +131,14 @@ class Pathfinder:
 
         finder = DijkstraFinder()
         path, _ = finder.find_path(origin, target, graph)
+        if path is None:
+            return False
         return path
     
 
-    def node_path_to_link_path(self, g_path: List[GraphNode], request: request.TransportResquest):
+    def node_path_to_link_path(self, g_path: List[GraphNode], request: request.TransportResquest, given_links_list):
         from prodsys.simulation import resources, sink, source
 
-        given_links_list = request.process.links
         path = []
         seen_ids = [] # no node several times  in the path
 

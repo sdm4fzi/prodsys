@@ -85,13 +85,15 @@ class TransportResquest(Request):
         origin: product.Location,
         target: product.Location,
         path = None,
-        path2 = None
+        path2 = {'path': [], 'resource_ID': []},
+        path3 = None
     ):
         self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = None
         self.path_to_origin = path,
-        self.path_to_target = path2,
+        self.path_to_target = path2
+        self.path_to_target_true = path3,
         self.origin: product.Location = origin
         self.target: product.Location = target
 
@@ -142,7 +144,6 @@ class TransportResquest(Request):
         """
         return self.target
     
-    #TODO: How to get here the path
     def get_path_to_origin(self) -> process.LinkTransportProcess:
         """
         Returns the path process of the transport request.
@@ -159,4 +160,4 @@ class TransportResquest(Request):
         Returns:
             process.TransportLinkProcess: The path process.
         """
-        return self.path_to_target
+        return self.path_to_target_true

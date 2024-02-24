@@ -13,7 +13,7 @@ from simpy import events
 
 from prodsys.simulation import path_finder, request, sim, state
 
-from prodsys.simulation.process import LinkTransportProcess
+from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink, source
@@ -360,15 +360,18 @@ class TransportController(Controller):
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
+            # hier jumpen wir rein und können nix machen
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
             for process in self.running_processes:
                 if not process.is_alive:
                     self.running_processes.remove(process)
+            # Wir jumpen hier immer rein weil die Ressource voll ist
             if self.resource.full or not self.requests:
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full})"})
                 continue
             self.control_policy(self.requests)
+            #Ich komme ier nicht mehr in den start_process rein
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
@@ -385,7 +388,7 @@ class TransportController(Controller):
         self._current_location = location
         self.resource.set_location(getattr(getattr(location, 'data', {}), 'location', getattr(location, 'location', None)))
 
-
+#TODO: Can be deleted
     def run_process_steps(self):
         # 1. if no link transport process -> start_process
         if not isinstance(process, process.LinkTransportProcess):
@@ -435,7 +438,7 @@ class TransportController(Controller):
 
                 pathfinder = path_finder.Pathfinder()
                 which_path: bool = True
-                path_to_origin = pathfinder.find_path(process_request, which_path)
+                path_to_origin = pathfinder.find_path(process_request, which_path, resource.processes[0])
 
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
@@ -454,7 +457,7 @@ class TransportController(Controller):
                     )
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
 
-                if isinstance(process, LinkTransportProcess):
+                if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
                     for node, next_node in zip(path_to_origin, path_to_origin[1:]):
                         if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
@@ -464,7 +467,7 @@ class TransportController(Controller):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.ID}"})
                         elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
-                        yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True))
+                        yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True, resource = resource))
                         self.update_location(next_node)
                         if (isinstance(next_node, resources.NodeData)):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
@@ -472,7 +475,7 @@ class TransportController(Controller):
                             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
                 else:
                     yield self.env.process(
-                        self.run_process(transport_state, product, target=origin, empty_transport=True)
+                        self.run_process(transport_state, product, target=origin, empty_transport=True, resource = resource)
                     )
                 self.update_location(origin)
                 transport_state.process = None
@@ -498,7 +501,7 @@ class TransportController(Controller):
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
 
 
-            if isinstance(process, LinkTransportProcess):
+            if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
                 for node, next_node in zip(path_to_target, path_to_target[1:]):
                     if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
@@ -509,7 +512,7 @@ class TransportController(Controller):
                     elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
                     
-                    yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False))
+                    yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False, resource = resource))
                     self.update_location(next_node)
                     if (isinstance(next_node, resources.NodeData)):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
@@ -517,7 +520,7 @@ class TransportController(Controller):
                         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
             else:
                 yield self.env.process(
-                    self.run_process(transport_state, product, target=target, empty_transport=False)
+                    self.run_process(transport_state, product, target=target, empty_transport=False, resource = resource)
                 )
 
                 
@@ -541,6 +544,7 @@ class TransportController(Controller):
         product: product.Product,
         target: product.Location,
         empty_transport: bool,
+        resource: resources.Resource,
     ):
         """
         Run the process of a product. The process is started and the product is logged.
@@ -556,7 +560,7 @@ class TransportController(Controller):
         if isinstance(self._current_location, source.Source):
             origin = None
         elif isinstance(self._current_location, resources.TransportResource):
-            for link in product.transport_process.links:
+            for link in resource.processes[0].links:
                 for node in link:
                     if isinstance(node, (resources.Resource, sink.Sink, source.Source)):
                         if self.resource.data.location == node.data.location:
@@ -578,7 +582,7 @@ class TransportController(Controller):
             state.StateTypeEnum.transport,
         )
         flag = False
-        for link in product.transport_process.links:
+        for link in resource.processes[0].links:
             if flag:
                 break
             for node in link:
