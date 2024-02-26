@@ -63,3 +63,5 @@ class Product(core.ExpressObject):
             processes=[process.ID for process in self.processes],
             transport_process=self.transport_process.ID,
         )
+    
+#TODO: Add an PalletProduct Class with an additional attribute called pallets.

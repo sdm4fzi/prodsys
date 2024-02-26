@@ -55,6 +55,7 @@ class Sink(core.ExpressObject):
         )
         ```
     """
+    #TODO: Change that both Producttypes can be part in the sink
     product: product.Product
     location: conlist(float, min_items=2, max_items=2)
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))

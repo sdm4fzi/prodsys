@@ -120,3 +120,5 @@ class ProductData(CoreAsset):
                 },
             ]
         }
+
+#TODO: Add the palletproductdata class which inherents

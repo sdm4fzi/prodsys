@@ -46,6 +46,7 @@ class SourceData(CoreAsset):
             output_queues=["SourceQueue"],
         )
     """
+    #TODO: Add an optional pallet attribute (integer)
     location: conlist(float, min_items=2, max_items=2)
     product_type: str
     time_model_id: str
