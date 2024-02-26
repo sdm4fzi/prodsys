@@ -854,6 +854,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
         """
         if not check_redudant_locations(self):
             raise ValueError(f"Multiple objects are positioned at the same location.")
+        # requiredtrnapsortprocess at product is at no resource -> delete the validation
         #if not check_required_processes_in_resources_available(self):
            # raise ValueError(f"Not all required process are available at resources.")
         #if not check_required_processes_in_resources_available(self):

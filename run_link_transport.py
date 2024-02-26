@@ -82,7 +82,7 @@ machine06 = psx.ProductionResource(
 agv01 = psx.TransportResource(
     location=[50, 20],
     ID="agv01",
-    processes=[ltp01, ltp02],
+    processes=[ltp01],
 )
 
 agv02 = psx.TransportResource(
@@ -91,9 +91,27 @@ agv02 = psx.TransportResource(
     processes=[ltp01],
 )
 
+agv03 = psx.TransportResource(
+    location=[50, 20],
+    ID="agv03",
+    processes=[ltp01],
+)
+
 agv04 = psx.TransportResource(
-    location=[0, 0],
+    location=[50, 80],
     ID="agv04",
+    processes=[ltp02],
+)
+
+agv05 = psx.TransportResource(
+    location=[50, 80],
+    ID="agv05",
+    processes=[ltp02],
+)
+
+agv06 = psx.TransportResource(
+    location=[50, 80],
+    ID="agv06",
     processes=[ltp02],
 )
 
@@ -114,6 +132,9 @@ product01 = psx.Product(
 product02 = psx.Product(
         processes=[
                 productionprocess01,
+                productionprocess02,
+                productionprocess03,
+                productionprocess04,
                 productionprocess06,
         ],
         transport_process = rcp01,
@@ -140,9 +161,29 @@ ltp01.links += [
     [source01, machine01],
     [source02, machine01],
     [machine01, node1],
-    #[node1, node2],
+    [node1, node2],
     [node2, machine02],
     [node2, node3],
+    [node3, machine03],
+    #[node3, node4],
+    #[node4, machine04],
+    #[node4, node5],
+    #[node5, machine05],
+    #[node5, node6],
+    #[node6, machine06],
+    #[machine06, sink01],
+    #[machine06, sink02],
+    #[node1, node6],
+]
+
+
+ltp02.links += [
+    #[source01, machine01],
+    #[source02, machine01],
+    #[machine01, node1],
+    #[node1, node2],
+    #[node2, machine02],
+    #[node2, node3],
     [node3, machine03],
     [node3, node4],
     [node4, machine04],
@@ -152,24 +193,6 @@ ltp01.links += [
     [node6, machine06],
     [machine06, sink01],
     [machine06, sink02],
-    [node1, node6],
-]
-
-
-ltp02.links += [
-    #[source01, machine01],
-    [machine01, node1],
-    [node1, node2],
-    [node2, machine02],
-    #[node2, node3],
-    #[node3, machine03],
-    #[node3, node4],
-    #[node4, machine04],
-    #[node4, node5],
-    #[node5, machine05],
-    #[node5, node6],
-    #[node6, machine06],
-    #[machine06, sink01],
     #[node1, node6],
 ]
 
@@ -177,7 +200,10 @@ productionsystem = psx.ProductionSystem(
     resources=[
         agv01,
         agv02,
+        agv03,
         agv04,
+        agv05,
+        agv06,
         machine01,
         machine02,
         machine03,
