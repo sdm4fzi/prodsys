@@ -199,15 +199,35 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
 
 @dataclass
 class LinkTransportProcess(DefaultProcess, core.ExpressObject):
+    """
+    Represents a link transport process. They include a list or dict of links.
+
+    Attributes:
+        type (processes_data.ProcessTypeEnum): The type of the process.
+        ID (Optional[str]): The ID of the process.
+        links (Union[List[List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]], 
+                      Dict[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink], 
+                           List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]]]):
+            The links associated with the process.
+        capability (Optional[str]): The capability of the process.
+    """
 
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    links: Union[List[List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]] , Dict[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink], List[Union[resources.Resource, resources.NodeData, source. Source, sink.Sink]]]] = Field(default_factory=list)
+    links: Union[List[List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]], 
+                 Dict[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink], 
+                      List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]]] = Field(default_factory=list)
     capability: Optional[str] = Field(default_factory=str)
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
+        """
+        Converts the LinkTransportProcess object to its corresponding data model.
+
+        Returns:
+            processes_data.LinkTransportProcessData: The converted data model object.
+        """
         if isinstance(self.links, list):
             return_links = [[link.ID for link in link_list] for link_list in self.links]
         else:
@@ -219,11 +239,20 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type,
             links=return_links,
             capability=self.capability,
-        )       
+        )
     
 
 @dataclass
 class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
+    """
+    Represents a required capability process. A capability which can be matched with the capability of a linktransportprocess.
+
+    Attributes:
+        type (processes_data.ProcessTypeEnum): The type of the process.
+        ID (Optional[str]): The ID of the process.
+        capability (Optional[str]): The capability required by the process.
+    """
+
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.RequiredCapabilityProcesses
     )
@@ -231,9 +260,15 @@ class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
     capability: Optional[str] = Field(default_factory=str)
 
     def to_model(self) -> processes_data.RequiredCapabilityProcessData:
+        """
+        Converts the RequiredCapabilityProcess object to its corresponding data model.
+
+        Returns:
+            processes_data.RequiredCapabilityProcessData: The data model representation of the process.
+        """
         return processes_data.RequiredCapabilityProcessData(
             ID=self.ID,
-            time_model = self.time_model.ID,
+            time_model=self.time_model.ID,
             description="",
             type=self.type,
             capability=self.capability,
