@@ -72,7 +72,6 @@ class Router:
         while True:
             free_resources = self.get_free_resources(possible_resources_reached)
             self.routing_heuristic(free_resources)
-            # hier jump out
             yield processing_request.product.env.timeout(0)
             if free_resources:
                 break

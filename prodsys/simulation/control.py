@@ -360,18 +360,15 @@ class TransportController(Controller):
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
-            # hier jumpen wir rein und können nix machen
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
             for process in self.running_processes:
                 if not process.is_alive:
                     self.running_processes.remove(process)
-            # Wir jumpen hier immer rein weil die Ressource voll ist
             if self.resource.full or not self.requests:
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full})"})
                 continue
             self.control_policy(self.requests)
-            #Ich komme ier nicht mehr in den start_process rein
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
@@ -387,16 +384,6 @@ class TransportController(Controller):
         """
         self._current_location = location
         self.resource.set_location(getattr(getattr(location, 'data', {}), 'location', getattr(location, 'location', None)))
-
-#TODO: Can be deleted
-    def run_process_steps(self):
-        # 1. if no link transport process -> start_process
-        if not isinstance(process, process.LinkTransportProcess):
-            self.start_process()
-        # 2. if link transport process -> start x times start_process
-        else:
-            for _ in range(process.get_number_of_links()):
-                self.start_process()
 
 
     def start_process(self) -> Generator:
@@ -436,8 +423,6 @@ class TransportController(Controller):
             yield req
             if origin.get_location() != resource.get_location():
                 
-
-                #TODO: If it is not a TransportProcess don't go into the function
                 if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
                     pathfinder = path_finder.Pathfinder()
                     which_path: bool = True
@@ -564,7 +549,7 @@ class TransportController(Controller):
         if isinstance(self._current_location, source.Source):
             origin = None
         elif isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
-            for link in resource.processes[0].links:
+            for link in resource.processes[0].links: #agv has just one ltp
                 for node in link:
                     if isinstance(node, (resources.Resource, sink.Sink, source.Source)):
                         if self.resource.data.location == node.data.location:
@@ -587,7 +572,7 @@ class TransportController(Controller):
         )
         flag = False
         if isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
-            for link in resource.processes[0].links:
+            for link in resource.processes[0].links: #agv has just one ltp
                 if flag:
                     break
                 for node in link:
