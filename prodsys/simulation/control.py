@@ -435,10 +435,13 @@ class TransportController(Controller):
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
+                
 
-                pathfinder = path_finder.Pathfinder()
-                which_path: bool = True
-                path_to_origin = pathfinder.find_path(process_request, which_path, resource.processes[0])
+                #TODO: If it is not a TransportProcess don't go into the function
+                if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
+                    pathfinder = path_finder.Pathfinder()
+                    which_path: bool = True
+                    path_to_origin = pathfinder.find_path(process_request, which_path, resource.processes[0])
 
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
@@ -554,12 +557,13 @@ class TransportController(Controller):
             product (product.Product): The product that is transported.
             target (product.Location): The target of the transport.
         """
+        from prodsys.simulation import process
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         if isinstance(self._current_location, source.Source):
             origin = None
-        elif isinstance(self._current_location, resources.TransportResource):
+        elif isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
             for link in resource.processes[0].links:
                 for node in link:
                     if isinstance(node, (resources.Resource, sink.Sink, source.Source)):
@@ -582,22 +586,27 @@ class TransportController(Controller):
             state.StateTypeEnum.transport,
         )
         flag = False
-        for link in resource.processes[0].links:
-            if flag:
-                break
-            for node in link:
-                if isinstance(node, (resources.NodeData)):
-                    if self.resource.data.location == node.location:
-                        input_state.process = self.env.process(
-                                input_state.process_state(target=target_location, bol = True)  # type: ignore False
-                        )
-                        flag = True
-                else:
-                    if self.resource.data.location == node.data.location:
-                        input_state.process = self.env.process(
-                                input_state.process_state(target=target_location, bol = False)  # type: ignore False
-                        )
-                        flag = True
+        if isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
+            for link in resource.processes[0].links:
+                if flag:
+                    break
+                for node in link:
+                    if isinstance(node, (resources.NodeData)):
+                        if self.resource.data.location == node.location:
+                            input_state.process = self.env.process(
+                                    input_state.process_state(target=target_location, bol = True)  # type: ignore False
+                            )
+                            flag = True
+                    else:
+                        if self.resource.data.location == node.data.location:
+                            input_state.process = self.env.process(
+                                    input_state.process_state(target=target_location, bol = False)  # type: ignore False
+                            )
+                            flag = True
+        else:
+            input_state.process = self.env.process(
+            input_state.process_state(target=target_location, bol = False)  # type: ignore False
+        )
                         
         yield input_state.process
 

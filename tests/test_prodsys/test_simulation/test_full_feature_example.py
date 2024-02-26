@@ -100,7 +100,7 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     source1 = psx.Source(product1, tm_arrival_model_1, [0, 0], ID="source_1")
     source2 = psx.Source(product2, tm_arrival_model_2, [0, 0], ID="source_2")
-    source3 = psx.Source(product3, tm_arrival_model_3, [0, 0], "CapabilityRouter", ID="source_3")
+    source3 = psx.Source(product3, tm_arrival_model_3, [0, 0], ID="source_3")
     source4 = psx.Source(product4, tm_arrival_model_4, [0, 0], ID="source_4")
 
     system = psx.ProductionSystem([machine_1, machine_2, machine_3, machine_4, machine_5, machine_6, transport_1, transport_2, transport_3], [source1, source2, source3, source4], [sink1, sink2, sink3, sink4])

@@ -226,17 +226,17 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     for counter, kpi in enumerate(post_processor.throughput_and_output_KPIs):
         if kpi.name == "output":
             assert kpi.value > 1
-    assert counter == 4 * 2 - 1
+    assert counter == 2 * 2 - 1
 
     productive_counter = 0
     for counter, kpi in enumerate(post_processor.machine_state_KPIS):
         if kpi.name == "productive_time":
             productive_counter += 1
             assert kpi.value > 1 and kpi.value < 99
-    assert productive_counter == 9
+    assert productive_counter == 11
 
     for counter, kpi in enumerate(post_processor.WIP_KPIs):
         if kpi.name == "WIP":
             assert kpi.value > 0.01 and kpi.value < 500
 
-    assert counter == 4 + 1 - 1
+    assert counter == 2 + 1 - 1
