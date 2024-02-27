@@ -9,6 +9,7 @@ TMAX = 10000
 TMIN = 1
 STEPS = 4000
 UPDATES = 300
+NUMBER_OF_SEEDS = 2
 
 # full optimization
 run_simulated_annealing(
@@ -20,6 +21,7 @@ run_simulated_annealing(
     TMIN,
     STEPS,
     UPDATES,
+    NUMBER_OF_SEEDS
 )
 
 PARTIAL_SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"
@@ -35,5 +37,6 @@ INITIAL_SOLUTION_FILE_PATH = "examples/optimization_example/initial_solutions/f_
 #     TMIN,
 #     STEPS,
 #     UPDATES,
+#     NUMBER_OF_SEEDS,
 #     INITIAL_SOLUTION_FILE_PATH
 # )
