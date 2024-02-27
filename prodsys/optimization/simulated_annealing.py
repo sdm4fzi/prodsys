@@ -1,6 +1,7 @@
 import json
 import time
 from copy import deepcopy
+from numpy import full
 
 from pydantic import BaseModel, Field
 import logging
@@ -35,6 +36,7 @@ class ProductionSystemOptimization(Annealer):
         weights: tuple,
         number_of_seeds: int = 1,
         initial_solution: adapters.ProductionSystemAdapter = None,
+        full_save: bool = False
     ):
         super().__init__(initial_solution, None)
         self.save_folder = save_folder
@@ -44,6 +46,7 @@ class ProductionSystemOptimization(Annealer):
         self.start = start
         self.weights = weights
         self.number_of_seeds = number_of_seeds
+        self.full_save = full_save
 
     def move(self):
         while True:
@@ -61,6 +64,7 @@ class ProductionSystemOptimization(Annealer):
             performances=self.performances,
             solution_dict=self.solution_dict,
             number_of_seeds=self.number_of_seeds,
+            full_save_folder_file_path=self.save_folder if self.full_save else "",
             individual=[self.state],
         )
 
@@ -117,6 +121,7 @@ def run_simulated_annealing(
     save_folder: str,
     base_configuration_file_path: str,
     scenario_file_path: str,
+    full_save: bool,
     seed: int,
     Tmax: int,
     Tmin: int,
@@ -132,6 +137,7 @@ def run_simulated_annealing(
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
         scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
+        full_save (bool): Save the full results of the optimization.
         seed (int): Random seed for optimization.
         Tmax (int): Maximum temperature
         Tmin (int): Minimum temperature
@@ -156,7 +162,8 @@ def run_simulated_annealing(
         base_configuration=base_configuration,
         hyper_parameters=hyper_parameters,
         save_folder=save_folder,
-        initial_solution=initial_solution        
+        initial_solution=initial_solution,
+        full_save = full_save        
     )
 
 
@@ -168,6 +175,7 @@ def simulated_annealing_optimization(
     hyper_parameters: SimulatedAnnealingHyperparameters,
     save_folder: str="results",
     initial_solution: adapters.ProductionSystemAdapter = None,
+    full_save: bool = False
 ):
     """
     Optimize a production system configuration using simulated anealing.
@@ -205,6 +213,7 @@ def simulated_annealing_optimization(
         weights=weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
         initial_solution=initial_solution,
+        full_save = full_save
     )
 
     pso.Tmax = hyper_parameters.Tmax
@@ -220,6 +229,7 @@ def optimize_configuration(
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: SimulatedAnnealingHyperparameters,
+    full_save: bool = False
 ):
     """
     Optimize a configuration with simulated annealing.
@@ -229,6 +239,7 @@ def optimize_configuration(
         scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters to perform a configuration optimization with simulated annealing.
+        full_save (bool, optional): Save the full results of the optimization. Defaults to False.
     """
     run_simulated_annealing(
         save_folder=save_folder,
@@ -240,4 +251,5 @@ def optimize_configuration(
         steps=hyper_parameters.steps,
         updates=hyper_parameters.updates,
         number_of_seeds=hyper_parameters.number_of_seeds,
+        full_save=full_save
     )

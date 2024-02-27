@@ -82,7 +82,12 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
             scenario_file_path (Optional[str], optional): File path for the scenario data. Defaults to None.
         """
         data = load_json(file_path=file_path)
-        self.seed = data["seed"]
+        if "ID" in data:
+            self.ID = data["ID"]
+        if "seed" in data:
+            self.seed = data["seed"]
+        else:
+            self.seed = 0
         self.time_model_data = self.create_objects_from_configuration_data(
             data["time_model_data"], time_model_data.TIME_MODEL_DATA
         )
@@ -92,7 +97,6 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.process_data = self.create_objects_from_configuration_data(
             data["process_data"], processes_data.PROCESS_DATA_UNION
         )
-
         self.queue_data = self.create_objects_from_configuration_data(data["queue_data"], queue_data.QueueData)
         self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
@@ -131,6 +135,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
 
     def get_dict_object_of_adapter(self) -> dict:
         data = {
+                "ID": self.ID,
                 "seed": self.seed,
                 "time_model_data": self.get_list_of_dict_objects(self.time_model_data),
                 "state_data": self.get_list_of_dict_objects(self.state_data),
