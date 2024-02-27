@@ -1018,6 +1018,7 @@ def evaluate(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
+    number_of_seeds: int,
     individual,
 ) -> List[float]:
     """
@@ -1027,6 +1028,7 @@ def evaluate(
         base_scenario (adapters.ProductionSystemAdapter): Baseline configuration.
         solution_dict (Dict[str, Union[list, str]]): Dictionary containing the solutions of the current and previous generations.
         performances (dict): Dictionary containing the performances of the current and previous generations.
+        number_of_seeds (int): Number of seeds for the simulation runs.
         individual (List[adapters.ProductionSystemAdapter]): List if length 1 containing the configuration to be evaluated.
 
     Raises:
@@ -1053,7 +1055,7 @@ def evaluate(
 
     fitness_values = []
 
-    for seed in [1, 2, 3, 4, 5]:
+    for seed in range(number_of_seeds):
         runner_object = runner.Runner(adapter=adapter_object) 
         if not adapter_object.scenario_data.info.time_range:
             raise ValueError("time_range is not defined in scenario_data")

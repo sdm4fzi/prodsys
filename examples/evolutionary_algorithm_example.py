@@ -4,6 +4,7 @@ seed = 23
 NGEN = 9
 POPULATION_SIZE = 8
 N_PROCESSES = 8
+NUMBER_OF_SEEDS = 2
 CROSS_OVER_RATE = 0.1
 MUTATION_RATE = 0.15
 
@@ -26,6 +27,7 @@ if __name__ == "__main__":
         POPULATION_SIZE,
         MUTATION_RATE,
         CROSS_OVER_RATE,
+        NUMBER_OF_SEEDS,
         N_PROCESSES,
     )
 
@@ -39,6 +41,7 @@ if __name__ == "__main__":
     #     POPULATION_SIZE,
     #     MUTATION_RATE,
     #     CROSS_OVER_RATE,
+    #     NUMBER_OF_SEEDS,
     #     N_PROCESSES,
     #     INITIAL_SOLUTION_FOLDER
     # )

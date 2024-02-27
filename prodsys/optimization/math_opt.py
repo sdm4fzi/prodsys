@@ -228,9 +228,12 @@ class MathOptimizer(BaseModel):
                         )
 
     def get_state_with_id(self, state_id: str) -> state_data.BreakDownStateData:
-        return [
+        possible_states = [
             state for state in self.adapter.state_data if state.ID == state_id
-        ].pop()
+        ]
+        if not possible_states:
+            return None
+        return possible_states.pop()
 
     def get_expected_time_of_time_model_with_id(
         self, time_model_id: str
@@ -252,33 +255,44 @@ class MathOptimizer(BaseModel):
         process_module_breakdown_state = self.get_state_with_id(
             optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
         )
-
-        MTTF_machine = self.get_expected_time_of_time_model_with_id(
-            machine_breakdown_state.time_model_id
-        )
-        MTTR_machine = self.get_expected_time_of_time_model_with_id(
-            machine_breakdown_state.repair_time_model_id
-        )
-        MTTF_process_module = self.get_expected_time_of_time_model_with_id(
-            process_module_breakdown_state.time_model_id
-        )
-        MTTR_process_module = self.get_expected_time_of_time_model_with_id(
-            process_module_breakdown_state.repair_time_model_id
-        )
-
-        BZ = self.adapter.scenario_data.info.time_range * self.optimization_time_portion
-        machine_breakdown_count = BZ / MTTF_machine
-        machine_breakdown_time = MTTR_machine
-
         process_modules, stations = self.get_process_modules_and_stations()
+        BZ = self.adapter.scenario_data.info.time_range * self.optimization_time_portion
 
-        module_breakdown_count = {
-            module: BZ / MTTF_process_module for module in process_modules
-        }
+        if not machine_breakdown_state:
+            machine_breakdown_count = 0
+            machine_breakdown_time = 1
+        else:
+            MTTF_machine = self.get_expected_time_of_time_model_with_id(
+                machine_breakdown_state.time_model_id
+            )
+            MTTR_machine = self.get_expected_time_of_time_model_with_id(
+                machine_breakdown_state.repair_time_model_id
+            )
+            machine_breakdown_count = BZ / MTTF_machine
+            machine_breakdown_time = MTTR_machine
 
-        module_breakdown_time = {
-            module: MTTR_process_module for module in process_modules
-        }
+        if not process_module_breakdown_state:
+            module_breakdown_count = {
+                module: 0 for module in process_modules
+            }
+
+            module_breakdown_time = {
+                module: 1 for module in process_modules
+            }
+        else:
+            MTTF_process_module = self.get_expected_time_of_time_model_with_id(
+                process_module_breakdown_state.time_model_id
+            )
+            MTTR_process_module = self.get_expected_time_of_time_model_with_id(
+                process_module_breakdown_state.repair_time_model_id
+            )
+            module_breakdown_count = {
+                module: BZ / MTTF_process_module for module in process_modules
+            }
+
+            module_breakdown_time = {
+                module: MTTR_process_module for module in process_modules
+            }
 
         return (
             machine_breakdown_count,
@@ -431,7 +445,7 @@ class MathOptimizer(BaseModel):
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
-        self, save_folder: str, adjusted_number_of_transport_resources: int = 1
+        self, save_folder: str, adjusted_number_of_transport_resources: int = 1, number_of_seeds: int = 1
     ):
         """
         Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run. 
@@ -499,7 +513,7 @@ class MathOptimizer(BaseModel):
                 new_adapter.resource_data.append(new_resource)
             util.add_default_queues_to_resources(new_adapter)
             simulation_results = optimization_util.evaluate(
-                self.adapter, solution_dict, performances, [new_adapter]
+                self.adapter, solution_dict, performances, number_of_seeds, [new_adapter]
             )
             optimization_util.document_individual(
                 solution_dict, save_folder, [new_adapter]
@@ -513,6 +527,37 @@ class MathOptimizer(BaseModel):
             json.dump(performances, json_file)
 
 
+class MathOptHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization with mathematical optimization. For mathetical optimization, only production capacity is optimized..
+    Mathematical optimization is performed with Gurobi, so a valid Gurobi license is required.
+
+    Args:
+        optimization_time_portion (float): Portion of the total time that is used for optimization.
+        number_of_solutions (int): Number of solutions that are generated.
+        adjusted_number_of_transport_resources (int): Number of transport resources that are used for the optimization.
+        number_of_seeds (int): Number of seeds for the simulation runs.
+    """
+
+    optimization_time_portion: float = 0.5
+    number_of_solutions: int = 1
+    adjusted_number_of_transport_resources: int = 1
+    number_of_seeds: int = 1
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Mathematical Optimization Hyperparameters",
+                "value": {
+                    "optimization_time_portion": 0.5,
+                    "number_of_solutions": 1,
+                    "adjusted_number_of_transport_resources": 1,
+                    "number_of_seeds": 1,
+                },
+            }
+        }
+
+
 def run_mathematical_optimization(
     save_folder: str,
     base_configuration_file_path: str,
@@ -520,6 +565,7 @@ def run_mathematical_optimization(
     optimization_time_portion: float,
     number_of_solutions: int,
     adjusted_number_of_transport_resources: int,
+    number_of_seeds: int = 1,
 ):
     """
     Run a mathematical optimization for configuration planning of production systems. 
@@ -531,6 +577,7 @@ def run_mathematical_optimization(
         optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
         number_of_solutions (int): Number of solutions to find.
         adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
+        number_of_seeds (int, optional): Number of seeds for the simulation runs. Defaults to 1.
     """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
@@ -545,39 +592,13 @@ def run_mathematical_optimization(
         optimization_time_portion=optimization_time_portion,
         number_of_solutions=number_of_solutions,
         adjusted_number_of_transport_resources=adjusted_number_of_transport_resources,
+        number_of_seeds=number_of_seeds,
     )
     mathematical_optimization(
         adapter,
         hypter_parameters,
         save_folder,
     )
-
-class MathOptHyperparameters(BaseModel):
-    """
-    Hyperparameters for configuration optimization with mathematical optimization. For mathetical optimization, only production capacity is optimized..
-    Mathematical optimization is performed with Gurobi, so a valid Gurobi license is required.
-
-    Args:
-        optimization_time_portion (float): Portion of the total time that is used for optimization.
-        number_of_solutions (int): Number of solutions that are generated.
-        adjusted_number_of_transport_resources (int): Number of transport resources that are used for the optimization.
-    """
-
-    optimization_time_portion: float = 0.5
-    number_of_solutions: int = 1
-    adjusted_number_of_transport_resources: int = 1
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Mathematical Optimization Hyperparameters",
-                "value": {
-                    "optimization_time_portion": 0.5,
-                    "number_of_solutions": 1,
-                    "adjusted_number_of_transport_resources": 1,
-                },
-            }
-        }
 
 
 def mathematical_optimization(
@@ -602,6 +623,7 @@ def mathematical_optimization(
     model.save_results(
         save_folder=save_folder,
         adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
+        number_of_seeds=hyper_parameters.number_of_seeds,
     )
 
 
@@ -627,4 +649,5 @@ def optimize_configuration(
         optimization_time_portion=hyper_parameters.optimization_time_portion,
         number_of_solutions=hyper_parameters.number_of_solutions,
         adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
+        number_of_seeds=hyper_parameters.number_of_seeds,
     )
