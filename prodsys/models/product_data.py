@@ -25,6 +25,7 @@ class ProductData(CoreAsset):
         product_type (str): Type of the product. If not given, the ID is used.
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
         transport_process (str): Transport process of the product.
+        auxiliaries (List[str], optional): List of auxiliary components required to process or transport the product. Defaults to [].
 
     Examples:
         Product with sequential process model:
@@ -76,6 +77,7 @@ class ProductData(CoreAsset):
     product_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     transport_process: str
+    auxiliaries: List[str] = []
 
     @root_validator(pre=True)
     def check_processes(cls, values):
@@ -94,6 +96,7 @@ class ProductData(CoreAsset):
                     "product_type": "Product_1",
                     "processes": ["P1", "P2", "P3"],
                     "transport_process": "TP1",
+                    "auxiliaries": ["Pallette"]
                 },
                 {
                     "ID": "Product_1",

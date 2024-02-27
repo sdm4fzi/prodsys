@@ -53,3 +53,7 @@ class QueueData(CoreAsset):
                 },
             ]
         }
+
+
+
+# TODO: add store -> queue with own location (e.g. storage location)
