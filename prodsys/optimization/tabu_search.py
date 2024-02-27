@@ -176,6 +176,7 @@ def run_tabu_search(
     max_score: float,
     number_of_seeds: int = 1,
     initial_solution_file_path: str = "",
+    full_save: bool = False,
 ):
     """
     Runs tabu search optimization.
@@ -208,6 +209,7 @@ def run_tabu_search(
         hyper_parameters=hyper_parameters,
         save_folder=save_folder,
         initial_solution=initial_solution,
+        full_save=full_save,
     )
 
 
@@ -216,6 +218,7 @@ def tabu_search_optimization(
         hyper_parameters: TabuSearchHyperparameters,
         save_folder: str,
         initial_solution: adapters.ProductionSystemAdapter = None,
+        full_save: bool = False,
 ):
     """
     Optimize a production system configuration using tabu search.
@@ -249,6 +252,7 @@ def tabu_search_optimization(
                 performances=performances,
                 solution_dict=solution_dict,
                 number_of_seeds=hyper_parameters.number_of_seeds,
+                full_save_folder_file_path=save_folder if full_save else "",
                 individual=[state],
             )
 
@@ -298,6 +302,7 @@ def optimize_configuration(
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: TabuSearchHyperparameters,
+    full_save: bool = False,
 ):
     """
     Optimize configuration with tabu search.
@@ -317,4 +322,5 @@ def optimize_configuration(
         max_steps=hyper_parameters.max_steps,
         max_score=hyper_parameters.max_score,
         number_of_seeds=hyper_parameters.number_of_seeds,
+        full_save=full_save,
     )
