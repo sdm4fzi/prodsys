@@ -445,7 +445,7 @@ class MathOptimizer(BaseModel):
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
-        self, save_folder: str, adjusted_number_of_transport_resources: int = 1, number_of_seeds: int = 1
+        self, save_folder: str, adjusted_number_of_transport_resources: int = 1, number_of_seeds: int = 1, full_save: bool = False
     ):
         """
         Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run. 
@@ -512,8 +512,9 @@ class MathOptimizer(BaseModel):
                 )
                 new_adapter.resource_data.append(new_resource)
             util.add_default_queues_to_resources(new_adapter)
+            full_save_folder_path = save_folder if full_save else ""
             simulation_results = optimization_util.evaluate(
-                self.adapter, solution_dict, performances, number_of_seeds, [new_adapter]
+                self.adapter, solution_dict, performances, number_of_seeds, full_save_folder_path, [new_adapter]
             )
             optimization_util.document_individual(
                 solution_dict, save_folder, [new_adapter]
@@ -562,6 +563,7 @@ def run_mathematical_optimization(
     save_folder: str,
     base_configuration_file_path: str,
     scenario_file_path: str,
+    full_save: bool,
     optimization_time_portion: float,
     number_of_solutions: int,
     adjusted_number_of_transport_resources: int,
@@ -598,6 +600,7 @@ def run_mathematical_optimization(
         adapter,
         hypter_parameters,
         save_folder,
+        full_save=full_save,
     )
 
 
@@ -605,6 +608,7 @@ def mathematical_optimization(
     base_configuration: adapters.ProductionSystemAdapter,
     hyper_parameters: MathOptHyperparameters,
     save_folder: str = "results",
+    full_save: bool = False,
 ):
     """
     Optimize the configuration of the production system with mathematical optimization.
@@ -613,6 +617,7 @@ def mathematical_optimization(
         base_configuration (adapters.ProductionSystemAdapter): Base configuration for the optimization.
         hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
         save_folder (str, optional): Folder to save the results in. Defaults to "results".
+        full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
     """
     util.prepare_save_folder(save_folder)
     model = MathOptimizer(
@@ -623,7 +628,7 @@ def mathematical_optimization(
     model.save_results(
         save_folder=save_folder,
         adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=hyper_parameters.number_of_seeds,
+        number_of_seeds=hyper_parameters.number_of_seeds, full_save=full_save
     )
 
 
@@ -632,6 +637,7 @@ def optimize_configuration(
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: MathOptHyperparameters,
+    full_save: bool = False,
 ):
     """
     Optimize the configuration of the production system with mathematical optimization.
@@ -641,11 +647,13 @@ def optimize_configuration(
         scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
         save_folder (str): Folder to save the results in.
         hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
+        full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
     """
     run_mathematical_optimization(
         save_folder=save_folder,
         base_configuration_file_path=base_configuration_file_path,
         scenario_file_path=scenario_file_path,
+        full_save=full_save,
         optimization_time_portion=hyper_parameters.optimization_time_portion,
         number_of_solutions=hyper_parameters.number_of_solutions,
         adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
