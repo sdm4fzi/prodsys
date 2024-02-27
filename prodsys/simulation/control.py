@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 class Controller(ABC, BaseModel):
     """
-    A controller is responsible for controlling the processes of a resource. The controller is requested by materials requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
+    A controller is responsible for controlling the processes of a resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
 
     Args:
         control_policy (Callable[[List[request.Request]], None]): The control policy that determines the sequence of requests to be processed.
@@ -99,7 +99,7 @@ class Controller(ABC, BaseModel):
 
 class ProductionController(Controller):
     """
-    A production controller is responsible for controlling the processes of a production resource. The controller is requested by materials requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
+    A production controller is responsible for controlling the processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
     resource: resources.ProductionResource = Field(init=False, default=None)
 

@@ -91,6 +91,7 @@ def register_functions_in_toolbox(
     weights: tuple,
     initial_solutions_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    full_save_solutions_folder: str="",
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -124,7 +125,8 @@ def register_functions_in_toolbox(
         base_configuration,
         solution_dict,
         performances,
-        hyper_parameters.number_of_seeds
+        hyper_parameters.number_of_seeds, 
+        full_save_solutions_folder
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -162,6 +164,7 @@ def run_evolutionary_algorithm(
     save_folder: str,
     base_configuration_file_path: str,
     scenario_file_path: str,
+    full_save: bool,
     seed: int,
     ngen: int,
     population_size: int,
@@ -169,7 +172,6 @@ def run_evolutionary_algorithm(
     crossover_rate: float,
     n_seeds: int,
     n_processes: int,
-    initial_solutions_folder: str = "",
 ):
     """
     Run an evolutionary algorithm for configuration optimization.
@@ -178,6 +180,7 @@ def run_evolutionary_algorithm(
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
         scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
+        full_save (bool): If True, the full event log of solutions is saved. If False, only the KPIs of solutions are saved.
         seed (int): Random seed for optimization.
         ngen (int): Number of generations to run the algorithm.
         population_size (int): Number of individuals in each generation.
@@ -203,7 +206,8 @@ def run_evolutionary_algorithm(
     evolutionary_algorithm_optimization(
         base_configuration,
         hyper_parameters,
-        save_folder
+        save_folder,
+        full_save=full_save
     )
 
 def optimize_configuration(
@@ -211,6 +215,7 @@ def optimize_configuration(
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    full_save: bool = False,
 ):
     """
     Optimize a configuration using an evolutionary algorithm.
@@ -225,6 +230,7 @@ def optimize_configuration(
         save_folder,
         base_configuration_file_path,
         scenario_file_path,
+        full_save,
         hyper_parameters.seed,
         hyper_parameters.number_of_generations,
         hyper_parameters.population_size,
@@ -241,6 +247,7 @@ def evolutionary_algorithm_optimization(
         hyper_parameters: EvolutionaryAlgorithmHyperparameters,
         save_folder: str = "results",
         initial_solutions_folder: str = "",
+        full_save: bool = False,
 ):
     """
     Optimize a production system configuration using an evolutionary algorithm.
@@ -276,6 +283,7 @@ def evolutionary_algorithm_optimization(
         weights=weights,
         initial_solutions_folder=initial_solutions_folder,
         hyper_parameters=hyper_parameters,
+        full_save_solutions_folder=save_folder if full_save else "",
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)

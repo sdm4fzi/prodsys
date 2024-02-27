@@ -23,7 +23,8 @@ run_tabu_search(
     TABU_SIZE,
     MAX_STEPS,
     MAX_SCORE,
-    NUMBER_OF_SEEDS
+    NUMBER_OF_SEEDS,
+    full_save=False
 )
 
 PARTIAL_SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"

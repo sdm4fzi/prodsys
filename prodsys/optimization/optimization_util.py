@@ -1005,12 +1005,10 @@ def document_individual(
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     current_generation = solution_dict["current_generation"]
 
-    if not adapter_object.ID:
-        adapter_object.ID = str(uuid1())
-        solution_dict[current_generation].append(adapter_object.ID)
+    solution_dict[current_generation].append(adapter_object.ID)
 
     adapters.JsonProductionSystemAdapter(**adapter_object.dict()).write_data(
-        f"{save_folder}/f_{current_generation}_{adapter_object.ID}.json"
+        f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
     )
 
 
@@ -1019,6 +1017,7 @@ def evaluate(
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     number_of_seeds: int,
+    full_save_folder_file_path: str,
     individual,
 ) -> List[float]:
     """
@@ -1048,6 +1047,8 @@ def evaluate(
                 and adapter_object.ID in solution_dict[generation]
             ):
                 return performances[generation][adapter_object.ID]["fitness"]
+    else:
+        adapter_object.ID = str(uuid1())
 
     if not check_valid_configuration(adapter_object, base_scenario):
         # TODO: check if this function is always correct, either max or min for all algorithms?
@@ -1062,6 +1063,8 @@ def evaluate(
         adapter_object.seed = seed
         runner_object.initialize_simulation()
         runner_object.run(adapter_object.scenario_data.info.time_range)
+        if full_save_folder_file_path:
+            runner_object.save_results_as_csv(full_save_folder_file_path)
         df = runner_object.event_logger.get_data_as_dataframe()
         p = PostProcessor(df_raw=df)
         fitness = []
