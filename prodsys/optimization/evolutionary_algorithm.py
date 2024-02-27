@@ -44,6 +44,45 @@ sim.VERBOSE = 1
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
+class EvolutionaryAlgorithmHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization using an evolutionary algorithm.
+
+    Args:
+        seed (int): Seed for the random number generator.
+        number_of_generations (int): Number of generations to run the algorithm.
+        population_size (int): Number of individuals in each generation.
+        mutation_rate (float): Probability of mutating an individual.
+        crossover_rate (float): Probability of crossover between two individuals.
+        number_of_seeds (int): Number of seeds to use for simulation.
+        number_of_processes (int): Number of processes to use for parallelization.
+    """
+
+    seed: int = Field(0, description="Seed for the random number generator.")
+    number_of_generations: int = 10
+    population_size: int = 10
+    mutation_rate: float = 0.1
+    crossover_rate: float = 0.1
+    number_of_seeds: int = 1
+    number_of_processes: int = 1
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Evolutionary Algorithm Hperparameters",
+                "value": {
+                    "seed": 0,
+                    "number_of_generations": 10,
+                    "population_size": 10,
+                    "mutation_rate": 0.1,
+                    "crossover_rate": 0.1,
+                    "number_of_seeds": 1,
+                    "number_of_processes": 1,
+                },
+            }
+        }
+
+
 
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonProductionSystemAdapter,
@@ -51,6 +90,7 @@ def register_functions_in_toolbox(
     performances: dict,
     weights: tuple,
     initial_solutions_folder: str,
+    hyper_parameters: EvolutionaryAlgorithmHyperparameters,
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -84,6 +124,7 @@ def register_functions_in_toolbox(
         base_configuration,
         solution_dict,
         performances,
+        hyper_parameters.number_of_seeds
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -126,6 +167,7 @@ def run_evolutionary_algorithm(
     population_size: int,
     mutation_rate: float,
     crossover_rate: float,
+    n_seeds: int,
     n_processes: int,
     initial_solutions_folder: str = "",
 ):
@@ -141,6 +183,7 @@ def run_evolutionary_algorithm(
         population_size (int): Number of individuals in each generation.
         mutation_rate (float): Probability of mutating an individual.
         crossover_rate (float): Probability of crossover between two individuals.
+        n_seeds (int): Number of seeds to use for simulation.
         n_processes (int): Number of processes to use for parallelization.
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
@@ -154,6 +197,7 @@ def run_evolutionary_algorithm(
         mutation_rate=mutation_rate,
         crossover_rate=crossover_rate,
         number_of_processes=n_processes,
+        number_of_seeds=n_seeds,
     )
 
     evolutionary_algorithm_optimization(
@@ -161,43 +205,6 @@ def run_evolutionary_algorithm(
         hyper_parameters,
         save_folder
     )
-
-
-class EvolutionaryAlgorithmHyperparameters(BaseModel):
-    """
-    Hyperparameters for configuration optimization using an evolutionary algorithm.
-
-    Args:
-        seed (int): Seed for the random number generator.
-        number_of_generations (int): Number of generations to run the algorithm.
-        population_size (int): Number of individuals in each generation.
-        mutation_rate (float): Probability of mutating an individual.
-        crossover_rate (float): Probability of crossover between two individuals.
-        number_of_processes (int): Number of processes to use for parallelization.
-    """
-
-    seed: int = Field(0, description="Seed for the random number generator.")
-    number_of_generations: int = 10
-    population_size: int = 10
-    mutation_rate: float = 0.1
-    crossover_rate: float = 0.1
-    number_of_processes: int = 1
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Evolutionary Algorithm Hperparameters",
-                "value": {
-                    "seed": 0,
-                    "number_of_generations": 10,
-                    "population_size": 10,
-                    "mutation_rate": 0.1,
-                    "crossover_rate": 0.1,
-                    "number_of_processes": 1,
-                },
-            }
-        }
-
 
 def optimize_configuration(
     base_configuration_file_path: str,
@@ -224,6 +231,7 @@ def optimize_configuration(
         hyper_parameters.mutation_rate,
         hyper_parameters.crossover_rate,
         hyper_parameters.number_of_processes,
+        hyper_parameters.number_of_seeds,
     )
 
 from prodsys.util import util
@@ -267,6 +275,7 @@ def evolutionary_algorithm_optimization(
         performances=performances,
         weights=weights,
         initial_solutions_folder=initial_solutions_folder,
+        hyper_parameters=hyper_parameters,
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)

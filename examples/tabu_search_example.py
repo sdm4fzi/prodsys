@@ -1,7 +1,7 @@
 from prodsys.optimization.tabu_search import run_tabu_search
 from prodsys.simulation import sim
 
-sim.VERBOSE = 0
+sim.VERBOSE = 1
 
 SEED = 22
 
@@ -12,6 +12,7 @@ SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
 TABU_SIZE = 10
 MAX_STEPS = 300
 MAX_SCORE = 500
+NUMBER_OF_SEEDS = 2
 
 # full optimization
 run_tabu_search(
@@ -22,6 +23,7 @@ run_tabu_search(
     TABU_SIZE,
     MAX_STEPS,
     MAX_SCORE,
+    NUMBER_OF_SEEDS
 )
 
 PARTIAL_SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"
@@ -36,5 +38,6 @@ INITIAL_SOLUTION_FILE_PATH = "examples/optimization_example/initial_solutions/f_
 #     TABU_SIZE,
 #     MAX_STEPS,
 #     MAX_SCORE,
+#     NUMBER_OF_SEEDS,
 #     INITIAL_SOLUTION_FILE_PATH
 # )

@@ -33,6 +33,7 @@ class ProductionSystemOptimization(Annealer):
         solutions_dict: dict,
         start: float,
         weights: tuple,
+        number_of_seeds: int = 1,
         initial_solution: adapters.ProductionSystemAdapter = None,
     ):
         super().__init__(initial_solution, None)
@@ -42,6 +43,7 @@ class ProductionSystemOptimization(Annealer):
         self.solution_dict = solutions_dict
         self.start = start
         self.weights = weights
+        self.number_of_seeds = number_of_seeds
 
     def move(self):
         while True:
@@ -58,6 +60,7 @@ class ProductionSystemOptimization(Annealer):
             base_scenario=self.base_configuration,
             performances=self.performances,
             solution_dict=self.solution_dict,
+            number_of_seeds=self.number_of_seeds,
             individual=[self.state],
         )
 
@@ -76,53 +79,7 @@ class ProductionSystemOptimization(Annealer):
             json.dump(self.performances, json_file)
 
         return performance
-
-
-def run_simulated_annealing(
-    save_folder: str,
-    base_configuration_file_path: str,
-    scenario_file_path: str,
-    seed: int,
-    Tmax: int,
-    Tmin: int,
-    steps: int,
-    updates: int,
-    initial_solution_file_path: str = "",
-):
-    """
-    Run a simulated annealing algorithm for configuration optimization.
-
-    Args:
-        save_folder (str): Folder to save the results in.
-        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
-        seed (int): Random seed for optimization.
-        Tmax (int): Maximum temperature
-        Tmin (int): Minimum temperature
-        steps (int): Steps for annealing
-        updates (int): Number of updates
-        initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
-    """
-    base_configuration = adapters.JsonProductionSystemAdapter()
-    base_configuration.read_data(base_configuration_file_path, scenario_file_path)
-
-    if initial_solution_file_path:
-        initial_solution = adapters.JsonProductionSystemAdapter()
-        initial_solution.read_data(initial_solution_file_path, scenario_file_path)
-    else:
-        initial_solution = base_configuration.copy(deep=True)
-
-    hyper_parameters = SimulatedAnnealingHyperparameters(
-        seed=seed, Tmax=Tmax, Tmin=Tmin, steps=steps, updates=updates)
-
-    simulated_annealing_optimization(
-        base_configuration=base_configuration,
-        hyper_parameters=hyper_parameters,
-        save_folder=save_folder,
-        initial_solution=initial_solution        
-    )
-
-
+    
 class SimulatedAnnealingHyperparameters(BaseModel):
     """
     Hyperparameters to perform a configuration optimization with simulated annealing.
@@ -138,6 +95,7 @@ class SimulatedAnnealingHyperparameters(BaseModel):
     Tmin: int = 1
     steps: int = 4000
     updates: int = 300
+    number_of_seeds: int = 1
 
     class Config:
         schema_extra = {
@@ -149,9 +107,60 @@ class SimulatedAnnealingHyperparameters(BaseModel):
                     "Tmin": 1,
                     "steps": 4000,
                     "updates": 300,
+                    "number_of_seeds": 1,
                 },
             }
         }
+
+
+def run_simulated_annealing(
+    save_folder: str,
+    base_configuration_file_path: str,
+    scenario_file_path: str,
+    seed: int,
+    Tmax: int,
+    Tmin: int,
+    steps: int,
+    updates: int,
+    number_of_seeds: int,
+    initial_solution_file_path: str = "",
+):
+    """
+    Run a simulated annealing algorithm for configuration optimization.
+
+    Args:
+        save_folder (str): Folder to save the results in.
+        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
+        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
+        seed (int): Random seed for optimization.
+        Tmax (int): Maximum temperature
+        Tmin (int): Minimum temperature
+        steps (int): Steps for annealing
+        updates (int): Number of updates
+        number_of_seeds (int): Number of seeds for optimization
+        initial_solution_file_path (str, optional): File path to an initial solution. Defaults to "".
+    """
+    base_configuration = adapters.JsonProductionSystemAdapter()
+    base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+
+    if initial_solution_file_path:
+        initial_solution = adapters.JsonProductionSystemAdapter()
+        initial_solution.read_data(initial_solution_file_path, scenario_file_path)
+    else:
+        initial_solution = base_configuration.copy(deep=True)
+
+    hyper_parameters = SimulatedAnnealingHyperparameters(
+        seed=seed, Tmax=Tmax, Tmin=Tmin, steps=steps, updates=updates, number_of_seeds=number_of_seeds)
+
+    simulated_annealing_optimization(
+        base_configuration=base_configuration,
+        hyper_parameters=hyper_parameters,
+        save_folder=save_folder,
+        initial_solution=initial_solution        
+    )
+
+
+
 
 
 def simulated_annealing_optimization(
@@ -194,6 +203,7 @@ def simulated_annealing_optimization(
         solutions_dict=solution_dict,
         start=start,
         weights=weights,
+        number_of_seeds=hyper_parameters.number_of_seeds,
         initial_solution=initial_solution,
     )
 
@@ -229,4 +239,5 @@ def optimize_configuration(
         Tmin=hyper_parameters.Tmin,
         steps=hyper_parameters.steps,
         updates=hyper_parameters.updates,
+        number_of_seeds=hyper_parameters.number_of_seeds,
     )
