@@ -188,12 +188,16 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
         while self.next_prodution_process:
+            # TODO: add here check for potentially needed auxilaries for production processes or transport processes
+            # if auxiliaries are needed and not available yet for the upcoming steps, request them to be transported to here from the storage by a transport process
+            # yield on all ready_to_use events of the auxilaries with simpy AllOf
             production_request = self.get_request_for_production_process()
             yield self.env.process(self.product_router.route_request(production_request))
             transport_request = self.get_request_for_transport_process(production_request)
             yield self.env.process(self.product_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
+            # TODO: release auxilaries if they are not needed anymore, so their process can continue
             self.set_next_production_process()
         transport_to_sink_request = self.get_request_for_transport_to_sink()
         yield self.env.process(self.product_router.route_request(transport_to_sink_request))
