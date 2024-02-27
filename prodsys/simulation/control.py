@@ -416,9 +416,6 @@ class TransportController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            #TODO: Minus one pallet at the source if product type
-            # 1. product.get_source()
-            # 2. attribute pallets =+ 1
             if origin.get_location() != resource.get_location():
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
@@ -473,9 +470,6 @@ class TransportController(Controller):
             product.update_location(target)
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
-            #TODO: if target is sink and it is the pallet_product then make empty drive to source
-            # 1. Make it like the empty drive to the origin on top of the start_process
-            # 2. product.get_source + add one on pallet attribute
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
             product.finished_process.succeed()

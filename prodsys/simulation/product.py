@@ -188,6 +188,9 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
         while self.next_prodution_process:
+            #TODO: 
+            # 1. Function: Find available workpiececarrier for product, if not wait
+            # 2. When found, Set the available attribute to false
             production_request = self.get_request_for_production_process()
             yield self.env.process(self.product_router.route_request(production_request))
             transport_request = self.get_request_for_transport_process(production_request)
@@ -198,6 +201,11 @@ class Product(BaseModel):
         transport_to_sink_request = self.get_request_for_transport_to_sink()
         yield self.env.process(self.product_router.route_request(transport_to_sink_request))
         yield self.env.process(self.request_process(transport_to_sink_request))
+        #TODO: Reverse Logistics for the WorkPieceCarrier to Source
+        # 1. Create a transportrequest with the workpiececarrier from the sink to the source
+        # 2. route_request for free agv
+        # 3. request process for the transportcontroller
+        # 4. Make the workpiececarrier available again
         self.product_info.log_finish_product(
             resource=self.current_location, _product=self, event_time=self.env.now
         )

@@ -81,7 +81,7 @@ class TransportResquest(Request):
     def __init__(
         self,
         process: process.TransportProcess,
-        product: product.Product,
+        product: product.Product, #TODO: Or it is a workpiece
         origin: product.Location,
         target: product.Location,
     ):

@@ -64,4 +64,6 @@ class Product(core.ExpressObject):
             transport_process=self.transport_process.ID,
         )
     
-#TODO: Add an PalletProduct Class with an additional attribute called pallets.
+#TODO: Add an WorkPieceCarrier_Product Class inherents from Product
+    
+#TODO: Add WorkPieceCarrier Class which just has an ID & possible products

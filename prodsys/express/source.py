@@ -63,8 +63,6 @@ class Source(core.ExpressObject):
         )
         ```
     """
-    #TODO: Add an optional pallets attribute
-    #TODO: Add that both product types can be part in the source
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
     location: conlist(float, min_items=2, max_items=2)

@@ -30,6 +30,7 @@ class ProductFactory(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    #TODO: Adjust that also WorkPieceCarrier_Product is created
     def create_product(
         self, product_data: product_data.ProductData, router: router.Router
     ) -> product.Product:

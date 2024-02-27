@@ -121,4 +121,4 @@ class ProductData(CoreAsset):
             ]
         }
 
-#TODO: Add the palletproductdata class which inherents
+#TODO: Add an WorkPieceCarrier_Product Class inherents from Product
