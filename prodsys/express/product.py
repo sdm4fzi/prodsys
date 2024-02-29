@@ -6,7 +6,7 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.models import product_data
 
-from prodsys.express import process, core
+from prodsys.express import process, core, auxiliary
 
 @dataclass
 class Product(core.ExpressObject):
@@ -48,6 +48,7 @@ class Product(core.ExpressObject):
     """
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
     transport_process: process.TransportProcess
+    auxiliaries: Optional[List[auxiliary.Auxiliary]]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self) -> product_data.ProductData:
@@ -62,4 +63,5 @@ class Product(core.ExpressObject):
             description="",
             processes=[process.ID for process in self.processes],
             transport_process=self.transport_process.ID,
+            auxiliaries=[auxiliary.ID for auxiliary in self.auxiliaries]
         )
