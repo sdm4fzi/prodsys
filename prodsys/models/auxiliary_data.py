@@ -7,9 +7,9 @@ from pydantic import root_validator
 from prodsys.models.core_asset import CoreAsset
 
 
-class Auxiliary(CoreAsset):
+class AuxiliaryData(CoreAsset):
     """
-    Class that represents auxiliary components required to process or transport a product by a resource.
+    Class that represents auxiliary components required to process or transport a product by a resource..
 
     Some examples are workpiece carriers or tools.
 
@@ -23,7 +23,7 @@ class Auxiliary(CoreAsset):
         relevant_processes (List[str], optional): List of relevant processes where the auxiliary component is needed. Defaults to [], meaning all processes.
         relevant_transport_processes (List[str], optional): List of relevant transport processes where the auxiliary component is needed. Defaults to [], meaning all processes.
     """
-    router: str
+    #router: str
     transport_process: str
     storages: List[str]
     initial_quantity_in_stores: List[int]

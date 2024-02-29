@@ -66,3 +66,21 @@ class QueueFactory(BaseModel):
             List[store.Queue]: List of queue objects with the given IDs.
         """
         return [q for q in self.queues if q.queue_data.ID in IDs]
+    
+
+    class StorageFactory(BaseModel):
+
+
+        env: sim.Environment
+
+        queues: List[store.Queue] = []
+        location: 
+
+        class Config:
+            arbitrary_types_allowed = True
+
+        def create_storage(self, adapter:adapter.ProductionSystemAdapter):
+        #TODO: Check if it is okay with the location not being inistialised
+            for storage_data in adapter.storage_data:
+                values = {}
+                values.update({"env": self.env, "storage_data": storage_data})

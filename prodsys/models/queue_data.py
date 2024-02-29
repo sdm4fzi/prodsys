@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 from prodsys.models.core_asset import CoreAsset
-from pydantic import validator
+from pydantic import conlist, validator
 
 
 class QueueData(CoreAsset):
@@ -55,5 +55,30 @@ class QueueData(CoreAsset):
         }
 
 
+class StorageData(QueueData):
+    """
+    Represents storage data for the auxiliaries.
 
-# TODO: add store -> queue with own location (e.g. storage location)
+    Attributes:
+        location (List[float]): The location of the storage in 2D coordinates.
+    """
+
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
+
+    class Config:
+        schema_extra = {
+            "examples": [
+                {
+                    "ID": "S1",
+                    "description": "Storage 1",
+                    "capacity": 100,
+                    "location": [1.0, 2.0],
+                },
+                {
+                    "ID": "S2",
+                    "description": "Storage 2",
+                    "capacity": 0.0,
+                    "location": [3.0, 4.0],
+                },
+            ]
+        }

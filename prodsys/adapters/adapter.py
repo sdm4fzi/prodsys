@@ -18,6 +18,7 @@ from prodsys.models import (
     sink_data,
     source_data,
     scenario_data,
+    auxiliary_data,
 )
 from prodsys.util import util
 
@@ -293,6 +294,9 @@ class ProductionSystemAdapter(ABC, BaseModel):
     sink_data: List[sink_data.SinkData] = []
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
+    auxiliary_data: Optional[List[auxiliary_data.AuxiliaryData]] = []
+    storage_data: Optional[List[queue_data.StorageData]] = []
+
 
     
     valid_configuration: bool = True

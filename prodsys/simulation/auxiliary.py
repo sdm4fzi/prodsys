@@ -84,7 +84,8 @@ class Auxiliary(BaseModel):
             # 5. update location of auxiliary to product location, trigger ready_to_use event to conitnue processing of the product
             self.ready_to_use.succeed()
             # 6. yield until product is finished processing (maybe use also a release event....) -> remove auxiliary from product
-            # 7. request transport to storage location
+            # 7. update the location of the auxiliary
+            # 8. request transport to storage location
         # important to check:
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
