@@ -14,17 +14,17 @@ from simpy import events
 
 from pydantic import BaseModel
 
+if TYPE_CHECKING:
+    from prodsys.simulation import process, product
+
 from prodsys.simulation import (
-    process,
     request,
-    router,
+    #router,
     sim,
-    product
+    #product
 )
+from prodsys.models import auxiliary_data
 
-
-
-from prodsys.models import auxiliary_data, product_data
 
 
 class Auxiliary(BaseModel):
@@ -37,13 +37,14 @@ class Auxiliary(BaseModel):
     """
 
     env: sim.Environment
-    auxiliary_data: auxiliary_data.Auxiliary
-    auxiliary_router: router.Router
-    transport_process: process.Process
+    auxiliary_data: auxiliary_data.AuxiliaryData
+    #auxiliary_router: router.Router
+    #transport_process: process.Process --> steht doch in dem auxiliary_data object
+
     current_location: product.Location = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
-    requested: events.Event = Field(default=events.Event(env), init=False)
-    ready_to_use: events.Event = Field(default=events.Event(env), init=False)
+    requested: events.Event = Field(default=None, init=False)
+    ready_to_use: events.Event = Field(default=None, init=False)
 
     class Config:
         arbitrary_types_allowed = True
@@ -89,3 +90,6 @@ class Auxiliary(BaseModel):
         # important to check:
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
+
+#from prodsys.models import auxiliary_data
+#auxiliary_data.AuxiliaryData.update_forward_refs()

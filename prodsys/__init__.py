@@ -7,6 +7,7 @@ from prodsys.models import (
     processes_data,
     product_data,
     queue_data,
+    auxiliary_data,
     resource_data,
     scenario_data,
     sink_data,
