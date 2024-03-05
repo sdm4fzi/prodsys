@@ -36,6 +36,9 @@ class SinkData(CoreAsset):
     product_type: str
     input_queues: Optional[List[str]]
 
+    def __hash__(self):
+        return hash((tuple(self.location), self.product_type, tuple(self.input_queues)))
+    
     class Config:
         schema_extra = {
             "example": {
