@@ -97,6 +97,9 @@ class BreakDownStateData(StateData):
     type: Literal[StateTypeEnum.BreakDownState]
     repair_time_model_id: str
 
+    def __hash__(self):
+        return hash((self.time_model_id, self.repair_time_model_id))
+    
     class Config:
         schema_extra = {
             "example": {

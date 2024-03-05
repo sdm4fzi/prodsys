@@ -55,6 +55,9 @@ class SequentialTimeModelData(CoreAsset):
 
     sequence: List[float]
 
+    def __hash__(self):
+        return hash((tuple(self.sequence)))
+    
     class Config:
         schema_extra = {
             "example": {
@@ -112,7 +115,9 @@ class FunctionTimeModelData(CoreAsset):
             }
         }
 
-
+    def __hash__(self):
+        return hash((self.distribution_function, self.location, self.scale))
+    
 class ManhattanDistanceTimeModelData(CoreAsset):
     """
     Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.
@@ -138,6 +143,9 @@ class ManhattanDistanceTimeModelData(CoreAsset):
     speed: float
     reaction_time: float
 
+    def __hash__(self):
+        return hash((self.speed, self.reaction_time))
+    
     class Config:
         schema_extra = {
             "example": {

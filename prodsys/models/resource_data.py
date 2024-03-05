@@ -94,6 +94,9 @@ class ResourceData(CoreAsset):
         return v
 
 
+    def __hash__(self):
+        return hash((self.capacity, tuple(self.location), self.controller, self.control_policy, tuple(sorted(self.process_ids)), tuple(self.process_capacities), tuple(sorted(self.state_ids))))
+
 class ProductionResourceData(ResourceData):
     """
     Class that represents production resource data.
