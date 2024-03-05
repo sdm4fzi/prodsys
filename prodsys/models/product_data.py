@@ -77,6 +77,9 @@ class ProductData(CoreAsset):
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     transport_process: str
 
+    def __hash__(self):
+        return hash((self.product_type, tuple(self.processes), self.transport_process))
+
     @root_validator(pre=True)
     def check_processes(cls, values):
         if "product_type" in values and values["product_type"]:

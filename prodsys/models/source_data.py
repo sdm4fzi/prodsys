@@ -52,6 +52,9 @@ class SourceData(CoreAsset):
     routing_heuristic: RoutingHeuristic
     output_queues: Optional[List[str]]
 
+    def __hash__(self):
+        return hash((tuple(self.location), self.product_type, self.time_model_id, self.router, self.routing_heuristic, tuple(self.output_queues)))
+    
     class Config:
         schema_extra = {
             "example": {

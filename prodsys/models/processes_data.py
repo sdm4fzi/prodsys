@@ -42,6 +42,9 @@ class ProcessData(CoreAsset):
         time_model_id (str): ID of the time model of the process.
     """
 
+    def __hash__(self):
+        return hash(tuple(self.time_model_id))
+
     time_model_id: str
 
     class Config:
