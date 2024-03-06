@@ -99,8 +99,8 @@ class ProductionSystem(core.ExpressObject):
             )
         )
         processes = remove_duplicate_items(processes)
-        storages = list(util.flatten_object([auxiliary.storages for auxiliary in auxiliaries ]))
-        #TODO: Kann ich wahrscheinlich rausnehmen wenn ich das nicht in der Facotry brauche oder!?
+        storages = list(util.flatten_object(storage for storage in [auxiliary.storages for auxiliary in auxiliaries ]))
+        storages = remove_duplicate_items(storages)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
         )

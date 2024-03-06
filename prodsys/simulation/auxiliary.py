@@ -15,17 +15,19 @@ from simpy import events
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from prodsys.simulation import process, product
+    from prodsys.simulation import product, resources, sink, source
 
 from prodsys.simulation import (
     request,
+    process,
+    #resources,
     #router,
     sim,
+    #sink,
+    #source,
     #product
 )
-from prodsys.models import auxiliary_data
-
-
+from prodsys.models import auxiliary_data, queue_data
 
 class Auxiliary(BaseModel):
     """
@@ -38,10 +40,11 @@ class Auxiliary(BaseModel):
 
     env: sim.Environment
     auxiliary_data: auxiliary_data.AuxiliaryData
+    transport_process: process.Process
+    storage: queue_data.StorageData
     #auxiliary_router: router.Router
-    #transport_process: process.Process --> steht doch in dem auxiliary_data object
 
-    current_location: product.Location = Field(default=None, init=False)
+    current_location: Union[product.Location, queue_data.StorageData] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
     ready_to_use: events.Event = Field(default=None, init=False)
@@ -79,8 +82,13 @@ class Auxiliary(BaseModel):
             # 1. wait until requested by a process (use logic from controller loops here)
             yield self.requested
             self.requested = events.Event(self.env)
+            #
             # 3. transport to product based on request to route transport process to transport auxiliary to product 
             # (based on current location axuiliary and product location)
+
+            #TODO: Add the router attribute in the auxiliary object
+            yield self.env.process(self.auxiliary_router.route_request(transport_request))
+            yield self.env.process(self.request_process(transport_request))
             # 4. yield until transport process is finished
             # 5. update location of auxiliary to product location, trigger ready_to_use event to conitnue processing of the product
             self.ready_to_use.succeed()
@@ -91,5 +99,5 @@ class Auxiliary(BaseModel):
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
 
-#from prodsys.models import auxiliary_data
-#auxiliary_data.AuxiliaryData.update_forward_refs()
+#from prodsys.simulation import product
+#Auxiliary.update_forward_refs()

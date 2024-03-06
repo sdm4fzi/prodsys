@@ -135,6 +135,7 @@ class Runner(BaseModel):
 
             self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
                 env=self.env,
+                process_factory=self.process_factory,
             )
             self.auxiliary_factory.create_auxiliary(self.adapter)
 
@@ -147,7 +148,9 @@ class Runner(BaseModel):
             self.resource_factory.create_resources(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env, process_factory=self.process_factory
+                env=self.env, 
+                process_factory=self.process_factory,
+                auxiliary_factory=self.auxiliary_factory,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
