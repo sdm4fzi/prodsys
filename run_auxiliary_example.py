@@ -12,11 +12,14 @@ machine = psx.ProductionResource([p1], [5,0], 1, ID="machine")
 
 transport = psx.TransportResource([tp], [0,0], 1, ID="transport")
 
-storage1 = psx.Storage(ID="storage1", location=[0,0], capacity=10)
+storage1 = psx.Storage(ID="storage1", location=[0,0], capacity=30)
+storage2 = psx.Storage(ID="storage2", location=[10,0], capacity=20)
 
-auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, storages=[storage1], initial_quantity_in_stores=[10], relevant_processes=[p1], relevant_transport_processes=[tp])
+# One auxiliary = pallets, specific tools, etc.
+auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, storages=[storage1,storage2], initial_quantity_in_stores=[10,10], relevant_processes=[], relevant_transport_processes=[tp])
+auxiliary2 = psx.Auxiliary(ID="auxiliary2", transport_process=tp, storages=[storage1], initial_quantity_in_stores=[5], relevant_processes=[p1], relevant_transport_processes=[])
 
-product1 = psx.Product(processes= [p1], transport_process= tp, ID = "product1", auxiliaries= [auxiliary1])
+product1 = psx.Product(processes= [p1], transport_process= tp, ID = "product1", auxiliaries= [auxiliary1, auxiliary2])
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 

@@ -14,6 +14,7 @@ import numpy as np
 from simpy import events
 
 from prodsys.simulation import (
+    auxiliary,
     process,
     request,
     router,
@@ -158,6 +159,8 @@ class Product(BaseModel):
     transport_process: process.TransportProcess
     product_router: router.Router
 
+    auxiliaries: Optional[List[auxiliary.Auxiliary]] = Field(default=None, init=False)
+
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
     current_location: Location = Field(default=None, init=False)
@@ -187,13 +190,33 @@ class Product(BaseModel):
         """
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
-        while self.next_prodution_process:
+        while self.next_prodution_process:           
             # TODO: add here check for potentially needed auxilaries for production processes or transport processes
             # if auxiliaries are needed and not available yet for the upcoming steps, request them to be transported to here from the storage by a transport process
             # yield on all ready_to_use events of the auxilaries with simpy AllOff
             production_request = self.get_request_for_production_process()
             yield self.env.process(self.product_router.route_request(production_request))
             transport_request = self.get_request_for_transport_process(production_request)
+
+            #new
+            if self.auxiliaries:
+                aux_list = self.auxiliaries
+                for aux in self.auxiliaries:
+                    if aux.current_product is None:
+                        if (self.next_prodution_process.process_data.ID in aux.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in aux.auxiliary_data.relevant_transport_processes):
+                            if aux.current_location is None:
+                                aux.current_location = aux.storage
+                            aux.requested = request.TransportResquest(
+                                process = aux.transport_process,
+                                product = self, 
+                                origin = aux.current_location,
+                                target = self.current_location
+                            )
+                            #TODO: Trigger ready_to_use event for True # triggered or succeed?
+                            aux.ready_to_use.triggered
+                # eigentlich muss es ja nur einen geben also AnyOf
+                yield events.AllOf(aux.env, aux_list.ready_to_use)
+
             yield self.env.process(self.product_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
