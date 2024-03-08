@@ -198,24 +198,25 @@ class Product(BaseModel):
             yield self.env.process(self.product_router.route_request(production_request))
             transport_request = self.get_request_for_transport_process(production_request)
 
-            #new
+            #new # do i need to do the request for all auxiliaries?
             if self.auxiliaries:
-                aux_list = self.auxiliaries
-                for aux in self.auxiliaries:
-                    if aux.current_product is None:
-                        if (self.next_prodution_process.process_data.ID in aux.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in aux.auxiliary_data.relevant_transport_processes):
-                            if aux.current_location is None:
-                                aux.current_location = aux.storage
+                aux_list = []
+                for auxiliary in self.auxiliaries:
+                    if auxiliary.current_product is None:
+                        if (self.next_prodution_process.process_data.ID in auxiliary.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in auxiliary.auxiliary_data.relevant_transport_processes):
+                            if auxiliary.current_location is None:
+                                auxiliary.current_location = auxiliary.storage
                             aux.requested = request.TransportResquest(
-                                process = aux.transport_process,
-                                product = self, 
-                                origin = aux.current_location,
+                                process = auxiliary.transport_process,
+                                product = auxiliary, 
+                                origin = auxiliary.current_location,
                                 target = self.current_location
                             )
-                            #TODO: Trigger ready_to_use event for True # triggered or succeed?
-                            aux.ready_to_use.triggered
-                # eigentlich muss es ja nur einen geben also AnyOf
-                yield events.AllOf(aux.env, aux_list.ready_to_use)
+                            auxiliary.request(request)
+                            auxiliary.ready_to_use = events.Event(self.env)
+                            auxiliary.ready_to_use.succeed() # trigger
+                            aux_list.append(auxiliary.ready_to_use)
+                yield events.AllOf(self.env, aux_list)
 
             yield self.env.process(self.product_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))

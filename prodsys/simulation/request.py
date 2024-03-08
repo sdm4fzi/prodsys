@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from prodsys.simulation import process as prodsys_process
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, resources
+    from prodsys.simulation import product, process, resources, auxiliary
 
 
 class Request:
@@ -81,7 +81,7 @@ class TransportResquest(Request):
     def __init__(
         self,
         process: process.TransportProcess,
-        product: product.Product,
+        product: Union[product.Product, auxiliary.Auxiliary],
         origin: product.Location,
         target: product.Location,
     ):
