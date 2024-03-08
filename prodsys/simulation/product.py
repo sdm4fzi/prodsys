@@ -206,13 +206,13 @@ class Product(BaseModel):
                         if (self.next_prodution_process.process_data.ID in auxiliary.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in auxiliary.auxiliary_data.relevant_transport_processes):
                             if auxiliary.current_location is None:
                                 auxiliary.current_location = auxiliary.storage
-                            aux.requested = request.TransportResquest(
+                            req = request.TransportResquest(
                                 process = auxiliary.transport_process,
                                 product = auxiliary, 
                                 origin = auxiliary.current_location,
                                 target = self.current_location
                             )
-                            auxiliary.request(request)
+                            auxiliary.request(req)
                             auxiliary.ready_to_use = events.Event(self.env)
                             auxiliary.ready_to_use.succeed() # trigger
                             aux_list.append(auxiliary.ready_to_use)
