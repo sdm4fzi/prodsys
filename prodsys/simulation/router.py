@@ -195,7 +195,8 @@ def shortest_queue_routing_heuristic(
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
     if any(not isinstance(resource, resources.ProductionResource) for resource in possible_resources):
-        random_routing_heuristic(possible_resources)
+        np.random.shuffle(possible_resources)
+        possible_resources.sort(key=lambda x: len(x.get_controller().requests))
         return
     np.random.shuffle(possible_resources)
     possible_resources.sort(key=lambda x: sum([len(q.items) for q in x.input_queues]))
