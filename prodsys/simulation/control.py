@@ -558,7 +558,18 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
             x.origin.get_location(), x.target.get_location()
         )
     )
-
+def Nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+    """
+    Sort the requests according to nearest origin without considering the target.
+    Args:
+        requests (List[request.TransportResquest]): The list of requests.
+    """
+    requests.sort(
+        key=lambda x: (
+            x.process.get_expected_process_time(
+                x.resource.data.location, x.origin.get_location()),
+                - x.target.get_output_queue_length())
+    )
 
 def agent_control_policy(
     gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request.Request]
