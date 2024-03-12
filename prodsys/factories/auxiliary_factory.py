@@ -17,6 +17,7 @@ class AuxiliaryFactory(BaseModel):
 
         env: sim.Environment
         process_factory: process_factory.ProcessFactory
+        storage_factory: queue_factory.StorageFactory
         auxiliaries: List[auxiliary.Auxiliary] = []
         class Config:
                 arbitrary_types_allowed = True
@@ -35,6 +36,7 @@ class AuxiliaryFactory(BaseModel):
                 values.update({"env": self.env, "auxiliary_data": auxiliary_data})
                 transport_process = self.process_factory.get_process(auxiliary_data.transport_process)
                 values.update({"transport_process": transport_process})
+                storage = self.storage_factory.get_storage(storage.ID)
                 values.update({"storage": storage})
                 #values.update({"auxiliary_router": None})
                 auxiliary_object = parse_obj_as(auxiliary.Auxiliary, values)

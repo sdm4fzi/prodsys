@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
 
 from prodsys.simulation import sim, store
 
@@ -67,3 +67,58 @@ class QueueFactory(BaseModel):
         """
         return [q for q in self.queues if q.queue_data.ID in IDs]
     
+
+
+class StorageFactory(BaseModel):
+    """
+    Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.models` queue objects.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+
+
+    Returns:
+        _type_: _description_
+    """
+    env: sim.Environment
+
+    storages: List[store.Queue] = []
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def create_storages(self, adapter: adapter.ProductionSystemAdapter):
+        """
+        Creates queue objects based on the given adapter.
+
+        Args:
+            adapter (adapter.ProductionSystemAdapter): _description_
+        """
+        for storage_data in adapter.storage_data:
+            self.add_storage(storage_data)
+
+    def add_storage(self, storage_data: queue_data.StorageData):
+        values = {}
+        values.update({"env": self.env, "storage_data": storage_data})
+        storage_object = parse_obj_as(store.Storage, values)
+
+        self.storages.append(storage_object)
+    
+
+    def get_storage(self, ID: str) -> Optional[store.Storage]:
+        """
+        Returns a process object based on the given ID.
+
+        Args:
+            ID (str): ID of the process object.
+
+        Raises:
+            ValueError: If the process object is not found.
+
+        Returns:
+            Optional[process.PROCESS_UNION]: Process object based on the given ID.
+        """
+        pr = [pr for pr in self.storages if pr.storage_data.ID in ID]
+        if not pr:
+            raise ValueError(f"Process with ID {ID} not found")
+        return pr.pop()

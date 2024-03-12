@@ -97,6 +97,7 @@ class Runner(BaseModel):
     state_factory: state_factory.StateFactory = Field(init=False, default=None)
     process_factory: process_factory.ProcessFactory = Field(init=False, default=None)
     queue_factory: queue_factory.QueueFactory = Field(init=False, default=None)
+    storage_factory: queue_factory.StorageFactory = Field(init=False, default=None)
     auxiliary_factory: auxiliary_factory.AuxiliaryFactory = Field(init=False, default=None)
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
@@ -133,7 +134,9 @@ class Runner(BaseModel):
 
             self.queue_factory = queue_factory.QueueFactory(env=self.env)
             self.queue_factory.create_queues(self.adapter)
-            # create the storage factory
+            
+            self.storage_factory = queue_factory.StorageFactory(env=self.env)
+            self.storage_factory.create_storages(self.adapter)
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
@@ -146,7 +149,7 @@ class Runner(BaseModel):
             self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
                 env=self.env,
                 process_factory=self.process_factory,
-                #add storage_factory
+                storage_factory = self.storage_factory,
             )
 
             self.auxiliary_factory.create_auxiliary(self.adapter)
@@ -169,6 +172,7 @@ class Runner(BaseModel):
             self.auxiliary_factory = auxiliary_factory_2.AuxiliaryFactory_2(
                 env=self.env,
                 process_factory=self.process_factory,
+                storage_factory=self.storage_factory,
                 resource_factory=self.resource_factory,
                 sink_factory= self.sink_factory
             )
