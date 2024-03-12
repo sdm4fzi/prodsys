@@ -160,7 +160,10 @@ class Auxiliary(BaseModel):
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
     ready_to_use: events.Event = Field(default=None, init=False)
+    finished_process: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
+
+
     class Config:
         arbitrary_types_allowed = True
             
@@ -189,7 +192,7 @@ class Auxiliary(BaseModel):
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
     def process_auxiliary(self, transport_request: request.TransportResquest):
-        #self.finished_process = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "event": f"Start processing of auxiliary component"})
         while True:
             yield self.requested # why is it jumping out here?
@@ -198,7 +201,7 @@ class Auxiliary(BaseModel):
             yield self.env.process(self.auxiliary_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
 
-            #yield self.finished_process
+            yield self.finished_process
             # 5. update location of auxiliary to product location, trigger ready_to_use event to conitnue processing of the product
             self.ready_to_use.succeed()
             # 6. yield until product is finished processing (maybe use also a release event....) -> remove auxiliary from product
@@ -222,7 +225,7 @@ class Auxiliary(BaseModel):
         self.env.request_process_of_resource(
             request=processing_request
         )
-        #yield self.finished_process
+        yield self.finished_process
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
         #TODO: Check here how i can do the logging
         self.auxiliary_info.log_end_process(
@@ -231,7 +234,7 @@ class Auxiliary(BaseModel):
             event_time=self.env.now,
             state_type=type_,
         )
-        #self.finished_process = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
 
 # from prodsys.simulation import product
 # Auxiliary.update_forward_refs()
