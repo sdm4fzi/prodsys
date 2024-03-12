@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import request, sim, state
+from prodsys.simulation import request, sim, state, auxiliary
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink
@@ -67,7 +67,10 @@ class Controller(ABC, BaseModel):
             process_request (request.Request): The request to be processed.
         """
         self.requests.append(process_request)
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
+        if isinstance(process_request.product, auxiliary.Auxiliary):
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.auxiliary_data.ID}"})
+        else:
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
         if not self.requested.triggered:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event"})
             self.requested.succeed()

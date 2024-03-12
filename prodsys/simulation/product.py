@@ -212,8 +212,6 @@ class Product(BaseModel):
                                 origin = auxiliary.current_location,
                                 target = self.current_location
                             )
-                            yield self.env.process(self.product_router.route_request(req))
-                            yield self.env.process(self.request_process(req))
                             auxiliary.requested = events.Event(self.env)
                             auxiliary.request(req)
                             yield self.env.process(auxiliary.process_auxiliary(req))

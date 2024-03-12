@@ -32,6 +32,114 @@ from prodsys.simulation import (
 )
 from prodsys.models import auxiliary_data, queue_data
 
+class AuxiliaryInfo(BaseModel, extra=Extra.allow):
+    """
+    Class that represents information of the current state of a product.
+
+    Args:
+        resource_ID (str): ID of the resource that the product is currently at.
+        state_ID (str): ID of the state that the product is currently at.
+        event_time (float): Time of the event.
+        activity (state.StateEnum): Activity of the product.
+        product_ID (str): ID of the product.
+        state_type (state.StateTypeEnum): Type of the state.
+    """
+
+    resource_ID: str = Field(init=False, default=None)
+    state_ID: str = Field(init=False, default=None)
+    event_time: float = Field(init=False, default=None)
+    activity: state.StateEnum = Field(init=False, default=None)
+    product_ID: str = Field(init=False, default=None)
+    state_type: state.StateTypeEnum = Field(init=False, default=None)
+
+    def log_finish_auxiliary(
+        self,
+        resource: Union[resources.Resource, sink.Sink, source.Source],
+        _product: Auxiliary,
+        event_time: float,
+    ):
+        """
+        Logs the finish of a product.
+
+        Args:
+            resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
+            _product (Product): Product that is finished.
+            event_time (float): Time of the event.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.auxiliary_data.ID
+        self.activity = state.StateEnum.finished_product
+        self.state_type = state.StateTypeEnum.sink
+
+    def log_create_auxiliary(
+        self,
+        resource: Union[resources.Resource, sink.Sink, source.Source],
+        _product: Auxiliary,
+        event_time: float,
+    ) -> None:
+        """
+        Logs the creation of a product.
+
+        Args:
+            resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
+            _product (Product): Product that is created.
+            event_time (float): Time of the event.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.auxiliary_data.ID
+        self.activity = state.StateEnum.created_product
+        self.state_type = state.StateTypeEnum.source
+
+    def log_start_process(
+        self,
+        resource: resources.Resource,
+        _product: Auxiliary,
+        event_time: float,
+        state_type: state.StateTypeEnum,
+    ) -> None:
+        """
+        Logs the start of a process.
+
+        Args:
+            resource (resources.Resource): Resource that the product is processed at.
+            _product (Product): Product that is processed.
+            event_time (float): Time of the event.
+            state_type (state.StateTypeEnum): Type of the state.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.auxiliary_data.ID
+        self.activity = state.StateEnum.start_state
+        self.state_type = state_type
+
+    def log_end_process(
+        self,
+        resource: resources.Resource,
+        _product: Auxiliary,
+        event_time: float,
+        state_type: state.StateTypeEnum,
+    ) -> None:
+        """
+        Logs the end of a process.
+
+        Args:
+            resource (resources.Resource): Resource that the product is processed at.
+            _product (Product): Product that is processed.
+            event_time (float): Time of the event.
+            state_type (state.StateTypeEnum): Type of the state.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.auxiliary_data.ID
+        self.activity = state.StateEnum.end_state
+        self.state_type = state_type
+
 class Auxiliary(BaseModel):
     """
     Class that represents a product in the discrete event simulation. For easier instantion of the class, use the ProductFactory at prodsys.factories.product_factory.
@@ -52,15 +160,9 @@ class Auxiliary(BaseModel):
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
     ready_to_use: events.Event = Field(default=None, init=False)
-
+    auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
     class Config:
         arbitrary_types_allowed = True
-    
-    def start_auxiliary(self):
-        auxiliary = self.auxiliary_factory.create_auxiliary(
-            self.auxiliary_data, self.storage, 
-        )
-        self.env.process()
             
 
     def request(self, process_request: request.TransportResquest) -> None:
@@ -71,9 +173,9 @@ class Auxiliary(BaseModel):
             process_request (request.Request): The request to be processed.
         """
         self.current_product = process_request.product
-        logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": f"Got requested by {process_request.product.auxiliary_data.ID}"})
+        #logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": f"Got requested by {process_request.product.auxiliary_data.ID}"})
         if not self.requested.triggered:
-            logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": "Triggered requested event"})
+            #logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": "Triggered requested event"})
             self.requested.succeed()
 
     def update_location(self, location: product.Location):
@@ -87,14 +189,16 @@ class Auxiliary(BaseModel):
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
     def process_auxiliary(self, transport_request: request.TransportResquest):
-        self.finished_process = events.Event(self.env)
+        #self.finished_process = events.Event(self.env)
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "event": f"Start processing of auxiliary component"})
         while True:
             yield self.requested # why is it jumping out here?
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
+            yield self.env.process(self.auxiliary_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
-            yield self.finished_process
+
+            #yield self.finished_process
             # 5. update location of auxiliary to product location, trigger ready_to_use event to conitnue processing of the product
             self.ready_to_use.succeed()
             # 6. yield until product is finished processing (maybe use also a release event....) -> remove auxiliary from product
@@ -118,15 +222,16 @@ class Auxiliary(BaseModel):
         self.env.request_process_of_resource(
             request=processing_request
         )
-        yield self.finished_process
+        #yield self.finished_process
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
         #TODO: Check here how i can do the logging
-        self.product_info.log_end_process(
+        self.auxiliary_info.log_end_process(
             resource=processing_request.resource,
             _product=self,
             event_time=self.env.now,
             state_type=type_,
         )
-        self.finished_process = events.Event(self.env)
-#from prodsys.simulation import product
-#Auxiliary.update_forward_refs()
+        #self.finished_process = events.Event(self.env)
+
+# from prodsys.simulation import product
+# Auxiliary.update_forward_refs()
