@@ -1,4 +1,6 @@
 from __future__ import annotations
+from typing import List
+from pydantic import BaseModel
 
 
 from simpy.resources import store
@@ -63,5 +65,21 @@ class Queue(store.FilterStore):
         self._pending_put -= 1
 
 
+class Storage(BaseModel):
+
+    env: sim.Environment
+    storage_data: queue_data.StorageData
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the resource.
+
+        Returns:
+            List[float]: The location of the resource. Has to have length 2.
+        """
+        return self.storage_data.location
 
 

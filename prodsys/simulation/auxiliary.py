@@ -26,6 +26,7 @@ from prodsys.simulation import (
     #router,
     sim,
     state,
+    store,
     #sink,
     #source,
     #product
@@ -152,11 +153,11 @@ class Auxiliary(BaseModel):
     env: sim.Environment
     auxiliary_data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
-    storage: queue_data.StorageData
+    storage: store.Storage
     
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
-    current_location: Union[product.Location, queue_data.StorageData] = Field(default=None, init=False)
+    current_location: Union[product.Location, store.Storage] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
     ready_to_use: events.Event = Field(default=None, init=False)

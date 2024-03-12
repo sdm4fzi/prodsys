@@ -17,6 +17,7 @@ class AuxiliaryFactory_2(BaseModel):
 
         env: sim.Environment
         process_factory: process_factory.ProcessFactory
+        storage_factory: queue_factory.StorageFactory
         resource_factory: resource_factory.ResourceFactory
         sink_factory: sink_factory.SinkFactory
         auxiliaries: List[auxiliary.Auxiliary] = []
@@ -37,6 +38,7 @@ class AuxiliaryFactory_2(BaseModel):
                 values.update({"env": self.env, "auxiliary_data": auxiliary_data})
                 transport_process = self.process_factory.get_process(auxiliary_data.transport_process)
                 values.update({"transport_process": transport_process})
+                storage = self.storage_factory.get_storage(storage.ID)
                 values.update({"storage": storage})
                 router = self.get_router(source_data.RoutingHeuristic.random) # Add the routing_heuristic in auxiliary_data, like in source_data
                 auxiliary_object = parse_obj_as(auxiliary.Auxiliary, values)

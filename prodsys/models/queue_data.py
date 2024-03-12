@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Optional, Union
 
 from prodsys.models.core_asset import CoreAsset
 from pydantic import conlist, validator
