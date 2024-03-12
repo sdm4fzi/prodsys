@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List, Generator, Optional, Union
+from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
 from pydantic import BaseModel, Field, Extra
 import random
