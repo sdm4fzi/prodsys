@@ -5,6 +5,7 @@ from typing import Union, List, Dict
 from pydantic import root_validator
 
 from prodsys.models.core_asset import CoreAsset
+from prodsys.models import source_data
 
 
 class AuxiliaryData(CoreAsset):
@@ -23,7 +24,6 @@ class AuxiliaryData(CoreAsset):
         relevant_processes (List[str], optional): List of relevant processes where the auxiliary component is needed. Defaults to [], meaning all processes.
         relevant_transport_processes (List[str], optional): List of relevant transport processes where the auxiliary component is needed. Defaults to [], meaning all processes.
     """
-    #router: str
     transport_process: str
     storages: List[str]
     initial_quantity_in_stores: List[int]

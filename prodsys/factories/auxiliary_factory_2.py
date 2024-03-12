@@ -2,21 +2,23 @@
 from typing import TYPE_CHECKING, Generator, List
 from pydantic import BaseModel, Field, parse_obj_as
 from prodsys.adapters import adapter
-from prodsys.factories import process_factory, queue_factory
+from prodsys.factories import process_factory, queue_factory, resource_factory, sink_factory
 from prodsys.models import queue_data
 
-from prodsys.simulation import sim
+from prodsys.simulation import sim, router
 from prodsys.simulation import auxiliary
 
-if TYPE_CHECKING:
-        from prodsys.simulation import router
-        from prodsys.factories import resource_factory, sink_factory
+# if TYPE_CHECKING:
+#         from prodsys.simulation import router
+#         from prodsys.factories import resource_factory, sink_factory
 
-
-class AuxiliaryFactory(BaseModel):
+from prodsys.models import source_data
+class AuxiliaryFactory_2(BaseModel):
 
         env: sim.Environment
         process_factory: process_factory.ProcessFactory
+        resource_factory: resource_factory.ResourceFactory
+        sink_factory: sink_factory.SinkFactory
         auxiliaries: List[auxiliary.Auxiliary] = []
         class Config:
                 arbitrary_types_allowed = True
@@ -36,14 +38,24 @@ class AuxiliaryFactory(BaseModel):
                 transport_process = self.process_factory.get_process(auxiliary_data.transport_process)
                 values.update({"transport_process": transport_process})
                 values.update({"storage": storage})
-                #values.update({"auxiliary_router": None})
+                router = self.get_router(source_data.RoutingHeuristic.random) # Add the routing_heuristic in auxiliary_data, like in source_data
                 auxiliary_object = parse_obj_as(auxiliary.Auxiliary, values)
+                auxiliary_object.auxiliary_router = router
                 self.auxiliaries.append(auxiliary_object)
 
 
         def get_auxiliary(self, ID: str) -> auxiliary.Auxiliary:
 
                 return [s for s in self.auxiliaries if s.auxiliary_data.ID == ID].pop()
+                
+
+        def get_router(self, routing_heuristic: str):
+                return router.Router(
+                self.resource_factory,
+                self.sink_factory,
+                router.ROUTING_HEURISTIC[routing_heuristic],
+                )
+        
 
 # from prodsys.factories import resource_factory, sink_factory
 # AuxiliaryFactory.update_forward_refs()

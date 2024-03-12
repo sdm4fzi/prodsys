@@ -504,6 +504,7 @@ class TransportController(Controller):
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
+        #TODO: Change here the logging for the auxiliary
         product.product_info.log_start_process(
             self.resource,
             product,

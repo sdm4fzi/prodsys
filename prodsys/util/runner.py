@@ -17,6 +17,7 @@ from prodsys.factories import (
     process_factory,
     queue_factory,
     auxiliary_factory,
+    auxiliary_factory_2,
     resource_factory,
     product_factory,
     sink_factory,
@@ -132,12 +133,7 @@ class Runner(BaseModel):
 
             self.queue_factory = queue_factory.QueueFactory(env=self.env)
             self.queue_factory.create_queues(self.adapter)
-
-            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
-                env=self.env,
-                process_factory=self.process_factory,
-            )
-            self.auxiliary_factory.create_auxiliary(self.adapter)
+            # create the storage factory
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
@@ -146,6 +142,37 @@ class Runner(BaseModel):
                 queue_factory=self.queue_factory,
             )
             self.resource_factory.create_resources(self.adapter)
+
+            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
+                env=self.env,
+                process_factory=self.process_factory,
+                #add storage_factory
+            )
+
+            self.auxiliary_factory.create_auxiliary(self.adapter)
+
+            self.product_factory = product_factory.ProductFactory(
+                env=self.env, 
+                process_factory=self.process_factory,
+                auxiliary_factory=self.auxiliary_factory,
+            )
+
+            self.sink_factory = sink_factory.SinkFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                queue_factory=self.queue_factory,
+            )
+
+            self.sink_factory.create_sinks(self.adapter)
+
+            # Zweite Auxiliary Factory erstellen
+            self.auxiliary_factory = auxiliary_factory_2.AuxiliaryFactory_2(
+                env=self.env,
+                process_factory=self.process_factory,
+                resource_factory=self.resource_factory,
+                sink_factory= self.sink_factory
+            )
+            self.auxiliary_factory.create_auxiliary(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 
