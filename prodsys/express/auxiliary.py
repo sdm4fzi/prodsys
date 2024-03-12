@@ -3,7 +3,7 @@ from pydantic.dataclasses import dataclass
 from typing import List, Optional, Union
 from pydantic import Field, conlist
 from prodsys.express import core, process
-from prodsys.models import auxiliary_data, queue_data
+from prodsys.models import auxiliary_data, queue_data, source_data
 import prodsys
 
 @dataclass
@@ -31,7 +31,6 @@ class Auxiliary(core.ExpressObject):
         storages: List[Storage]
         initial_quantity_in_stores: List[int]
         ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-        #router !?
         
 
         def to_model(self) -> auxiliary_data.AuxiliaryData:

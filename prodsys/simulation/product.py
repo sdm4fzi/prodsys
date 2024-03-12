@@ -212,10 +212,18 @@ class Product(BaseModel):
                                 origin = auxiliary.current_location,
                                 target = self.current_location
                             )
+                            yield self.env.process(self.product_router.route_request(req))
+                            yield self.env.process(self.request_process(req))
+                            auxiliary.requested = events.Event(self.env)
                             auxiliary.request(req)
+                            yield self.env.process(auxiliary.process_auxiliary(req))
+                            #yield auxiliary.requested
+
                             auxiliary.ready_to_use = events.Event(self.env)
                             auxiliary.ready_to_use.succeed() # trigger
                             aux_list.append(auxiliary.ready_to_use)
+
+                        #stop as soon as one auxilairy is free and fits
                 yield events.AllOf(self.env, aux_list)
 
             yield self.env.process(self.product_router.route_request(transport_request))
