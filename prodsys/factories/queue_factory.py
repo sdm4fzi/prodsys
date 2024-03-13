@@ -94,12 +94,12 @@ class StorageFactory(BaseModel):
         Args:
             adapter (adapter.ProductionSystemAdapter): _description_
         """
-        for storage_data in adapter.storage_data:
-            self.add_storage(storage_data)
+        for data in adapter.storage_data:
+            self.add_storage(data)
 
     def add_storage(self, storage_data: queue_data.StorageData):
         values = {}
-        values.update({"env": self.env, "storage_data": storage_data})
+        values.update({"env": self.env, "data": storage_data})
         storage_object = parse_obj_as(store.Storage, values)
 
         self.storages.append(storage_object)
@@ -118,7 +118,7 @@ class StorageFactory(BaseModel):
         Returns:
             Optional[process.PROCESS_UNION]: Process object based on the given ID.
         """
-        pr = [pr for pr in self.storages if pr.storage_data.ID in ID]
+        pr = [pr for pr in self.storages if pr.data.ID in ID]
         if not pr:
             raise ValueError(f"Process with ID {ID} not found")
         return pr.pop()
