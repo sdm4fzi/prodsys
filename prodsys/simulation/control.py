@@ -427,21 +427,20 @@ class TransportController(Controller):
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.auxiliary_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 else:
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
-                
                 possible_states = resource.get_processes(process)
                 while True:
-                    transport_state = resource.get_free_process(process)
-                    if transport_state is not None:
-                        break
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process"})
-                    yield events.AnyOf(
-                        self.env,
-                        [
-                            state.process
-                            for state in possible_states
-                            if state.process is not None and state.process.is_alive
-                        ],
-                    )
+                        transport_state = resource.get_free_process(process)
+                        if transport_state is not None:
+                            break
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process"})
+                        yield events.AnyOf(
+                            self.env,
+                            [
+                                state.process
+                                for state in possible_states
+                                if state.process is not None and state.process.is_alive
+                            ],
+                        )
                 if isinstance(product, auxiliary.Auxiliary):
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.auxiliary_data.ID} for transport"})
                 else:
@@ -452,15 +451,14 @@ class TransportController(Controller):
                 self.update_location(origin)
                 transport_state.process = None
 
-            # TODO: drive along nodes of path
-
-            eventss = self.get_next_product_for_process(origin, product)
             if isinstance(product, auxiliary.Auxiliary):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.auxiliary_data.ID} for transport"})
             else:
+                eventss = self.get_next_product_for_process(origin, product)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})            
-            yield events.AllOf(resource.env, eventss)
+                yield events.AllOf(resource.env, eventss)
             product.update_location(self.resource)
+
             possible_states = resource.get_processes(process)
             while True:
                 transport_state = resource.get_free_process(process)
@@ -484,15 +482,17 @@ class TransportController(Controller):
             )
             self.update_location(target)
             transport_state.process = None
+
             if not isinstance(product, auxiliary.Auxiliary):
                 eventss = self.put_product_to_input_queue(target, product)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
                 yield events.AllOf(resource.env, eventss)
             product.update_location(target)
-            if isinstance(target, resources.ProductionResource):
-                target.unreserve_input_queues()
-            if not resource.got_free.triggered:
-                resource.got_free.succeed()
+            if not isinstance(product, auxiliary.Auxiliary):
+                if isinstance(target, resources.ProductionResource):
+                    target.unreserve_input_queues()
+                if not resource.got_free.triggered:
+                    resource.got_free.succeed()
             product.finished_process.succeed()
             if isinstance(product, auxiliary.Auxiliary):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.auxiliary_data.ID}"})
@@ -516,7 +516,10 @@ class TransportController(Controller):
         """
         target_location = target.get_location()
         input_state.prepare_for_run()
-        input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+        if isinstance(product, auxiliary.Auxiliary):
+            input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        else:
+            input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         if self._current_location.data.ID is self.resource.data.ID:
             origin = None
         else:
@@ -526,13 +529,20 @@ class TransportController(Controller):
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
-        #TODO: Change here the logging for the auxiliary
-        product.product_info.log_start_process(
-            self.resource,
-            product,
-            self.env.now,
-            state.StateTypeEnum.transport,
-        )
+        if isinstance(product, auxiliary.Auxiliary):
+            product.auxiliary_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
+        else:
+            product.product_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
         input_state.process = self.env.process(
             input_state.process_state(target=target_location)  # type: ignore False
         )

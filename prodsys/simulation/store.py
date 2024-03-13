@@ -68,7 +68,7 @@ class Queue(store.FilterStore):
 class Storage(BaseModel):
 
     env: sim.Environment
-    storage_data: queue_data.StorageData
+    data: queue_data.StorageData
 
     class Config:
         arbitrary_types_allowed = True
@@ -80,6 +80,6 @@ class Storage(BaseModel):
         Returns:
             List[float]: The location of the resource. Has to have length 2.
         """
-        return self.storage_data.location
+        return self.data.location
 
 

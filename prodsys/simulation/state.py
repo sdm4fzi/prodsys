@@ -22,7 +22,7 @@ from prodsys.models.state_data import (
 )
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, resources
+    from prodsys.simulation import product, resources, auxiliary
 
 
 class StateEnum(str, Enum):
@@ -100,6 +100,17 @@ class StateInfo(BaseModel, extra=Extra.allow):
             state_type (StateTypeEnum): The type of the state.
         """
         self._product_ID = _product.product_data.ID
+        self._state_type = state_type
+
+    def log_auxiliary(self, _auxiliary: auxiliary.Auxiliary, state_type: StateTypeEnum):
+        """
+        Logs the product of a transport or production state.
+
+        Args:
+            _product (product.Product): The product.
+            state_type (StateTypeEnum): The type of the state.
+        """
+        self._product_ID = _auxiliary.auxiliary_data.ID
         self._state_type = state_type
 
     def log_start_state(
