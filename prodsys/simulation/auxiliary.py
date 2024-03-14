@@ -178,10 +178,9 @@ class Auxiliary(BaseModel):
             process_request (request.Request): The request to be processed.
         """
         self.current_product = process_request.product
-        #logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": f"Got requested by {process_request.product.auxiliary_data.ID}"})
         if not self.requested.triggered:
-            #logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": process_request.resource.data.ID, "event": "Triggered requested event"})
             self.requested.succeed()
+            print(self.requested)
 
     def update_location(self, location: product.Location):
         """
@@ -193,41 +192,38 @@ class Auxiliary(BaseModel):
         self.current_location = location
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
-    def process_auxiliary(self, transport_request: request.TransportResquest):
+    def get_auxiliary(self, transport_request: request.TransportResquest):
+
         self.finished_process = events.Event(self.env)
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "event": f"Start processing of auxiliary component"})
         while True:
-            # yield self.requested
-            # if self.requested.triggered:
-            #     self.requested = events.Event(self.env)
-            yield self.env.process(self.auxiliary_router.route_request(transport_request))
-            yield self.env.process(self.request_process(transport_request))
-
-            # yields here for the sink drive back
-            if self.ready_to_use is not None:
-                yield self.ready_to_use
-            
-            # only make the transport to the storage if at sink or it is a production process
-            # if isinstance(self.current_location, sink.Sink) or isinstance(self.current_process, process.ProductionProcess):   
-            #     storage_transport_request = request.TransportResquest(
-            #         process = self.transport_process,
-            #         product = self, 
-            #         origin = self.current_location,
-            #         target = self.storage
-            #     )
-            #     yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
-            #     yield self.env.process(self.request_process(storage_transport_request))
-
-            yield self.finished_process           
-            self.update_location(self.current_product.current_location)
-
-            # continue with the product process
-            self.event_three = events.Event(self.env)
+            yield self.requested
+            if self.requested.triggered:
+                self.requested = events.Event(self.env)
+                yield self.env.process(self.auxiliary_router.route_request(transport_request))
+                yield self.env.process(self.request_process(transport_request))
+        
+                self.update_location(self.current_product.current_location)
+                self.finished_process.succeed()
 
         # important to check:
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
     
+    def release_auxiliary(self):
+
+        self.ready_to_use = events.Event(self.env)
+        storage_transport_request = request.TransportResquest(
+                    process = self.transport_process,
+                    product = self, 
+                    origin = self.current_location,
+                    target = self.storage
+                )
+        yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
+        yield self.env.process(self.request_process(storage_transport_request))
+
+        self.update_location(self.storage)
+        self.ready_to_use.succeed()
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
