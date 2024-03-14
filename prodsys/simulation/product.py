@@ -190,53 +190,72 @@ class Product(BaseModel):
         """
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
-        while self.next_prodution_process:           
-            # TODO: add here check for potentially needed auxilaries for production processes or transport processes
-            # if auxiliaries are needed and not available yet for the upcoming steps, request them to be transported to here from the storage by a transport process
-            # yield on all ready_to_use events of the auxilaries with simpy AllOff
+        while self.next_prodution_process:  
+
+            if self.auxiliaries:
+                # get auxiliary + request
+                auxiliary, auxiliary_request = self.get_request_for_auxiliary()
+                if auxiliary_request is not None:
+                    yield self.env.process(auxiliary.process_auxiliary(auxiliary_request))
+
             production_request = self.get_request_for_production_process()
             yield self.env.process(self.product_router.route_request(production_request))
             transport_request = self.get_request_for_transport_process(production_request)
-
-            #new # do i need to do the request for all auxiliaries?
-            if self.auxiliaries:
-                aux_list = []
-                for auxiliary in self.auxiliaries:
-                    if auxiliary.current_product is None:
-                        if (self.next_prodution_process.process_data.ID in auxiliary.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in auxiliary.auxiliary_data.relevant_transport_processes):
-                            if auxiliary.current_location is None:
-                                auxiliary.current_location = auxiliary.storage
-                            req = request.TransportResquest(
-                                process = auxiliary.transport_process,
-                                product = auxiliary, 
-                                origin = auxiliary.current_location,
-                                target = self.current_location
-                            )
-                            auxiliary.requested = events.Event(self.env)
-                            auxiliary.request(req)
-                            yield self.env.process(auxiliary.process_auxiliary(req))
-                            #yield auxiliary.requested
-
-                            auxiliary.ready_to_use = events.Event(self.env)
-                            auxiliary.ready_to_use.succeed() # trigger
-                            aux_list.append(auxiliary.ready_to_use)
-
-                        #stop as soon as one auxilairy is free and fits
-                yield events.AllOf(self.env, aux_list)
-
             yield self.env.process(self.product_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
-            # TODO: release auxilaries if they are not needed anymore, so their process can continue
+
+            # set the product free
+            auxiliary.current_product = None
+            # update the location in the auxiliary
+            auxiliary.finished_process = events.Event(self.env)
+            yield auxiliary.event_three
             self.set_next_production_process()
+        
+
+        # block the auxiliary
+        auxiliary.current_product = self
+        # jump into the Auxiliary
+        auxiliary.ready_to_use = events.Event(self.env)
+
         transport_to_sink_request = self.get_request_for_transport_to_sink()
         yield self.env.process(self.product_router.route_request(transport_to_sink_request))
         yield self.env.process(self.request_process(transport_to_sink_request))
+        
+        auxiliary.current_product = None
+        auxiliary.finished_process = events.Event(self.env)
+        yield auxiliary.event_three
+
         self.product_info.log_finish_product(
             resource=self.current_location, _product=self, event_time=self.env.now
         )
         self.current_location.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
+
+
+    def get_request_for_auxiliary(self):
+
+        #TODO: falls es kein freie Auxiliary gibt dann muss eben gewartet werden
+        for auxiliary in self.auxiliaries:
+            if auxiliary.current_product is None:
+                if (self.next_prodution_process.process_data.ID in auxiliary.auxiliary_data.relevant_processes) or (self.transport_process.process_data.ID in auxiliary.auxiliary_data.relevant_transport_processes):
+                    
+                    auxiliary.current_product = self
+                    if auxiliary.current_location is None: # later do in factory
+                        auxiliary.current_location = auxiliary.storage
+                    # in case the auxiliary is already at the location, no transport needed
+                    if auxiliary.current_location.data.ID == self.product_data.ID:
+                        return auxiliary
+                    else:
+                        req = request.TransportResquest(
+                            process = auxiliary.transport_process,
+                            product = auxiliary, 
+                            origin = auxiliary.current_location,
+                            target = self.current_location
+                        )
+                        return auxiliary, req
+
+
 
     def get_request_for_production_process(self) -> request.Request:
         """

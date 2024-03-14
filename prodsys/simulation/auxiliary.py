@@ -162,6 +162,7 @@ class Auxiliary(BaseModel):
     requested: events.Event = Field(default=None, init=False)
     ready_to_use: events.Event = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
+    event_three: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
@@ -196,19 +197,33 @@ class Auxiliary(BaseModel):
         self.finished_process = events.Event(self.env)
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "event": f"Start processing of auxiliary component"})
         while True:
-            yield self.requested # why is it jumping out here?
-            if self.requested.triggered:
-                self.requested = events.Event(self.env)
+            # yield self.requested
+            # if self.requested.triggered:
+            #     self.requested = events.Event(self.env)
             yield self.env.process(self.auxiliary_router.route_request(transport_request))
             yield self.env.process(self.request_process(transport_request))
 
-            yield self.finished_process
-            # 5. update location of auxiliary to product location, trigger ready_to_use event to conitnue processing of the product
-            self.ready_to_use.succeed()
-            # 6. yield until product is finished processing (maybe use also a release event....) -> remove auxiliary from product
+            # yields here for the sink drive back
+            if self.ready_to_use is not None:
+                yield self.ready_to_use
             
-            # 7. update the location of the auxiliary
-            # 8. request transport to storage location
+            # only make the transport to the storage if at sink or it is a production process
+            # if isinstance(self.current_location, sink.Sink) or isinstance(self.current_process, process.ProductionProcess):   
+            #     storage_transport_request = request.TransportResquest(
+            #         process = self.transport_process,
+            #         product = self, 
+            #         origin = self.current_location,
+            #         target = self.storage
+            #     )
+            #     yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
+            #     yield self.env.process(self.request_process(storage_transport_request))
+
+            yield self.finished_process           
+            self.update_location(self.current_product.current_location)
+
+            # continue with the product process
+            self.event_three = events.Event(self.env)
+
         # important to check:
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
