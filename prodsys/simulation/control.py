@@ -483,7 +483,7 @@ class TransportController(Controller):
             self.update_location(target)
             transport_state.process = None
 
-            if not isinstance(product, auxiliary.Auxiliary):
+            if not isinstance(product, auxiliary.Auxiliary): #
                 eventss = self.put_product_to_input_queue(target, product)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
                 yield events.AllOf(resource.env, eventss)
@@ -491,9 +491,12 @@ class TransportController(Controller):
             if not isinstance(product, auxiliary.Auxiliary):
                 if isinstance(target, resources.ProductionResource):
                     target.unreserve_input_queues()
-                if not resource.got_free.triggered:
-                    resource.got_free.succeed()
-            product.finished_process.succeed()
+            if not resource.got_free.triggered:
+                resource.got_free.succeed()
+            if not isinstance(product, auxiliary.Auxiliary):
+                product.finished_process.succeed() # can be the auxiliary or product
+            else:
+                product.finished_auxiliary_process.succeed()
             if isinstance(product, auxiliary.Auxiliary):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.auxiliary_data.ID}"})
             else:

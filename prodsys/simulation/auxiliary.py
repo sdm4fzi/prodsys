@@ -160,9 +160,8 @@ class Auxiliary(BaseModel):
     current_location: Union[product.Location, store.Storage] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
-    ready_to_use: events.Event = Field(default=None, init=False)
-    finished_process: events.Event = Field(default=None, init=False)
-    event_three: events.Event = Field(default=None, init=False)
+    finished_auxiliary_process: events.Event = Field(default=None, init=False)
+    in_use: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
@@ -170,17 +169,18 @@ class Auxiliary(BaseModel):
         arbitrary_types_allowed = True
             
 
-    def request(self, process_request: request.TransportResquest) -> None:
-        """
-        Request the auxiliary component to be transported to a Location of a product.
+    # def request(self) -> None:
+    #     """
+    #     Request the auxiliary component to be transported to a Location of a product.
 
-        Args:
-            process_request (request.Request): The request to be processed.
-        """
-        self.current_product = process_request.product
-        if not self.requested.triggered:
-            self.requested.succeed()
-            print(self.requested)
+    #     Args:
+    #         process_request (request.Request): The request to be processed.
+    #     """
+    #     #allocate the product to the auxiliary
+    #     self.current_product = process_request.product
+    #     # if not self.requested.triggered:
+    #     #     self.requested.succeed()
+    #     #     print(self.requested)
 
     def update_location(self, location: product.Location):
         """
@@ -193,26 +193,20 @@ class Auxiliary(BaseModel):
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
     def get_auxiliary(self, transport_request: request.TransportResquest):
-
-        self.finished_process = events.Event(self.env)
-        logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "event": f"Start processing of auxiliary component"})
-        while True:
-            yield self.requested
-            if self.requested.triggered:
-                self.requested = events.Event(self.env)
-                yield self.env.process(self.auxiliary_router.route_request(transport_request))
-                yield self.env.process(self.request_process(transport_request))
-        
-                self.update_location(self.current_product.current_location)
-                self.finished_process.succeed()
-
+        self.finished_auxiliary_process = events.Event(self.env)
+        # yield self.requested
+        # if self.requested.triggered:
+        #     self.requested = events.Event(self.env)
+        yield self.env.process(self.auxiliary_router.route_request(transport_request))
+        yield self.env.process(self.request_process(transport_request))
+        # self.update_location(self.current_product.current_location)
+        # self.in_use.succeed()
         # important to check:
         # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
         # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
     
-    def release_auxiliary(self):
+    def release_auxiliary(self) -> Generator:
 
-        self.ready_to_use = events.Event(self.env)
         storage_transport_request = request.TransportResquest(
                     process = self.transport_process,
                     product = self, 
@@ -221,9 +215,8 @@ class Auxiliary(BaseModel):
                 )
         yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
         yield self.env.process(self.request_process(storage_transport_request))
-
+        self.current_product = None
         self.update_location(self.storage)
-        self.ready_to_use.succeed()
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
@@ -237,7 +230,7 @@ class Auxiliary(BaseModel):
         self.env.request_process_of_resource(
             request=processing_request
         )
-        yield self.finished_process
+        yield self.finished_auxiliary_process # jumpt in die control loop self requested
         logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
         #TODO: Check here how i can do the logging
         self.auxiliary_info.log_end_process(
@@ -246,7 +239,7 @@ class Auxiliary(BaseModel):
             event_time=self.env.now,
             state_type=type_,
         )
-        self.finished_process = events.Event(self.env)
+        self.finished_auxiliary_process = events.Event(self.env)
 
 # from prodsys.simulation import product
 # Auxiliary.update_forward_refs()
