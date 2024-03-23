@@ -68,7 +68,7 @@ class Controller(ABC, BaseModel):
         """
         self.requests.append(process_request)
         if isinstance(process_request.product, auxiliary.Auxiliary):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.auxiliary_data.ID}"})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.data.ID}"})
         else:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
         if not self.requested.triggered:
@@ -416,7 +416,7 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
         if isinstance(product, auxiliary.Auxiliary):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process for {product.auxiliary_data.ID}"})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process for {product.data.ID}"})
         else:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
         yield self.env.process(resource.setup(process))
@@ -424,7 +424,7 @@ class TransportController(Controller):
             yield req
             if origin.get_location() != resource.get_location():
                 if isinstance(product, auxiliary.Auxiliary):
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.auxiliary_data.ID} from {origin.data.ID} to {target.data.ID}"})
+                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.data.ID} from {origin.data.ID} to {target.data.ID}"})
                 else:
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
@@ -442,7 +442,7 @@ class TransportController(Controller):
                             ],
                         )
                 if isinstance(product, auxiliary.Auxiliary):
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.auxiliary_data.ID} for transport"})
+                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.data.ID} for transport"})
                 else:
                     logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
                 yield self.env.process(
@@ -452,7 +452,7 @@ class TransportController(Controller):
                 transport_state.process = None
 
             if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.auxiliary_data.ID} for transport"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.data.ID} for transport"})
             else:
                 eventss = self.get_next_product_for_process(origin, product)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})            
@@ -474,7 +474,7 @@ class TransportController(Controller):
                     ],
                 )
             if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.auxiliary_data.ID}"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.data.ID}"})
             else:
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
             yield self.env.process(
@@ -498,7 +498,7 @@ class TransportController(Controller):
             else:
                 product.finished_auxiliary_process.succeed()
             if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.auxiliary_data.ID}"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.data.ID}"})
             else:
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
 

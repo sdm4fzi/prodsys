@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from prodsys.simulation import router, product, resources, sink, source
+    from prodsys.factories import auxiliary_factory
 
 
 from prodsys.simulation import (
@@ -51,7 +52,7 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
     event_time: float = Field(init=False, default=None)
     activity: state.StateEnum = Field(init=False, default=None)
     product_ID: str = Field(init=False, default=None)
-    state_type: state.StateTypeEnum = Field(init=False, default=None)
+    state_type: state.StateTypeEnum = Field(init=False, default=None)            
 
     def log_finish_auxiliary(
         self,
@@ -70,7 +71,7 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.auxiliary_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.finished_product
         self.state_type = state.StateTypeEnum.sink
 
@@ -91,7 +92,7 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.auxiliary_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.created_product
         self.state_type = state.StateTypeEnum.source
 
@@ -114,7 +115,7 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.auxiliary_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.start_state
         self.state_type = state_type
 
@@ -137,7 +138,7 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.auxiliary_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
@@ -151,17 +152,17 @@ class Auxiliary(BaseModel):
     """
 
     env: sim.Environment
-    auxiliary_data: auxiliary_data.AuxiliaryData
+    data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
     storage: store.Storage
-    
+
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
     current_location: Union[product.Location, store.Storage] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     requested: events.Event = Field(default=None, init=False)
     finished_auxiliary_process: events.Event = Field(default=None, init=False)
-    in_use: events.Event = Field(default=None, init=False)
+    got_free: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
@@ -190,23 +191,15 @@ class Auxiliary(BaseModel):
             resource (Location): Location of the product object.
         """
         self.current_location = location
-        logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
     def get_auxiliary(self, transport_request: request.TransportResquest):
         self.finished_auxiliary_process = events.Event(self.env)
-        # yield self.requested
-        # if self.requested.triggered:
-        #     self.requested = events.Event(self.env)
         yield self.env.process(self.auxiliary_router.route_request(transport_request))
         yield self.env.process(self.request_process(transport_request))
-        # self.update_location(self.current_product.current_location)
-        # self.in_use.succeed()
-        # important to check:
-        # - if transported, auxiliaries should'nt be placed in queues, like with products -> change logic in controllers to make case distinction.
-        # - transport of auxiliaries (when not attached to products) should be logged similarly as products -> check if this is the case
-    
-    def release_auxiliary(self) -> Generator:
 
+    def release_auxiliary(self) -> Generator:
+        self.got_free = events.Event(self.env)
         storage_transport_request = request.TransportResquest(
                     process = self.transport_process,
                     product = self, 
@@ -216,6 +209,9 @@ class Auxiliary(BaseModel):
         yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
         yield self.env.process(self.request_process(storage_transport_request))
         self.current_product = None
+        if not self.got_free.triggered:
+            self.got_free.succeed()
+        yield self.env.timeout(0) # bringt das was?
         self.update_location(self.storage)
 
     def request_process(self, processing_request: request.Request) -> Generator:
@@ -226,12 +222,12 @@ class Auxiliary(BaseModel):
             type_ = state.StateTypeEnum.transport
         else:
             type_ = state.StateTypeEnum.production
-        logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
         self.env.request_process_of_resource(
             request=processing_request
         )
         yield self.finished_auxiliary_process # jumpt in die control loop self requested
-        logger.debug({"ID": self.auxiliary_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
         #TODO: Check here how i can do the logging
         self.auxiliary_info.log_end_process(
             resource=processing_request.resource,

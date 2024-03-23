@@ -110,7 +110,7 @@ class StateInfo(BaseModel, extra=Extra.allow):
             _product (product.Product): The product.
             state_type (StateTypeEnum): The type of the state.
         """
-        self._product_ID = _auxiliary.auxiliary_data.ID
+        self._product_ID = _auxiliary.data.ID
         self._state_type = state_type
 
     def log_start_state(

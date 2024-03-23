@@ -159,9 +159,6 @@ class Product(BaseModel):
     transport_process: process.TransportProcess
     product_router: router.Router
 
-    # Note von Sebastian, dass der Teil hier auch weg kann
-    auxiliaries: Optional[List[auxiliary.Auxiliary]] = Field(default=None, init=False)
-
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
     current_location: Location = Field(default=None, init=False)
@@ -192,23 +189,14 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
 
+        # Call the get_auxiliary
+        if self.product_data.auxiliaries:
+            auxiliary_request_1 = self.get_auxiliary_request_for_auxiliary()
+            yield self.env.process(self.product_router.get_auxiliary(auxiliary_request_1))
 
-        # product_data auxiliary
-
-        # call the function get_auxiliary
-            # allocate the product to the auxiliary (request function)
-            # move the auxiliary to the product
-            # update the auxiliary location to the product location
-        if self.auxiliaries:
-            auxiliary = None
-            while not auxiliary:
-                free_auxiliaries = self.get_free_auxiliary()
-                auxiliary = self.find_auxiliary(free_auxiliaries)
-            auxiliary.current_product = self
-            
-            if auxiliary.current_location.data.ID != self.current_location.data.ID: # doesn't work if storage has same location as source
-                auxiliary_request = self.get_request_for_auxiliary(auxiliary)
-                yield self.env.process(auxiliary.get_auxiliary(auxiliary_request))
+            if auxiliary_request_1.auxiliary.current_location.data.ID != self.current_location.data.ID: # doesn't work if storage has same location as source
+                auxiliary_request = self.get_transport_request_for_auxiliary(auxiliary_request_1.auxiliary)
+                yield self.env.process(auxiliary_request_1.auxiliary.get_auxiliary(auxiliary_request))
 
         while self.next_prodution_process:
 
@@ -223,34 +211,19 @@ class Product(BaseModel):
         transport_to_sink_request = self.get_request_for_transport_to_sink()
         yield self.env.process(self.product_router.route_request(transport_to_sink_request))
         yield self.env.process(self.request_process(transport_to_sink_request))
-        auxiliary.update_location(self.current_location)
+        
+        auxiliary_request_1.auxiliary.update_location(self.current_location)
+        
         self.product_info.log_finish_product(
             resource=self.current_location, _product=self, event_time=self.env.now
         )
         self.current_location.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
-        # call the function release_auxiliary function
-            # update location of the auxiliary
-            # drive the auxiliary to the storage
-            # release the auxiliary
-        yield self.env.process(auxiliary.release_auxiliary())
+        
+        yield self.env.process(auxiliary_request_1.auxiliary.release_auxiliary())
 
-    def find_auxiliary(self, auxiliaries: List[auxiliary.Auxiliary]):
 
-        for auxiliary in auxiliaries:
-            if (self.transport_process.process_data.ID in auxiliary.auxiliary_data.relevant_transport_processes):
-                if auxiliary.current_location is None: # later do in factory
-                    auxiliary.current_location = auxiliary.storage
-                return auxiliary
-
-    def get_free_auxiliary(self):
-        free_auxiliary = []
-        for auxiliary in self.auxiliaries:
-            if auxiliary.current_product is None:
-                free_auxiliary.append(auxiliary)
-        return free_auxiliary
-
-    def get_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
+    def get_transport_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
 
         # create a transport request for the free auxiliary
 
@@ -262,6 +235,13 @@ class Product(BaseModel):
         )
         return req
 
+    def get_auxiliary_request_for_auxiliary(self) -> request.AuxiliaryRequest:
+
+        req = request.AuxiliaryRequest(
+            process = self.product_data.transport_process,
+            product = self,
+        )
+        return req
 
 
     def get_request_for_production_process(self) -> request.Request:
