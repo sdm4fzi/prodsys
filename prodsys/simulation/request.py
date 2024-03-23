@@ -66,6 +66,20 @@ class Request:
         """
         return self.resource
 
+class AuxiliaryRequest(Request):
+
+
+    def __init__(
+        self,
+        process: process.TransportProcess,
+        product: product.Product,
+    ):
+        self.process: process.TransportProcess = process
+        self.product: product.Product = product
+        self.auxiliary: auxiliary.Auxiliary = None
+
+
+
 
 class TransportResquest(Request):
     """

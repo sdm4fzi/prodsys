@@ -15,7 +15,7 @@ from prodsys.simulation import state
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product
+    from prodsys.simulation import product, auxiliary
     from prodsys.factories import resource_factory
 
 
@@ -210,5 +210,19 @@ class EventLogger(Logger):
                     self.event_data,
                     product.product_info,
                     attr=["log_create_product", "log_finish_product"],
+                    post=post_monitor_product_info,
+                )
+        
+    def observe_terminal_auxiliary_states(self, auxiliary: auxiliary.Auxiliary):
+        """
+        Create path to observe the terminal product states.
+
+        Args:
+            product (product.Product): The product.
+        """
+        self.register_patch(
+                    self.event_data,
+                    auxiliary.auxiliary_info,
+                    attr=["log_create_auxiliary", "log_finish_auxiliary"],
                     post=post_monitor_product_info,
                 )

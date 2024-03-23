@@ -5,9 +5,9 @@ from typing import List, Dict
 from pydantic import BaseModel, Field
 
 
-from prodsys.simulation import auxiliary, router, sim
+from prodsys.simulation import router, sim
 from prodsys.models import product_data
-from prodsys.factories import process_factory, auxiliary_factory
+from prodsys.factories import auxiliary_factory, process_factory
 from prodsys.simulation import logger, proces_models, process
 
 
@@ -22,9 +22,8 @@ class ProductFactory(BaseModel):
 
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
-    auxiliary_factory: auxiliary_factory.AuxiliaryFactory
     products: List[product.Product] = []
-    auxilaries: List[auxiliary.Auxiliary] = []
+    #auxilaries: List[auxiliary.Auxiliary] = []
     finished_products: List[product.Product] = []
     event_logger: logger.EventLogger = Field(default=False, init=False)
     product_counter = 0
@@ -61,17 +60,16 @@ class ProductFactory(BaseModel):
         ):
             raise ValueError("Transport process not found.")
         
-        if product_data.auxiliaries:
-            auxiliaries = []
-            for auxiliary in self.auxiliary_factory.auxiliaries:
-                if auxiliary.auxiliary_data.ID in product_data.auxiliaries:
-                    auxiliaries.append(self.auxiliary_factory.get_auxiliary(auxiliary.auxiliary_data.ID))
+        # if product_data.auxiliaries:
+        #     auxiliaries = []
+        #     for auxiliary in self.auxiliary_factory.auxiliaries:
+        #         if auxiliary.auxiliary_data.ID in product_data.auxiliaries:
+        #             auxiliaries.append(self.auxiliary_factory.get_auxiliary(auxiliary.auxiliary_data.ID))
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
             product_router=router,
             process_model=process_model,
-            auxiliaries=auxiliaries,
             transport_process=transport_processes,
         )
         if self.event_logger:

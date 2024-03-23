@@ -12,14 +12,15 @@ import numpy as np
 from simpy import events
 
 from prodsys.simulation import process
-from prodsys.simulation import resources
+from prodsys.simulation import resources, auxiliary
 from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
     from prodsys.simulation import resources, process, product, sink
-    from prodsys.factories import resource_factory, sink_factory
+    from prodsys.factories import resource_factory, sink_factory, auxiliary_factory
     from prodsys.control import routing_control_env
+    from prodsys.models import product_data
 
 
 class Router:
@@ -36,10 +37,12 @@ class Router:
         self,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
+        auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[resources.Resource]], resources.Resource],
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
+        self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
         self.routing_heuristic: Callable[[List[resources.Resource]]] = routing_heuristic
 
 
@@ -89,6 +92,43 @@ class Router:
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
         processing_request.set_resource(routed_resource)
+
+
+    def get_auxiliary(self, processing_request: request.AuxiliaryRequest) -> Generator:
+
+        possible_auxiliaries = self.get_possible_auxiliaries(processing_request)
+        while True:
+            free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
+            self.routing_heuristic(free_possible_auxiliaries)
+            yield processing_request.product.env.timeout(0) # why don't we jump out here
+            if free_possible_auxiliaries:
+                break
+            logger.debug({"ID": processing_request.product.product_data.ID , "sim_time": processing_request.product.env.now, "event": f"Waiting for free auxiliary."})
+            yield events.AnyOf(
+                processing_request.product.env,
+                [auxiliary.got_free for auxiliary in possible_auxiliaries],
+            )
+            logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Free auxiliary available."})
+        routed_auxiliary = free_possible_auxiliaries[0]
+        routed_auxiliary.current_product = processing_request.product
+        processing_request.auxiliary = routed_auxiliary
+
+    def get_free_auxiliary(self, possible_auxiliaries: List[auxiliary.Auxiliary]) -> List[auxiliary.Auxiliary]:
+
+        free_possible_auxiliaries = []
+        for auxiliary in possible_auxiliaries:
+            if auxiliary.current_product is None:
+                free_possible_auxiliaries.append(auxiliary)
+        return free_possible_auxiliaries
+    
+    def get_possible_auxiliaries(self, processing_request: request.AuxiliaryRequest)-> List[auxiliary.Auxiliary]:
+
+        possible_auxiliaries = []
+        for auxiliary in self.auxiliary_factory.auxiliaries:
+            if processing_request.process == auxiliary.transport_process.process_data.ID:
+                possible_auxiliaries.append(auxiliary)
+        return possible_auxiliaries
+
                 
     def can_reach_resource(
         self, product: product.Product, resource: resources.Resource

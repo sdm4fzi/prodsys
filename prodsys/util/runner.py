@@ -12,12 +12,11 @@ from functools import cached_property
 from prodsys.adapters import adapter
 from prodsys.simulation import sim
 from prodsys.factories import (
+    auxiliary_factory,
     state_factory,
     time_model_factory,
     process_factory,
     queue_factory,
-    auxiliary_factory,
-    auxiliary_factory_2,
     resource_factory,
     product_factory,
     sink_factory,
@@ -146,18 +145,9 @@ class Runner(BaseModel):
             )
             self.resource_factory.create_resources(self.adapter)
 
-            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
-                env=self.env,
-                process_factory=self.process_factory,
-                storage_factory = self.storage_factory,
-            )
-
-            self.auxiliary_factory.create_auxiliary(self.adapter)
-
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 
                 process_factory=self.process_factory,
-                auxiliary_factory=self.auxiliary_factory,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -168,8 +158,7 @@ class Runner(BaseModel):
 
             self.sink_factory.create_sinks(self.adapter)
 
-            # Zweite Auxiliary Factory erstellen
-            self.auxiliary_factory = auxiliary_factory_2.AuxiliaryFactory_2(
+            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
                 env=self.env,
                 process_factory=self.process_factory,
                 storage_factory=self.storage_factory,
@@ -181,7 +170,6 @@ class Runner(BaseModel):
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 
                 process_factory=self.process_factory,
-                auxiliary_factory=self.auxiliary_factory,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -196,6 +184,7 @@ class Runner(BaseModel):
             self.event_logger.observe_resource_states(self.resource_factory)
 
             self.product_factory.event_logger = self.event_logger
+            self.auxiliary_factory.event_logger = self.event_logger
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
@@ -203,6 +192,7 @@ class Runner(BaseModel):
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
+                auxiliary_factory=self.auxiliary_factory,
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)

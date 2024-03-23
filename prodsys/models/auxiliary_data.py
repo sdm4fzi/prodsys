@@ -24,8 +24,17 @@ class AuxiliaryData(CoreAsset):
         relevant_processes (List[str], optional): List of relevant processes where the auxiliary component is needed. Defaults to [], meaning all processes.
         relevant_transport_processes (List[str], optional): List of relevant transport processes where the auxiliary component is needed. Defaults to [], meaning all processes.
     """
+    auxiliary_type: str
     transport_process: str
     storages: List[str]
     initial_quantity_in_stores: List[int]
     relevant_processes: List[str] = []
     relevant_transport_processes: List[str] = []
+
+    @root_validator(pre=True)
+    def check_processes(cls, values):
+        if "auxiliary_type" in values and values["auxiliary_type"]:
+            values["ID"] = values["auxiliary_type"]
+        else:
+            values["auxiliary_type"] = values["ID"]
+        return values
