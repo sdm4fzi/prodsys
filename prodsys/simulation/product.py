@@ -211,8 +211,9 @@ class Product(BaseModel):
         transport_to_sink_request = self.get_request_for_transport_to_sink()
         yield self.env.process(self.product_router.route_request(transport_to_sink_request))
         yield self.env.process(self.request_process(transport_to_sink_request))
-        
-        auxiliary_request_1.auxiliary.update_location(self.current_location)
+
+        if self.product_data.auxiliaries:
+            auxiliary_request_1.auxiliary.update_location(self.current_location)
         
         self.product_info.log_finish_product(
             resource=self.current_location, _product=self, event_time=self.env.now
@@ -220,7 +221,8 @@ class Product(BaseModel):
         self.current_location.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
         
-        yield self.env.process(auxiliary_request_1.auxiliary.release_auxiliary())
+        if self.product_data.auxiliaries:
+            yield self.env.process(auxiliary_request_1.auxiliary.release_auxiliary())
 
 
     def get_transport_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
