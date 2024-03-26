@@ -195,11 +195,13 @@ class Auxiliary(BaseModel):
 
     def get_auxiliary(self, transport_request: request.TransportResquest):
         self.finished_auxiliary_process = events.Event(self.env)
+        self.got_free = events.Event(self.env)
         yield self.env.process(self.auxiliary_router.route_request(transport_request))
         yield self.env.process(self.request_process(transport_request))
 
     def release_auxiliary(self) -> Generator:
-        self.got_free = events.Event(self.env)
+        self.finished_auxiliary_process = events.Event(self.env)
+        #self.got_free = events.Event(self.env)
         storage_transport_request = request.TransportResquest(
                     process = self.transport_process,
                     product = self, 
@@ -211,8 +213,9 @@ class Auxiliary(BaseModel):
         self.current_product = None
         if not self.got_free.triggered:
             self.got_free.succeed()
-        yield self.env.timeout(0) # bringt das was?
+        self.got_free = events.Event(self.env)
         self.update_location(self.storage)
+        yield self.env.timeout(0)
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """

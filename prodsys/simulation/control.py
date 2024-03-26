@@ -243,6 +243,7 @@ class ProductionController(Controller):
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
                 next_product.finished_process.succeed()
+                #next_product.finished_auxiliary_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished process for {product.product_data.ID}"})
 
     def run_process(self, input_state: state.State, target_product: product.Product):
@@ -496,7 +497,8 @@ class TransportController(Controller):
             if not isinstance(product, auxiliary.Auxiliary):
                 product.finished_process.succeed() # can be the auxiliary or product
             else:
-                product.finished_auxiliary_process.succeed()
+                if not product.finished_auxiliary_process.triggered:
+                    product.finished_auxiliary_process.succeed()
             if isinstance(product, auxiliary.Auxiliary):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.data.ID}"})
             else:

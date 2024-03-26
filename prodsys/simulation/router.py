@@ -100,7 +100,7 @@ class Router:
         while True:
             free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
             self.routing_heuristic(free_possible_auxiliaries)
-            yield processing_request.product.env.timeout(0) # why don't we jump out here
+            yield processing_request.product.env.timeout(0)
             if free_possible_auxiliaries:
                 break
             logger.debug({"ID": processing_request.product.product_data.ID , "sim_time": processing_request.product.env.now, "event": f"Waiting for free auxiliary."})
