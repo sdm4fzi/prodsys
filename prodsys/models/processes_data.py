@@ -9,11 +9,13 @@ The following processes are possible:
 """
 
 from __future__ import annotations
-
+from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, Optional, List
-
+from typing import Literal, Union, Optional, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 from prodsys.models.core_asset import CoreAsset
+from prodsys.models import time_model_data, processes_data
 
 
 class ProcessTypeEnum(str, Enum):
@@ -42,8 +44,13 @@ class ProcessData(CoreAsset):
         time_model_id (str): ID of the time model of the process.
     """
 
-    def __hash__(self):
-        return hash(tuple(self.time_model_id))
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        combined_hash = ""
+        for time_model, process in zip(adapter.time_model_data, adapter.process_data):
+            if time_model.ID == process.time_model_id:
+                combined_hash += time_model.tomd5()
+        return md5(combined_hash.encode("utf-8")).hexdigest()
+    
 
     time_model_id: str
 

@@ -9,7 +9,7 @@ The following time models are possible:
 """
 
 from __future__ import annotations
-
+from hashlib import md5
 from typing import List, Literal, Union
 from pydantic import Field
 
@@ -55,8 +55,8 @@ class SequentialTimeModelData(CoreAsset):
 
     sequence: List[float]
 
-    def __hash__(self):
-        return hash((tuple(self.sequence)))
+    def tomd5(self):
+        return md5(("".join([str(s) for s in self.sequence])).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {
@@ -114,9 +114,8 @@ class FunctionTimeModelData(CoreAsset):
                 },
             }
         }
-
-    def __hash__(self):
-        return hash((self.distribution_function, self.location, self.scale))
+    def tomd5(self):
+        return md5(("".join([str(s) for s in [self.distribution_function, self.location, self.scale]])).encode("utf-8")).hexdigest()
     
 class ManhattanDistanceTimeModelData(CoreAsset):
     """
@@ -142,9 +141,8 @@ class ManhattanDistanceTimeModelData(CoreAsset):
 
     speed: float
     reaction_time: float
-
-    def __hash__(self):
-        return hash((self.speed, self.reaction_time))
+    def tomd5(self):
+        return md5(("".join([str(s) for s in [self.speed, self.reaction_time]])).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {
