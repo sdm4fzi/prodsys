@@ -12,9 +12,11 @@ The following states are possible:
 """
 
 from __future__ import annotations
-
+from hashlib import md5
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -55,6 +57,14 @@ class StateData(CoreAsset):
         StateTypeEnum.TransportState,
         StateTypeEnum.SetupState,
     ]
+
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        time_model_ids = []
+        for state in adapter.state_data:
+            if state.time_model_id == self.time_model_id:
+                time_model_ids.append(state.tomd5(adapter))
+        combined_hash = "".join(time_model_ids)
+        return md5(("".join([self.type, combined_hash])).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {
@@ -97,8 +107,22 @@ class BreakDownStateData(StateData):
     type: Literal[StateTypeEnum.BreakDownState]
     repair_time_model_id: str
 
-    def __hash__(self):
-        return hash((self.time_model_id, self.repair_time_model_id))
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        time_model_ids = []
+        repair_time_model_ids = [self.repair_time_model_id]
+            
+        for state in adapter.state_data:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == state.time_model_id:
+                    time_model_ids.append(time_model.tomd5())
+                if time_model.ID == state.repair_time_model_id:
+                    repair_time_model_ids.append(time_model.tomd5())
+            
+        combined_hash = "".join(time_model_ids) + "".join(repair_time_model_ids)
+            
+        return md5(combined_hash.encode("utf-8")).hexdigest()
+
+    
     
     class Config:
         schema_extra = {
@@ -145,6 +169,18 @@ class ProcessBreakDownStateData(StateData):
     repair_time_model_id: str
     process_id: str
 
+    def	tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        for i in range(0, len(adapter.state_data)):
+            for l in range(0, len(adapter.time_model_data)):
+                for s in range(0, len(adapter.process_data)):
+                    if adapter.time_model_data[l].ID == adapter.state_data[i].time_model_id:
+                        self.time_model_id = adapter.time_model_data[l].tomd5()
+                    if adapter.time_model_data[l].ID == adapter.state_data[i].repair_time_model_id:
+                        self.repair_time_model_id = adapter.time_model_data[l].tomd5()
+                    if adapter.process_data[s].ID == adapter.state_data[i].process_id:
+                        self.process_id = adapter.process_data[s].tomd5()
+        return md5(("".join([self.time_model_id, self.repair_time_model_id, self.process_id])).encode("utf-8")).hexdigest()
+    
     class Config:
         schema_extra = {
             "example": {
@@ -245,6 +281,24 @@ class SetupStateData(StateData):
     type: Literal[StateTypeEnum.SetupState]
     origin_setup: str
     target_setup: str
+
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        time_model_ids = []
+        origin_setups = [self.origin_setup]
+        target_setups = [self.target_setup]
+        
+        for state in adapter.state_data:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == state.time_model_id:
+                    time_model_ids.append(time_model.tomd5())
+            for process in adapter.process_data:
+                if process.ID == state.origin_setup:
+                    origin_setups.append(process.tomd5(adapter))
+                if process.ID == state.target_setup:
+                    target_setups.append(process.tomd5(adapter))
+
+        combined_hash = "".join(time_model_ids + origin_setups + target_setups)
+        return md5(combined_hash.encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {

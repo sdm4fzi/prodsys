@@ -8,8 +8,10 @@ The following resources are available:
 """
 
 from __future__ import annotations
-
-from typing import Literal, Union, List, Tuple, Optional
+from hashlib import md5
+from typing import Literal, Union, List, Tuple, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 from enum import Enum
 
 from pydantic import validator, conlist
@@ -94,8 +96,23 @@ class ResourceData(CoreAsset):
         return v
 
 
-    def __hash__(self):
-        return hash((self.capacity, tuple(self.location), self.controller, self.control_policy, tuple(sorted(self.process_ids)), tuple(self.process_capacities), tuple(sorted(self.state_ids))))
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        process_ids = []
+        state_ids = []
+        
+        for i in range(len(adapter.process_data)):
+            for l in range(len(adapter.resource_data)):
+                if adapter.process_data[i].ID in adapter.resource_data[l].process_ids:
+                    process_ids.append(adapter.process_data[i].tomd5(adapter))
+                for s in range(len(adapter.state_data)):
+                    if adapter.state_data[s].ID in adapter.resource_data[l].state_ids:
+                        state_ids.append(adapter.state_data[s].tomd5(adapter))
+        
+        combined_data = [str(self.capacity), *map(str, self.location), self.controller, *sorted(process_ids), *map(str, self.process_capacities), *sorted(state_ids)]
+        combined_hash = "".join(combined_data)
+        
+        return md5(combined_hash.encode("utf-8")).hexdigest()
+    
 
 class ProductionResourceData(ResourceData):
     """

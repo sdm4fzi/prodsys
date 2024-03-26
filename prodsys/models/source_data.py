@@ -1,7 +1,8 @@
 from __future__ import annotations
-
-from typing import Literal, Union, List, Tuple, Optional
-
+from hashlib import md5
+from typing import Literal, Union, List, Tuple, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 from pydantic import validator, conlist
 
 from enum import Enum
@@ -49,11 +50,23 @@ class SourceData(CoreAsset):
     location: conlist(float, min_items=2, max_items=2)
     product_type: str
     time_model_id: str
+    router: str
     routing_heuristic: RoutingHeuristic
     output_queues: Optional[List[str]]
-
-    def __hash__(self):
-        return hash((tuple(self.location), self.product_type, self.time_model_id, self.router, self.routing_heuristic, tuple(self.output_queues)))
+    
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        product_type = [self.product_type]
+        time_model_id = [self.time_model_id]
+        
+        for i in range(len(adapter.source_data)):
+            for l in range(len(adapter.product_data)):
+                if adapter.product_data[l].ID in adapter.source_data[i].product_type:
+                    product_type.append(adapter.product_data[i].tomd5(adapter))
+                for s in range(len(adapter.time_model_data)):
+                    if adapter.time_model_data[s].ID in adapter.source_data[i].time_model_id:
+                        time_model_id.append(adapter.time_model_data[s].tomd5())
+        
+        return md5(("".join([*[str(l) for l in self.location], "".join(product_type), "".join(time_model_id), self.routing_heuristic])).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {

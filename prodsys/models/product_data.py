@@ -1,7 +1,8 @@
 from __future__ import annotations
-
-from typing import Union, List, Dict
-
+from hashlib import md5
+from typing import Union, List, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 from pydantic import root_validator
 
 from prodsys.models.core_asset import CoreAsset
@@ -76,10 +77,22 @@ class ProductData(CoreAsset):
     product_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     transport_process: str
+    
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        processes = self.processes
+        transport_processes = [self.transport_process]
 
-    def __hash__(self):
-        return hash((self.product_type, tuple(self.processes), self.transport_process))
+        for i in range(0, len(adapter.process_data)):
+            for l in range(0, len(adapter.product_data)):
+                if adapter.process_data[i].ID == adapter.product_data[l].processes:
+                    processes.append(adapter.process_data[i].tomd5(adapter))
+                if adapter.process_data[i].ID == adapter.product_data[l].transport_process:
+                    transport_processes.append(adapter.process_data[i].tomd5(adapter))
 
+        combined_hash = "".join([self.product_type, *processes, *transport_processes])
+
+        return md5(combined_hash.encode("utf-8")).hexdigest()
+                   
     @root_validator(pre=True)
     def check_processes(cls, values):
         if "product_type" in values and values["product_type"]:

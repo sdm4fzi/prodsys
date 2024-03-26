@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from hashlib import md5
 import warnings
 from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator, ValidationError
@@ -294,10 +295,21 @@ class ProductionSystemAdapter(ABC, BaseModel):
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
 
-    
+ 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        return md5(("".join([
+                str([time.tomd5() for time in self.time_model_data]),
+                str([state.tomd5(adapter) for state in self.state_data]),
+                str([process.tomd5(adapter) for process in self.process_data]),
+                *sorted([res.tomd5(adapter) for res in self.resource_data]),
+                *sorted([product.tomd5(adapter) for product in self.product_data]),
+                *sorted([sink.tomd5(adapter) for sink in self.sink_data]),
+                *sorted([source.tomd5(adapter) for source in self.source_data])])
+                ).encode("utf-8")).hexdigest()
+    
     class Config:
         validate = True
         validate_assignment = True

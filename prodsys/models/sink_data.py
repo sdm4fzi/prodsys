@@ -1,7 +1,8 @@
 from __future__ import annotations
-
-from typing import Literal, Union, List, Tuple, Optional
-
+from hashlib import md5
+from typing import Literal, Union, List, Tuple, Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 from pydantic import validator, conlist
 
 from prodsys.models.core_asset import CoreAsset
@@ -35,9 +36,14 @@ class SinkData(CoreAsset):
     location: conlist(float, min_items=2, max_items=2)
     product_type: str
     input_queues: Optional[List[str]]
-
-    def __hash__(self):
-        return hash((tuple(self.location), self.product_type, tuple(self.input_queues)))
+    
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        product_type = self.product_type
+        for sink_item in adapter.sink_data:
+            for product_item in adapter.product_data:
+                if product_item.ID == sink_item.product_type:
+                    product_type = product_item.tomd5(adapter)
+        return md5("".join([str(item) for item in self.location] + [product_type]).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {
