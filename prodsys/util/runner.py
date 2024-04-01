@@ -20,6 +20,7 @@ from prodsys.factories import (
     product_factory,
     sink_factory,
     source_factory,
+    node_factory,
     linktransportprocess_factory,
 )
 from prodsys.simulation import logger
@@ -98,6 +99,7 @@ class Runner(BaseModel):
     linktransportprocess_factory: linktransportprocess_factory.LinkTransportProcessFactory = Field(init=False, default=None)
     queue_factory: queue_factory.QueueFactory = Field(init=False, default=None)
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
+    node_factory: node_factory.NodeFactory = Field(init=False, default=None)
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
     source_factory: source_factory.SourceFactory = Field(init=False, default=None)
     product_factory: product_factory.ProductFactory = Field(init=False, default=None)
@@ -141,7 +143,9 @@ class Runner(BaseModel):
             )
             self.resource_factory.create_resources(self.adapter)
 
-            self.resource_factory.create_nodes(self.adapter)
+            self.node_factory = node_factory.NodeFactory(
+                env=self.env)
+            self.node_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env,
@@ -176,6 +180,7 @@ class Runner(BaseModel):
                 source_factory=self.source_factory,
                 sink_factory=self.sink_factory,
                 resource_factory=self.resource_factory,
+                node_factory=self.node_factory,
             )
             self.linktransportprocess_factory.create_processes(self.adapter)
 

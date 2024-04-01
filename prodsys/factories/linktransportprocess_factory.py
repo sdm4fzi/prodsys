@@ -4,7 +4,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, parse_obj_as
 
-from prodsys.factories import time_model_factory, source_factory, sink_factory, resource_factory
+from prodsys.factories import time_model_factory, source_factory, sink_factory, resource_factory, node_factory
 from prodsys.simulation import process
 from prodsys.models import processes_data
 
@@ -24,6 +24,7 @@ class LinkTransportProcessFactory(BaseModel):
     source_factory: source_factory.SourceFactory
     sink_factory: sink_factory.SinkFactory
     resource_factory: resource_factory.ResourceFactory
+    node_factory: node_factory.NodeFactory
     processes: List[process.PROCESS_UNION] = []
 
     def create_processes(self, adapter: adapter.ProductionSystemAdapter):
@@ -59,7 +60,7 @@ class LinkTransportProcessFactory(BaseModel):
                             try:
                                 nodes_list.append(self.sink_factory.get_sink(node))
                             except Exception:
-                                nodes_list.append(self.resource_factory.get_node(node))
+                                nodes_list.append(self.node_factory.get_node(node))
                 links_list.append(nodes_list)
             values.update({"links": links_list})      
 
