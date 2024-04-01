@@ -368,12 +368,12 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self, target: List[float], bol: bool) -> Generator:
+    def process_state(self, target: List[float], node_true: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
-        if bol == True:
-            self.done_in -= self.time_model.time_model_data.reaction_time
+        if node_true == True:
+            self.done_in -= self.time_model.time_model_data.reaction_time # no reaction_time if it is a node
         else:
             self.done_in
         while True:
