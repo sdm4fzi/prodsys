@@ -87,9 +87,9 @@ class Router:
             raise ValueError("No free resources available, Error in Event handling of routing to resources.")
         routed_resource = free_resources[0]
         if isinstance(routed_resource, resources.TransportResource) and (isinstance(processing_request.process, process.RequiredCapabilityProcess) or isinstance(processing_request.process, process.LinkTransportProcess)):
-            for i,x in enumerate(processing_request.path_to_target['resource_ID']):
-                if x == routed_resource.data.ID:
-                    processing_request.path_to_target_true = processing_request.path_to_target['path'][i]
+            for path, resource in enumerate(processing_request.path_to_target['resource_ID']):
+                if resource == routed_resource.data.ID:
+                    processing_request.path_to_target_true = processing_request.path_to_target['path'][path]
                     break
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
