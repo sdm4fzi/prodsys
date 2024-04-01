@@ -84,16 +84,14 @@ class TransportResquest(Request):
         product: product.Product,
         origin: product.Location,
         target: product.Location,
-        path = None,
-        path2 = {'path': [], 'resource_ID': []},
-        path3 = None
+        path_to_target = {'path': [], 'resource_ID': []},
+        path_to_target_chosen = None
     ):
         self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = None
-        self.path_to_origin = path,
-        self.path_to_target = path2
-        self.path_to_target_true = path3,
+        self.path_to_target = path_to_target
+        self.path_to_target_chosen = path_to_target_chosen,
         self.origin: product.Location = origin
         self.target: product.Location = target
 
@@ -160,4 +158,4 @@ class TransportResquest(Request):
         Returns:
             process.TransportLinkProcess: The path process.
         """
-        return self.path_to_target_true
+        return self.path_to_target_chosen

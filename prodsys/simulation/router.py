@@ -89,7 +89,7 @@ class Router:
         if isinstance(routed_resource, resources.TransportResource) and (isinstance(processing_request.process, process.RequiredCapabilityProcess) or isinstance(processing_request.process, process.LinkTransportProcess)):
             for path, resource in enumerate(processing_request.path_to_target['resource_ID']):
                 if resource == routed_resource.data.ID:
-                    processing_request.path_to_target_true = processing_request.path_to_target['path'][path]
+                    processing_request.path_to_target_chosen = processing_request.path_to_target['path'][path]
                     break
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
