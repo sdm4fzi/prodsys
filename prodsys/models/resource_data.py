@@ -51,11 +51,13 @@ class TransportControlPolicy(str, Enum):
     - SPT_transport: Shortest transport time first.
     - SPT_transport: Shortest raw transport time first. Does not consider distance to start of the transport.
     - Nearest_origin_and_longest_target_queues_transport: Nearest_Origin but also sorts by the length of the target queue to make sure, something can be picked up at the target.
+    - Nearest_origin_and_shortest_target_input_queues_transport: Nearest_Origin but also sorts by the length of the target input queue to prefer target machines, that have lower number of products waiting to be processed.
     """
 
     FIFO = "FIFO"
     SPT_transport = "SPT_transport"
     Nearest_origin_and_longest_target_queues_transport = "Nearest_origin_and_longest_target_queues_transport"
+    Nearest_origin_and_shortest_target_input_queues_transport = "Nearest_origin_and_shortest_target_input_queues_transport"
 
 
 class ResourceData(CoreAsset):
