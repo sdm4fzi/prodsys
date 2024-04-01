@@ -35,6 +35,9 @@ CONTROL_POLICY_DICT: Dict = {
     ResourceControlPolicy.LIFO: control.LIFO_control_policy,
     ResourceControlPolicy.SPT: control.SPT_control_policy,
     TransportControlPolicy.SPT_transport: control.SPT_transport_control_policy,
+    TransportControlPolicy.Nearest_origin_and_longest_target_queues_transport : control.Nearest_origin_and_longest_target_queues_transport_control_policy,
+    TransportControlPolicy.Nearest_origin_and_shortest_target_input_queues_transport : control.Nearest_origin_and_shortest_target_input_queues_transport_control_policy,
+
 }
 
 
