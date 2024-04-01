@@ -560,7 +560,8 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
     )
 def Nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
     """
-    Sort the requests according to nearest origin without considering the target.
+    Sort the requests according to nearest origin without considering the target location. 
+    Second order sorting by descending length of the target output queues, to prefer targets where a product can be picked up.
     Args:
         requests (List[request.TransportResquest]): The list of requests.
     """
@@ -569,6 +570,20 @@ def Nearest_origin_and_longest_target_queues_transport_control_policy(requests: 
             x.process.get_expected_process_time(
                 x.resource.data.location, x.origin.get_location()),
                 - x.target.get_output_queue_length())
+    )
+def Nearest_origin_and_shortest_target_input_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+    """
+    Sort the requests according to nearest origin without considering the target location.
+    Second order sorting by ascending length of the target input queue.
+
+    Args:
+        requests (List[request.TransportResquest]): The list of requests.
+    """
+    requests.sort(
+        key=lambda x: (
+            x.process.get_expected_process_time(
+                x.resource.data.location, x.origin.get_location()),
+                sum([len(q.items) for q in x.target.input_queues]))
     )
 
 def agent_control_policy(
