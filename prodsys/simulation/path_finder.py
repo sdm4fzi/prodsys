@@ -60,27 +60,7 @@ class Pathfinder:
         for link in given_links_list:
             link_edge: List[Union[resources.NodeData, resources.Resource, sink.Sink, source.Source]] = []
             graphnode_edge: List[GraphNode] = []
-            for b_node in link:
-                node = None
-                for y in self.nodes:
-                    if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)):
-                        if y.node_id == b_node.data.ID:
-                            node = y
-                    else:
-                        if y.node_id == b_node.ID:
-                            node = y
-
-                if node is None:
-                    if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)):
-                        node = GraphNode(node_id=b_node.data.ID)
-                    else:
-                        node = GraphNode(node_id=b_node.ID)
-                    self.nodes.append(node)
-                    self.node_loc.append(b_node)
-
-                link_edge.append(b_node)
-                graphnode_edge.append(node)
-
+            self.make_list(link, link_edge, graphnode_edge)
             if isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], (sink.Sink, source.Source, resources.Resource)):
                 cost = self.calculate_cost(link_edge[0].data.location, link_edge[1].data.location)
             elif isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], (resources.NodeData)):
@@ -94,6 +74,40 @@ class Pathfinder:
             pathfinder_edges.append(edge)
 
         return pathfinder_edges
+    
+    def make_list(self, link, link_edge, graphnode_edge):
+        """
+        Creates a list of links and edges.
+
+        Args:
+            link (list): A list of nodes.
+            link_edge (list): A list to store the link edges.
+            graphnode_edge (list): A list to store the graph node edges.
+
+        Returns:
+            None
+        """
+
+        from prodsys.simulation import resources, sink, source
+
+        for b_node in link:
+            node = None
+            for y in self.nodes:
+                if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)):
+                    if y.node_id == b_node.data.ID:
+                        node = y
+                else:
+                    if y.node_id == b_node.ID:
+                        node = y
+            
+            if node is None:
+                node_id = b_node.data.ID if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)) else b_node.ID
+                node = GraphNode(node_id=node_id)
+                self.nodes.append(node)
+                self.node_loc.append(b_node)
+
+            link_edge.append(b_node)
+            graphnode_edge.append(node)
 
     def calculate_cost(self, node1, node2):
         """
@@ -121,50 +135,52 @@ class Pathfinder:
         Returns:
             The origin and target as graph nodes.
         """
-
-        from prodsys.simulation import resources
         origin, target = None, None
-
         for link in given_links_list:
             for nodex in link:
-                if which_path == True:  # path from agv to origin
-                    if isinstance(nodex, (resources.NodeData)):
-                        for node in graph.nodes.values():
-                            if nodex.ID == node.node_id:
-                                if (nodex.location == request.resource.get_location()):
-                                    if origin is None:
-                                        origin = node
-                                elif (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID):
-                                    if target is None:
-                                        target = node
-                    else:  # node is a resource|sinks|source
-                        for node in graph.nodes.values():
-                            if nodex.data.ID == node.node_id:
-                                if (nodex.data.location == request.resource.get_location()):
-                                    if origin is None:
-                                        origin = node
-                                elif (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
-                                    if target is None:
-                                        target = node
+                origin, target = self.create_graphnodes(nodex, which_path, request, graph, origin, target)
+        return origin, target
+    
+    def create_graphnodes(self, nodex, which_path, request, graph, origin, target):
+        """
+        Creates graph nodes for the origin and target.
+
+        Args:
+            nodex (object): The node object.
+            which_path (bool): Indicates whether it is a path from agv to origin or from origin to target.
+            request (object): The request object.
+            graph (object): The graph object.
+            origin (object): The origin node.
+            target (object): The target node.
+
+        Returns:
+            tuple: A tuple containing the origin and target nodes.
+        """
+        from prodsys.simulation import resources
+        for node in graph.nodes.values():
+            if isinstance(nodex, (resources.NodeData)):
+                if nodex.ID != node.node_id:
+                    continue
+                if which_path:  # path from agv to origin
+                    if nodex.location != request.resource.get_location() and not (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID):
+                        continue
                 else:  # path from origin to target
-                    if isinstance(nodex, (resources.NodeData)):
-                        for node in graph.nodes.values():
-                            if nodex.ID == node.node_id:
-                                if (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID):
-                                    if origin is None:
-                                        origin = node
-                                elif (nodex.location == request.target.data.location and nodex.ID == request.target.data.ID):
-                                    if target is None:
-                                        target = node
-                    else:  # node is a resource|sinks|source
-                        for node in graph.nodes.values():
-                            if nodex.data.ID == node.node_id:
-                                if (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
-                                    if origin is None:
-                                        origin = node
-                                elif (nodex.data.location == request.target.data.location and nodex.data.ID == request.target.data.ID):
-                                    if target is None:
-                                        target = node
+                    if not (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID) and not (nodex.location == request.target.data.location and nodex.ID == request.target.data.ID):
+                        continue
+            else:  # node is a resource|sinks|source
+                if nodex.data.ID != node.node_id:
+                    continue
+                if which_path:  # path from agv to origin
+                    if nodex.data.location != request.resource.get_location() and not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
+                        continue
+                else:  # path from origin to target
+                    if not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID) and not (nodex.data.location == request.target.data.location and nodex.data.ID == request.target.data.ID):
+                        continue
+
+            if origin is None:
+                origin = node
+            elif target is None:
+                target = node
 
         return origin, target
 
