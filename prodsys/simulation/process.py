@@ -211,9 +211,13 @@ class RequiredCapabilityProcess(Process):
     process_data: processes_data.RequiredCapabilityProcessData
 
     def matches_request(self, request: request.Request) -> bool:
-        raise NotImplementedError(
-            "RequiredCapabilityProcess cannot be matched but should only request."
-        )
+        requested_process = request.process
+        if not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
+        if isinstance(requested_process, RequiredCapabilityProcess):
+            return requested_process.process_data.capability == self.process_data.capability
 
     def get_process_time(self) -> float:
         raise NotImplementedError(
