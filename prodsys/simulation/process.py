@@ -241,12 +241,12 @@ class LinkTransportProcess(Process):
                 which_path: bool = False
                 path = pathfinder.find_path(request, which_path, self)
                 if not path:
-                    return False
+                    return ValueError("No path found for this capability")
                 else:
                     self.add_path_to_request(request, path)
                     return requested_process.process_data.capability == self.process_data.capability
             else:
-                return False
+                return ValueError("The capability of the requested process does not match the capability of the LinkTransportProcess")
             
 
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
@@ -259,13 +259,10 @@ class LinkTransportProcess(Process):
             which_path: bool = False
             path = pathfinder.find_path(request, which_path, self)
             if not path:
-                return False
+                return ValueError("No path found for this Linktransportprocess")
             else:
                 self.add_path_to_request(request, path)
                 return requested_process.process_data.ID == self.process_data.ID            
-        
-        #TODO: Das passt noch nicht für die RequiredCapabilityProcesses
-        #return self.process_data.ID in requested_process.process_data.process_ids
     
     def add_path_to_request(self, request: request.TransportResquest, path: List[processes_data.LinkTransportProcessData.links]):
         request.path_to_target['path'].append(path)
