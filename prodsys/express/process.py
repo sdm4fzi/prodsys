@@ -133,7 +133,6 @@ class CapabilityProcess(Process, core.ExpressObject):
         ```
     """
     capability: str
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.CapabilityProcesses
     )
@@ -208,14 +207,16 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
         links (Union[List[List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]], 
                       Dict[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink], 
                            List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]]]):
-            The links associated with the process.
+            The links associated with the process. Each link is a list of different objects, which can be a 
+            Resource, NodeData, Source, or Sink. If the links attribute is a list, it represents a list of 
+            links, where each link is a list of these objects. If the links attribute is a dictionary, it represents a 
+            mapping from a key (which can be a ProductionResource, NodeData, Source, or Sink) to a list of these objects.
         capability (Optional[str]): The capability of the process.
     """
 
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     links: Union[List[List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]], 
                  Dict[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink], 
                       List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]]] = Field(default_factory=list)
@@ -256,7 +257,6 @@ class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.RequiredCapabilityProcesses
     )
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     capability: Optional[str] = Field(default_factory=str)
 
     def to_model(self) -> processes_data.RequiredCapabilityProcessData:
