@@ -682,10 +682,9 @@ class ProductionSystemAdapter(ABC, BaseModel):
             )
         return state
 
-    #TODO: Add validator for nodes_data
     @validator("process_data", each_item=True)
     def check_processes(cls, process: processes_data.PROCESS_DATA_UNION, values):
-        if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):
+        if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.LinkTransportProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):
             return process
         time_models = get_set_of_IDs(values["time_model_data"])
         if process.time_model_id not in time_models:
@@ -854,11 +853,10 @@ class ProductionSystemAdapter(ABC, BaseModel):
         """
         if not check_redudant_locations(self):
             raise ValueError(f"Multiple objects are positioned at the same location.")
-        # requiredtrnapsortprocess at product is at no resource -> delete the validation
-        #if not check_required_processes_in_resources_available(self):
-           # raise ValueError(f"Not all required process are available at resources.")
-        #if not check_required_processes_in_resources_available(self):
-            #raise ValueError(f"Not all required process are available at resources.")
+        if not check_required_processes_in_resources_available(self):
+           raise ValueError(f"Not all required process are available at resources.")
+        if not check_required_processes_in_resources_available(self):
+            raise ValueError(f"Not all required process are available at resources.")
 
 
 def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float]]:
@@ -1045,8 +1043,8 @@ def check_capability_processes_available(available: List[processes_data.Capabili
 
 def check_required_processes_in_resources_available(configuration: ProductionSystemAdapter) -> bool:
     available = list(util.flatten([resource.process_ids for resource in configuration.resource_data]))
-    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
-    required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
+    required = util.flatten([process for process in product.processes] + [process for process in configuration.process_data if process.ID == product.transport_process and not isinstance(process, processes_data.RequiredCapabilityProcessData)] for product in configuration.product_data if not isinstance(product.processes, dict))
+    required_dict_processes = util.flatten([list(process_id for process_id, process in product.processes.items() if not isinstance(process, processes_data.RequiredCapabilityProcessData)) + [process for process in configuration.process_data if process.ID == product.transport_process and not isinstance(process, processes_data.RequiredCapabilityProcessData)] for product in configuration.product_data if isinstance(product.processes, dict)])
     required = list(required) + list(required_dict_processes)
 
     required_production_processes = get_production_processes_from_ids(configuration, required)
