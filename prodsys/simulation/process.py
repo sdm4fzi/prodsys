@@ -241,12 +241,12 @@ class LinkTransportProcess(Process):
                 which_path: bool = False
                 path = pathfinder.find_path(request, which_path, self)
                 if not path:
-                    return ValueError("No path found for this capability")
+                    return False
                 else:
                     self.add_path_to_request(request, path)
                     return requested_process.process_data.capability == self.process_data.capability
             else:
-                return ValueError("The capability of the requested process does not match the capability of the LinkTransportProcess")
+                return False
             
 
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
@@ -259,7 +259,7 @@ class LinkTransportProcess(Process):
             which_path: bool = False
             path = pathfinder.find_path(request, which_path, self)
             if not path:
-                return ValueError("No path found for this Linktransportprocess")
+                return False
             else:
                 self.add_path_to_request(request, path)
                 return requested_process.process_data.ID == self.process_data.ID            
