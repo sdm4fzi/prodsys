@@ -14,7 +14,7 @@ from simpy import events
 from prodsys.simulation import sim, store
 if TYPE_CHECKING:
     from prodsys.simulation import process, control, state
-
+from prodsys.simulation.process import RequiredCapabilityProcess
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
@@ -222,7 +222,6 @@ class Resource(BaseModel, ABC, resource.Resource):
         Returns:
             List[state.State]: The state of the resource for the process.
         """
-        from prodsys.simulation.process import RequiredCapabilityProcess
         possible_states = []
         for actual_state in self.production_states:
             if isinstance(process, RequiredCapabilityProcess) and (
@@ -248,7 +247,6 @@ class Resource(BaseModel, ABC, resource.Resource):
         Returns:
             Optional[state.State]: The state of the resource for the process.
         """
-        from prodsys.simulation.process import RequiredCapabilityProcess
         for actual_state in self.production_states:
             if isinstance(process, RequiredCapabilityProcess) and (actual_state.resource.processes[0].process_data.capability == process.process_data.capability):
                 if actual_state.process is None or not actual_state.process.is_alive:
