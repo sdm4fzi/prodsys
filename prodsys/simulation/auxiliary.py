@@ -160,7 +160,6 @@ class Auxiliary(BaseModel):
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
     current_location: Union[product.Location, store.Storage] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
-    requested: events.Event = Field(default=None, init=False)
     finished_auxiliary_process: events.Event = Field(default=None, init=False)
     got_free: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
@@ -201,7 +200,6 @@ class Auxiliary(BaseModel):
 
     def release_auxiliary(self) -> Generator:
         self.finished_auxiliary_process = events.Event(self.env)
-        #self.got_free = events.Event(self.env)
         storage_transport_request = request.TransportResquest(
                     process = self.transport_process,
                     product = self, 
@@ -229,9 +227,8 @@ class Auxiliary(BaseModel):
         self.env.request_process_of_resource(
             request=processing_request
         )
-        yield self.finished_auxiliary_process # jumpt in die control loop self requested
+        yield self.finished_auxiliary_process
         logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
-        #TODO: Check here how i can do the logging
         self.auxiliary_info.log_end_process(
             resource=processing_request.resource,
             _product=self,
