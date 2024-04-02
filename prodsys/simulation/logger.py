@@ -242,6 +242,6 @@ class EventLogger(Logger):
         self.register_patch(
                     self.event_data,
                     auxiliary.auxiliary_info,
-                    attr="log_create_auxiliary",
+                    attr=["log_create_auxiliary"],
                     post=post_monitor_auxiliary_info,
                 )
