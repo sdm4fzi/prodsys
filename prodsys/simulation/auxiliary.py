@@ -54,35 +54,14 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
     product_ID: str = Field(init=False, default=None)
     state_type: state.StateTypeEnum = Field(init=False, default=None)            
 
-    def log_finish_auxiliary(
-        self,
-        resource: Union[resources.Resource, sink.Sink, source.Source],
-        _product: Auxiliary,
-        event_time: float,
-    ):
-        """
-        Logs the finish of a product.
-
-        Args:
-            resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
-            _product (Product): Product that is finished.
-            event_time (float): Time of the event.
-        """
-        self.resource_ID = resource.data.ID
-        self.state_ID = resource.data.ID
-        self.event_time = event_time
-        self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.finished_product
-        self.state_type = state.StateTypeEnum.sink
-
     def log_create_auxiliary(
         self,
-        resource: Union[resources.Resource, sink.Sink, source.Source],
+        resource: Union[resources.Resource, sink.Sink, source.Source, store.Storage],
         _product: Auxiliary,
         event_time: float,
     ) -> None:
         """
-        Logs the creation of a product.
+        Logs the creation of an auxiliary.
 
         Args:
             resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
@@ -93,8 +72,8 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.created_product
-        self.state_type = state.StateTypeEnum.source
+        self.activity = state.StateEnum.created_auxiliary        
+        self.state_type = state.StateTypeEnum.store
 
     def log_start_process(
         self,

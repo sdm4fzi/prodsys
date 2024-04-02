@@ -35,6 +35,7 @@ class StateEnum(str, Enum):
     end_state = "end state"
     finished_product = "finished product"
     created_product = "created product"
+    created_auxiliary = "created auxiliary"
 
 
 class StateTypeEnum(str, Enum):
@@ -48,6 +49,7 @@ class StateTypeEnum(str, Enum):
     setup = "Setup"
     source = "Source"
     sink = "Sink"
+    store = "Store"
 
 
 class StateInfo(BaseModel, extra=Extra.allow):

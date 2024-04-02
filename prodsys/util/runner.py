@@ -165,7 +165,7 @@ class Runner(BaseModel):
                 resource_factory=self.resource_factory,
                 sink_factory= self.sink_factory
             )
-            self.auxiliary_factory.create_auxiliary(self.adapter)
+            # self.auxiliary_factory.create_auxiliary(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 
@@ -185,6 +185,8 @@ class Runner(BaseModel):
 
             self.product_factory.event_logger = self.event_logger
             self.auxiliary_factory.event_logger = self.event_logger
+            self.auxiliary_factory.create_auxiliary(self.adapter)
+
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,

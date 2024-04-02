@@ -152,6 +152,25 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
     }
     data.append(item)
 
+def post_monitor_auxiliary_info(data: List[dict], auxiliary_info: auxiliary.AuxiliaryInfo):
+    """
+    Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
+
+    Args:
+        data (List[dict]): The data to log to.
+        product_info (product.ProductInfo): The product info object.
+    """
+
+    item = {
+        "Time": auxiliary_info.event_time,
+        "Resource": auxiliary_info.resource_ID,
+        "State": auxiliary_info.state_ID,
+        "State Type": auxiliary_info.state_type,
+        "Activity": auxiliary_info.activity,
+        "Product": auxiliary_info.product_ID,
+    }
+    data.append(item)
+
 class EventLogger(Logger):
     """
     Logger for logging events.
@@ -215,14 +234,14 @@ class EventLogger(Logger):
         
     def observe_terminal_auxiliary_states(self, auxiliary: auxiliary.Auxiliary):
         """
-        Create path to observe the terminal product states.
+        Create path to observe the terminal auxiliary states.
 
         Args:
-            product (product.Product): The product.
+            auxiliary (auxiliary.Auxiliary): The auxiliary.
         """
         self.register_patch(
                     self.event_data,
                     auxiliary.auxiliary_info,
-                    attr=["log_create_auxiliary", "log_finish_auxiliary"],
-                    post=post_monitor_product_info,
+                    attr="log_create_auxiliary",
+                    post=post_monitor_auxiliary_info,
                 )
