@@ -24,14 +24,15 @@ class AuxiliaryFactory(BaseModel):
                 arbitrary_types_allowed = True
 
         def create_auxiliary(self, adapter: adapter.ProductionSystemAdapter):
-                #TODO: Add logger
                 for auxiliary_data in adapter.auxiliary_data:
                         for i, storage in enumerate(auxiliary_data.initial_quantity_in_stores):
                                 stor = auxiliary_data.storages[i]
                                 storr = next((storage for storage in adapter.storage_data if storage.ID == stor), None)
                                 for _ in range(storage):
                                         auxiliary = self.add_auxiliary(auxiliary_data, storr)
-                                        #logger.debug({"ID": auxiliary.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": auxilairy.data.ID, "event": f"Created auxiliary"})
+                                        auxiliary.auxiliary_info.log_create_auxiliary(
+                                                resource = auxiliary.current_location, _product = auxiliary, event_time = self.env.now
+                                                )
 
 
 
