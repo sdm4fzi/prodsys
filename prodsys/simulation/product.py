@@ -189,7 +189,6 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
 
-        # Call the get_auxiliary
         if self.product_data.auxiliaries:
             auxiliary_request_1 = self.get_auxiliary_request_for_auxiliary()
             yield self.env.process(self.product_router.get_auxiliary(auxiliary_request_1))
