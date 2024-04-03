@@ -43,14 +43,14 @@ class ProcessData(CoreAsset):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process.
     """
-
-    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        combined_hash = ""
-        for time_model, process in zip(adapter.time_model_data, adapter.process_data):
-            if time_model.ID == process.time_model_id:
-                combined_hash += time_model.tomd5()
-        return md5(combined_hash.encode("utf-8")).hexdigest()
+    #TODO: also consider capabilities
     
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.tomd5()
+                break
+        return md5((time_model_hash).encode("utf-8")).hexdigest()
 
     time_model_id: str
 

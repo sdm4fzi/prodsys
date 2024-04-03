@@ -38,12 +38,11 @@ class SinkData(CoreAsset):
     input_queues: Optional[List[str]]
     
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        product_type = self.product_type
-        for sink_item in adapter.sink_data:
-            for product_item in adapter.product_data:
-                if product_item.ID == sink_item.product_type:
-                    product_type = product_item.tomd5(adapter)
-        return md5("".join([str(item) for item in self.location] + [product_type]).encode("utf-8")).hexdigest()
+        for product in adapter.product_data:
+            if product.ID == self.product_type:
+                product_hash = product.tomd5(adapter)
+                break
+        return md5("".join([str(item) for item in self.location] + [product_hash]).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {

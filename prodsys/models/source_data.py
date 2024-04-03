@@ -55,18 +55,17 @@ class SourceData(CoreAsset):
     output_queues: Optional[List[str]]
     
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        product_type = [self.product_type]
-        time_model_id = [self.time_model_id]
-        
-        for i in range(len(adapter.source_data)):
-            for l in range(len(adapter.product_data)):
-                if adapter.product_data[l].ID in adapter.source_data[i].product_type:
-                    product_type.append(adapter.product_data[i].tomd5(adapter))
-                for s in range(len(adapter.time_model_data)):
-                    if adapter.time_model_data[s].ID in adapter.source_data[i].time_model_id:
-                        time_model_id.append(adapter.time_model_data[s].tomd5())
-        
-        return md5(("".join([*[str(l) for l in self.location], "".join(product_type), "".join(time_model_id), self.routing_heuristic])).encode("utf-8")).hexdigest()
+        for product in adapter.product_data:
+            if product.ID == self.product_type:
+                product_hash = product.tomd5(adapter)
+                break
+
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.tomd5()
+                break
+
+        return md5(("".join([*[str(l) for l in self.location], product_hash, time_model_hash, self.routing_heuristic])).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {
