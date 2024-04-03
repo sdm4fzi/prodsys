@@ -93,25 +93,23 @@ class ResourceData(CoreAsset):
             )
         if max(v) > values["capacity"]:
             raise ValueError("process_capacities must be smaller than capacity")
-        return v
-
-
+        return v 
+    
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        process_ids = []
-        state_ids = []
+        state_id_hash = ""
+        process_id_hash = ""
+
+        for state in adapter.state_data:
+            if state.ID == self.state_ids:
+                state_id_hash = state.tomd5(adapter)
+                break
         
-        for i in range(len(adapter.process_data)):
-            for l in range(len(adapter.resource_data)):
-                if adapter.process_data[i].ID in adapter.resource_data[l].process_ids:
-                    process_ids.append(adapter.process_data[i].tomd5(adapter))
-                for s in range(len(adapter.state_data)):
-                    if adapter.state_data[s].ID in adapter.resource_data[l].state_ids:
-                        state_ids.append(adapter.state_data[s].tomd5(adapter))
-        
-        combined_data = [str(self.capacity), *map(str, self.location), self.controller, *sorted(process_ids), *map(str, self.process_capacities), *sorted(state_ids)]
-        combined_hash = "".join(combined_data)
-        
-        return md5(combined_hash.encode("utf-8")).hexdigest()
+        for process in adapter.process_data:
+            if process.ID == self.process_ids:
+                process_id_hash = process.tomd5(adapter)
+                break
+
+        return md5(("".join([str(self.capacity), *map(str, self.location), self.controller, process_id_hash, *map(str, self.process_capacities), state_id_hash])).encode("utf-8")).hexdigest()
     
 
 class ProductionResourceData(ResourceData):

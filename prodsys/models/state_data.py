@@ -108,21 +108,20 @@ class BreakDownStateData(StateData):
     repair_time_model_id: str
 
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        time_model_ids = []
-        repair_time_model_ids = [self.repair_time_model_id]
-            
-        for state in adapter.state_data:
-            for time_model in adapter.time_model_data:
-                if time_model.ID == state.time_model_id:
-                    time_model_ids.append(time_model.tomd5())
-                if time_model.ID == state.repair_time_model_id:
-                    repair_time_model_ids.append(time_model.tomd5())
-            
-        combined_hash = "".join(time_model_ids) + "".join(repair_time_model_ids)
-            
-        return md5(combined_hash.encode("utf-8")).hexdigest()
+        time_model_hash = ""
+        repair_time_model_hash = ""
+        
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.tomd5()
+                break
 
-    
+        for repair_time_model in adapter.time_model_data:
+            if repair_time_model.ID == self.repair_time_model_id:
+                repair_time_model_hash = repair_time_model.tomd5()
+                break
+
+        return md5(("".join([time_model_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()  
     
     class Config:
         schema_extra = {
@@ -169,18 +168,28 @@ class ProcessBreakDownStateData(StateData):
     repair_time_model_id: str
     process_id: str
 
-    def	tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        for i in range(0, len(adapter.state_data)):
-            for l in range(0, len(adapter.time_model_data)):
-                for s in range(0, len(adapter.process_data)):
-                    if adapter.time_model_data[l].ID == adapter.state_data[i].time_model_id:
-                        self.time_model_id = adapter.time_model_data[l].tomd5()
-                    if adapter.time_model_data[l].ID == adapter.state_data[i].repair_time_model_id:
-                        self.repair_time_model_id = adapter.time_model_data[l].tomd5()
-                    if adapter.process_data[s].ID == adapter.state_data[i].process_id:
-                        self.process_id = adapter.process_data[s].tomd5()
-        return md5(("".join([self.time_model_id, self.repair_time_model_id, self.process_id])).encode("utf-8")).hexdigest()
-    
+    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
+        process_hash = ""
+        time_model_hash = ""
+        repair_time_model_hash = ""
+
+        for process in adapter.process_data:
+            if process.ID == self.process_id:
+                process_hash = process.tomd5(adapter)
+                break
+
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.tomd5()
+                break
+
+        for repair_time_model in adapter.time_model_data:
+            if repair_time_model.ID == self.repair_time_model_id:
+                repair_time_model_hash = repair_time_model.tomd5()
+                break
+
+        return md5(("".join([process_hash, time_model_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()
+
     class Config:
         schema_extra = {
             "example": {
@@ -283,22 +292,23 @@ class SetupStateData(StateData):
     target_setup: str
 
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        time_model_ids = []
-        origin_setups = [self.origin_setup]
-        target_setups = [self.target_setup]
-        
-        for state in adapter.state_data:
-            for time_model in adapter.time_model_data:
-                if time_model.ID == state.time_model_id:
-                    time_model_ids.append(time_model.tomd5())
-            for process in adapter.process_data:
-                if process.ID == state.origin_setup:
-                    origin_setups.append(process.tomd5(adapter))
-                if process.ID == state.target_setup:
-                    target_setups.append(process.tomd5(adapter))
+        origin_hash = ""
+        target_hash = ""
+        time_model_hash = ""
 
-        combined_hash = "".join(time_model_ids + origin_setups + target_setups)
-        return md5(combined_hash.encode("utf-8")).hexdigest()
+        for process in adapter.process_data:
+            if process.ID == self.origin_setup:
+                origin_hash = process.tomd5(adapter)
+            if process.ID == self.target_setup:
+                target_hash = process.tomd5(adapter)
+            break
+
+        for state in adapter.state_data:
+            if state.ID == self.time_model_id:
+                time_model_hash = state.tomd5(adapter)
+                break
+
+        return md5(("".join([origin_hash, target_hash, time_model_hash])).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {

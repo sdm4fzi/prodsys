@@ -79,19 +79,20 @@ class ProductData(CoreAsset):
     transport_process: str
     
     def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        processes = self.processes
-        transport_processes = [self.transport_process]
-
-        for i in range(0, len(adapter.process_data)):
-            for l in range(0, len(adapter.product_data)):
-                if adapter.process_data[i].ID == adapter.product_data[l].processes:
-                    processes.append(adapter.process_data[i].tomd5(adapter))
-                if adapter.process_data[i].ID == adapter.product_data[l].transport_process:
-                    transport_processes.append(adapter.process_data[i].tomd5(adapter))
-
-        combined_hash = "".join([self.product_type, *processes, *transport_processes])
-
-        return md5(combined_hash.encode("utf-8")).hexdigest()
+        processes_hash = ""
+        transport_process_hash = ""
+        
+        for process in adapter.process_data:
+            if process.ID == self.processes:
+                processes_hash = process.tomd5(adapter)
+                break
+        
+        for transport_process in adapter.process_data:
+            if transport_process.ID == self.transport_process:
+                transport_process_hash = transport_process.tomd5(adapter)
+                break
+        
+        return md5("".join([self.product_type, processes_hash, transport_process_hash]).encode("utf-8")).hexdigest()
                    
     @root_validator(pre=True)
     def check_processes(cls, values):
