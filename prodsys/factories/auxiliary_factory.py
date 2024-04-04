@@ -45,7 +45,7 @@ class AuxiliaryFactory(BaseModel):
                 values.update({"transport_process": transport_process})
                 storage = self.storage_factory.get_storage(storage.ID)
                 values.update({"storage": storage})
-                router = self.get_router(source_data.RoutingHeuristic.random) # Add the routing_heuristic in auxiliary_data, like in source_data
+                router = self.get_router(source_data.RoutingHeuristic.FIFO) # Add the routing_heuristic in auxiliary_data, like in source_data
                 auxiliary_object = parse_obj_as(auxiliary.Auxiliary, values)
                 auxiliary_object.auxiliary_router = router
                 auxiliary_object.current_location = storage
