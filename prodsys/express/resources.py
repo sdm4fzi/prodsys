@@ -57,7 +57,8 @@ class Node(core.ExpressObject):
 @dataclass
 class Node(core.ExpressObject):
         """
-        Represents a node data object of a link.
+        Represents a node data object of a link. Each node is a location which the Transportresource
+        can move to on it's way between Productionresources, Sinks and Sources.
 
         Attributes:
                 location (List[float]): Location of the node. It has to be a list of length 2.
