@@ -146,20 +146,6 @@ class Auxiliary(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
-            
-
-    # def request(self) -> None:
-    #     """
-    #     Request the auxiliary component to be transported to a Location of a product.
-
-    #     Args:
-    #         process_request (request.Request): The request to be processed.
-    #     """
-    #     #allocate the product to the auxiliary
-    #     self.current_product = process_request.product
-    #     # if not self.requested.triggered:
-    #     #     self.requested.succeed()
-    #     #     print(self.requested)
 
     def update_location(self, location: product.Location):
         """
@@ -172,19 +158,44 @@ class Auxiliary(BaseModel):
         logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
 
     def get_auxiliary(self, transport_request: request.TransportResquest):
+        """
+        Retrieves the auxiliary resources for a given transport request. Processes the auxiliary to the product location.
+        Blocks the auxiliary until the release_auxiliary method is called.
+
+        Args:
+            transport_request (request.TransportResquest): The transport request for which to retrieve auxiliary resources.
+
+        Yields:
+            simpy.events.Event: A SimPy event that represents the completion of the auxiliary resource retrieval process.
+        """
         self.finished_auxiliary_process = events.Event(self.env)
         self.got_free = events.Event(self.env)
         yield self.env.process(self.auxiliary_router.route_request(transport_request))
         yield self.env.process(self.request_process(transport_request))
 
     def release_auxiliary(self) -> Generator:
+        """
+        Releases the auxiliary process and performs necessary actions. 
+        After this function the auxiliary is available for other products.
+        The auxiliary is processed from the sink to the storage.
+
+        This method releases the auxiliary process and performs the following actions:
+        1. Creates a storage transport request.
+        2. Routes the storage transport request using the auxiliary router.
+        3. Processes the storage transport request.
+        4. Updates the current auxiliary location to the storage.
+        5. Yields a timeout of 0.
+
+        Yields:
+            Generator: A generator object that represents the execution of the method.
+        """
         self.finished_auxiliary_process = events.Event(self.env)
         storage_transport_request = request.TransportResquest(
-                    process = self.transport_process,
-                    product = self, 
-                    origin = self.current_location,
-                    target = self.storage
-                )
+            process=self.transport_process,
+            product=self,
+            origin=self.current_location,
+            target=self.storage
+        )
         yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
         yield self.env.process(self.request_process(storage_transport_request))
         self.current_product = None

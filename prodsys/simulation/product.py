@@ -225,22 +225,37 @@ class Product(BaseModel):
 
 
     def get_transport_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
+        """
+        Creates a transport request for the given auxiliary.
 
-        # create a transport request for the free auxiliary
+        Args:
+            auxiliary (auxiliary.Auxiliary): The auxiliary for which the transport request is created.
+
+        Returns:
+            request.Request: The created transport request.
+        """
 
         req = request.TransportResquest(
-            process = auxiliary.transport_process,
-            product = auxiliary, 
-            origin = auxiliary.current_location,
-            target = self.current_location
+            process=auxiliary.transport_process,
+            product=auxiliary,
+            origin=auxiliary.current_location,
+            target=self.current_location
         )
         return req
 
     def get_auxiliary_request_for_auxiliary(self) -> request.AuxiliaryRequest:
+        """
+        Returns an AuxiliaryRequest object for the auxiliary process.
 
+        This method creates and returns an AuxiliaryRequest object that represents the request
+        for the auxiliary process associated with the current product.
+
+        Returns:
+            An AuxiliaryRequest object representing the request for the auxiliary process.
+        """
         req = request.AuxiliaryRequest(
-            process = self.product_data.transport_process,
-            product = self,
+            process=self.product_data.transport_process,
+            product=self,
         )
         return req
 
