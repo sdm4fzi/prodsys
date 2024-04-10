@@ -67,7 +67,14 @@ class Request:
         return self.resource
 
 class AuxiliaryRequest(Request):
+    """
+    Represents an auxiliary request in the simulation. The request is associated with an auxiliary which needs to be transported
 
+    Attributes:
+        process (process.TransportProcess): The transport process associated with the request.
+        product (product.Product): The product associated with the request.
+        auxiliary (auxiliary.Auxiliary): The auxiliary associated with the request.
+    """
 
     def __init__(
         self,

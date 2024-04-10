@@ -23,7 +23,6 @@ class ProductFactory(BaseModel):
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     products: List[product.Product] = []
-    #auxilaries: List[auxiliary.Auxiliary] = []
     finished_products: List[product.Product] = []
     event_logger: logger.EventLogger = Field(default=False, init=False)
     product_counter = 0
@@ -60,11 +59,6 @@ class ProductFactory(BaseModel):
         ):
             raise ValueError("Transport process not found.")
         
-        # if product_data.auxiliaries:
-        #     auxiliaries = []
-        #     for auxiliary in self.auxiliary_factory.auxiliaries:
-        #         if auxiliary.auxiliary_data.ID in product_data.auxiliaries:
-        #             auxiliaries.append(self.auxiliary_factory.get_auxiliary(auxiliary.auxiliary_data.ID))
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
