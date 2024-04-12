@@ -54,6 +54,25 @@ class Source(BaseModel):
         """
         self.env.process(self.create_product_loop())
 
+    def get_output_queue_length(self) -> int:
+        """
+        Returns total number of items in all output_queues.
+
+        Returns:
+            int: Sum of items in the source output-queues.
+        """
+        return sum([len(q.items) for q in self.output_queues])
+
+
+    def get_input_queue_length(self) -> int:
+        """
+        Returns total number of items in all input_queues.
+
+        Returns:
+            int(0)
+        """
+        return 0
+
     def create_product_loop(self) -> Generator:
         """
         Simpy process that creates products and puts them in the output queues.
