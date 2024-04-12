@@ -242,10 +242,21 @@ class Resource(BaseModel, ABC, resource.Resource):
             List[float]: The location of the resource. Has to have length 2.
         """
         return self.data.location
+    
 
-    def get_output_queue_length(self) -> List[float]:
+    def get_input_queue_length(self) -> int:
+        """
+        Returns total number of items in all input_queues.
+
+        Returns:
+            int: Sum of items in the resources input-queues.
+        """
+        return sum([len(q.items) for q in self.input_queues])
+
+    def get_output_queue_length(self) -> int:
         """
         Returns total number of items in all output_queues.
+        
         Returns:
             int: Sum of items in the resources output-queues.
         """
