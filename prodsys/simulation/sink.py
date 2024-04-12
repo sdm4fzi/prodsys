@@ -46,6 +46,23 @@ class Sink(BaseModel):
             List[float]: The location. Has to be a list of length 2.
         """
         return self.data.location
+
+    def get_input_queue_length(self) -> int:
+        """
+        Returns total number of items in all input_queues. Defaults to 0 for a sink.
+
+        Returns:
+            int(0)
+        """
+        return 0
+
+    def get_output_queue_length(self) -> int:
+        """
+        Returns zero. Needed for transport control policies that use the target locations output queue for request ordering.
+        Returns:
+            int(0)
+        """
+        return 0
     
     def register_finished_product(self, product: product.Product):
         """
