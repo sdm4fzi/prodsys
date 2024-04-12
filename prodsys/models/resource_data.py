@@ -50,11 +50,15 @@ class TransportControlPolicy(str, Enum):
     Enum that represents the control policy of a transport resource.
 
     - FIFO: First in first out.
-    - SPT_transport: Shortest transport time first.
+    - SPT_transport: Shortest raw transport time first. Does not consider distance to start of the transport.
+    - NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT: Nearest_Origin but also sorts by the length of the target queue to make sure, something can be picked up at the target.
+    - NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT: Nearest_Origin but also sorts by the length of the target input queue to prefer target machines, that have lower number of products waiting to be processed.
     """
 
     FIFO = "FIFO"
     SPT_transport = "SPT_transport"
+    NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT = "Nearest_origin_and_longest_target_queues_transport"
+    NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT = "Nearest_origin_and_shortest_target_input_queues_transport"
 
 
 class ResourceData(CoreAsset):
