@@ -82,7 +82,7 @@ class ScenarioOptionsData(BaseModel):
     Args:
         transformations (List[ReconfigurationEnum]): List of possible transformations of the configuration.
         machine_controllers (List[Literal["FIFO", "LIFO", "SPT"]]): List of possible controllers for machines.
-        transport_controllers (List[Literal["FIFO", "SPT_transport"]]): List of possible controllers for transport resources.
+        transport_controllers (List[Literal["FIFO", "SPT_transport", "Nearest_origin_and_longest_target_queues_transport", "Nearest_origin_and_shortest_target_input_queues_transport"]]): List of possible controllers for transport resources.
         routing_heuristics (List[Literal["shortest_queue", "random", "FIFO"]]): List of possible routing heuristics for sources.
         positions (List[conlist(float, min_items=2, max_items=2)]): List of possible positions for machines in the layout.
 
