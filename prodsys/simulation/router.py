@@ -190,6 +190,7 @@ def shortest_queue_routing_heuristic(
 ):
     """
     Sorts the list of possible resources by the length of their input queues and returns the first resource.
+    For Transport resources, the next resource is chosen by the resource with the shortest request queue.
 
     Args:
         possible_resources (List[resources.Resource]): A list of possible resources.
