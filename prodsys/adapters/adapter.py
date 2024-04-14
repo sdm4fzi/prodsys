@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from hashlib import md5
 import warnings
 from typing import List, Any, Set, Optional, Tuple, Union
 from pydantic import BaseModel, validator, ValidationError
@@ -294,7 +295,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
 
-    
+
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
@@ -671,6 +672,28 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 "scenario_data": None,
             }
         }
+
+    def hash(self) -> str:
+        """
+        Generates a hash of the adapter based on the hash of all contained entities. Only information describing the physical structure and functionality of the production system is considered. Can be used to compare two production systems of adapters for functional equality.
+
+        Returns:
+            str: Hash of the adapter
+        """
+        return md5(
+            ("".join(
+                [
+                *sorted([time_model.hash() for time_model in self.time_model_data]),
+                *sorted([state.hash(self) for state in self.state_data]),
+                *sorted([process.hash(self) for process in self.process_data]),
+                *sorted([res.hash(self) for res in self.resource_data]),
+                *sorted([queue.hash() for queue in self.queue_data]),
+                *sorted([product.hash(self) for product in self.product_data]),
+                *sorted([sink.hash(self) for sink in self.sink_data]),
+                *sorted([source.hash(self) for source in self.source_data])
+                ]
+            )).encode("utf-8")
+            ).hexdigest()
 
     @validator("state_data", each_item=True)
     def check_states(cls, state: state_data.STATE_DATA_UNION, values):

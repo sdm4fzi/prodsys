@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import Union
+from hashlib import md5
 
 from prodsys.models.core_asset import CoreAsset
-from pydantic import validator
 
 
 class QueueData(CoreAsset):
@@ -37,6 +37,17 @@ class QueueData(CoreAsset):
     """
 
     capacity: Union[int, float] = 0.0
+
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the queue considering its capacity.
+
+
+        Returns:
+            str: Hash of the queue.
+        """
+        return md5((str(self.capacity)).encode("utf-8")).hexdigest()
+
 
     class Config:
         schema_extra = {

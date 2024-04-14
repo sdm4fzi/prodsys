@@ -240,7 +240,10 @@ def tabu_search_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -267,6 +270,7 @@ def tabu_search_optimization(
                 "agg_fitness": performance,
                 "fitness": [float(value) for value in values],
                 "time_stamp": time.perf_counter() - start,
+                "hash": state.hash()
             }
             with open(f"{save_folder}/optimization_results.json", "w") as json_file:
                 json.dump(performances, json_file)
