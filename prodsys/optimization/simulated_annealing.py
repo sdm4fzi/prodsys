@@ -78,6 +78,7 @@ class ProductionSystemOptimization(Annealer):
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
             "time_stamp": time.perf_counter() - self.start,
+            "hash": self.state.hash(),
         }
         with open(f"{self.save_folder}/optimization_results.json", "w") as json_file:
             json.dump(self.performances, json_file)
@@ -199,7 +200,10 @@ def simulated_annealing_optimization(
 
     weights = get_weights(base_configuration, "min")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()

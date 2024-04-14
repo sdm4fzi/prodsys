@@ -94,9 +94,9 @@ class ProductData(CoreAsset):
         processes_hashes = []
         transport_process_hash = ""
 
-        # if not isinstance(self.processes, list) or isinstance(self.processes[0], list):
-        #     # TODO: Implement hash for adjacency matrix and edges process models
-        #     raise NotImplementedError("Only list of processes is supported for hashing. Complex process models are not supported yet.")
+        if not isinstance(self.processes, list) or isinstance(self.processes[0], list):
+            # TODO: Implement hash for adjacency matrix and edges process models
+            raise NotImplementedError("Only list of processes is supported for hashing. Complex process models are not supported yet.")
         
         for process_id in self.processes:
             for process in adapter.process_data:
