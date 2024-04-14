@@ -295,21 +295,10 @@ class ProductionSystemAdapter(ABC, BaseModel):
     source_data: List[source_data.SourceData] = []
     scenario_data: Optional[scenario_data.ScenarioData] = None
 
- 
+
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
-    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        return md5(("".join([
-                str([time.tomd5() for time in self.time_model_data]),
-                str([state.tomd5(adapter) for state in self.state_data]),
-                str([process.tomd5(adapter) for process in self.process_data]),
-                *sorted([res.tomd5(adapter) for res in self.resource_data]),
-                *sorted([product.tomd5(adapter) for product in self.product_data]),
-                *sorted([sink.tomd5(adapter) for sink in self.sink_data]),
-                *sorted([source.tomd5(adapter) for source in self.source_data])])
-                ).encode("utf-8")).hexdigest()
-    
     class Config:
         validate = True
         validate_assignment = True
@@ -683,6 +672,28 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 "scenario_data": None,
             }
         }
+
+    def hash(self) -> str:
+        """
+        Generates a hash of the adapter based on the hash of all contained entities. Only information describing the physical structure and functionality of the production system is considered. Can be used to compare two production systems of adapters for functional equality.
+
+        Returns:
+            str: Hash of the adapter
+        """
+        return md5(
+            ("".join(
+                [
+                *sorted([time_model.hash() for time_model in self.time_model_data]),
+                *sorted([state.hash(self) for state in self.state_data]),
+                *sorted([process.hash(self) for process in self.process_data]),
+                *sorted([res.hash(self) for res in self.resource_data]),
+                *sorted([queue.hash() for queue in self.queue_data]),
+                *sorted([product.hash(self) for product in self.product_data]),
+                *sorted([sink.hash(self) for sink in self.sink_data]),
+                *sorted([source.hash(self) for source in self.source_data])
+                ]
+            )).encode("utf-8")
+            ).hexdigest()
 
     @validator("state_data", each_item=True)
     def check_states(cls, state: state_data.STATE_DATA_UNION, values):
