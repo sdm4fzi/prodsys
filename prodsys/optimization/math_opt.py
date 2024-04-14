@@ -523,6 +523,7 @@ class MathOptimizer(BaseModel):
                 "agg_fitness": 0.0,
                 "fitness": [float(value) for value in simulation_results],
                 "time_stamp": 0.0,
+                "hash": new_adapter.hash(),
             }
         with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
