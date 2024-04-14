@@ -1,11 +1,13 @@
 from __future__ import annotations
 from hashlib import md5
-from typing import Literal, Union, List, Tuple, Optional, TYPE_CHECKING
-if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
-from pydantic import validator, conlist
+from typing import List, Optional, TYPE_CHECKING
+from pydantic import conlist
 
 from prodsys.models.core_asset import CoreAsset
+
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
+
 
 
 class SinkData(CoreAsset):
@@ -33,16 +35,9 @@ class SinkData(CoreAsset):
         ```
     """
 
-    location: conlist(float, min_items=2, max_items=2)
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
     product_type: str
     input_queues: Optional[List[str]]
-    
-    def tomd5(self, adapter: ProductionSystemAdapter) -> str:
-        for product in adapter.product_data:
-            if product.ID == self.product_type:
-                product_hash = product.tomd5(adapter)
-                break
-        return md5("".join([str(item) for item in self.location] + [product_hash]).encode("utf-8")).hexdigest()
     
     class Config:
         schema_extra = {
@@ -57,3 +52,34 @@ class SinkData(CoreAsset):
                 },
             }
         }
+    
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the sink considering its location, product type and input queues.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter of the production system.
+
+        Raises:
+            ValueError: If the product or input queue is not found in the adapter.
+
+        Returns:
+            str: Hash of the sink.
+        """
+        for product in adapter.product_data:
+            if product.product_type == self.product_type:
+                product_hash = product.hash(adapter)
+                break
+        else:
+            raise ValueError(f"Product with ID {self.product_type} not found for sink {self.ID}.")
+        
+        input_queue_hashes = []
+        for queue_id in self.input_queues:
+            for queue in adapter.queue_data:
+                if queue.ID == queue_id:
+                    input_queue_hashes.append(queue.hash())
+                    break
+            else:
+                raise ValueError(f"Queue with ID {queue_id} not found for sink {self.ID}.")
+
+        return md5("".join([*map(str, self.location), product_hash, *sorted(input_queue_hashes)]).encode("utf-8")).hexdigest()
