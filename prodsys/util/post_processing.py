@@ -419,7 +419,7 @@ class PostProcessor:
             df = pd.concat([example_row, df]).reset_index(drop=True)
 
         df["next_Time"] = df.groupby("Resource")["Time"].shift(-1)
-        df["next_Time"].fillna(df["Time"].max(), inplace=True)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"].max())
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
@@ -554,6 +554,8 @@ class PostProcessor:
         return df
     
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.loc[df["Time"] != 0]
+
         CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
         FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
 
@@ -571,7 +573,7 @@ class PostProcessor:
 
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
         
-        # remove bug that sinks have resource WIP!
+        # FIXME: remove bug that negative WIP is possible
         df_temp = df[["State", "State Type"]].drop_duplicates()
         sinks = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.sink, "State"].unique()
         df = df.loc[~df["WIP_resource"].isin(sinks)]
