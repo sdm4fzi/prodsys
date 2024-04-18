@@ -1,4 +1,4 @@
-![Alt text](./resources/logo.svg)
+![prodsys logo](https://raw.githubusercontent.com/sdm4fzi/prodsys/main/resources/logo.svg)
 
 *prodsys - modeling, simulating and optimizing production systems*
 
