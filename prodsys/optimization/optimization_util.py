@@ -213,10 +213,9 @@ def get_weights(
     for objective in adapter.scenario_data.objectives:
         kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
         if kpi.target != direction:
-            objective.weight *= -1
-        # if direction == "min":
-        #     objective.weight *= -1
-        weights.append(objective.weight)
+            weights.append(objective.weight * -1)
+        else:
+            weights.append(objective.weight)
     return tuple(weights)
 
 
@@ -1055,8 +1054,7 @@ def evaluate(
         return performances[evaluated_adapter_generation][evaluated_adapter_id]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
-        # FIXME: check if this function is always correct, either max or min for all algorithms?
-        return [-100000 * weight for weight in get_weights(base_scenario, "max")]
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")]
 
     fitness_values = []
 
