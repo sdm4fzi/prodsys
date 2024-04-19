@@ -79,3 +79,10 @@ async def create_time_model(
 async def read_time_model(project_id: str, adapter_id: str, time_model_id: str):
     time_model = get_time_model(project_id, adapter_id, time_model_id)
     return time_model
+
+@router.delete("/{time_model_id}")
+async def delete_time_model(project_id: str, adapter_id: str, time_model_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    time_model = get_time_model(project_id, adapter_id, time_model_id)
+    adapter.time_model_data.remove(time_model)
+    return "Sucessfully deleted time model with ID: " + time_model.ID

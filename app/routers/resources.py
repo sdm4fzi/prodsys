@@ -49,17 +49,6 @@ async def read_resources(project_id: str, adapter_id: str):
     adapter = get_adapter(project_id, adapter_id)
     return adapter.resource_data
 
-
-@router.delete(
-    "/{resource_id}",
-)
-async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    resource = get_resource(project_id, adapter_id, resource_id)
-    adapter.resource_data.remove(resource)
-    return "Sucessfully deleted resource with ID: " + resource_id
-
-
 @router.get(
     "/{resource_id}",
     response_model=resource_data.RESOURCE_DATA_UNION,
@@ -92,3 +81,12 @@ async def create_resource(
     adapter = get_adapter(project_id, adapter_id)
     adapter.resource_data.append(resource)
     return "Sucessfully updated resource with ID: " + resource_id
+
+@router.delete(
+    "/{resource_id}",
+)
+async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    resource = get_resource(project_id, adapter_id, resource_id)
+    adapter.resource_data.remove(resource)
+    return "Sucessfully deleted resource with ID: " + resource_id

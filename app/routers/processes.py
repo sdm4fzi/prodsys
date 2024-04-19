@@ -73,3 +73,12 @@ async def create_process(
 async def read_process(project_id: str, adapter_id: str, process_id: str):
     process = get_process(project_id, adapter_id, process_id)
     return process
+
+@router.delete(
+    "/{process_id}",
+)
+async def delete_process(project_id: str, adapter_id: str, process_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    process = get_process(project_id, adapter_id, process_id)
+    adapter.process_data.remove(process)
+    return "Sucessfully deleted process with ID: " + process_id

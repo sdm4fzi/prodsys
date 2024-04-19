@@ -70,3 +70,12 @@ async def create_queue(
 async def read_queue(project_id: str, adapter_id: str, queue_id: str):
     queue = get_queue_data(project_id, adapter_id, queue_id)
     return queue
+
+@router.delete(
+    "/{queue_id}",
+)
+async def delete_queue(project_id: str, adapter_id: str, queue_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    queue = get_queue_data(project_id, adapter_id, queue_id)
+    adapter.queue_data.remove(queue)
+    return "Sucessfully deleted queue with ID: " + queue_id

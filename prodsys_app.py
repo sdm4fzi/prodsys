@@ -69,15 +69,16 @@ app.include_router(scenario.router)
 @app.get("/", response_model=str)
 async def root():
     # return {"message": f"prodsys API v{str(prodsys.VERSION)}"}
-    return "Hello World!"
+    return "Prodsys API version 0.5.0"
 
 
-@hydra.main(config_path="conf", config_name="config", version_base=None)
+"""@hydra.main(config_path="conf", config_name="config", version_base=None)
 def prodsys_app(cfg: DictConfig) -> None:
     if os.environ.get("ROOT_PATH"):
         uvicorn.run(app, root_path=os.environ.get("ROOT_PATH"), host=cfg.fastapi.host, port=cfg.fastapi.port)
     else:
-        uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
+        uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)"""
 
-if __name__ == "__main__":
-    prodsys_app()
+#if __name__ == "__main__":
+  #  prodsys_app()
+#prodsys_app()
