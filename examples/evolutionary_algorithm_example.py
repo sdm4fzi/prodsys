@@ -2,7 +2,7 @@ from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorit
 
 seed = 23
 NGEN = 9
-POPULATION_SIZE = 8
+POPULATION_SIZE = 16
 N_PROCESSES = 4
 NUMBER_OF_SEEDS = 1
 CROSS_OVER_RATE = 0.1

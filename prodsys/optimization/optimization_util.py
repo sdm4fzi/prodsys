@@ -213,10 +213,9 @@ def get_weights(
     for objective in adapter.scenario_data.objectives:
         kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
         if kpi.target != direction:
-            objective.weight *= -1
-        # if direction == "min":
-        #     objective.weight *= -1
-        weights.append(objective.weight)
+            weights.append(objective.weight * -1)
+        else:
+            weights.append(objective.weight)
     return tuple(weights)
 
 
@@ -1010,7 +1009,6 @@ def document_individual(
     current_generation = solution_dict["current_generation"]
 
     if adapter_object.hash() not in solution_dict["hashes"]:
-        print(f"new solution in generation {current_generation} with ID {adapter_object.ID} and hash {adapter_object.hash()}.")
         solution_dict["hashes"][adapter_object.hash()] = {
             "generation": current_generation,
             "ID": adapter_object.ID,
@@ -1051,12 +1049,10 @@ def evaluate(
     if adapter_object_hash in solution_dict["hashes"]:
         evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash]["generation"]
         evaluated_adapter_id = solution_dict["hashes"][adapter_object_hash]["ID"]
-        print(f"{adapter_object.ID}: adapter with equal hash already evaluated. Returning fitness of generation {evaluated_adapter_generation} and ID {evaluated_adapter_id}.")
         return performances[evaluated_adapter_generation][evaluated_adapter_id]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
-        # FIXME: check if this function is always correct, either max or min for all algorithms?
-        return [-100000 * weight for weight in get_weights(base_scenario, "max")]
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")]
 
     fitness_values = []
 

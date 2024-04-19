@@ -75,12 +75,14 @@ def read_initial_solutions(
     """
     file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
     adapter_objects = []
-    for file_path in file_paths:
+    for counter, file_path in enumerate(file_paths):
         if ".json" not in file_path or file_path == "optimization_results.json":
             continue
         adapter = adapters.JsonProductionSystemAdapter()
         adapter.read_data(join(folder_path, file_path))
         adapter.scenario_data = base_configuration.scenario_data.copy()
+        if not adapter.ID:
+            adapter.ID = f"initial_solution_{counter}"
         adapter_objects.append(adapter)
     return adapter_objects
 
@@ -127,7 +129,7 @@ def flatten(xs: Iterable) -> Iterable:
         else:
             yield x
 
-def flatten_object(xs: list) -> list:
+def flatten_object(xs: list) -> list: # type: ignore
     """
     Flattens a nested list.
 
