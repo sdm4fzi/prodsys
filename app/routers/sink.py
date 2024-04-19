@@ -76,3 +76,10 @@ async def create_sink(
 async def read_sink(project_id: str, adapter_id: str, sink_id: str):
     sink = get_sink(project_id, adapter_id, sink_id)
     return sink
+
+@router.delete("/{sink_id}")
+async def delete_sink(project_id: str, adapter_id: str, sink_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    sink = get_sink(project_id, adapter_id, sink_id)
+    adapter.sink_data.remove(sink)
+    return "Sucessfully deleted sink with ID: " + sink_id

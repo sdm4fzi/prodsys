@@ -14,17 +14,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-
+#TODO: Seed mit einfügen
 @router.get(
-    "/",
-    response_model=str,
-)
-async def run_simulation(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    evaluate(adapter)
-    return "Sucessfully ran simulation for adapter with ID: " + adapter_id
-
-@router.post(
     "/",
     response_model=str,
 )

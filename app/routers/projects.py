@@ -28,7 +28,7 @@ async def read_projects() -> List[Project]:
 
 
 @router.put("/{project_id}")
-async def create_project(
+async def update_project(
     project_id: str,
     project: Project,
 ) -> str:
@@ -40,6 +40,12 @@ async def create_project(
 async def read_project(project_id: str) -> Project:
     return get_project(project_id)
 
+@router.post("/")
+async def create_project(
+    project: Project,
+) -> str:
+    database.append(project)
+    return "Sucessfully updated project with ID: " + project.ID
 
 @router.delete("/{project_id}")
 async def delete_project(project_id: str):

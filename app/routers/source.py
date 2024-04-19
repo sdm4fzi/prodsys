@@ -70,3 +70,10 @@ async def create_sink(
 async def read_source(project_id: str, adapter_id: str, source_id: str):
     source = get_source(project_id, adapter_id, source_id)
     return source
+
+@router.delete("/{source_id}")
+async def delete_source(project_id: str, adapter_id: str, source_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    source = get_source(project_id, adapter_id, source_id)
+    adapter.source_data.remove(source)
+    return "Sucessfully deleted source with ID: " + source_id

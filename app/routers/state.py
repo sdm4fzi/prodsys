@@ -88,3 +88,10 @@ async def create_state(
 async def read_state(project_id: str, adapter_id: str, state_id: str):
     state = get_state(project_id, adapter_id, state_id)
     return state
+
+@router.delete("/{state_id}")
+async def delete_state(project_id: str, adapter_id: str, state_id: str):
+    adapter = get_adapter(project_id, adapter_id)
+    state = get_state(project_id, adapter_id, state_id)
+    adapter.state_data.remove(state)
+    return "Sucessfully deleted state with ID: " + state_id
