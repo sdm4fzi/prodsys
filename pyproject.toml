@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prodsys"
-version = "0.5.0"
+version = "0.5.3"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
 license = "MIT"
@@ -21,6 +21,15 @@ openpyxl = "^3.1.2"
 plotly = "^5.14.1"
 scipy = "^1.11.1"
 tqdm = "^4.65"
+
+[tool.poetry.extras]
+ai = ["torch", "torchvision", "torchaudio", "tensorboard", "gymnasium", "stable-baselines3"]
+
+
+[tool.poetry.group.ai]
+optional = true
+
+[tool.poetry.group.ai.dependencies]
 torch = "^2.0.1"
 torchvision = "^0.15.2"
 torchaudio = "^2.0.2"
@@ -29,9 +38,15 @@ gymnasium = ">=0.26.3"
 stable-baselines3 = "^2.0.0"
 
 
+[tool.poetry.group.test]
+optional = true
+
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"
 
+
+[tool.poetry.group.dev]
+optional = true
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
@@ -44,9 +59,8 @@ ipywidgets = "^8.0.6"
 snakeviz = "^2.2.0"
 
 
-[tool.poetry.group.experimental.dependencies]
-pm4py = "^2.7.3"
-
+[tool.poetry.group.build]
+optional = true
 
 [tool.poetry.group.build.dependencies]
 setuptools = "^67.7.0"
