@@ -17,7 +17,7 @@ from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyp
 from prodsys.models import (
     performance_indicators
 )
-from app.dependencies import get_adapter, prepare_adapter_from_optimization, get_configuration_results_adapter_from_filesystem
+from app.dependencies import prodsys_backend, prepare_adapter_from_optimization, get_configuration_results_adapter_from_filesystem
 
 
 router = APIRouter(
@@ -26,18 +26,18 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-HYPERPARAMETER_EXAMPLES = {
-    "Evolutionary algorithm": EvolutionaryAlgorithmHyperparameters.Config.schema_extra["example"],
-    "Simulated annealing": simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra["example"],
-    "Tabu search": tabu_search.TabuSearchHyperparameters.Config.schema_extra["example"],
-    "Mathematical optimization": math_opt.MathOptHyperparameters.Config.schema_extra["example"],
-}
+HYPERPARAMETER_EXAMPLES = [
+    EvolutionaryAlgorithmHyperparameters.Config.schema_extra["examples"][0],
+    simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra["examples"][0],
+    tabu_search.TabuSearchHyperparameters.Config.schema_extra["examples"][0],
+    math_opt.MathOptHyperparameters.Config.schema_extra["examples"][0],
+]
 
 @router.post(
     "/",
     response_model=str,
 )
-async def run_configuration_optimization(
+async def optimize(
     project_id: str,
     adapter_id: str,
     hyper_parameters: Annotated[Union[
@@ -47,7 +47,7 @@ async def run_configuration_optimization(
         math_opt.MathOptHyperparameters,
     ], Body(examples=HYPERPARAMETER_EXAMPLES)],
 ):
-    adapter = get_adapter(project_id, adapter_id)
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
         raise HTTPException(
             404, f"Adapter {adapter_id} is missing scenario data for optimization."
@@ -59,6 +59,7 @@ async def run_configuration_optimization(
     adapter.write_data(configuration_file_path)
     adapter.write_scenario_data(scenario_file_path)
 
+    # TODO: move this to background task
     if isinstance(
         hyper_parameters, EvolutionaryAlgorithmHyperparameters
     ):
@@ -90,7 +91,7 @@ async def run_configuration_optimization(
 def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
-    adapter_object = get_adapter(project_id, adapter_id)
+    adapter_object = prodsys_backend.get_adapter(project_id, adapter_id)
     kpis = adapter_object.scenario_data.objectives
     response = {}
     for solution in data.values():

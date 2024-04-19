@@ -153,16 +153,15 @@ class TabuSearchHyperparameters(BaseModel):
 
     class Config:
         schema_extra = {
-            "example": {
-                "summary": "Tabu Search Hyperparameters",
-                "value": {
+            "examples": [
+                 {
                     "seed": 0,
                     "tabu_size": 10,
                     "max_steps": 300,
                     "max_score": 500,
                     "number_of_seeds": 1,
                 },
-            }
+            ]
         }
 
 
