@@ -21,6 +21,7 @@ openpyxl = "^3.1.2"
 plotly = "^5.14.1"
 scipy = "^1.11.1"
 tqdm = "^4.65"
+email-validator = "^2.1.1"
 
 [tool.poetry.extras]
 ai = ["torch", "torchvision", "torchaudio", "tensorboard", "gymnasium", "stable-baselines3"]

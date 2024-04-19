@@ -8,7 +8,7 @@ from prodsys.models import (
     performance_data,
     performance_indicators
 )
-from app.dependencies import get_result
+from app.dependencies import prodsys_backend
 
 KPI_EXAMPLES = {
     "Output": performance_indicators.Output.Config.schema_extra["example"],
@@ -27,16 +27,15 @@ KPI_EXAMPLES = {
 
 KPI_LIST_EXAMPLE = [item["value"] for item in KPI_EXAMPLES.values()]
 
-EVENT_LIST_EXAMPLE = [item for item in performance_data.Event.Config.schema_extra["examples"]]
 
 router = APIRouter(
-    prefix="/projects/{project_id}/adapters/{adapter_id}/results",
-    tags=["results"],
+    prefix="/projects/{project_id}/adapters/{adapter_id}/performance",
+    tags=["performance"],
     responses={404: {"description": "Not found"}},
 )
 
 @router.get(
-    "/static_results",
+    "/kpis",
     response_model=List[performance_indicators.KPI_UNION],
     responses={
         200: {
@@ -50,34 +49,13 @@ router = APIRouter(
         404: {"description": "No KPIs found"},
     }
 )
-async def get_static_results(project_id: str, adapter_id: str):
-    result = get_result(project_id, adapter_id)
-    return result.kpis
+async def get_kpis(project_id: str, adapter_id: str):
+    performance = prodsys_backend.get_performance(project_id, adapter_id)
+    return performance.kpis
 
 
 @router.get(
-    "/event_results",
-    response_model=List[performance_data.Event],
-    responses={
-        200: {
-            "description": "Sucessfully returned event results",
-            "content": {
-                "application/json": {
-                    "example": EVENT_LIST_EXAMPLE
-                }
-            }
-        },
-        404: {"description": "No events found"},
-    }
-)
-async def get_event_results(project_id: str, adapter_id: str, num_events: int = 10, offset: int = 0):
-    result = get_result(project_id, adapter_id)
-    if offset + num_events > len(result.event_log):
-        raise HTTPException(404, f"Only {len(result.event_log)} events found. Offset {offset} and num_events {num_events} are too large.")
-    return result.event_log[offset:offset+num_events]
-
-@router.get(
-    "/{kpi}",
+    "/kpis/{kpi}",
     response_model=List[performance_indicators.KPI_UNION],
     responses={
         200: {
@@ -94,12 +72,25 @@ async def get_event_results(project_id: str, adapter_id: str, num_events: int = 
 async def get_kpi(
     project_id: str, adapter_id: str, kpi: performance_indicators.KPIEnum
 ):
-    enum_values = tuple(item.value for item in performance_indicators.KPIEnum)
+    enum_values = tuple(item for item in performance_indicators.KPIEnum)
     if kpi not in enum_values:
         raise HTTPException(404, f"KPI {kpi} not found")
-    result = get_result(project_id, adapter_id)
+    performance = prodsys_backend.get_performance(project_id, adapter_id)
 
-    output = [
-        kpi_to_select for kpi_to_select in result.kpis if kpi_to_select.name == kpi
+    selected_kpis = [
+        kpi_to_select for kpi_to_select in performance.kpis if kpi_to_select.name == kpi
     ]
-    return output
+    if not selected_kpis:
+        raise HTTPException(404, f"KPI {kpi} not found in performance of adapter {adapter_id} in project {project_id}")
+    return selected_kpis
+
+
+@router.get(
+    "/events",
+    response_model=List[performance_data.Event]
+)
+async def get_events(project_id: str, adapter_id: str, num_events: int = 10, offset: int = 0):
+    performance = prodsys_backend.get_performance(project_id, adapter_id)
+    if offset + num_events > len(performance.event_log):
+        raise HTTPException(404, f"Only {len(performance.event_log)} events found. Offset {offset} and num_events {num_events} are too large.")
+    return performance.event_log[offset:offset+num_events]
