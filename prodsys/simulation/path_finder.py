@@ -40,6 +40,7 @@ class Pathfinder:
             return False
         g_path = self.find_graphnode_path(origin, target, graph)
         path = self.node_path_to_link_path(g_path, request, given_links_list=given_links_list)
+        path.reverse()
 
         return path
 
