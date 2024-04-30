@@ -51,7 +51,7 @@ class NodeFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the node data.
         """
         
-        for node_data in adapter.nodes_data:
+        for node_data in adapter.node_data:
             self.nodes.append(
                 parse_obj_as(NodeData, node_data))
 
