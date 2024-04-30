@@ -79,6 +79,7 @@ class ResourceData(CoreAsset):
 
     capacity: int
     location: conlist(float, min_items=2, max_items=2) # type: ignore
+    # TODO: add attributes for input and output location
 
     controller: ControllerEnum
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
@@ -98,6 +99,8 @@ class ResourceData(CoreAsset):
         if max(v) > values["capacity"]:
             raise ValueError("process_capacities must be smaller than capacity")
         return v 
+    
+    # TODO: add validation for loaction, input location and output location
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """

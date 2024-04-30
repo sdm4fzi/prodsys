@@ -271,6 +271,11 @@ class Product(BaseModel):
         Sets the next process of the product object based on the current state of the product and its process model.
         """
         next_possible_processes = self.process_model.get_next_possible_processes()
+        # TODO: add an if condition, if previous proces failed, then start rework
+            # 0. Add functionality in controller that a process fails, if so: mark the product as rework_needed (in controller or )
+            # 0. add ReworkProcesses, that have a time_model and also a process_id that should be reworked, similar to setup_states with process to be setup
+            # 1. get rework process with router, implement function for this at the router -> get_rework_process(failed_process) -> rework process
+            # 2. set next process of the product and return
         if not next_possible_processes:
             self.next_prodution_process = None
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"No next process"})

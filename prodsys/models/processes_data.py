@@ -46,6 +46,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
+    # TODO: add optional attribute for failure rate (defaults to 0), also update hasing
 
     class Config:
         schema_extra = {
@@ -195,6 +196,7 @@ class TransportProcessData(ProcessData):
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
+    # TODO: add time model for loading (and maybe unloading)
 
     class Config:
         schema_extra = {
@@ -209,6 +211,8 @@ class TransportProcessData(ProcessData):
             }
         }
 
+
+# TODO: add ReworkProcess
 
 class CompoundProcessData(CoreAsset):
     """
