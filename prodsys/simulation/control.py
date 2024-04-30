@@ -204,6 +204,7 @@ class ProductionController(Controller):
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process"})
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
+        # TODO: duplicate ProductionController for Batchcontroller and get from self.requests a number of products of one one requested process type (max batch size) and perform function belog or the whole batch
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()
@@ -261,6 +262,7 @@ class ProductionController(Controller):
             state.StateTypeEnum.production,
         )
         input_state.process = self.env.process(input_state.process_state())
+        # TODO: if performed process has failure_rate -> sample (np.choice) if failure happened, if so: mark product as rework_needed
         yield input_state.process
 
 
@@ -416,6 +418,8 @@ class TransportController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
+            # TODO: adjust logic, that get_location function also handels the case for a resource with different input and output locations.
+            # TODO: use below a function to get the output location of the origin
             if origin.get_location() != resource.get_location():
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 possible_states = resource.get_processes(process)
@@ -460,6 +464,7 @@ class TransportController(Controller):
                     ],
                 )
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
+            # TODO: use here a function to get the input location of the target for the transport
             yield self.env.process(
                 self.run_process(transport_state, product, target=target, empty_transport=False)
             )

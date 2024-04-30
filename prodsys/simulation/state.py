@@ -361,6 +361,7 @@ class TransportState(State):
     start: float = 0.0
     done_in: float = 0.0
     interrupted: bool = False
+    # TODO: also add loading time model attribute when creating the state in the state factory
 
     def prepare_for_run(self):
         self.finished_process = events.Event(self.env)
@@ -372,6 +373,7 @@ class TransportState(State):
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
+        # TODO: also retrieve time model for loading
         while True:
             try:
                 if self.interrupted:
@@ -384,6 +386,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
+        # TODO: also make loop for loading
         while self.done_in:
             try:
                 if self.interrupted:
@@ -408,6 +411,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
+        # TODO: also add loop for unloading
         debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
         self.finished_process.succeed()
