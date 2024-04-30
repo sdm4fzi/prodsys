@@ -288,7 +288,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
-    nodes_data: List[resource_data.NodeData] = []
+    node_data: List[resource_data.NodeData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
@@ -684,6 +684,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
 
     @validator("process_data", each_item=True)
     def check_processes(cls, process: processes_data.PROCESS_DATA_UNION, values):
+        # TODO: do not make return for LinkDataProcess -> they should be checked for their time model
         if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.LinkTransportProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):
             return process
         time_models = get_set_of_IDs(values["time_model_data"])
