@@ -1,17 +1,15 @@
 from typing import List, Optional, Union
-from uuid import uuid1
 
-from abc import ABC
 
-from pydantic import Field, conlist
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import core_asset, source_data, queue_data
 import prodsys
 from prodsys.util import util
 
 from prodsys.express import (
     core,
+    node,
     product,
     resources,
     source,
@@ -105,8 +103,9 @@ class ProductionSystem(core.ExpressObject):
             if not isinstance(process_instance, process.LinkTransportProcess):
                 continue
             for link in process_instance.links:
-                for node in link:
-                    nodes.append(node)
+                for link_element in link:
+                    if isinstance(link_element, node.Node):
+                        nodes.append(link_element)
         nodes = remove_duplicate_items(nodes)
 
         states = list(
