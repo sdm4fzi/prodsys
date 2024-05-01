@@ -107,7 +107,7 @@ production_system = prodsys.adapters.JsonProductionSystemAdapter(
     )
 
 
-production_system.physical_validation()
+production_system.validate_configuration()
 
 runner = prodsys.runner.Runner(adapter=production_system)
 runner.initialize_simulation()
