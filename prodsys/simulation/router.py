@@ -93,6 +93,7 @@ class Router:
                     break
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
+        # TODO: also set the process that was chosen by the router!
         processing_request.set_resource(routed_resource)
                 
     def can_reach_resource(
