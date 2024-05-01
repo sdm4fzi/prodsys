@@ -37,6 +37,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
         queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
         resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
+        node_data (List[resource_data.NodeData], optional): List of nodes in the production system. Defaults to [].
         product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to [].
         sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
@@ -44,6 +45,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
+
     def read_data_old(self, file_path: str, scenario_file_path: Optional[str] = None):
         """
         Reads the data from the given file path and scenario file path.
@@ -137,6 +139,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
                 "time_model_data": self.get_list_of_dict_objects(self.time_model_data),
                 "state_data": self.get_list_of_dict_objects(self.state_data),
                 "process_data": self.get_list_of_dict_objects(self.process_data),
+                "node_data": self.get_list_of_dict_objects(self.node_data),
                 "queue_data": self.get_list_of_dict_objects(self.queue_data),
                 "resource_data": self.get_list_of_dict_objects(self.resource_data),
                 "node_data": self.get_list_of_dict_objects(self.node_data),

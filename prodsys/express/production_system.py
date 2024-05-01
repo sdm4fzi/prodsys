@@ -19,6 +19,7 @@ from prodsys.express import (
     process,
     time_model,
     state,
+    process
 )
 
 
@@ -100,13 +101,12 @@ class ProductionSystem(core.ExpressObject):
         processes = remove_duplicate_items(processes)
 
         nodes = []
-        for process in processes:
-            if not hasattr(process, "links"):
+        for process_instance in processes:
+            if not isinstance(process_instance, process.LinkTransportProcess):
                 continue
-            for link in process.links:
+            for link in process_instance.links:
                 for node in link:
                     nodes.append(node)
-        
         nodes = remove_duplicate_items(nodes)
 
         states = list(
@@ -156,6 +156,7 @@ class ProductionSystem(core.ExpressObject):
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,
+            node_data=nodes_data,
             product_data=product_data,
             nodes_data=nodes_data,
             resource_data=resource_data,
@@ -185,7 +186,7 @@ class ProductionSystem(core.ExpressObject):
             ValueError: If the production system is not valid.
         """
         adapter = self.to_model()
-        adapter.physical_validation()
+        adapter.validate_configuration()
 
     @property
     def runner(self):

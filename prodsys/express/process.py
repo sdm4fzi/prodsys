@@ -15,15 +15,17 @@ from uuid import uuid1
 
 from abc import ABC
 
-from pydantic import Field, conlist
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import processes_data, time_model_data
-
-from prodsys.express import time_model, core
+from prodsys.express import core, time_model
+from prodsys.models import processes_data
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, source, sink
+    from prodsys.express.resources import Resource
+    from prodsys.express.source import Source
+    from prodsys.express.sink import Sink
+    from prodsys.express.node import Node
 
 @dataclass
 class Process(ABC):
@@ -195,9 +197,8 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type
         )
 
-
 @dataclass
-class LinkTransportProcess(DefaultProcess, core.ExpressObject):
+class LinkTransportProcess(TransportProcess):
     """
     Represents a link transport process. They include a list or dict of links.
 
@@ -217,10 +218,34 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
-    links: Union[List[List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]], 
-                 Dict[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink], 
-                      List[Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]]]] = Field(default_factory=list)
+    links: Union[List[List[Union[Resource, Node, Source, Sink]]], 
+                 Dict[Union[Resource, Node, Source, Sink], 
+                      List[Union[Resource, Node, Source, Sink]]]] = Field(default_factory=list)
     capability: Optional[str] = Field(default_factory=str)
+
+    def add_link(self, link: List[Union[Resource, Node, Source, Sink]]) -> None:
+        """
+        Adds a link to the LinkTransportProcess object.
+
+        Args:
+            link (Union[Resource, Node, Source, Sink]): The link to add.
+            link_list (List[Union[Resource, Node, Source, Sink]]): The list of links to add the link to.
+        """
+        if isinstance(self.links, list):
+            self.links.append(link)
+        else:
+            if not link in self.links:
+                self.links[link] = []
+            self.links[link[0]] = link[1]
+
+    def set_links(self, links: List[List[Union[Resource, Node, Source, Sink]]]) -> None:
+        """
+        Sets the links of the LinkTransportProcess object.
+
+        Args:
+            links (List[List[Union[Resource, Node, Source, Sink]]]): The links to set.
+        """
+        self.links = links
 
     def to_model(self) -> processes_data.LinkTransportProcessData:
         """
@@ -244,16 +269,16 @@ class LinkTransportProcess(DefaultProcess, core.ExpressObject):
     
 
 @dataclass
-class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
+class RequiredCapabilityProcess(core.ExpressObject):
     """
     Represents a required capability process. A capability which can be matched with the capability of a linktransportprocess.
 
     Attributes:
-        type (processes_data.ProcessTypeEnum): The type of the process.
         ID (Optional[str]): The ID of the process.
+        type (processes_data.ProcessTypeEnum): The type of the process.
         capability (Optional[str]): The capability required by the process.
     """
-
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.RequiredCapabilityProcesses
     )
@@ -268,7 +293,6 @@ class RequiredCapabilityProcess(DefaultProcess, core.ExpressObject):
         """
         return processes_data.RequiredCapabilityProcessData(
             ID=self.ID,
-            time_model=self.time_model.ID,
             description="",
             type=self.type,
             capability=self.capability,
@@ -283,4 +307,3 @@ PROCESS_UNION = Union[
     RequiredCapabilityProcess,
     LinkTransportProcess,
 ]
-

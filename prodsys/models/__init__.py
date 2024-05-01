@@ -10,7 +10,7 @@ The following modules are available:
 - `prodsys.models.performance_indicators`: Contains classes to represent performance indicators (KPIs).
 - `prodsys.models.processes_data`: Contains classes to represent processes.
 - `prodsys.models.queue_data`: Contains classes to represent queues.
-- `prodsys.models.resource_data`: Contains classes to represent resources.
+- `prodsys.models.resource_data`: Contains classes to represent resources and nodes.
 - `prodsys.models.scenario_data`: Contains classes to represent scenario data.
 - `prodsys.models.sink_data`: Contains classes to represent sinks.
 - `prodsys.models.source_data`: Contains classes to represent sources.
