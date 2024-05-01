@@ -6,18 +6,21 @@ from pydantic import BaseModel, Field, validator, Extra
 from typing import List, Generator, TYPE_CHECKING, Union, Optional
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import path_finder, request, sim, state
+from prodsys.simulation import node, path_finder, request, sim, state
 
 from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink, source
     from prodsys.control import sequencing_control_env
+    from prodsys.simulation.product import Location
+
 
 
 class Controller(ABC, BaseModel):
@@ -385,41 +388,6 @@ class TransportController(Controller):
         self._current_location = location
         self.resource.set_location(getattr(getattr(location, 'data', {}), 'location', getattr(location, 'location', None)))
 
-    def node_logger(self, node, next_node) -> None:
-        """
-        Logs the movement of a resource from one node to another.
-
-        Args:
-            node (Union[NodeData, Sink, Source, Resource]): The current node.
-            next_node (Union[NodeData, Sink, Source, Resource]): The next node.
-
-        Returns:
-            None
-        """
-        if (isinstance(node, resources.NodeData) and isinstance(next_node, resources.NodeData)):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.ID}"})
-        elif (isinstance(node, resources.NodeData) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.ID} to {next_node.data.ID}"})
-        elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, resources.NodeData)):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.ID}"})
-        elif (isinstance(node, (sink.Sink, source.Source, resources.Resource)) and isinstance(next_node, (sink.Sink, source.Source, resources.Resource))):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {node.data.ID} to {next_node.data.ID}"})
-
-    def next_node_logger(self, next_node) -> None:
-        """
-        Logs the arrival at the next node.
-
-        Parameters:
-        - next_node: The next node that the controller has arrived at.
-
-        Returns:
-        None
-        """
-        if isinstance(next_node, resources.NodeData):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.ID}"})
-        else:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_node.data.ID}"})
-
     def start_process(self) -> Generator:
         """
         Start the next process.
@@ -476,11 +444,11 @@ class TransportController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
 
                 if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
-                    for node, next_node in zip(path_to_origin, path_to_origin[1:]):
-                        self.node_logger(node, next_node)
-                        yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=True, resource = resource))
-                        self.update_location(next_node)
-                        self.next_node_logger(next_node)
+                    for location, next_location in zip(path_to_origin, path_to_origin[1:]):
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}"})
+                        yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=True, resource = resource))
+                        self.update_location(next_location)
+                        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}"})
                 else:
                     yield self.env.process(
                         self.run_process(transport_state, product, target=origin, empty_transport=True, resource = resource)
@@ -509,11 +477,11 @@ class TransportController(Controller):
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
 
             if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
-                for node, next_node in zip(path_to_target, path_to_target[1:]):
-                    self.node_logger(node, next_node)
-                    yield self.env.process(self.run_process(transport_state, product, target=next_node, empty_transport=False, resource = resource))
-                    self.update_location(next_node)
-                    self.next_node_logger(next_node)
+                for location, next_location in zip(path_to_target, path_to_target[1:]):
+                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}"})
+                    yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=False, resource = resource))
+                    self.update_location(next_location)
+                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}"})
             else:
                 yield self.env.process(
                     self.run_process(transport_state, product, target=target, empty_transport=False, resource = resource)
@@ -555,14 +523,11 @@ class TransportController(Controller):
         if isinstance(self._current_location, source.Source):
             origin = None
         elif isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
+            # TODO: remove this hack
             for link in resource.processes[0].links: #agv has just one ltp
-                for node in link:
-                    if isinstance(node, (resources.Resource, sink.Sink, source.Source)):
-                        if self.resource.data.location == node.data.location:
-                            origin = node
-                    else:
-                        if self.resource.data.location == node.location:
-                            origin = node
+                for location in link:
+                    if self.resource.data.location == location.data.location:
+                        origin = location
         else:
             origin = self._current_location
         input_state.state_info.log_transport(
@@ -578,25 +543,27 @@ class TransportController(Controller):
         )
         flag = False
         if isinstance(self._current_location, resources.TransportResource) and isinstance(resource.processes[0], process.LinkTransportProcess):
+            # TODO: resolve this hack with index 0
             for link in resource.processes[0].links: #agv has just one ltp
                 if flag:
                     break
-                for node in link:
-                    if isinstance(node, (resources.NodeData)):
-                        if self.resource.data.location == node.location:
+                for location in link:
+                    if isinstance(location, node.Node):
+                        # TODO: this can be cleaner
+                        if self.resource.data.location == location.data.location:
                             input_state.process = self.env.process(
-                                    input_state.process_state(target=target_location, node_true = True)  # type: ignore False
+                                    input_state.process_state(target=target_location, start_of_new_transport_process = True)  # type: ignore False
                             )
                             flag = True
                     else:
-                        if self.resource.data.location == node.data.location:
+                        if self.resource.data.location == location.data.location:
                             input_state.process = self.env.process(
-                                    input_state.process_state(target=target_location, node_true = False)  # type: ignore False
+                                    input_state.process_state(target=target_location, start_of_new_transport_process = False)  # type: ignore False
                             )
                             flag = True
         else:
             input_state.process = self.env.process(
-                input_state.process_state(target=target_location, node_true = False)  # type: ignore False
+                input_state.process_state(target=target_location, start_of_new_transport_process = False)  # type: ignore False
             )
                         
         yield input_state.process

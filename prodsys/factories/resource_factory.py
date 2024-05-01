@@ -14,7 +14,7 @@ from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
     ControllerEnum,
-    ResourceControlPolicy, TransportControlPolicy, NodeData
+    ResourceControlPolicy, TransportControlPolicy
 )
 from prodsys.factories import process_factory, state_factory, queue_factory
 

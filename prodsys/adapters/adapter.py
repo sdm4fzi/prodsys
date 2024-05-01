@@ -13,6 +13,7 @@ from prodsys.models import (
     product_data,
     queue_data,
     resource_data,
+    node_data,
     time_model_data,
     state_data,
     processes_data,
@@ -290,7 +291,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
-    node_data: List[resource_data.NodeData] = []
+    node_data: List[node_data.NodeData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []

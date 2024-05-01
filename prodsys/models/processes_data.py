@@ -272,7 +272,7 @@ class LinkTransportProcessData(TransportProcessData):
     """
 
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
-    links: Union[List[List[str]], Dict[str, List[str]]]
+    links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
 
     class Config:

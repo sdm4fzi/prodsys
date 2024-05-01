@@ -12,6 +12,7 @@ from functools import cached_property
 from prodsys.adapters import adapter
 from prodsys.simulation import sim
 from prodsys.factories import (
+    link_transport_process_updater,
     state_factory,
     time_model_factory,
     process_factory,
@@ -21,7 +22,6 @@ from prodsys.factories import (
     sink_factory,
     source_factory,
     node_factory,
-    linktransportprocess_factory,
 )
 from prodsys.simulation import logger
 from prodsys.util import post_processing, kpi_visualization, util
@@ -96,7 +96,6 @@ class Runner(BaseModel):
     )
     state_factory: state_factory.StateFactory = Field(init=False, default=None)
     process_factory: process_factory.ProcessFactory = Field(init=False, default=None)
-    linktransportprocess_factory: linktransportprocess_factory.LinkTransportProcessFactory = Field(init=False, default=None)
     queue_factory: queue_factory.QueueFactory = Field(init=False, default=None)
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
     node_factory: node_factory.NodeFactory = Field(init=False, default=None)
@@ -148,8 +147,7 @@ class Runner(BaseModel):
             self.node_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env,
-                process_factory= self.process_factory
+                env=self.env, process_factory=self.process_factory
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -175,52 +173,15 @@ class Runner(BaseModel):
             )
             self.source_factory.create_sources(self.adapter)
 
-            self.linktransportprocess_factory = linktransportprocess_factory.LinkTransportProcessFactory(
-                time_model_factory=self.time_model_factory,
+            link_transport_process_updater_instance = link_transport_process_updater.LinkTransportProcessUpdater(
+                process_factory=self.process_factory,
                 source_factory=self.source_factory,
                 sink_factory=self.sink_factory,
                 resource_factory=self.resource_factory,
                 node_factory=self.node_factory,
             )
-            self.linktransportprocess_factory.create_processes(self.adapter)
-
-            #TODO: Correct solution to overwrite all!?
-
-            self.resource_factory = resource_factory.ResourceFactory(
-                env=self.env,
-                state_factory=self.state_factory,
-                queue_factory=self.queue_factory,
-                process_factory= self.linktransportprocess_factory
-            )
-            self.resource_factory.create_resources(self.adapter)
-
-            self.product_factory = product_factory.ProductFactory(
-                env=self.env,
-                process_factory= self.linktransportprocess_factory
-            )
-            self.sink_factory = sink_factory.SinkFactory(
-                env=self.env,
-                product_factory=self.product_factory,
-                queue_factory=self.queue_factory,
-            )
-
-            self.sink_factory.create_sinks(self.adapter)
-
-            self.event_logger = logger.EventLogger()
-            self.event_logger.observe_resource_states(self.resource_factory)
-
-            self.product_factory.event_logger = self.event_logger
-
-            self.source_factory = source_factory.SourceFactory(
-                env=self.env,
-                product_factory=self.product_factory,
-                time_model_factory=self.time_model_factory,
-                queue_factory=self.queue_factory,
-                resource_factory=self.resource_factory,
-                sink_factory=self.sink_factory,
-            )
-            self.source_factory.create_sources(self.adapter)
-
+            link_transport_process_updater_instance.update_links_with_objects()
+            
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 

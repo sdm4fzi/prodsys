@@ -5,7 +5,7 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 from prodsys.simulation import request
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, request, sink, source, process
+    from prodsys.simulation import resources, request, sink, source, node
 
 class Pathfinder:
     """
@@ -17,7 +17,8 @@ class Pathfinder:
         Initializes two empty lists of nodes and node locations.
         """
         self.nodes: List[GraphNode] = []
-        self.node_loc: List[Union[resources.NodeData, sink.Sink, source.Source]] = []
+        # TODO: also add resources as possible locations
+        self.node_loc: List[Union[node.Node, sink.Sink, source.Source]] = []
 
     def find_path(self, request: request.TransportResquest, which_path: bool, self_obj):
         """
@@ -59,17 +60,10 @@ class Pathfinder:
         pathfinder_edges = []
 
         for link in given_links_list:
-            link_edge: List[Union[resources.NodeData, resources.Resource, sink.Sink, source.Source]] = []
+            link_edge: List[Union[node.Node, resources.Resource, sink.Sink, source.Source]] = []
             graphnode_edge: List[GraphNode] = []
             self.make_list(link, link_edge, graphnode_edge)
-            if isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], (sink.Sink, source.Source, resources.Resource)):
-                cost = self.calculate_cost(link_edge[0].data.location, link_edge[1].data.location)
-            elif isinstance(link_edge[0], (sink.Sink, source.Source, resources.Resource)) and isinstance(link_edge[1], (resources.NodeData)):
-                cost = self.calculate_cost(link_edge[0].data.location, link_edge[1].location)
-            elif isinstance(link_edge[0], (resources.NodeData)) and isinstance(link_edge[1], (sink.Sink, source.Source, resources.Resource)):
-                cost = self.calculate_cost(link_edge[0].location, link_edge[1].data.location)
-            else:
-                cost = self.calculate_cost(link_edge[0].location, link_edge[1].location)
+            cost = self.calculate_cost(link_edge[0].get_location(), link_edge[1].get_location())
 
             edge = (graphnode_edge[0], graphnode_edge[1], cost)
             pathfinder_edges.append(edge)
@@ -94,15 +88,11 @@ class Pathfinder:
         for b_node in link:
             node = None
             for y in self.nodes:
-                if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)):
-                    if y.node_id == b_node.data.ID:
-                        node = y
-                else:
-                    if y.node_id == b_node.ID:
-                        node = y
+                if y.node_id == b_node.data.ID:
+                    node = y
             
             if node is None:
-                node_id = b_node.data.ID if isinstance(b_node, (sink.Sink, source.Source, resources.Resource)) else b_node.ID
+                node_id = b_node.data.ID
                 node = GraphNode(node_id=node_id)
                 self.nodes.append(node)
                 self.node_loc.append(b_node)
@@ -157,26 +147,15 @@ class Pathfinder:
         Returns:
             tuple: A tuple containing the origin and target nodes.
         """
-        from prodsys.simulation import resources
         for node in graph.nodes.values():
-            if isinstance(nodex, (resources.NodeData)):
-                if nodex.ID != node.node_id:
+            if nodex.data.ID != node.node_id:
+                continue
+            if which_path:  # path from agv to origin
+                if nodex.data.location != request.resource.get_location() and not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
                     continue
-                if which_path:  # path from agv to origin
-                    if nodex.location != request.resource.get_location() and not (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID):
-                        continue
-                else:  # path from origin to target
-                    if not (nodex.location == request.origin.data.location and nodex.ID == request.origin.data.ID) and not (nodex.location == request.target.data.location and nodex.ID == request.target.data.ID):
-                        continue
-            else:  # node is a resource|sinks|source
-                if nodex.data.ID != node.node_id:
+            else:  # path from origin to target
+                if not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID) and not (nodex.data.location == request.target.data.location and nodex.data.ID == request.target.data.ID):
                     continue
-                if which_path:  # path from agv to origin
-                    if nodex.data.location != request.resource.get_location() and not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
-                        continue
-                else:  # path from origin to target
-                    if not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID) and not (nodex.data.location == request.target.data.location and nodex.data.ID == request.target.data.ID):
-                        continue
 
             if origin is None:
                 origin = node
@@ -215,21 +194,15 @@ class Pathfinder:
         Returns:
             The path as a list of links.
         """
-        from prodsys.simulation import resources, sink, source
         path = []
         seen_ids = []  # no node several times in the path
 
         for node in g_path:
             for link in given_links_list:
                 for node_link in link:
-                    if isinstance(node_link, (resources.NodeData)):
-                        if node.node_id == node_link.ID and node_link.ID not in seen_ids:
-                            path.append(node_link)
-                            seen_ids.append(node_link.ID)
-                    elif isinstance(node_link, (sink.Sink, source.Source, resources.Resource)):
-                        if node.node_id == node_link.data.ID and node_link.data.ID not in seen_ids:
-                            path.append(node_link)
-                            seen_ids.append(node_link.data.ID)
+                    if node.node_id == node_link.data.ID and node_link.data.ID not in seen_ids:
+                        path.append(node_link)
+                        seen_ids.append(node_link.data.ID)
 
         return path
     
