@@ -570,9 +570,9 @@ class TransportController(Controller):
 
     def find_path_to_origin(self, process_request, process, resource):
         if isinstance(process, LinkTransportProcess) or isinstance(process, RequiredCapabilityProcess):
+            # TODO: do not access resource process like this!
             pathfinder = path_finder.Pathfinder()
-            which_path: bool = True
-            path_to_origin = pathfinder.find_path(process_request, which_path, resource.processes[0])
+            path_to_origin = pathfinder.find_path(request=process_request, find_path_to_origin=True, process=resource.processes[0])
             return path_to_origin
         else:
             return None

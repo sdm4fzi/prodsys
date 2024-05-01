@@ -1,11 +1,12 @@
-from typing import List, TYPE_CHECKING, Optional, Union
+from __future__ import annotations
+
+from typing import List, TYPE_CHECKING, Optional, Tuple, Union
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 
-from prodsys.simulation import request
-
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, request, sink, source, node
+    from prodsys.simulation import request, process, resources
+    from prodsys.simulation.product import Location
 
 class Pathfinder:
     """
@@ -16,36 +17,35 @@ class Pathfinder:
         """
         Initializes two empty lists of nodes and node locations.
         """
+        # TODO: potentially use here dicts instead of list for faster access!
         self.nodes: List[GraphNode] = []
-        # TODO: also add resources as possible locations
-        self.node_loc: List[Union[node.Node, sink.Sink, source.Source]] = []
+        self.node_locations: List[Location] = []
 
-    def find_path(self, request: request.TransportResquest, which_path: bool, self_obj):
+    def find_path(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_path_to_origin: bool=False) -> List[Location]:
         """
         The general function which includes all sub functions to find the shortest path for a TransportRequest.
 
         Args:
             request (TransportResquest): The transportation request.
-            which_path (bool): Indicates whether to find the path from AGV to origin or from origin to target.
-            self_obj: The process of the related resource
+            process (LinkTransportProcess): The process to find the path for.
+            find_path_to_origin (bool): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
-            The path as a list of links.
+            List[Location]: The path as a list of locations.
         """
-        given_links_list = self_obj.links
-
-        edges = self.process_links_to_edges(request, given_links_list=given_links_list)
+        edges = self.process_links_to_graph_edges(links=process.links)
         graph = Graph(edges=edges, bi_directional=True)
-        origin, target = self.origin_target_to_graphnode(request, graph, which_path, given_links_list=given_links_list)
-        if origin is None or target is None:
-            return False
-        g_path = self.find_graphnode_path(origin, target, graph)
-        path = self.node_path_to_link_path(g_path, request, given_links_list=given_links_list)
+        origin, target = self.get_path_origin_and_target(request=request, path_to_origin=find_path_to_origin)
+        if not origin or not target:
+            print(request.resource.data.ID, request.origin.data.ID, request.target.data.ID)
+            raise ValueError("Origin or target not found in graph, cannot find path. Routing should not happened for this request.")
+        graph_node_path = self.find_graphnode_path(origin, target, graph)
+        path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
         path.reverse()
 
         return path
 
-    def process_links_to_edges(self, request: request.TransportResquest, given_links_list):
+    def process_links_to_graph_edges(self, links: List[List[Location]]) -> List[Tuple[GraphNode, GraphNode, int]]:
         """
         Processes the given links to create (Graph)-edges for the graph.
 
@@ -54,23 +54,19 @@ class Pathfinder:
             given_links_list: The given links list.
 
         Returns:
-            The edges as a list of tuples (with a start_node, end_node and related costs).
+            List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
-        from prodsys.simulation import resources, sink, source
         pathfinder_edges = []
 
-        for link in given_links_list:
-            link_edge: List[Union[node.Node, resources.Resource, sink.Sink, source.Source]] = []
-            graphnode_edge: List[GraphNode] = []
-            self.make_list(link, link_edge, graphnode_edge)
-            cost = self.calculate_cost(link_edge[0].get_location(), link_edge[1].get_location())
-
-            edge = (graphnode_edge[0], graphnode_edge[1], cost)
+        for link in links:
+            cost = self.calculate_cost(link[0].get_location(), link[1].get_location())
+            origin_graph_node, target_graph_node = self.get_graph_nodes_for_link(link)
+            edge = (origin_graph_node, target_graph_node, cost)
             pathfinder_edges.append(edge)
 
         return pathfinder_edges
     
-    def make_list(self, link, link_edge, graphnode_edge):
+    def get_graph_nodes_for_link(self, link: List[Location]) -> Tuple[GraphNode, GraphNode]:
         """
         Creates a list of links and edges.
 
@@ -80,25 +76,48 @@ class Pathfinder:
             graphnode_edge (list): A list to store the graph node edges.
 
         Returns:
-            None
+            Tuple[GraphNode, GraphNode]: A tuple containing the origin and target nodes for a link.
         """
+        graph_nodes = []
+        for location in link:
+            graph_node = self.get_graph_node_for_location(location)
+            graph_nodes.append(graph_node)
+        return tuple(graph_nodes)
+    
 
-        from prodsys.simulation import resources, sink, source
+    def get_existing_graph_node_for_location(self, location: Location) -> Optional[GraphNode]:
+        """
+        Gets an existing graph node for a location.
 
-        for b_node in link:
-            node = None
-            for y in self.nodes:
-                if y.node_id == b_node.data.ID:
-                    node = y
-            
-            if node is None:
-                node_id = b_node.data.ID
-                node = GraphNode(node_id=node_id)
-                self.nodes.append(node)
-                self.node_loc.append(b_node)
+        Args:
+            location (Location): The location.
 
-            link_edge.append(b_node)
-            graphnode_edge.append(node)
+        Returns:
+            Optional[GraphNode, None]: The graph node or None.
+        """
+        for existing_node in self.nodes:
+            if existing_node.node_id == location.data.ID:
+                return existing_node
+        return None
+    
+    def get_graph_node_for_location(self, location: Location) -> GraphNode:
+        """
+        Creates a graph node for a location.
+
+        Args:
+            location (Location): The location.
+
+        Returns:
+            GraphNode: The graph node.
+        """
+        existing_node = self.get_existing_graph_node_for_location(location)
+        if existing_node:
+            return existing_node
+        new_graph_node = GraphNode(node_id=location.data.ID)
+        self.nodes.append(new_graph_node)
+        self.node_locations.append(location)
+        return new_graph_node
+        
 
     def calculate_cost(self, node1, node2):
         """
@@ -113,56 +132,41 @@ class Pathfinder:
         """
         return abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])
 
-    def origin_target_to_graphnode(self, request: request.TransportResquest, graph: Graph, which_path: bool, given_links_list):
+    def get_path_origin_and_target(self, request: request.TransportResquest, path_to_origin: bool) -> Tuple[Optional[GraphNode], Optional[GraphNode]]:
         """
         Converts the origin and target of the transport request to graph nodes.
 
         Args:
             request (TransportResquest): The transportation request.
-            graph (Graph): The graph.
-            which_path (bool): Indicates whether to find the path from AGV to origin or from origin to target.
-            given_links_list: The given links list.
+            path_to_origin (bool): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
-            The origin and target as graph nodes.
+            Tuple[Optional[GraphNode], Optional[GraphNode]]: A tuple containing the origin and target graph nodes for the transport request and the path_to_origin flag.
         """
-        origin, target = None, None
-        for link in given_links_list:
-            for nodex in link:
-                origin, target = self.create_graphnodes(nodex, which_path, request, graph, origin, target)
-        return origin, target
+        if path_to_origin:
+            origin_location = self.get_location_of_transport_resource(request.resource)
+            target_location = request.origin
+        else:
+            origin_location = request.origin
+            target_location = request.target
+        origin_graph_node = self.get_existing_graph_node_for_location(origin_location)
+        target_graph_node = self.get_existing_graph_node_for_location(target_location)
+        return origin_graph_node, target_graph_node
     
-    def create_graphnodes(self, nodex, which_path, request, graph, origin, target):
+    def get_location_of_transport_resource(self, resource: resources.Resource) -> Location:
         """
-        Creates graph nodes for the origin and target.
+        Gets the location of a resource.
 
         Args:
-            nodex (object): The node object.
-            which_path (bool): Indicates whether it is a path from agv to origin or from origin to target.
-            request (object): The request object.
-            graph (object): The graph object.
-            origin (object): The origin node.
-            target (object): The target node.
+            resource (Resource): The resource.
 
         Returns:
-            tuple: A tuple containing the origin and target nodes.
+            Location: The location of the resource.
         """
-        for node in graph.nodes.values():
-            if nodex.data.ID != node.node_id:
-                continue
-            if which_path:  # path from agv to origin
-                if nodex.data.location != request.resource.get_location() and not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID):
-                    continue
-            else:  # path from origin to target
-                if not (nodex.data.location == request.origin.data.location and nodex.data.ID == request.origin.data.ID) and not (nodex.data.location == request.target.data.location and nodex.data.ID == request.target.data.ID):
-                    continue
-
-            if origin is None:
-                origin = node
-            elif target is None:
-                target = node
-
-        return origin, target
+        for location in self.node_locations:
+            if location.get_location() == resource.get_location():
+                return location
+        raise ValueError(f"The current location for resource {resource.data.ID} could not be found. {resource.data.ID} is at location {resource.get_location()} that is not part of the links.")
 
     def find_graphnode_path(self, origin: GraphNode, target: GraphNode, graph: Graph) -> List[GraphNode]:
         """
@@ -182,27 +186,25 @@ class Pathfinder:
             return False
         return path
 
-    def node_path_to_link_path(self, g_path: List[GraphNode], request: request.TransportResquest, given_links_list):
+    def convert_node_path_to_location_path(self, graph_node_path: List[GraphNode], links: List[List[Location]]) -> List[Location]:
         """
         Converts the path of graph nodes to a path of links.
 
         Args:
-            g_path (List[GraphNode]): The path as a list of graph nodes.
-            request (TransportResquest): The transportation request.
-            given_links_list: The given links list.
+            graph_node_path (List[GraphNode]): The path as a list of graph nodes.
+            links (List[List[Location]]): The given links list.
 
         Returns:
-            The path as a list of links.
+            List[Location]: The path as a list of locations.
         """
         path = []
         seen_ids = []  # no node several times in the path
 
-        for node in g_path:
-            for link in given_links_list:
-                for node_link in link:
-                    if node.node_id == node_link.data.ID and node_link.data.ID not in seen_ids:
-                        path.append(node_link)
-                        seen_ids.append(node_link.data.ID)
-
+        for node in graph_node_path:
+            for link in links:
+                for location in link:
+                    if node.node_id == location.data.ID and location.data.ID not in seen_ids:
+                        path.append(location)
+                        seen_ids.append(location.data.ID)
         return path
     

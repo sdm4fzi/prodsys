@@ -379,6 +379,7 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
         """
+        # FIXME: resolve problem with link transports!
         df = self.df_prepared.copy()
         positive_condition = (
             (df["State_type"] == "Process State")

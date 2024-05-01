@@ -3,7 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional
 
-from pydantic import BaseModel, Field
+from numpy import isin
+from pydantic import BaseModel
 
 
 if TYPE_CHECKING:
@@ -96,9 +97,7 @@ class CapabilityProcess(Process):
     def matches_request(self, request: request.Request) -> bool:
         requested_process = request.process
         if (
-            not isinstance(requested_process, CapabilityProcess)
-            and not isinstance(requested_process, CompoundProcess)
-            and not isinstance(requested_process, RequiredCapabilityProcess)
+            not is_process_with_capability(requested_process) and not isinstance(requested_process, CompoundProcess)
         ):
             return False
         if isinstance(requested_process, CompoundProcess):
@@ -141,7 +140,30 @@ class TransportProcess(Process):
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
+    
+def is_process_with_capability(process: PROCESS_UNION) -> bool:
+    """
+    Returns True if the given process is a process with capability.
 
+    Args:
+        process (PROCESS_UNION): The process.
+
+    Returns:
+        bool: True if the given process is a process with capability.
+    """
+    return isinstance(process, CapabilityProcess) or isinstance(process, RequiredCapabilityProcess) or (isinstance(process, LinkTransportProcess) and process.process_data.capability)
+
+def is_available_process_with_capability(process: PROCESS_UNION) -> bool:
+    """
+    Returns True if the given process is an available process with capability.
+
+    Args:
+        process (PROCESS_UNION): The process.
+
+    Returns:
+        bool: True if the given process is an available process with capability.
+    """
+    return isinstance(process, CapabilityProcess) or (isinstance(process, LinkTransportProcess) and process.process_data.capability)
 
 class CompoundProcess(Process):
     """
@@ -166,15 +188,13 @@ class CompoundProcess(Process):
         requested_process = request.process
         if isinstance(requested_process, ProductionProcess) or isinstance(
             requested_process, TransportProcess
-        ) or isinstance(requested_process, LinkTransportProcess):
+        ) or (isinstance(requested_process, LinkTransportProcess) and not requested_process.process_data.capability):
             return requested_process.process_data.ID in self.process_data.process_ids
-        elif isinstance(requested_process, CapabilityProcess) or isinstance(
-            requested_process, RequiredCapabilityProcess
-        ):
+        elif is_process_with_capability(requested_process):
             return requested_process.process_data.capability in [
                 p.process_data.capability
                 for p in self.contained_processes_data
-                if isinstance(p, CapabilityProcess)
+                if is_available_process_with_capability(p)
             ]
         elif isinstance(requested_process, CompoundProcess):
             return any(
@@ -186,11 +206,12 @@ class CompoundProcess(Process):
                 in [
                     p.process_data.capability
                     for p in self.contained_processes_data
-                    if isinstance(p, CapabilityProcess)
+                    if is_available_process_with_capability(p)
                 ]
                 for p in requested_process.contained_processes_data
-                if isinstance(p, CapabilityProcess)
+                if is_available_process_with_capability(p)
             )
+        return False
 
     def get_process_time(self) -> float:
         raise NotImplementedError("CompoundProcess does not have a process time.")
@@ -209,13 +230,7 @@ class RequiredCapabilityProcess(Process):
     process_data: processes_data.RequiredCapabilityProcessData
 
     def matches_request(self, request: request.Request) -> bool:
-        requested_process = request.process
-        if not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
-            requested_process, CompoundProcess
-        ):
-            return False
-        if isinstance(requested_process, RequiredCapabilityProcess):
-            return requested_process.process_data.capability == self.process_data.capability
+        raise NotImplementedError("RequiredCapabilityProcess does not match requests but only generates them.")
 
     def get_process_time(self) -> float:
         raise NotImplementedError(
@@ -233,50 +248,51 @@ class LinkTransportProcess(TransportProcess):
     """
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[node.Node, source.Source, sink.Sink, resources.ProductionResource]]]]
-    
-    def matches_request(self, request: request.Request) -> bool:
 
+    def matches_request(self, request: request.Request) -> bool:
         requested_process = request.process
 
-        if isinstance(requested_process, RequiredCapabilityProcess):
-            if requested_process.process_data.capability == self.process_data.capability:
-                pathfinder = path_finder.Pathfinder()
-                which_path: bool = False
-                path = pathfinder.find_path(request, which_path, self)
-                if not path:
-                    return False
-                else:
-                    self.add_path_to_request(request, path)
-                    return requested_process.process_data.capability == self.process_data.capability
-            else:
-                return False
-            
-
-        if not isinstance(requested_process, LinkTransportProcess) and not isinstance(
+        if not isinstance(requested_process, LinkTransportProcess) and not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
             requested_process, CompoundProcess
         ):
             return False
         
-        if isinstance(requested_process, LinkTransportProcess):
-            pathfinder = path_finder.Pathfinder()
-            which_path: bool = False
-            path = pathfinder.find_path(request, which_path, self)
-            if not path:
+        if isinstance(requested_process, CompoundProcess):
+            possible_processes = []
+            for process_data_instance in requested_process.contained_processes_data:
+                if is_process_with_capability(process_data_instance) and self.process_data.capability and self.process_data.capability == process_data_instance.capability:
+                    possible_processes.append(process_data_instance)
+                if isinstance(process_data_instance, LinkTransportProcess) and process_data_instance.ID == self.process_data.ID:
+                    possible_processes.append(process_data_instance)
+            if not possible_processes:
                 return False
-            else:
-                self.add_path_to_request(request, path)
-                return requested_process.process_data.ID == self.process_data.ID            
+
+        if is_process_with_capability(requested_process):
+            if not requested_process.process_data.capability == self.process_data.capability:
+                return False
+        
+        if isinstance(requested_process, LinkTransportProcess):
+            if not requested_process.process_data.ID == self.process_data.ID:
+                return False
+        
+        pathfinder = path_finder.Pathfinder()
+        path = pathfinder.find_path(request=request, process=self)
+        if not path:
+            return False
+        
+        # TODO: make this adding of path more convenient and transparent
+        self.add_path_to_request(request, path)
+        return True       
     
     def add_path_to_request(self, request: request.TransportResquest, path: List[processes_data.LinkTransportProcessData.links]):
         request.path_to_target['path'].append(path)
         return request
     
     def get_process_time(self, request: request.TransportResquest) -> float:
-        # function not used
         path = request.path_to_target
         total_time = 0
         for link in path:
-            time = self.time_model.get_next_time(origin= link[0].location, target=link[1].location)
+            time = self.time_model.get_next_time(origin=link[0].get_location(), target=link[1].get_location())
             total_time += time
         return total_time
 
