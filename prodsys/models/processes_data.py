@@ -253,7 +253,7 @@ class LinkTransportProcessData(TransportProcessData):
         description (str): Description of the process.
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
         links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
-        capability (Optional[str], optional): Capability of the process. Defaults to None.
+        capability (Optional[str], optional): Capability of the process, which is used for matching if available. Defaults to None.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1",

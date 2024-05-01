@@ -982,6 +982,7 @@ def get_production_processes_from_ids(
         for process in adapter_object.process_data:
             if process.ID == process_id and isinstance(process, processes_data.ProductionProcessData):
                 processes.append(process)
+                break
     return processes
 
 
@@ -991,8 +992,9 @@ def get_transport_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData):
+            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData) and not (hasattr(process, "capability") and getattr(process, "capability")):
                 processes.append(process)
+                break
     return processes
 
 def get_capability_processes_from_ids(
@@ -1001,8 +1003,9 @@ def get_capability_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and (isinstance(process, processes_data.CapabilityProcessData)):
+            if process.ID == process_id and (isinstance(process, processes_data.CapabilityProcessData) or (hasattr(process, "capability") and getattr(process, "capability"))):
                 processes.append(process)
+                break
     return processes
 
 
@@ -1141,10 +1144,10 @@ def assert_required_processes_in_resources_available(configuration: ProductionSy
     Raises:
         ValueError: If specified processes contain some logical errors.
     """
-    available = list(util.flatten([resource.process_ids for resource in configuration.resource_data]))
+    available = set(list(util.flatten([resource.process_ids for resource in configuration.resource_data])))
     required = util.flatten([product.processes for product in configuration.product_data if not isinstance(product.processes, dict)])
     required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
-    required = list(required) + list(required_dict_processes) + [product.transport_process for product in configuration.product_data]
+    required = set(list(required) + list(required_dict_processes) + [product.transport_process for product in configuration.product_data])
 
     required_production_processes = get_production_processes_from_ids(configuration, required)
     required_transport_processes = get_transport_processes_from_ids(configuration, required)
