@@ -158,4 +158,5 @@ adapter.validate_configuration()
 
 runner = prodsys.runner.Runner(adapter=adapter)
 runner.initialize_simulation()
-# runner.run(1000)
+runner.run(1000)
+runner.print_results()

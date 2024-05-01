@@ -233,6 +233,7 @@ class LinkTransportProcess(TransportProcess):
     """
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[node.Node, source.Source, sink.Sink, resources.ProductionResource]]]]
+    
     def matches_request(self, request: request.Request) -> bool:
 
         requested_process = request.process
@@ -295,5 +296,5 @@ PROCESS_UNION = Union[
 """
 Union type for all processes.
 """
-from prodsys.simulation import resources, source, sink
-# LinkTransportProcess.update_forward_refs()
+from prodsys.simulation import resources, source, sink, node
+LinkTransportProcess.update_forward_refs()

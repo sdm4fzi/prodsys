@@ -44,7 +44,9 @@ class ProcessFactory(BaseModel):
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})
-        self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
+            self.processes.append(parse_obj_as(process.LinkTransportProcess, values))
+        else:
+            self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """
