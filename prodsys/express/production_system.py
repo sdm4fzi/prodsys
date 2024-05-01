@@ -115,7 +115,7 @@ class ProductionSystem(core.ExpressObject):
         states = remove_duplicate_items(states)
 
         time_models = (
-            [process.time_model for process in processes]
+            [process_instance.time_model for process_instance in processes if not isinstance(process_instance, process.RequiredCapabilityProcess)]
             + [state.time_model for state in states]
             + [source.time_model for source in self.sources]
         )

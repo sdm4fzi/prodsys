@@ -223,6 +223,9 @@ class LinkTransportProcess(TransportProcess):
                       List[Union[Resource, Node, Source, Sink]]]] = Field(default_factory=list)
     capability: Optional[str] = Field(default_factory=str)
 
+    def __post_init__(self):
+        self.__pydantic_model__.update_forward_refs(**globals())
+
     def add_link(self, link: List[Union[Resource, Node, Source, Sink]]) -> None:
         """
         Adds a link to the LinkTransportProcess object.
@@ -307,3 +310,7 @@ PROCESS_UNION = Union[
     RequiredCapabilityProcess,
     LinkTransportProcess,
 ]
+from prodsys.express.resources import Resource
+from prodsys.express.source import Source
+from prodsys.express.sink import Sink
+from prodsys.express.node import Node
