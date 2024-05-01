@@ -3,7 +3,7 @@ from prodsys import express as psx
 
 # all time models
 time_model_agv = psx.ManhattanDistanceTimeModel(
-    speed=90, reaction_time=0, ID="time_model_x"
+    speed=360, reaction_time=0, ID="time_model_x"
 )
 time_model_machine1 = psx.FunctionTimeModel(
     distribution_function="constant", location=3, ID="time_model_ap23"
