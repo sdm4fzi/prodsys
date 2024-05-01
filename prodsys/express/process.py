@@ -138,6 +138,7 @@ class CapabilityProcess(Process, core.ExpressObject):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.CapabilityProcesses
     )
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self) -> processes_data.CapabilityProcessData:
         """
@@ -260,7 +261,11 @@ class LinkTransportProcess(TransportProcess):
         if isinstance(self.links, list):
             return_links = [[link.ID for link in link_list] for link_list in self.links]
         else:
-            return_links = {link.ID: [link.ID for link in link_list] for link, link_list in self.links.items()}
+            return_links = []
+            for start, targets in self.links.items():
+                for target in targets:
+                    return_links.append([start.ID, target.ID])
+
         return processes_data.LinkTransportProcessData(
             time_model_id=self.time_model.ID,
             ID=self.ID,

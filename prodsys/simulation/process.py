@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, source, sink
+    from prodsys.simulation import resources, source, sink, node
 
 from prodsys.simulation import path_finder, time_model, request
 
@@ -205,9 +205,7 @@ class RequiredCapabilityProcess(Process):
 
     Args:
         process_data (processes_data.RequiredCapabilityProcessData): The process data.
-        time_model (time_model.TimeModel): The time model.
     """
-
     process_data: processes_data.RequiredCapabilityProcessData
 
     def matches_request(self, request: request.Request) -> bool:
@@ -229,12 +227,12 @@ class RequiredCapabilityProcess(Process):
             "RequiredCapabilityProcess does not have a process time."
         )
 
-class LinkTransportProcess(Process):
+class LinkTransportProcess(TransportProcess):
     """
     Class that represents a transport link process.
     """
     process_data: processes_data.LinkTransportProcessData
-    links: Optional[List[List[Union[resources.NodeData, source.Source, sink.Sink, resources.ProductionResource]]]]
+    links: Optional[List[List[Union[node.Node, source.Source, sink.Sink, resources.ProductionResource]]]]
     def matches_request(self, request: request.Request) -> bool:
 
         requested_process = request.process
@@ -298,4 +296,4 @@ PROCESS_UNION = Union[
 Union type for all processes.
 """
 from prodsys.simulation import resources, source, sink
-LinkTransportProcess.update_forward_refs()
+# LinkTransportProcess.update_forward_refs()

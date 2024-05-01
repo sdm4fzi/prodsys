@@ -33,7 +33,6 @@ class ProcessFactory(BaseModel):
         for process_data in adapter.process_data:
             self.add_processes(process_data, adapter)
 
-
     def add_processes(self, process_data: processes_data.PROCESS_DATA_UNION, adapter: adapter.ProductionSystemAdapter):
         values = {}
         if not (isinstance(process_data, processes_data.CompoundProcessData) or isinstance(process_data, processes_data.RequiredCapabilityProcessData)):
@@ -44,7 +43,7 @@ class ProcessFactory(BaseModel):
             contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
-            values.update({"links": [[]]})  
+            values.update({"links": [[]]})
         self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:

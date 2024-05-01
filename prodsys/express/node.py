@@ -9,7 +9,7 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import resource_data
+from prodsys.models import node_data
 
 from prodsys.express import core
 
@@ -36,11 +36,11 @@ class Node(core.ExpressObject):
                 }
             }
                 
-        def to_model(self) -> resource_data.NodeData:
+        def to_model(self) -> node_data.NodeData:
              """
              Function returns a NodeData object from the Node object.
              """
-             return resource_data.NodeData(
+             return node_data.NodeData(
                   ID = self.ID,
                   location=self.location,
                   description="",)

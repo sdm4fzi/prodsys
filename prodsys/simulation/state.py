@@ -86,8 +86,8 @@ class StateInfo(BaseModel, extra=Extra.allow):
         if not origin:
             self._origin_ID = "Loading station"
         else:
-            self._origin_ID = getattr(getattr(origin, 'data', {}), 'ID', getattr(origin, 'ID', None))
-        self._target_ID = getattr(getattr(target, 'data', {}), 'ID', getattr(target, 'ID', None))
+            self._origin_ID = origin.data.ID
+        self._target_ID = target.data.ID
         self._state_type = state_type
         self._empty_transport = empty_transport
 
@@ -368,14 +368,13 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self, target: List[float], node_true: bool) -> Generator:
+    def process_state(self, target: List[float], start_of_new_transport_process: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
-        if node_true == True:
-            self.done_in -= self.time_model.time_model_data.reaction_time # no reaction_time if it is a node
-        else:
-            self.done_in
+        if start_of_new_transport_process:
+            self.done_in -= self.time_model.time_model_data.reaction_time
+
         while True:
             try:
                 if self.interrupted:

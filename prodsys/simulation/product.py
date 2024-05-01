@@ -23,6 +23,7 @@ from prodsys.simulation import (
     source,
     proces_models,
     state,
+    node
 )
 
 from prodsys.models import product_data
@@ -136,7 +137,7 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-Location= Union[resources.Resource, resources.NodeData, source.Source, sink.Sink]
+Location= Union[resources.Resource, node.Node, source.Source, sink.Sink]
 
 class Product(BaseModel):
     """

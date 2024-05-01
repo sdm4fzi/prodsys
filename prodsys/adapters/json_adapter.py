@@ -13,6 +13,7 @@ from prodsys.models import (
     product_data,
     queue_data,
     resource_data,
+    node_data,
     time_model_data,
     state_data,
     processes_data,
@@ -70,7 +71,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.queue_data = self.create_objects_from_configuration_data_old(data["queues"], queue_data.QueueData)
         self.resource_data = self.create_objects_from_configuration_data_old(data["resources"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data_old(data["products"], product_data.ProductData)
-        self.node_data = self.create_objects_from_configuration_data(data["links"], resource_data.NodeData)
+        self.node_data = self.create_objects_from_configuration_data(data["links"], node_data.NodeData)
         self.sink_data = self.create_objects_from_configuration_data_old(data["sinks"], sink_data.SinkData)
         self.source_data = self.create_objects_from_configuration_data_old(data["sources"], source_data.SourceData)
         if scenario_file_path:
@@ -100,7 +101,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
         self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)
-        self.node_data = self.create_objects_from_configuration_data(data["node_data"], resource_data.NodeData)
+        self.node_data = self.create_objects_from_configuration_data(data["node_data"], node_data.NodeData)
         self.source_data = self.create_objects_from_configuration_data(data["source_data"], source_data.SourceData)
         if scenario_file_path:
             self.read_scenario(scenario_file_path)
