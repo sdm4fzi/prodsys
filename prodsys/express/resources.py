@@ -13,80 +13,11 @@ from abc import ABC
 
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
-import dataclasses
 
-from prodsys.models import core_asset, resource_data, queue_data
+from prodsys.models import resource_data, queue_data
 import prodsys
 
-from prodsys.express import process, core, state
-
-@dataclass
-class Node(core.ExpressObject):
-        """
-        Represents a node data object of a link.
-
-        Attributes:
-                location (List[float]): Location of the node. It has to be a list of length 2.
-        """
-        location: conlist(float, min_items=2, max_items=2)
-        ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
-        class Config:
-                schema_extra = {
-                "example": {
-                        "summary": "Node",
-                        "value": {
-                        "ID": "N1",
-                        "description": "Node 1",
-                        "location": [0.0, 0.0],
-                        },
-                }
-            }
-                
-        def to_model(self) -> resource_data.NodeData:
-             """
-             Function returns a NodeData object from the Node object.
-             """
-             return resource_data.NodeData(
-                  ID = self.ID,
-                  location=self.location,
-                  description="",)
-
-
-
-@dataclass
-class Node(core.ExpressObject):
-        """
-        Represents a node data object of a link. Each node is a location which the Transportresource
-        can move to on it's way between Productionresources, Sinks and Sources.
-
-        Attributes:
-                location (List[float]): Location of the node. It has to be a list of length 2.
-        """
-        location: conlist(float, min_items=2, max_items=2)
-        ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
-        class Config:
-                schema_extra = {
-                "example": {
-                        "summary": "Node",
-                        "value": {
-                        "ID": "N1",
-                        "description": "Node 1",
-                        "location": [0.0, 0.0],
-                        },
-                }
-            }
-                
-        def to_model(self) -> resource_data.NodeData:
-             """
-             Function returns a NodeData object from the Node object.
-             """
-             return resource_data.NodeData(
-                  ID = self.ID,
-                  location=self.location,
-                  description="",)
-
+from prodsys.express import core, process, state
 
 
 @dataclass
@@ -104,7 +35,7 @@ class Resource(ABC):
         ID (str): ID of the resource.
     """
     processes: List[process.PROCESS_UNION]
-    location: conlist(float, min_items=2, max_items=2)
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
@@ -214,8 +145,8 @@ class TransportResource(Resource, core.ExpressObject):
         )
         ```
     """
-    processes: List[Union[process.LinkTransportProcess, process.TransportProcess]]
-    location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list)
+    processes: List[process.TransportProcess]
+    location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list) # type: ignore
     # capacity: int = 1
     # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.TransportController

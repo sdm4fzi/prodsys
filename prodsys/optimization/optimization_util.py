@@ -16,8 +16,8 @@ from pydantic import parse_obj_as
 
 from prodsys import adapters, runner
 from prodsys.adapters.adapter import add_default_queues_to_resources
-from prodsys.adapters.adapter import check_redudant_locations
-from prodsys.adapters.adapter import check_required_processes_in_resources_available
+from prodsys.adapters.adapter import assert_no_redudant_locations
+from prodsys.adapters.adapter import assert_required_processes_in_resources_available
 from prodsys.adapters.adapter import get_possible_production_processes_IDs, get_possible_transport_processes_IDs
 from prodsys.util.post_processing import PostProcessor
 from prodsys.models import (
@@ -914,7 +914,9 @@ def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -
 
 
 def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
-    if not check_redudant_locations(configuration):
+    try: 
+        assert_no_redudant_locations(configuration)
+    except ValueError as e:
         return False
 
     positions = [machine.location for machine in adapters.get_machines(configuration)]
@@ -962,7 +964,9 @@ def check_valid_configuration(
         return False
     if not valid_num_process_modules(configuration):
         return False
-    if not check_required_processes_in_resources_available(configuration):
+    try:
+        assert_required_processes_in_resources_available(configuration)
+    except ValueError as e:
         return False
     if not valid_positions(configuration):
         return False

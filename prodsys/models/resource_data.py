@@ -56,33 +56,35 @@ class TransportControlPolicy(str, Enum):
 
 
 class NodeData(CoreAsset):
+    """
+    Represents a node data object of a link.
+
+    Attributes:
+            location (List[float]): Location of the node. It has to be a list of length 2.
+    """
+
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Node",
+                "value": {
+                    "ID": "N1",
+                    "description": "Node 1",
+                    "location": [0.0, 0.0],
+                },
+            }
+        }
+
+    def get_location(self) -> List[float]:
         """
-        Represents a node data object of a link.
+        Returns the location of the node.
 
-        Attributes:
-                location (List[float]): Location of the node. It has to be a list of length 2.
+        Returns:
+            List[float]: The location of the node. Has to have length 2.
         """
-        location: conlist(float, min_items=2, max_items=2)
-
-        class Config:
-                schema_extra = {
-                "example": {
-                        "summary": "Node",
-                        "value": {
-                        "ID": "N1",
-                        "description": "Node 1",
-                        "location": [0.0, 0.0],
-                        },
-                }
-                }
-        def get_location(self) -> List[float]:
-            """
-            Returns the location of the node.
-
-            Returns:
-                List[float]: The location of the node. Has to have length 2.
-            """
-            return self.location
+        return self.location
 
 
 class ResourceData(CoreAsset):
@@ -102,7 +104,7 @@ class ResourceData(CoreAsset):
     """
 
     capacity: int
-    location: conlist(float, min_items=2, max_items=2)
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
 
     controller: ControllerEnum
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]

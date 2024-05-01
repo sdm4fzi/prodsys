@@ -11,7 +11,9 @@ The following processes are possible:
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Union, Optional, List, Dict
+from typing import Literal, Optional, Union, List, Dict
+
+from pydantic import Field
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -242,7 +244,7 @@ class RequiredCapabilityProcessData(CoreAsset):
         }
 
 
-class LinkTransportProcessData(ProcessData):
+class LinkTransportProcessData(TransportProcessData):
     """
     Class that represents all link transport process data.
 
@@ -251,10 +253,11 @@ class LinkTransportProcessData(ProcessData):
         description (str): Description of the process.
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
         links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
+        capability (Optional[str], optional): Capability of the process. Defaults to None.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1",
-        type "LinkTransportProcesses", and link_data LinkData(link="link1"):
+        type "LinkTransportProcesses", and links [["Resource1", "Node2"], ["Node2", "Resource1"]]:
         ``` py
         import prodsys
         prodsys.processes_data.LinkTransportProcessData(
@@ -262,14 +265,15 @@ class LinkTransportProcessData(ProcessData):
             description="Transport Process 1",
             time_model_id="manhattan_time_model_1",
             type="LinkTransportProcesses",
-            links=[LinkData(link="link1")],
+            links=[["Resource1", "Node2"], ["Node2", "Resource1"]],
+            capability="automated_transport_process",
         )
         ```
     """
 
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: Union[List[List[str]], Dict[str, List[str]]]
-    capability: str
+    capability: Optional[str] = Field(default_factory=str)
 
     class Config:
         schema_extra = {
@@ -279,7 +283,7 @@ class LinkTransportProcessData(ProcessData):
                     "ID": "TP1",
                     "description": "Transport Process 1",
                     "time_model_id": "manhattan_time_model_1",
-                    "type": "RouteTransportProcesses",
+                    "type": "LinkTransportProcesses",
                     "links": [["Resource1", "Node2"], ["Node2", "Resource1"]],
                 },
             }
