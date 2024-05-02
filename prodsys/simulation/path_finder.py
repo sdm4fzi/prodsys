@@ -41,7 +41,9 @@ class Pathfinder:
             raise ValueError("Origin or target not found in graph, cannot find path. Routing should not happened for this request.")
         graph_node_path = self.find_graphnode_path(origin, target, graph)
         path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
+        # FIXME: check if this reverse function makes sense here
         path.reverse()
+        print(f"Path for request {request.product.product_data.ID}: {[location.data.ID for location in path]}")
 
         return path
 
@@ -149,6 +151,7 @@ class Pathfinder:
         else:
             origin_location = request.origin
             target_location = request.target
+        print(f"Origin: {origin_location.data.ID}, Target: {target_location.data.ID}, path_to_origin: {path_to_origin}, product: {request.product.product_data.ID}")
         origin_graph_node = self.get_existing_graph_node_for_location(origin_location)
         target_graph_node = self.get_existing_graph_node_for_location(target_location)
         return origin_graph_node, target_graph_node

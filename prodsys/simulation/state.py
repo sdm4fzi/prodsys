@@ -368,12 +368,14 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self, target: List[float], start_of_new_transport_process: bool) -> Generator:
+    def process_state(self, target: List[float], initial_transport_step: bool, last_transport_step: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
-        if start_of_new_transport_process:
+        if initial_transport_step:
             self.done_in -= self.time_model.time_model_data.reaction_time
+
+        # TODO: also use intial and last_transport_step to add loading times
 
         while True:
             try:

@@ -125,15 +125,18 @@ class TransportProcess(Process):
     """
     process_data: processes_data.TransportProcessData
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request.TransportResquest) -> bool:
         requested_process = request.process
         if not isinstance(requested_process, TransportProcess) and not isinstance(
             requested_process, CompoundProcess
         ):
             return False
-        if isinstance(requested_process, TransportProcess):
-            return requested_process.process_data.ID == self.process_data.ID
-        return self.process_data.ID in requested_process.process_data.process_ids
+        if isinstance(requested_process, TransportProcess) and not requested_process.process_data.ID == self.process_data.ID:
+            return False
+        if isinstance(requested_process, CompoundProcess) and not self.process_data.ID in requested_process.process_data.process_ids:
+            return False
+        request.cache_possible_path_of_process(process=self, path=[request.origin, request.target])
+        return True
 
     def get_process_time(self, origin: List[float], target: List[float]) -> float:
         return self.time_model.get_next_time(origin=origin, target=target)
@@ -249,7 +252,7 @@ class LinkTransportProcess(TransportProcess):
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[node.Node, source.Source, sink.Sink, resources.ProductionResource]]]]
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request.TransportResquest) -> bool:
         requested_process = request.process
 
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
@@ -279,19 +282,15 @@ class LinkTransportProcess(TransportProcess):
         path = pathfinder.find_path(request=request, process=self)
         if not path:
             return False
-        
-        # TODO: make this adding of path more convenient and transparent
-        self.add_path_to_request(request, path)
-        return True       
-    
-    def add_path_to_request(self, request: request.TransportResquest, path: List[processes_data.LinkTransportProcessData.links]):
-        request.path_to_target['path'].append(path)
-        return request
+        request.cache_possible_path_of_process(process=self, path=path)
+        return True
     
     def get_process_time(self, request: request.TransportResquest) -> float:
-        path = request.path_to_target
+        path = request.get_path()
         total_time = 0
-        for link in path:
+        link_path = [path[i:i+2] for i in range(len(path)-1)]
+
+        for link in link_path:
             time = self.time_model.get_next_time(origin=link[0].get_location(), target=link[1].get_location())
             total_time += time
         return total_time
