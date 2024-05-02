@@ -101,7 +101,8 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
         self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)
-        self.node_data = self.create_objects_from_configuration_data(data["node_data"], node_data.NodeData)
+        if "node_data" in data:
+            self.node_data = self.create_objects_from_configuration_data(data["node_data"], node_data.NodeData)
         self.source_data = self.create_objects_from_configuration_data(data["source_data"], source_data.SourceData)
         if scenario_file_path:
             self.read_scenario(scenario_file_path)

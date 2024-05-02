@@ -277,7 +277,7 @@ class LinkTransportProcess(TransportProcess):
         if isinstance(requested_process, LinkTransportProcess):
             if not requested_process.process_data.ID == self.process_data.ID:
                 return False
-        
+        # TODO: make sure, that this is not executed multiple times for the same process!
         pathfinder = path_finder.Pathfinder()
         path = pathfinder.find_path(request=request, process=self)
         if not path:

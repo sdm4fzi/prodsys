@@ -13,6 +13,6 @@ if __name__ == '__main__':
     runner_object.initialize_simulation()
     runner_object.run(20000)
     runner_object.print_results()
-    # runner_object.plot_results()
-    # runner_object.save_results_as_csv()
+    runner_object.plot_results()
+    runner_object.save_results_as_csv()
     # runner_object.save_results_as_json()

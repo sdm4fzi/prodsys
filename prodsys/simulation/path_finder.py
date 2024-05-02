@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Optional, Tuple, Union
+
+import numpy as np
+
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 
@@ -34,6 +37,7 @@ class Pathfinder:
             List[Location]: The path as a list of locations.
         """
         edges = self.process_links_to_graph_edges(links=process.links)
+        # TODO: also add functionality to make directional edges only for conveyors
         graph = Graph(edges=edges, bi_directional=True)
         origin, target = self.get_path_origin_and_target(request=request, path_to_origin=find_path_to_origin)
         if not origin or not target:
@@ -41,8 +45,6 @@ class Pathfinder:
             raise ValueError("Origin or target not found in graph, cannot find path. Routing should not happened for this request.")
         graph_node_path = self.find_graphnode_path(origin, target, graph)
         path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
-        # FIXME: check if this reverse function makes sense here
-        path.reverse()
         print(f"Path for request {request.product.product_data.ID}: {[location.data.ID for location in path]}")
 
         return path
@@ -121,18 +123,18 @@ class Pathfinder:
         return new_graph_node
         
 
-    def calculate_cost(self, node1, node2):
+    def calculate_cost(self, node1: List[float], node2: List[float]) -> float:
         """
-        Calculates the cost between two nodes.
+        Calculates the cost between two nodes based on the euclidean distance.
 
         Args:
-            node1: The first node.
-            node2: The second node.
+            node1 (List[float]): The first node.
+            node2 (List[float]): The second node.
 
         Returns:
-            The cost between the two nodes.
+            float: The cost.
         """
-        return abs(node1[0] - node2[0]) + abs(node1[1] - node2[1])
+        return np.sqrt((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)
 
     def get_path_origin_and_target(self, request: request.TransportResquest, path_to_origin: bool) -> Tuple[Optional[GraphNode], Optional[GraphNode]]:
         """

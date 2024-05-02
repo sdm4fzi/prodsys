@@ -444,7 +444,6 @@ class TransportController(Controller):
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
-                
                 path_to_origin = self.find_path_to_origin(process_request)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
@@ -554,7 +553,7 @@ class TransportController(Controller):
         Returns:
             List[product.Location]: The path to the origin. In case of a simple transport process, the path is just the origin.
         """
-        if isinstance(process, LinkTransportProcess):
+        if isinstance(process_request.process, LinkTransportProcess):
             pathfinder = path_finder.Pathfinder()
             path_to_origin = pathfinder.find_path(request=process_request, find_path_to_origin=True, process=process_request.get_process())
             return path_to_origin
