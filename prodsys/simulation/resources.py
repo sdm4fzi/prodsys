@@ -14,7 +14,6 @@ from simpy import events
 from prodsys.simulation import sim, store
 if TYPE_CHECKING:
     from prodsys.simulation import process, control, state
-from prodsys.simulation.process import RequiredCapabilityProcess
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
@@ -80,7 +79,7 @@ class Resource(BaseModel, ABC, resource.Resource):
             [
                 state
                 for state in self.production_states
-                if state.state_data.ID == current_setup_ID or (state.resource.current_setup.process_data.ID == current_setup_ID)
+                if state.state_data.ID == current_setup_ID
             ]
         )
         return length
@@ -206,15 +205,11 @@ class Resource(BaseModel, ABC, resource.Resource):
         Returns:
             List[state.State]: The state of the resource for the process.
         """
-        possible_states = []
-        for actual_state in self.production_states:
-            if isinstance(process, RequiredCapabilityProcess) and (
-            actual_state.resource.processes[0].process_data.capability == process.process_data.capability
-            ):
-                possible_states.append(actual_state)
-            elif actual_state.state_data.ID == process.process_data.ID:
-                possible_states.append(actual_state)
-
+        possible_states = [
+            actual_state
+            for actual_state in self.production_states
+            if actual_state.state_data.ID == process.process_data.ID
+        ]
         if not possible_states:
             raise ValueError(
                 f"Process {process.process_data.ID} not found in resource {self.data.ID}"
@@ -232,12 +227,10 @@ class Resource(BaseModel, ABC, resource.Resource):
             Optional[state.State]: The state of the resource for the process.
         """
         for actual_state in self.production_states:
-            if isinstance(process, RequiredCapabilityProcess) and (actual_state.resource.processes[0].process_data.capability == process.process_data.capability):
-                if actual_state.process is None or not actual_state.process.is_alive:
-                    return actual_state 
-            elif (actual_state.state_data.ID == process.process_data.ID):
-                if (actual_state.process is None or not actual_state.process.is_alive):
-                    return actual_state
+            if actual_state.state_data.ID == process.process_data.ID and (
+                actual_state.process is None or not actual_state.process.is_alive
+            ):
+                return actual_state
         return None
 
     def get_location(self) -> List[float]:

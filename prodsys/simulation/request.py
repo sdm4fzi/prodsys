@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, List, Union
-
-from prodsys.simulation import process as prodsys_process
+from typing import TYPE_CHECKING, Optional, List, Tuple, Union
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, resources
+    from prodsys.simulation.product import Location
+
 
 
 class Request:
@@ -83,28 +83,48 @@ class TransportResquest(Request):
         process: Union[process.TransportProcess, process.LinkTransportProcess],
         product: product.Product,
         origin: product.Location,
-        target: product.Location,
-        path_to_target = {'path': [], 'resource_ID': []},
-        path_to_target_chosen = None
+        target: product.Location
     ):
         self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = None
-        self.path_to_target = path_to_target
-        self.path_to_target_chosen = path_to_target_chosen,
         self.origin: product.Location = origin
         self.target: product.Location = target
 
+        self.possible_paths: List[Tuple[process.LinkTransportProcess, List[Location]]] = []
+        self.path: Optional[List[Location]] = None
+
+    def cache_possible_path_of_process(self, process: process.TransportProcess, path: List[Location]):
+        """
+        Caches a possible path of the transport request used later for setting the resource of the transport request.
+
+        Args:
+            process (process.TransportProcess): The process.
+            path (List[product.Location]): The path.
+        """
+        self.possible_paths.append((process, path))
+
     def set_resource(self, resource: resources.Resource):
         """
-        Sets the resource of the transport request.
+        Sets the resource of the transport request. Also sets the path of the transport request and upadtes the transport process to the one used by the resource for executing the request.
         
         Args:
             resource (resources.TransportResource): The resource.
         """
+        if not self.possible_paths:
+            raise ValueError("No possible paths have been set. Resource should not be set before possible paths exist.")
+        possible_paths_of_routed_resource = []
+        for process, path in self.possible_paths:
+            if any(resource_process.process_data.ID == process.process_data.ID for resource_process in resource.processes):
+                possible_paths_of_routed_resource.append((process, path))
+        if not possible_paths_of_routed_resource:
+            raise ValueError("The resource does not have any processes that can perform the possible paths from the routing.")
+        if len(possible_paths_of_routed_resource) > 1:
+            raise ValueError("The resource has multiple processes that can perform the possible paths from the routing. This is not allowed, since distinct association is not possible.")
+        
+        self.path = possible_paths_of_routed_resource[0][1]
+        self.process = possible_paths_of_routed_resource[0][0]
         self.resource = resource
-
-
 
     def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
@@ -142,20 +162,12 @@ class TransportResquest(Request):
         """
         return self.target
     
-    def get_path_to_origin(self) -> process.LinkTransportProcess:
+    def get_path(self) -> List[Location]:
         """
-        Returns the path process of the transport request.
+        Returns the path of the transport request.
 
         Returns:
-            process.TransportLinkProcess: The path process.
-        """
-        return self.path_to_origin
-    
-    def get_path_to_target(self) -> process.LinkTransportProcess:
-        """
-        Returns the path process of the transport request.
+            List[product.Location]: The path.
 
-        Returns:
-            process.TransportLinkProcess: The path process.
         """
-        return self.path_to_target_chosen
+        return self.path

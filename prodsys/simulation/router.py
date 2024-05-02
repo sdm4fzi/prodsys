@@ -86,14 +86,8 @@ class Router:
         if not free_resources:
             raise ValueError("No free resources available, Error in Event handling of routing to resources.")
         routed_resource = free_resources[0]
-        if isinstance(routed_resource, resources.TransportResource) and (isinstance(processing_request.process, process.RequiredCapabilityProcess) or isinstance(processing_request.process, process.LinkTransportProcess)):
-            for path, resource in enumerate(processing_request.path_to_target['resource_ID']):
-                if resource == routed_resource.data.ID:
-                    processing_request.path_to_target_chosen = processing_request.path_to_target['path'][path]
-                    break
         if isinstance(routed_resource, resources.ProductionResource):
             routed_resource.reserve_input_queues()
-        # TODO: also set the process that was chosen by the router!
         processing_request.set_resource(routed_resource)
                 
     def can_reach_resource(
@@ -160,17 +154,11 @@ class Router:
         Returns:
             List[resources.Resource]: A list of possible resources for the process.
         """
-        # TODO: maybe make result of function in dict and save it after instantiation. 
         possible_resources = []
-        if isinstance(processing_request, request.TransportResquest):
-            processing_request.path_to_target['resource_ID'] = []
-            processing_request.path_to_target['path'] = []
         for resource in self.resource_factory.resources:
             for process in resource.processes:
                 if process.matches_request(processing_request):
                     possible_resources.append(resource)
-                    if isinstance(processing_request, request.TransportResquest) and isinstance(resource, resources.TransportResource):
-                        processing_request.path_to_target['resource_ID'].append(resource.data.ID)
         return possible_resources
 
 
