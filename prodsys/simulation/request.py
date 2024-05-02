@@ -119,9 +119,7 @@ class TransportResquest(Request):
                 possible_paths_of_routed_resource.append((process, path))
         if not possible_paths_of_routed_resource:
             raise ValueError("The resource does not have any processes that can perform the possible paths from the routing.")
-        if len(possible_paths_of_routed_resource) > 1:
-            raise ValueError("The resource has multiple processes that can perform the possible paths from the routing. This is not allowed, since distinct association is not possible.")
-        
+
         self.path = possible_paths_of_routed_resource[0][1]
         self.process = possible_paths_of_routed_resource[0][0]
         self.resource = resource

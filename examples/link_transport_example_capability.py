@@ -115,6 +115,7 @@ links = [
     [node1, machine01],
     [node2, machine01],
     [node2, node4],
+    [node2, machine03],
     [machine02, machine03],
     [machine03, machine01],
     [machine01, machine02],
