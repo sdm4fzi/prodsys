@@ -3,9 +3,9 @@ from urllib import response
 
 from fastapi import APIRouter
 from app.dependencies import (
-    Project,
     prodsys_backend,
 )
+from app.models.project import Project
 
 router = APIRouter(
     prefix="/projects",
