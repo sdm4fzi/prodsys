@@ -28,10 +28,13 @@ from prodsys.express.time_model import (
 from prodsys.express.process import (
     ProductionProcess,
     CapabilityProcess,
+    RequiredCapabilityProcess,
     TransportProcess,
+    LinkTransportProcess,
 )
 from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState
 from prodsys.express.resources import ProductionResource, TransportResource
+from prodsys.express.node import Node
 from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink

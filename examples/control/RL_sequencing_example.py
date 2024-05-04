@@ -94,7 +94,7 @@ class TensorboardCallback(BaseCallback):
 if __name__ == '__main__':
     resource_id = "R2"
     adapter = prodsys.adapters.JsonProductionSystemAdapter()
-    adapter.read_data('examples/control_example/control_configuration.json')
+    adapter.read_data('examples/control/control_example_data/control_configuration.json')
     resource_data = [r for r in adapter.resource_data if r.ID == resource_id][0]
     queue = [q for q in adapter.queue_data if q.ID == resource_data.input_queues[0]][0]
     shape = (queue.capacity + resource_data.capacity, len(resource_data.process_ids))
