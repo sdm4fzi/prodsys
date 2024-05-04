@@ -356,9 +356,10 @@ class LinkTransportProcessData(TransportProcessData):
         Returns:
             str: hash of the required capability process data.
         """
+        raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
         # TODO: Implement hash function for LinkTransportProcessData and Nodes
-        return md5(self.capability.encode("utf-8")).hexdigest()
-
+        # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
+        
     class Config:
         schema_extra = {
             "example": {
