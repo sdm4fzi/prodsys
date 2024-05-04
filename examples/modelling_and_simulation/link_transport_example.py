@@ -1,9 +1,10 @@
 from prodsys import express as psx
+import prodsys
 
 
 # all time models
 time_model_agv = psx.ManhattanDistanceTimeModel(
-    speed=90, reaction_time=0, ID="time_model_x"
+    speed=360, reaction_time=0, ID="time_model_x"
 )
 time_model_machine1 = psx.FunctionTimeModel(
     distribution_function="constant", location=3, ID="time_model_ap23"
@@ -143,15 +144,6 @@ sinks=[sink01, sink02],
 ID="productionsystem01",)
 
 adapter = productionsystem.to_model()
-adapter.write_data("link_transport_example.json")
-
-from prodsys.adapters import JsonProductionSystemAdapter
-import prodsys
-
-adapter = JsonProductionSystemAdapter()
-adapter.read_data("link_transport_example.json")
-adapter.validate_configuration()
-
 runner = prodsys.runner.Runner(adapter=adapter)
 runner.initialize_simulation()
 runner.run(1000)

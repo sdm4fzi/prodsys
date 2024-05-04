@@ -135,10 +135,10 @@ class CapabilityProcess(Process, core.ExpressObject):
         ```
     """
     capability: str
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.CapabilityProcesses
     )
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self) -> processes_data.CapabilityProcessData:
         """

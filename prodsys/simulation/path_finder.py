@@ -24,17 +24,16 @@ def find_path(request: request.TransportResquest, process: process.LinkTransport
     Returns:
         List[Location]: The path as a list of locations.
     """
-    if request.path:
-        print("Path already found in cache. Returning this path.")
+    if request.path and not find_path_to_origin:
         return request.path
     pathfinder = Pathfinder()
-    path = pathfinder.find_path(request=request, process=process)
-    if not path:
-        return []
-    request.set_path(path=path)
+    path = pathfinder.find_path(request=request, process=process, find_path_to_origin=find_path_to_origin)
+    if path and not find_path_to_origin:
+        request.set_path(path=path)
     return path
 
 class Pathfinder:
+    # TODO: rename to Routefinder
     """
     Class representing a path finder for transportation requests in a graph.
     """
@@ -59,14 +58,16 @@ class Pathfinder:
             List[Location]: The path as a list of locations.
         """
         edges = self.process_links_to_graph_edges(links=process.links)
-        # TODO: also add functionality to make directional edges only for conveyors
+        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly. 
+        # For this feature is it necessary, that the location of the conveyor does not change after a transport.
         graph = Graph(edges=edges, bi_directional=True)
         origin, target = self.get_path_origin_and_target(request=request, path_to_origin=find_path_to_origin)
         if not origin or not target:
-            raise ValueError("Origin or target not found in graph, cannot find path. Routing should not happened for this request.")
+            return []
         graph_node_path = self.find_graphnode_path(origin, target, graph)
+        if not graph_node_path:
+            return []
         path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
-        # print(f"Path for request {request.product.product_data.ID}: {[location.data.ID for location in path]}")
 
         return path
 
@@ -208,7 +209,7 @@ class Pathfinder:
         finder = DijkstraFinder()
         path, _ = finder.find_path(origin, target, graph)
         if path is None:
-            return False
+            return []
         return path
 
     def convert_node_path_to_location_path(self, graph_node_path: List[GraphNode], links: List[List[Location]]) -> List[Location]:

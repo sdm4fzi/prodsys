@@ -1,8 +1,8 @@
 from prodsys.optimization.math_opt import run_mathematical_optimization
 
 
-BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
-SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "examples/optimization/optimization_example/base_scenario.json"
+SCENARIO_FILE_PATH = "examples/optimization/optimization_example/scenario.json"
 SAVE_FOLDER = "data/math_results"
 OPTIMIZATION_TIME_PORTION = 1.0
 NUMBER_OF_SOLUTIONS = 2

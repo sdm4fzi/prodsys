@@ -163,32 +163,32 @@
         {
             "ID": "IQ1",
             "description": "Input-queue 1 for R1",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "OQ1",
             "description": "Output-queue 1 for R1",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "OQ2",
             "description": "Output-queue 2 for R2",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "IQ2",
             "description": "Input-queue 2 for R3",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "SourceQueue",
             "description": "Output-Queue for all sources",
-            "capacity": 0
+            "capacity": 20
         },
         {
             "ID": "SinkQueue",
@@ -198,7 +198,7 @@
         {
             "ID": "IQ9",
             "description": "Input-queue 1 for R2",
-            "capacity": 0
+            "capacity": 20
         }
     ],
     "resource_data": [
@@ -294,7 +294,7 @@
         },
         {
             "ID": "R4",
-            "description": "Resource 4",
+            "description": "Resource 3",
             "capacity": 2,
             "location": [
                 10.0,
@@ -363,7 +363,6 @@
             ]
         }
     ],
-    "process_module_data": [],
     "product_data": [
         {
             "ID": "Product_1",

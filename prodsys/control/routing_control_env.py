@@ -20,8 +20,6 @@ if TYPE_CHECKING:
 
 
 class AbstractRoutingControlEnv(gym.Env, ABC):
-
-    # FIXME: update from resources routing to request routing
     """
     Abstract Gym environment for controlling a router of a production system with an reinforcement learning agent.
     This class defines the methods that need to be implemented in order to use a Reinforcement learning agent for production routing control.
