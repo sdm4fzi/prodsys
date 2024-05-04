@@ -17,7 +17,7 @@ from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, process, product, sink
+    from prodsys.simulation import resources, product, sink
     from prodsys.factories import resource_factory, sink_factory
     from prodsys.control import routing_control_env
 
@@ -223,20 +223,20 @@ class Router:
         product = production_requests[0].product
 
         possible_requests = []
-        path_cache = {}
+        route_cache = {}
 
         for resource in self.resource_factory.get_transport_resources():
             for process in resource.processes:
                 for target in transport_targets:
                     transport_request = self.get_transport_request(product, resource, target)
-                    if path_cache.get((target.data.ID, process.process_data.ID)):
-                        transport_request.copy_cached_paths(path_cache[(target.data.ID, process.process_data.ID)])
+                    if route_cache.get((target.data.ID, process.process_data.ID)):
+                        transport_request.copy_cached_routes(route_cache[(target.data.ID, process.process_data.ID)])
                         transport_request.set_process(process)
                         possible_requests.append(transport_request)
                     elif process.matches_request(transport_request):
                         possible_requests.append(transport_request)
                         transport_request.set_process(process)
-                        path_cache[(target.data.ID, process.process_data.ID)] = transport_request
+                        route_cache[(target.data.ID, process.process_data.ID)] = transport_request
         return possible_requests
 
     def get_requests_with_non_blocked_resources(

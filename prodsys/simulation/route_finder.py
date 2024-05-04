@@ -12,30 +12,29 @@ if TYPE_CHECKING:
     from prodsys.simulation.product import Location
 
 
-def find_path(request: request.TransportResquest, process: process.LinkTransportProcess, find_path_to_origin: bool=False) -> List[Location]:
+def find_route(request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Location]:
     """
-    Finds the path for a transportation request.
+    Finds the route for a transportation request.
 
     Args:
         request (request.TransportResquest): The transportation request.
-        process (process.LinkTransportProcess): The process to find the path for.
-        find_path_to_origin (bool, optional): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False). Defaults to False.
+        process (process.LinkTransportProcess): The process to find the route for.
+        find_route_to_origin (bool, optional): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False). Defaults to False.
 
     Returns:
-        List[Location]: The path as a list of locations.
+        List[Location]: The route as a list of location objects.
     """
-    if request.path and not find_path_to_origin:
-        return request.path
-    pathfinder = Pathfinder()
-    path = pathfinder.find_path(request=request, process=process, find_path_to_origin=find_path_to_origin)
-    if path and not find_path_to_origin:
-        request.set_path(path=path)
-    return path
+    if request.route and not find_route_to_origin:
+        return request.route
+    route_finder = RouteFinder()
+    route = route_finder.find_route(request=request, process=process, find_route_to_origin=find_route_to_origin)
+    if route and not find_route_to_origin:
+        request.set_route(route=route)
+    return route
 
-class Pathfinder:
-    # TODO: rename to Routefinder
+class RouteFinder:
     """
-    Class representing a path finder for transportation requests in a graph.
+    Class representing a route finder for transportation requests in a graph.
     """
 
     def __init__(self):
@@ -45,31 +44,31 @@ class Pathfinder:
         self.nodes: Dict[str, GraphNode] = {}
         self.node_locations: Dict[Tuple[float,float], Location] = {}
 
-    def find_path(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_path_to_origin: bool=False) -> List[Location]:
+    def find_route(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Location]:
         """
-        The general function which includes all sub functions to find the shortest path for a TransportRequest.
+        The general function which includes all sub functions to find the shortest route for a TransportRequest.
 
         Args:
             request (TransportResquest): The transportation request.
-            process (LinkTransportProcess): The process to find the path for.
-            find_path_to_origin (bool): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False).
+            process (LinkTransportProcess): The process to find the route for.
+            find_route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
-            List[Location]: The path as a list of locations.
+            List[Location]: The route as a list of location objects.
         """
         edges = self.process_links_to_graph_edges(links=process.links)
         # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly. 
         # For this feature is it necessary, that the location of the conveyor does not change after a transport.
         graph = Graph(edges=edges, bi_directional=True)
-        origin, target = self.get_path_origin_and_target(request=request, path_to_origin=find_path_to_origin)
+        origin, target = self.get_route_origin_and_target(request=request, route_to_origin=find_route_to_origin)
         if not origin or not target:
             return []
         graph_node_path = self.find_graphnode_path(origin, target, graph)
         if not graph_node_path:
             return []
-        path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
+        route = self.convert_node_path_to_location_route(graph_node_path=graph_node_path, links=process.links)
 
-        return path
+        return route
 
     def process_links_to_graph_edges(self, links: List[List[Location]]) -> List[Tuple[GraphNode, GraphNode, int]]:
         """
@@ -155,26 +154,26 @@ class Pathfinder:
         Returns:
             float: The cost.
         """
+        # TODO: maybe use here the time model feature to weight the distance with the time it takes to travel it to optimize for fastest paths and not shortest paths
         return np.sqrt((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)
 
-    def get_path_origin_and_target(self, request: request.TransportResquest, path_to_origin: bool) -> Tuple[Optional[GraphNode], Optional[GraphNode]]:
+    def get_route_origin_and_target(self, request: request.TransportResquest, route_to_origin: bool) -> Tuple[Optional[GraphNode], Optional[GraphNode]]:
         """
         Converts the origin and target of the transport request to graph nodes.
 
         Args:
             request (TransportResquest): The transportation request.
-            path_to_origin (bool): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False).
+            route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
-            Tuple[Optional[GraphNode], Optional[GraphNode]]: A tuple containing the origin and target graph nodes for the transport request and the path_to_origin flag.
+            Tuple[Optional[GraphNode], Optional[GraphNode]]: A tuple containing the origin and target graph nodes for the transport request and the route_to_origin flag.
         """
-        if path_to_origin:
+        if route_to_origin:
             origin_location = self.get_location_of_transport_resource(request.resource)
             target_location = request.origin
         else:
             origin_location = request.origin
             target_location = request.target
-        # print(f"Origin: {origin_location.data.ID}, Target: {target_location.data.ID}, path_to_origin: {path_to_origin}, product: {request.product.product_data.ID}")
         origin_graph_node = self.get_existing_graph_node_for_location(origin_location)
         target_graph_node = self.get_existing_graph_node_for_location(target_location)
         return origin_graph_node, target_graph_node
@@ -212,25 +211,25 @@ class Pathfinder:
             return []
         return path
 
-    def convert_node_path_to_location_path(self, graph_node_path: List[GraphNode], links: List[List[Location]]) -> List[Location]:
+    def convert_node_path_to_location_route(self, graph_node_path: List[GraphNode], links: List[List[Location]]) -> List[Location]:
         """
-        Converts the path of graph nodes to a path of links.
+        Converts the path of graph nodes to a route of locations.
 
         Args:
             graph_node_path (List[GraphNode]): The path as a list of graph nodes.
             links (List[List[Location]]): The given links list.
 
         Returns:
-            List[Location]: The path as a list of locations.
+            List[Location]: The route as a list of locations.
         """
-        path = []
-        seen_ids = []  # no node several times in the path
+        route = []
+        seen_node_ids = []  # no node several times in the path
 
         for node in graph_node_path:
             for link in links:
                 for location in link:
-                    if node.node_id == location.data.ID and location.data.ID not in seen_ids:
-                        path.append(location)
-                        seen_ids.append(location.data.ID)
-        return path
+                    if node.node_id == location.data.ID and location.data.ID not in seen_node_ids:
+                        route.append(location)
+                        seen_node_ids.append(location.data.ID)
+        return route
     

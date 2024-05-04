@@ -10,7 +10,7 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from prodsys.simulation import resources, source, sink, node
 
-from prodsys.simulation import path_finder, time_model, request
+from prodsys.simulation import route_finder, time_model, request
 
 from prodsys.models import processes_data
 
@@ -135,7 +135,7 @@ class TransportProcess(Process):
             return False
         if isinstance(requested_process, CompoundProcess) and not self.process_data.ID in requested_process.process_data.process_ids:
             return False
-        request.set_path(path=[request.origin, request.target])
+        request.set_route(route=[request.origin, request.target])
         return True
 
     def get_process_time(self, origin: List[float], target: List[float]) -> float:
@@ -278,17 +278,17 @@ class LinkTransportProcess(TransportProcess):
             if not requested_process.process_data.ID == self.process_data.ID:
                 return False
             
-        path = path_finder.find_path(request=request, process=self)
-        if not path:
+        route = route_finder.find_route(request=request, process=self)
+        if not route:
             return False
         return True
     
     def get_process_time(self, request: request.TransportResquest) -> float:
-        path = request.get_path()
+        route = request.get_route()
         total_time = 0
-        link_path = [path[i:i+2] for i in range(len(path)-1)]
+        link_route = [route[i:i+2] for i in range(len(route)-1)]
 
-        for link in link_path:
+        for link in link_route:
             time = self.time_model.get_next_time(origin=link[0].get_location(), target=link[1].get_location())
             total_time += time
         return total_time

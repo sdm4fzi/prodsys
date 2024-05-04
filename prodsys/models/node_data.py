@@ -1,6 +1,6 @@
 """
 NodeData objects are used in prodsys to represent Locations in the production system that serve as nodes in a link. They are used in the 
-`LinkTransportProcess` class to represent locations where paths can cross.
+`LinkTransportProcess` class to represent locations where routes can cross.
 """
 
 from __future__ import annotations

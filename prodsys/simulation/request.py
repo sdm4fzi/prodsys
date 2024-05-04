@@ -110,7 +110,7 @@ class TransportResquest(Request):
         self.origin: product.Location = origin
         self.target: product.Location = target
 
-        self.path: Optional[List[Location]] = None
+        self.route: Optional[List[Location]] = None
 
 
     def set_process(self, process: process.PROCESS_UNION):
@@ -123,24 +123,24 @@ class TransportResquest(Request):
         self.process = process
         # TODO: maybe do some special handling of compound processes here
 
-    def copy_cached_paths(self, request: TransportResquest):
+    def copy_cached_routes(self, request: TransportResquest):
         """
-        Copies the cached paths from another transport request.
+        Copies the cached routes from another transport request.
 
         Args:
             request (TransportResquest): The transport request.
         """
-        self.path = request.path
+        self.route = request.route
 
-    def set_path(self, path: List[Location]):
+    def set_route(self, route: List[Location]):
         """
-        Caches a possible path of the transport request used later for setting the resource of the transport request.
+        Caches a possible route of the transport request used later for setting the resource of the transport request.
 
         Args:
             process (process.TransportProcess): The process.
-            path (List[product.Location]): The path.
+            route (List[product.Location]): The route.
         """
-        self.path = path
+        self.route = route
 
     def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
@@ -178,12 +178,12 @@ class TransportResquest(Request):
         """
         return self.target
     
-    def get_path(self) -> List[Location]:
+    def get_route(self) -> List[Location]:
         """
-        Returns the path of the transport request.
+        Returns the route of the transport request.
 
         Returns:
-            List[product.Location]: The path.
+            List[product.Location]: The route.
 
         """
-        return self.path
+        return self.route
