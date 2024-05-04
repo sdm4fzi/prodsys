@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import node, path_finder, request, sim, state, process
+from prodsys.simulation import node, request, route_finder, sim, state, process
 
 from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess
 
@@ -437,18 +437,18 @@ class TransportController(Controller):
         product = process_request.get_product()
         origin = process_request.get_origin()
         target = process_request.get_target()
-        path_to_target = process_request.get_path()
+        route_to_target = process_request.get_route()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
-                path_to_origin = self.find_path_to_origin(process_request)
+                route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport to pick up {product.product_data.ID} for transport"})
-                yield self.env.process(self.run_transport(transport_state, product, path_to_origin, empty_transport=True))
+                yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
 
             product_retrieval_events = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
@@ -457,7 +457,7 @@ class TransportController(Controller):
 
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
-            yield self.env.process(self.run_transport(transport_state, product, path_to_target, empty_transport=False))
+            yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False))
             
             product_put_events = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
@@ -471,25 +471,25 @@ class TransportController(Controller):
             product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
 
-    def run_transport(self, transport_state: state.State, product: product.Product, path: List[product.Location], empty_transport: bool) -> Generator:
+    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Location], empty_transport: bool) -> Generator:
         """
-        Run the transport process and every single transport step in the path of the transport process.
+        Run the transport process and every single transport step in the route of the transport process.
 
         Args:
             transport_state (state.State): The transport state of the process.
             product (product.Product): The product that is transported.
-            path (List[product.Location]): The path of the transport.
+            route (List[product.Location]): The route of the transport.
             empty_transport (bool): If the transport is empty.
 
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        for link_index, (location, next_location) in enumerate(zip(path, path[1:])):
+        for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
             if link_index == 0:
                 initial_transport_step = True
             else:
                 initial_transport_step = False
-            if link_index == len(path) - 2:
+            if link_index == len(route) - 2:
                 last_transport_step = True
             else:
                 last_transport_step = False
@@ -543,21 +543,21 @@ class TransportController(Controller):
         )
         yield input_state.process
 
-    def find_path_to_origin(self, process_request: request.TransportResquest) -> List[product.Location]:
+    def find_route_to_origin(self, process_request: request.TransportResquest) -> List[product.Location]:
         """
-        Find the path to the origin of the transport request.
+        Find the route to the origin of the transport request.
 
         Args:
             process_request (request.TransportResquest): The transport request.
 
         Returns:
-            List[product.Location]: The path to the origin. In case of a simple transport process, the path is just the origin.
+            List[product.Location]: The route to the origin. In case of a simple transport process, the route is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
-            path_to_origin = path_finder.find_path(request=process_request, find_path_to_origin=True, process=process_request.get_process())
-            if not path_to_origin:
-                raise ValueError(f"Path to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin.")
-            return path_to_origin
+            route_to_origin = route_finder.find_route(request=process_request, find_route_to_origin=True, process=process_request.get_process())
+            if not route_to_origin:
+                raise ValueError(f"Route to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin.")
+            return route_to_origin
         else:
             return [self._current_location, process_request.get_origin()]
 
