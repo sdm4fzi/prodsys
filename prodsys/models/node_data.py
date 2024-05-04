@@ -5,6 +5,7 @@ NodeData objects are used in prodsys to represent Locations in the production sy
 
 from __future__ import annotations
 
+from hashlib import md5
 from typing import List
 
 from pydantic import conlist
@@ -20,6 +21,15 @@ class NodeData(CoreAsset):
     """
 
     location: conlist(float, min_items=2, max_items=2) # type: ignore
+
+    def hash(self) -> str:
+        """
+        Hashes the node data object.
+
+        Returns:
+            str: Hash of the node data object.
+        """
+        return md5("".join([*map(str, self.location)]).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {
