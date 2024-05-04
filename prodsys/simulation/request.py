@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Dict, Optional, List, Tuple, Union
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, resources, sink
-    from prodsys.simulation.product import Location
+    from prodsys.simulation.product import Locatable
 
 
 
@@ -101,16 +101,16 @@ class TransportResquest(Request):
         process: Union[process.TransportProcess, process.LinkTransportProcess],
         product: product.Product,
         resource: resources.TransportResource,
-        origin: product.Location,
-        target: product.Location,
+        origin: product.Locatable,
+        target: product.Locatable,
     ):
         self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
         self.resource: resources.TransportResource = resource
-        self.origin: product.Location = origin
-        self.target: product.Location = target
+        self.origin: product.Locatable = origin
+        self.target: product.Locatable = target
 
-        self.route: Optional[List[Location]] = None
+        self.route: Optional[List[Locatable]] = None
 
 
     def set_process(self, process: process.PROCESS_UNION):
@@ -132,13 +132,13 @@ class TransportResquest(Request):
         """
         self.route = request.route
 
-    def set_route(self, route: List[Location]):
+    def set_route(self, route: List[Locatable]):
         """
         Caches a possible route of the transport request used later for setting the resource of the transport request.
 
         Args:
             process (process.TransportProcess): The process.
-            route (List[product.Location]): The route.
+            route (List[product.Locatable]): The route.
         """
         self.route = route
 
@@ -160,30 +160,30 @@ class TransportResquest(Request):
         """
         return self.resource
 
-    def get_origin(self) -> product.Location:
+    def get_origin(self) -> product.Locatable:
         """
         Returns the origin location of the transport request.
 
         Returns:
-            product.Location: The origin location.
+            product.Locatable: The origin location.
         """
         return self.origin
 
-    def get_target(self) -> product.Location:
+    def get_target(self) -> product.Locatable:
         """
         Returns the target location of the transport request.
 
         Returns:
-            product.Location: The target location.
+            product.Locatable: The target location.
         """
         return self.target
     
-    def get_route(self) -> List[Location]:
+    def get_route(self) -> List[Locatable]:
         """
         Returns the route of the transport request.
 
         Returns:
-            List[product.Location]: The route.
+            List[product.Locatable]: The route.
 
         """
         return self.route

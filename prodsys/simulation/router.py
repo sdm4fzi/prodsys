@@ -77,7 +77,7 @@ class Router:
 
         potential_transport_requests = self.get_possible_transport_requests(potential_production_requests)
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_location.data.ID}.")
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}.")
         possible_production_requests = self.get_reachable_production_requests(potential_production_requests, potential_transport_requests)
         
         env = get_env_from_requests(potential_transport_requests)
@@ -112,7 +112,7 @@ class Router:
         sink_request = request.SinkRequest(product=product, sink=sink)
         potential_transport_requests = self.get_possible_transport_requests([sink_request])
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any sinks from resource {product.current_location.data.ID}.")
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any sinks from resource {product.current_locatable.data.ID}.")
         env = get_env_from_requests(potential_transport_requests)
         transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
         if not transport_requests:
@@ -168,7 +168,7 @@ class Router:
             process=product.transport_process,
             product=product,
             resource=transport_resource,
-            origin=product.current_location,
+            origin=product.current_locatable,
             target=target,
         )
     
