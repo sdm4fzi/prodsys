@@ -37,7 +37,8 @@ node5 = psx.Node(location=[50, 80], ID="node5")
 node6 = psx.Node(location=[0, 80], ID="node6")
 
 
-ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, capability="agv_link_transport", ID="ltp01")
+
+rcp01 = psx.RequiredCapabilityProcess(time_model=time_model_agv, capability="euro_palette_transport", ID="rtp01")
 productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
 productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="pp02")
 productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
@@ -77,43 +78,6 @@ machine06 = psx.ProductionResource(
     location=[0, 100],
 )
 
-agv01 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv01",
-    processes=[ltp01],
-)
-
-agv02 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv02",
-    processes=[ltp01],
-)
-
-agv03 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv03",
-    processes=[ltp01],
-)
-
-agv04 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv04",
-    processes=[ltp01],
-)
-
-agv05 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv05",
-    processes=[ltp01],
-)
-
-agv06 = psx.TransportResource(
-    location=[100, 100],
-    ID="agv06",
-    processes=[ltp01],
-)
-
-
 product01 = psx.Product(
     processes=[
         productionprocess01,
@@ -123,7 +87,7 @@ product01 = psx.Product(
         productionprocess05,
         productionprocess06,
     ],
-    transport_process=ltp01,
+    transport_process=rcp01,
     ID="product01",
 )
 
@@ -135,7 +99,7 @@ product02 = psx.Product(
                 productionprocess04,
                 productionprocess06,
         ],
-        transport_process = ltp01,
+        transport_process = rcp01,
         ID="product02",
 )
 
@@ -155,13 +119,19 @@ source02 = psx.Source(
 sink01 = psx.Sink(product=product01, ID="sink01", location=[-10, 100])
 sink02 = psx.Sink(product=product02, ID="sink02", location=[-10, 100])
 
-ltp01.links += [
+ltp01_links = [
     [source01, machine01],
     [source02, machine01],
     [machine01, node1],
     [node1, node2],
     [node2, machine02],
     [node2, node3],
+    [node3, machine03],
+]
+
+ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, capability="euro_palette_transport", ID="ltp01", links=ltp01_links)
+
+ltp02_links = [
     [node3, machine03],
     [node3, node4],
     [node4, machine04],
@@ -171,8 +141,45 @@ ltp01.links += [
     [node6, machine06],
     [machine06, sink01],
     [machine06, sink02],
-    [node1, node6],
 ]
+
+ltp02 = psx.LinkTransportProcess(time_model=time_model_agv, capability= "euro_palette_transport", ID="ltp02", links=ltp02_links)
+
+agv01 = psx.TransportResource(
+    location=[50, 20],
+    ID="agv01",
+    processes=[ltp01],
+)
+
+agv02 = psx.TransportResource(
+    location=[50, 20],
+    ID="agv02",
+    processes=[ltp01],
+)
+
+agv03 = psx.TransportResource(
+    location=[50, 20],
+    ID="agv03",
+    processes=[ltp01],
+)
+
+agv04 = psx.TransportResource(
+    location=[50, 80],
+    ID="agv04",
+    processes=[ltp02],
+)
+
+agv05 = psx.TransportResource(
+    location=[50, 80],
+    ID="agv05",
+    processes=[ltp02],
+)
+
+agv06 = psx.TransportResource(
+    location=[50, 80],
+    ID="agv06",
+    processes=[ltp02],
+)
 
 productionsystem = psx.ProductionSystem(
     resources=[

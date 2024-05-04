@@ -36,7 +36,8 @@ class Request:
             process (process.PROCESS_UNION): The process.
         """
         self.process = process
-        # TODO: do some handling of compound processes here
+        # TODO: maybe do some special handling of compound processes here
+
 
     def get_process(self) -> process.PROCESS_UNION:
         """
@@ -120,7 +121,7 @@ class TransportResquest(Request):
             process (process.PROCESS_UNION): The process.
         """
         self.process = process
-        # TODO: do some handling of compound processes here
+        # TODO: maybe do some special handling of compound processes here
 
     def copy_cached_paths(self, request: TransportResquest):
         """

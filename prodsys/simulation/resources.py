@@ -121,7 +121,7 @@ class Resource(BaseModel, ABC, resource.Resource):
             return True
         return (
             self.capacity_current_setup
-            - len(self.controller.running_processes)
+            - (len(self.controller.running_processes) + self.controller.reserved_requests_count)
         ) <= 0
 
     def get_controller(self) -> control.Controller:

@@ -372,7 +372,7 @@ class TransportState(State):
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
-        if initial_transport_step:
+        if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
             self.done_in -= self.time_model.time_model_data.reaction_time
 
         # TODO: also use intial and last_transport_step to add loading times

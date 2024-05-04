@@ -216,6 +216,7 @@ class ProductionController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full}) or all requests reserved ({self.reserved_requests_count == len(self.requests)})"})
                 continue
             self.control_policy(self.requests)
+            self.reserved_requests_count += 1
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
@@ -235,7 +236,6 @@ class ProductionController(Controller):
         Yields:
             Generator: The generator yields when the process is finished.
         """
-        self.reserved_requests_count += 1
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process"})
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
@@ -554,8 +554,9 @@ class TransportController(Controller):
             List[product.Location]: The path to the origin. In case of a simple transport process, the path is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
-            pathfinder = path_finder.Pathfinder()
-            path_to_origin = pathfinder.find_path(request=process_request, find_path_to_origin=True, process=process_request.get_process())
+            path_to_origin = path_finder.find_path(request=process_request, find_path_to_origin=True, process=process_request.get_process())
+            if not path_to_origin:
+                raise ValueError(f"Path to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin.")
             return path_to_origin
         else:
             return [self._current_location, process_request.get_origin()]

@@ -56,7 +56,7 @@ class Router:
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic
-        # TODO: allow setting transport heuristic!
+        # TODO: add possibility to specify a production and a transport heuristic separately
     
     def route_product(self, product: product.Product) -> Generator[Tuple[request.Request, request.TransportResquest]]:
         """
