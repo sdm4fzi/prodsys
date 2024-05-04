@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prodsys"
-version = "0.5.3"
+version = "0.6.0"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
 license = "MIT"
@@ -37,6 +37,7 @@ torchaudio = "^2.0.2"
 tensorboard = "^2.13.0"
 gymnasium = ">=0.26.3"
 stable-baselines3 = "^2.0.0"
+pathfinding = "^1.0.9"
 
 
 [tool.poetry.group.test]

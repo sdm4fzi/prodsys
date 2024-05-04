@@ -9,11 +9,11 @@ CROSS_OVER_RATE = 0.1
 MUTATION_RATE = 0.15
 
 SAVE_FOLDER = "data/ea_results"
-BASE_CONFIGURATION_FILE_PATH = "examples/optimization_example/base_scenario.json"
-SCENARIO_FILE_PATH = "examples/optimization_example/scenario.json"
+BASE_CONFIGURATION_FILE_PATH = "examples/optimization/optimization_example/base_scenario.json"
+SCENARIO_FILE_PATH = "examples/optimization/optimization_example/scenario.json"
 
-PARTIAL_SCENARIO_FILE_PATH = "examples/optimization_example/scenario_partial.json"
-INITIAL_SOLUTION_FOLDER = "examples/optimization_example/initial_solutions"
+PARTIAL_SCENARIO_FILE_PATH = "examples/optimization/optimization_example/scenario_partial.json"
+INITIAL_SOLUTION_FOLDER = "examples/optimization/optimization_example/initial_solutions"
 
 
 if __name__ == "__main__":

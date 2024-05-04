@@ -23,6 +23,7 @@ from prodsys.simulation import (
     source,
     proces_models,
     state,
+    node
 )
 
 from prodsys.models import product_data
@@ -136,9 +137,7 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-
-Location = Union[resources.Resource, source.Source, sink.Sink]
-
+Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink]
 
 class Product(BaseModel):
     """
@@ -155,32 +154,32 @@ class Product(BaseModel):
     env: sim.Environment
     product_data: product_data.ProductData
     process_model: proces_models.ProcessModel
-    transport_process: process.TransportProcess
+    transport_process: Union[process.LinkTransportProcess, process.TransportProcess, process.RequiredCapabilityProcess]
     product_router: router.Router
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
-    current_location: Location = Field(default=None, init=False)
+    current_locatable: Locatable = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
 
     class Config:
         arbitrary_types_allowed = True
 
-    def update_location(self, resource: Location):
+    def update_location(self, resource: Locatable):
         """
         Updates the location of the product object.
 
         Args:
-            resource (Location): Location of the product object.
+            resource (Locatable): Locatable objects where product object currently is.
         """
-        self.current_location = resource
-        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
+        self.current_locatable = resource
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Updated location to {self.current_locatable.data.ID}"})
 
     def process_product(self):
         self.finished_process = events.Event(self.env)
         self.product_info.log_create_product(
-            resource=self.current_location, _product=self, event_time=self.env.now
+            resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
@@ -188,61 +187,17 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
         while self.next_prodution_process:
-            production_request = self.get_request_for_production_process()
-            yield self.env.process(self.product_router.route_request(production_request))
-            transport_request = self.get_request_for_transport_process(production_request)
-            yield self.env.process(self.product_router.route_request(transport_request))
+            production_request, transport_request = yield self.env.process(self.product_router.route_product(self))
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
             self.set_next_production_process()
-        transport_to_sink_request = self.get_request_for_transport_to_sink()
-        yield self.env.process(self.product_router.route_request(transport_to_sink_request))
+        transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
         yield self.env.process(self.request_process(transport_to_sink_request))
         self.product_info.log_finish_product(
-            resource=self.current_location, _product=self, event_time=self.env.now
+            resource=self.current_locatable, _product=self, event_time=self.env.now
         )
-        self.current_location.register_finished_product(self)
+        self.current_locatable.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
-
-    def get_request_for_production_process(self) -> request.Request:
-        """
-        Returns a request for the next production process of the product object.
-
-        Returns:
-            request.Request: The request for the next production process.
-        """
-        return request.Request(
-            process=self.next_prodution_process,
-            product=self,
-        )
-    
-    def get_request_for_transport_process(self, production_request: request.Request) -> request.Request:
-        """
-        Returns a request for the next transport process of the product object.
-
-        Returns:
-            request.Request: The request for the next transport process.
-        """
-        return request.TransportResquest(
-            process=self.transport_process,
-            product=self,
-            origin=self.current_location,
-            target=production_request.resource,
-        )
-    
-    def get_request_for_transport_to_sink(self) -> request.Request:
-        """
-        Returns a request for the transport to the sink of the product object.
-
-        Returns:
-            request.Request: The request for the transport to the sink.
-        """
-        return request.TransportResquest(
-            process=self.transport_process,
-            product=self,
-            origin=self.current_location,
-            target=self.product_router.get_sink(self.product_data.product_type),
-        )
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
