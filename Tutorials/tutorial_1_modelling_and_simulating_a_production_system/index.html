@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.18">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.4">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.66ac8b77.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.50c56a3b.min.css">
       
       
 
@@ -218,8 +218,10 @@
     
     
     
+    
     <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
+        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
@@ -486,8 +488,10 @@
     
     
     
+    
     <li class="md-nav__item md-nav__item--nested">
       
+        
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
@@ -869,7 +873,9 @@
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">turning_process</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionProcess</span><span class="p">(</span><span class="n">turning_time</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;turning_process&quot;</span><span class="p">)</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">transport_process</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">TransportProcess</span><span class="p">(</span><span class="n">transport_time</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;transport_process&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>prodsys</code> also provides the possibility for a <code>CapabilityProcess</code> instead of normal <code>ProductionProcess</code>. These processes are not matched by their ID but by their capability, which gives more flexibility. This extends the typical PPR modeling principle (Product, Process and Resource) of <code>prodsys</code> to the Product, Process, Resource and Skill modelling principle <a href="https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content">PPRS</a> by considering the capabilities / skills required for performing processes. For more information, refer to the API reference in the documentation.</p>
+<p><code>prodsys</code> also provides the possibility for a <code>CapabilityProcess</code> instead of normal <code>ProductionProcess</code>. These processes are not matched by their ID but by their capability, which gives more flexibility. This extends the typical PPR modeling principle (Product, Process and Resource) of <code>prodsys</code> to the Product, Process, Resource and Skill modelling principle <a href="https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content">PPRS</a> by considering the capabilities / skills required for performing processes. With this feature, one can specify with <code>RequiredCapabilityProcess</code> for products only which kind of capabilities are required and allow that multiple differnt <code>CapabilityProcess</code> are matched to these required processes. </p>
+<p>Moreover, there also exists a <code>LinkTransportProcess</code> which allows to define that a transport process can only be performed between certain resources. This allows to make transport in <code>prodsys</code> more realistic. </p>
+<p>For more information, refer to the API reference in the documentation or checkout the examples folder of <code>prodsys</code>.</p>
 <h2 id="resources">Resources</h2>
 <p>With this, we can create our resources. The milling machine and turning lath can perform their associated processes and the worker can perform the transport process. However, the work center can perform milling and turning. Milling machine, turning lath and work center are <code>ProductionResource</code>s and the worker is a <code>TransportResource</code>:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">milling_machine</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionResource</span><span class="p">([</span><span class="n">milling_process</span><span class="p">],</span> <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;milling_machine&quot;</span><span class="p">)</span>
@@ -993,10 +999,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.c011b7c0.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.3220b9d7.min.js"></script>
+      <script src="../../assets/javascripts/bundle.7389ff0e.min.js"></script>
       
     
   </body>
