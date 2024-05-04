@@ -207,6 +207,7 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
+
     def get_controller_of_resource(
         self, _resource: resources.Resource
     ) -> Optional[Union[control.ProductionController, control.TransportController]]:
@@ -252,3 +253,22 @@ class ResourceFactory(BaseModel):
             for res in self.resources
             if target_process.process_data.ID in res.data.process_ids
         ]
+    
+    def get_transport_resources(self) -> List[resources.TransportResource]:
+        """
+        Method returns a list of transport resource objects.
+
+        Returns:
+            List[resources.TransportResource]: List of transport resource objects.
+        """
+        return [r for r in self.resources if isinstance(r, resources.TransportResource)]
+    
+
+    def get_production_resources(self) -> List[resources.ProductionResource]:
+        """
+        Method returns a list of production resource objects.
+
+        Returns:
+            List[resources.ProductionResource]: List of production resource objects.
+        """
+        return [r for r in self.resources if isinstance(r, resources.ProductionResource)]

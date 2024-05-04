@@ -54,7 +54,11 @@ turning_process = psx.ProductionProcess(turning_time, ID="turning_process")
 transport_process = psx.TransportProcess(transport_time, ID="transport_process")
 ```
 
-`prodsys` also provides the possibility for a `CapabilityProcess` instead of normal `ProductionProcess`. These processes are not matched by their ID but by their capability, which gives more flexibility. This extends the typical PPR modeling principle (Product, Process and Resource) of `prodsys` to the Product, Process, Resource and Skill modelling principle [PPRS](https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content) by considering the capabilities / skills required for performing processes. For more information, refer to the API reference in the documentation.
+`prodsys` also provides the possibility for a `CapabilityProcess` instead of normal `ProductionProcess`. These processes are not matched by their ID but by their capability, which gives more flexibility. This extends the typical PPR modeling principle (Product, Process and Resource) of `prodsys` to the Product, Process, Resource and Skill modelling principle [PPRS](https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content) by considering the capabilities / skills required for performing processes. With this feature, one can specify with `RequiredCapabilityProcess` for products only which kind of capabilities are required and allow that multiple differnt `CapabilityProcess` are matched to these required processes. 
+
+Moreover, there also exists a `LinkTransportProcess` which allows to define that a transport process can only be performed between certain resources. This allows to make transport in `prodsys` more realistic. 
+
+For more information, refer to the API reference in the documentation or checkout the examples folder of `prodsys`.
 
 ## Resources
 

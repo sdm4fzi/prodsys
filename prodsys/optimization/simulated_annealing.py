@@ -194,7 +194,7 @@ def simulated_annealing_optimization(
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.info("Compound processes are not clean. This may lead to unexpected results.")
+        logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     if not initial_solution:
