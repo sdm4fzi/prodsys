@@ -135,7 +135,7 @@ class TransportProcess(Process):
             return False
         if isinstance(requested_process, CompoundProcess) and not self.process_data.ID in requested_process.process_data.process_ids:
             return False
-        request.cache_possible_path_of_process(process=self, path=[request.origin, request.target])
+        request.set_path(path=[request.origin, request.target])
         return True
 
     def get_process_time(self, origin: List[float], target: List[float]) -> float:
@@ -277,12 +277,10 @@ class LinkTransportProcess(TransportProcess):
         if isinstance(requested_process, LinkTransportProcess):
             if not requested_process.process_data.ID == self.process_data.ID:
                 return False
-        # TODO: make sure, that this is not executed multiple times for the same process!
-        pathfinder = path_finder.Pathfinder()
-        path = pathfinder.find_path(request=request, process=self)
+            
+        path = path_finder.find_path(request=request, process=self)
         if not path:
             return False
-        request.cache_possible_path_of_process(process=self, path=path)
         return True
     
     def get_process_time(self, request: request.TransportResquest) -> float:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, List, Tuple, Union
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, resources
+    from prodsys.simulation import product, process, resources, sink
     from prodsys.simulation.product import Location
 
 
@@ -21,23 +21,22 @@ class Request:
         self,
         process: process.PROCESS_UNION,
         product: product.Product,
+        resource: resources.Resource
     ):
         self.process = process
         self.product = product
-        self.resource: Optional[resources.Resource] = None
+        self.resource = resource
 
-    def set_resource(self, resource: resources.Resource):
+
+    def set_process(self, process: process.PROCESS_UNION):
         """
-        Sets the resource of the request.
+        Sets the process of the request.
 
         Args:
-            resource (resources.Resource): The resource.
+            process (process.PROCESS_UNION): The process.
         """
-        self.resource = resource
-        for process in self.resource.processes:
-            if process.matches_request(self):
-                # TODO: check whether this needs adaption for compound processes...
-                self.process = process
+        self.process = process
+        # TODO: do some handling of compound processes here
 
     def get_process(self) -> process.PROCESS_UNION:
         """
@@ -65,6 +64,24 @@ class Request:
             resources.Resource: The resource.
         """
         return self.resource
+    
+
+class SinkRequest(Request):
+    """
+    Class to represents requests of a product for a storage in a sink to be executed by a resource.
+
+    Args:
+        Request (_type_): _description_
+    """
+    def __init__(
+        self,
+        product: product.Product,
+        sink: sink.Sink
+    ):
+        self.resource = sink
+        self.product = product
+        self.process = None
+    
 
 
 class TransportResquest(Request):
@@ -82,19 +99,39 @@ class TransportResquest(Request):
         self,
         process: Union[process.TransportProcess, process.LinkTransportProcess],
         product: product.Product,
+        resource: resources.TransportResource,
         origin: product.Location,
-        target: product.Location
+        target: product.Location,
     ):
         self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
-        self.resource: resources.TransportResource = None
+        self.resource: resources.TransportResource = resource
         self.origin: product.Location = origin
         self.target: product.Location = target
 
-        self.possible_paths: List[Tuple[process.LinkTransportProcess, List[Location]]] = []
         self.path: Optional[List[Location]] = None
 
-    def cache_possible_path_of_process(self, process: process.TransportProcess, path: List[Location]):
+
+    def set_process(self, process: process.PROCESS_UNION):
+        """
+        Sets the process of the request.
+
+        Args:
+            process (process.PROCESS_UNION): The process.
+        """
+        self.process = process
+        # TODO: do some handling of compound processes here
+
+    def copy_cached_paths(self, request: TransportResquest):
+        """
+        Copies the cached paths from another transport request.
+
+        Args:
+            request (TransportResquest): The transport request.
+        """
+        self.path = request.path
+
+    def set_path(self, path: List[Location]):
         """
         Caches a possible path of the transport request used later for setting the resource of the transport request.
 
@@ -102,27 +139,7 @@ class TransportResquest(Request):
             process (process.TransportProcess): The process.
             path (List[product.Location]): The path.
         """
-        self.possible_paths.append((process, path))
-
-    def set_resource(self, resource: resources.Resource):
-        """
-        Sets the resource of the transport request. Also sets the path of the transport request and upadtes the transport process to the one used by the resource for executing the request.
-        
-        Args:
-            resource (resources.TransportResource): The resource.
-        """
-        if not self.possible_paths:
-            raise ValueError("No possible paths have been set. Resource should not be set before possible paths exist.")
-        possible_paths_of_routed_resource = []
-        for process, path in self.possible_paths:
-            if any(resource_process.process_data.ID == process.process_data.ID for resource_process in resource.processes):
-                possible_paths_of_routed_resource.append((process, path))
-        if not possible_paths_of_routed_resource:
-            raise ValueError("The resource does not have any processes that can perform the possible paths from the routing.")
-
-        self.path = possible_paths_of_routed_resource[0][1]
-        self.process = possible_paths_of_routed_resource[0][0]
-        self.resource = resource
+        self.path = path
 
     def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
