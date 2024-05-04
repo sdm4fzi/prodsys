@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Optional, Tuple, Union
+from typing import Dict, List, TYPE_CHECKING, Optional, Tuple, Union
 
 import numpy as np
 
@@ -11,6 +11,29 @@ if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
     from prodsys.simulation.product import Location
 
+
+def find_path(request: request.TransportResquest, process: process.LinkTransportProcess, find_path_to_origin: bool=False) -> List[Location]:
+    """
+    Finds the path for a transportation request.
+
+    Args:
+        request (request.TransportResquest): The transportation request.
+        process (process.LinkTransportProcess): The process to find the path for.
+        find_path_to_origin (bool, optional): Indicates whether to find the path from current resource location to origin (True) or from origin to target of request (False). Defaults to False.
+
+    Returns:
+        List[Location]: The path as a list of locations.
+    """
+    if request.path:
+        print("Path already found in cache. Returning this path.")
+        return request.path
+    pathfinder = Pathfinder()
+    path = pathfinder.find_path(request=request, process=process)
+    if not path:
+        return []
+    request.set_path(path=path)
+    return path
+
 class Pathfinder:
     """
     Class representing a path finder for transportation requests in a graph.
@@ -20,9 +43,8 @@ class Pathfinder:
         """
         Initializes two empty lists of nodes and node locations.
         """
-        # TODO: potentially use here dicts instead of list for faster access!
-        self.nodes: List[GraphNode] = []
-        self.node_locations: List[Location] = []
+        self.nodes: Dict[str, GraphNode] = {}
+        self.node_locations: Dict[Tuple[float,float], Location] = {}
 
     def find_path(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_path_to_origin: bool=False) -> List[Location]:
         """
@@ -41,11 +63,10 @@ class Pathfinder:
         graph = Graph(edges=edges, bi_directional=True)
         origin, target = self.get_path_origin_and_target(request=request, path_to_origin=find_path_to_origin)
         if not origin or not target:
-            print(request.resource.data.ID, request.origin.data.ID, request.target.data.ID)
             raise ValueError("Origin or target not found in graph, cannot find path. Routing should not happened for this request.")
         graph_node_path = self.find_graphnode_path(origin, target, graph)
         path = self.convert_node_path_to_location_path(graph_node_path=graph_node_path, links=process.links)
-        print(f"Path for request {request.product.product_data.ID}: {[location.data.ID for location in path]}")
+        # print(f"Path for request {request.product.product_data.ID}: {[location.data.ID for location in path]}")
 
         return path
 
@@ -99,9 +120,8 @@ class Pathfinder:
         Returns:
             Optional[GraphNode, None]: The graph node or None.
         """
-        for existing_node in self.nodes:
-            if existing_node.node_id == location.data.ID:
-                return existing_node
+        if location.data.ID in self.nodes:
+            return self.nodes[location.data.ID]
         return None
     
     def get_graph_node_for_location(self, location: Location) -> GraphNode:
@@ -118,8 +138,8 @@ class Pathfinder:
         if existing_node:
             return existing_node
         new_graph_node = GraphNode(node_id=location.data.ID)
-        self.nodes.append(new_graph_node)
-        self.node_locations.append(location)
+        self.nodes[location.data.ID] = new_graph_node
+        self.node_locations[tuple(location.get_location())] = location
         return new_graph_node
         
 
@@ -153,7 +173,7 @@ class Pathfinder:
         else:
             origin_location = request.origin
             target_location = request.target
-        print(f"Origin: {origin_location.data.ID}, Target: {target_location.data.ID}, path_to_origin: {path_to_origin}, product: {request.product.product_data.ID}")
+        # print(f"Origin: {origin_location.data.ID}, Target: {target_location.data.ID}, path_to_origin: {path_to_origin}, product: {request.product.product_data.ID}")
         origin_graph_node = self.get_existing_graph_node_for_location(origin_location)
         target_graph_node = self.get_existing_graph_node_for_location(target_location)
         return origin_graph_node, target_graph_node
@@ -168,9 +188,9 @@ class Pathfinder:
         Returns:
             Location: The location of the resource.
         """
-        for location in self.node_locations:
-            if location.get_location() == resource.get_location():
-                return location
+        resource_location = tuple(resource.get_location())
+        if resource_location in self.node_locations:
+            return self.node_locations[resource_location]
         raise ValueError(f"The current location for resource {resource.data.ID} could not be found. {resource.data.ID} is at location {resource.get_location()} that is not part of the links.")
 
     def find_graphnode_path(self, origin: GraphNode, target: GraphNode, graph: Graph) -> List[GraphNode]:
