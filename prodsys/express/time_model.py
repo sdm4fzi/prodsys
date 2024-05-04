@@ -13,7 +13,7 @@ from typing import List, Optional, Union
 from uuid import uuid1
 
 from pydantic.dataclasses import dataclass
-from pydantic import validator, Field
+from pydantic import Field
 
 from prodsys.models import time_model_data
 from prodsys.express import core

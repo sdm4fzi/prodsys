@@ -151,7 +151,6 @@ class ManhattanDistanceTimeModel(TimeModel):
         time_model_data (ManhattanDistanceTimeModelData): The time model data object.
     """
     time_model_data: ManhattanDistanceTimeModelData
-
     def get_next_time(
         self,
         origin: Optional[List[float]] = None,

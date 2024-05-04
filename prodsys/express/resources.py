@@ -14,10 +14,11 @@ from abc import ABC
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import core_asset, resource_data, queue_data
+from prodsys.models import resource_data, queue_data
 import prodsys
 
-from prodsys.express import process, state, core
+from prodsys.express import core, process, state
+
 
 @dataclass
 class Resource(ABC):
@@ -34,7 +35,7 @@ class Resource(ABC):
         ID (str): ID of the resource.
     """
     processes: List[process.PROCESS_UNION]
-    location: conlist(float, min_items=2, max_items=2)
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
@@ -145,7 +146,7 @@ class TransportResource(Resource, core.ExpressObject):
         ```
     """
     processes: List[process.TransportProcess]
-    location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list)
+    location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list) # type: ignore
     # capacity: int = 1
     # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.TransportController

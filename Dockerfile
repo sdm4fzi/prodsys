@@ -1,5 +1,4 @@
-ARG APP_VERSION=0.5.3
-# TODO: update to gunicorn fastAPI -> https://github.com/tiangolo/full-stack-fastapi-template/blob/master/backend/Dockerfile
+ARG APP_VERSION=0.6.0
 
 FROM python:3.11-slim
 
@@ -10,7 +9,9 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock /app/
 
 # Install dependencies using Poetry
-RUN pip install prodsys==0.5.3
+RUN pip install prodsys==0.6.0
+
+
 
 COPY . /app
 
