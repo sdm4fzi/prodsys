@@ -137,7 +137,7 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
-Location= Union[resources.Resource, node.Node, source.Source, sink.Sink]
+Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink]
 
 class Product(BaseModel):
     """
@@ -159,27 +159,27 @@ class Product(BaseModel):
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     process: events.Process = Field(default=None, init=False)
-    current_location: Location = Field(default=None, init=False)
+    current_locatable: Locatable = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
 
     class Config:
         arbitrary_types_allowed = True
 
-    def update_location(self, resource: Location):
+    def update_location(self, resource: Locatable):
         """
         Updates the location of the product object.
 
         Args:
-            resource (Location): Location of the product object.
+            resource (Locatable): Locatable objects where product object currently is.
         """
-        self.current_location = resource
-        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
+        self.current_locatable = resource
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Updated location to {self.current_locatable.data.ID}"})
 
     def process_product(self):
         self.finished_process = events.Event(self.env)
         self.product_info.log_create_product(
-            resource=self.current_location, _product=self, event_time=self.env.now
+            resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
@@ -194,9 +194,9 @@ class Product(BaseModel):
         transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
         yield self.env.process(self.request_process(transport_to_sink_request))
         self.product_info.log_finish_product(
-            resource=self.current_location, _product=self, event_time=self.env.now
+            resource=self.current_locatable, _product=self, event_time=self.env.now
         )
-        self.current_location.register_finished_product(self)
+        self.current_locatable.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
 
     def request_process(self, processing_request: request.Request) -> Generator:

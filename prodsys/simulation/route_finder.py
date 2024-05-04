@@ -9,10 +9,10 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 
 if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
-    from prodsys.simulation.product import Location
+    from prodsys.simulation.product import Locatable
 
 
-def find_route(request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Location]:
+def find_route(request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Locatable]:
     """
     Finds the route for a transportation request.
 
@@ -22,7 +22,7 @@ def find_route(request: request.TransportResquest, process: process.LinkTranspor
         find_route_to_origin (bool, optional): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False). Defaults to False.
 
     Returns:
-        List[Location]: The route as a list of location objects.
+        List[Locatable]: The route as a list of locatable objects.
     """
     if request.route and not find_route_to_origin:
         return request.route
@@ -42,9 +42,9 @@ class RouteFinder:
         Initializes two empty lists of nodes and node locations.
         """
         self.nodes: Dict[str, GraphNode] = {}
-        self.node_locations: Dict[Tuple[float,float], Location] = {}
+        self.node_locatables: Dict[Tuple[float,float], Locatable] = {}
 
-    def find_route(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Location]:
+    def find_route(self, request: request.TransportResquest, process: process.LinkTransportProcess, find_route_to_origin: bool=False) -> List[Locatable]:
         """
         The general function which includes all sub functions to find the shortest route for a TransportRequest.
 
@@ -54,7 +54,7 @@ class RouteFinder:
             find_route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
-            List[Location]: The route as a list of location objects.
+            List[Locatable]: The route as a list of locatable objects.
         """
         edges = self.process_links_to_graph_edges(links=process.links)
         # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly. 
@@ -66,11 +66,11 @@ class RouteFinder:
         graph_node_path = self.find_graphnode_path(origin, target, graph)
         if not graph_node_path:
             return []
-        route = self.convert_node_path_to_location_route(graph_node_path=graph_node_path, links=process.links)
+        route = self.convert_node_path_to_locatable_route(graph_node_path=graph_node_path, links=process.links)
 
         return route
 
-    def process_links_to_graph_edges(self, links: List[List[Location]]) -> List[Tuple[GraphNode, GraphNode, int]]:
+    def process_links_to_graph_edges(self, links: List[List[Locatable]]) -> List[Tuple[GraphNode, GraphNode, int]]:
         """
         Processes the given links to create (Graph)-edges for the graph.
 
@@ -91,7 +91,7 @@ class RouteFinder:
 
         return pathfinder_edges
     
-    def get_graph_nodes_for_link(self, link: List[Location]) -> Tuple[GraphNode, GraphNode]:
+    def get_graph_nodes_for_link(self, link: List[Locatable]) -> Tuple[GraphNode, GraphNode]:
         """
         Creates a list of links and edges.
 
@@ -104,42 +104,42 @@ class RouteFinder:
             Tuple[GraphNode, GraphNode]: A tuple containing the origin and target nodes for a link.
         """
         graph_nodes = []
-        for location in link:
-            graph_node = self.get_graph_node_for_location(location)
+        for locatable in link:
+            graph_node = self.get_graph_node_for_locatable(locatable)
             graph_nodes.append(graph_node)
         return tuple(graph_nodes)
     
 
-    def get_existing_graph_node_for_location(self, location: Location) -> Optional[GraphNode]:
+    def get_existing_graph_node_for_locatable(self, locatable: Locatable) -> Optional[GraphNode]:
         """
-        Gets an existing graph node for a location.
+        Gets an existing graph node for a Locatable.
 
         Args:
-            location (Location): The location.
+            locatable (Locatable): The locatable object.
 
         Returns:
             Optional[GraphNode, None]: The graph node or None.
         """
-        if location.data.ID in self.nodes:
-            return self.nodes[location.data.ID]
+        if locatable.data.ID in self.nodes:
+            return self.nodes[locatable.data.ID]
         return None
     
-    def get_graph_node_for_location(self, location: Location) -> GraphNode:
+    def get_graph_node_for_locatable(self, locatable: Locatable) -> GraphNode:
         """
-        Creates a graph node for a location.
+        Creates a graph node for a locatable.
 
         Args:
-            location (Location): The location.
+            locatable (Locatable): The locatable.
 
         Returns:
             GraphNode: The graph node.
         """
-        existing_node = self.get_existing_graph_node_for_location(location)
+        existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:
             return existing_node
-        new_graph_node = GraphNode(node_id=location.data.ID)
-        self.nodes[location.data.ID] = new_graph_node
-        self.node_locations[tuple(location.get_location())] = location
+        new_graph_node = GraphNode(node_id=locatable.data.ID)
+        self.nodes[locatable.data.ID] = new_graph_node
+        self.node_locatables[tuple(locatable.get_location())] = locatable
         return new_graph_node
         
 
@@ -169,16 +169,16 @@ class RouteFinder:
             Tuple[Optional[GraphNode], Optional[GraphNode]]: A tuple containing the origin and target graph nodes for the transport request and the route_to_origin flag.
         """
         if route_to_origin:
-            origin_location = self.get_location_of_transport_resource(request.resource)
-            target_location = request.origin
+            origin_locatable = self.get_location_of_transport_resource(request.resource)
+            target_locatable = request.origin
         else:
-            origin_location = request.origin
-            target_location = request.target
-        origin_graph_node = self.get_existing_graph_node_for_location(origin_location)
-        target_graph_node = self.get_existing_graph_node_for_location(target_location)
+            origin_locatable = request.origin
+            target_locatable = request.target
+        origin_graph_node = self.get_existing_graph_node_for_locatable(origin_locatable)
+        target_graph_node = self.get_existing_graph_node_for_locatable(target_locatable)
         return origin_graph_node, target_graph_node
     
-    def get_location_of_transport_resource(self, resource: resources.Resource) -> Location:
+    def get_location_of_transport_resource(self, resource: resources.Resource) -> Locatable:
         """
         Gets the location of a resource.
 
@@ -186,11 +186,11 @@ class RouteFinder:
             resource (Resource): The resource.
 
         Returns:
-            Location: The location of the resource.
+            Locatable: The locatable object where the transport resource currently is.
         """
         resource_location = tuple(resource.get_location())
-        if resource_location in self.node_locations:
-            return self.node_locations[resource_location]
+        if resource_location in self.node_locatables:
+            return self.node_locatables[resource_location]
         raise ValueError(f"The current location for resource {resource.data.ID} could not be found. {resource.data.ID} is at location {resource.get_location()} that is not part of the links.")
 
     def find_graphnode_path(self, origin: GraphNode, target: GraphNode, graph: Graph) -> List[GraphNode]:
@@ -211,25 +211,25 @@ class RouteFinder:
             return []
         return path
 
-    def convert_node_path_to_location_route(self, graph_node_path: List[GraphNode], links: List[List[Location]]) -> List[Location]:
+    def convert_node_path_to_locatable_route(self, graph_node_path: List[GraphNode], links: List[List[Locatable]]) -> List[Locatable]:
         """
-        Converts the path of graph nodes to a route of locations.
+        Converts the path of graph nodes to a route of Locatable objects.
 
         Args:
             graph_node_path (List[GraphNode]): The path as a list of graph nodes.
-            links (List[List[Location]]): The given links list.
+            links (List[List[Locatable]]): The given links list.
 
         Returns:
-            List[Location]: The route as a list of locations.
+            List[Locatable]: The route as a list of locatable.
         """
         route = []
         seen_node_ids = []  # no node several times in the path
 
         for node in graph_node_path:
             for link in links:
-                for location in link:
-                    if node.node_id == location.data.ID and location.data.ID not in seen_node_ids:
-                        route.append(location)
-                        seen_node_ids.append(location.data.ID)
+                for locatable in link:
+                    if node.node_id == locatable.data.ID and locatable.data.ID not in seen_node_ids:
+                        route.append(locatable)
+                        seen_node_ids.append(locatable.data.ID)
         return route
     

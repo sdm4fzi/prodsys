@@ -75,13 +75,15 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _origin_ID: str = ""
     _empty_transport: Optional[bool] = None
 
-    def log_transport(self, origin: Optional[product.Location], target: product.Location, state_type: StateTypeEnum, empty_transport: bool):
+    def log_transport(self, origin: Optional[product.Locatable], target: product.Locatable, state_type: StateTypeEnum, empty_transport: bool):
         """
         Logs the target location of a transport state.
 
         Args:
-            target (product.Location): The target location, either a resource, source or a sink.
+            origin (Optional[product.Locatable]): The origin location, either a resource, source, node or a sink.
+            target (product.Locatable): The target location, either a resource, source, node or a sink.
             state_type (StateTypeEnum): The type of the state.
+            empty_transport (bool): Indicates if the transport is empty.
         """
         if not origin:
             self._origin_ID = "Loading station"

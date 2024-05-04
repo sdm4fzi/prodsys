@@ -19,7 +19,7 @@ from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityP
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink, source
     from prodsys.control import sequencing_control_env
-    from prodsys.simulation.product import Location
+    from prodsys.simulation.product import Locatable
 
 
 
@@ -301,16 +301,16 @@ class TransportController(Controller):
         ],
         None,
     ]
-    _current_location: Optional[product.Location] = Field(init=False, default=None)
+    _current_locatable: Optional[product.Locatable] = Field(init=False, default=None)
 
     def get_next_product_for_process(
-        self, resource: product.Location, product: product.Product
+        self, resource: product.Locatable, product: product.Product
     ) -> List[events.Event]:
         """
         Get the next product for a process from the input queue of a resource.
 
         Args:
-            resource (product.Location): Resource or Source to get the product from.
+            resource (product.Locatable): Resource or Source to get the product from.
             product (product.Product): The product that shall be transported.
 
         Raises:
@@ -333,13 +333,13 @@ class TransportController(Controller):
         return events
 
     def put_product_to_input_queue(
-        self, resource: product.Location, product: product.Product
+        self, locatable: product.Locatable, product: product.Product
     ) -> List[events.Event]:
         """
         Put a product to the input queue of a resource.
 
         Args:
-            resource (product.Location): Resource or Sink to put the product to.
+            locatable (product.Locatable): Resource or Sink to put the product to.
             product (product.Product): The product that shall be transported.
 
         Raises:
@@ -349,14 +349,14 @@ class TransportController(Controller):
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
         events = []
-        if isinstance(resource, resources.ProductionResource) or isinstance(
-            resource, sink.Sink
+        if isinstance(locatable, resources.ProductionResource) or isinstance(
+            locatable, sink.Sink
         ):
-            for queue in resource.input_queues:
+            for queue in locatable.input_queues:
                 events.append(queue.put(product.product_data))
         else:
             raise ValueError(
-                f"Resource {resource.data.ID} is not a ProductionResource or Sink"
+                f"Resource {locatable.data.ID} is not a ProductionResource or Sink"
             )
 
         return events
@@ -398,15 +398,15 @@ class TransportController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
                 self.requested.succeed()
 
-    def update_location(self, location: product.Location) -> None:
+    def update_location(self, locatable: product.Locatable) -> None:
         """
         Set the current position of the transport resource.
 
         Args:
-            position (product.Location): The current position.
+            locatable (product.Locatable): The current position.
         """
-        self._current_location = location
-        self.resource.set_location(location.get_location())
+        self._current_locatable = locatable
+        self.resource.set_location(locatable.get_location())
 
     def start_process(self) -> Generator:
         """
@@ -471,14 +471,14 @@ class TransportController(Controller):
             product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
 
-    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Location], empty_transport: bool) -> Generator:
+    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool) -> Generator:
         """
         Run the transport process and every single transport step in the route of the transport process.
 
         Args:
             transport_state (state.State): The transport state of the process.
             product (product.Product): The product that is transported.
-            route (List[product.Location]): The route of the transport.
+            route (List[product.Locatable]): The route of the transport with locatable objects.
             empty_transport (bool): If the transport is empty.
 
         Yields:
@@ -503,7 +503,7 @@ class TransportController(Controller):
         self,
         input_state: state.TransportState,
         product: product.Product,
-        target: product.Location,
+        target: product.Locatable,
         empty_transport: bool,
         initial_transport_step: bool,
         last_transport_step: bool
@@ -514,7 +514,7 @@ class TransportController(Controller):
         Args:
             input_state (state.State): The transport state of the process.
             product (product.Product): The product that is transported.
-            target (product.Location): The target of the transport.
+            target (product.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             initial_transport_step (bool): If this is the initial transport step.
             last_transport_step (bool): If this is the last transport step.
@@ -522,10 +522,10 @@ class TransportController(Controller):
         target_location = target.get_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        if self._current_location.data.ID is self.resource.data.ID:
+        if self._current_locatable.data.ID is self.resource.data.ID:
             origin = None
         else:
-            origin = self._current_location
+            origin = self._current_locatable
         input_state.state_info.log_transport(
             origin,
             target, state.StateTypeEnum.transport,
@@ -543,7 +543,7 @@ class TransportController(Controller):
         )
         yield input_state.process
 
-    def find_route_to_origin(self, process_request: request.TransportResquest) -> List[product.Location]:
+    def find_route_to_origin(self, process_request: request.TransportResquest) -> List[product.Locatable]:
         """
         Find the route to the origin of the transport request.
 
@@ -551,7 +551,7 @@ class TransportController(Controller):
             process_request (request.TransportResquest): The transport request.
 
         Returns:
-            List[product.Location]: The route to the origin. In case of a simple transport process, the route is just the origin.
+            List[product.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
             route_to_origin = route_finder.find_route(request=process_request, find_route_to_origin=True, process=process_request.get_process())
@@ -559,7 +559,7 @@ class TransportController(Controller):
                 raise ValueError(f"Route to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin.")
             return route_to_origin
         else:
-            return [self._current_location, process_request.get_origin()]
+            return [self._current_locatable, process_request.get_origin()]
 
 
 def FIFO_control_policy(requests: List[request.Request]) -> None:
