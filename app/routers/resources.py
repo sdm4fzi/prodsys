@@ -5,15 +5,7 @@ from fastapi import APIRouter, HTTPException, Body
 
 
 from prodsys.models import resource_data
-from app.dependencies import get_adapter, get_resource
-
-# TIME_MODEL_EXAMPLES = {
-#             "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra["example"],
-#             "Functional time model": time_model_data.FunctionTimeModelData.Config.schema_extra["example"],
-#             "Manhattan Distance time model": time_model_data.ManhattanDistanceTimeModelData.Config.schema_extra["example"]
-#         }
-
-# TIME_MODEL_LIST_EXAMPLE = [item["value"] for item in TIME_MODEL_EXAMPLES.values()]
+from app.dependencies import prodsys_backend, get_resource_from_backend
 
 RESOURCE_EXAMPLES = {
     "Production Resource": resource_data.ProductionResourceData.Config.schema_extra[
@@ -45,19 +37,33 @@ router = APIRouter(
         404: {"description": "No resources found"},
     },
 )
-async def read_resources(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
+async def get_all_resources(project_id: str, adapter_id: str):
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     return adapter.resource_data
 
 
-@router.delete(
-    "/{resource_id}",
+@router.post(
+    "/",
+    response_model=resource_data.RESOURCE_DATA_UNION,
+    responses={
+        200: {
+            "description": "Sucessfully created resource",
+            "content": {"application/json": {"examples": RESOURCE_EXAMPLES}},
+        }
+    },
 )
-async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    resource = get_resource(project_id, adapter_id, resource_id)
-    adapter.resource_data.remove(resource)
-    return "Sucessfully deleted resource with ID: " + resource_id
+async def create_resource(
+    project_id: str,
+    adapter_id: str,
+    resource: Annotated[
+        resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_LIST_EXAMPLE)
+    ],
+) -> resource_data.RESOURCE_DATA_UNION:
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+    # TODO: only add resource if it does not exist, else raise error
+    adapter.resource_data.append(resource)
+    prodsys_backend.update_adapter(project_id, adapter)
+    return resource
 
 
 @router.get(
@@ -71,24 +77,35 @@ async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
         404: {"description": "Resource not found"},
     },
 )
-async def read_resource(project_id: str, adapter_id: str, resource_id: str):
-    resource = get_resource(project_id, adapter_id, resource_id)
+async def get_resource(project_id: str, adapter_id: str, resource_id: str):
+    resource = get_resource_from_backend(project_id, adapter_id, resource_id)
     return resource
 
 
 @router.put(
     "/{resource_id}",
 )
-async def create_resource(
+async def update_resource(
     project_id: str,
     adapter_id: str,
     resource_id: str,
     resource: Annotated[
         resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_EXAMPLES)
     ],
-):
+) -> resource_data.RESOURCE_DATA_UNION:
     if resource.ID != resource_id:
         raise HTTPException(404, "Resource ID must not be changed")
-    adapter = get_adapter(project_id, adapter_id)
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)#
+    # TODO: make update of resource possible and update to backend
     adapter.resource_data.append(resource)
-    return "Sucessfully updated resource with ID: " + resource_id
+    return resource
+
+@router.delete(
+    "/{resource_id}",
+)
+async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+    resource = get_resource_from_backend(project_id, adapter_id, resource_id)
+    adapter.resource_data.remove(resource)
+    prodsys_backend.update_adapter(project_id, adapter)
+    return "Sucessfully deleted resource with ID: " + resource_id
