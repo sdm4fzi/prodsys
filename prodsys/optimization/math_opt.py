@@ -548,14 +548,15 @@ class MathOptHyperparameters(BaseModel):
 
     class Config:
         schema_extra = {
-            "examples": [
-                {
+            "example": {
+                "summary": "Mathematical Optimization Hyperparameters",
+                "value": {
                     "optimization_time_portion": 0.5,
                     "number_of_solutions": 1,
                     "adjusted_number_of_transport_resources": 1,
                     "number_of_seeds": 1,
                 },
-            ]
+            }
         }
 
 

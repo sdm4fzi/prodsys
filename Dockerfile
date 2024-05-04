@@ -1,5 +1,4 @@
 ARG APP_VERSION=0.6.0
-# TODO: update to gunicorn fastAPI -> https://github.com/tiangolo/full-stack-fastapi-template/blob/master/backend/Dockerfile
 
 FROM python:3.11-slim
 
@@ -18,4 +17,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "prodsys_api:app", "--host",  "0.0.0.0", "--port", "8000"]
+CMD ["python", "app.py", "fastapi=linux"]

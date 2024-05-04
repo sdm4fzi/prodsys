@@ -307,8 +307,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
         validate = True
         validate_assignment = True
         schema_extra = {
-            "examples": [{
-                "ID": "Example Adapter",
+            "example": {
+                "ID": "",
                 "valid_configuration": True,
                 "reconfiguration_cost": 0,
                 "seed": 24,
@@ -675,7 +675,6 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 ],
                 "scenario_data": None,
             }
-            ]
         }
 
     def hash(self) -> str:
