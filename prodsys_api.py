@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import hydra
 from omegaconf import DictConfig
@@ -11,11 +11,11 @@ from app.routers import (
     simulation,
     optimization,
     time_models,
-    examples,
     performance,
     processes,
     queue,
     resources, 
+    products,
     sink,
     source,
     state, 
@@ -24,8 +24,11 @@ from app.routers import (
 
 import prodsys
 
+from prodsys.simulation import sim
+sim.VERBOSE = 1
+
 description = """
-The prodsys API allows you to create and run production simulations and optimizations with the prodsys library as a web service. 
+The prodsys API allows you to model, simulate and optimize production systems with the prodsys library as a web service. 
 """
 
 app = FastAPI(
@@ -51,7 +54,6 @@ app.add_middleware(
 )
 
 app.include_router(projects.router)
-app.include_router(examples.router)
 app.include_router(adapters.router)
 app.include_router(simulation.router)
 app.include_router(optimization.router)
@@ -60,6 +62,7 @@ app.include_router(time_models.router)
 app.include_router(processes.router)
 app.include_router(queue.router)
 app.include_router(resources.router)
+app.include_router(products.router)
 app.include_router(sink.router)
 app.include_router(source.router)
 app.include_router(state.router)
@@ -68,8 +71,7 @@ app.include_router(scenario.router)
 
 @app.get("/", response_model=str)
 async def root():
-    # return {"message": f"prodsys API v{str(prodsys.VERSION)}"}
-    return "Hello World!"
+    return f"Welcome to prodsys API version {prodsys.VERSION}. Check out the documentation at {app.docs_url}"
 
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
@@ -80,4 +82,4 @@ def prodsys_app(cfg: DictConfig) -> None:
         uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
 
 if __name__ == "__main__":
-    prodsys_app()
+   prodsys_app()

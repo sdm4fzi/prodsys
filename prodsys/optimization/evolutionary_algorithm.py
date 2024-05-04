@@ -68,9 +68,8 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
 
     class Config:
         schema_extra = {
-            "example": {
-                "summary": "Evolutionary Algorithm Hperparameters",
-                "value": {
+            "examples": [
+                {
                     "seed": 0,
                     "number_of_generations": 10,
                     "population_size": 10,
@@ -79,7 +78,7 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
                     "number_of_seeds": 1,
                     "number_of_processes": 1,
                 },
-            }
+            ]
         }
 
 
