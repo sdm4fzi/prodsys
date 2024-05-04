@@ -44,6 +44,45 @@ sim.VERBOSE = 1
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
+class EvolutionaryAlgorithmHyperparameters(BaseModel):
+    """
+    Hyperparameters for configuration optimization using an evolutionary algorithm.
+
+    Args:
+        seed (int): Seed for the random number generator.
+        number_of_generations (int): Number of generations to run the algorithm.
+        population_size (int): Number of individuals in each generation.
+        mutation_rate (float): Probability of mutating an individual.
+        crossover_rate (float): Probability of crossover between two individuals.
+        number_of_seeds (int): Number of seeds to use for simulation.
+        number_of_processes (int): Number of processes to use for parallelization.
+    """
+
+    seed: int = Field(0, description="Seed for the random number generator.")
+    number_of_generations: int = 10
+    population_size: int = 10
+    mutation_rate: float = 0.1
+    crossover_rate: float = 0.1
+    number_of_seeds: int = 1
+    number_of_processes: int = 1
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Evolutionary Algorithm Hperparameters",
+                "value": {
+                    "seed": 0,
+                    "number_of_generations": 10,
+                    "population_size": 10,
+                    "mutation_rate": 0.1,
+                    "crossover_rate": 0.1,
+                    "number_of_seeds": 1,
+                    "number_of_processes": 1,
+                },
+            }
+        }
+
+
 
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonProductionSystemAdapter,
@@ -51,6 +90,8 @@ def register_functions_in_toolbox(
     performances: dict,
     weights: tuple,
     initial_solutions_folder: str,
+    hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    full_save_solutions_folder: str="",
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -84,6 +125,8 @@ def register_functions_in_toolbox(
         base_configuration,
         solution_dict,
         performances,
+        hyper_parameters.number_of_seeds, 
+        full_save_solutions_folder
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -107,6 +150,7 @@ def save_population_results(
             "agg_fitness": aggregated_fitness,
             "fitness": [float(value) for value in ind.fitness.values],
             "time_stamp": time.perf_counter() - start,
+            "hash": ind[0].hash(),
         }
 
     if optimization.VERBOSE:
@@ -121,13 +165,14 @@ def run_evolutionary_algorithm(
     save_folder: str,
     base_configuration_file_path: str,
     scenario_file_path: str,
+    full_save: bool,
     seed: int,
     ngen: int,
     population_size: int,
     mutation_rate: float,
     crossover_rate: float,
+    n_seeds: int,
     n_processes: int,
-    initial_solutions_folder: str = "",
 ):
     """
     Run an evolutionary algorithm for configuration optimization.
@@ -136,11 +181,13 @@ def run_evolutionary_algorithm(
         save_folder (str): Folder to save the results in.
         base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
         scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
+        full_save (bool): If True, the full event log of solutions is saved. If False, only the KPIs of solutions are saved.
         seed (int): Random seed for optimization.
         ngen (int): Number of generations to run the algorithm.
         population_size (int): Number of individuals in each generation.
         mutation_rate (float): Probability of mutating an individual.
         crossover_rate (float): Probability of crossover between two individuals.
+        n_seeds (int): Number of seeds to use for simulation.
         n_processes (int): Number of processes to use for parallelization.
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
@@ -154,56 +201,22 @@ def run_evolutionary_algorithm(
         mutation_rate=mutation_rate,
         crossover_rate=crossover_rate,
         number_of_processes=n_processes,
+        number_of_seeds=n_seeds,
     )
 
     evolutionary_algorithm_optimization(
         base_configuration,
         hyper_parameters,
-        save_folder
+        save_folder,
+        full_save=full_save
     )
-
-
-class EvolutionaryAlgorithmHyperparameters(BaseModel):
-    """
-    Hyperparameters for configuration optimization using an evolutionary algorithm.
-
-    Args:
-        seed (int): Seed for the random number generator.
-        number_of_generations (int): Number of generations to run the algorithm.
-        population_size (int): Number of individuals in each generation.
-        mutation_rate (float): Probability of mutating an individual.
-        crossover_rate (float): Probability of crossover between two individuals.
-        number_of_processes (int): Number of processes to use for parallelization.
-    """
-
-    seed: int = Field(0, description="Seed for the random number generator.")
-    number_of_generations: int = 10
-    population_size: int = 10
-    mutation_rate: float = 0.1
-    crossover_rate: float = 0.1
-    number_of_processes: int = 1
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Evolutionary Algorithm Hperparameters",
-                "value": {
-                    "seed": 0,
-                    "number_of_generations": 10,
-                    "population_size": 10,
-                    "mutation_rate": 0.1,
-                    "crossover_rate": 0.1,
-                    "number_of_processes": 1,
-                },
-            }
-        }
-
 
 def optimize_configuration(
     base_configuration_file_path: str,
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    full_save: bool = False,
 ):
     """
     Optimize a configuration using an evolutionary algorithm.
@@ -218,12 +231,14 @@ def optimize_configuration(
         save_folder,
         base_configuration_file_path,
         scenario_file_path,
+        full_save,
         hyper_parameters.seed,
         hyper_parameters.number_of_generations,
         hyper_parameters.population_size,
         hyper_parameters.mutation_rate,
         hyper_parameters.crossover_rate,
         hyper_parameters.number_of_processes,
+        hyper_parameters.number_of_seeds,
     )
 
 from prodsys.util import util
@@ -233,6 +248,7 @@ def evolutionary_algorithm_optimization(
         hyper_parameters: EvolutionaryAlgorithmHyperparameters,
         save_folder: str = "results",
         initial_solutions_folder: str = "",
+        full_save: bool = False,
 ):
     """
     Optimize a production system configuration using an evolutionary algorithm.
@@ -256,7 +272,11 @@ def evolutionary_algorithm_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    # TODO: rework solution_dict and performances to classes
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -267,6 +287,8 @@ def evolutionary_algorithm_optimization(
         performances=performances,
         weights=weights,
         initial_solutions_folder=initial_solutions_folder,
+        hyper_parameters=hyper_parameters,
+        full_save_solutions_folder=save_folder if full_save else "",
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)
@@ -289,7 +311,6 @@ def evolutionary_algorithm_optimization(
         if optimization.VERBOSE:
             print(f"\nGeneration: {current_generation}")
         solution_dict["current_generation"] = str(current_generation)
-        solution_dict[str(current_generation)] = []
         performances[str(current_generation)] = {}
 
         # Vary population

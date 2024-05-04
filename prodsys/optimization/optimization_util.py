@@ -213,14 +213,15 @@ def get_weights(
     for objective in adapter.scenario_data.objectives:
         kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
         if kpi.target != direction:
-            objective.weight *= -1
-        weights.append(objective.weight)
+            weights.append(objective.weight * -1)
+        else:
+            weights.append(objective.weight)
     return tuple(weights)
 
 
 def crossover(ind1, ind2):
-    ind1[0].ID = ""
-    ind2[0].ID = ""
+    ind1[0].ID = str(uuid1())
+    ind2[0].ID = str(uuid1())
 
     crossover_type = random.choice(["machine", "partial_machine", "transport_resource"])
     adapter1: adapters.ProductionSystemAdapter = ind1[0]
@@ -282,7 +283,7 @@ def mutation(individual):
     mutation_operation = random.choice(get_mutation_operations(individual[0]))
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
-        individual[0].ID = ""
+        individual[0].ID = str(uuid1())
     add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
@@ -851,6 +852,8 @@ def random_configuration(
     invalid_configuration_counter = 0
     while True:
         adapter_object = baseline.copy(deep=True)
+        adapter_object.ID = str(uuid1())
+
         if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
             get_random_production_capacity(adapter_object)
         if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
@@ -1009,12 +1012,14 @@ def document_individual(
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     current_generation = solution_dict["current_generation"]
 
-    if not adapter_object.ID:
-        adapter_object.ID = str(uuid1())
-        solution_dict[current_generation].append(adapter_object.ID)
+    if adapter_object.hash() not in solution_dict["hashes"]:
+        solution_dict["hashes"][adapter_object.hash()] = {
+            "generation": current_generation,
+            "ID": adapter_object.ID,
+        }
 
     adapters.JsonProductionSystemAdapter(**adapter_object.dict()).write_data(
-        f"{save_folder}/f_{current_generation}_{adapter_object.ID}.json"
+        f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
     )
 
 
@@ -1022,6 +1027,8 @@ def evaluate(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
+    number_of_seeds: int,
+    full_save_folder_file_path: str,
     individual,
 ) -> List[float]:
     """
@@ -1029,8 +1036,9 @@ def evaluate(
 
     Args:
         base_scenario (adapters.ProductionSystemAdapter): Baseline configuration.
-        solution_dict (Dict[str, Union[list, str]]): Dictionary containing the solutions of the current and previous generations.
+        solution_dict (Dict[str, Union[list, str]]): Dictionary containing the ids of existing solutions.
         performances (dict): Dictionary containing the performances of the current and previous generations.
+        number_of_seeds (int): Number of seeds for the simulation runs.
         individual (List[adapters.ProductionSystemAdapter]): List if length 1 containing the configuration to be evaluated.
 
     Raises:
@@ -1041,32 +1049,35 @@ def evaluate(
     """
 
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
-    current_generation = solution_dict["current_generation"]
-    if adapter_object.ID:
-        for generation in solution_dict.keys():
-            if (
-                generation != "current_generation"
-                and not generation == current_generation
-                and adapter_object.ID in solution_dict[generation]
-            ):
-                return performances[generation][adapter_object.ID]["fitness"]
+    adapter_object_hash = adapter_object.hash()
+    if adapter_object_hash in solution_dict["hashes"]:
+        evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash]["generation"]
+        evaluated_adapter_id = solution_dict["hashes"][adapter_object_hash]["ID"]
+        return performances[evaluated_adapter_generation][evaluated_adapter_id]["fitness"]
 
     if not check_valid_configuration(adapter_object, base_scenario):
-        # TODO: check if this function is always correct, either max or min for all algorithms?
-        return [-100000 * weight for weight in get_weights(base_scenario, "max")]
-    runner_object = runner.Runner(adapter=adapter_object)
-    runner_object.initialize_simulation()
-    if not adapter_object.scenario_data.info.time_range:
-        raise ValueError("time_range is not defined in scenario_data")
-    runner_object.run(adapter_object.scenario_data.info.time_range)
-    df = runner_object.event_logger.get_data_as_dataframe()
-    p = PostProcessor(df_raw=df)
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")]
 
-    fitness = []
-    for objective in adapter_object.scenario_data.objectives:
-        if objective.name == performance_indicators.KPIEnum.COST:
-            fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
-            continue
-        fitness.append(KPI_function_dict[objective.name](p))
+    fitness_values = []
 
-    return fitness
+    for seed in range(number_of_seeds):
+        runner_object = runner.Runner(adapter=adapter_object) 
+        if not adapter_object.scenario_data.info.time_range:
+            raise ValueError("time_range is not defined in scenario_data")
+        adapter_object.seed = seed
+        runner_object.initialize_simulation()
+        runner_object.run(adapter_object.scenario_data.info.time_range)
+        if full_save_folder_file_path:
+            runner_object.save_results_as_csv(full_save_folder_file_path)
+        df = runner_object.event_logger.get_data_as_dataframe()
+        p = PostProcessor(df_raw=df)
+        fitness = []
+        for objective in adapter_object.scenario_data.objectives:
+            if objective.name == performance_indicators.KPIEnum.COST:
+                fitness.append(get_reconfiguration_cost(adapter_object, base_scenario))
+                continue
+            fitness.append(KPI_function_dict[objective.name](p))
+        fitness_values.append(fitness)
+    
+    mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
+    return mean_fitness
