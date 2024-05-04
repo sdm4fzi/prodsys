@@ -4,10 +4,11 @@ from typing import List, Annotated
 from fastapi import APIRouter, HTTPException, Body
 
 
+from app.dao import time_model_dao
 from prodsys.models import (
     time_model_data,
 )
-from app.dependencies import get_time_model_from_backend, prodsys_backend
+from app.dependencies import prodsys_backend
 
 TIME_MODEL_EXAMPLES = {
             "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra["example"],	
@@ -66,12 +67,7 @@ async def create_time_model(
         Body(examples=TIME_MODEL_LIST_EXAMPLE)
     ],
 ):
-    if get_time_model_from_backend(project_id, adapter_id, time_model.ID):
-        raise HTTPException(404, "Time model with ID already exists. Try updating instead.")
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    adapter.time_model_data.append(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return time_model
+    return time_model_dao.add_time_model_to_backend(project_id, adapter_id, time_model)
 
 
 @router.get(
@@ -91,8 +87,7 @@ async def create_time_model(
     }
 )
 async def get_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    time_model = get_time_model_from_backend(project_id, adapter_id, time_model_id)
-    return time_model
+    return time_model_dao.get_time_model_from_backend(project_id, adapter_id, time_model_id)
 
 @router.put("/{time_model_id}",
             response_model=time_model_data.TIME_MODEL_DATA,
@@ -116,18 +111,9 @@ async def update_time_model(
         Body(examples=TIME_MODEL_LIST_EXAMPLE)
     ],
 ):
-    if time_model.ID != time_model_id:
-        raise HTTPException(404, "Time model ID must not be changed")
-    # TODO: make update of time model possible and update to backend 
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    adapter.time_model_data.append(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return time_model
+    return time_model_dao.update_time_model_in_backend(project_id, adapter_id, time_model_id, time_model)
 
 @router.delete("/{time_model_id}")
 async def delete_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    time_model = get_time_model_from_backend(project_id, adapter_id, time_model_id)
-    adapter.time_model_data.remove(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return "Sucessfully deleted time model with ID: " + time_model.ID
+    time_model_dao.delete_time_model_from_backend(project_id, adapter_id, time_model_id)
+    return f"Succesfully deleted time model with ID {time_model_id}"

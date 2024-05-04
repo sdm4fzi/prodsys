@@ -7,9 +7,10 @@ from fastapi import HTTPException
 from torch import exp
 from app.backends.backend import Backend
 from app.backends.in_memory import InMemoryBackend
+from app.dao.time_model_dao import get_time_model_from_backend
 from app.models.progress_report import ProgressReport
 import prodsys
-from prodsys.models import performance_data
+from prodsys.models import performance_data, time_model_data
 import prodsys.simulation
 import prodsys.simulation.sim
 
@@ -74,13 +75,6 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
-
-def get_time_model_from_backend(project_id: str, adapter_id: str, time_model_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for time_model in adapter.time_model_data:
-        if time_model.ID == time_model_id:
-            return time_model
-    raise HTTPException(404, "Time model not found")
 
 def get_process_from_backend(project_id: str, adapter_id: str, process_id: str):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
