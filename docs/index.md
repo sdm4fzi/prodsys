@@ -6,7 +6,6 @@
 ![PyPI](https://img.shields.io/pypi/v/prodsys)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/prodsys)
 ![Docu](https://img.shields.io/badge/docu-full-green)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg)](https://doi.org/10.5281/zenodo.10995273)
 
 prodsys is a python package for modeling, simulating and optimizing production systems based on the product, process and resource (PPR) modelling principle. 
 
@@ -102,24 +101,6 @@ print(wip)
 ```
 
 These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](Tutorials/tutorial_0_overview.md). For a complete overview of the package's functionality, please see the [API reference](API_reference/API_reference_0_overview.md).
-
-## Run prodsys as a webserver with REST API
-
-prodsys cannot only be used as a python package, but can also be used as a webserver by interacting with its REST API. All features of prodsys are also available in the API and allow easy integration of prodsys in operative IT architectures. 
-
-The API is based on the [FastAPI](https://fastapi.tiangolo.com/) framework and utilizes the models API of prodsys. To use prodsys as a webserver, you can use the official docker image which can be obtained from dockerhub:
-
-```bash
-docker pull sebbehrendt/prodsys
-```
-
-To start the API, run the following command:
-
-```bash
-docker run -p 8000:8000 sebbehrendt/prodsys
-```
-
-The API documentation is then available at `http://localhost:8000/docs`. 
 
 ## Contributing
 

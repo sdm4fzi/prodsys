@@ -1,103 +1,77 @@
-import time
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import os
 
 from fastapi import HTTPException
-from torch import exp
-from app.backends.backend import Backend
-from app.backends.in_memory import InMemoryBackend
-from app.models.progress_report import ProgressReport
 import prodsys
 from prodsys.models import performance_data
-import prodsys.simulation
-import prodsys.simulation.sim
 
-from .models.project import Project
+from .models.projects import Project
 
-import logging
-logger = logging.getLogger(__name__)
-
-def get_backend() -> Backend:
-    backend_name = os.getenv("PRODSYS_BACKEND") or "in_memory"
-    if backend_name == "in_memory":
-        logger.info("Using in-memory backend")
-        return InMemoryBackend()
-    if backend_name == "mongo":
-        logger.info("Using MongoDB backend")
-        raise NotImplementedError("MongoDB backend not implemented")
-    else:
-        raise Exception(f"Backend {backend_name} not possible to use for prodsys API.")
+print("create database")
+database: List[Project] = []
+results_database: Dict[str, performance_data.Performance] = {}
 
 
-prodsys_backend = get_backend()
-runners: Dict[str, prodsys.runner.Runner] = {}
+def get_projects() -> List[Project]:
+    return database
 
-def get_backend() -> Backend:
-    return prodsys_backend
+def get_project(project_id: str) -> Project:
+    for project in database:
+        if project.ID == project_id:
+            return project
+    raise HTTPException(404, f"Project {project_id} not found")
 
-
-def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressReport:
-    if adapter_id not in runners:
+def get_adapter(project_id: str, adapter_id: str) -> prodsys.adapters.JsonProductionSystemAdapter:
+    project = get_project(project_id)
+    if adapter_id not in project.adapters:
         raise HTTPException(
-            404, f"No simulation was yet started for adapter {adapter_id} in project {project_id}."
+            404, f"Adapter {adapter_id} not found in project {project_id}"
         )
-    steps_done = runners[adapter_id].env.pbar.n
-    steps_total = runners[adapter_id].env.pbar.total
-    time_done = time.time() - runners[adapter_id].env.pbar.start_t
-
-    ratio_done = steps_done / steps_total
-    expected_total_time = time_done / ratio_done
-    expected_time_left = expected_total_time - time_done
-
-    return ProgressReport(
-        ratio_done=ratio_done,
-        time_done=round(time_done, 2),
-        expected_time_left=round(expected_time_left, 2),
-        expected_total_time=round(expected_total_time, 2),
-    )
+    return project.adapters[adapter_id]
 
 
-def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
-    # TODO: implement function that returns progress of optimization
-    return 0.5
-
-def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: int):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    adapter.seed = seed
-    runner_object = prodsys.runner.Runner(adapter=adapter)
-    runners[adapter_id] = runner_object
+def evaluate(adapter_object: prodsys.adapters.JsonProductionSystemAdapter) -> str:
+    runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
+    if adapter_object.scenario_data and adapter_object.scenario_data.info.time_range:
+        run_length = adapter_object.scenario_data.info.time_range
+    else:
+        run_length = 5 * 7 * 24 * 60
     runner_object.run(run_length)
     performance = runner_object.get_performance_data()
-    try:
-        prodsys_backend.create_performance(project_id, adapter_id, performance)
-    except:
-        prodsys_backend.update_performance(project_id, adapter_id, performance)
+    results_database[adapter_object.ID] = performance
 
-def get_time_model_from_backend(project_id: str, adapter_id: str, time_model_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_result(project_id: str, adapter_id: str) -> performance_data.Performance:
+    if adapter_id not in results_database:
+        raise HTTPException(
+            404, f"Results for adapter {adapter_id} not found in project {project_id}"
+        )
+    return results_database[adapter_id]
+
+def get_time_model(project_id: str, adapter_id: str, time_model_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for time_model in adapter.time_model_data:
         if time_model.ID == time_model_id:
             return time_model
     raise HTTPException(404, "Time model not found")
 
-def get_process_from_backend(project_id: str, adapter_id: str, process_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_process(project_id: str, adapter_id: str, process_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for process in adapter.process_data:
         if process.ID == process_id:
             return process
     raise HTTPException(404, "Process not found")
 
-def get_queue_from_backend(project_id: str, adapter_id: str, queue_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_queue_data(project_id: str, adapter_id: str, queue_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for queue_data in adapter.queue_data:
         if queue_data.ID == queue_id:
             return queue_data
     raise HTTPException(404, "Queue not found")
 
-def get_resource_from_backend(project_id: str, adapter_id: str, resource_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_resource(project_id: str, adapter_id: str, resource_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for resource in adapter.resource_data:
         if resource.ID == resource_id:
             return resource
@@ -106,29 +80,22 @@ def get_resource_from_backend(project_id: str, adapter_id: str, resource_id: str
         f"Resource {resource_id} not found in adapter {adapter_id} for project {project_id}",
     )
 
-def get_sink_from_backend(project_id: str, adapter_id: str, sink_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_sink(project_id: str, adapter_id: str, sink_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for sink in adapter.sink_data:
         if sink.ID == sink_id:
             return sink
     raise HTTPException(404, "Sink not found")
 
-def get_product_from_backend(project_id: str, adapter_id: str, product_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for product in adapter.product_data:
-        if product.ID == product_id:
-            return product
-    raise HTTPException(404, "Product not found")
-
-def get_source_from_backend(project_id: str, adapter_id: str, source_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_source(project_id: str, adapter_id: str, source_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for source in adapter.source_data:
         if source.ID == source_id:
             return source
     raise HTTPException(404, "Source not found")
 
-def get_state_from_backend(project_id: str, adapter_id: str, state_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+def get_state(project_id: str, adapter_id: str, state_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     for state in adapter.state_data:
         if state.ID == state_id:
             return state
@@ -142,12 +109,11 @@ def prepare_adapter_from_optimization(
     adapter_id: str,
     solution_id: str,
 ):
-    # TODO: use backend to save and retrieve data here...
-    origin_adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+    origin_adapter = get_adapter(project_id, adapter_id)
     adapter_object.scenario_data = origin_adapter.scenario_data
     adapter_object.ID = solution_id
 
-    project = prodsys_backend.get_project(project_id)
+    project = get_project(project_id)
     project.adapters[solution_id] = adapter_object
 
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
@@ -159,16 +125,12 @@ def prepare_adapter_from_optimization(
     runner_object.run(run_length)
 
     performance = runner_object.get_performance_data()
-    try:
-        prodsys_backend.create_performance(project_id, adapter_id, performance)
-    except:
-        prodsys_backend.update_performance(project_id, adapter_id, performance)
+    results_database[adapter_id] = performance
 
 
 def get_configuration_results_adapter_from_filesystem(
     project_id: str, adapter_id: str, solution_id: str
 ):
-    # TODO: use backend to save and retrieve data here...
     adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
     files = os.listdir(f"data/{project_id}/{adapter_id}")
     if not any(solution_id in file for file in files):

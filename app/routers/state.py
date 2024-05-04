@@ -7,7 +7,15 @@ from fastapi import APIRouter, HTTPException, Body
 from prodsys.models import (
     state_data,
 )
-from app.dependencies import prodsys_backend, get_state_from_backend
+from app.dependencies import get_adapter, get_state
+
+# TIME_MODEL_EXAMPLES = {
+#             "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra["example"],
+#             "Functional time model": time_model_data.FunctionTimeModelData.Config.schema_extra["example"],
+#             "Manhattan Distance time model": time_model_data.ManhattanDistanceTimeModelData.Config.schema_extra["example"]
+#         }
+
+# TIME_MODEL_LIST_EXAMPLE = [item["value"] for item in TIME_MODEL_EXAMPLES.values()]
 
 STATE_DATA_EXAMPLES = {
     state_data.StateTypeEnum.BreakDownState: state_data.BreakDownStateData.Config.schema_extra[
@@ -47,30 +55,23 @@ router = APIRouter(
         404: {"description": "No states found."},
     },
 )
-async def get_states(project_id: str, adapter_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+async def read_states(project_id: str, adapter_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     return adapter.state_data
 
 
-@router.post("/",
-            response_model=state_data.STATE_DATA_UNION,
-            responses={
-                200: {
-                    "description": "Sucessfully updated state",
-                    "content": {"application/json": {"examples": STATE_DATA_EXAMPLES}},
-                },
-                404: {"description": "No state found."},
-            })
+@router.put("/{state_id}")
 async def create_state(
     project_id: str,
     adapter_id: str,
-    state: Annotated[state_data.STATE_DATA_UNION, Body(examples=STATE_LIST_EXAMPLE)],
+    state_id,
+    state: Annotated[state_data.STATE_DATA_UNION, Body(examples=STATE_DATA_EXAMPLES)],
 ):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    # TODO: only add if state does not exist, else raise error
+    if state.ID != state_id:
+        raise HTTPException(404, "State ID must not be changed")
+    adapter = get_adapter(project_id, adapter_id)
     adapter.state_data.append(state)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return state
+    return "Sucessfully created state with ID: " + state.ID
 
 
 @router.get(
@@ -84,37 +85,6 @@ async def create_state(
         404: {"description": "No state found."},
     },
 )
-async def get_state(project_id: str, adapter_id: str, state_id: str):
-    state = get_state_from_backend(project_id, adapter_id, state_id)
+async def read_state(project_id: str, adapter_id: str, state_id: str):
+    state = get_state(project_id, adapter_id, state_id)
     return state
-
-
-@router.put("/{state_id}",
-            response_model=state_data.STATE_DATA_UNION,
-            responses={
-                200: {
-                    "description": "Sucessfully updated state",
-                    "content": {"application/json": {"examples": STATE_DATA_EXAMPLES}},
-                },
-                404: {"description": "No state found."},
-            })
-async def update_state(
-    project_id: str,
-    adapter_id: str,
-    state_id,
-    state: Annotated[state_data.STATE_DATA_UNION, Body(examples=STATE_LIST_EXAMPLE)],
-):
-    if state.ID != state_id:
-        raise HTTPException(404, "State ID must not be changed")
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    # TODO: make removal of old state 
-    adapter.state_data.append(state)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return state
-
-@router.delete("/{state_id}")
-async def delete_state(project_id: str, adapter_id: str, state_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    state = get_state_from_backend(project_id, adapter_id, state_id)
-    adapter.state_data.remove(state)
-    return "Sucessfully deleted state with ID: " + state_id

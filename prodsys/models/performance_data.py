@@ -50,7 +50,7 @@ class Event(BaseModel):
                     "product": "Product_1_12",
                     "expected_end_time": 24.3,
                     "target_location": None,
-                }, 
+                },
                 {
                     "time": 24.3,
                     "resource": "R1",
@@ -59,7 +59,7 @@ class Event(BaseModel):
                     "activity": "end state",
                     "product": "Product_1_12",
                     "expected_end_time": None,
-                    "target_location": "L1",
+                    "target_location": None,
                 },
             ]
         }
@@ -73,32 +73,6 @@ class Performance(BaseModel):
         event_log (List[Event]): Event log of the simulation run.
         kpis (List[KPI_UNION]): List of KPIs of the simulation run.
     """
-
-    class Config:
-        schema_extra = {
-            "examples": [{               
-                    "event_log": Event.Config.schema_extra["examples"],
-                    "kpis": [
-                        {
-                            "name": "throughput",
-                            "target": "max",
-                            "weight": 1,
-                            "value": 4.32,
-                            "context": ["system", "product_type"],
-                            "product_type": "ProductType_1",
-                        },
-                        {
-                            "name": "WIP",
-                            "target": "min",
-                            "weight": 1,
-                            "value": 121,
-                            "context": ["system", "product_type"],
-                            "product_type": "ProductType_1",
-                        },
-                    ],
-                }
-            ]
-        }
 
     event_log: List[Event]
     kpis: List[KPI_UNION]

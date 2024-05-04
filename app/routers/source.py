@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Body
 from prodsys.models import (
     source_data
 )
-from app.dependencies import prodsys_backend, get_source_from_backend
+from app.dependencies import get_adapter, get_source
 
 SOURCE_LIST_EXAMPLE = [source_data.SourceData.Config.schema_extra["example"]["value"]]
 
@@ -34,32 +34,24 @@ router = APIRouter(
         404: {"description": "No source data found."}
     }
 )
-async def get_sources(project_id: str, adapter_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+async def read_sources(project_id: str, adapter_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     return adapter.source_data
 
 
-@router.post("/",
-            response_model=source_data.SourceData,
-            responses={
-                200: {
-                    "description": "Successfully updated source data",
-                    "content": {
-                        "application/json": SOURCE_LIST_EXAMPLE
-                    }
-                }
-            })
+@router.put("/{source_id}")
 async def create_sink(
     project_id: str,
     adapter_id: str,
+    source_id: str,
     source: Annotated[source_data.SourceData,
                     Body(example=source_data.SourceData.Config.schema_extra["example"])]
 ):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    # TODO: only add if sink does not exist, else raise error
+    if source.ID != source_id:
+        raise HTTPException(404, "Source ID must not be changed")
+    adapter = get_adapter(project_id, adapter_id)
     adapter.source_data.append(source)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return source
+    return "Sucessfully created source with ID: " + source.ID
 
 
 @router.get(
@@ -75,39 +67,6 @@ async def create_sink(
         404: {"description": "Sink not found."}
     }
 )
-async def get_source(project_id: str, adapter_id: str, source_id: str):
-    source = get_source_from_backend(project_id, adapter_id, source_id)
+async def read_source(project_id: str, adapter_id: str, source_id: str):
+    source = get_source(project_id, adapter_id, source_id)
     return source
-
-
-@router.put("/{source_id}",
-            response_model=source_data.SourceData,
-            responses={
-                200: {
-                    "description": "Successfully updated source data",
-                    "content": {
-                        "application/json": SOURCE_LIST_EXAMPLE
-                    }
-                }
-            })
-async def update_source(
-    project_id: str,
-    adapter_id: str,
-    source_id: str,
-    source: Annotated[source_data.SourceData,
-                    Body(example=source_data.SourceData.Config.schema_extra["example"])]
-):
-    if source.ID != source_id:
-        raise HTTPException(404, "Source ID must not be changed")
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    # TODO: only add if sink does not exist, else raise error
-    adapter.source_data.append(source)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return source
-
-@router.delete("/{source_id}")
-async def delete_source(project_id: str, adapter_id: str, source_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    source = get_source_from_backend(project_id, adapter_id, source_id)
-    adapter.source_data.remove(source)
-    return "Sucessfully deleted source with ID: " + source_id

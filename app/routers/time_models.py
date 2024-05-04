@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Body
 from prodsys.models import (
     time_model_data,
 )
-from app.dependencies import get_time_model_from_backend, prodsys_backend
+from app.dependencies import get_adapter, get_time_model
 
 TIME_MODEL_EXAMPLES = {
             "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra["example"],	
@@ -40,39 +40,25 @@ router = APIRouter(
         404: {"description": "No time models found."},
     }
 )
-async def get_time_models(project_id: str, adapter_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+async def read_time_models(project_id: str, adapter_id: str):
+    adapter = get_adapter(project_id, adapter_id)
     return adapter.time_model_data
 
-
-@router.post("/",
-             response_model=time_model_data.TIME_MODEL_DATA,
-             responses={
-                 200: {
-                     "description": "Sucessfully created time model",
-                     "content": {
-                         "application/json": {
-                                "examples": TIME_MODEL_EXAMPLES
-                         }
-
-                     }
-                 }
-             })
+@router.put("/{time_model_id}")
 async def create_time_model(
     project_id: str,
     adapter_id: str,
+    time_model_id,
     time_model: Annotated[
         time_model_data.TIME_MODEL_DATA,
-        Body(examples=TIME_MODEL_LIST_EXAMPLE)
+        Body(examples=TIME_MODEL_EXAMPLES)
     ],
 ):
-    if get_time_model_from_backend(project_id, adapter_id, time_model.ID):
-        raise HTTPException(404, "Time model with ID already exists. Try updating instead.")
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+    if time_model.ID != time_model_id:
+        raise HTTPException(404, "Time model ID must not be changed")
+    adapter = get_adapter(project_id, adapter_id)
     adapter.time_model_data.append(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return time_model
-
+    return "Sucessfully created time model with ID: " + time_model.ID
 
 @router.get(
     "/{time_model_id}",
@@ -90,44 +76,6 @@ async def create_time_model(
         404: {"description": "Time model not found"},
     }
 )
-async def get_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    time_model = get_time_model_from_backend(project_id, adapter_id, time_model_id)
+async def read_time_model(project_id: str, adapter_id: str, time_model_id: str):
+    time_model = get_time_model(project_id, adapter_id, time_model_id)
     return time_model
-
-@router.put("/{time_model_id}",
-            response_model=time_model_data.TIME_MODEL_DATA,
-            responses={
-                200: {
-                    "description": "Sucessfully updated time model",
-                    "content": {
-                        "application/json": {
-                            "examples": TIME_MODEL_EXAMPLES
-                        }
-                    }
-                },
-                404: {"description": "Time model not found"}
-            })
-async def update_time_model(
-    project_id: str,
-    adapter_id: str,
-    time_model_id,
-    time_model: Annotated[
-        time_model_data.TIME_MODEL_DATA,
-        Body(examples=TIME_MODEL_LIST_EXAMPLE)
-    ],
-):
-    if time_model.ID != time_model_id:
-        raise HTTPException(404, "Time model ID must not be changed")
-    # TODO: make update of time model possible and update to backend 
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    adapter.time_model_data.append(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return time_model
-
-@router.delete("/{time_model_id}")
-async def delete_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    time_model = get_time_model_from_backend(project_id, adapter_id, time_model_id)
-    adapter.time_model_data.remove(time_model)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return "Sucessfully deleted time model with ID: " + time_model.ID

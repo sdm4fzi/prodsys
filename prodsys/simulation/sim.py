@@ -63,7 +63,7 @@ class Environment(core.Environment):
         self.pbar: Any = None
         self.last_update = 0
 
-    def run(self, time_range: float):
+    def run(self, time_range:int):
         """
         Runs the simulation for a given time range.
 
