@@ -12,11 +12,15 @@ The following states are possible:
 """
 
 from __future__ import annotations
-
+from hashlib import md5
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal, Union, TYPE_CHECKING
 
 from prodsys.models.core_asset import CoreAsset
+
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
+
 
 
 class StateTypeEnum(str, Enum):
@@ -55,6 +59,28 @@ class StateData(CoreAsset):
         StateTypeEnum.TransportState,
         StateTypeEnum.SetupState,
     ]
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the state considering the time model and the type of the state. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the time model is not found in the adapter.
+
+        Returns:
+            str: hash of the state.
+        """
+        time_model_hash = ""
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.hash()
+                break
+        else:
+            raise ValueError(f"Time model with ID {self.time_model_id} not found for state {self.ID}.")
+        return md5(("".join([self.type, time_model_hash])).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {
@@ -97,6 +123,31 @@ class BreakDownStateData(StateData):
     type: Literal[StateTypeEnum.BreakDownState]
     repair_time_model_id: str
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the state considering the time model and the repair time model. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the repair time model is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        repair_time_model_hash = ""
+
+        for repair_time_model in adapter.time_model_data:
+            if repair_time_model.ID == self.repair_time_model_id:
+                repair_time_model_hash = repair_time_model.hash()
+                break
+        else:
+            raise ValueError(f"Repair time model with ID {self.repair_time_model_id} not found for state {self.ID}.")
+
+        return md5(("".join([base_class_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()  
+    
     class Config:
         schema_extra = {
             "example": {
@@ -141,6 +192,40 @@ class ProcessBreakDownStateData(StateData):
     type: Literal[StateTypeEnum.ProcessBreakDownState]
     repair_time_model_id: str
     process_id: str
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the state considering the time model, process and repair time model. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the process or repair time model is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        process_hash = ""
+        repair_time_model_hash = ""
+
+        for process in adapter.process_data:
+            if process.ID == self.process_id:
+                process_hash = process.hash(adapter)
+                break
+        else:
+            raise ValueError(f"Process with ID {self.process_id} not found for process breakdown state {self.ID}.")
+
+        for repair_time_model in adapter.time_model_data:
+            if repair_time_model.ID == self.repair_time_model_id:
+                repair_time_model_hash = repair_time_model.hash()
+                break
+        else:
+            raise ValueError(f"Repair time model with ID {self.repair_time_model_id} not found for process breakdown state {self.ID}.")
+        
+
+        return md5(("".join([base_class_hash, process_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {
@@ -242,6 +327,32 @@ class SetupStateData(StateData):
     type: Literal[StateTypeEnum.SetupState]
     origin_setup: str
     target_setup: str
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the state considering the time model, origin and target setup process. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the origin or target setup process is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        setup_process_hashes = []
+
+        for process_id in [self.origin_setup, self.target_setup]:
+            for process in adapter.process_data:
+                if process.ID == process_id:
+                    setup_process_hashes.append(process.hash(adapter))
+                break
+            else:
+                raise ValueError(f"Process with ID {process_id} not found for setup state {self.ID}.")
+
+        return md5(("".join([base_class_hash] + setup_process_hashes)).encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {

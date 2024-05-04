@@ -2,8 +2,9 @@ from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorit
 
 seed = 23
 NGEN = 9
-POPULATION_SIZE = 8
-N_PROCESSES = 8
+POPULATION_SIZE = 16
+N_PROCESSES = 4
+NUMBER_OF_SEEDS = 1
 CROSS_OVER_RATE = 0.1
 MUTATION_RATE = 0.15
 
@@ -21,11 +22,13 @@ if __name__ == "__main__":
         SAVE_FOLDER,
         BASE_CONFIGURATION_FILE_PATH,
         SCENARIO_FILE_PATH,
+        False,
         seed,
         NGEN,
         POPULATION_SIZE,
         MUTATION_RATE,
         CROSS_OVER_RATE,
+        NUMBER_OF_SEEDS,
         N_PROCESSES,
     )
 
@@ -34,11 +37,13 @@ if __name__ == "__main__":
     #     SAVE_FOLDER,
     #     BASE_CONFIGURATION_FILE_PATH,
     #     PARTIAL_SCENARIO_FILE_PATH,
+    #     False,
     #     seed,
     #     NGEN,
     #     POPULATION_SIZE,
     #     MUTATION_RATE,
     #     CROSS_OVER_RATE,
+    #     NUMBER_OF_SEEDS,
     #     N_PROCESSES,
     #     INITIAL_SOLUTION_FOLDER
     # )

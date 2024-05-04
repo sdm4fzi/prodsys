@@ -9,13 +9,16 @@ The following processes are possible:
 """
 
 from __future__ import annotations
-
+from hashlib import md5
 from enum import Enum
-from typing import Literal, Optional, Union, List, Dict
+from typing import Literal, Union, Optional, List, TYPE_CHECKING
 
 from pydantic import Field
 
 from prodsys.models.core_asset import CoreAsset
+
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 
 
 class ProcessTypeEnum(str, Enum):
@@ -55,6 +58,26 @@ class ProcessData(CoreAsset):
                 "time_model_id": "function_time_model_1",
             }
         }
+    
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the process data considering the time model data. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+        Raises:
+            ValueError: If the time model with the ID of the process is not found.
+
+        Returns:
+            str: hash of the process data. 
+        """
+        for time_model in adapter.time_model_data:
+            if time_model.ID == self.time_model_id:
+                time_model_hash = time_model.hash()
+                break
+        else:
+            raise ValueError(f"Time model with ID {self.time_model_id} not found for process {self.ID}.")
+        return md5((time_model_hash).encode("utf-8")).hexdigest()
 
 
 class ProductionProcessData(ProcessData):
@@ -138,6 +161,19 @@ class CapabilityProcessData(ProcessData):
             }
         }
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the capability process data considering the capability, time model and type of the process. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the capability process data.
+        """
+        base_class_hash = super().hash(adapter)
+        return md5((base_class_hash + self.capability).encode("utf-8")).hexdigest()
+
 class TransportProcessData(ProcessData):
     """
     Class that represents transport process data.
@@ -202,6 +238,29 @@ class CompoundProcessData(CoreAsset):
             }
         }
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the compound process data considering the proces ids. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the process data.
+
+        Raises:
+            ValueError: If a process with the ID of the compound process is not found.
+
+        Returns:
+            str: hash of the compound process data.
+        """
+        process_hashes = []
+        for process_id in self.process_ids:
+            for process in adapter.process_data:
+                if process.ID == process_id:
+                    process_hashes.append(process.hash(adapter))
+                    break
+            else:
+                raise ValueError(f"Process with ID {process_id} not found for compound process {self.ID}.")
+        return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
+
 
 
 class RequiredCapabilityProcessData(CoreAsset):
@@ -243,6 +302,18 @@ class RequiredCapabilityProcessData(CoreAsset):
             }
         }
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the required capability process data.
+        """
+        return md5(self.capability.encode("utf-8")).hexdigest()
+
 
 class LinkTransportProcessData(TransportProcessData):
     """
@@ -274,6 +345,19 @@ class LinkTransportProcessData(TransportProcessData):
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the required capability process data.
+        """
+        # TODO: Implement hash function for LinkTransportProcessData and Nodes
+        return md5(self.capability.encode("utf-8")).hexdigest()
 
     class Config:
         schema_extra = {
