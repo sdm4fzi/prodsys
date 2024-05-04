@@ -29,7 +29,7 @@ def add_process_to_backend(
         )
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     adapter.process_data.append(process)
-    prodsys_backend.update_adapter(project_id, adapter)
+    prodsys_backend.update_adapter(project_id, adapter_id, adapter)
     return process
 
 
@@ -40,10 +40,10 @@ def update_process_in_backend(
     process: processes_data.PROCESS_DATA_UNION,
 ) -> processes_data.PROCESS_DATA_UNION:
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for idx, process in enumerate(adapter.process_data):
-        if process.ID == process_id:
+    for idx, existing_process in enumerate(adapter.process_data):
+        if existing_process.ID == process_id:
             adapter.process_data[idx] = process
-            prodsys_backend.update_adapter(project_id, adapter)
+            prodsys_backend.update_adapter(project_id, adapter_id, adapter)
             return process
     raise HTTPException(404, f"Process with ID {process_id} not found.")
 

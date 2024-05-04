@@ -1,20 +1,16 @@
 import time
-from typing import Dict, List, Optional
+from typing import Dict
 
 import os
 
 from fastapi import HTTPException
-from torch import exp
 from app.backends.backend import Backend
 from app.backends.in_memory import InMemoryBackend
-from app.dao.time_model_dao import get_time_model_from_backend
 from app.models.progress_report import ProgressReport
 import prodsys
-from prodsys.models import performance_data, time_model_data
 import prodsys.simulation
 import prodsys.simulation.sim
 
-from .models.project import Project
 
 import logging
 logger = logging.getLogger(__name__)
@@ -76,12 +72,9 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
 
-def get_process_from_backend(project_id: str, adapter_id: str, process_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for process in adapter.process_data:
-        if process.ID == process_id:
-            return process
-    raise HTTPException(404, "Process not found")
+
+
+# TODO: delete below get requests after implementing daos
 
 def get_queue_from_backend(project_id: str, adapter_id: str, queue_id: str):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
@@ -106,13 +99,6 @@ def get_sink_from_backend(project_id: str, adapter_id: str, sink_id: str):
         if sink.ID == sink_id:
             return sink
     raise HTTPException(404, "Sink not found")
-
-def get_product_from_backend(project_id: str, adapter_id: str, product_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for product in adapter.product_data:
-        if product.ID == product_id:
-            return product
-    raise HTTPException(404, "Product not found")
 
 def get_source_from_backend(project_id: str, adapter_id: str, source_id: str):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
