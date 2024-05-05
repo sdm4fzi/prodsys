@@ -2,18 +2,11 @@ from typing import List, Annotated
 
 
 from fastapi import APIRouter, HTTPException, Body
+from regex import P
 
 
 from prodsys.models import resource_data
-from app.dependencies import get_adapter, get_resource
-
-# TIME_MODEL_EXAMPLES = {
-#             "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra["example"],
-#             "Functional time model": time_model_data.FunctionTimeModelData.Config.schema_extra["example"],
-#             "Manhattan Distance time model": time_model_data.ManhattanDistanceTimeModelData.Config.schema_extra["example"]
-#         }
-
-# TIME_MODEL_LIST_EXAMPLE = [item["value"] for item in TIME_MODEL_EXAMPLES.values()]
+from app.dao import resources_dao
 
 RESOURCE_EXAMPLES = {
     "Production Resource": resource_data.ProductionResourceData.Config.schema_extra[
@@ -25,6 +18,12 @@ RESOURCE_EXAMPLES = {
 }
 
 RESOURCE_LIST_EXAMPLE = [item["value"] for item in RESOURCE_EXAMPLES.values()]
+PRODUCTION_RESOURCE_LIST_EXAMPLE = [
+    resource_data.ProductionResourceData.Config.schema_extra["example"]["value"]
+]
+TRANSPORT_RESOURCE_LIST_EXAMPLE = [
+    resource_data.TransportResourceData.Config.schema_extra["example"]["value"]
+]
 
 
 router = APIRouter(
@@ -45,19 +44,62 @@ router = APIRouter(
         404: {"description": "No resources found"},
     },
 )
-async def read_resources(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    return adapter.resource_data
+async def get_all_resources(project_id: str, adapter_id: str):
+    return resources_dao.get_all(project_id, adapter_id)
 
 
-@router.delete(
-    "/{resource_id}",
+@router.get(
+    "/production_resources",
+    response_model=List[resource_data.ProductionResourceData],
+    responses={
+        200: {
+            "description": "Sucessfully returned production resources",
+            "content": {
+                "application/json": {"example": PRODUCTION_RESOURCE_LIST_EXAMPLE}
+            },
+        },
+        404: {"description": "No resources found"},
+    },
 )
-async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    resource = get_resource(project_id, adapter_id, resource_id)
-    adapter.resource_data.remove(resource)
-    return "Sucessfully deleted resource with ID: " + resource_id
+async def get_all_production_resources(project_id: str, adapter_id: str):
+    return resources_dao.get_production_resources(project_id, adapter_id)
+
+
+@router.get(
+    "/transport_resources",
+    response_model=List[resource_data.TransportResourceData],
+    responses={
+        200: {
+            "description": "Sucessfully returned transport resources",
+            "content": {
+                "application/json": {"example": TRANSPORT_RESOURCE_LIST_EXAMPLE}
+            },
+        },
+        404: {"description": "No resources found"},
+    },
+)
+async def get_all_transport_resources(project_id: str, adapter_id: str):
+    return resources_dao.get_transport_resources(project_id, adapter_id)
+
+
+@router.post(
+    "/",
+    response_model=resource_data.RESOURCE_DATA_UNION,
+    responses={
+        200: {
+            "description": "Sucessfully created resource",
+            "content": {"application/json": {"examples": RESOURCE_EXAMPLES}},
+        }
+    },
+)
+async def create_resource(
+    project_id: str,
+    adapter_id: str,
+    resource: Annotated[
+        resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_LIST_EXAMPLE)
+    ],
+) -> resource_data.RESOURCE_DATA_UNION:
+    return resources_dao.add(project_id, adapter_id, resource)
 
 
 @router.get(
@@ -71,24 +113,25 @@ async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
         404: {"description": "Resource not found"},
     },
 )
-async def read_resource(project_id: str, adapter_id: str, resource_id: str):
-    resource = get_resource(project_id, adapter_id, resource_id)
-    return resource
+async def get_resource(project_id: str, adapter_id: str, resource_id: str):
+    return resources_dao.get(project_id, adapter_id, resource_id)
 
 
 @router.put(
     "/{resource_id}",
 )
-async def create_resource(
+async def update_resource(
     project_id: str,
     adapter_id: str,
     resource_id: str,
     resource: Annotated[
         resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_EXAMPLES)
     ],
-):
-    if resource.ID != resource_id:
-        raise HTTPException(404, "Resource ID must not be changed")
-    adapter = get_adapter(project_id, adapter_id)
-    adapter.resource_data.append(resource)
-    return "Sucessfully updated resource with ID: " + resource_id
+) -> resource_data.RESOURCE_DATA_UNION:
+    return resources_dao.update(project_id, adapter_id, resource_id, resource)
+
+
+@router.delete("/{resource_id}", response_model=str)
+async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
+    resources_dao.delete(project_id, adapter_id, resource_id)
+    return f"Succesfully deleted resource with ID {resource_id}"

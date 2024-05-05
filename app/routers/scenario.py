@@ -5,11 +5,9 @@ from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel, Field
 
 
-from prodsys.models import (
-    scenario_data,
-    performance_indicators
-)
-from app.dependencies import get_adapter
+from prodsys.models import scenario_data, performance_indicators
+from app.dao import scenario_dao
+
 
 class UserSettingsIn(BaseModel):
 
@@ -17,6 +15,19 @@ class UserSettingsIn(BaseModel):
         use_enum_values = True
 
 
+SCENARIO_EXAMPLE = scenario_data.ScenarioData.Config.schema_extra["example"]["value"]
+SCENARIO_CONSTRAINT_EXAMPLE = scenario_data.ScenarioConstrainsData.Config.schema_extra[
+    "example"
+]["value"]
+SCENARIO_OPTIONS_EXAMPLE = scenario_data.ScenarioOptionsData.Config.schema_extra[
+    "example"
+]["value"]
+SCENARIO_INFO_EXAMPLE = scenario_data.ScenarioInfoData.Config.schema_extra["example"][
+    "value"
+]
+OBJECTIVES_LIST_EXAMPLE = [
+    item for item in scenario_data.Objective.Config.schema_extra["examples"]
+]
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/scenario",
@@ -27,130 +38,228 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=scenario_data.ScenarioData
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully returned scenario",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
 )
-async def read_scenario(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    if not adapter.scenario_data:
-        raise HTTPException(404, "No scenario found.")
-    return adapter.scenario_data
+async def get_scenario(project_id: str, adapter_id: str) -> scenario_data.ScenarioData:
+    return scenario_dao.get(project_id, adapter_id)
 
 
-@router.put("/")
-async def create_scenario(
+@router.put(
+    "/",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated scenario",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No resources found"},
+    },
+)
+async def update_scenario(
     project_id: str,
     adapter_id: str,
-    scenario: scenario_data.ScenarioData,
-):
-    adapter = get_adapter(project_id, adapter_id)
-    adapter.scenario_data = scenario
-    return "Sucessfully created scenario"
+    scenario: Annotated[scenario_data.ScenarioData, Body(example=SCENARIO_EXAMPLE)],
+) -> scenario_data.ScenarioData:
+    return scenario_dao.update(project_id, adapter_id, scenario)
 
 
-@router.get("/contraints",
-           response_model=scenario_data.ScenarioConstrainsData,
-           )
-async def read_scenario_constrains(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    if not adapter.scenario_data:
-        raise HTTPException(404, "No scenario found.")
-    return adapter.scenario_data.constraints
+@router.get(
+    "/contraints",
+    response_model=scenario_data.ScenarioConstrainsData,
+    responses={
+        200: {
+            "description": "Sucessfully returned scenario constraints",
+            "content": {"application/json": {"example": SCENARIO_CONSTRAINT_EXAMPLE}},
+        },
+        404: {"description": "No scenario constraints found"},
+    },
+)
+async def get_scenario_constrains(project_id: str, adapter_id: str):
+    return scenario_dao.get_constraints(project_id, adapter_id)
 
-@router.put("/constraints")
-async def create_scenario_constrains(
+
+@router.put(
+    "/constraints",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated scenario constraints",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def update_scenario_constrains(
     project_id: str,
     adapter_id: str,
-    constrains: scenario_data.ScenarioConstrainsData,
-):
-    adapter = get_adapter(project_id, adapter_id)
-    return_string = ""
-    if not adapter.scenario_data:
-        adapter.scenario_data = scenario_data.ScenarioData(**scenario_data.ScenarioData.Config.schema_extra["example"]["value"])
-        return_string = "Initialized scenario with default values for scenario info, options and objectives."
-    adapter.scenario_data.constraints = constrains
-    return "Sucessfully created scenario constrains. " + return_string
+    constrains: Annotated[
+        scenario_data.ScenarioConstrainsData, Body(example=SCENARIO_CONSTRAINT_EXAMPLE)
+    ],
+) -> scenario_data.ScenarioConstrainsData:
+    return scenario_dao.update_constraints(project_id, adapter_id, constrains)
 
 
-@router.get("/info",
-              response_model=scenario_data.ScenarioInfoData,
-                )
-async def read_scenario_info(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    if not adapter.scenario_data:
-        raise HTTPException(404, "No scenario found.")
-    return adapter.scenario_data.info
+@router.get(
+    "/info",
+    response_model=scenario_data.ScenarioInfoData,
+    responses={
+        200: {
+            "description": "Sucessfully returned scenario info",
+            "content": {"application/json": {"example": SCENARIO_INFO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def get_scenario_info(project_id: str, adapter_id: str):
+    return scenario_dao.get_info(project_id, adapter_id)
 
-@router.put("/info")
-async def create_scenario_info(
+
+@router.put(
+    "/info",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated scenario info",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def update_scenario_info(
     project_id: str,
     adapter_id: str,
-    info: scenario_data.ScenarioInfoData,
-):
-    adapter = get_adapter(project_id, adapter_id)
-    return_string = ""
-    if not adapter.scenario_data:
-        adapter.scenario_data = scenario_data.ScenarioData(**scenario_data.ScenarioData.Config.schema_extra["example"]["value"])
-        return_string = "Initialized scenario with default values for scenario constrains, options and objectives."
-    adapter.scenario_data.info = info
-    return "Sucessfully created scenario info. " + return_string
+    info: Annotated[
+        scenario_data.ScenarioInfoData, Body(example=SCENARIO_INFO_EXAMPLE)
+    ],
+) -> scenario_data.ScenarioData:
+    return scenario_dao.update_info(project_id, adapter_id, info)
 
-@router.get("/options",
-                response_model=scenario_data.ScenarioOptionsData,
-                )
-async def read_scenario_options(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    if not adapter.scenario_data:
-        raise HTTPException(404, "No scenario found.")
-    return adapter.scenario_data.options
 
-@router.put("/options")
-async def create_scenario_options(
+@router.get(
+    "/options",
+    response_model=scenario_data.ScenarioOptionsData,
+    responses={
+        200: {
+            "description": "Sucessfully returned scenario options",
+            "content": {"application/json": {"example": SCENARIO_OPTIONS_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def get_scenario_options(project_id: str, adapter_id: str):
+    return scenario_dao.get_options(project_id, adapter_id)
+
+
+@router.put(
+    "/options",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated scenario options",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def update_scenario_options(
     project_id: str,
     adapter_id: str,
-    options: scenario_data.ScenarioOptionsData,
-):
-    adapter = get_adapter(project_id, adapter_id)
-    return_string = ""
-    if not adapter.scenario_data:
-        adapter.scenario_data = scenario_data.ScenarioData(**scenario_data.ScenarioData.Config.schema_extra["example"]["value"])
-        return_string = "Initialized scenario with default values for scenario constrains, info and objectives."
-    adapter.scenario_data.options = options
-    return "Sucessfully created scenario options. " + return_string
+    options: Annotated[
+        scenario_data.ScenarioOptionsData, Body(example=SCENARIO_OPTIONS_EXAMPLE)
+    ],
+) -> scenario_data.ScenarioData:
+    return scenario_dao.update_options(project_id, adapter_id, options)
 
 
-OBJECTIVES_LIST_EXAMPLE = [item for item in scenario_data.Objective.Config.schema_extra["examples"]]
+@router.get(
+    "/objectives",
+    response_model=List[scenario_data.Objective],
+    responses={
+        200: {
+            "description": "Sucessfully returned objectives",
+            "content": {"application/json": {"example": OBJECTIVES_LIST_EXAMPLE}},
+        },
+        404: {"description": "No objectives found"},
+    },
+)
+async def get_scenario_objectives(project_id: str, adapter_id: str):
+    return scenario_dao.get_objectives(project_id, adapter_id)
 
 
-@router.get("/objectives",
-                response_model=List[scenario_data.Objective],
-                responses={
-                    200: {
-                        "description": "Sucessfully returned objectives",
-                        "content": {
-                            "application/json": {
-                                "example": OBJECTIVES_LIST_EXAMPLE
-                    }
-                        },
-                    },
-                    404: {"description": "No objectives found"},
-                }
-                )
-async def read_scenario_objectives(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    if not adapter.scenario_data:
-        raise HTTPException(404, "No scenario found.")
-    return adapter.scenario_data.objectives   
-
-@router.put("/objectives")
-async def create_scenario_objectives(
+@router.put(
+    "/objectives",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated objectives",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def update_scenario_objectives(
     project_id: str,
     adapter_id: str,
-    objectives: Annotated[List[scenario_data.Objective], Body(example=OBJECTIVES_LIST_EXAMPLE)],
+    objectives: Annotated[
+        List[scenario_data.Objective], Body(example=OBJECTIVES_LIST_EXAMPLE)
+    ],
+) -> scenario_data.ScenarioData:
+    return scenario_dao.update_objectives(project_id, adapter_id, objectives)
+
+
+@router.post(
+    "/objectives/objective",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully added objective",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def create_scenario_objective(
+    project_id: str, adapter_id: str, objective: scenario_data.Objective
 ):
-    adapter = get_adapter(project_id, adapter_id)
-    return_string = ""
-    if not adapter.scenario_data:
-        adapter.scenario_data = scenario_data.ScenarioData(**scenario_data.ScenarioData.Config.schema_extra["example"]["value"])
-        return_string = "Initialized scenario with default values for scenario constrains, info and options."
-    adapter.scenario_data.objectives = objectives
-    return "Sucessfully created scenario objectives. " + return_string
+    return scenario_dao.add_objective(project_id, adapter_id, objective)
+
+
+@router.put(
+    "/objectives/objective",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully updated objectives",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def update_scenario_objective(
+    project_id: str, adapter_id: str, objective: scenario_data.Objective
+):
+    return scenario_dao.update_objective(project_id, adapter_id, objective)
+
+
+@router.delete(
+    "/objectives/objective/{objective_name}",
+    response_model=scenario_data.ScenarioData,
+    responses={
+        200: {
+            "description": "Sucessfully deleted objective",
+            "content": {"application/json": {"example": SCENARIO_EXAMPLE}},
+        },
+        404: {"description": "No scenario found"},
+    },
+)
+async def delete_scenario_objective(
+    project_id: str, adapter_id: str, objective_name: performance_indicators.KPIEnum
+):
+    return scenario_dao.delete_objective(project_id, adapter_id, objective_name)

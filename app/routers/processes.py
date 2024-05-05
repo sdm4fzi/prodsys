@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Body
 
 
 from prodsys.models import processes_data
-from app.dependencies import get_adapter, get_process
+from app.dao import process_dao
 
 PROCESSES_EXAMPLES = {
     "Production process": processes_data.ProductionProcessData.Config.schema_extra[
@@ -39,25 +39,28 @@ router = APIRouter(
         },
     },
 )
-async def read_processes(project_id: str, adapter_id: str):
-    adapter = get_adapter(project_id, adapter_id)
-    return adapter.process_data
+async def get_processes(project_id: str, adapter_id: str):
+    return process_dao.get_all(project_id, adapter_id)
 
 
-@router.put(
-    "/{process_id}",
+@router.post(
+    "/",
+    response_model=List[processes_data.PROCESS_DATA_UNION],
+    responses={
+        200: {
+            "description": "Sucessfully created process",
+            "content": {"application/json": {"examples": PROCESSES_EXAMPLES}},
+        }
+    },
 )
 async def create_process(
     project_id: str,
     adapter_id: str,
-    process_id,
-    process: Annotated[processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_EXAMPLES)],
-):
-    if process.ID != process_id:
-        raise HTTPException(404, "Process ID must not be changed")
-    adapter = get_adapter(project_id, adapter_id)
-    adapter.process_data.append(process)
-    return "Sucessfully created process with ID: " + process.ID
+    process: Annotated[
+        processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_LIST_EXAMPLE)
+    ],
+) -> processes_data.PROCESS_DATA_UNION:
+    return process_dao.add(project_id, adapter_id, process)
 
 
 @router.get(
@@ -70,6 +73,32 @@ async def create_process(
         }
     },
 )
-async def read_process(project_id: str, adapter_id: str, process_id: str):
-    process = get_process(project_id, adapter_id, process_id)
-    return process
+async def get_process(project_id: str, adapter_id: str, process_id: str):
+    return process_dao.get(project_id, adapter_id, process_id)
+
+
+@router.put(
+    "/{process_id}",
+    response_model=List[processes_data.PROCESS_DATA_UNION],
+    responses={
+        200: {
+            "description": "Sucessfully updated process",
+            "content": {"application/json": {"examples": PROCESSES_EXAMPLES}},
+        }
+    },
+)
+async def update_process(
+    project_id: str,
+    adapter_id: str,
+    process_id,
+    process: Annotated[
+        processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_LIST_EXAMPLE)
+    ],
+) -> processes_data.PROCESS_DATA_UNION:
+    return process_dao.update(project_id, adapter_id, process_id, process)
+
+
+@router.delete("/{process_id}", response_model=str)
+async def delete_process(project_id: str, adapter_id: str, process_id: str):
+    process_dao.delete(project_id, adapter_id, process_id)
+    return f"Succesfully deleted process with ID {process_id}."
