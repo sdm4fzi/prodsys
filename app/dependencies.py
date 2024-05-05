@@ -30,9 +30,6 @@ def get_backend() -> Backend:
 prodsys_backend = get_backend()
 runners: Dict[str, prodsys.runner.Runner] = {}
 
-def get_backend() -> Backend:
-    return prodsys_backend
-
 
 def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressReport:
     if adapter_id not in runners:
@@ -54,11 +51,6 @@ def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressRepo
         expected_total_time=round(expected_total_time, 2),
     )
 
-
-def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
-    # TODO: implement function that returns progress of optimization
-    return 0.5
-
 def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: int):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     adapter.seed = seed
@@ -73,6 +65,11 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
         prodsys_backend.update_performance(project_id, adapter_id, performance)
 
 
+def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
+    # TODO: implement function that returns progress of optimization
+    return 0.5
+
+
 def prepare_adapter_from_optimization(
     adapter_object: prodsys.adapters.JsonProductionSystemAdapter,
     project_id: str,
@@ -84,8 +81,11 @@ def prepare_adapter_from_optimization(
     adapter_object.scenario_data = origin_adapter.scenario_data
     adapter_object.ID = solution_id
 
+    prodsys_backend.create_adapter(project_id, adapter_object)
+
     project = prodsys_backend.get_project(project_id)
-    project.adapters[solution_id] = adapter_object
+    project.adapters.append(adapter_object)
+
 
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
@@ -96,10 +96,13 @@ def prepare_adapter_from_optimization(
     runner_object.run(run_length)
 
     performance = runner_object.get_performance_data()
+    project.performances[adapter_object.ID] = performance
     try:
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
+  
+    prodsys_backend.update_project(project_id, project)
 
 
 def get_configuration_results_adapter_from_filesystem(
