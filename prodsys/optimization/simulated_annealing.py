@@ -104,9 +104,8 @@ class SimulatedAnnealingHyperparameters(BaseModel):
 
     class Config:
         schema_extra = {
-            "example": {
-                "summary": "Simulated Annealing Hyperparameters",
-                "value": {
+            "examples": [ 
+            {
                     "seed": 0,
                     "Tmax": 10000,
                     "Tmin": 1,
@@ -114,7 +113,7 @@ class SimulatedAnnealingHyperparameters(BaseModel):
                     "updates": 300,
                     "number_of_seeds": 1,
                 },
-            }
+            ]
         }
 
 

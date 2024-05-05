@@ -1,4 +1,4 @@
-ARG APP_VERSION=0.6.0
+ARG APP_VERSION=0.6.1
 
 FROM python:3.11-slim
 
@@ -9,7 +9,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock /app/
 
 # Install dependencies using Poetry
-RUN pip install prodsys==0.6.0
+RUN pip install prodsys==0.6.1
 
 
 
@@ -17,4 +17,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["python", "app.py", "fastapi=linux"]
+CMD ["uvicorn", "prodsys_api:app", "--host",  "0.0.0.0", "--port", "8000"]
