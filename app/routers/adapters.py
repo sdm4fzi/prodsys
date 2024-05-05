@@ -13,12 +13,11 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get(
-    "/",
-    response_model=Dict[str, JsonProductionSystemAdapter]
-)
+
+@router.get("/", response_model=Dict[str, JsonProductionSystemAdapter])
 async def get_adapters(project_id: str) -> List[JsonProductionSystemAdapter]:
     return prodsys_backend.get_adapters(project_id)
+
 
 @router.post("/", response_model=JsonProductionSystemAdapter)
 async def create_adapter(

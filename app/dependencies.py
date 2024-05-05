@@ -73,49 +73,6 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
         prodsys_backend.update_performance(project_id, adapter_id, performance)
 
 
-
-# TODO: delete below get requests after implementing daos
-
-def get_queue_from_backend(project_id: str, adapter_id: str, queue_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for queue_data in adapter.queue_data:
-        if queue_data.ID == queue_id:
-            return queue_data
-    raise HTTPException(404, "Queue not found")
-
-def get_resource_from_backend(project_id: str, adapter_id: str, resource_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for resource in adapter.resource_data:
-        if resource.ID == resource_id:
-            return resource
-    raise HTTPException(
-        404,
-        f"Resource {resource_id} not found in adapter {adapter_id} for project {project_id}",
-    )
-
-def get_sink_from_backend(project_id: str, adapter_id: str, sink_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for sink in adapter.sink_data:
-        if sink.ID == sink_id:
-            return sink
-    raise HTTPException(404, "Sink not found")
-
-def get_source_from_backend(project_id: str, adapter_id: str, source_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for source in adapter.source_data:
-        if source.ID == source_id:
-            return source
-    raise HTTPException(404, "Source not found")
-
-def get_state_from_backend(project_id: str, adapter_id: str, state_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    for state in adapter.state_data:
-        if state.ID == state_id:
-            return state
-    raise HTTPException(404, "State not found")
-
-
-
 def prepare_adapter_from_optimization(
     adapter_object: prodsys.adapters.JsonProductionSystemAdapter,
     project_id: str,

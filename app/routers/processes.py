@@ -40,7 +40,7 @@ router = APIRouter(
     },
 )
 async def get_processes(project_id: str, adapter_id: str):
-    return process_dao.get_processes_from_backend(project_id, adapter_id)
+    return process_dao.get_all(project_id, adapter_id)
 
 
 @router.post(
@@ -60,7 +60,7 @@ async def create_process(
         processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_LIST_EXAMPLE)
     ],
 ) -> processes_data.PROCESS_DATA_UNION:
-    return process_dao.add_process_to_backend(project_id, adapter_id, process)
+    return process_dao.add(project_id, adapter_id, process)
 
 
 @router.get(
@@ -74,7 +74,7 @@ async def create_process(
     },
 )
 async def get_process(project_id: str, adapter_id: str, process_id: str):
-    return process_dao.get_process_from_backend(project_id, adapter_id, process_id)
+    return process_dao.get(project_id, adapter_id, process_id)
 
 
 @router.put(
@@ -95,12 +95,10 @@ async def update_process(
         processes_data.PROCESS_DATA_UNION, Body(examples=PROCESSES_LIST_EXAMPLE)
     ],
 ) -> processes_data.PROCESS_DATA_UNION:
-    return process_dao.update_process_in_backend(
-        project_id, adapter_id, process_id, process
-    )
+    return process_dao.update(project_id, adapter_id, process_id, process)
 
 
 @router.delete("/{process_id}", response_model=str)
 async def delete_process(project_id: str, adapter_id: str, process_id: str):
-    process_dao.delete_process_from_backend(project_id, adapter_id, process_id)
+    process_dao.delete(project_id, adapter_id, process_id)
     return f"Succesfully deleted process with ID {process_id}."

@@ -43,7 +43,7 @@ router = APIRouter(
     },
 )
 async def get_time_models(project_id: str, adapter_id: str):
-    return time_model_dao.get_time_models_from_backend(project_id, adapter_id)
+    return time_model_dao.get_all(project_id, adapter_id)
 
 
 @router.post(
@@ -63,7 +63,7 @@ async def create_time_model(
         time_model_data.TIME_MODEL_DATA, Body(examples=TIME_MODEL_LIST_EXAMPLE)
     ],
 ):
-    return time_model_dao.add_time_model_to_backend(project_id, adapter_id, time_model)
+    return time_model_dao.add(project_id, adapter_id, time_model)
 
 
 @router.get(
@@ -78,9 +78,7 @@ async def create_time_model(
     },
 )
 async def get_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    return time_model_dao.get_time_model_from_backend(
-        project_id, adapter_id, time_model_id
-    )
+    return time_model_dao.get(project_id, adapter_id, time_model_id)
 
 
 @router.put(
@@ -102,12 +100,10 @@ async def update_time_model(
         time_model_data.TIME_MODEL_DATA, Body(examples=TIME_MODEL_LIST_EXAMPLE)
     ],
 ):
-    return time_model_dao.update_time_model_in_backend(
-        project_id, adapter_id, time_model_id, time_model
-    )
+    return time_model_dao.update(project_id, adapter_id, time_model_id, time_model)
 
 
-@router.delete("/{time_model_id}")
+@router.delete("/{time_model_id}", response_model=str)
 async def delete_time_model(project_id: str, adapter_id: str, time_model_id: str):
-    time_model_dao.delete_time_model_from_backend(project_id, adapter_id, time_model_id)
+    time_model_dao.delete(project_id, adapter_id, time_model_id)
     return f"Succesfully deleted time model with ID {time_model_id}"
