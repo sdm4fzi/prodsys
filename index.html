@@ -251,6 +251,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-prodsys-as-a-webserver-with-rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run prodsys as a webserver with REST API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#contributing" class="md-nav__link">
     <span class="md-ellipsis">
       Contributing
@@ -710,6 +719,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#run-prodsys-as-a-webserver-with-rest-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Run prodsys as a webserver with REST API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#contributing" class="md-nav__link">
     <span class="md-ellipsis">
       Contributing
@@ -758,7 +776,8 @@
 <p><img alt="Build-sucess" src="https://img.shields.io/badge/build-success-green" />
 <img alt="PyPI" src="https://img.shields.io/pypi/v/prodsys" />
 <img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/prodsys" />
-<img alt="Docu" src="https://img.shields.io/badge/docu-full-green" /></p>
+<img alt="Docu" src="https://img.shields.io/badge/docu-full-green" />
+<a href="https://doi.org/10.5281/zenodo.10995273"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg" /></a></p>
 <p>prodsys is a python package for modeling, simulating and optimizing production systems based on the product, process and resource (PPR) modelling principle. </p>
 <h2 id="installation">Installation</h2>
 <p>To install the package, run the following command in the terminal:</p>
@@ -815,6 +834,15 @@
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nb">print</span><span class="p">(</span><span class="n">wip</span><span class="p">)</span>
 </span></code></pre></div>
 <p>These examples only cover the most basic functionalities of <code>prodsys</code>. For more elaborate guides that guide you through more of the package's features, please see the <a href="Tutorials/tutorial_0_overview/">tutorials</a>. For a complete overview of the package's functionality, please see the <a href="API_reference/API_reference_0_overview/">API reference</a>.</p>
+<h2 id="run-prodsys-as-a-webserver-with-rest-api">Run prodsys as a webserver with REST API</h2>
+<p>prodsys cannot only be used as a python package, but can also be used as a webserver by interacting with its REST API. All features of prodsys are also available in the API and allow easy integration of prodsys in operative IT architectures. </p>
+<p>The API is based on the <a href="https://fastapi.tiangolo.com/">FastAPI</a> framework and utilizes the models API of prodsys. To use prodsys as a webserver, you can use the official docker image which can be obtained from dockerhub:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>sebbehrendt/prodsys
+</span></code></pre></div>
+<p>To start the API, run the following command:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>sebbehrendt/prodsys
+</span></code></pre></div>
+<p>The API documentation is then available at <code>http://localhost:8000/docs</code>. </p>
 <h2 id="contributing">Contributing</h2>
 <p><code>prodsys</code> is a new project and has therefore much room for improvement. Therefore, it would be a pleasure to get feedback or support! If you want to contribute to the package, either create issues on <a href="https://github.com/sdm4fzi/prodsys">prodsys' github page</a> for discussing new features or contact me directly via <a href="https://github.com/SebBehrendt">github</a> or <a href="mailto:sebastian.behrendt@kit.edu">email</a>.</p>
 <h2 id="license">License</h2>
