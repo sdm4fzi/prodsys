@@ -2,10 +2,11 @@ from typing import List, Annotated
 
 
 from fastapi import APIRouter, HTTPException, Body
+from regex import P
 
 
 from prodsys.models import resource_data
-from app.dependencies import prodsys_backend, get_resource_from_backend
+from app.dao import resources_dao
 
 RESOURCE_EXAMPLES = {
     "Production Resource": resource_data.ProductionResourceData.Config.schema_extra[
@@ -17,6 +18,12 @@ RESOURCE_EXAMPLES = {
 }
 
 RESOURCE_LIST_EXAMPLE = [item["value"] for item in RESOURCE_EXAMPLES.values()]
+PRODUCTION_RESOURCE_LIST_EXAMPLE = [
+    resource_data.ProductionResourceData.Config.schema_extra["example"]["value"]
+]
+TRANSPORT_RESOURCE_LIST_EXAMPLE = [
+    resource_data.TransportResourceData.Config.schema_extra["example"]["value"]
+]
 
 
 router = APIRouter(
@@ -38,8 +45,41 @@ router = APIRouter(
     },
 )
 async def get_all_resources(project_id: str, adapter_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    return adapter.resource_data
+    return resources_dao.get_all(project_id, adapter_id)
+
+
+@router.get(
+    "/production_resources",
+    response_model=List[resource_data.ProductionResourceData],
+    responses={
+        200: {
+            "description": "Sucessfully returned production resources",
+            "content": {
+                "application/json": {"example": PRODUCTION_RESOURCE_LIST_EXAMPLE}
+            },
+        },
+        404: {"description": "No resources found"},
+    },
+)
+async def get_all_production_resources(project_id: str, adapter_id: str):
+    return resources_dao.get_production_resources(project_id, adapter_id)
+
+
+@router.get(
+    "/transport_resources",
+    response_model=List[resource_data.TransportResourceData],
+    responses={
+        200: {
+            "description": "Sucessfully returned transport resources",
+            "content": {
+                "application/json": {"example": TRANSPORT_RESOURCE_LIST_EXAMPLE}
+            },
+        },
+        404: {"description": "No resources found"},
+    },
+)
+async def get_all_transport_resources(project_id: str, adapter_id: str):
+    return resources_dao.get_transport_resources(project_id, adapter_id)
 
 
 @router.post(
@@ -59,11 +99,7 @@ async def create_resource(
         resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_LIST_EXAMPLE)
     ],
 ) -> resource_data.RESOURCE_DATA_UNION:
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    # TODO: only add resource if it does not exist, else raise error
-    adapter.resource_data.append(resource)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return resource
+    return resources_dao.add(project_id, adapter_id, resource)
 
 
 @router.get(
@@ -78,8 +114,7 @@ async def create_resource(
     },
 )
 async def get_resource(project_id: str, adapter_id: str, resource_id: str):
-    resource = get_resource_from_backend(project_id, adapter_id, resource_id)
-    return resource
+    return resources_dao.get(project_id, adapter_id, resource_id)
 
 
 @router.put(
@@ -93,19 +128,10 @@ async def update_resource(
         resource_data.RESOURCE_DATA_UNION, Body(examples=RESOURCE_EXAMPLES)
     ],
 ) -> resource_data.RESOURCE_DATA_UNION:
-    if resource.ID != resource_id:
-        raise HTTPException(404, "Resource ID must not be changed")
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)#
-    # TODO: make update of resource possible and update to backend
-    adapter.resource_data.append(resource)
-    return resource
+    return resources_dao.update(project_id, adapter_id, resource_id, resource)
 
-@router.delete(
-    "/{resource_id}",
-)
+
+@router.delete("/{resource_id}", response_model=str)
 async def delete_resource(project_id: str, adapter_id: str, resource_id: str):
-    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    resource = get_resource_from_backend(project_id, adapter_id, resource_id)
-    adapter.resource_data.remove(resource)
-    prodsys_backend.update_adapter(project_id, adapter)
-    return "Sucessfully deleted resource with ID: " + resource_id
+    resources_dao.delete(project_id, adapter_id, resource_id)
+    return f"Succesfully deleted resource with ID {resource_id}"

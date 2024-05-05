@@ -13,11 +13,16 @@ from prodsys.optimization import (
     math_opt,
     optimization_analysis,
 )
-from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters, optimize_configuration
-from prodsys.models import (
-    performance_indicators
+from prodsys.optimization.evolutionary_algorithm import (
+    EvolutionaryAlgorithmHyperparameters,
+    optimize_configuration,
 )
-from app.dependencies import prodsys_backend, prepare_adapter_from_optimization, get_configuration_results_adapter_from_filesystem
+from prodsys.models import performance_indicators
+from app.dependencies import (
+    prodsys_backend,
+    prepare_adapter_from_optimization,
+    get_configuration_results_adapter_from_filesystem,
+)
 
 
 router = APIRouter(
@@ -28,10 +33,13 @@ router = APIRouter(
 
 HYPERPARAMETER_EXAMPLES = [
     EvolutionaryAlgorithmHyperparameters.Config.schema_extra["examples"][0],
-    simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra["examples"][0],
+    simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra[
+        "examples"
+    ][0],
     tabu_search.TabuSearchHyperparameters.Config.schema_extra["examples"][0],
     math_opt.MathOptHyperparameters.Config.schema_extra["examples"][0],
 ]
+
 
 @router.post(
     "/",
@@ -40,12 +48,15 @@ HYPERPARAMETER_EXAMPLES = [
 async def optimize(
     project_id: str,
     adapter_id: str,
-    hyper_parameters: Annotated[Union[
-        EvolutionaryAlgorithmHyperparameters,
-        simulated_annealing.SimulatedAnnealingHyperparameters,
-        tabu_search.TabuSearchHyperparameters,
-        math_opt.MathOptHyperparameters,
-    ], Body(examples=HYPERPARAMETER_EXAMPLES)],
+    hyper_parameters: Annotated[
+        Union[
+            EvolutionaryAlgorithmHyperparameters,
+            simulated_annealing.SimulatedAnnealingHyperparameters,
+            tabu_search.TabuSearchHyperparameters,
+            math_opt.MathOptHyperparameters,
+        ],
+        Body(examples=HYPERPARAMETER_EXAMPLES),
+    ],
 ):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
@@ -60,9 +71,7 @@ async def optimize(
     adapter.write_scenario_data(scenario_file_path)
 
     # TODO: move this to background task
-    if isinstance(
-        hyper_parameters, EvolutionaryAlgorithmHyperparameters
-    ):
+    if isinstance(hyper_parameters, EvolutionaryAlgorithmHyperparameters):
         optimization_func = optimize_configuration
     elif isinstance(
         hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters

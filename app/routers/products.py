@@ -28,7 +28,7 @@ router = APIRouter(
     },
 )
 async def get_products(project_id: str, adapter_id: str):
-    return product_dao.get_products_from_backend(project_id, adapter_id)
+    return product_dao.get_all(project_id, adapter_id)
 
 
 @router.post(
@@ -40,7 +40,7 @@ async def create_product(
     adapter_id: str,
     product: Annotated[product_data.ProductData, Body(examples=PRODUCT_LIST_EXAMPLE)],
 ) -> product_data.ProductData:
-    return product_dao.add_product_to_backend(project_id, adapter_id, product)
+    return product_dao.add(project_id, adapter_id, product)
 
 
 @router.get(
@@ -55,7 +55,7 @@ async def create_product(
     },
 )
 async def get_product(project_id: str, adapter_id: str, product_id: str):
-    return product_dao.get_product_from_backend(project_id, adapter_id, product_id)
+    return product_dao.get(project_id, adapter_id, product_id)
 
 
 @router.put("/{product_id}", response_model=product_data.ProductData)
@@ -65,12 +65,10 @@ async def update_product(
     product_id: str,
     product: Annotated[product_data.ProductData, Body(examples=PRODUCT_LIST_EXAMPLE)],
 ) -> product_data.ProductData:
-    return product_dao.update_product_in_backend(
-        project_id, adapter_id, product_id, product
-    )
+    return product_dao.update(project_id, adapter_id, product_id, product)
 
 
 @router.delete("/{product_id}", response_model=str)
 async def delete_product(project_id: str, adapter_id: str, product_id: str) -> str:
-    product_dao.delete_product_from_backend(project_id, adapter_id, product_id)
+    product_dao.delete(project_id, adapter_id, product_id)
     return f"Deleted product with ID {product_id}"

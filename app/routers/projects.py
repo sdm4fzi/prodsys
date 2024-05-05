@@ -13,10 +13,8 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.get(
-    "/",
-    response_model=List[Project]
-)
+
+@router.get("/", response_model=List[Project])
 async def get_all_projects() -> List[Project]:
     return prodsys_backend.get_projects()
 
