@@ -1,6 +1,3 @@
-
-
-
 from pydantic import BaseModel
 
 

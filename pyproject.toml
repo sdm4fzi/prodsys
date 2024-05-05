@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prodsys"
-version = "0.6.0"
+version = "0.6.1"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
 license = "MIT"
