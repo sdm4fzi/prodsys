@@ -10,13 +10,16 @@ from prodsys.models import (
 )
 
 TIME_MODEL_EXAMPLES = {
-    "Sequential time model": time_model_data.SequentialTimeModelData.Config.schema_extra[
+    "Sample time model": time_model_data.SampleTimeModelData.Config.schema_extra[
+        "example"
+    ],
+    "Scheduled time model": time_model_data.ScheduledTimeModelData.Config.schema_extra[
         "example"
     ],
     "Functional time model": time_model_data.FunctionTimeModelData.Config.schema_extra[
         "example"
     ],
-    "Manhattan Distance time model": time_model_data.ManhattanDistanceTimeModelData.Config.schema_extra[
+    "Distance time model": time_model_data.DistanceTimeModelData.Config.schema_extra[
         "example"
     ],
 }

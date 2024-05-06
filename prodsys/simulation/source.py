@@ -81,7 +81,13 @@ class Source(BaseModel):
             Generator: Yields when a product is created or when a product is put in an output queue.
         """
         while True:
-            yield self.env.timeout(self.time_model.get_next_time())
+            inter_arrival_time = self.time_model.get_next_time()
+            if inter_arrival_time <= 0:
+                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Inter arrival time is less than or equal to 0. Stopping source."})
+                break
+            yield self.env.timeout(
+                inter_arrival_time
+            )
             product = self.product_factory.create_product(
                 self.product_data, self.router
             )

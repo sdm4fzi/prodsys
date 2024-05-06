@@ -10,7 +10,7 @@ welding_time_model = prodsys.time_model_data.FunctionTimeModelData(
     scale=0.0
 )
 
-transport_time_model = prodsys.time_model_data.ManhattanDistanceTimeModelData(
+transport_time_model = prodsys.time_model_data.DistanceTimeModelData(
     ID="time model 2",
     description="Time model 2 is create!",
     speed=5.0,
@@ -113,6 +113,9 @@ runner = prodsys.runner.Runner(adapter=production_system)
 runner.initialize_simulation()
 runner.run(100000)
 
+from prodsys.util import post_processing
+
+post_processing.WARM_UP_CUT_OFF = 0
 
 runner.print_results()
 

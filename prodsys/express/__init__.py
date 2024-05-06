@@ -21,7 +21,10 @@ The following modules are available:
 
 """
 from prodsys.express.time_model import (
+    SampleTimeModel,
+    ScheduledTimeModel,
     FunctionTimeModel,
+    DistanceTimeModel,
     SequentialTimeModel,
     ManhattanDistanceTimeModel,
 )
