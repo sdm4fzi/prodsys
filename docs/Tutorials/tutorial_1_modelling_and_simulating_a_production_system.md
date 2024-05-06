@@ -29,6 +29,7 @@ sim.VERBOSE = 0
 ## Time models
 
 `prodsys` provides different types of time models to use, the are:
+
 - **FunctionTimeModel**: A time model that is based on a distribution function. Either constant, normal, lognormal or exponential.
 - **SampleTimeModel**: A time model that is based on a sequence of time values that are randomly sampled.
 - **ScheduledTimeModel**: A time model that is based on a schedule of time values. The schedule can contain relative or absulte time values. Also the schedule can be executed once or multiple times in a cycle.
