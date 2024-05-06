@@ -7,7 +7,7 @@ t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
 p1 = psx.ProductionProcess(t1, "p1")
 p2 = psx.ProductionProcess(t2, "p2")
 
-t3 = psx.ManhattanDistanceTimeModel(speed=180, reaction_time=0.1, ID="t3")
+t3 = psx.DistanceTimeModel(speed=180, reaction_time=0.1, ID="t3")
 
 tp = psx.TransportProcess(t3, "tp")
 

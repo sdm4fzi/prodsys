@@ -1,6 +1,6 @@
 import prodsys.express as psx
 
-time_model_agv = psx.ManhattanDistanceTimeModel(
+time_model_agv = psx.DistanceTimeModel(
     speed=90, reaction_time=0.2, ID="time_model_x"
 )
 

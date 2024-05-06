@@ -29,20 +29,22 @@ sim.VERBOSE = 0
 ## Time models
 
 `prodsys` provides different types of time models to use, the are:
-
 - **FunctionTimeModel**: A time model that is based on a distribution function. Either constant, normal, lognormal or exponential.
-- **SequenceTimeModel**: A time model that is based on a sequence of time values that are randomly sampled.
-- **ManhattanDistanceTimeMOdel**: A time model that is based on the manhattan distance between two locations and a constant speed and reaction time.
+- **SampleTimeModel**: A time model that is based on a sequence of time values that are randomly sampled.
+- **ScheduledTimeModel**: A time model that is based on a schedule of time values. The schedule can contain relative or absulte time values. Also the schedule can be executed once or multiple times in a cycle.
+- **DistanceTimeMOdel**: A time model that is based on th distance between two locations and a constant speed and reaction time. Manhattan distance or Euclidian distance can be used as distance metrics between the points.
 
-We will use the `FunctionTimeModel` to model the time required for milling and turning processes and model the time needed for transport with the `ManhattanDistanceTimeModel`. We will also model the arrival of housings with the `SequentialTimeModel`, which could, e.g. be observed inter-arrival times:
+We will use the `FunctionTimeModel` to model the time required for milling and turning processes and model the time needed for transport with the `DistanceTimeModel`. We will also model the arrival of housings with the `ScheduledTimeModel`, which could, e.g. be observed inter-arrival times:
 
 ```python
 milling_time = psx.FunctionTimeModel(distribution_function="normal", location=1, scale=0.1, ID="milling_time")
 turning_time = psx.FunctionTimeModel(distribution_function="normal", location=0.5, scale=0.1, ID="turning_time")
-transport_time = psx.ManhattanDistanceTimeModel(speed=200, reaction_time=0.05, ID="transport_time")
-arrival_time_of_housing_1 = psx.SequentialTimeModel([1.6, 1.3, 1.8, 2.0, 1.2, 1.7, 1.3], ID="arrival_time_of_housings")
-arrival_time_of_housing_2 = psx.SequentialTimeModel([1.3, 2.3, 2.1, 2.0, 1.4], ID="arrival_time_of_housings")
+transport_time = psx.DistanceTimeModel(speed=200, reaction_time=0.05, metric="manhattan", ID="transport_time")
+arrival_time_of_housing_1 = psx.ScheduledTimeModel([1.6, 1.3, 1.8, 2.0, 1.2, 1.7, 1.3], absolute=False, cyclic=True, ID="arrival_time_of_housings")
+arrival_time_of_housing_2 = psx.ScheduledTimeModel([1.3, 2.3, 2.1, 2.0, 1.4], absolute=False, cyclic=True, ID="arrival_time_of_housings")
 ```
+
+Note, the `ManhattanDistanceTimeModel` and the `SequentialTimeModel` are deprecated. The `ManhattanDistanceTimeModel` is replaced by the `DistanceTimeModel` and the `SequentialTimeModel` is replaced by the `SampleTimeModel`.
 
 ## Processes
 

@@ -42,9 +42,9 @@
             "batch_size": 100
         },
         {
-            "ID": "sequential_time_model_1",
-            "description": "Sequential time model",
-            "sequence": [
+            "ID": "sample_time_model_1",
+            "description": "Sample time model",
+            "samples": [
                 25.0,
                 13.0,
                 15.0,
@@ -58,7 +58,8 @@
             "ID": "manhattan_time_model_1",
             "description": "manhattan time model with speed 180 m/min = 3 m/s",
             "speed": 30.0,
-            "reaction_time": 0.15
+            "reaction_time": 0.15,
+            "metric": "manhattan"
         },
         {
             "ID": "function_time_model_7",

@@ -10,7 +10,8 @@ The following time models are possible:
 
 from __future__ import annotations
 from hashlib import md5
-from typing import List, Union
+from typing import List, Literal, Union
+from typing_extensions import deprecated
 from enum import Enum
 
 from pydantic import Field
@@ -23,16 +24,30 @@ class TimeModelEnum(str, Enum):
     """
     Enum that represents the different kind time models.
 
-    - HistoryTimeModel: A time model that is based on a sequence of values.
     - FunctionTimeModel: A time model that is based on a distribution function which gets sampled.
-    - ManhattanDistanceTimeModel: A time model that is based on the manhattan distance between two nodes and a constant velocity.
+    - SampleTimeModel: A time model that samples values from a provided data set by random choice of a sample element.
+    - ScheduledTimeModel: A time model that is based on a schedule of timely values. Should only be used for arrival time models of sources.
+    - DistanceTimeModel: A time model that is based on the distance between two nodes and a constant velocity and a distance metric.
+    - SequentialTimeModel: A time model that is based on a sequence of values. Deprecated, use SampleTimeModel instead.
+    - ManhattanDistanceTimeModel: A time model that is based on the manhattan distance between two nodes and a constant velocity. Deprecated, use DistanceTimeModel instead.
     """
 
-    HistoryTimeModel = "HistoryTimeModel"
     FunctionTimeModel = "FunctionTimeModel"
+    SampleTimeModel = "SampleTimeModel"
+    ScheduledTimeModel = "ScheduledTimeModel"
+    DistanceTimeModel = "DistanceTimeModel"
+    # TODO: remove in the future
+    SequentialTimeModel = "SequentialTimeModel"
     ManhattanDistanceTimeModel = "ManhattanDistanceTimeModel"
 
 
+
+
+@deprecated(
+    'prodsys SequentialTimeModelData is deprecated and will be removed in the future. '
+    'Use prodsys.models.time_model_data.SampleTimeModel instead.',
+    category=None,
+)
 class SequentialTimeModelData(CoreAsset):
     """
     Class that represents a time model that is based on a sequence of values.
@@ -73,6 +88,104 @@ class SequentialTimeModelData(CoreAsset):
                     "ID": "sequence_time_model_1",
                     "description": "Examplary sequence time model",
                     "sequence": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+                },
+            }
+        }
+
+
+class SampleTimeModelData(CoreAsset):
+    """
+    Class that represents a time model that samples values from a provided data set by random choice of a sample element.
+
+    Args:
+        ID (str): ID of the time model.
+        description (str): Description of the time model.
+        samples (List[float]): List of sample time values.
+
+    Examples:
+        Sample time model with 7 time values:
+        ```	py
+        import prodsys
+        prodsys.time_model_data.SampleTimeModelData(
+            ID="sample_time_model_1",
+            description="Examplary sample time model",
+            samples=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+        )
+        ```
+    """
+
+    samples: List[float]
+
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its samples. Can be used to compare time models for equal functionality.
+
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, self.samples)])).encode("utf-8")).hexdigest()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Sample time model",
+                "value": {
+                    "ID": "sample_time_model_1",
+                    "description": "Examplary sample time model",
+                    "samples": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+                },
+            }
+        }
+
+
+class ScheduledTimeModelData(CoreAsset):
+    """
+    Class that represents a time model that is based on a schedule of timely values. Should only be used for arrival time models of sources.
+
+    Args:
+        ID (str): ID of the time model.
+        description (str): Description of the time model.
+        schedule (List[float]): Schedule of time values.
+        absolute (bool): If the schedule contains absolute time values in simulation time or relative time differences. Default is False.
+        cyclic (bool): If the schedule should be repeated cyclically. If False, the time model does not return any values after the schedule is exhausted. Default is False.
+
+    Examples:
+        Scheduled time model with 7 time values:
+        ```	py
+        import prodsys
+        prodsys.time_model_data.ScheduledTimeModelData(
+            ID="scheduled_time_model_1",
+            description="Examplary scheduled time model",
+            schedule=[3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0],
+            absolute=True,
+            cyclic=False
+        )
+        ```
+    """
+
+    schedule: List[float]
+    absolute: bool
+    cyclic: bool = False
+
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its schedule and boolean values. Can be used to compare time models for equal functionality.
+
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, self.schedule)] + [*map(str, [self.absolute, self.cyclic])])).encode("utf-8")).hexdigest()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Scheduled time model",
+                "value": {
+                    "ID": "scheduled_time_model_1",
+                    "description": "Examplary scheduled time model",
+                    "schedule": [3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0],
+                    "absolute": True,
+                    "cyclic": False
                 },
             }
         }
@@ -121,6 +234,7 @@ class FunctionTimeModelData(CoreAsset):
                 },
             }
         }
+    
     def hash(self) -> str:
         """
         Returns a unique hash for the time model considering its distribution function, location and scale. Can be used to compare time models for equal functionality.
@@ -130,6 +244,10 @@ class FunctionTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, [self.distribution_function, self.location, self.scale])])).encode("utf-8")).hexdigest()
     
+@deprecated(
+    'prodsys ManhattanDistanceTimeModelData is deprecated and will be removed in the future. Use instead the prodsys.models.time_model_data.DistanceTimeModelData.',
+    category=None,
+)
 class ManhattanDistanceTimeModelData(CoreAsset):
     """
     Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.
@@ -178,6 +296,59 @@ class ManhattanDistanceTimeModelData(CoreAsset):
         }
 
 
+class DistanceTimeModelData(CoreAsset):
+    """
+    Class that represents a time model that is based on the distance between two nodes and a constant velocity.
+    The distance is calculated based on the metric provided.
+
+    Args:
+        ID (str): ID of the time model.
+        description (str): Description of the time model.
+        speed (float): Speed of the transport.
+        reaction_time (float): Reaction time of the transport.
+        metric (Literal["manhattan", "euclidian"]): Metric to calculate the distance. Default is "manhattan".
+
+    Examples:
+        Distance time model with speed 180 m/min = 3 m/s and reaction time 0.15 minutes:
+        ``` py
+        import prodsys
+        time_model_data.DistanceTimeModelData(
+            ID="distance_time_model_1",
+            description="distance time model with speed 180 m/min = 3 m/s",
+            speed=180.0,
+            reaction_time=0.15,
+            metric="manhattan",
+        )
+    """
+
+    speed: float
+    reaction_time: float
+    metric: Literal["manhattan", "euclidian"] = "manhattan"
+
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its speed and reaction time. Can be used to compare time models for equal functionality.
+
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, [self.speed, self.reaction_time, self.metric])])).encode("utf-8")).hexdigest()
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Distance time model",
+                "value": {
+                    "ID": "distance_time_model_1",
+                    "description": "distance time model with speed 180 m/min = 3 m/s",
+                    "speed": 30.0,
+                    "reaction_time": 0.15,
+                    "metric": "manhattan",
+                },
+            }
+        }
+
+
 TIME_MODEL_DATA = Union[
-    SequentialTimeModelData, ManhattanDistanceTimeModelData, FunctionTimeModelData
+    FunctionTimeModelData, SampleTimeModelData, ScheduledTimeModelData, DistanceTimeModelData, SequentialTimeModelData, ManhattanDistanceTimeModelData, 
 ]

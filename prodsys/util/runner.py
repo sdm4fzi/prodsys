@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import random
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import time
