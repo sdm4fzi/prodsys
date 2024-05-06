@@ -8,7 +8,7 @@ from prodsys.simulation import sim
 # Define the path to your test configuration file. This should be similar to example_simulation.py.
 @pytest.fixture
 def simulation_adapter() -> JsonProductionSystemAdapter:
-    time_model_agv = psx.ManhattanDistanceTimeModel(
+    time_model_agv = psx.DistanceTimeModel(
         speed=90, reaction_time=0.2, ID="time_model_x"
     )
 
