@@ -75,8 +75,7 @@ class RouteFinder:
         Processes the given links to create (Graph)-edges for the graph.
 
         Args:
-            request (TransportResquest): The transportation request.
-            given_links_list: The given links list.
+            links (List[List[Locatable]]): The links as a list of lists of locatable objects.
 
         Returns:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
@@ -96,9 +95,7 @@ class RouteFinder:
         Creates a list of links and edges.
 
         Args:
-            link (list): A list of nodes.
-            link_edge (list): A list to store the link edges.
-            graphnode_edge (list): A list to store the graph node edges.
+            link (List[Locatable]): The link as a list of two locatable objects.
 
         Returns:
             Tuple[GraphNode, GraphNode]: A tuple containing the origin and target nodes for a link.
@@ -115,7 +112,7 @@ class RouteFinder:
         Gets an existing graph node for a Locatable.
 
         Args:
-            locatable (Locatable): The locatable object.
+            locatable (Locatable): The locatable object to get the graph node for.
 
         Returns:
             Optional[GraphNode, None]: The graph node or None.
@@ -129,7 +126,7 @@ class RouteFinder:
         Creates a graph node for a locatable.
 
         Args:
-            locatable (Locatable): The locatable.
+            locatable (Locatable): The locatable to create the graph node for.
 
         Returns:
             GraphNode: The graph node.
