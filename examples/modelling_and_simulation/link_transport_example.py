@@ -3,7 +3,7 @@ import prodsys
 
 
 # all time models
-time_model_agv = psx.ManhattanDistanceTimeModel(
+time_model_agv = psx.DistanceTimeModel(
     speed=360, reaction_time=0, ID="time_model_x"
 )
 time_model_machine1 = psx.FunctionTimeModel(

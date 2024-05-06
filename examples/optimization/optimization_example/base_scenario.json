@@ -117,7 +117,8 @@
             "ID": "md1",
             "description": "manhattan time model 1",
             "speed": 60.0,
-            "reaction_time": 0.033
+            "reaction_time": 0.033,
+            "metric": "manhattan"
         }
     ],
     "state_data": [

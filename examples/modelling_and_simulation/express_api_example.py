@@ -2,11 +2,11 @@ import prodsys.express as psx
 import prodsys
 
 tm1 = psx.FunctionTimeModel("normal", 20.0, 5.0)
-tm2 = psx.SequentialTimeModel([10.0, 20.0, 30.0])
-tm3 = psx.ManhattanDistanceTimeModel(10, 0.2)
+tm2 = psx.SampleTimeModel([10.0, 20.0, 30.0])
+tm3 = psx.DistanceTimeModel(10, 0.2)
 
 bm1 = psx.FunctionTimeModel("exponential", 500.0)
-bm2 = psx.SequentialTimeModel([10.0, 20.0, 30.0])
+bm2 = psx.SampleTimeModel([10.0, 20.0, 30.0])
 
 
 p1 = psx.ProductionProcess(tm1)
