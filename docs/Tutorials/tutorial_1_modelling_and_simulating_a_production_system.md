@@ -10,7 +10,7 @@ In this example we explore the modeling functionalities of `prodsys`. In `prodsy
 - **Sinks**: Sinks store finished products.
 - **Production system**: The production system is the container for all components and is used to run the simulation.
 
-To make these concepts more understandable, we extend the example from the [getting started](/index.md) section. The production system contains a milling machine, a turning lath and a work center that perform processes on aluminium housings. The transport is thereby performed by a worker.
+To make these concepts more understandable, we extend the example from the [getting started](../index.md) section. The production system contains a milling machine, a turning lath and a work center that perform processes on aluminium housings. The transport is thereby performed by a worker.
 
 We will start by importing the express API:
 
@@ -175,4 +175,4 @@ model_production_system = production_system.to_model()
 print(model_production_system.process_data[0])
 ```
 
-For now, the express API allows all modeling features as the models API but the creation of products that require processes in a sequence according to an assembly precedence graph. This feature is only available in the models API. For more information, refer to the API reference in the documentation. However, using the algorithms provided by `prodsys` for optimizing or autonomously controlling a production system requires the models API. For a complete overview of the package's modelling functionalities, please see the [API reference](/API_reference/API_reference_0_overview.md).
+For now, the express API allows all modeling features as the models API but the creation of products that require processes in a sequence according to an assembly precedence graph. This feature is only available in the models API. For more information, refer to the API reference in the documentation. However, using the algorithms provided by `prodsys` for optimizing or autonomously controlling a production system requires the models API. For a complete overview of the package's modelling functionalities, please see the [API reference](../API_reference/API_reference_0_overview.md).
