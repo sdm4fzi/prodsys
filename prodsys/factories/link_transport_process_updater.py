@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Union
 
 from pydantic import BaseModel
-from sympy import Union
 
 from prodsys.factories import process_factory, source_factory, sink_factory, resource_factory, node_factory
 from prodsys.simulation import process

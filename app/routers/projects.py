@@ -1,5 +1,4 @@
 from typing import List
-from urllib import response
 
 from fastapi import APIRouter
 from app.dependencies import (

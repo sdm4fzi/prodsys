@@ -1,4 +1,4 @@
-from typing import Dict, List, Protocol
+from typing import Dict, List
 
 from fastapi import HTTPException
 

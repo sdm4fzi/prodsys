@@ -1,4 +1,3 @@
-from sqlite3 import adapt
 from typing import Optional
 from fastapi import APIRouter, BackgroundTasks
 

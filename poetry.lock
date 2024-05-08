@@ -3562,4 +3562,4 @@ ai = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.13"
-content-hash = "b089f765878cb507dfc6abfdaa9a69b77b0a6d5be02dde0262d71070deb819ef"
+content-hash = "178d76cc18ece9a82c358276773edbc1d5375bd4c99792f186f95856eacfb0b0"
