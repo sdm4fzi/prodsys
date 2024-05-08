@@ -1,4 +1,4 @@
-ARG APP_VERSION=0.6.2
+ARG APP_VERSION=0.6.5
 
 FROM python:3.11-slim
 
@@ -8,8 +8,8 @@ WORKDIR /app
 # Copy the poetry files into the container
 COPY pyproject.toml poetry.lock /app/
 
-# Install dependencies using Poetry
-RUN pip install prodsys==0.6.2
+# TODO: Install dependencies using Poetry instead of pypi
+RUN pip install prodsys==0.6.5
 
 
 

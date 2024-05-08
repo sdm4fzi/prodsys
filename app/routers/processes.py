@@ -1,7 +1,7 @@
 from typing import List, Annotated
 
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, Body
 
 
 from prodsys.models import processes_data

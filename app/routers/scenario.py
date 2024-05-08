@@ -1,8 +1,8 @@
-from typing import List, Annotated, Dict, Optional
+from typing import List, Annotated
 
 
-from fastapi import APIRouter, HTTPException, Body
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Body
+from pydantic import BaseModel
 
 
 from prodsys.models import scenario_data, performance_indicators
