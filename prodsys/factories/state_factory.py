@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 
 from pydantic import parse_obj_as, BaseModel
 
@@ -48,6 +48,11 @@ class StateFactory(BaseModel):
             values["state_data"].time_model_id
         )
         values.update({"time_model": time_model, "env": self.env})
+        if "handling_time_model" in state_data.dict() and state_data.dict()["handling_time_model"] is not None:
+            handling_time_model = self.time_model_factory.get_time_model(
+                state_data.handling_time_model
+            )
+            values.update({"handling_time_model": handling_time_model})
         if "repair_time_model_id" in state_data.dict():
             repair_time_model = self.time_model_factory.get_time_model(
                 state_data.repair_time_model_id
@@ -63,7 +68,7 @@ class StateFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the state data.
         """
         for state_data in adapter.state_data:
-            self.add_state(state_data)
+            self.add_state(state_data)        
 
     def get_states(self, IDs: List[str]) -> List[state.STATE_UNION]:
         """

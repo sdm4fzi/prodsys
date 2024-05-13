@@ -14,7 +14,7 @@ The following states are possible:
 from __future__ import annotations
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, TYPE_CHECKING
+from typing import Literal, Union, TYPE_CHECKING, Optional
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -283,6 +283,9 @@ class TransportStateData(StateData):
     """
 
     type: Literal[StateTypeEnum.TransportState]
+    handling_time_model: Optional[str] = None
+    if handling_time_model is not None:
+        setattr('handling_time_model', handling_time_model)
 
     class Config:
         schema_extra = {

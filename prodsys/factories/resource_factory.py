@@ -82,6 +82,8 @@ def register_production_states_for_processes(
         if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
         elif isinstance(process_instance, process.TransportProcess) and not existence_condition:
+            if "handling_time_model" in process_instance.process_data.dict():
+                values["new_state"]["handling_time_model"] = process_instance.process_data.handling_time_model
             state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
