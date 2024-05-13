@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
-
-from prodsys.simulation import process as prodsys_process
+from typing import TYPE_CHECKING, Dict, Optional, List, Tuple, Union
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, resources
+    from prodsys.simulation import product, process, resources, sink
+    from prodsys.simulation.product import Locatable
+
 
 
 class Request:
@@ -21,23 +21,23 @@ class Request:
         self,
         process: process.PROCESS_UNION,
         product: product.Product,
+        resource: resources.Resource
     ):
         self.process = process
         self.product = product
-        self.resource: Optional[resources.Resource] = None
+        self.resource = resource
 
-    def set_resource(self, resource: resources.Resource):
+
+    def set_process(self, process: process.PROCESS_UNION):
         """
-        Sets the resource of the request.
+        Sets the process of the request.
 
         Args:
-            resource (resources.Resource): The resource.
+            process (process.PROCESS_UNION): The process.
         """
-        self.resource = resource
-        for process in self.resource.processes:
-            if process.matches_request(self):
-                # TODO: check whether this needs adaption for compound processes...
-                self.process = process
+        self.process = process
+        # TODO: maybe do some special handling of compound processes here
+
 
     def get_process(self) -> process.PROCESS_UNION:
         """
@@ -65,6 +65,24 @@ class Request:
             resources.Resource: The resource.
         """
         return self.resource
+    
+
+class SinkRequest(Request):
+    """
+    Class to represents requests of a product for a storage in a sink to be executed by a resource.
+
+    Args:
+        Request (_type_): _description_
+    """
+    def __init__(
+        self,
+        product: product.Product,
+        sink: sink.Sink
+    ):
+        self.resource = sink
+        self.product = product
+        self.process = None
+    
 
 
 class TransportResquest(Request):
@@ -80,18 +98,51 @@ class TransportResquest(Request):
     """
     def __init__(
         self,
-        process: process.TransportProcess,
+        process: Union[process.TransportProcess, process.LinkTransportProcess],
         product: product.Product,
-        origin: product.Location,
-        target: product.Location,
+        resource: resources.TransportResource,
+        origin: product.Locatable,
+        target: product.Locatable,
     ):
-        self.process: process.TransportProcess = process
+        self.process: Union[process.TransportProcess, process.LinkTransportProcess] = process
         self.product: product.Product = product
-        self.resource: resources.TransportResource = None
-        self.origin: product.Location = origin
-        self.target: product.Location = target
+        self.resource: resources.TransportResource = resource
+        self.origin: product.Locatable = origin
+        self.target: product.Locatable = target
 
-    def get_process(self) -> process.TransportProcess:
+        self.route: Optional[List[Locatable]] = None
+
+
+    def set_process(self, process: process.PROCESS_UNION):
+        """
+        Sets the process of the request.
+
+        Args:
+            process (process.PROCESS_UNION): The process.
+        """
+        self.process = process
+        # TODO: maybe do some special handling of compound processes here
+
+    def copy_cached_routes(self, request: TransportResquest):
+        """
+        Copies the cached routes from another transport request.
+
+        Args:
+            request (TransportResquest): The transport request.
+        """
+        self.route = request.route
+
+    def set_route(self, route: List[Locatable]):
+        """
+        Caches a possible route of the transport request used later for setting the resource of the transport request.
+
+        Args:
+            process (process.TransportProcess): The process.
+            route (List[product.Locatable]): The route.
+        """
+        self.route = route
+
+    def get_process(self) -> Union[process.TransportProcess, process.LinkTransportProcess]:
         """
         Returns the transport process of the transport request.
 
@@ -109,20 +160,30 @@ class TransportResquest(Request):
         """
         return self.resource
 
-    def get_origin(self) -> product.Location:
+    def get_origin(self) -> product.Locatable:
         """
         Returns the origin location of the transport request.
 
         Returns:
-            product.Location: The origin location.
+            product.Locatable: The origin location.
         """
         return self.origin
 
-    def get_target(self) -> product.Location:
+    def get_target(self) -> product.Locatable:
         """
         Returns the target location of the transport request.
 
         Returns:
-            product.Location: The target location.
+            product.Locatable: The target location.
         """
         return self.target
+    
+    def get_route(self) -> List[Locatable]:
+        """
+        Returns the route of the transport request.
+
+        Returns:
+            List[product.Locatable]: The route.
+
+        """
+        return self.route

@@ -75,13 +75,15 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _origin_ID: str = ""
     _empty_transport: Optional[bool] = None
 
-    def log_transport(self, origin: Optional[product.Location], target: product.Location, state_type: StateTypeEnum, empty_transport: bool):
+    def log_transport(self, origin: Optional[product.Locatable], target: product.Locatable, state_type: StateTypeEnum, empty_transport: bool):
         """
         Logs the target location of a transport state.
 
         Args:
-            target (product.Location): The target location, either a resource, source or a sink.
+            origin (Optional[product.Locatable]): The origin location, either a resource, source, node or a sink.
+            target (product.Locatable): The target location, either a resource, source, node or a sink.
             state_type (StateTypeEnum): The type of the state.
+            empty_transport (bool): Indicates if the transport is empty.
         """
         if not origin:
             self._origin_ID = "Loading station"
@@ -382,10 +384,15 @@ class TransportState(State):
             if not self.interrupted:
                 raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
         
-    def process_state(self, target: List[float]) -> Generator:
+    def process_state(self, target: List[float], initial_transport_step: bool, last_transport_step: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
+        if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
+            self.done_in -= self.time_model.time_model_data.reaction_time
+
+        # TODO: also use intial and last_transport_step to add loading times
+
         if self.handling_time_model:
             self.handling_time = self.handling_time_model.get_next_time()
         while True:

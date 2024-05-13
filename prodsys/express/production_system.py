@@ -1,17 +1,15 @@
 from typing import List, Optional, Union
-from uuid import uuid1
 
-from abc import ABC
 
-from pydantic import Field, conlist
+from pydantic import Field
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import core_asset, source_data, queue_data
 import prodsys
 from prodsys.util import util
 
 from prodsys.express import (
     core,
+    node,
     product,
     resources,
     source,
@@ -19,6 +17,7 @@ from prodsys.express import (
     process,
     time_model,
     state,
+    process
 )
 
 
@@ -92,11 +91,22 @@ class ProductionSystem(core.ExpressObject):
         products = remove_duplicate_items(products)
         processes = list(
             util.flatten_object(
-                [product.processes for product in products]
+                [product.processes for product in products]+
+                [product.transport_process for product in products]
                 + [resource.processes for resource in self.resources]
             )
         )
         processes = remove_duplicate_items(processes)
+
+        nodes = []
+        for process_instance in processes:
+            if not isinstance(process_instance, process.LinkTransportProcess):
+                continue
+            for link in process_instance.links:
+                for link_element in link:
+                    if isinstance(link_element, node.Node):
+                        nodes.append(link_element)
+        nodes = remove_duplicate_items(nodes)
 
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
@@ -104,7 +114,7 @@ class ProductionSystem(core.ExpressObject):
         states = remove_duplicate_items(states)
 
         time_models = (
-            [process.time_model for process in processes]
+            [process_instance.time_model for process_instance in processes if not isinstance(process_instance, process.RequiredCapabilityProcess)]
             + [state.time_model for state in states]
             + [source.time_model for source in self.sources]
         )
@@ -119,6 +129,7 @@ class ProductionSystem(core.ExpressObject):
         time_model_data = [time_model.to_model() for time_model in time_models]
         process_data = [process.to_model() for process in processes]
         state_data = [state.to_model() for state in states]
+        nodes_data = [node.to_model() for node in nodes]
         product_data = [product.to_model() for product in products]
         resource_data = [resource.to_model() for resource in self.resources]
         source_data = [source.to_model() for source in self.sources]
@@ -144,7 +155,9 @@ class ProductionSystem(core.ExpressObject):
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,
+            node_data=nodes_data,
             product_data=product_data,
+            nodes_data=nodes_data,
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,
@@ -172,7 +185,7 @@ class ProductionSystem(core.ExpressObject):
             ValueError: If the production system is not valid.
         """
         adapter = self.to_model()
-        adapter.physical_validation()
+        adapter.validate_configuration()
 
     @property
     def runner(self):
