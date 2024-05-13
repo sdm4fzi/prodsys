@@ -12,6 +12,7 @@ from __future__ import annotations
 from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, List, TYPE_CHECKING, Optional
+from pydantic import Field
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -33,6 +34,7 @@ class ProcessTypeEnum(str, Enum):
     CapabilityProcesses = "CapabilityProcesses"
     CompoundProcesses = "CompoundProcesses"
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
+    LinkTransportProcesses = "LinkTransportProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -318,7 +320,66 @@ class RequiredCapabilityProcessData(CoreAsset):
         return md5(self.capability.encode("utf-8")).hexdigest()
 
 
+class LinkTransportProcessData(TransportProcessData):
+    """
+    Class that represents all link transport process data.
+
+    Args:
+        ID (str): ID of the process.
+        description (str): Description of the process.
+        type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
+        links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
+        capability (Optional[str], optional): Capability of the process, which is used for matching if available. Defaults to None.
+
+    Examples:
+        A transport process with ID "TP1", description "Transport Process 1",
+        type "LinkTransportProcesses", and links [["Resource1", "Node2"], ["Node2", "Resource1"]]:
+        ``` py
+        import prodsys
+        prodsys.processes_data.LinkTransportProcessData(
+            ID="TP1",
+            description="Transport Process 1",
+            time_model_id="manhattan_time_model_1",
+            type="LinkTransportProcesses",
+            links=[["Resource1", "Node2"], ["Node2", "Resource1"]],
+            capability="automated_transport_process",
+        )
+        ```
+    """
+
+    type: Literal[ProcessTypeEnum.LinkTransportProcesses]
+    links: List[List[str]]
+    capability: Optional[str] = Field(default_factory=str)
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the required capability process data.
+        """
+        raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
+        # TODO: Implement hash function for LinkTransportProcessData and Nodes
+        # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
+        
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Transport process",
+                "value": {
+                    "ID": "TP1",
+                    "description": "Transport Process 1",
+                    "time_model_id": "manhattan_time_model_1",
+                    "type": "LinkTransportProcesses",
+                    "links": [["Resource1", "Node2"], ["Node2", "Resource1"]],
+                },
+            }
+        }
+
 PROCESS_DATA_UNION = Union[
     CompoundProcessData, RequiredCapabilityProcessData,
-    ProductionProcessData, TransportProcessData, CapabilityProcessData
+    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData
 ]

@@ -9,15 +9,20 @@ The following time models are possible:
 """
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import List, Literal, Optional, Union
+from typing_extensions import deprecated
 from uuid import uuid1
 
 from pydantic.dataclasses import dataclass
-from pydantic import validator, Field
+from pydantic import Field
 
 from prodsys.models import time_model_data
 from prodsys.express import core
 
+@deprecated(
+    "The SequentialTimeModel is deprecated and will be removed in the next version. Please use the SampleTimeModel instead.",
+    category=None
+)
 @dataclass
 class SequentialTimeModel(core.ExpressObject):
     """
@@ -49,6 +54,83 @@ class SequentialTimeModel(core.ExpressObject):
         """
         return time_model_data.SequentialTimeModelData(
             sequence=self.sequence,
+            ID=self.ID,
+            description=""
+        )
+    
+@dataclass
+class SampleTimeModel(core.ExpressObject):
+    """
+    Class that represents a time model that is based on a list of sample values.
+
+    Args:
+        samples (List[float]): Values to sample from.
+        ID (str): ID of the time model.
+
+    Examples:
+        Sample time model with 7 time values:
+        ``` py
+        import prodsys.express as psx
+        psx.SampleTimeModel(
+            samples=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+        )
+        ```
+    """
+    samples: List[float]
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+
+    def to_model(self) -> time_model_data.SampleTimeModelData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            time_model_data.SequentialTimeModelData: Data object of the express object.
+        """
+        return time_model_data.SampleTimeModelData(
+            samples=self.samples,
+            ID=self.ID,
+            description=""
+        )
+    
+@dataclass
+class ScheduledTimeModel(core.ExpressObject):
+    """
+    Class that represents a time model that is based on a schedule of timely values.
+    If the schedule is not cyclic, usage in other classes than sources can lead to unexpected behavior.
+
+    Args:
+        schedule (List[float]): Schedule of time values.
+        absolute (bool): If the schedule contains absolute time values or relative values to each other.
+        cyclic (bool): If the schedule is cyclic or not.
+        ID (str): ID of the time model.
+
+    Examples:
+        Scheduled time model with 7 time values:
+        ``` py
+        import prodsys.express as psx
+        psx.ScheduledTimeModel(
+            schedule=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+        )
+        ```
+    """
+    schedule: List[float]
+    absolute: bool = True
+    cyclic: bool = True
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+
+    def to_model(self) -> time_model_data.ScheduledTimeModelData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            time_model_data.SequentialTimeModelData: Data object of the express object.
+        """
+        return time_model_data.ScheduledTimeModelData(
+            schedule=self.schedule,
+            absolute=self.absolute,
+            cyclic=self.cyclic,
             ID=self.ID,
             description=""
         )
@@ -95,8 +177,53 @@ class FunctionTimeModel(core.ExpressObject):
             ID=self.ID,
             description=""
         )
+    
 
+@dataclass
+class DistanceTimeModel(core.ExpressObject):
+    """
+    Class that represents a time model that is based on the distance between two nodes and a constant velocity.
+    The distance is calculated by the specified distance metric.
 
+    Args:
+        speed (float): Speed of the vehicle in meters per minute.
+        reaction_time (float): Reaction time of the driver in minutes.
+        metric (Literal["manhattan", "euclidean"]): Metric to calculate the distance.
+
+    Examples:
+        Distance time model with a speed of 50 meters per minute and a reaction time of 0.5 minutes, using the default manhattan distance metric:
+        ``` py
+        import prodsys.express as psx
+        psx.DistanceTimeModel(
+            speed=50.0,
+            reaction_time=0.5,
+        )
+        ```
+    """
+    speed: float
+    reaction_time: float
+    metric: Literal["manhattan", "euclidean"] = "manhattan"
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+    def to_model(self) -> time_model_data.DistanceTimeModelData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            time_model_data.DistanceTimeModelData: Data object of the express object.
+        """
+        return time_model_data.DistanceTimeModelData(
+            speed=self.speed,
+            reaction_time=self.reaction_time,
+            metric=self.metric,
+            ID=self.ID,
+            description=""
+        )
+
+@deprecated(
+    "The ManhattanDistanceTimeModel is deprecated and will be removed in the next version. Please use the DistanceTimeModel instead.",
+    category=None
+)
 @dataclass
 class ManhattanDistanceTimeModel(core.ExpressObject):
     """
@@ -135,8 +262,11 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
         )
 
 TIME_MODEL_UNION = Union[
-    SequentialTimeModel,
+    SampleTimeModel,
+    ScheduledTimeModel,
+    DistanceTimeModel,
     FunctionTimeModel,
+    SequentialTimeModel,
     ManhattanDistanceTimeModel,
 ]
     

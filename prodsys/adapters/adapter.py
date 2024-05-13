@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from hashlib import md5
 import warnings
 from typing import List, Any, Set, Optional, Tuple, Union
+from numpy import isin
 from pydantic import BaseModel, validator, ValidationError
 
 import logging
@@ -13,6 +14,7 @@ from prodsys.models import (
     product_data,
     queue_data,
     resource_data,
+    node_data,
     time_model_data,
     state_data,
     processes_data,
@@ -274,8 +276,9 @@ class ProductionSystemAdapter(ABC, BaseModel):
         state_data (List[state_data.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
         process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
         queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
+        node_data (List[resource_data.NodeData], optional): List of nodes in the production system. Defaults to [].
         resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
-        product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to [].
+        product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to []
         sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
@@ -289,6 +292,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     state_data: List[state_data.STATE_DATA_UNION] = []
     process_data: List[processes_data.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data.QueueData] = []
+    node_data: List[node_data.NodeData] = []
     resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
     product_data: List[product_data.ProductData] = []
     sink_data: List[sink_data.SinkData] = []
@@ -303,8 +307,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
         validate = True
         validate_assignment = True
         schema_extra = {
-            "example": {
-                "ID": "",
+            "examples": [{
+                "ID": "Example Adapter",
                 "valid_configuration": True,
                 "reconfiguration_cost": 0,
                 "seed": 24,
@@ -671,6 +675,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 ],
                 "scenario_data": None,
             }
+            ]
         }
 
     def hash(self) -> str:
@@ -688,6 +693,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 *sorted([process.hash(self) for process in self.process_data]),
                 *sorted([res.hash(self) for res in self.resource_data]),
                 *sorted([queue.hash() for queue in self.queue_data]),
+                *sorted([node.hash() for node in self.node_data]),
                 *sorted([product.hash(self) for product in self.product_data]),
                 *sorted([sink.hash(self) for sink in self.sink_data]),
                 *sorted([source.hash(self) for source in self.source_data])
@@ -865,27 +871,34 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 f"The processes {required_processes - available_processes} are not available."
             )
 
-    def physical_validation(self):
+    def validate_configuration(self):
         """
         Checks if the configuration is physically valid, i.e. if all resources are positioned at different locations and if all required processes are available.
 
         Raises:
             ValueError: If multiple objects are positioned at the same location.
             ValueError: If not all required process are available.
+            ValueError: If not all links are available for LinkTransportProcesses.
         """
-        if not check_redudant_locations(self):
-            raise ValueError(f"Multiple objects are positioned at the same location.")
-        if not check_required_processes_in_resources_available(self):
-            raise ValueError(f"Not all required process are available at resources.")
-        if not check_required_processes_in_resources_available(self):
-            raise ValueError(f"Not all required process are available at resources.")
+        assert_no_redudant_locations(self)
+        assert_required_processes_in_resources_available(self)
+        assert_all_links_available(self)
 
 
 def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float]]:
     return [list(x) for x in set(tuple(x) for x in input_list)]
 
 
-def check_redudant_locations(adapter: ProductionSystemAdapter) -> bool:
+def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
+    """
+    Asserts that no multiple objects are positioned at the same location.
+
+    Args:
+        adapter (ProductionSystemAdapter): Production system configuration
+
+    Raises:
+        ValueError: If multiple objects are positioned at the same location.
+    """
     machine_locations = [machine.location for machine in get_machines(adapter)]
     source_locations = remove_duplicate_locations(
         [source.location for source in adapter.source_data]
@@ -894,14 +907,59 @@ def check_redudant_locations(adapter: ProductionSystemAdapter) -> bool:
         [sink.location for sink in adapter.sink_data]
     )
     positions = machine_locations + source_locations + sink_locations
-    if any(positions.count(location) > 1 for location in positions):
-        return False
-    return True
+    for location in positions:
+        if positions.count(location) > 1:
+            raise ValueError(f"Multiple objects are positioned at the same location: {location}")
+
+def assert_all_links_available(adapter: ProductionSystemAdapter):
+    """
+    Asserts that all links are valid, so that the start and target of the link are valid locations.
+
+    Args:
+        adapter (ProductionSystemAdapter): Production system configuration
+
+    Raises:
+        ValueError: If the start or target of a link is not a valid location.
+    """
+    link_transport_processes = [process for process in adapter.process_data if isinstance(process, processes_data.LinkTransportProcessData)]
+    if not link_transport_processes:
+        return 
+    nodes = get_set_of_IDs(adapter.node_data)
+    resources = get_set_of_IDs(adapter.resource_data)
+    sources = get_set_of_IDs(adapter.source_data)
+    sinks = get_set_of_IDs(adapter.sink_data)
+    all_location_ids = nodes | resources | sources | sinks
+    for link_transport_process in link_transport_processes:
+        link_pairs: List[List[str]] = []
+        if isinstance(link_transport_process.links, dict):
+            for start, targets in link_transport_process.links.items():
+                for target in targets:
+                    link_pairs.append([start, target])
+        else:
+            link_pairs = link_transport_process.links
+        for start, target in link_pairs:
+            if start not in all_location_ids:
+                raise ValueError(
+                    f"The link from {start} to {target} of process {link_transport_process.ID} is not a valid location because {start} is no valid location id."
+                )
+            if target not in all_location_ids:
+                raise ValueError(
+                    f"The link from {start} to {target} of process {link_transport_process.ID} is not a valid location because {target} is no valid location id."
+                )
 
 
 def check_for_clean_compound_processes(
         adapter_object: ProductionSystemAdapter,
 ) -> bool:
+    """
+    Checks that the compound processes are clean, i.e. that they do not contain compund processes and normal processes at the same time.
+
+    Args:
+        adapter_object (ProductionSystemAdapter): Production system configuration
+
+    Returns:
+        bool: True if the compound processes are clean, False otherwise
+    """
     possible_production_processes_ids = get_possible_production_processes_IDs(adapter_object)
     if any(isinstance(process_id, tuple) for process_id in possible_production_processes_ids) and any(isinstance(process_id, str) for process_id in possible_production_processes_ids):
         return False
@@ -910,6 +968,16 @@ def check_for_clean_compound_processes(
 def get_possible_production_processes_IDs(
     adapter_object: ProductionSystemAdapter,
 ) -> Union[List[str], List[Tuple[str, ...]]]:
+    """
+    Returns all possible production processes IDs that can be used in the production system. 
+    Compund processes are grouped as touples, whereas individual processes are represented as strings.
+
+    Args:
+        adapter_object (ProductionSystemAdapter): Production system configuration
+
+    Returns:
+        Union[List[str], List[Tuple[str, ...]]]: List of production process IDs
+    """
     possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data.TransportProcessData) and not isinstance(process, processes_data.RequiredCapabilityProcessData)]  
     compund_processes = [process for process in adapter_object.process_data if isinstance(process, processes_data.CompoundProcessData)]
     compound_process_id_tuples = [tuple(compound_process.process_ids) for compound_process in compund_processes]
@@ -940,6 +1008,7 @@ def get_production_processes_from_ids(
         for process in adapter_object.process_data:
             if process.ID == process_id and isinstance(process, processes_data.ProductionProcessData):
                 processes.append(process)
+                break
     return processes
 
 
@@ -949,8 +1018,9 @@ def get_transport_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData):
+            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData) and not (hasattr(process, "capability") and getattr(process, "capability")):
                 processes.append(process)
+                break
     return processes
 
 def get_capability_processes_from_ids(
@@ -959,8 +1029,9 @@ def get_capability_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.CapabilityProcessData):
+            if process.ID == process_id and (isinstance(process, processes_data.CapabilityProcessData) or (hasattr(process, "capability") and getattr(process, "capability"))):
                 processes.append(process)
+                break
     return processes
 
 
@@ -1042,32 +1113,67 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
-def check_production_processes_available(available: List[processes_data.ProductionProcessData], required: List[processes_data.ProductionProcessData]) -> bool:
+def assert_production_processes_available(available: List[processes_data.ProductionProcessData], required: List[processes_data.ProductionProcessData]):
+    """
+    Checks if all required production processes are available.
+
+    Args:
+        available (List[processes_data.ProductionProcessData]): production processes that are available in the production system resources
+        required (List[processes_data.ProductionProcessData]): production processes that are required from the products
+    Raises:
+        ValueError: If required production processes are not available
+    """
     available = set([process.ID for process in available])
     required = set([process.ID for process in required])
     if required - available != set():
-        return False
-    return True
+        raise ValueError(f"Required production processes {required - available} are not available.")
 
-def check_transport_processes_available(available: List[processes_data.TransportProcessData], required: List[processes_data.TransportProcessData]) -> bool:
+def assert_transport_processes_available(available: List[processes_data.TransportProcessData], required: List[processes_data.TransportProcessData]):
+    """
+    Checks if all required transport processes are available.
+
+    Args:
+        available (List[processes_data.TransportProcessData]): transport processes that are available in the production system resources
+        required (List[processes_data.TransportProcessData]): transport processes that are required from the products
+
+    Raises:
+        ValueError: If required transport processes are not available
+    """
     available = set([process.ID for process in available])
     required = set([process.ID for process in required])
     if required - available != set():
-        return False
-    return True
+        raise ValueError(f"Required transport processes {required - available} are not available.")
 
-def check_capability_processes_available(available: List[processes_data.CapabilityProcessData], required: List[processes_data.CapabilityProcessData]) -> bool:
+def assert_capability_processes_available(available: List[processes_data.CapabilityProcessData], required: List[processes_data.CapabilityProcessData]):
+    """
+    Checks if all required capability processes are available.
+
+    Args:
+        available (List[processes_data.CapabilityProcessData]): capability processes that are available in the production system resources
+        required (List[processes_data.CapabilityProcessData]): capability processes that are required from the products
+
+    Raises:
+        ValueError: If required capability processes are not available
+    """
     available = set([process.capability for process in available])
     required = set([process.capability for process in required])
     if required - available != set():
-        return False
-    return True
+        raise ValueError(f"Required capability processes {required - available} are not available.")
 
-def check_required_processes_in_resources_available(configuration: ProductionSystemAdapter) -> bool:
-    available = list(util.flatten([resource.process_ids for resource in configuration.resource_data]))
-    required = util.flatten([product.processes + [product.transport_process] for product in configuration.product_data if not isinstance(product.processes, dict)])
+def assert_required_processes_in_resources_available(configuration: ProductionSystemAdapter):
+    """
+    Asserts that all required processes are available in the resources that are requested by the products in the configuration.
+
+    Args:
+        configuration (ProductionSystemAdapter): Production system configuration
+
+    Raises:
+        ValueError: If specified processes contain some logical errors.
+    """
+    available = set(list(util.flatten([resource.process_ids for resource in configuration.resource_data])))
+    required = util.flatten([product.processes for product in configuration.product_data if not isinstance(product.processes, dict)])
     required_dict_processes = util.flatten([list(product.processes.keys()) for product in configuration.product_data if isinstance(product.processes, dict)])
-    required = list(required) + list(required_dict_processes)
+    required = set(list(required) + list(required_dict_processes) + [product.transport_process for product in configuration.product_data])
 
     required_production_processes = get_production_processes_from_ids(configuration, required)
     required_transport_processes = get_transport_processes_from_ids(configuration, required)
@@ -1078,7 +1184,7 @@ def check_required_processes_in_resources_available(configuration: ProductionSys
     available_capability_processes = get_capability_processes_from_ids(configuration, available)
     available_required_capability_processes = get_required_capability_processes_from_ids(configuration, available)
     if available_required_capability_processes:
-        raise ValueError(f"Required capability processes {available_required_capability_processes} should not be available for resources since no time model is given.")
+        raise ValueError(f"Required capability processes {available_required_capability_processes} should not be used for resources since no time model is given.")
 
 
     all_process_ids = set([process.ID for process in configuration.process_data])
@@ -1097,10 +1203,6 @@ def check_required_processes_in_resources_available(configuration: ProductionSys
     available_transport_processes += get_contained_transport_processes_from_compound_processes(configuration, available_compound_processes)
     available_capability_processes += get_contained_capability_processes_from_compound_processes(configuration, available_compound_processes)
 
-    if not check_production_processes_available(available_production_processes, required_production_processes):
-        return False
-    if not check_transport_processes_available(available_transport_processes, required_transport_processes):
-        return False
-    if not check_capability_processes_available(available_capability_processes, required_capability_processes):
-        return False
-    return True
+    assert_production_processes_available(available_production_processes, required_production_processes)
+    assert_transport_processes_available(available_transport_processes, required_transport_processes)
+    assert_capability_processes_available(available_capability_processes, required_capability_processes)

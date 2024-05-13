@@ -1,0 +1,490 @@
+{
+    "seed": 24,
+    "time_model_data": [
+        {
+            "ID": "function_time_model_1",
+            "description": "normal distribution time model with 20 minutes",
+            "distribution_function": "normal",
+            "location": 14.3,
+            "scale": 5.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "function_time_model_2",
+            "description": "constant distribution time model with 10 minutes",
+            "distribution_function": "constant",
+            "location": 15.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "function_time_model_3",
+            "description": "normal distribution time model with 20 minutes",
+            "distribution_function": "normal",
+            "location": 20.0,
+            "scale": 5.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "function_time_model_4",
+            "description": "exponential distribution time model with 100 minutes",
+            "distribution_function": "exponential",
+            "location": 70.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "function_time_model_5",
+            "description": "exponential distribution time model with 150 minutes",
+            "distribution_function": "exponential",
+            "location": 150.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "sample_time_model_1",
+            "description": "Sample time model",
+            "samples": [
+                25.0,
+                13.0,
+                15.0,
+                16.0,
+                17.0,
+                20.0,
+                21.0
+            ]
+        },
+        {
+            "ID": "manhattan_time_model_1",
+            "description": "distance time model with speed 180 m/min = 3 m/s",
+            "speed": 30.0,
+            "reaction_time": 0.15
+        },
+        {
+            "ID": "function_time_model_7",
+            "description": "exponential distribution time model with 300 minutes",
+            "distribution_function": "exponential",
+            "location": 300.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "function_time_model_8",
+            "description": "normal distribution time model with 15 minutes",
+            "distribution_function": "normal",
+            "location": 15.0,
+            "scale": 3.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [
+        {
+            "ID": "Breakdownstate_1",
+            "description": "Breakdown state machine 1",
+            "time_model_id": "function_time_model_5",
+            "type": "BreakDownState",
+            "repair_time_model_id": "function_time_model_8"
+        },
+        {
+            "ID": "Breakdownstate_2",
+            "description": "Breakdown state machine 2",
+            "time_model_id": "function_time_model_5",
+            "type": "BreakDownState",
+            "repair_time_model_id": "function_time_model_8"
+        },
+        {
+            "ID": "Setup_State_1",
+            "description": "Setup state machine 1",
+            "time_model_id": "function_time_model_2",
+            "type": "SetupState",
+            "origin_setup": "P1",
+            "target_setup": "P2"
+        },
+        {
+            "ID": "Setup_State_2",
+            "description": "Setup state machine 2",
+            "time_model_id": "function_time_model_2",
+            "type": "SetupState",
+            "origin_setup": "P2",
+            "target_setup": "P1"
+        },
+        {
+            "ID": "Setup_State_3",
+            "description": "Setup state machine 3",
+            "time_model_id": "function_time_model_2",
+            "type": "SetupState",
+            "origin_setup": "P1",
+            "target_setup": "P3"
+        },
+        {
+            "ID": "Setup_State_4",
+            "description": "Setup state machine 3",
+            "time_model_id": "function_time_model_3",
+            "type": "SetupState",
+            "origin_setup": "P3",
+            "target_setup": "P1"
+        },
+        {
+            "ID": "ProcessBreakdownState_1",
+            "description": "Breakdown state process 1",
+            "time_model_id": "function_time_model_7",
+            "type": "ProcessBreakDownState",
+            "repair_time_model_id": "function_time_model_8",
+            "process_id": "P1"
+        }
+    ],
+    "process_data": [
+        {
+            "ID": "P1",
+            "description": "Process 1",
+            "time_model_id": "function_time_model_1",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P2",
+            "description": "Process 2",
+            "time_model_id": "function_time_model_2",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P3",
+            "description": "Process 3",
+            "time_model_id": "function_time_model_3",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "TP1",
+            "description": "Transport Process 1",
+            "time_model_id": "manhattan_time_model_1",
+            "type": "TransportProcesses"
+        }
+    ],
+    "queue_data": [
+        {
+            "ID": "IQ1",
+            "description": "Input-queue 1 for R1",
+            "capacity": 20
+        },
+        {
+            "ID": "OQ1",
+            "description": "Output-queue 1 for R1",
+            "capacity": 20
+        },
+        {
+            "ID": "OQ2",
+            "description": "Output-queue 2 for R2",
+            "capacity": 20
+        },
+        {
+            "ID": "IQ2",
+            "description": "Input-queue 2 for R3",
+            "capacity": 20
+        },
+        {
+            "ID": "OQ3",
+            "description": "Output-queue 3 for R3",
+            "capacity": 20
+        },
+        {
+            "ID": "SourceQueue",
+            "description": "Output-Queue for all sources",
+            "capacity": 20
+        },
+        {
+            "ID": "SinkQueue",
+            "description": "Input-Queue for all sinks",
+            "capacity": 0
+        },
+        {
+            "ID": "IQ9",
+            "description": "Input-queue 1 for R2",
+            "capacity": 20
+        }
+    ],
+    "resource_data": [
+        {
+            "ID": "R1",
+            "description": "Resource 1",
+            "capacity": 2,
+            "location": [
+                10.0,
+                10.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "P1",
+                "P2"
+            ],
+            "process_capacities": [
+                2,
+                1
+            ],
+            "state_ids": [
+                "Breakdownstate_1",
+                "Setup_State_1",
+                "Setup_State_2",
+                "ProcessBreakdownState_1"
+            ],
+            "input_queues": [
+                "IQ1"
+            ],
+            "output_queues": [
+                "OQ1"
+            ]
+        },
+        {
+            "ID": "R2",
+            "description": "Resource 2",
+            "capacity": 1,
+            "location": [
+                20.0,
+                10.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "P2",
+                "P3"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [
+                "Breakdownstate_2"
+            ],
+            "input_queues": [
+                "IQ9"
+            ],
+            "output_queues": [
+                "OQ2"
+            ]
+        },
+        {
+            "ID": "R3",
+            "description": "Resource 3",
+            "capacity": 2,
+            "location": [
+                20.0,
+                20.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "P1",
+                "P3"
+            ],
+            "process_capacities": [
+                1,
+                2
+            ],
+            "state_ids": [
+                "Breakdownstate_1",
+                "Breakdownstate_2",
+                "Setup_State_3",
+                "Setup_State_4"
+            ],
+            "input_queues": [
+                "IQ2"
+            ],
+            "output_queues": [
+                "OQ3"
+            ]
+        },
+        {
+            "ID": "R4",
+            "description": "Resource 3",
+            "capacity": 2,
+            "location": [
+                10.0,
+                20.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "P1",
+                "P3"
+            ],
+            "process_capacities": [
+                2,
+                2
+            ],
+            "state_ids": [
+                "Breakdownstate_1",
+                "Setup_State_3",
+                "Setup_State_4"
+            ],
+            "input_queues": [
+                "IQ2"
+            ],
+            "output_queues": [
+                "OQ3"
+            ]
+        },
+        {
+            "ID": "TR1",
+            "description": "Transport Resource 1",
+            "capacity": 1,
+            "location": [
+                15.0,
+                15.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "TP1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "Breakdownstate_1"
+            ]
+        },
+        {
+            "ID": "TR2",
+            "description": "Transport Resource 2",
+            "capacity": 1,
+            "location": [
+                15.0,
+                20.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "Breakdownstate_1"
+            ]
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "Product_1",
+            "description": "Product 1",
+            "product_type": "Product_1",
+            "processes": [
+                "P1",
+                "P2",
+                "P3"
+            ],
+            "transport_process": "TP1"
+        },
+        {
+            "ID": "Product_2",
+            "description": "Product 2",
+            "product_type": "Product_2",
+            "processes": [
+                "P1",
+                "P2",
+                "P3",
+                "P1"
+            ],
+            "transport_process": "TP1"
+        },
+        {
+            "ID": "Product_3",
+            "description": "Product 3",
+            "product_type": "Product_3",
+            "processes": {
+                "P1": [
+                    "P2",
+                    "P3"
+                ],
+                "P2": [],
+                "P3": []
+            },
+            "transport_process": "TP1"
+        }
+    ],
+    "sink_data": [
+        {
+            "ID": "SK1",
+            "description": "Sink 1",
+            "location": [
+                50.0,
+                50.0
+            ],
+            "product_type": "Product_1",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        },
+        {
+            "ID": "SK2",
+            "description": "Sink 2",
+            "location": [
+                55.0,
+                50.0
+            ],
+            "product_type": "Product_2",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        },
+        {
+            "ID": "SK3",
+            "description": "Sink 3",
+            "location": [
+                45.0,
+                50.0
+            ],
+            "product_type": "Product_3",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "ID": "S1",
+            "description": "Source 1",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "Product_1",
+            "time_model_id": "function_time_model_4",
+            "router": "SimpleRouter",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        },
+        {
+            "ID": "S2",
+            "description": "Source 2",
+            "location": [
+                30.0,
+                30.0
+            ],
+            "product_type": "Product_2",
+            "time_model_id": "function_time_model_4",
+            "router": "SimpleRouter",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        },
+        {
+            "ID": "S3",
+            "description": "Source 3",
+            "location": [
+                40.0,
+                30.0
+            ],
+            "product_type": "Product_3",
+            "time_model_id": "function_time_model_4",
+            "router": "SimpleRouter",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        }
+    ]
+}

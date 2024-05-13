@@ -5,11 +5,11 @@ from typing import List, Optional, TYPE_CHECKING
 from pydantic import BaseModel, parse_obj_as
 
 from prodsys.factories import time_model_factory
-from prodsys.simulation import process
 from prodsys.models import processes_data
 
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
+    from prodsys.simulation import process
 
 
 class ProcessFactory(BaseModel):
@@ -42,7 +42,11 @@ class ProcessFactory(BaseModel):
         if isinstance(process_data, processes_data.CompoundProcessData):
             contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
             values.update({"contained_processes_data": contained_processes_data})
-        self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
+        if isinstance(process_data, processes_data.LinkTransportProcessData):
+            values.update({"links": [[]]})
+            self.processes.append(parse_obj_as(process.LinkTransportProcess, values))
+        else:
+            self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """
@@ -79,3 +83,7 @@ class ProcessFactory(BaseModel):
         if not pr:
             raise ValueError(f"Process with ID {ID} not found")
         return pr.pop()
+
+
+from prodsys.simulation import process
+ProcessFactory.update_forward_refs()
