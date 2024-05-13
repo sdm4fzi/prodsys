@@ -11,7 +11,7 @@ The following processes are possible:
 from __future__ import annotations
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, List, TYPE_CHECKING
+from typing import Literal, Union, List, TYPE_CHECKING, Optional
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -181,6 +181,7 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
+        handling_time_model (str): ID of the handling time model of the process.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
@@ -196,7 +197,7 @@ class TransportProcessData(ProcessData):
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
-    # TODO: add time model for loading (and maybe unloading)
+    handling_time_model: Optional[str] = None
 
     class Config:
         schema_extra = {
@@ -207,6 +208,7 @@ class TransportProcessData(ProcessData):
                     "description": "Transport Process 1",
                     "time_model_id": "manhattan_time_model_1",
                     "type": "TransportProcesses",
+                    "handling_time_model": "function_time_model_2",
                 },
             }
         }
