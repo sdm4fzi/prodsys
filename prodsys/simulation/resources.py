@@ -401,10 +401,11 @@ class ProductionResource(Resource):
 
     """
     data: ProductionResourceData
-    controller: control.ProductionController
+    controller: control.Controller
 
     input_queues: List[store.Queue] = []
     output_queues: List[store.Queue] = []
+    batch_size: Optional[int] = None
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)

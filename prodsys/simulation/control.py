@@ -239,7 +239,6 @@ class ProductionController(Controller):
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process"})
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
-        # TODO: duplicate ProductionController for Batchcontroller and get from self.requests a number of products of one one requested process type (max batch size) and perform function belog or the whole batch
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()
@@ -290,6 +289,187 @@ class ProductionController(Controller):
         # TODO: if performed process has failure_rate -> sample (np.choice) if failure happened, if so: mark product as rework_needed
         yield input_state.process
 
+class BatchController(Controller):
+    """
+    A production controller is responsible for controlling the processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
+    """
+    resource: resources.ProductionResource = Field(init=False, default=None)
+
+    def get_batch_size(self, resource: resources.Resource) -> int:
+        """
+        Get the batch size for the given resource.
+
+        Args:
+            resource (resources.Resource): The resource to get the batch size for.
+
+        Returns:
+            int: The batch size of the resource.
+        """
+        if isinstance(resource, resources.ProductionResource):
+            return resource.batch_size
+        else:
+            raise ValueError("Resource is not a ProductionResource")
+
+    def get_next_product_for_process(
+        self, resource: resources.Resource, process_request: request.Request
+    ) -> Generator:
+        """
+       Get the next batch of products for a process. The products are removed (get) from the input queues of the resource.
+
+        Args:
+            resource (resources.Resource): The resource to take the products from.
+            process_request (request.Request): The request that is requesting the products.
+
+        Returns:
+            List[events.Event]: The events that are triggered when the products are taken from the queue.
+        """
+
+        events = []
+        products = []
+        batch_size = self.get_batch_size(resource)
+        if isinstance(resource, resources.ProductionResource):
+            for queue in resource.input_queues:
+                while len(products) < batch_size:
+                    event = queue.get(filter=lambda item: item is process_request.get_product().product_data)
+                    events.append(event)
+                    product = yield event
+                    products.append(product)
+            if not events:
+                raise ValueError("Not enough products in queue for a batch")
+            return events
+        else:
+            raise ValueError("Resource is not a ProductionResource")
+
+    def put_product_to_output_queue(
+        self, resource: resources.Resource, products: List[product.Product]
+    ) -> List[events.Event]:
+        """
+        Place a batch of products to the output queue (put) of the resource.
+
+        Args:
+            resource (resources.Resource): The resource to place the product to.
+            products (List[product.Product]): The products to be placed.
+
+        Returns:
+            List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+        """
+        events = []
+        if isinstance(resource, resources.ProductionResource):
+            for queue in resource.output_queues:
+                for product in products:
+                    events.append(queue.put(product.product_data))
+        else:
+            raise ValueError("Resource is not a ProductionResource")
+
+        return events
+
+    def control_loop(self) -> Generator:
+        """
+        The control loop is the main process of the controller. It has to run indefinetely.
+
+        The logic is the control loop of a production resource is the following:
+
+        1. Wait until a request is made or a process is finished.
+        2. If a request is made, add it to the list of requests.
+        3. If a process is finished, remove it from the list of running processes.
+        4. If the resource is full or there are not enough requests for a batch, go to 1.
+        5. Sort the queue according to the control policy.
+        6. Start the next process. Go to 1.
+
+        Yields:
+            Generator: The generator yields when a request is made or a process is finished.
+        """
+        while True:
+            batch_size = self.get_batch_size(self.resource)
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
+            yield events.AnyOf(
+                env=self.env, events=self.running_processes + [self.requested]
+            )
+            if self.requested.triggered:
+                self.requested = events.Event(self.env)
+            for process in self.running_processes:
+                if not process.is_alive:
+                    self.running_processes.remove(process)
+            if self.resource.full or len(self.requests) < batch_size or self.reserved_requests_count == len(self.requests):
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Not enough requests ({len(self.requests)}) or resource full ({self.resource.full}) or all requests reserved ({self.reserved_requests_count == len(self.requests)})"})
+                continue
+            self.control_policy(self.requests)
+            self.reserved_requests_count += 1
+            running_process = self.env.process(self.start_process())
+            self.running_processes.append(running_process)
+            if not self.resource.full:
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
+                self.requested.succeed()
+
+    def start_process(self) -> Generator:
+        """
+        Start the next process with the following logic:
+
+        1. Setup the resource for the process.
+        2. Wait until the resource is free for the process.
+        3. Retrieve the products for the batch from the queue.
+        4. Run the process and wait until finished.
+        5. Place the product in the output queue.
+
+        Yields:
+            Generator: The generator yields when the process is finished.
+        """
+        batch_size = self.get_batch_size(self.resource)
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
+        yield self.env.timeout(0)
+        process_request = self.requests.pop(0)
+        # TODO: duplicate ProductionController for Batchcontroller and get from self.requests a number of products of one requested process type (max batch size) and perform function belog or the whole batch
+        self.reserved_requests_count -= 1
+        resource = process_request.get_resource()
+        process = process_request.get_process()
+        product = process_request.get_product()
+        products = [process_request.get_product() for _ in range(batch_size)]
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID} with batch size {batch_size}"})
+
+        yield self.env.process(resource.setup(process))
+        with resource.request() as req:
+            yield req
+            product_retrieval_events = yield from self.get_next_product_for_process(resource, process_request)
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve products for batch from queue"})
+            yield events.AllOf(resource.env, product_retrieval_events)
+            
+            production_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
+            yield self.env.process(self.run_process(production_state, products))
+            production_state.process = None
+            
+            product_put_events = yield from self.put_product_to_output_queue(resource, products)
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put products to queue"})
+            yield events.AllOf(resource.env, product_put_events)
+            
+            for product in products:
+                if not resource.got_free.triggered:
+                    resource.got_free.succeed()
+                product.finished_process.succeed()
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished batch process"})
+    
+    def run_process(self, input_state: state.State, products: List[product.Product]):
+        """
+        Run the process of a product. The process is started and the product is logged.
+
+        Args:
+            input_state (state.State): The production state of the process.
+            target_product (product.Product): The product that is processed.
+        """
+        input_state.prepare_for_run()
+        for product in products:
+            input_state.state_info.log_product(
+                product, state.StateTypeEnum.production
+            )
+            product.product_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.production,
+            )
+        input_state.process = self.env.process(input_state.process_state())
+        # TODO: if performed process has failure_rate -> sample (np.choice) if failure happened, if so: mark product as rework_needed
+        yield input_state.process
 
 class TransportController(Controller):
     """
@@ -652,15 +832,9 @@ def agent_control_policy(
     gym_env.interrupt_simulation_event.succeed()
 
 
-class BatchController(Controller):
-    """
-    A controller that processes the requests in batches.
-    """
-    pass
-
-
 from prodsys.simulation import resources, source, sink
 
 Controller.update_forward_refs()
 ProductionController.update_forward_refs()
+BatchController.update_forward_refs()
 TransportController.update_forward_refs()

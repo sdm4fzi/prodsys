@@ -25,10 +25,12 @@ class ControllerEnum(str, Enum):
 
     - PipelineController: Pipeline controller.
     - TransportController: Transport controller.
+    - BatchController: Batch controller.
     """
 
     PipelineController = "PipelineController"
     TransportController = "TransportController"
+    BatchController = "BatchController"
 
 
 class ResourceControlPolicy(str, Enum):
@@ -146,7 +148,7 @@ class ProductionResourceData(ResourceData):
         description (str): Description of the resource.
         capacity (int): Capacity of the resource.
         location (List[float]): Location of the resource. Has to be a list of length 2.
-        controller (Literal[ControllerEnum.PipelineController]): Controller of the resource, has to be a PipelineController.
+        controller (ControllerEnum): Controller of the resource.
         control_policy (ResourceControlPolicy): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
         process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
@@ -177,11 +179,11 @@ class ProductionResourceData(ResourceData):
         ```
     """
 
-    controller: Literal[ControllerEnum.PipelineController]
+    controller: Literal[ControllerEnum.PipelineController, ControllerEnum.BatchController]
     control_policy: ResourceControlPolicy
-
     input_queues: Optional[List[str]]
     output_queues: Optional[List[str]]
+    batch_size: Optional[int] = None
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """

@@ -13,6 +13,7 @@ from prodsys.util.util import get_class_from_str
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
+    TransportResourceData,
     ControllerEnum,
     ResourceControlPolicy, TransportControlPolicy
 )
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 CONTROLLER_DICT: Dict = {
     ControllerEnum.PipelineController: control.ProductionController,
     ControllerEnum.TransportController: control.TransportController,
+    ControllerEnum.BatchController: control.BatchController,
 }
 
 CONTROL_POLICY_DICT: Dict = {
@@ -120,7 +122,7 @@ class ResourceFactory(BaseModel):
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[resources.RESOURCE_UNION] = []
     controllers: List[
-        Union[control.ProductionController, control.TransportController]
+        Union[control.ProductionController, control.TransportController, control.BatchController]
     ] = []
 
     class Config:
@@ -155,7 +157,7 @@ class ResourceFactory(BaseModel):
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(resource_data.process_ids)
-
+        
         values.update({"processes": processes})
 
         controller_class = get_class_from_str(
@@ -165,7 +167,7 @@ class ResourceFactory(BaseModel):
             name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
         )
         controller: Union[
-            control.ProductionController, control.TransportController
+            control.ProductionController, control.TransportController, control.BatchController
         ] = controller_class(control_policy=control_policy, env=self.env)
         self.controllers.append(controller)
         values.update({"controller": controller})
@@ -173,8 +175,10 @@ class ResourceFactory(BaseModel):
         if isinstance(resource_data, ProductionResourceData):
             input_queues, output_queues = self.get_queues_for_resource(resource_data)
             values.update(
-                {"input_queues": input_queues, "output_queues": output_queues}
+            {"input_queues": input_queues, "output_queues": output_queues}
             )
+            if "batch_size" in resource_data.dict():
+                values.update({"batch_size": resource_data.batch_size})
         resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
         # print(resource_object._env)
         controller.set_resource(resource_object)
@@ -212,7 +216,7 @@ class ResourceFactory(BaseModel):
 
     def get_controller_of_resource(
         self, _resource: resources.Resource
-    ) -> Optional[Union[control.ProductionController, control.TransportController]]:
+    ) -> Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]:
         """
         Method returns the controller of the given resource.
 
@@ -220,7 +224,7 @@ class ResourceFactory(BaseModel):
             _resource (resources.Resource): Resource object.
 
         Returns:
-            Optional[Union[control.ProductionController, control.TransportController]]: Controller of the given resource.
+            Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]: Controller of the given resource.
         """
         for controller in self.controllers:
             if controller.resource == _resource:

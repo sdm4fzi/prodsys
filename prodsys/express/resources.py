@@ -38,7 +38,7 @@ class Resource(ABC):
     location: conlist(float, min_items=2, max_items=2) # type: ignore
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
-    controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
+    controller: resource_data.ControllerEnum = Union [resource_data.ControllerEnum.PipelineController, resource_data.ControllerEnum.BatchController]
     control_policy: Union[resource_data.ResourceControlPolicy, resource_data.TransportControlPolicy] = resource_data.ResourceControlPolicy.FIFO
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
@@ -88,6 +88,7 @@ class ProductionResource(Resource, core.ExpressObject):
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
     control_policy: resource_data.ResourceControlPolicy = resource_data.ResourceControlPolicy.FIFO
     queue_size: Optional[int] = 0
+    batch_size: Optional[int] = None
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
@@ -107,6 +108,7 @@ class ProductionResource(Resource, core.ExpressObject):
             state_ids=[state.ID for state in self.states],
             controller=self.controller,
             control_policy=self.control_policy,
+            batch_size=self.batch_size,
         )
         self._input_queues, self._output_queues = prodsys.adapters.get_default_queues_for_resource(resource, self.queue_size)
         resource.input_queues = [q.ID for q in self._input_queues]
