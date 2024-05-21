@@ -150,6 +150,7 @@ def save_population_results(
             "agg_fitness": aggregated_fitness,
             "fitness": [float(value) for value in ind.fitness.values],
             "time_stamp": time.perf_counter() - start,
+            "hash": ind[0].hash(),
         }
 
     if optimization.VERBOSE:
@@ -271,7 +272,11 @@ def evolutionary_algorithm_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    # TODO: rework solution_dict and performances to classes
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -306,7 +311,6 @@ def evolutionary_algorithm_optimization(
         if optimization.VERBOSE:
             print(f"\nGeneration: {current_generation}")
         solution_dict["current_generation"] = str(current_generation)
-        solution_dict[str(current_generation)] = []
         performances[str(current_generation)] = {}
 
         # Vary population

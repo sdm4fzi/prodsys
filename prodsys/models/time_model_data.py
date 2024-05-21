@@ -9,11 +9,12 @@ The following time models are possible:
 """
 
 from __future__ import annotations
+from hashlib import md5
+from typing import List, Union
+from enum import Enum
 
-from typing import List, Literal, Union
 from pydantic import Field
 
-from enum import Enum
 from prodsys.models.core_asset import CoreAsset
 from prodsys.util.statistical_functions import FunctionTimeModelEnum
 
@@ -55,6 +56,15 @@ class SequentialTimeModelData(CoreAsset):
 
     sequence: List[float]
 
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its sequence. Can be used to compare time models for equal functionality.
+
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, self.sequence)])).encode("utf-8")).hexdigest()
+    
     class Config:
         schema_extra = {
             "example": {
@@ -111,8 +121,15 @@ class FunctionTimeModelData(CoreAsset):
                 },
             }
         }
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its distribution function, location and scale. Can be used to compare time models for equal functionality.
 
-
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, [self.distribution_function, self.location, self.scale])])).encode("utf-8")).hexdigest()
+    
 class ManhattanDistanceTimeModelData(CoreAsset):
     """
     Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.
@@ -138,6 +155,15 @@ class ManhattanDistanceTimeModelData(CoreAsset):
     speed: float
     reaction_time: float
 
+    def hash(self) -> str:
+        """
+        Returns a unique hash for the time model considering its speed and reaction time. Can be used to compare time models for equal functionality.
+
+        Returns:
+            str: Hash of the time model.
+        """
+        return md5(("".join([*map(str, [self.speed, self.reaction_time])])).encode("utf-8")).hexdigest()
+    
     class Config:
         schema_extra = {
             "example": {

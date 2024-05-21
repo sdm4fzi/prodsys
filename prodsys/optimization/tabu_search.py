@@ -194,10 +194,14 @@ def run_tabu_search(
     """
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+    if not base_configuration.ID:
+        base_configuration.ID = "base_configuration"
 
     if initial_solution_file_path:
         initial_solution = adapters.JsonProductionSystemAdapter()
         initial_solution.read_data(initial_solution_file_path, scenario_file_path)
+        if not initial_solution.ID:
+            initial_solution.ID = "initial_solution"
     else:
         initial_solution = base_configuration.copy(deep=True)
 
@@ -240,7 +244,10 @@ def tabu_search_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -263,10 +270,11 @@ def tabu_search_optimization(
             print(counter, performance)
             document_individual(solution_dict, save_folder, [state])
 
-            performances["0"][str(counter)] = {
+            performances["0"][state.ID] = {
                 "agg_fitness": performance,
                 "fitness": [float(value) for value in values],
                 "time_stamp": time.perf_counter() - start,
+                "hash": state.hash()
             }
             with open(f"{save_folder}/optimization_results.json", "w") as json_file:
                 json.dump(performances, json_file)
@@ -293,7 +301,7 @@ def tabu_search_optimization(
         max_score=hyper_parameters.max_score,
     )
     best_solution, best_objective_value = alg.run()
-    print("Best solution: ", best_objective_value)
+    print(f"Best solution has ID {best_solution.ID} and objectives values: {best_objective_value}")
 
 
 
