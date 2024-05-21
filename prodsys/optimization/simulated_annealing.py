@@ -74,10 +74,11 @@ class ProductionSystemOptimization(Annealer):
         # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(self.performances["0"]) - 1
         document_individual(self.solution_dict, self.save_folder, [self.state])
-        self.performances["0"][str(counter)] = {
+        self.performances["0"][self.state.ID] = {
             "agg_fitness": performance,
             "fitness": [float(value) for value in values],
             "time_stamp": time.perf_counter() - self.start,
+            "hash": self.state.hash(),
         }
         with open(f"{self.save_folder}/optimization_results.json", "w") as json_file:
             json.dump(self.performances, json_file)
@@ -148,10 +149,14 @@ def run_simulated_annealing(
     """
     base_configuration = adapters.JsonProductionSystemAdapter()
     base_configuration.read_data(base_configuration_file_path, scenario_file_path)
+    if not base_configuration.ID:
+        base_configuration.ID = "base_configuration"
 
     if initial_solution_file_path:
         initial_solution = adapters.JsonProductionSystemAdapter()
         initial_solution.read_data(initial_solution_file_path, scenario_file_path)
+        if not initial_solution.ID:
+            initial_solution.ID = "initial_solution"
     else:
         initial_solution = base_configuration.copy(deep=True)
 
@@ -199,7 +204,10 @@ def simulated_annealing_optimization(
 
     weights = get_weights(base_configuration, "min")
 
-    solution_dict = {"current_generation": "0", "0": []}
+    solution_dict = {
+        "current_generation": "0", 
+        "hashes": {} 
+    }
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()

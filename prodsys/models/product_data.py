@@ -1,10 +1,11 @@
 from __future__ import annotations
-
-from typing import Optional, Union, List, Dict
-
+from hashlib import md5
+from typing import Optional, Union, List, Dict, TYPE_CHECKING
 from pydantic import root_validator
-
 from prodsys.models.core_asset import CoreAsset
+
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 
 
 class ProductData(CoreAsset):
@@ -79,6 +80,43 @@ class ProductData(CoreAsset):
     transport_process: str
     auxiliaries: Optional[List[str]]
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the product considering the processes and the transport process. Can be used to compare products for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter that contains the process data.
+
+        Raises:
+            ValueError: If the process or transport process is not found in the adapter.
+
+        Returns:
+            str: Hash of the product.
+        """
+        processes_hashes = []
+        transport_process_hash = ""
+
+        if not isinstance(self.processes, list) or isinstance(self.processes[0], list):
+            # TODO: Implement hash for adjacency matrix and edges process models
+            raise NotImplementedError("Only list of processes is supported for hashing. Complex process models are not supported yet.")
+        
+        for process_id in self.processes:
+            for process in adapter.process_data:
+                if process.ID == process_id:
+                    processes_hashes.append(process.hash(adapter))
+                    break
+            else:
+                raise ValueError(f"Process with ID {self.processes} not found for product {self.ID}.")
+        
+        for transport_process in adapter.process_data:
+            if transport_process.ID == self.transport_process:
+                transport_process_hash = transport_process.hash(adapter)
+                break
+        else:
+            raise ValueError(f"Transport process with ID {self.transport_process} not found for product {self.ID}.")
+        
+        return md5("".join([*processes_hashes, transport_process_hash]).encode("utf-8")).hexdigest()
+                   
     @root_validator(pre=True)
     def check_processes(cls, values):
         if "product_type" in values and values["product_type"]:

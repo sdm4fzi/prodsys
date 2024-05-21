@@ -596,7 +596,36 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
             x.origin.get_location(), x.target.get_location()
         )
     )
+def nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+    """
+    Sort the requests according to nearest origin without considering the target location. 
+    Second order sorting by descending length of the target output queues, to prefer targets where a product can be picked up.
+    Args:
+        requests (List[request.TransportResquest]): The list of requests.
+    """
+    requests.sort(
+        key=lambda x: (
+            x.process.get_expected_process_time(
+                x.resource.data.location, x.origin.get_location()),
+                - x.target.get_output_queue_length()
+                )
+    )
 
+def nearest_origin_and_shortest_target_input_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+    """
+    Sort the requests according to nearest origin without considering the target location.
+    Second order sorting by ascending length of the target input queue so that resources with empty input queues get material to process.
+
+    Args:
+        requests (List[request.TransportResquest]): The list of requests.
+    """
+    requests.sort(
+        key=lambda x: (
+            x.process.get_expected_process_time(
+                x.resource.data.location, x.origin.get_location()),
+            x.target.get_input_queue_length()
+            )
+    )
 
 def agent_control_policy(
     gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request.Request]
