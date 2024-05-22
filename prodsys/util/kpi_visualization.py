@@ -1,9 +1,10 @@
 import os
-
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from prodsys.util import post_processing
 
@@ -31,6 +32,179 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=True)
+
+def plot_line_balance_kpis(post_processor: post_processing.PostProcessor):
+    """
+    Plots line balancing key performance indicators (throughput, WIP, and Throughput Time) after total time.
+
+    Args:
+        post_processor (post_processing.PostProcessor): Post processor of the simulation.
+    """
+
+    df_output = post_processor.get_aggregated_data()
+    fig = make_subplots(rows=1, cols=3,
+                        specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}]])
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = round(np.sum(list(df_output['Throughput']['Output'].values()))),
+        title = {"text": "Total Output"},
+    ), row=1, col=1)
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = round(np.mean(list(df_output['WIP']['WIP'].values()))),
+        title = {"text": "Average Work In Progress (WIP)"},
+    ), row=1, col=2)
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = round(np.mean(list(df_output['Throughput time']['Throughput_time'].values()))),
+        title = {"text": "Average Throughput Time"},
+    ), row=1, col=3)
+
+    fig.update_layout(
+        title_text="Line Balancing KPIs after Total Time",
+        annotations=[
+            dict(
+                x=0.5,
+                y=-0.1,
+                showarrow=False,
+                text="All KPI's are calculated for the steady state production",
+                xref="paper",
+                yref="paper"
+            )
+        ]
+    )
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "line_balance.html"), auto_open=True)
+
+def plot_oee(post_processor: post_processing.PostProcessor):
+    """
+    Plots the Overall Equipment Effectiveness (OEE) with Availability, Performance & Quality using the given post_processor.
+
+    Parameters:
+    - post_processor: An instance of the post_processing.PostProcessor class.
+    """
+    df_tp = post_processor.df_oee_production_system    
+    fig = make_subplots(rows=1, cols=4,
+                        specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}]])
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = df_tp['Value'][0],
+        title = {"text": "Availability in %"},
+    ), row=1, col=1)
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = df_tp['Value'][1],
+        title = {"text": "Performance in %"},
+    ), row=1, col=2)
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = df_tp['Value'][2],
+        title = {"text": "Quality in %"},
+    ), row=1, col=3)
+
+    fig.add_trace(go.Indicator(
+        mode = "number",
+        value = df_tp['Value'][3],
+        title = {"text": "OEE in %"},
+    ), row=1, col=4)
+
+    fig.update_layout(
+        title_text="Overall Equipment Effectiveness (OEE)",
+        annotations=[
+            dict(
+                x=0.5,
+                y=-0.1,
+                showarrow=False,
+                text="OEE = Availability * Performance * Quality",
+                xref="paper",
+                yref="paper"
+            )
+        ]
+    )
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "oee.html"), auto_open=True)
+
+
+def plot_production_flow_rate_per_product(post_processor: post_processing.PostProcessor):
+    """
+    Plots the production flow rate per product.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+    """
+    percentage_df = post_processor.df_production_flow_ratio
+
+    fig = go.Figure(data=[
+    go.Bar(name='Production', y=percentage_df['Product_type'], x=percentage_df['Production '], marker_color='steelblue', orientation='h',  text=percentage_df['Production '].round(2), textposition='auto', textangle=-90),
+    go.Bar(name='Transport', y=percentage_df['Product_type'], x=percentage_df['Transport '], marker_color='darkseagreen', orientation='h', text=percentage_df['Transport '].round(2),  textposition='auto', textangle=-90),
+    go.Bar(name='Idle', y=percentage_df['Product_type'], x=percentage_df['Idle '], marker_color='lightcoral', orientation='h', text=percentage_df['Idle '].round(2),  textposition='auto', textangle=-90)
+    ])
+    # Change the bar mode
+    fig.update_layout(barmode='stack')
+    fig.update_xaxes(title_text="Percentage")
+    fig.update_layout(
+        title_text="Production Flow Rate (PFO) per Product",
+        annotations=[
+            dict(
+                x=0.5,
+                y=-0.1,
+                showarrow=False,
+                text="Time spent of product in Production, Transport and Idle during the whole throughput time",
+                xref="paper",
+                yref="paper"
+            )
+        ]
+    )
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "production_flow_rate_product_type.html"), auto_open=True)
+
+
+def plot_boxplot_resource_utilization(post_processor: post_processing.PostProcessor):
+    """
+    Plots a boxplot to visualize resource utilization per station.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+    """
+    df_time_per_state = post_processor.df_aggregated_resource_bucket_states_boxplot
+    fig = go.Figure()
+    resources = df_time_per_state['Resource'].unique()
+
+    for resource in resources:
+        df_resource = df_time_per_state[df_time_per_state['Resource'] == resource]
+        
+        df_time_per_state = df_time_per_state[df_time_per_state['Time_type'] == 'PR']
+        fig.add_trace(go.Box(
+            y=df_resource['Percentage'],
+            name=f'{resource}',
+            boxmean=True,
+        ))
+
+    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage', annotations=[
+            dict(
+                x=0.5,
+                y=-0.18,
+                showarrow=False,
+                text="Dashed Line = Mean & Solid Line = Median, Whiskers = Q1/Q3 +/- 1.5 * IQR(Q3-Q1)",
+                xref="paper",
+                yref="paper"
+            )
+        ])
+    fig.update_yaxes(range=[0, 100])
+
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_box_plots.html"), auto_open=True)
+
 
 def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor):
     """
@@ -83,6 +257,66 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "resource_states.html"), auto_open=True)
+
+
+def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normalized: bool=True):
+    """
+    Plots the time per state of the resources of the simulation.
+
+    Args:
+        post_processor (post_processing.PostProcessor): Post processor of the simulation.
+        normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
+    """
+    df_time_per_state = post_processor.df_mean_WIP_per_station
+    df_time_per_state.sort_values(by='column_to_sort', inplace=True)
+    fig1 = go.Figure()
+    df_time_per_state['Mean_WIP'] = np.maximum(np.ceil(df_time_per_state['Mean_WIP']), 1)
+    fig1.add_trace(go.Bar(name='Mean_WIP', x=df_time_per_state['Resource'], y=df_time_per_state['Mean_WIP'], marker_color='purple', yaxis='y2'))
+
+    df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
+    fig2 = go.Figure()
+    resources = df_time_per_state2['Resource'].unique()
+    for resource in resources:
+        df_resource = df_time_per_state2[df_time_per_state2['Resource'] == resource]
+        
+        df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
+        fig2.add_trace(go.Box(
+            y=df_resource['Percentage'],
+            name=f'{resource}',
+            boxmean=True  # mean and standard deviation
+        ))
+    fig2.update_xaxes(categoryorder='array', categoryarray=resources)
+    fig = make_subplots(rows=2, cols=1)
+    for trace in fig1.data:
+        fig.add_trace(trace, row=2, col=1)
+    for trace in fig2.data:
+        fig.add_trace(trace, row=1, col=1)
+
+    fig.update_yaxes(title_text='WIP in #product', row=2, col=1)
+    fig.update_yaxes(title_text='Percentage', row=1, col=1)
+
+    fig.update_layout(title='Mean WIP and Utilization per Station', showlegend=False)
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=True)
+
+def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor):
+    """
+    Plots the utilization of the transport_agv resource over time.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+    """
+    df_time_per_state = post_processor.df_aggregated_resource_bucket_states
+    df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
+    fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['Percentage'], mode='lines', name='PR'))
+
+    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
+
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "Transport_utilization_over_time.html"), auto_open=True)
+
 
 def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
     """
