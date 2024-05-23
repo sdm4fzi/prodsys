@@ -58,7 +58,6 @@ class ListProcessModel(ProcessModel):
     ) -> None:
         self.current_marking += 1
 
-
 class PrecendeGraphNode(BaseModel):
     """
     Class that represents a node in a precedence graph.

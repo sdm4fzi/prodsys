@@ -9,16 +9,16 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     # All time models
     tm_p1 = psx.FunctionTimeModel("normal", 1, 0.1, "tm_p1")
     tm_p2 = psx.FunctionTimeModel("normal", 2, 0.2, "tm_p2")
-    tm_p3 = psx.SequentialTimeModel([1.6, 0.7, 1.4, 0.6], "tm_p3")
+    tm_p3 = psx.SampleTimeModel([1.6, 0.7, 1.4, 0.6], "tm_p3")
     tm_p4 = psx.FunctionTimeModel("lognormal", 1.5, 0.4, "tm_p4")
     tm_p5 = psx.FunctionTimeModel("exponential", 1, ID="tm_p5")
 
 
     tm_cp1 = psx.FunctionTimeModel("normal", 1, 0.1, "tm_cp1")
     tm_cp2 = psx.FunctionTimeModel("normal", 2, 0.5, "tm_cp2")
-    tm_cp3 = psx.SequentialTimeModel([1.6, 0.7, 1.4, 0.6], "tm_cp3")
+    tm_cp3 = psx.SampleTimeModel([1.6, 0.7, 1.4, 0.6], "tm_cp3")
 
-    tm_tp = psx.ManhattanDistanceTimeModel(120, 0.1, "tm_tp")
+    tm_tp = psx.DistanceTimeModel(120, 0.1, "manhattan", "tm_tp")
 
 
     tm_p1_p2 = psx.FunctionTimeModel("exponential", 0.4, ID="s1")
@@ -100,7 +100,7 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     source1 = psx.Source(product1, tm_arrival_model_1, [0, 0], ID="source_1")
     source2 = psx.Source(product2, tm_arrival_model_2, [0, 0], ID="source_2")
-    source3 = psx.Source(product3, tm_arrival_model_3, [0, 0], "CapabilityRouter", ID="source_3")
+    source3 = psx.Source(product3, tm_arrival_model_3, [0, 0], ID="source_3")
     source4 = psx.Source(product4, tm_arrival_model_4, [0, 0], ID="source_4")
 
     system = psx.ProductionSystem([machine_1, machine_2, machine_3, machine_4, machine_5, machine_6, transport_1, transport_2, transport_3], [source1, source2, source3, source4], [sink1, sink2, sink3, sink4])

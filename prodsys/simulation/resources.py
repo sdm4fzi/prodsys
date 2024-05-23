@@ -11,17 +11,16 @@ logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
 from simpy import events
-from prodsys.simulation import process, sim, store
-
+from prodsys.simulation import sim, store
+if TYPE_CHECKING:
+    from prodsys.simulation import process, control, state
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
     TransportResourceData,
 )
-from prodsys.simulation import control, state
 from prodsys.util import util
-
 
 class Resource(BaseModel, ABC, resource.Resource):
     """
@@ -122,7 +121,7 @@ class Resource(BaseModel, ABC, resource.Resource):
             return True
         return (
             self.capacity_current_setup
-            - len(self.controller.running_processes)
+            - (len(self.controller.running_processes) + self.controller.reserved_requests_count)
         ) <= 0
 
     def get_controller(self) -> control.Controller:
@@ -444,3 +443,8 @@ class TransportResource(Resource):
 
 RESOURCE_UNION = Union[ProductionResource, TransportResource]
 """ Union Type for Resources. """
+
+from prodsys.simulation import process, control, state
+Resource.update_forward_refs()
+ProductionResource.update_forward_refs()
+TransportResource.update_forward_refs()

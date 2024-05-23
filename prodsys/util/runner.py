@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import random
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import time
@@ -12,6 +12,7 @@ from functools import cached_property
 from prodsys.adapters import adapter
 from prodsys.simulation import sim
 from prodsys.factories import (
+    link_transport_process_updater,
     auxiliary_factory,
     state_factory,
     time_model_factory,
@@ -21,6 +22,7 @@ from prodsys.factories import (
     product_factory,
     sink_factory,
     source_factory,
+    node_factory,
 )
 from prodsys.simulation import logger
 from prodsys.util import post_processing, kpi_visualization, util
@@ -99,6 +101,7 @@ class Runner(BaseModel):
     storage_factory: queue_factory.StorageFactory = Field(init=False, default=None)
     auxiliary_factory: auxiliary_factory.AuxiliaryFactory = Field(init=False, default=None)
     resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
+    node_factory: node_factory.NodeFactory = Field(init=False, default=None)
     sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
     source_factory: source_factory.SourceFactory = Field(init=False, default=None)
     product_factory: product_factory.ProductFactory = Field(init=False, default=None)
@@ -113,7 +116,7 @@ class Runner(BaseModel):
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
-        self.adapter.physical_validation()
+        self.adapter.validate_configuration()
         with temp_seed(self.adapter.seed):
 
             self.time_model_factory = time_model_factory.TimeModelFactory()
@@ -139,11 +142,15 @@ class Runner(BaseModel):
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
-                process_factory=self.process_factory,
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
+                process_factory= self.process_factory
             )
             self.resource_factory.create_resources(self.adapter)
+
+            self.node_factory = node_factory.NodeFactory(
+                env=self.env)
+            self.node_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 
@@ -199,6 +206,15 @@ class Runner(BaseModel):
             )
             self.source_factory.create_sources(self.adapter)
 
+            link_transport_process_updater_instance = link_transport_process_updater.LinkTransportProcessUpdater(
+                process_factory=self.process_factory,
+                source_factory=self.source_factory,
+                sink_factory=self.sink_factory,
+                resource_factory=self.resource_factory,
+                node_factory=self.node_factory,
+            )
+            link_transport_process_updater_instance.update_links_with_objects()
+            
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 
@@ -257,9 +273,9 @@ class Runner(BaseModel):
         p = self.get_post_processor()
         df_raw=self.event_logger.get_data_as_dataframe()
         events = []
-        df_raw["Expected End Time"].fillna(value=-1, inplace=True)
-        df_raw["Target location"].fillna(value="", inplace=True)
-        df_raw["Product"].fillna(value="", inplace=True)
+        df_raw["Expected End Time"] = df_raw["Expected End Time"].fillna(value=-1)
+        df_raw["Target location"] = df_raw["Target location"].fillna(value="")
+        df_raw["Product"] = df_raw["Product"].fillna(value="")
         for index, row in df_raw.iterrows():
             
             events.append(

@@ -59,7 +59,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.runner = runner.Runner(adapter=self.adapter)
 
         self.router: router.Router = None
-        self.possible_resources: List[resources.Resource] = []
+        self.possible_requests: List[request.Request] = []
         self.chosen_resource: Optional[resources.Resource] = None
         self.interrupt_simulation_event: events.Event = None
         self.observers: List[observer.ResourceObserver] = []
@@ -123,7 +123,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.interrupt_simulation_event = events.Event(self.runner.env)
         self.chose_resource_event = events.Event(self.runner.env)
         agent_routing_heuristic = partial(router.agent_routing_heuristic, self)
-        self.router = router.SimpleRouter(self.runner.resource_factory, self.runner.sink_factory, agent_routing_heuristic)  
+        self.router = router.Router(self.runner.resource_factory, self.runner.sink_factory, agent_routing_heuristic)  
         
         sources = self.runner.source_factory.sources
         for source in sources:
@@ -147,14 +147,14 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
 
         return observation, info
     
-    def set_possible_resources(self, resources: List[resources.Resource]):
+    def set_possible_requests(self, requests: List[request.Request]):
         """
-        Set possible resources for the RL agent environment.
+        Set possible requests for the RL agent environment.
 
         Args:
-            resources (List[resources.Resource]): The possible resources.
+            resources (List[request.Request]): The possible requests to route.
         """
-        self.possible_resources = resources
+        self.possible_requests = requests
 
     def get_chosen_resource(self) -> resources.Resource:
         """
@@ -179,13 +179,13 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         resource_index = np.argmax(action)
 
         self.chosen_resource = self.runner.resource_factory.resources[resource_index]
-        if not self.chosen_resource.data.ID in [r.data.ID for r in self.possible_resources]:
+        if not self.chosen_resource.data.ID in [r.resource.data.ID for r in self.possible_requests]:
             invalid_action = True
-            self.chosen_resource = np.random.choice(self.possible_resources)
+            self.chosen_resource = np.random.choice(self.possible_requests)
         else:
             invalid_action = False
 
-        self.possible_resources.sort(key=lambda r: r.data.ID == self.chosen_resource.data.ID, reverse=True)
+        self.possible_requests.sort(key=lambda r: r.resource.data.ID == self.chosen_resource.data.ID, reverse=True)
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
         self.step_count += 1

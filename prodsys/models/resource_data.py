@@ -60,7 +60,6 @@ class TransportControlPolicy(str, Enum):
     NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT = "Nearest_origin_and_longest_target_queues_transport"
     NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT = "Nearest_origin_and_shortest_target_input_queues_transport"
 
-
 class ResourceData(CoreAsset):
     """
     Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.
