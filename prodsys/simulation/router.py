@@ -12,14 +12,31 @@ import numpy as np
 
 from simpy import events
 
-from prodsys.simulation import resources
+from prodsys.simulation import resources, auxiliary
 from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
     from prodsys.simulation import resources, product, sink
-    from prodsys.factories import resource_factory, sink_factory
+    from prodsys.factories import resource_factory, sink_factory, auxiliary_factory
     from prodsys.control import routing_control_env
+    from prodsys.models import product_data
+    
+
+
+def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
+    """
+    Returns the environment from a list of requests.
+
+    Args:
+        requests (List[request.Request]): The requests.
+
+    Returns:
+        simpy.Environment: The environment.
+    """
+    if not requests:
+        raise ValueError("No requests found to retrieve an environment from.")
+    return requests[0].product.env
 
 
 def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
@@ -51,10 +68,12 @@ class Router:
         self,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
+        auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
+        self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
         self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic
         # TODO: add possibility to specify a production and a transport heuristic separately
     
@@ -171,6 +190,39 @@ class Router:
             origin=product.current_locatable,
             target=target,
         )
+    def get_auxiliary(self, processing_request: request.AuxiliaryRequest) -> Generator:
+
+        possible_auxiliaries = self.get_possible_auxiliaries(processing_request)
+        while True:
+            free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
+            self.routing_heuristic(free_possible_auxiliaries)
+            if free_possible_auxiliaries:
+                break
+            logger.debug({"ID": processing_request.product.product_data.ID , "sim_time": processing_request.product.env.now, "event": f"Waiting for free auxiliary."})
+            yield events.AnyOf(
+                processing_request.product.env,
+                [auxiliary.got_free for auxiliary in possible_auxiliaries],
+            )
+            logger.debug({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Free auxiliary available."})
+        routed_auxiliary = free_possible_auxiliaries[0]
+        routed_auxiliary.current_product = processing_request.product
+        processing_request.auxiliary = routed_auxiliary
+
+    def get_free_auxiliary(self, possible_auxiliaries: List[auxiliary.Auxiliary]) -> List[auxiliary.Auxiliary]:
+
+        free_possible_auxiliaries = []
+        for auxiliary in possible_auxiliaries:
+            if auxiliary.current_product is None:
+                free_possible_auxiliaries.append(auxiliary)
+        return free_possible_auxiliaries
+    
+    def get_possible_auxiliaries(self, processing_request: request.AuxiliaryRequest)-> List[auxiliary.Auxiliary]:
+
+        possible_auxiliaries = []
+        for auxiliary in self.auxiliary_factory.auxiliaries:
+            if processing_request.process == auxiliary.transport_process.process_data.ID:
+                possible_auxiliaries.append(auxiliary)
+        return possible_auxiliaries
     
     def get_possible_production_requests(self, product: product.Product) -> List[request.Request]:
         """
@@ -285,8 +337,12 @@ def random_routing_heuristic(possible_requests: List[request.Request]):
     Args:
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
-    possible_requests.sort(key=lambda x: x.resource.data.ID)
-    np.random.shuffle(possible_requests)
+    
+    if any(isinstance(resource, auxiliary.Auxiliary) for resource in possible_requests):
+        np.random.shuffle(possible_requests)
+    else:
+        possible_requests.sort(key=lambda x: x.resource.data.ID)
+        np.random.shuffle(possible_requests)
 
 
 def shortest_queue_routing_heuristic(

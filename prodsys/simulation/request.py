@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Optional, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, resources, sink
+    from prodsys.simulation import product, process, resources, auxiliary, sink
     from prodsys.simulation.product import Locatable
 
 
@@ -65,7 +65,7 @@ class Request:
             resources.Resource: The resource.
         """
         return self.resource
-    
+
 
 class SinkRequest(Request):
     """
@@ -83,6 +83,26 @@ class SinkRequest(Request):
         self.product = product
         self.process = None
     
+class AuxiliaryRequest(Request):
+    """
+    Represents an auxiliary request in the simulation. The request is associated with an auxiliary which needs to be transported
+
+    Attributes:
+        process (process.TransportProcess): The transport process associated with the request.
+        product (product.Product): The product associated with the request.
+        auxiliary (auxiliary.Auxiliary): The auxiliary associated with the request.
+    """
+
+    def __init__(
+        self,
+        process: process.TransportProcess,
+        product: product.Product,
+    ):
+        self.process: process.TransportProcess = process
+        self.product: product.Product = product
+        self.auxiliary: auxiliary.Auxiliary = None
+
+
 
 
 class TransportResquest(Request):
@@ -99,7 +119,7 @@ class TransportResquest(Request):
     def __init__(
         self,
         process: Union[process.TransportProcess, process.LinkTransportProcess],
-        product: product.Product,
+        product: Union[product.Product, auxiliary.Auxiliary],
         resource: resources.TransportResource,
         origin: product.Locatable,
         target: product.Locatable,

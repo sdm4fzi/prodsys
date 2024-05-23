@@ -14,6 +14,7 @@ import numpy as np
 from simpy import events
 
 from prodsys.simulation import (
+    auxiliary,
     process,
     request,
     router,
@@ -186,6 +187,15 @@ class Product(BaseModel):
         """
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
+
+        if self.product_data.auxiliaries:
+            auxiliary_request_1 = self.get_auxiliary_request_for_auxiliary()
+            yield self.env.process(self.product_router.get_auxiliary(auxiliary_request_1))
+
+            if auxiliary_request_1.auxiliary.current_location.data.ID != self.current_locatable.data.ID: # doesn't work if storage has same location as source
+                auxiliary_request = self.get_transport_request_for_auxiliary(auxiliary_request_1.auxiliary)
+                yield self.env.process(auxiliary_request_1.auxiliary.get_auxiliary(auxiliary_request))
+
         while self.next_prodution_process:
             production_request, transport_request = yield self.env.process(self.product_router.route_product(self))
             yield self.env.process(self.request_process(transport_request))
@@ -193,11 +203,55 @@ class Product(BaseModel):
             self.set_next_production_process()
         transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
         yield self.env.process(self.request_process(transport_to_sink_request))
+
+        if self.product_data.auxiliaries:
+            auxiliary_request_1.auxiliary.update_location(self.current_location)
+        
         self.product_info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         self.current_locatable.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
+        
+        if self.product_data.auxiliaries:
+            yield self.env.process(auxiliary_request_1.auxiliary.release_auxiliary())
+
+
+    def get_transport_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
+        """
+        Creates a transport request for the given auxiliary.
+
+        Args:
+            auxiliary (auxiliary.Auxiliary): The auxiliary for which the transport request is created.
+
+        Returns:
+            request.Request: The created transport request.
+        """
+
+        req = request.TransportResquest(
+            process=auxiliary.transport_process,
+            product=auxiliary,
+            origin=auxiliary.current_location,
+            target=self.current_locatable
+        )
+        return req
+
+    def get_auxiliary_request_for_auxiliary(self) -> request.AuxiliaryRequest:
+        """
+        Returns an AuxiliaryRequest object for the auxiliary process.
+
+        This method creates and returns an AuxiliaryRequest object that represents the request
+        for the auxiliary process associated with the current product.
+
+        Returns:
+            An AuxiliaryRequest object representing the request for the auxiliary process.
+        """
+        req = request.AuxiliaryRequest(
+            process=self.product_data.transport_process,
+            product=self,
+        )
+        return req
+
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """

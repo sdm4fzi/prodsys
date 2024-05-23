@@ -58,6 +58,7 @@ class ProductFactory(BaseModel):
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
+        
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
