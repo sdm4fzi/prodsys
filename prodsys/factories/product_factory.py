@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from prodsys.simulation import router, sim
 from prodsys.models import product_data
-from prodsys.factories import auxiliary_factory, process_factory
+from prodsys.factories import process_factory
 from prodsys.simulation import logger, proces_models, process
 
 
