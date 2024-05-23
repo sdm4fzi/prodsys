@@ -337,8 +337,12 @@ def random_routing_heuristic(possible_requests: List[request.Request]):
     Args:
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
-    possible_requests.sort(key=lambda x: x.resource.data.ID)
-    np.random.shuffle(possible_requests)
+    
+    if any(isinstance(resource, auxiliary.Auxiliary) for resource in possible_requests):
+        np.random.shuffle(possible_requests)
+    else:
+        possible_requests.sort(key=lambda x: x.resource.data.ID)
+        np.random.shuffle(possible_requests)
 
 
 def shortest_queue_routing_heuristic(

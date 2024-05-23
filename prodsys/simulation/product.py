@@ -192,7 +192,7 @@ class Product(BaseModel):
             auxiliary_request_1 = self.get_auxiliary_request_for_auxiliary()
             yield self.env.process(self.product_router.get_auxiliary(auxiliary_request_1))
 
-            if auxiliary_request_1.auxiliary.current_location.data.ID != self.current_location.data.ID: # doesn't work if storage has same location as source
+            if auxiliary_request_1.auxiliary.current_location.data.ID != self.current_locatable.data.ID: # doesn't work if storage has same location as source
                 auxiliary_request = self.get_transport_request_for_auxiliary(auxiliary_request_1.auxiliary)
                 yield self.env.process(auxiliary_request_1.auxiliary.get_auxiliary(auxiliary_request))
 
@@ -232,7 +232,7 @@ class Product(BaseModel):
             process=auxiliary.transport_process,
             product=auxiliary,
             origin=auxiliary.current_location,
-            target=self.current_location
+            target=self.current_locatable
         )
         return req
 
