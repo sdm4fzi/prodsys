@@ -5,7 +5,7 @@ import random
 import os
 
 import numpy as np
-from typing import List, Generator
+from typing import Any, List, Generator
 import warnings
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -129,7 +129,7 @@ def flatten(xs: Iterable) -> Iterable:
         else:
             yield x
 
-def flatten_object(xs: list) -> list: # type: ignore
+def flatten_object(xs: list) -> Generator[Any, Any, list]:
     """
     Flattens a nested list.
 

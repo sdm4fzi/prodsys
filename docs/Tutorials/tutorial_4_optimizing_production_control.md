@@ -198,4 +198,4 @@ You can review the training progress by looking at the tensorboard logs in the f
 tensorboard --logdir tensorboard_log\sequencing
 ```
 
-This example should only show the required implementation for an RL-agent for production control tasks. The routing control task can be implemented in a similar fashion. For more information on the implementation of the environment, please refer to the documentation of the abstract base classes in the [API reference](/API_reference/API_reference_0_overview.md) of `prodsys.control`.
+This example should only show the required implementation for an RL-agent for production control tasks. The routing control task can be implemented in a similar fashion. For more information on the implementation of the environment, please refer to the documentation of the abstract base classes in the [API reference](../API_reference/API_reference_0_overview.md) of `prodsys.control`.

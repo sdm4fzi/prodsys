@@ -29,3 +29,5 @@ tensorboard_log/
 results/
 logs/*
 plots/*
+
+examples/tutorials/plots/

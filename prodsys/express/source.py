@@ -1,15 +1,14 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 from uuid import uuid1
 
-from abc import ABC
 
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.models import core_asset, source_data, queue_data
+from prodsys.models import source_data, queue_data
 import prodsys
 
-from prodsys.express import process, product, state, core, time_model
+from prodsys.express import core, product, time_model
 
 @dataclass
 class Source(core.ExpressObject):
@@ -65,7 +64,7 @@ class Source(core.ExpressObject):
     """
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
-    location: conlist(float, min_items=2, max_items=2)
+    location: conlist(float, min_items=2, max_items=2) # type: ignore
     routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
