@@ -1018,7 +1018,7 @@ def document_individual(
             "ID": adapter_object.ID,
         }
 
-    adapters.JsonProductionSystemAdapter(**adapter_object.dict()).write_data(
+    adapters.JsonProductionSystemAdapter(**adapter_object.model_dump()).write_data(
         f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
     )
 

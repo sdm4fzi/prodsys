@@ -1,8 +1,4 @@
-from abc import ABC, abstractmethod, abstractclassmethod
-import uuid
-from pydantic import validator, Field
-import pydantic
-from pydantic.dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 from prodsys.models import core_asset
 

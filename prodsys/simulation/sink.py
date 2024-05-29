@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from prodsys.simulation import sim, store
 from prodsys.models import sink_data
@@ -26,8 +26,7 @@ class Sink(BaseModel):
     product_factory: product_factory.ProductFactory
     input_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         """
@@ -73,7 +72,5 @@ class Sink(BaseModel):
         """
         self.product_factory.register_finished_product(product)
 
-from prodsys.factories import product_factory
-Sink.update_forward_refs()
-    
+from prodsys.factories import product_factory    
 

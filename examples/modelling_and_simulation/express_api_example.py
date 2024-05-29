@@ -43,6 +43,8 @@ sk2 = psx.Sink(m2, [20.0, 20.0])
 ps = psx.ProductionSystem([r1, r2], [s1, s2], [sk1, sk2])
 
 ps.run(7*24*60)
+# FIXME: resolve problem when running this
+
 
 ps.runner.print_results()
 

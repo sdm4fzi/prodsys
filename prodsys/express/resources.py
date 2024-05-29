@@ -6,6 +6,8 @@ The following resources are available:
 - `ProductionResource`: Class that represents a production resource.
 - `TransportResource`: Class that represents a transport resource.
 """
+from __future__ import annotations
+
 from typing import List, Optional, Union
 from uuid import uuid1
 
@@ -14,11 +16,10 @@ from abc import ABC
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
+from prodsys.express import core
+
 from prodsys.models import resource_data, queue_data
 import prodsys
-
-from prodsys.express import core, process, state
-
 
 @dataclass
 class Resource(ABC):
@@ -27,7 +28,7 @@ class Resource(ABC):
 
     Args:
         processes (List[process.PROCESS_UNION]): Processes of the resource.
-        location (conlist(float, min_items=2, max_items=2)): Location of the resource.
+        location (conlist(float, min_length=2, max_length=2)): Location of the resource.
         capacity (int): Capacity of the resource. Defaults to 1.
         states (Optional[List[state.STATE_UNION]], optional): States of the resource. Defaults to None.
         controller (resource_data.ControllerEnum, optional): Controller of the resource. Defaults to resource_data.ControllerEnum.PipelineController.
@@ -35,7 +36,7 @@ class Resource(ABC):
         ID (str): ID of the resource.
     """
     processes: List[process.PROCESS_UNION]
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
@@ -50,7 +51,7 @@ class ProductionResource(Resource, core.ExpressObject):
 
     Args:
         processes (List[process.ProductionProcess]): Processes of the resource.
-        location (conlist(float, min_items=2, max_items=2)): Location of the resource.
+        location (conlist(float, min_length=2, max_length=2)): Location of the resource.
         capacity (int): Capacity of the resource. Defaults to 1.
         states (Optional[List[state.STATE_UNION]], optional): States of the resource. Defaults to None.
         controller (resource_data.ControllerEnum, optional): Controller of the resource. Defaults to resource_data.ControllerEnum.PipelineController.
@@ -106,7 +107,7 @@ class ProductionResource(Resource, core.ExpressObject):
             capacity=self.capacity,
             state_ids=[state.ID for state in self.states],
             controller=self.controller,
-            control_policy=self.control_policy,
+            control_policy=self.control_policy
         )
         self._input_queues, self._output_queues = prodsys.adapters.get_default_queues_for_resource(resource, self.queue_size)
         resource.input_queues = [q.ID for q in self._input_queues]
@@ -121,7 +122,7 @@ class TransportResource(Resource, core.ExpressObject):
 
     Args:
         processes (List[process.TransportProcess]): Processes of the resource.
-        location (conlist(float, min_items=2, max_items=2)): Location of the resource.
+        location (conlist(float, min_length=2, max_length=2)): Location of the resource.
         capacity (int): Capacity of the resource. Defaults to 1.
         states (Optional[List[state.STATE_UNION]], optional): States of the resource. Defaults to None.
         controller (resource_data.ControllerEnum, optional): Controller of the resource. Defaults to resource_data.ControllerEnum.TransportController.
@@ -146,7 +147,7 @@ class TransportResource(Resource, core.ExpressObject):
         ```
     """
     processes: List[process.TransportProcess]
-    location: conlist(float, min_items=2, max_items=2) = Field(default_factory=list) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) = Field(default_factory=list) # type: ignore
     # capacity: int = 1
     # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.TransportController
@@ -174,3 +175,5 @@ class TransportResource(Resource, core.ExpressObject):
             controller=self.controller,
             control_policy=self.control_policy,
         )
+
+from prodsys.express import state, process

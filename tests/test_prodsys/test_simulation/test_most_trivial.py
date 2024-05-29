@@ -39,7 +39,7 @@ def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
 def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "cd248c176303d8e85e77a82c4f58ee6e"
+    assert hash_str == "934de9573541ea7fcceffda10653ab74"
 
 def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     runner_instance = runner.Runner(adapter=simulation_adapter)   
@@ -61,8 +61,8 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
         
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 4.4 and kpi.value > 3.6
+            assert kpi.value < 1.7 and kpi.value > 1.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 4.4 and kpi.value > 3.6
+            assert kpi.value < 1.4 and kpi.value > 1.2

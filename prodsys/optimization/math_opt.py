@@ -10,7 +10,7 @@ import random
 import logging
 logger = logging.getLogger(__name__)
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from prodsys import adapters
 from prodsys.models import (
     resource_data,
@@ -80,8 +80,7 @@ class MathOptimizer(BaseModel):
 
     processing_times_per_product_and_step: dict = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
 
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.adapter.scenario_data.info.process_module_cost
@@ -546,17 +545,16 @@ class MathOptHyperparameters(BaseModel):
     adjusted_number_of_transport_resources: int = 1
     number_of_seeds: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "optimization_time_portion": 0.5,
-                    "number_of_solutions": 1,
-                    "adjusted_number_of_transport_resources": 1,
-                    "number_of_seeds": 1,
-                },
-            ]
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "optimization_time_portion": 0.5,
+                "number_of_solutions": 1,
+                "adjusted_number_of_transport_resources": 1,
+                "number_of_seeds": 1,
+            },
+        ]
+    })
 
 
 def run_mathematical_optimization(

@@ -1,8 +1,4 @@
 from prodsys.conf.logging_config import set_logging
-from prodsys.util import runner
-from prodsys import adapters
-from prodsys.util import post_processing  # , optimization_util
-
 from prodsys.models import (
     processes_data,
     product_data,
@@ -14,5 +10,10 @@ from prodsys.models import (
     state_data,
     time_model_data,
 )
+from prodsys import adapters
+from prodsys.util import post_processing  # , optimization_util
+from prodsys.util import runner
+
+
 
 VERSION = "0.6.5"

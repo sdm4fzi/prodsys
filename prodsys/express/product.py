@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Union
 from uuid import uuid1
 
@@ -6,7 +8,7 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.models import product_data
 
-from prodsys.express import core, process
+from prodsys.express import core
 
 @dataclass
 class Product(core.ExpressObject):
@@ -63,3 +65,5 @@ class Product(core.ExpressObject):
             processes=[process.ID for process in self.processes],
             transport_process=self.transport_process.ID,
         )
+
+from prodsys.express import process

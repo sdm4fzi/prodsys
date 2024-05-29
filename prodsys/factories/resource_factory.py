@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
@@ -19,6 +19,7 @@ from prodsys.models.resource_data import (
 from prodsys.factories import process_factory, state_factory, queue_factory
 
 from prodsys.simulation import control, resources
+from prodsys.simulation.resources import RESOURCE_UNION
 
 if TYPE_CHECKING:
     from prodsys.simulation import store
@@ -116,13 +117,12 @@ class ResourceFactory(BaseModel):
     queue_factory: queue_factory.QueueFactory
 
     resource_data: List[RESOURCE_DATA_UNION] = []
-    resources: List[resources.RESOURCE_UNION] = []
+    resources: List[RESOURCE_UNION] = []
     controllers: List[
         Union[control.ProductionController, control.TransportController]
     ] = []
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_resources(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -173,7 +173,7 @@ class ResourceFactory(BaseModel):
             values.update(
                 {"input_queues": input_queues, "output_queues": output_queues}
             )
-        resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
+        resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
         # print(resource_object._env)
         controller.set_resource(resource_object)
 
@@ -195,7 +195,7 @@ class ResourceFactory(BaseModel):
         for controller in self.controllers:
             self.env.process(controller.control_loop())  # type: ignore
 
-    def get_resource(self, ID: str) -> resources.RESOURCE_UNION:
+    def get_resource(self, ID: str) -> RESOURCE_UNION:
         """
         Method returns a resource object with the given ID.
 

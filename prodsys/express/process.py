@@ -21,12 +21,6 @@ from pydantic.dataclasses import dataclass
 from prodsys.express import core, time_model
 from prodsys.models import processes_data
 
-if TYPE_CHECKING:
-    from prodsys.express.resources import Resource
-    from prodsys.express.source import Source
-    from prodsys.express.sink import Sink
-    from prodsys.express.node import Node
-
 @dataclass
 class Process(ABC):
     """
@@ -198,6 +192,7 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             type=self.type
         )
 
+
 @dataclass
 class LinkTransportProcess(TransportProcess):
     """
@@ -219,15 +214,12 @@ class LinkTransportProcess(TransportProcess):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.LinkTransportProcesses
     )
-    links: Union[List[List[Union[Resource, Node, Source, Sink]]], 
-                 Dict[Union[Resource, Node, Source, Sink], 
-                      List[Union[Resource, Node, Source, Sink]]]] = Field(default_factory=list)
+    links: Union[List[List[Union[resources.Resource, sink.Sink, source.Source, node.Node]]], 
+                 Dict[Union[resources.Resource, sink.Sink, source.Source, node.Node], 
+                      List[Union[resources.Resource, sink.Sink, source.Source, node.Node]]]] = Field(default_factory=list)
     capability: Optional[str] = Field(default_factory=str)
 
-    def __post_init__(self):
-        self.__pydantic_model__.update_forward_refs(**globals())
-
-    def add_link(self, link: List[Union[Resource, Node, Source, Sink]]) -> None:
+    def add_link(self, link: List[Union[resources.Resource, sink.Sink, source.Source, node.Node]]) -> None:
         """
         Adds a link to the LinkTransportProcess object.
 
@@ -242,7 +234,7 @@ class LinkTransportProcess(TransportProcess):
                 self.links[link] = []
             self.links[link[0]] = link[1]
 
-    def set_links(self, links: List[List[Union[Resource, Node, Source, Sink]]]) -> None:
+    def set_links(self, links: List[List[Union[resources.Resource, node.Node, source.Source, sink.Sink]]]) -> None:
         """
         Sets the links of the LinkTransportProcess object.
 
@@ -274,7 +266,7 @@ class LinkTransportProcess(TransportProcess):
             links=return_links,
             capability=self.capability,
         )
-    
+
 
 @dataclass
 class RequiredCapabilityProcess(core.ExpressObject):
@@ -315,7 +307,4 @@ PROCESS_UNION = Union[
     RequiredCapabilityProcess,
     LinkTransportProcess,
 ]
-from prodsys.express.resources import Resource
-from prodsys.express.source import Source
-from prodsys.express.sink import Sink
-from prodsys.express.node import Node
+from prodsys.express import resources, sink, source, node

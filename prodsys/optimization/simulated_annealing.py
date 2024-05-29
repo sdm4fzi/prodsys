@@ -3,8 +3,9 @@ import time
 from copy import deepcopy
 from numpy import full
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import logging
+
 logger = logging.getLogger(__name__)
 
 from simanneal import Annealer
@@ -18,7 +19,7 @@ from prodsys.optimization.optimization_util import (
     document_individual,
     get_weights,
     check_breakdown_states_available,
-    create_default_breakdown_states
+    create_default_breakdown_states,
 )
 from prodsys.util.util import set_seed
 
@@ -36,7 +37,7 @@ class ProductionSystemOptimization(Annealer):
         weights: tuple,
         number_of_seeds: int = 1,
         initial_solution: adapters.ProductionSystemAdapter = None,
-        full_save: bool = False
+        full_save: bool = False,
     ):
         super().__init__(initial_solution, None)
         self.save_folder = save_folder
@@ -84,7 +85,8 @@ class ProductionSystemOptimization(Annealer):
             json.dump(self.performances, json_file)
 
         return performance
-    
+
+
 class SimulatedAnnealingHyperparameters(BaseModel):
     """
     Hyperparameters to perform a configuration optimization with simulated annealing.
@@ -95,6 +97,7 @@ class SimulatedAnnealingHyperparameters(BaseModel):
         steps (int): Number of steps
         updates (int): Number of updates
     """
+
     seed: int = 0
     Tmax: int = 10000
     Tmin: int = 1
@@ -102,10 +105,10 @@ class SimulatedAnnealingHyperparameters(BaseModel):
     updates: int = 300
     number_of_seeds: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [ 
-            {
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
                     "seed": 0,
                     "Tmax": 10000,
                     "Tmin": 1,
@@ -115,6 +118,7 @@ class SimulatedAnnealingHyperparameters(BaseModel):
                 },
             ]
         }
+    )
 
 
 def run_simulated_annealing(
@@ -160,26 +164,29 @@ def run_simulated_annealing(
         initial_solution = base_configuration.copy(deep=True)
 
     hyper_parameters = SimulatedAnnealingHyperparameters(
-        seed=seed, Tmax=Tmax, Tmin=Tmin, steps=steps, updates=updates, number_of_seeds=number_of_seeds)
+        seed=seed,
+        Tmax=Tmax,
+        Tmin=Tmin,
+        steps=steps,
+        updates=updates,
+        number_of_seeds=number_of_seeds,
+    )
 
     simulated_annealing_optimization(
         base_configuration=base_configuration,
         hyper_parameters=hyper_parameters,
         save_folder=save_folder,
         initial_solution=initial_solution,
-        full_save = full_save        
+        full_save=full_save,
     )
-
-
-
 
 
 def simulated_annealing_optimization(
     base_configuration: adapters.ProductionSystemAdapter,
     hyper_parameters: SimulatedAnnealingHyperparameters,
-    save_folder: str="results",
+    save_folder: str = "results",
     initial_solution: adapters.ProductionSystemAdapter = None,
-    full_save: bool = False
+    full_save: bool = False,
 ):
     """
     Optimize a production system configuration using simulated anealing.
@@ -193,7 +200,9 @@ def simulated_annealing_optimization(
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
+        logger.warning(
+            "Both compound processes and normal processes are used. This may lead to unexpected results."
+        )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     if not initial_solution:
@@ -203,10 +212,7 @@ def simulated_annealing_optimization(
 
     weights = get_weights(base_configuration, "min")
 
-    solution_dict = {
-        "current_generation": "0", 
-        "hashes": {} 
-    }
+    solution_dict = {"current_generation": "0", "hashes": {}}
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -220,7 +226,7 @@ def simulated_annealing_optimization(
         weights=weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
         initial_solution=initial_solution,
-        full_save = full_save
+        full_save=full_save,
     )
 
     pso.Tmax = hyper_parameters.Tmax
@@ -236,7 +242,7 @@ def optimize_configuration(
     scenario_file_path: str,
     save_folder: str,
     hyper_parameters: SimulatedAnnealingHyperparameters,
-    full_save: bool = False
+    full_save: bool = False,
 ):
     """
     Optimize a configuration with simulated annealing.
@@ -258,5 +264,5 @@ def optimize_configuration(
         steps=hyper_parameters.steps,
         updates=hyper_parameters.updates,
         number_of_seeds=hyper_parameters.number_of_seeds,
-        full_save=full_save
+        full_save=full_save,
     )
