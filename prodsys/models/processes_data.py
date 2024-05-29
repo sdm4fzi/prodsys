@@ -13,13 +13,12 @@ from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, Optional, List, TYPE_CHECKING
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
-
 
 class ProcessTypeEnum(str, Enum):
     """
@@ -50,14 +49,15 @@ class ProcessData(CoreAsset):
 
     time_model_id: str
 
-    class Config:
-        schema_extra = {
-            "example": {
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
                 "ID": "P1",
                 "description": "Process 1",
                 "time_model_id": "function_time_model_1",
             }
-        }
+        ]
+    })
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -105,18 +105,16 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Production process",
-                "value": {
-                    "ID": "P1",
-                    "description": "Process 1",
-                    "time_model_id": "function_time_model_1",
-                    "type": "ProductionProcesses",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "P1",
+                "description": "Process 1",
+                "time_model_id": "function_time_model_1",
+                "type": "ProductionProcesses",
             }
-        }
+        ]
+    })
 
 
 class CapabilityProcessData(ProcessData):
@@ -147,19 +145,17 @@ class CapabilityProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.CapabilityProcesses]
     capability: str
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Capability process",
-                "value": {
-                    "ID": "P1",
-                    "description": "Process 1",
-                    "time_model_id": "function_time_model_1",
-                    "type": "CapabilityProcesses",
-                    "capability": "C1",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "P1",
+                "description": "Process 1",
+                "time_model_id": "function_time_model_1",
+                "type": "CapabilityProcesses",
+                "capability": "C1",
             }
-        }
+        ]
+    })
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -199,18 +195,16 @@ class TransportProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Transport process",
-                "value": {
-                    "ID": "TP1",
-                    "description": "Transport Process 1",
-                    "time_model_id": "manhattan_time_model_1",
-                    "type": "TransportProcesses",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "TP1",
+                "description": "Transport Process 1",
+                "time_model_id": "manhattan_time_model_1",
+                "type": "TransportProcesses",
             }
-        }
+        ]
+    })
 
 
 class CompoundProcessData(CoreAsset):
@@ -225,18 +219,16 @@ class CompoundProcessData(CoreAsset):
     process_ids: List[str]
     type: Literal[ProcessTypeEnum.CompoundProcesses]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Compound Process",
-                "value": {
-                    "ID": "CP1",
-                    "description": "Compound Process 1",
-                    "process_ids": ["P1", "P2"],
-                    "type": "CompoundProcesses",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "CP1",
+                "description": "Compound Process 1",
+                "process_ids": ["P1", "P2"],
+                "type": "CompoundProcesses",
             }
-        }
+        ]
+    })
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -289,18 +281,16 @@ class RequiredCapabilityProcessData(CoreAsset):
     type: Literal[ProcessTypeEnum.RequiredCapabilityProcesses]
     capability: str
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Required Capability process",
-                "value": {
-                    "ID": "P1",
-                    "description": "Process 1",
-                    "type": "RequiredCapabilityProcesses",
-                    "capability": "C1",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "P1",
+                "description": "Process 1",
+                "type": "RequiredCapabilityProcesses",
+                "capability": "C1",
             }
-        }
+        ]
+    })
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -359,20 +349,18 @@ class LinkTransportProcessData(TransportProcessData):
         raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
         # TODO: Implement hash function for LinkTransportProcessData and Nodes
         # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
-        
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Transport process",
-                "value": {
-                    "ID": "TP1",
-                    "description": "Transport Process 1",
-                    "time_model_id": "manhattan_time_model_1",
-                    "type": "LinkTransportProcesses",
-                    "links": [["Resource1", "Node2"], ["Node2", "Resource1"]],
-                },
+
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "TP1",
+                "description": "Transport Process 1",
+                "time_model_id": "manhattan_time_model_1",
+                "type": "LinkTransportProcesses",
+                "links": [["Resource1", "Node2"], ["Node2", "Resource1"]]
             }
-        }
+        ]
+    })
 
 PROCESS_DATA_UNION = Union[
     CompoundProcessData, RequiredCapabilityProcessData,

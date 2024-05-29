@@ -7,8 +7,6 @@ The following time models are possible:
 - `FunctionTimeModel`: A time model that is based on a distribution function which gets sampled.
 - `ManhattanDistanceTimeModel`: A time model that is based on the manhattan distance between two nodes and a constant velocity.
 """
-from __future__ import annotations
-
 from typing import List, Literal, Optional, Union
 from typing_extensions import deprecated
 from uuid import uuid1
@@ -16,8 +14,9 @@ from uuid import uuid1
 from pydantic.dataclasses import dataclass
 from pydantic import Field
 
-from prodsys.models import time_model_data
 from prodsys.express import core
+
+from prodsys.models import time_model_data
 
 @deprecated(
     "The SequentialTimeModel is deprecated and will be removed in the next version. Please use the SampleTimeModel instead.",

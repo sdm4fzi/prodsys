@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 import json
 import time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
@@ -151,18 +151,17 @@ class TabuSearchHyperparameters(BaseModel):
     max_score: float = 500
     number_of_seeds: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [
-                 {
-                    "seed": 0,
-                    "tabu_size": 10,
-                    "max_steps": 300,
-                    "max_score": 500,
-                    "number_of_seeds": 1,
-                },
-            ]
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "seed": 0,
+                "tabu_size": 10,
+                "max_steps": 300,
+                "max_score": 500,
+                "number_of_seeds": 1,
+            },
+        ]
+    })
 
 
 def run_tabu_search(

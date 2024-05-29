@@ -7,14 +7,14 @@ The following time models are possible:
 - `FunctionTimeModelData`: A time model that is based on a distribution function which gets sampled.
 - `ManhattanDistanceTimeModelData`: A time model that is based on the manhattan distance between two nodes and a constant velocity.
 """
+# from __future__ import annotations
 
-from __future__ import annotations
 from hashlib import md5
 from typing import List, Literal, Union
 from typing_extensions import deprecated
 from enum import Enum
 
-from pydantic import Field
+from pydantic import ConfigDict, Field
 
 from prodsys.models.core_asset import CoreAsset
 from prodsys.util.statistical_functions import FunctionTimeModelEnum
@@ -80,17 +80,16 @@ class SequentialTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, self.sequence)])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Sequential time model",
-                "value": {
-                    "ID": "sequence_time_model_1",
-                    "description": "Examplary sequence time model",
-                    "sequence": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-                },
-            }
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "sequence_time_model_1",
+                "description": "Examplary sequence time model",
+                "sequence": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+            },
+        ]
+    
+    })
 
 
 class SampleTimeModelData(CoreAsset):
@@ -125,17 +124,16 @@ class SampleTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, self.samples)])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Sample time model",
-                "value": {
-                    "ID": "sample_time_model_1",
-                    "description": "Examplary sample time model",
-                    "samples": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-                },
-            }
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "sample_time_model_1",
+                "description": "Examplary sample time model",
+                "samples": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
+            },
+        ]
+    
+    })
 
 
 class ScheduledTimeModelData(CoreAsset):
@@ -176,19 +174,18 @@ class ScheduledTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, self.schedule)] + [*map(str, [self.absolute, self.cyclic])])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Scheduled time model",
-                "value": {
-                    "ID": "scheduled_time_model_1",
-                    "description": "Examplary scheduled time model",
-                    "schedule": [3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0],
-                    "absolute": True,
-                    "cyclic": False
-                },
-            }
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "scheduled_time_model_1",
+                "description": "Examplary scheduled time model",
+                "schedule": [3.0, 5.0, 7.0, 9.0, 11.0, 13.0, 15.0],
+                "absolute": True,
+                "cyclic": False
+            },
+        ]
+    
+    })
 
 
 class FunctionTimeModelData(CoreAsset):
@@ -221,19 +218,18 @@ class FunctionTimeModelData(CoreAsset):
     scale: float
     batch_size: int = Field(default=100, init=False)
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Function time model",
-                "value": {
-                    "ID": "function_time_model_1",
-                    "description": "normal distribution time model with 20 minutes",
-                    "distribution_function": "normal",
-                    "location": 20.0,
-                    "scale": 5.0,
-                },
-            }
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "function_time_model_1",
+                "description": "normal distribution time model with 20 minutes",
+                "distribution_function": "normal",
+                "location": 20.0,
+                "scale": 5.0,
+            },
+        ]
+    
+    })
     
     def hash(self) -> str:
         """
@@ -282,19 +278,16 @@ class ManhattanDistanceTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, [self.speed, self.reaction_time])])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Manhattan time model",
-                "value": {
-                    "ID": "manhattan_time_model_1",
-                    "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                    "speed": 30.0,
-                    "reaction_time": 0.15,
-                },
-            }
-        }
-
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "manhattan_time_model_1",
+                "description": "manhattan time model with speed 180 m/min = 3 m/s",
+                "speed": 180.0,
+                "reaction_time": 0.15,
+            },
+        ]
+    })
 
 class DistanceTimeModelData(CoreAsset):
     """
@@ -334,19 +327,17 @@ class DistanceTimeModelData(CoreAsset):
         """
         return md5(("".join([*map(str, [self.speed, self.reaction_time, self.metric])])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Distance time model",
-                "value": {
-                    "ID": "distance_time_model_1",
-                    "description": "distance time model with speed 180 m/min = 3 m/s",
-                    "speed": 30.0,
-                    "reaction_time": 0.15,
-                    "metric": "manhattan",
-                },
-            }
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "distance_time_model_1",
+                "description": "distance time model with speed 180 m/min = 3 m/s",
+                "speed": 30.0,
+                "reaction_time": 0.15,
+                "metric": "manhattan",
+            },
+        ]
+    })
 
 
 TIME_MODEL_DATA = Union[

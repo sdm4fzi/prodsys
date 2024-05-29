@@ -3,11 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 from prodsys.simulation import router, sim, source
-from prodsys.models import source_data, product_data
+from prodsys.models.product_data import ProductData
+from prodsys.models.source_data import SourceData
 
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 class SourceFactory(BaseModel):
     """
-    Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.models.source_data.SourceData`.
+    Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.models.SourceData`.
 
     Args:
         env (sim.Environment): prodsys simulation environment.
@@ -39,13 +40,12 @@ class SourceFactory(BaseModel):
     resource_factory: resource_factory.ResourceFactory
     sink_factory: sink_factory.SinkFactory
 
-    product_data: List[product_data.ProductData] = Field(
+    product_data: List[ProductData] = Field(
         default_factory=list, init=False
     )
     sources: List[source.Source] = Field(default_factory=list, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_sources(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -68,8 +68,8 @@ class SourceFactory(BaseModel):
 
     def add_source(
         self,
-        source_data: source_data.SourceData,
-        product_data_of_source: product_data.ProductData,
+        source_data: SourceData,
+        product_data_of_source: ProductData,
     ):
         router = self.get_router(source_data.routing_heuristic)
 
@@ -141,5 +141,3 @@ from prodsys.factories import (
     time_model_factory,
     sink_factory,
 )
-
-SourceFactory.update_forward_refs()

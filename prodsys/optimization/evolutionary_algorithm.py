@@ -13,7 +13,7 @@ from os import listdir
 from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
@@ -66,21 +66,19 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
     number_of_seeds: int = 1
     number_of_processes: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "seed": 0,
-                    "number_of_generations": 10,
-                    "population_size": 10,
-                    "mutation_rate": 0.1,
-                    "crossover_rate": 0.1,
-                    "number_of_seeds": 1,
-                    "number_of_processes": 1,
-                },
-            ]
-        }
-
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "seed": 0,
+                "number_of_generations": 10,
+                "population_size": 10,
+                "mutation_rate": 0.1,
+                "crossover_rate": 0.1,
+                "number_of_seeds": 1,
+                "number_of_processes": 1,
+            },
+        ]
+    })
 
 
 def register_functions_in_toolbox(
