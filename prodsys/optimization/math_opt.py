@@ -39,7 +39,7 @@ def adjust_number_of_transport_resources(
     existing_transport_resource = adapter_object.resource_data[0]
     existing_transport_resource.ID = "TR0"
     for i in range(number_of_transport_resources - 1):
-        new_transport_resource = existing_transport_resource.copy(deep=True)
+        new_transport_resource = existing_transport_resource.model_copy(deep=True)
         new_transport_resource.ID = f"TR{i + 1}"
         adapter_object.resource_data.append(new_transport_resource)
 
@@ -465,7 +465,7 @@ class MathOptimizer(BaseModel):
         performances["00"] = {}
 
         for result_counter in range(nSolutions):
-            new_adapter = self.adapter.copy(deep=True)
+            new_adapter = self.adapter.model_copy(deep=True)
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data

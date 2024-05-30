@@ -161,7 +161,7 @@ def run_simulated_annealing(
         if not initial_solution.ID:
             initial_solution.ID = "initial_solution"
     else:
-        initial_solution = base_configuration.copy(deep=True)
+        initial_solution = base_configuration.model_copy(deep=True)
 
     hyper_parameters = SimulatedAnnealingHyperparameters(
         seed=seed,
@@ -197,8 +197,7 @@ def simulated_annealing_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning(
             "Both compound processes and normal processes are used. This may lead to unexpected results."
@@ -206,7 +205,7 @@ def simulated_annealing_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     if not initial_solution:
-        initial_solution = base_configuration.copy(deep=True)
+        initial_solution = base_configuration.model_copy(deep=True)
 
     set_seed(hyper_parameters.seed)
 

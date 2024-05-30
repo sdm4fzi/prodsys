@@ -201,7 +201,7 @@ def run_tabu_search(
         if not initial_solution.ID:
             initial_solution.ID = "initial_solution"
     else:
-        initial_solution = base_configuration.copy(deep=True)
+        initial_solution = base_configuration.model_copy(deep=True)
 
     hyper_parameters = TabuSearchHyperparameters(
         seed=seed, tabu_size=tabu_size, max_steps=max_steps, max_score=max_score, number_of_seeds=number_of_seeds

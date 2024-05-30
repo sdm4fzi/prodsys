@@ -153,7 +153,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
     """
 
     nodes: List[PrecendeGraphNode] = Field(default_factory=list, init=False)
-    current_marking: Optional[PrecendeGraphNode] = Field(init=False)
+    current_marking: Optional[PrecendeGraphNode] = Field(init=False, default=None)
 
     def __str__(self) -> str:
         """
