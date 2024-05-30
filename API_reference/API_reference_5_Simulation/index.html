@@ -728,6 +728,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prodsys.simulation.control.TransportController.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.simulation.control.TransportController.put_product_to_input_queue" class="md-nav__link">
     <span class="md-ellipsis">
       put_product_to_input_queue()
@@ -2938,6 +2947,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#prodsys.simulation.state.StateInfo.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3257,6 +3275,15 @@
   <a href="#prodsys.simulation.time_model.ScheduledTimeModel.get_next_time" class="md-nav__link">
     <span class="md-ellipsis">
       get_next_time()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.simulation.time_model.ScheduledTimeModel.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
     </span>
   </a>
   
@@ -3620,6 +3647,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prodsys.simulation.control.TransportController.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.simulation.control.TransportController.put_product_to_input_queue" class="md-nav__link">
     <span class="md-ellipsis">
       put_product_to_input_queue()
@@ -5830,6 +5866,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#prodsys.simulation.state.StateInfo.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6154,6 +6199,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#prodsys.simulation.time_model.ScheduledTimeModel.model_post_init" class="md-nav__link">
+    <span class="md-ellipsis">
+      model_post_init()
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -6321,9 +6375,6 @@ BatchController            (<a class="autorefs autorefs-internal" title="prodsys
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -6332,6 +6383,24 @@ BatchController            (<a class="autorefs autorefs-internal" title="prodsys
       <p>A controller that processes the requests in batches.</p>
 
 
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
 
     </div>
 
@@ -6349,9 +6418,6 @@ Controller            (<span title="abc.ABC">ABC</span>, <span title="pydantic.m
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -6372,7 +6438,7 @@ Controller            (<span title="abc.ABC">ABC</span>, <span title="pydantic.m
   <tbody>
       <tr>
         <td><code>control_policy</code></td>
-        <td><code>Callable[[List[request.Request]], None]</code></td>
+        <td><code>Callable[[List[Request]], None]</code></td>
         <td><p>The control policy that determines the sequence of requests to be processed.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -6406,7 +6472,7 @@ Controller            (<span title="abc.ABC">ABC</span>, <span title="pydantic.m
       </tr>
       <tr>
         <td><code>requests</code></td>
-        <td><code>List[request.Request]</code></td>
+        <td><code>List[Request]</code></td>
         <td><p>A list of requests that are made to the controller.</p></td>
       </tr>
       <tr>
@@ -6420,11 +6486,6 @@ Controller            (<span title="abc.ABC">ABC</span>, <span title="pydantic.m
 
 
   <div class="doc doc-children">
-
-
-
-
-
 
 
 
@@ -6546,7 +6607,7 @@ It should repeatedly check if requests are made or a process is finished and the
   <tbody>
       <tr>
         <td><code>process_request</code></td>
-        <td><code>request.Request</code></td>
+        <td><code>Request</code></td>
         <td><p>The request to be processed.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -6654,9 +6715,6 @@ ProductionController            (<a class="autorefs autorefs-internal" title="pr
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -6668,6 +6726,9 @@ ProductionController            (<a class="autorefs autorefs-internal" title="pr
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -6948,9 +7009,6 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -6962,6 +7020,9 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -7140,6 +7201,52 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
       <td><code>List[events.Event]</code></td>
       <td><p>The event that is triggered when the product is in the queue.</p></td>
     </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.simulation.control.TransportController.model_post_init" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">model_post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__context</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>This function is meant to behave like a BaseModel method to initialise private attributes.</p>
+<p>It takes context as an argument since that's what pydantic-core passes when calling it.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>self</code></td>
+        <td><code>BaseModel</code></td>
+        <td><p>The BaseModel instance.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>__context</code></td>
+        <td><code>Any</code></td>
+        <td><p>The context.</p></td>
+        <td><em>required</em></td>
+      </tr>
   </tbody>
 </table>
     </div>
@@ -7489,7 +7596,7 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
   <tbody>
       <tr>
         <td><code>requests</code></td>
-        <td><code>List[request.Request]</code></td>
+        <td><code>List[Request]</code></td>
         <td><p>The list of requests.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -7528,7 +7635,7 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
   <tbody>
       <tr>
         <td><code>requests</code></td>
-        <td><code>List[request.Request]</code></td>
+        <td><code>List[Request]</code></td>
         <td><p>The list of requests.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -7567,7 +7674,7 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
   <tbody>
       <tr>
         <td><code>requests</code></td>
-        <td><code>List[request.Request]</code></td>
+        <td><code>List[Request]</code></td>
         <td><p>The list of requests.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -7651,7 +7758,7 @@ TransportController            (<a class="autorefs autorefs-internal" title="pro
       </tr>
       <tr>
         <td><code>requests</code></td>
-        <td><code>List[request.Request]</code></td>
+        <td><code>List[Request]</code></td>
         <td><p>The list of requests.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -7788,9 +7895,6 @@ EventLogger            (<a class="autorefs autorefs-internal" title="prodsys.sim
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -7802,6 +7906,8 @@ EventLogger            (<a class="autorefs autorefs-internal" title="prodsys.sim
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -7945,9 +8051,6 @@ Logger            (<span title="pydantic.main.BaseModel">BaseModel</span>, <span
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -7959,6 +8062,9 @@ Logger            (<span title="pydantic.main.BaseModel">BaseModel</span>, <span
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -8291,9 +8397,6 @@ Node            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -8304,6 +8407,8 @@ Node            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -8406,9 +8511,6 @@ ListProcessModel            (<a class="autorefs autorefs-internal" title="prodsy
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -8429,7 +8531,7 @@ ListProcessModel            (<a class="autorefs autorefs-internal" title="prodsy
   <tbody>
       <tr>
         <td><code>process_list</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>List of processes that are executed sequentially.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -8439,6 +8541,7 @@ ListProcessModel            (<a class="autorefs autorefs-internal" title="prodsy
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -8474,7 +8577,7 @@ ListProcessModel            (<a class="autorefs autorefs-internal" title="prodsy
   </thead>
   <tbody>
     <tr>
-      <td><code>Optional[List[process.PROCESS_UNION]]</code></td>
+      <td><code>Optional[List[PROCESS_UNION]]</code></td>
       <td><p>List of possible processes.</p></td>
     </tr>
   </tbody>
@@ -8512,7 +8615,7 @@ ListProcessModel            (<a class="autorefs autorefs-internal" title="prodsy
   <tbody>
       <tr>
         <td><code>chosen_process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The chosen process that is executed.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -8544,9 +8647,6 @@ PrecedenceGraphProcessModel            (<a class="autorefs autorefs-internal" ti
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -8591,6 +8691,7 @@ PrecedenceGraphProcessModel            (<a class="autorefs autorefs-internal" ti
 
 
 
+
   <div class="doc doc-object doc-method">
 
 
@@ -8618,19 +8719,19 @@ PrecedenceGraphProcessModel            (<a class="autorefs autorefs-internal" ti
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>Process that is represented by the node.</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>successors</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>List of successor processes.</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>predecessors</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>List of predecessor processes.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -8666,7 +8767,7 @@ PrecedenceGraphProcessModel            (<a class="autorefs autorefs-internal" ti
   </thead>
   <tbody>
     <tr>
-      <td><code>Optional[List[process.PROCESS_UNION]]</code></td>
+      <td><code>Optional[List[PROCESS_UNION]]</code></td>
       <td><p>List of possible processes.</p></td>
     </tr>
   </tbody>
@@ -8774,7 +8875,7 @@ PrecedenceGraphProcessModel            (<a class="autorefs autorefs-internal" ti
   <tbody>
       <tr>
         <td><code>chosen_process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The chosen process that is executed.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -8806,9 +8907,6 @@ PrecendeGraphNode            (<span title="pydantic.main.BaseModel">BaseModel</s
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -8829,7 +8927,7 @@ PrecendeGraphNode            (<span title="pydantic.main.BaseModel">BaseModel</s
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process that is represented by the node.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -8868,7 +8966,6 @@ PrecendeGraphNode            (<span title="pydantic.main.BaseModel">BaseModel</s
 
 
   <div class="doc doc-children">
-
 
 
 
@@ -8921,9 +9018,6 @@ ProcessModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -8935,6 +9029,9 @@ ProcessModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -8968,7 +9065,7 @@ ProcessModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic
   </thead>
   <tbody>
     <tr>
-      <td><code>Optional[List[process.PROCESS_UNION]]</code></td>
+      <td><code>Optional[List[PROCESS_UNION]]</code></td>
       <td><p>List of possible processes.</p></td>
     </tr>
   </tbody>
@@ -9006,7 +9103,7 @@ ProcessModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic
   <tbody>
       <tr>
         <td><code>chosen_process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The chosen process that is executed.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -9132,7 +9229,7 @@ ProcessModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic
   </thead>
   <tbody>
     <tr>
-      <td><code>List[process.PROCESS_UNION]</code></td>
+      <td><code>List[PROCESS_UNION]</code></td>
       <td><p>List of predecessing processes' IDs.</p></td>
     </tr>
   </tbody>
@@ -9261,9 +9358,6 @@ CapabilityProcess            (<a class="autorefs autorefs-internal" title="prods
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -9300,6 +9394,9 @@ CapabilityProcess            (<a class="autorefs autorefs-internal" title="prods
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -9453,9 +9550,6 @@ CompoundProcess            (<a class="autorefs autorefs-internal" title="prodsys
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -9492,6 +9586,8 @@ CompoundProcess            (<a class="autorefs autorefs-internal" title="prodsys
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -9646,9 +9742,6 @@ LinkTransportProcess            (<a class="autorefs autorefs-internal" title="pr
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -9660,6 +9753,8 @@ LinkTransportProcess            (<a class="autorefs autorefs-internal" title="pr
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -9814,9 +9909,6 @@ Process            (<span title="abc.ABC">ABC</span>, <span title="pydantic.main
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -9828,6 +9920,7 @@ Process            (<span title="abc.ABC">ABC</span>, <span title="pydantic.main
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -9983,9 +10076,6 @@ ProductionProcess            (<a class="autorefs autorefs-internal" title="prods
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -10022,6 +10112,9 @@ ProductionProcess            (<a class="autorefs autorefs-internal" title="prods
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -10175,9 +10268,6 @@ RequiredCapabilityProcess            (<a class="autorefs autorefs-internal" titl
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -10208,6 +10298,9 @@ RequiredCapabilityProcess            (<a class="autorefs autorefs-internal" titl
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -10361,9 +10454,6 @@ TransportProcess            (<a class="autorefs autorefs-internal" title="prodsy
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -10400,6 +10490,9 @@ TransportProcess            (<a class="autorefs autorefs-internal" title="prodsy
 
 
   <div class="doc doc-children">
+
+
+
 
 
 
@@ -10699,9 +10792,6 @@ Product            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -10756,14 +10846,6 @@ Product            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
-
-
-
-
-
-
-
-
 
 
 
@@ -10876,9 +10958,6 @@ ProductInfo            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -10939,9 +11018,6 @@ ProductInfo            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
-
-
-
 
 
 
@@ -11921,9 +11997,6 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -11956,7 +12029,7 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
       </tr>
       <tr>
         <td><code>processes</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>The processes.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -11998,13 +12071,13 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
       </tr>
       <tr>
         <td><code>current_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The current setup.</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>reserved_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The reserved setup.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12043,6 +12116,7 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
 
 
 
+
   </div>
 
     </div>
@@ -12061,9 +12135,6 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -12096,7 +12167,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
       </tr>
       <tr>
         <td><code>processes</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>The processes.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12138,13 +12209,13 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
       </tr>
       <tr>
         <td><code>current_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The current setup.</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>reserved_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The reserved setup.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12154,7 +12225,6 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
 
 
   <div class="doc doc-children">
-
 
 
 
@@ -12199,10 +12269,6 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
 
 
 
-
-
-
-
   <div class="doc doc-object doc-attribute">
 
 
@@ -12241,7 +12307,6 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
 
 
 
-
   <div class="doc doc-object doc-attribute">
 
 
@@ -12277,9 +12342,6 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
 </table>    </div>
 
   </div>
-
-
-
 
 
 
@@ -12519,7 +12581,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process to get the state for.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12678,7 +12740,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process to get the state for.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12747,7 +12809,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process to get the state for.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12871,7 +12933,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
   <tbody>
       <tr>
         <td><code>process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process that wants to reserve the setup.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -12949,7 +13011,7 @@ Resource            (<span title="pydantic.main.BaseModel">BaseModel</span>, <sp
   <tbody>
       <tr>
         <td><code>_process</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The process to set up the resource for.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -13036,9 +13098,6 @@ TransportResource            (<a class="autorefs autorefs-internal" title="prods
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -13071,7 +13130,7 @@ TransportResource            (<a class="autorefs autorefs-internal" title="prods
       </tr>
       <tr>
         <td><code>processes</code></td>
-        <td><code>List[process.PROCESS_UNION]</code></td>
+        <td><code>List[PROCESS_UNION]</code></td>
         <td><p>The processes.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -13113,19 +13172,37 @@ TransportResource            (<a class="autorefs autorefs-internal" title="prods
       </tr>
       <tr>
         <td><code>current_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The current setup.</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>reserved_setup</code></td>
-        <td><code>process.PROCESS_UNION</code></td>
+        <td><code>PROCESS_UNION</code></td>
         <td><p>The reserved setup.</p></td>
         <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
 
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
 
     </div>
 
@@ -15051,9 +15128,6 @@ Sink            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -15102,8 +15176,6 @@ Sink            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
-
-
 
 
 
@@ -15356,9 +15428,6 @@ Source            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -15425,11 +15494,6 @@ Source            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
-
-
-
-
-
 
 
 
@@ -15717,9 +15781,6 @@ BreakDownState            (<a class="autorefs autorefs-internal" title="prodsys.
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -15809,6 +15870,7 @@ BreakDownState            (<a class="autorefs autorefs-internal" title="prodsys.
 
 
 
+
   <div class="doc doc-object doc-method">
 
 
@@ -15886,9 +15948,6 @@ ProcessBreakDownState            (<a class="autorefs autorefs-internal" title="p
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -15984,6 +16043,7 @@ ProcessBreakDownState            (<a class="autorefs autorefs-internal" title="p
 
 
 
+
   <div class="doc doc-object doc-method">
 
 
@@ -16062,9 +16122,6 @@ ProductionState            (<a class="autorefs autorefs-internal" title="prodsys
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -16283,9 +16340,6 @@ SetupState            (<a class="autorefs autorefs-internal" title="prodsys.simu
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -16515,9 +16569,6 @@ State            (<span title="abc.ABC">ABC</span>, <span title="pydantic.main.B
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -16590,12 +16641,6 @@ State            (<span title="abc.ABC">ABC</span>, <span title="pydantic.main.B
 
 
   <div class="doc doc-children">
-
-
-
-
-
-
 
 
 
@@ -16863,9 +16908,6 @@ StateInfo            (<span title="pydantic.main.BaseModel">BaseModel</span>)
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -16938,6 +16980,7 @@ StateInfo            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -17243,6 +17286,52 @@ StateInfo            (<span title="pydantic.main.BaseModel">BaseModel</span>)
 
 
 
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.simulation.state.StateInfo.model_post_init" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">model_post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__context</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>This function is meant to behave like a BaseModel method to initialise private attributes.</p>
+<p>It takes context as an argument since that's what pydantic-core passes when calling it.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>self</code></td>
+        <td><code>BaseModel</code></td>
+        <td><p>The BaseModel instance.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>__context</code></td>
+        <td><code>Any</code></td>
+        <td><p>The context.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
 
 
   </div>
@@ -17310,9 +17399,6 @@ TransportState            (<a class="autorefs autorefs-internal" title="prodsys.
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -17848,9 +17934,6 @@ DistanceTimeModel            (<a class="autorefs autorefs-internal" title="prods
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -17881,6 +17964,8 @@ DistanceTimeModel            (<a class="autorefs autorefs-internal" title="prods
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -18091,9 +18176,6 @@ FunctionTimeModel            (<a class="autorefs autorefs-internal" title="prods
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18239,9 +18321,6 @@ ManhattanDistanceTimeModel            (<a class="autorefs autorefs-internal" tit
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18272,6 +18351,8 @@ ManhattanDistanceTimeModel            (<a class="autorefs autorefs-internal" tit
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -18422,9 +18503,6 @@ SampleTimeModel            (<a class="autorefs autorefs-internal" title="prodsys
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18455,6 +18533,8 @@ SampleTimeModel            (<a class="autorefs autorefs-internal" title="prodsys
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -18580,9 +18660,6 @@ ScheduledTimeModel            (<a class="autorefs autorefs-internal" title="prod
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18613,6 +18690,7 @@ ScheduledTimeModel            (<a class="autorefs autorefs-internal" title="prod
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -18719,6 +18797,52 @@ ScheduledTimeModel            (<a class="autorefs autorefs-internal" title="prod
 
 
 
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.simulation.time_model.ScheduledTimeModel.model_post_init" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">model_post_init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__context</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>This function is meant to behave like a BaseModel method to initialise private attributes.</p>
+<p>It takes context as an argument since that's what pydantic-core passes when calling it.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>self</code></td>
+        <td><code>BaseModel</code></td>
+        <td><p>The BaseModel instance.</p></td>
+        <td><em>required</em></td>
+      </tr>
+      <tr>
+        <td><code>__context</code></td>
+        <td><code>Any</code></td>
+        <td><p>The context.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
 
 
   </div>
@@ -18739,9 +18863,6 @@ SequentialTimeModel            (<a class="autorefs autorefs-internal" title="pro
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18772,6 +18893,8 @@ SequentialTimeModel            (<a class="autorefs autorefs-internal" title="pro
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -18897,9 +19020,6 @@ TimeModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic.ma
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -18911,6 +19031,9 @@ TimeModel            (<span title="abc.ABC">ABC</span>, <span title="pydantic.ma
 
 
   <div class="doc doc-children">
+
+
+
 
 
 

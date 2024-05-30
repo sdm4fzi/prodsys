@@ -1338,9 +1338,6 @@ ProductionSystemAdapter            (<span title="abc.ABC">ABC</span>, <span titl
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -1377,61 +1374,61 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
       </tr>
       <tr>
         <td><code>time_model_data</code></td>
-        <td><code>List[time_model_data.TIME_MODEL_DATA]</code></td>
+        <td><code>List[time_model_data_module.TIME_MODEL_DATA]</code></td>
         <td><p>List of time models used by the entities in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>state_data</code></td>
-        <td><code>List[state_data.STATE_DATA_UNION]</code></td>
+        <td><code>List[state_data_module.STATE_DATA_UNION]</code></td>
         <td><p>List of states used by the resources in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>process_data</code></td>
-        <td><code>List[processes_data.PROCESS_DATA_UNION]</code></td>
+        <td><code>List[processes_data_module.PROCESS_DATA_UNION]</code></td>
         <td><p>List of processes required by products and provided by resources in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>queue_data</code></td>
-        <td><code>List[queue_data.QueueData]</code></td>
+        <td><code>List[queue_data_module.QueueData]</code></td>
         <td><p>List of queues used by the resources, sources and sinks in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>node_data</code></td>
-        <td><code>List[resource_data.NodeData]</code></td>
+        <td><code>List[resource_data_module.NodeData]</code></td>
         <td><p>List of nodes in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>resource_data</code></td>
-        <td><code>List[resource_data.RESOURCE_DATA_UNION]</code></td>
+        <td><code>List[resource_data_module.RESOURCE_DATA_UNION]</code></td>
         <td><p>List of resources in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>product_data</code></td>
-        <td><code>List[product_data.ProductData]</code></td>
+        <td><code>List[product_data_module.ProductData]</code></td>
         <td><p>List of products in the production system. Defaults to []</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>sink_data</code></td>
-        <td><code>List[sink_data.SinkData]</code></td>
+        <td><code>List[sink_data_module.SinkData]</code></td>
         <td><p>List of sinks in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>source_data</code></td>
-        <td><code>List[source_data.SourceData]</code></td>
+        <td><code>List[source_data_module.SourceData]</code></td>
         <td><p>List of sources in the production system. Defaults to [].</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>scenario_data</code></td>
-        <td><code>Optional[scenario_data.ScenarioData]</code></td>
+        <td><code>Optional[scenario_data_module.ScenarioData]</code></td>
         <td><p>Scenario data of the production system used for optimization. Defaults to None.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -1453,18 +1450,6 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
 
 
   <div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1979,13 +1964,13 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>available</code></td>
-        <td><code>List[processes_data.CapabilityProcessData]</code></td>
+        <td><code>List[processes_data_module.CapabilityProcessData]</code></td>
         <td><p>capability processes that are available in the production system resources</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>required</code></td>
-        <td><code>List[processes_data.CapabilityProcessData]</code></td>
+        <td><code>List[processes_data_module.CapabilityProcessData]</code></td>
         <td><p>capability processes that are required from the products</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2093,13 +2078,13 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>available</code></td>
-        <td><code>List[processes_data.ProductionProcessData]</code></td>
+        <td><code>List[processes_data_module.ProductionProcessData]</code></td>
         <td><p>production processes that are available in the production system resources</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>required</code></td>
-        <td><code>List[processes_data.ProductionProcessData]</code></td>
+        <td><code>List[processes_data_module.ProductionProcessData]</code></td>
         <td><p>production processes that are required from the products</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2207,13 +2192,13 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>available</code></td>
-        <td><code>List[processes_data.TransportProcessData]</code></td>
+        <td><code>List[processes_data_module.TransportProcessData]</code></td>
         <td><p>transport processes that are available in the production system resources</p></td>
         <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>required</code></td>
-        <td><code>List[processes_data.TransportProcessData]</code></td>
+        <td><code>List[processes_data_module.TransportProcessData]</code></td>
         <td><p>transport processes that are required from the products</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2327,7 +2312,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>sink</code></td>
-        <td><code>sink_data.SinkData</code></td>
+        <td><code>sink_data_module.SinkData</code></td>
         <td><p>Sink for which the default queue should be returned</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2349,7 +2334,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   </thead>
   <tbody>
     <tr>
-      <td><code>queue_data.QueueData</code></td>
+      <td><code>queue_data_module.QueueData</code></td>
       <td><p>Default queue for the given sink</p></td>
     </tr>
   </tbody>
@@ -2387,7 +2372,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>source</code></td>
-        <td><code>source_data.SourceData</code></td>
+        <td><code>source_data_module.SourceData</code></td>
         <td><p>Source for which the default queue should be returned</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2409,7 +2394,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   </thead>
   <tbody>
     <tr>
-      <td><code>queue_data.QueueData</code></td>
+      <td><code>queue_data_module.QueueData</code></td>
       <td><p>Default queue for the given source</p></td>
     </tr>
   </tbody>
@@ -2447,7 +2432,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   <tbody>
       <tr>
         <td><code>resource</code></td>
-        <td><code>resource_data.ProductionResourceData</code></td>
+        <td><code>resource_data_module.ProductionResourceData</code></td>
         <td><p>Resource for which the default queues should be returned</p></td>
         <td><em>required</em></td>
       </tr>
@@ -2469,7 +2454,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   </thead>
   <tbody>
     <tr>
-      <td><code>Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]</code></td>
+      <td><code>Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]</code></td>
       <td><p>Tuple of two lists of default queues for the given resource</p></td>
     </tr>
   </tbody>
@@ -2523,7 +2508,7 @@ Therefore, the adapter can even be used for integration of new algorithms by ser
   </thead>
   <tbody>
     <tr>
-      <td><code>List[resource_data.ProductionResourceData]</code></td>
+      <td><code>List[resource_data_module.ProductionResourceData]</code></td>
       <td><p>List of all machines in the adapter</p></td>
     </tr>
   </tbody>
@@ -2690,7 +2675,7 @@ Compund processes are grouped as touples, whereas individual processes are repre
   </thead>
   <tbody>
     <tr>
-      <td><code>List[resource_data.TransportResourceData]</code></td>
+      <td><code>List[resource_data_module.TransportResourceData]</code></td>
       <td><p>List of all transport resources in the adapter</p></td>
     </tr>
   </tbody>
@@ -2749,9 +2734,6 @@ JsonProductionSystemAdapter            (<a class="autorefs autorefs-internal" ti
         </code>
 
 
-  <span class="doc doc-properties">
-      <small class="doc doc-property doc-property-pydantic-model"><code>pydantic-model</code></small>
-  </span>
 
 </h3>
 
@@ -2860,6 +2842,9 @@ JsonProductionSystemAdapter            (<a class="autorefs autorefs-internal" ti
 
 
   <div class="doc doc-children">
+
+
+
 
 
 

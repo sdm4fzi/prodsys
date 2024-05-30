@@ -2557,7 +2557,7 @@ the capability instead of the porcess itself.</p>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the process.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function CapabilityProcess.&lt;lambda&gt; at 0x000001AF0F3B6CA0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -2694,7 +2694,7 @@ DefaultProcess            (<a class="autorefs autorefs-internal" title="prodsys.
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the process.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function DefaultProcess.&lt;lambda&gt; at 0x000001AF0F3B63E0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -2801,6 +2801,7 @@ mapping from a key (which can be a ProductionResource, NodeData, Source, or Sink
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -3063,7 +3064,7 @@ ProductionProcess            (<a class="autorefs autorefs-internal" title="prods
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the process.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function DefaultProcess.&lt;lambda&gt; at 0x000001AF0F3B63E0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -3101,6 +3102,7 @@ ProductionProcess            (<a class="autorefs autorefs-internal" title="prods
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -3305,7 +3307,7 @@ TransportProcess            (<a class="autorefs autorefs-internal" title="prodsy
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the process.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function DefaultProcess.&lt;lambda&gt; at 0x000001AF0F3B63E0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -3342,6 +3344,7 @@ TransportProcess            (<a class="autorefs autorefs-internal" title="prodsy
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -3480,7 +3483,7 @@ Product            (<a class="autorefs autorefs-internal" title="prodsys.express
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the product.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Product.&lt;lambda&gt; at 0x000001AF0F4AE480&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -3907,7 +3910,7 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
       </tr>
       <tr>
         <td><code>location</code></td>
-        <td><code>conlist(float, min_items=2, max_items=2</code></td>
+        <td><code>conlist(float, min_length=2, max_length=2</code></td>
         <td><p>Location of the resource.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -3915,37 +3918,37 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
         <td><code>capacity</code></td>
         <td><code>int</code></td>
         <td><p>Capacity of the resource. Defaults to 1.</p></td>
-        <td><code>1</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>states</code></td>
         <td><code>Optional[List[state.STATE_UNION]]</code></td>
         <td><p>States of the resource. Defaults to None.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;class &#39;list&#39;&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>controller</code></td>
         <td><code>resource_data.ControllerEnum</code></td>
         <td><p>Controller of the resource. Defaults to resource_data.ControllerEnum.PipelineController.</p></td>
-        <td><code>&lt;ControllerEnum.PipelineController: &#39;PipelineController&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>control_policy</code></td>
         <td><code>resource_data.ResourceControlPolicy</code></td>
         <td><p>Control policy of the resource. Defaults to resource_data.ResourceControlPolicy.FIFO.</p></td>
-        <td><code>&lt;ResourceControlPolicy.FIFO: &#39;FIFO&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>queue_size</code></td>
         <td><code>Optional[int]</code></td>
         <td><p>Queue size of the resource. Defaults to 0 (infinte queue).</p></td>
-        <td><code>0</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the resource.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Resource.&lt;lambda&gt; at 0x000001AF0F4AC2C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -3979,6 +3982,8 @@ ProductionResource            (<a class="autorefs autorefs-internal" title="prod
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -4074,7 +4079,7 @@ Resource            (<span title="abc.ABC">ABC</span>)
       </tr>
       <tr>
         <td><code>location</code></td>
-        <td><code>conlist(float, min_items=2, max_items=2</code></td>
+        <td><code>conlist(float, min_length=2, max_length=2</code></td>
         <td><p>Location of the resource.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -4082,31 +4087,31 @@ Resource            (<span title="abc.ABC">ABC</span>)
         <td><code>capacity</code></td>
         <td><code>int</code></td>
         <td><p>Capacity of the resource. Defaults to 1.</p></td>
-        <td><code>1</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>states</code></td>
         <td><code>Optional[List[state.STATE_UNION]]</code></td>
         <td><p>States of the resource. Defaults to None.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;class &#39;list&#39;&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>controller</code></td>
         <td><code>resource_data.ControllerEnum</code></td>
         <td><p>Controller of the resource. Defaults to resource_data.ControllerEnum.PipelineController.</p></td>
-        <td><code>&lt;ControllerEnum.PipelineController: &#39;PipelineController&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>control_policy</code></td>
         <td><code>resource_data.ResourceControlPolicy</code></td>
         <td><p>Control policy of the resource. Defaults to resource_data.ResourceControlPolicy.FIFO.</p></td>
-        <td><code>&lt;ResourceControlPolicy.FIFO: &#39;FIFO&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the resource.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Resource.&lt;lambda&gt; at 0x000001AF0F4AC2C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -4179,39 +4184,39 @@ TransportResource            (<a class="autorefs autorefs-internal" title="prods
       </tr>
       <tr>
         <td><code>location</code></td>
-        <td><code>conlist(float, min_items=2, max_items=2</code></td>
+        <td><code>conlist(float, min_length=2, max_length=2</code></td>
         <td><p>Location of the resource.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;class &#39;list&#39;&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>capacity</code></td>
         <td><code>int</code></td>
         <td><p>Capacity of the resource. Defaults to 1.</p></td>
-        <td><code>1</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>states</code></td>
         <td><code>Optional[List[state.STATE_UNION]]</code></td>
         <td><p>States of the resource. Defaults to None.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;class &#39;list&#39;&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>controller</code></td>
         <td><code>resource_data.ControllerEnum</code></td>
         <td><p>Controller of the resource. Defaults to resource_data.ControllerEnum.TransportController.</p></td>
-        <td><code>&lt;ControllerEnum.TransportController: &#39;TransportController&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>control_policy</code></td>
         <td><code>resource_data.TransportControlPolicy</code></td>
         <td><p>Control policy of the resource. Defaults to resource_data.TransportControlPolicy.FIFO.</p></td>
-        <td><code>&lt;TransportControlPolicy.FIFO: &#39;FIFO&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the resource.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Resource.&lt;lambda&gt; at 0x000001AF0F4AC2C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -4235,6 +4240,8 @@ TransportResource            (<a class="autorefs autorefs-internal" title="prods
 
 
   <div class="doc doc-children">
+
+
 
 
 
@@ -4367,7 +4374,7 @@ Sink            (<a class="autorefs autorefs-internal" title="prodsys.express.co
       </tr>
       <tr>
         <td><code>location</code></td>
-        <td><code>conlist(float, min_items=2, max_items=2</code></td>
+        <td><code>conlist(float, min_length=2, max_length=2</code></td>
         <td><p>Location of the sink.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -4375,7 +4382,7 @@ Sink            (<a class="autorefs autorefs-internal" title="prodsys.express.co
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the sink.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Sink.&lt;lambda&gt; at 0x000001AF0F4AEB60&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -4569,7 +4576,7 @@ Source            (<a class="autorefs autorefs-internal" title="prodsys.express.
       </tr>
       <tr>
         <td><code>location</code></td>
-        <td><code>conlist(float, min_items=2, max_items=2</code></td>
+        <td><code>conlist(float, min_length=2, max_length=2</code></td>
         <td><p>Location of the source.</p></td>
         <td><em>required</em></td>
       </tr>
@@ -4577,13 +4584,13 @@ Source            (<a class="autorefs autorefs-internal" title="prodsys.express.
         <td><code>routing_heuristic</code></td>
         <td><code>source_data.RoutingHeuristic</code></td>
         <td><p>Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.random.</p></td>
-        <td><code>&lt;RoutingHeuristic.random: &#39;random&#39;&gt;</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the source.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function Source.&lt;lambda&gt; at 0x000001AF0F4AE2A0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -4795,7 +4802,7 @@ BreakDownState            (<a class="autorefs autorefs-internal" title="prodsys.
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the state.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function BreakDownState.&lt;lambda&gt; at 0x000001AF0F4AC7C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -4949,7 +4956,7 @@ ProcessBreakdownState            (<a class="autorefs autorefs-internal" title="p
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the state.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function ProcessBreakdownState.&lt;lambda&gt; at 0x000001AF0F4ACD60&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5113,7 +5120,7 @@ SetupState            (<a class="autorefs autorefs-internal" title="prodsys.expr
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the state.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function SetupState.&lt;lambda&gt; at 0x000001AF0F4AD1C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5376,7 +5383,7 @@ The distance is calculated by the specified distance metric.</p>
         <td><code>metric</code></td>
         <td><code>Literal[&#34;manhattan&#34;, &#34;euclidean&#34;]</code></td>
         <td><p>Metric to calculate the distance.</p></td>
-        <td><code>&#39;manhattan&#39;</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5498,13 +5505,13 @@ FunctionTimeModel            (<a class="autorefs autorefs-internal" title="prods
         <td><code>scale</code></td>
         <td><code>float</code></td>
         <td><p>Scale parameter of the distribution function.</p></td>
-        <td><code>0.0</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the time model.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function FunctionTimeModel.&lt;lambda&gt; at 0x000001AF0F3B5580&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5736,7 +5743,7 @@ SampleTimeModel            (<a class="autorefs autorefs-internal" title="prodsys
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the time model.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function SampleTimeModel.&lt;lambda&gt; at 0x000001AF0F3B4C20&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5850,19 +5857,19 @@ If the schedule is not cyclic, usage in other classes than sources can lead to u
         <td><code>absolute</code></td>
         <td><code>bool</code></td>
         <td><p>If the schedule contains absolute time values or relative values to each other.</p></td>
-        <td><code>True</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>cyclic</code></td>
         <td><code>bool</code></td>
         <td><p>If the schedule is cyclic or not.</p></td>
-        <td><code>True</code></td>
+        <td><em>required</em></td>
       </tr>
       <tr>
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the time model.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function ScheduledTimeModel.&lt;lambda&gt; at 0x000001AF0F3B5080&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
@@ -5977,7 +5984,7 @@ SequentialTimeModel            (<a class="autorefs autorefs-internal" title="pro
         <td><code>ID</code></td>
         <td><code>str</code></td>
         <td><p>ID of the time model.</p></td>
-        <td><code>FieldInfo(default=PydanticUndefined, default_factory=&lt;function SequentialTimeModel.&lt;lambda&gt; at 0x000001AF0F3B42C0&gt;, extra={})</code></td>
+        <td><em>required</em></td>
       </tr>
   </tbody>
 </table>
