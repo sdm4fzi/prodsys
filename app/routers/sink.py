@@ -9,7 +9,7 @@ from prodsys.models import (
 )
 from app.dao import sink_dao
 
-SINK_LIST_EXAMPLE = [sink_data.SinkData.Config.schema_extra["example"]["value"]]
+SINK_LIST_EXAMPLE = [sink_data.SinkData.model_config["json_schema_extra"]["examples"]]
 
 
 router = APIRouter(
@@ -40,7 +40,7 @@ async def get_sinks(project_id: str, adapter_id: str):
     responses={
         200: {
             "description": "Successfully created sink data",
-            "content": {"application/json": sink_data.SinkData.Config.schema_extra},
+            "content": {"application/json": sink_data.SinkData.model_config["json_schema_extra"]},
         }
     },
 )
@@ -49,7 +49,7 @@ async def create_sink(
     adapter_id: str,
     sink: Annotated[
         sink_data.SinkData,
-        Body(example=sink_data.SinkData.Config.schema_extra["example"]),
+        Body(example=sink_data.SinkData.model_config["json_schema_extra"]["examples"]),
     ],
 ) -> sink_data.SinkData:
     return sink_dao.add(project_id, adapter_id, sink)
@@ -61,7 +61,7 @@ async def create_sink(
     responses={
         200: {
             "description": "Successfulle returned sink data.",
-            "content": {"application/json": sink_data.SinkData.Config.schema_extra},
+            "content": {"application/json": sink_data.SinkData.model_config["json_schema_extra"]},
         },
         404: {"description": "Sink not found."},
     },
@@ -76,7 +76,7 @@ async def get_sink(project_id: str, adapter_id: str, sink_id: str):
     responses={
         200: {
             "description": "Successfully updated sink data",
-            "content": {"application/json": sink_data.SinkData.Config.schema_extra},
+            "content": {"application/json": sink_data.SinkData.model_config["json_schema_extra"]},
         },
         404: {"description": "Sink not found."},
     },
@@ -87,7 +87,7 @@ async def create_sink(
     sink_id: str,
     sink: Annotated[
         sink_data.SinkData,
-        Body(example=sink_data.SinkData.Config.schema_extra["example"]),
+        Body(example=sink_data.SinkData.model_config["json_schema_extra"]["examples"]),
     ],
 ) -> sink_data.SinkData:
     return sink_dao.update(project_id, adapter_id, sink_id, sink)

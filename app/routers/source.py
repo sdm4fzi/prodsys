@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body
 from prodsys.models import source_data
 from app.dao import source_dao
 
-SOURCE_LIST_EXAMPLE = [source_data.SourceData.Config.schema_extra["example"]["value"]]
+SOURCE_LIST_EXAMPLE = [source_data.SourceData.model_config["json_schema_extra"]["examples"]]
 
 
 router = APIRouter(
@@ -47,7 +47,7 @@ async def create_sink(
     adapter_id: str,
     source: Annotated[
         source_data.SourceData,
-        Body(example=source_data.SourceData.Config.schema_extra["example"]),
+        Body(example=source_data.SourceData.model_config["json_schema_extra"]["examples"]),
     ],
 ):
     return source_dao.add(project_id, adapter_id, source)
@@ -59,7 +59,7 @@ async def create_sink(
     responses={
         200: {
             "description": "Successfulle returned source data.",
-            "content": {"application/json": source_data.SourceData.Config.schema_extra},
+            "content": {"application/json": source_data.SourceData.model_config["json_schema_extra"]},
         },
         404: {"description": "Sink not found."},
     },
@@ -84,7 +84,7 @@ async def update_source(
     source_id: str,
     source: Annotated[
         source_data.SourceData,
-        Body(example=source_data.SourceData.Config.schema_extra["example"]),
+        Body(example=source_data.SourceData.model_config["json_schema_extra"]["examples"]),
     ],
 ):
     return source_dao.update(project_id, adapter_id, source_id, source)
