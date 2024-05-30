@@ -72,10 +72,6 @@ class Source(core.ExpressObject):
 
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
-
-    def __post_init_post_parse__(self):
-        pass
-
     def to_model(self) -> source_data.SourceData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.

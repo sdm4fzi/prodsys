@@ -258,7 +258,7 @@ def evolutionary_algorithm_optimization(
     """
     adapters.ProductionSystemAdapter.Config.validate = False
     adapters.ProductionSystemAdapter.Config.validate_assignment = False
-    base_configuration = base_configuration.copy(deep=True)
+    base_configuration = base_configuration.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
     if not check_breakdown_states_available(base_configuration):

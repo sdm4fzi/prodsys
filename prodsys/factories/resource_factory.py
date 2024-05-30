@@ -132,7 +132,7 @@ class ResourceFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the resource data.
         """
         for resource_data in adapter.resource_data:
-            self.add_resource(resource_data.copy(deep=True))
+            self.add_resource(resource_data.model_copy(deep=True))
 
     def get_queues_for_resource(
         self, resource_data: ProductionResourceData

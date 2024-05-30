@@ -154,7 +154,7 @@ class TransportResource(Resource, core.ExpressObject):
     control_policy: resource_data.TransportControlPolicy = resource_data.TransportControlPolicy.FIFO
     # ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def __post_init_post_parse__(self):
+    def __post_init__(self):
         if not self.location:
             self.location = [0.0, 0.0]
 

@@ -48,7 +48,6 @@ class ProcessFactory(BaseModel):
             values.update({"links": [[]]})
             self.processes.append(TypeAdapter(process.LinkTransportProcess).validate_python(values))
         else:
-            print("validate process", type(process_data))
             self.processes.append(TypeAdapter(process.PROCESS_UNION).validate_python(values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
