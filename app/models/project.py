@@ -27,7 +27,7 @@ class Project(BaseModel):
                     "ID": "Example Project",
                     "adapters": prodsys.adapters.ProductionSystemAdapter.model_config["json_schema_extra"]["examples"],
                     "performances": {
-                        "Example Adapter": Performance.Config.schema_extra["examples"][0]
+                        "Example Adapter": Performance.model_config["json_schema_extra"]["examples"][0]
                     }
                 }
             ]

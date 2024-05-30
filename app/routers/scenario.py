@@ -13,16 +13,10 @@ class UserSettingsIn(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
-SCENARIO_EXAMPLE = scenario_data.ScenarioData.model_config["json_schema_extra"]["value"]
-SCENARIO_CONSTRAINT_EXAMPLE = scenario_data.ScenarioConstrainsData.model_config["json_schema_extra"][
-    "example"
-]["value"]
-SCENARIO_OPTIONS_EXAMPLE = scenario_data.ScenarioOptionsData.model_config["json_schema_extra"][
-    "example"
-]["value"]
-SCENARIO_INFO_EXAMPLE = scenario_data.ScenarioInfoData.model_config["json_schema_extra"]["example"][
-    "value"
-]
+SCENARIO_EXAMPLE = scenario_data.ScenarioData.model_config["json_schema_extra"]["examples"]
+SCENARIO_CONSTRAINT_EXAMPLE = scenario_data.ScenarioConstrainsData.model_config["json_schema_extra"]["examples"]
+SCENARIO_OPTIONS_EXAMPLE = scenario_data.ScenarioOptionsData.model_config["json_schema_extra"]["examples"]
+SCENARIO_INFO_EXAMPLE = scenario_data.ScenarioInfoData.model_config["json_schema_extra"]["examples"]
 OBJECTIVES_LIST_EXAMPLE = [
     item for item in scenario_data.Objective.model_config["json_schema_extra"]["examples"]
 ]
