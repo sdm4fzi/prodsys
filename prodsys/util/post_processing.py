@@ -445,6 +445,241 @@ class PostProcessor:
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
 
         return df
+    
+    @cached_property
+    def df_resource_states_buckets(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the machine states and the time spent in each state. 
+        There are 4 different states a resource can spend its time: 
+            -SB: A resource is in standby state, could process but no product is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the machine states and the time spent in each state.
+        """
+        df = self.df_prepared.copy()
+        positive_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "start state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+        )
+        negative_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "end state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+        )
+
+        df["Increment"] = 0
+        df.loc[positive_condition, "Increment"] = 1
+        df.loc[negative_condition, "Increment"] = -1
+
+        bucket_size = 100
+        df['Bucket'] = df.groupby('Resource').cumcount() // bucket_size
+        df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
+
+        df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
+        resource_types_dict = pd.Series(df_resource_types["State Type"].values, index=df_resource_types["Resource"].values).to_dict()
+        for resource in df["Resource"].unique():
+            if resource_types_dict[resource] in {state.StateTypeEnum.source, state.StateTypeEnum.sink}:
+                continue
+            example_row = (
+                df.loc[
+                    (df["Resource"] == resource)
+                    & (
+                        ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0))
+                        | (df["State_sorting_Index"] == 3)
+                    )
+                ]
+                .copy()
+                .head(1)
+            )
+            example_row["Time"] = 0.0
+            df = pd.concat([example_row, df]).reset_index(drop=True)
+
+        df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
+        df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'), inplace=True)
+        df["time_increment"] = df["next_Time"] - df["Time"]
+
+        STANDBY_CONDITION = (
+            (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
+        ) | (df["State_sorting_Index"] == 3)
+        PRODUCTIVE_CONDITION = (
+            (df["State_sorting_Index"] == 6)
+            | (df["State_sorting_Index"] == 4)
+            | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
+        )
+        DOWN_CONDITION = ((df["State_sorting_Index"] == 7) | (
+            df["State_sorting_Index"] == 8
+        )) & (df["State Type"] == state.StateTypeEnum.breakdown)
+        SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
+            df["State Type"] == state.StateTypeEnum.setup
+        )
+
+        df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
+        df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
+        df.loc[DOWN_CONDITION, "Time_type"] = "UD"
+        df.loc[SETUP_CONDITION, "Time_type"] = "ST"
+
+        return df
+
+    @cached_property
+    def df_aggregated_resource_bucket_states(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the total time spent in each state of each resource. 
+
+        There are 4 different states a resource can spend its time:
+            -SB: A resource is in standby state, could process but no product is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the total time spent in each state of each resource.
+        """
+        df = self.df_resource_states_buckets.copy()
+        df = df.loc[df["Time_type"] != "na"]
+
+        df_time_per_state = df.groupby(["Resource", "Bucket", "Time_type"]).agg({
+            "time_increment": "sum",
+            "Time": "first"}).reset_index()
+
+        df_resource_time = df.groupby(["Resource", "Bucket"]).agg({
+            "time_increment": "sum",
+        }).reset_index()
+        df_resource_time.rename(
+            columns={"time_increment": "resource_time"}, inplace=True
+        )
+        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
+        df_time_per_state["Percentage"] = (
+            df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
+        ) * 100
+
+        return df_time_per_state
+
+    @cached_property
+    def df_resource_states_buckets_boxplot(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the machine states and the time spent in each state. 
+        There are 4 different states a resource can spend its time: 
+            -SB: A resource is in standby state, could process but no product is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the machine states and the time spent in each state.
+        """
+        df = self.df_prepared.copy()
+        positive_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "start state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+        )
+        negative_condition = (
+            (df["State_type"] == "Process State")
+            & (df["Activity"] == "end state")
+            & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+        )
+
+        df["Increment"] = 0
+        df.loc[positive_condition, "Increment"] = 1
+        df.loc[negative_condition, "Increment"] = -1
+
+        bucket_sizes = [50, 100, 150]
+        df_all = pd.DataFrame()
+
+        for bucket_size in bucket_sizes:
+            df['Bucket'] = df.groupby('Resource').cumcount() // bucket_size
+            df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
+
+            df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
+            resource_types_dict = pd.Series(df_resource_types["State Type"].values, index=df_resource_types["Resource"].values).to_dict()
+            for resource in df["Resource"].unique():
+                if resource_types_dict[resource] in {state.StateTypeEnum.source, state.StateTypeEnum.sink}:
+                    continue
+                example_row = (
+                    df.loc[
+                        (df["Resource"] == resource)
+                        & (
+                            ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0))
+                            | (df["State_sorting_Index"] == 3)
+                        )
+                    ]
+                    .copy()
+                    .head(1)
+                )
+                example_row["Time"] = 0.0
+                df = pd.concat([example_row, df]).reset_index(drop=True)
+
+            df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
+            df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'), inplace=True)
+            df["time_increment"] = df["next_Time"] - df["Time"]
+
+            standby_condition = (
+                (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
+            ) | (df["State_sorting_Index"] == 3)
+            productive_condition = (
+                (df["State_sorting_Index"] == 6)
+                | (df["State_sorting_Index"] == 4)
+                | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
+            )
+            downtime_condition = ((df["State_sorting_Index"] == 7) | (
+                df["State_sorting_Index"] == 8
+            )) & (df["State Type"] == state.StateTypeEnum.breakdown)
+            setup_condition = ((df["State_sorting_Index"] == 8)) & (
+                df["State Type"] == state.StateTypeEnum.setup
+            )
+
+            df.loc[standby_condition, "Time_type"] = "SB"
+            df.loc[productive_condition, "Time_type"] = "PR"
+            df.loc[downtime_condition, "Time_type"] = "UD"
+            df.loc[setup_condition, "Time_type"] = "ST"
+
+            df_all = pd.concat([df_all, df])
+
+        return df_all
+
+
+    @cached_property
+    def df_aggregated_resource_bucket_states_boxplot(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the total time spent in each state of each resource. 
+
+        There are 4 different states a resource can spend its time:
+            -SB: A resource is in standby state, could process but no product is available
+            -PR: A resource is in productive state and performs a process
+            -UD: A resource is in unscheduled downtime state due to a breakdown
+            -ST: A resource is in setup state
+
+        Returns:
+            pd.DataFrame: Data frame with the total time spent in each state of each resource.
+        """
+        df = self.df_resource_states_buckets_boxplot.copy()
+        df = df.loc[df["Time_type"] != "na"]
+
+        df_time_per_state = df.groupby(["Resource", "Bucket", "Time_type"]).agg({
+            "time_increment": "sum",
+            "Time": "first"}).reset_index()
+
+        df_resource_time = df.groupby(["Resource", "Bucket"]).agg({
+            "time_increment": "sum",
+        }).reset_index()
+        df_resource_time.rename(
+            columns={"time_increment": "resource_time"}, inplace=True
+        )
+        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
+        df_time_per_state["Percentage"] = (
+            df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
+        ) * 100
+
+        return df_time_per_state
+
 
     @cached_property
     def df_aggregated_resource_states(self) -> pd.DataFrame:
@@ -482,6 +717,79 @@ class PostProcessor:
         ) * 100
 
         return df_time_per_state
+    
+    @cached_property
+    def df_oee_production_system(self) -> pd.DataFrame:
+        """
+        Calculate the Overall Equipment Efficiency (OEE) of the production system.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the calculated OEE values for Availability, Performance, Quality, and OEE.
+        """
+        df_resource_states = self.df_aggregated_resource_states.copy()
+        df_resource_states = df_resource_states.reset_index()
+        average_kpis = df_resource_states.groupby("Time_type")["Percentage"].mean()
+        unplanned_downtime = average_kpis.get('UD', 0)
+        utilization_value = (100 - unplanned_downtime) / 100
+
+        # Create new DataFrame
+        oee_df = pd.DataFrame({
+            'KPI': ['Availability', 'Performance', 'Quality', 'OEE'],
+            'Value': [utilization_value * 100, 1 * 100, 1 * 100, utilization_value * 100]
+        })
+        oee_df['Value'] = oee_df['Value'].round(2)
+
+        return oee_df
+    
+
+    @cached_property
+    def df_production_flow_ratio(self) -> pd.DataFrame:
+        """
+        Calculates the production flow ratio for each product type.
+
+        Returns:
+            percentage_df (pd.DataFrame): DataFrame containing the production flow ratio for each product type.
+                The DataFrame has the following columns:
+                - Product_type: The type of the product.
+                - Production: The percentage of time spent in production activities.
+                - Transport: The percentage of time spent in transport activities.
+                - Idle: The percentage of idle time.
+        """
+        df_finished_product_copy = self.df_finished_product.copy()
+
+        # Production
+        filtered_df = df_finished_product_copy[df_finished_product_copy['State Type'] == 'Production']
+        df_production = filtered_df[['Product', 'Product_type', 'State Type', 'Activity', 'Time']]
+        grouped_production_df = df_production.groupby(['Product','Product_type','Activity'])['Time'].sum().reset_index()
+        pivot_production_df = grouped_production_df.pivot(index=['Product', 'Product_type'], columns='Activity', values='Time')
+        pivot_production_df = pivot_production_df.fillna(0)
+        pivot_production_df['Production Time'] = (pivot_production_df['end state'] + pivot_production_df.get('end interrupt', 0) - pivot_production_df['start state'] - (pivot_production_df.get('end interrupt', 0) - pivot_production_df.get('start interrupt', 0)))
+        mean_production_time = pivot_production_df.groupby('Product_type')['Production Time'].mean().reset_index()
+
+        # Transport
+        df_transport = df_finished_product_copy[df_finished_product_copy['State Type'] == 'Transport']
+        df_transport = df_transport[['Product', 'Product_type', 'State Type', 'Activity', 'Time']]
+        df_transport = df_transport.groupby(['Product','Product_type','Activity'])['Time'].sum().reset_index()
+        df_transport = df_transport.pivot(index=['Product', 'Product_type'], columns='Activity', values='Time')
+        df_transport = df_transport.fillna(0)
+        df_transport['Transport Time'] = (df_transport['end state'] + df_transport.get('end interrupt', 0) - df_transport['start state'] - (df_transport.get('end interrupt', 0) - df_transport.get('start interrupt', 0)))
+        mean_transport_time = df_transport.groupby('Product_type')['Transport Time'].mean().reset_index()
+
+        df_aggregated_throughput_time_copy = self.df_aggregated_throughput_time.copy()
+
+        merged_df = pd.merge(df_aggregated_throughput_time_copy, mean_production_time, on='Product_type', how='inner')
+        merged_df = pd.merge(merged_df, mean_transport_time, on='Product_type', how='inner')
+        merged_df['Idle Time'] = merged_df['Throughput_time'] - merged_df['Production Time'] - merged_df['Transport Time']
+
+        percentage_df = pd.DataFrame({
+            'Product_type': merged_df['Product_type'],
+            'Production ': merged_df['Production Time'] / merged_df['Throughput_time'] * 100,
+            'Transport ': merged_df['Transport Time'] / merged_df['Throughput_time'] * 100,
+            'Idle ': merged_df['Idle Time'] / merged_df['Throughput_time'] * 100
+        })
+
+        return percentage_df
+
     
     @cached_property
     def machine_state_KPIS(self) -> List[performance_indicators.KPI]:
@@ -533,6 +841,48 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         return self.get_WIP_KPI(df)
+    
+    @cached_property
+    def df_mean_wip_per_station(self) -> pd.DataFrame:
+        """
+        Calculate the mean Work-in-Progress (WIP) per station.
+
+        Returns:
+            pd.DataFrame: A DataFrame containing the mean WIP per station.
+        """
+        df = self.df_resource_states.copy()
+        created_condition = df["Activity"] == state.StateEnum.created_product
+        finished_condition = df["Activity"] == state.StateEnum.finished_product
+
+        df["wip_increment"] = 0
+        df.loc[created_condition, "wip_increment"] = 1
+        df.loc[finished_condition, "wip_increment"] = -1
+        df.loc[created_condition | finished_condition, "wip_resource"] = df.loc[created_condition | finished_condition, "Resource"]
+        move_away_condition = (df["Empty Transport"] == False) & (df["Activity"] == "start state")
+        move_in_condition = (df["Empty Transport"] == False) & (df["Activity"] == "end state")
+
+        df.loc[move_away_condition, "wip_increment"] = -1
+        df.loc[move_away_condition, "wip_resource"] = df.loc[move_away_condition, "Origin location"]
+        df.loc[move_in_condition, "wip_increment"] = 1
+        df.loc[move_in_condition, "wip_resource"] = df.loc[move_in_condition, "Target location"]
+
+        df["wip"] = df.groupby(by="wip_resource")["wip_increment"].cumsum()
+
+        # remove bug that sinks have resource WIP!
+        df_temp = df[["State", "State Type"]].drop_duplicates()
+        sinks = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.sink, "State"].unique()
+        df = df.loc[~df["wip_resource"].isin(sinks)]
+        sources = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.source, "State"].unique()
+        df = df.loc[~df["wip_resource"].isin(sources)]
+        resources = df['Resource'].unique()
+        df = df.loc[df['wip_resource'].isin(resources)]
+
+        # Calculate mean WIP per station
+        df_mean_wip_per_station = df.groupby("wip_resource")["wip"].mean().reset_index()
+        df_mean_wip_per_station.rename(columns={"wip": "mean_wip"}, inplace=True)
+        df_mean_wip_per_station.rename(columns={"wip_resource": "resource"}, inplace=True)
+
+        return df_mean_wip_per_station
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
