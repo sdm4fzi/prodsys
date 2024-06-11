@@ -14,10 +14,11 @@ from simpy import events
 
 from prodsys.simulation import resources
 from prodsys.simulation import request
+from prodsys.simulation.process import ReworkProcess
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink
+    from prodsys.simulation import resources, product, sink, process
     from prodsys.factories import resource_factory, sink_factory
     from prodsys.control import routing_control_env
 
@@ -73,7 +74,6 @@ class Router:
         if not potential_production_requests:
             raise ValueError(f"No possible production resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID}.")
         potential_transport_requests: List[request.Request] = []
-
 
         potential_transport_requests = self.get_possible_transport_requests(potential_production_requests)
         if not potential_transport_requests:
@@ -252,6 +252,28 @@ class Router:
             List[request.Request]: A list of requests with non-blocked resources.
         """
         return [request for request in requests if isinstance(request.resource, resources.TransportResource) or (isinstance(request.resource, resources.ProductionResource) and not any(q.full for q in request.resource.input_queues))]
+    
+    def get_rework_processes(self, product: product.Product, failed_process: process.Process) -> process.Process:
+        """
+        Returns a list of possible rework requests with different resources and processes for the rework process of a product.
+
+        Args:
+            product (product.Product): The product to get the rework request for.
+
+        Returns:
+            List[request.Request]: A list of possible rework requests for the rework process of the product.
+        """
+
+        for potential_rework_process in self.resource_factory.process_factory.processes:
+            if isinstance(potential_rework_process, ReworkProcess):
+                rework_request = request.Request(
+                    process=failed_process,
+                    product=product,
+                    resource=None,
+                )
+                if potential_rework_process.matches_request(rework_request):
+                    return [potential_rework_process]
+        return None
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """

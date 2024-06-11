@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, Field, validator, Extra
 from typing import Any, List, Generator, TYPE_CHECKING, Union, Optional
+import numpy as np
 
 import logging
 
@@ -14,7 +15,7 @@ from simpy import events
 
 from prodsys.simulation import node, request, route_finder, sim, state, process
 
-from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess
+from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess, ProductionProcess, ReworkProcess
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, process, state, resources, request, sink, source
@@ -137,6 +138,8 @@ class ProductionController(Controller):
     A production controller is responsible for controlling the processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
     resource: resources.ProductionResource = Field(init=False, default=None)
+    rework_needed: Optional[bool] = None
+    blocking: Optional[bool] = None
 
     def get_next_product_for_process(
         self, resource: resources.Resource, product: product.Product
@@ -254,8 +257,9 @@ class ProductionController(Controller):
             
             production_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process for {product.product_data.ID}"})
-            yield self.env.process(self.run_process(production_state, product))
+            yield self.env.process(self.run_process(production_state, product, process))
             production_state.process = None
+            self.rework_needed = False
             
             product_put_events = self.put_product_to_output_queue(resource, [product])
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
@@ -267,7 +271,7 @@ class ProductionController(Controller):
                 next_product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished process for {product.product_data.ID}"})
     
-    def run_process(self, input_state: state.State, target_product: product.Product):
+    def run_process(self, input_state: state.State, target_product: product.Product, process: process.Process):
         """
         Run the process of a product. The process is started and the product is logged.
 
@@ -286,8 +290,45 @@ class ProductionController(Controller):
             state.StateTypeEnum.production,
         )
         input_state.process = self.env.process(input_state.process_state())
-        # TODO: if performed process has failure_rate -> sample (np.choice) if failure happened, if so: mark product as rework_needed
+        self.blocking = self.check_blocking(target_product, process)
+        self.rework_needed = self.handle_rework(process)
+        
+        if self.rework_needed is not None:
+            target_product.rework_needed = self.rework_needed
+            if self.rework_needed:
+                target_product.processes_needing_rework = target_product.processes_needing_rework or []
+                target_product.processes_needing_rework.append(process)
+            
+            #target_product.product_info.log_rework(target_product)
+            #print(f"Product {target_product.product_data.ID} needs rework: {self.rework_needed}")
+
         yield input_state.process
+    
+    def check_blocking(self, product: product.Product, proc: process.Process) -> bool:
+
+        blocking = False  
+        for proc in self.resource.processes:
+            if isinstance(proc, ReworkProcess):
+                blocking = proc.process_data.blocking
+                if blocking is not None:
+                    product.blocking = blocking
+                    return blocking
+        return blocking
+
+    def handle_rework(self, process: process.Process) -> bool:
+        """
+        Determine if rework is needed based on the process's failure rate.
+
+        Args:
+            process (process.Process): The process to check for failure rate.
+
+        Returns:
+            bool: True if rework is needed, False otherwise.
+        """
+        failure_rate = process.process_data.failure_rate
+        if failure_rate is not None:
+            self.rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
+        return self.rework_needed
 
 class BatchController(Controller):
     """
@@ -297,7 +338,7 @@ class BatchController(Controller):
 
     def get_batch_size(self, resource: resources.Resource) -> int:
         """
-        Get the batch size for the given resource.
+        Get the batch size for the given resource which equals the capacity of the resource.
 
         Args:
             resource (resources.Resource): The resource to get the batch size for.
@@ -306,7 +347,7 @@ class BatchController(Controller):
             int: The batch size of the resource.
         """
         if isinstance(resource, resources.ProductionResource):
-            return resource.batch_size
+            return resource.capacity
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -326,11 +367,11 @@ class BatchController(Controller):
 
         events = []
         products = []
-        batch_size = self.get_batch_size(resource)
+        batch_size = self.get_batch_size(resource) 
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
                 while len(products) < batch_size:
-                    event = queue.get(filter=lambda item: item is process_request.get_product().product_data)
+                    event = queue.get(filter=lambda item: item.ID == process_request.get_product().product_data.ID)
                     events.append(event)
                     product = yield event
                     products.append(product)
@@ -418,7 +459,6 @@ class BatchController(Controller):
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
-        # TODO: duplicate ProductionController for Batchcontroller and get from self.requests a number of products of one requested process type (max batch size) and perform function belog or the whole batch
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()

@@ -341,6 +341,8 @@ class ProductionState(State):
             self.interrupted = True
             self.process.interrupt()
 
+    #TODO: add logging for rework processes
+
 
 class TransportState(State):
     """
@@ -374,6 +376,7 @@ class TransportState(State):
         self.active = events.Event(self.env).succeed()
 
     def handle_loading(self, loading_time: float, action: str) -> Generator:
+        loading_time = loading_time if loading_time is not None else self.handling_time_model.get_next_time()
         try:
             if self.interrupted:
                 debug_logging(self, f"interrupted during {action}")
@@ -407,7 +410,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        yield from self.handle_loading(self.handling_time, "loading")
+        yield self.env.process(self.handle_loading(self.handling_time, "loading"))
         while self.done_in:
             try:
                 if self.interrupted:
