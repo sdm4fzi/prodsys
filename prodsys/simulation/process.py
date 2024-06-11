@@ -22,6 +22,7 @@ class Process(ABC, BaseModel):
 
     process_data: processes_data.PROCESS_DATA_UNION
     time_model: Optional[time_model.TimeModel]
+    failure_rate: Optional[float] = None
 
     @abstractmethod
     def matches_request(self, request: request.Request) -> bool:
@@ -184,6 +185,7 @@ class CompoundProcess(Process):
             processes_data.CapabilityProcessData,
             processes_data.RequiredCapabilityProcessData,
             processes_data.LinkTransportProcessData,
+            processes_data.ReworkProcessData,
         ]
     ]
 
@@ -244,6 +246,30 @@ class RequiredCapabilityProcess(Process):
         raise NotImplementedError(
             "RequiredCapabilityProcess does not have a process time."
         )
+    
+class ReworkProcess(Process):
+    """
+    Class that represents a rework process.
+    """
+    process_data: processes_data.ReworkProcessData
+    reworked_process_ids: List[str]
+    blocking: bool 
+
+    def matches_request(self, request: request.Request) -> bool:
+        requested_process = request.process
+        if not isinstance(requested_process, ProductionProcess) and not isinstance(requested_process, CompoundProcess) and not isinstance(requested_process, ReworkProcess):
+            return False
+        if isinstance(requested_process, CompoundProcess):
+            return any(reworked_process_id in requested_process.process_data.process_ids for reworked_process_id in self.reworked_process_ids)
+        if isinstance(requested_process, ReworkProcess):
+            return True
+        return requested_process.process_data.ID in self.reworked_process_ids
+
+    def get_process_time(self) -> float:
+        return self.time_model.get_next_time()
+
+    def get_expected_process_time(self) -> float:
+        return self.time_model.get_expected_time()
 
 class LinkTransportProcess(TransportProcess):
     """
@@ -305,9 +331,11 @@ PROCESS_UNION = Union[
     TransportProcess,
     CapabilityProcess,
     LinkTransportProcess,
+    ReworkProcess,
 ]
 """
 Union type for all processes.
 """
 from prodsys.simulation import resources, source, sink, node
 LinkTransportProcess.update_forward_refs()
+Process.update_forward_refs()

@@ -162,6 +162,10 @@ class Product(BaseModel):
     current_locatable: Locatable = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = ProductInfo()
+    processes_needing_rework: List[process.Process] = Field(default_factory=list, init=False)
+    rework_needed: bool = Field(default=False, init=False)
+    blocking: bool = Field(default=None, init=False)
+    executed_production_processes: List = Field(default_factory=list, init=False)
 
     class Config:
         arbitrary_types_allowed = True
@@ -224,17 +228,38 @@ class Product(BaseModel):
     def set_next_production_process(self):
         """
         Sets the next process of the product object based on the current state of the product and its process model.
-        """
+        """ 
+        blocked = bool
+        if self.blocking is not None:
+            blocked = self.blocking 
+        reworked = self.rework_needed
+        
         next_possible_processes = self.process_model.get_next_possible_processes()
-        # TODO: add an if condition, if previous proces failed, then start rework
-            # 0. Add functionality in controller that a process fails, if so: mark the product as rework_needed (in controller or )
-            # 0. add ReworkProcesses, that have a time_model and also a process_id that should be reworked, similar to setup_states with process to be setup
-            # 1. get rework process with router, implement function for this at the router -> get_rework_process(failed_process) -> rework process
-            # 2. set next process of the product and return
+        
         if not next_possible_processes:
             self.next_prodution_process = None
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"No next process"})
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"No next process"})  
         else:
-            self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
-            self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
+            if reworked:         
+                if blocked is not None and blocked is True:
+                    failed_process = self.next_prodution_process
+                    next_possible_processes = self.product_router.get_rework_processes(self, failed_process)
+                    if next_possible_processes is not None:
+                        self.next_prodution_process = next_possible_processes[0]
+                        self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
+                        reworked = False
+                        blocked = False
+                        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
+                elif blocked is not None and blocked is False:
+                    for proc in self.processes_needing_rework:
+                        ids_to_rework = [proc.process_data.ID]
+                        processes_on_product = self.executed_production_processes
+                        if all(id in processes_on_product for id in ids_to_rework):
+                            self.next_prodution_process = proc
+                            self.process_model.update_marking_from_transition(self.next_prodution_process)              
+                    reworked = False
+            else: 
+                self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
+                self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
+                self.executed_production_processes.append(self.next_prodution_process.process_data.ID)
+                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})

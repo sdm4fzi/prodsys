@@ -39,12 +39,18 @@ class ProcessFactory(BaseModel):
             time_model = self.time_model_factory.get_time_model(process_data.time_model_id)
             values.update({"time_model": time_model})
         values.update({"process_data": process_data})
+        if "failure_rate" in process_data:
+            values.update({"failure_rate": process_data.failure_rate})
         if isinstance(process_data, processes_data.CompoundProcessData):
             contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})
             self.processes.append(parse_obj_as(process.LinkTransportProcess, values))
+        elif isinstance(process_data, processes_data.ReworkProcessData):
+            values.update({"reworked_process_ids": process_data.reworked_process_ids})
+            values.update({"blocking": process_data.blocking})
+            self.processes.append(parse_obj_as(process.ReworkProcess, values))
         else:
             self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
 

@@ -81,9 +81,10 @@ def register_production_states_for_processes(
             }
         }
         existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
-        if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess)) and not existence_condition:
+        if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess) or isinstance(process_instance, process.ReworkProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
-        elif isinstance(process_instance, process.TransportProcess) and not existence_condition:
+            #TODO: also implement production state for rework processess -> done
+        elif isinstance(process_instance, (process.TransportProcess, process.LinkTransportProcess)) and not existence_condition:
             if "handling_time_model" in process_instance.process_data.dict():
                 values["new_state"]["handling_time_model"] = process_instance.process_data.handling_time_model
             state_factory.create_states_from_configuration_data({"TransportState": values})
@@ -177,8 +178,7 @@ class ResourceFactory(BaseModel):
             values.update(
             {"input_queues": input_queues, "output_queues": output_queues}
             )
-            if "batch_size" in resource_data.dict():
-                values.update({"batch_size": resource_data.batch_size})
+  
         resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
         # print(resource_object._env)
         controller.set_resource(resource_object)

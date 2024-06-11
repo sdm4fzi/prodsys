@@ -35,6 +35,7 @@ class ProcessTypeEnum(str, Enum):
     CompoundProcesses = "CompoundProcesses"
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
+    ReworkProcesses = "ReworkProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -48,7 +49,8 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
-    # TODO: add optional attribute for failure rate (defaults to 0), also update hasing
+    failure_rate: Optional[float] = None
+    # TODO: add optional attribute for failure rate (defaults to 0), also update hashing
 
     class Config:
         schema_extra = {
@@ -216,7 +218,52 @@ class TransportProcessData(ProcessData):
         }
 
 
-# TODO: add ReworkProcess
+
+class ReworkProcessData(ProcessData):
+    """
+    Class that represents rework process data.
+
+    Args:
+        ID (str): ID of the process.
+        description (str): Description of the process.
+        time_model_id (str): ID of the time model of the process.
+        type (Literal[ProcessTypeEnum.ProductionProcesses]): Type of the process.
+        reworked_process_ids (List[str]): Process IDs of the reworked processes.
+        blocking (bool): If the rework process is blocking.
+
+    Examples:
+        A rework process with ID "RP1", description "Rework Process 1" and time model ID "function_time_model_1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.ReworkProcessData(
+            ID="RP1",
+            description="Rework Process 1",
+            time_model_id="function_time_model_1",
+            type="ProductionProcesses",
+            reworked_process_ids=["P1", "P2"],
+            blocking=True
+        )
+        ```
+    """
+
+    type: Literal[ProcessTypeEnum.ReworkProcesses]
+    reworked_process_ids: List[str]
+    blocking: bool 
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "summary": "Rework process",
+                "value": {
+                    "ID": "RP1",
+                    "description": "Rework Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "ProductionProcesses",
+                    "reworked_process_ids": ["P1", "P2"],
+                    "blocking": True,
+                },
+            }
+        }
 
 class CompoundProcessData(CoreAsset):
     """
@@ -350,6 +397,8 @@ class LinkTransportProcessData(TransportProcessData):
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
+    handling_time_model: Optional[str] = None
+
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -381,5 +430,5 @@ class LinkTransportProcessData(TransportProcessData):
 
 PROCESS_DATA_UNION = Union[
     CompoundProcessData, RequiredCapabilityProcessData,
-    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData
+    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData, ReworkProcessData
 ]

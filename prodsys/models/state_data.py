@@ -284,8 +284,6 @@ class TransportStateData(StateData):
 
     type: Literal[StateTypeEnum.TransportState]
     handling_time_model: Optional[str] = None
-    if handling_time_model is not None:
-        setattr('handling_time_model', handling_time_model)
 
     class Config:
         schema_extra = {
