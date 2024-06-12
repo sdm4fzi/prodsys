@@ -341,7 +341,6 @@ class ProductionState(State):
             self.interrupted = True
             self.process.interrupt()
 
-    #TODO: add logging for rework processes
 
 
 class TransportState(State):

@@ -49,8 +49,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
-    failure_rate: Optional[float] = None
-    # TODO: add optional attribute for failure rate (defaults to 0), also update hashing
+    failure_rate: Optional[float] = 0.0
 
     class Config:
         schema_extra = {
@@ -79,7 +78,10 @@ class ProcessData(CoreAsset):
                 break
         else:
             raise ValueError(f"Time model with ID {self.time_model_id} not found for process {self.ID}.")
-        return md5((time_model_hash).encode("utf-8")).hexdigest()
+        
+        failure_rate_str = str(self.failure_rate)
+        input_hash = time_model_hash + failure_rate_str
+        return md5((input_hash).encode("utf-8")).hexdigest()
 
 
 class ProductionProcessData(ProcessData):
