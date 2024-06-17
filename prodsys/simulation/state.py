@@ -286,8 +286,10 @@ class ProductionState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def process_state(self) -> Generator:
-        self.done_in = self.time_model.get_next_time()
+    def process_state(self, time: Optional[float] = None) -> Generator:
+        if not time:
+            time = self.time_model.get_next_time()
+        self.done_in = time
         while True:
             try:
                 if self.interrupted:
@@ -327,6 +329,7 @@ class ProductionState(State):
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
         debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
+        #print(f"product {self.state_data} finished at {self.env.now}")
         self.finished_process.succeed()
 
     def update_done_in(self):
@@ -359,14 +362,16 @@ class TransportState(State):
         start (float, optional): The start time of the state. Defaults to 0.0.
         done_in (float, optional): The ramaining time for the state to finish. Defaults to 0.0.
         interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
-        handling_time_model (time_model.TimeModel, optional): The time model of the loading time. Defaults to None.
+        loading_time_model (time_model.TimeModel, optional): The time model of the loading time. Defaults to None.
     """
     state_data: TransportStateData
-    handling_time_model: Optional[time_model.TimeModel] = None
+    loading_time_model: Optional[time_model.TimeModel] = None
+    unloading_time_model: Optional[time_model.TimeModel] = None
     start: float = 0.0
     done_in: float = 0.0
     interrupted: bool = False
-    handling_time: float = 0.0
+    loading_time: float = 0.0
+    unloading_time: float = 0.0
 
     def prepare_for_run(self):
         self.finished_process = events.Event(self.env)
@@ -374,12 +379,21 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def handle_loading(self, loading_time: float, action: str) -> Generator:
-        loading_time = loading_time if loading_time is not None else self.handling_time_model.get_next_time()
+    def handle_loading(self, action: str) -> Generator:
+        #loading_time = loading_time if loading_time is not None else self.loading_time_model.get_next_time()
+        if action == "loading":
+            time_model = self.loading_time_model
+        elif action == "unloading":
+            time_model = self.unloading_time_model
+        else:
+            raise ValueError(f"Unknown action {action}")
+        
+        time = time_model.get_next_time() if time_model else 0
+
         try:
             if self.interrupted:
                 debug_logging(self, f"interrupted during {action}")
-                yield self.env.timeout(loading_time)
+                yield self.env.timeout(time)
                 self.interrupted = False
             debug_logging(self, f"loading completed")
         except exceptions.Interrupt:
@@ -395,8 +409,8 @@ class TransportState(State):
 
         # TODO: also use intial and last_transport_step to add loading times
 
-        if self.handling_time_model:
-            self.handling_time = self.handling_time_model.get_next_time()
+        # if self.loading_time_model:
+        #     self.loading_time = self.loading_time_model.get_next_time()
         while True:
             try:
                 if self.interrupted:
@@ -409,7 +423,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        yield self.env.process(self.handle_loading(self.handling_time, "loading"))
+        yield self.env.process(self.handle_loading("loading"))
         while self.done_in:
             try:
                 if self.interrupted:
@@ -434,7 +448,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        yield from self.handle_loading(self.handling_time, "unloading")
+        yield from self.handle_loading("unloading")
         debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
         self.finished_process.succeed()

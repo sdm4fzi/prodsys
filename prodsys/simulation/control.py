@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import node, request, route_finder, sim, state, process
+from prodsys.simulation import node, request, route_finder, sim, state, process, router
 
 from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess, ProductionProcess, ReworkProcess
 
@@ -349,7 +349,7 @@ class BatchController(Controller):
 
     def get_batch_size(self, resource: resources.Resource) -> int:
         """
-        Get the batch size for the given resource which equals the capacity of the resource.
+        Get the batch size for the given resource.
 
         Args:
             resource (resources.Resource): The resource to get the batch size for.
@@ -358,13 +358,13 @@ class BatchController(Controller):
             int: The batch size of the resource.
         """
         if isinstance(resource, resources.ProductionResource):
-            return resource.capacity
+            return resource.batch_size
         else:
             raise ValueError("Resource is not a ProductionResource")
 
     def get_next_product_for_process(
         self, resource: resources.Resource, process_request: request.Request
-    ) -> Generator:
+    ) -> List[events.Event]:
         """
        Get the next batch of products for a process. The products are removed (get) from the input queues of the resource.
 
@@ -375,26 +375,17 @@ class BatchController(Controller):
         Returns:
             List[events.Event]: The events that are triggered when the products are taken from the queue.
         """
-
         events = []
-        products = set()
-        batch_size = self.get_batch_size(resource) 
+
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.input_queues:
-                if len(products) < batch_size:
-                    break
-                event = queue.get(filter=lambda item: item.product_type == process_request.get_product().product_data.product_type and item.ID not in products)
-                events.append(event)
-                product = yield event
-                if product:
-                    products.add(product.ID)
-                    print(f"Product {product.ID} retrieved from queue")
-                    # if len(products) == batch_size:
-                    #     break
-            if len(products) < batch_size and len(self.requests) > 0:
-                return events
-            elif len(products) < batch_size:
-                raise ValueError("Not enough products in queue for a batch")
+                while len(events) < self.get_batch_size(resource):
+                    event = queue.get(
+                        filter=lambda item: item.product_type == process_request.get_product().product_data.product_type
+                    )
+                    if not event:
+                        break
+                    events.append(event)
             return events
         else:
             raise ValueError("Resource is not a ProductionResource")
@@ -421,6 +412,56 @@ class BatchController(Controller):
             raise ValueError("Resource is not a ProductionResource")
         print("method: ", events)
         return events
+    
+    def is_process_available(self, resource: resources.Resource, process: process.Process, product: product.Product) -> bool:
+        """
+        Check if the process is available for the specific product.
+
+        Args:
+            resource (resources.Resource): The resource.
+            process (process.Process): The process.
+            product (product.Product): The specific product.
+
+        Returns:
+            bool: True if the process is available, False otherwise.
+        """
+        possible_states = resource.get_processes(process)
+        for state in possible_states:
+            if state.process is None or not state.process.is_alive:
+                # Additional checks specific to the product can be added here
+                return True
+        return False
+
+    def wait_for_free_process_batch(self, resource: resources.Resource, process: process.Process, product: product.Product) -> Generator[state.State, None, None]:
+        """
+        Wait for a free process of a resource for a specific product.
+
+        Args:
+            resource (resources.Resource): The resource.
+            process (process.Process): The process.
+            product (product.Product): The specific product.
+
+        Returns:
+            Generator: The generator yields when a process is free.
+
+        Yields:
+            Generator: The generator yields when a process is free.
+        """
+        possible_states = resource.get_processes(process)
+        while True:
+            for state in possible_states:
+                if state.process is None or not state.process.is_alive:
+                    if self.is_process_available(resource, process, product):
+                        return state
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process for product {product.product_data.ID}"})
+            yield events.AnyOf(
+                self.env,
+                [
+                    state.process
+                    for state in possible_states
+                    if state.process is not None and state.process.is_alive
+                ],
+            )
 
     def control_loop(self) -> Generator:
         """
@@ -481,21 +522,33 @@ class BatchController(Controller):
         resource = process_request.get_resource()
         process = process_request.get_process()
         product = process_request.get_product()
-        products = [process_request.get_product() for _ in range(batch_size)]
+        products = []
+        production_states = []
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID} with batch size {batch_size}"})
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            product_retrieval_events = yield from self.get_next_product_for_process(resource, process_request)
+            product_retrieval_events = self.get_next_product_for_process(resource, process_request)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve products for batch from queue"})
-            yield events.AllOf(resource.env, product_retrieval_events)
+            product_data_list = yield events.AllOf(resource.env, product_retrieval_events)
+            #TODO: get simulation product instances from product_data_list via router - product_factory (source_factory) -> done
+            for product_data in product_data_list.values():
+                simulation_product = product.product_router.product_factory.get_product(product_data.ID)
+                print(simulation_product.product_data.ID)
+                products.append(simulation_product)
+            #TODO: get production states for all products
+            for simulation_product in products:
+                #print(simulation_product.product_data.ID)
+                production_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
+                production_states.append(production_state)
             
-            production_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
-            yield self.env.process(self.run_process(production_state, products, process))
-            production_state.process = None
+            yield self.env.process(self.run_process(production_states, products, process))
+            for state in production_states:
+                state.process = None
             print("start_process", self.put_product_to_output_queue(resource, products))
+            
             product_put_events = yield from self.put_product_to_output_queue(resource, products)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put products to queue"})
             yield events.AllOf(resource.env, product_put_events)
@@ -506,7 +559,7 @@ class BatchController(Controller):
                 product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished batch process"})
     
-    def run_process(self, input_state: state.State, products: List[product.Product], process: process.Process):
+    def run_process(self, input_states: List[state.State], products: List[product.Product], process: process.Process):
         """
         Run the process of a product. The process is started and the product is logged.
 
@@ -514,8 +567,15 @@ class BatchController(Controller):
             input_state (state.State): The production state of the process.
             target_product (product.Product): The product that is processed.
         """
-        input_state.prepare_for_run()
-        for product in products:
+        #TODO: for each product one input_state
+        #input_states is the same object
+        states = []
+        process_time_for_batch = input_states[0].time_model.get_next_time()
+    
+        #input_states[0].prepare_for_run()
+        for product, input_state in zip(products, input_states):
+            print("product", input_state.finished_process)
+            input_state.prepare_for_run()
             input_state.state_info.log_product(
                 product, state.StateTypeEnum.production
             )
@@ -525,17 +585,24 @@ class BatchController(Controller):
                 self.env.now,
                 state.StateTypeEnum.production,
             )
-        input_state.process = self.env.process(input_state.process_state())
-        self.blocking = self.check_blocking(products, process)
-        self.rework_needed = self.handle_rework(process)
+            input_state.process = self.env.process(input_state.process_state())
+            states.append(input_state.process)
         
-        if self.rework_needed is not None:
-            for product in products:
-                product.rework_needed = self.rework_needed
-                if self.rework_needed:
-                    product.processes_needing_rework = product.processes_needing_rework or []
-                    product.processes_needing_rework.append(process)
-        yield input_state.process
+        yield events.AllOf(self.env, states)
+
+        # self.blocking = self.check_blocking(products, process)
+        # self.rework_needed = self.handle_rework(process)
+        
+        # if self.rework_needed is not None:
+        #     for product in products:
+        #         product.rework_needed = self.rework_needed
+        #         if self.rework_needed:
+        #             product.processes_needing_rework = product.processes_needing_rework or []
+        #             product.processes_needing_rework.append(process)
+        
+        # TODO: yield all.EventsOf for all input_states
+        #yield events.AllOf(self.env, [input_state.process for input_state in input_states])
+
 
     def check_blocking(self, products: List[product.Product], proc: process.Process) -> bool:
         """

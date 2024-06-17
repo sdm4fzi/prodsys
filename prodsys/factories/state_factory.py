@@ -48,11 +48,16 @@ class StateFactory(BaseModel):
             values["state_data"].time_model_id
         )
         values.update({"time_model": time_model, "env": self.env})
-        if "handling_time_model" in state_data.dict() and state_data.dict()["handling_time_model"] is not None:
-            handling_time_model = self.time_model_factory.get_time_model(
-                state_data.handling_time_model
+        if "loading_time_model" in state_data.dict() and state_data.dict()["loading_time_model"] is not None:
+            loading_time_model = self.time_model_factory.get_time_model(
+                state_data.loading_time_model
             )
-            values.update({"handling_time_model": handling_time_model})
+            values.update({"loading_time_model": loading_time_model})
+        if "unloading_time_model" in state_data.dict() and state_data.dict()["unloading_time_model"] is not None:
+            unloading_time_model = self.time_model_factory.get_time_model(
+                state_data.unloading_time_model
+            )
+            values.update({"unloading_time_model": unloading_time_model})
         if "repair_time_model_id" in state_data.dict():
             repair_time_model = self.time_model_factory.get_time_model(
                 state_data.repair_time_model_id

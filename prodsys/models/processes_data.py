@@ -187,7 +187,8 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        handling_time_model (str): ID of the handling time model of the process.
+        loading_time_model (str): ID of the loading time model of the process.
+        unloading_time_model (str): ID of the loading time model of the process.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
@@ -198,12 +199,17 @@ class TransportProcessData(ProcessData):
             description="Transport Process 1",
             time_model_id="manhattan_time_model_1",
             type="TransportProcesses",
+            loading_time_model="function_time_model_2",
+            unloading_time_model="function_time_model_3",
         )
         ```
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
-    handling_time_model: Optional[str] = None
+    loading_time_model: Optional[str] = None
+    unloading_time_model: Optional[str] = None
+    #TODO: implement charging_time_model for charging times for the AGV
+
 
     class Config:
         schema_extra = {
@@ -214,7 +220,8 @@ class TransportProcessData(ProcessData):
                     "description": "Transport Process 1",
                     "time_model_id": "manhattan_time_model_1",
                     "type": "TransportProcesses",
-                    "handling_time_model": "function_time_model_2",
+                    "loading_time_model": "function_time_model_2",
+                    "unloading_time_model": "function_time_model_3",
                 },
             }
         }
@@ -399,7 +406,7 @@ class LinkTransportProcessData(TransportProcessData):
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
-    handling_time_model: Optional[str] = None
+    loading_time_model: Optional[str] = None
 
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
