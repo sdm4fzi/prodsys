@@ -19,7 +19,7 @@ from prodsys.simulation.process import ReworkProcess
 
 if TYPE_CHECKING:
     from prodsys.simulation import resources, product, sink, process
-    from prodsys.factories import resource_factory, sink_factory
+    from prodsys.factories import resource_factory, sink_factory, product_factory
     from prodsys.control import routing_control_env
 
 
@@ -50,10 +50,12 @@ class Router:
 
     def __init__(
         self,
+        product_factory: product_factory.ProductFactory,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
     ):
+        self.product_factory: product_factory.ProductFactory = product_factory
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic

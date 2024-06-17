@@ -183,6 +183,7 @@ class ProductionResourceData(ResourceData):
     control_policy: ResourceControlPolicy
     input_queues: Optional[List[str]]
     output_queues: Optional[List[str]]
+    batch_size: Optional[int] = None
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """

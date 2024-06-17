@@ -41,6 +41,10 @@ class ProcessFactory(BaseModel):
         values.update({"process_data": process_data})
         if "failure_rate" in process_data:
             values.update({"failure_rate": process_data.failure_rate})
+        if "loading_time_model" in process_data:
+            values.update({"loading_time_model": self.time_model_factory.get_time_model(process_data.loading_time_model)})
+        if "unloading_time_model" in process_data:
+            values.update({"unloading_time_model": self.time_model_factory.get_time_model(process_data.unloading_time_model)})
         if isinstance(process_data, processes_data.CompoundProcessData):
             contained_processes_data = [other_process_data for other_process_data in adapter.process_data if other_process_data.ID in process_data.process_ids]
             values.update({"contained_processes_data": contained_processes_data})

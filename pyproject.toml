@@ -2,7 +2,7 @@
 name = "prodsys"
 version = "0.6.5"
 description = "A useful module for production system simulation and optimization"
-authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
+authors = ["Sebastian Behrendt <sebastian.behrendt@kit.edu>"]
 license = "MIT"
 readme = ["README.md", "LICENSE"]
 

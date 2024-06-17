@@ -283,7 +283,8 @@ class TransportStateData(StateData):
     """
 
     type: Literal[StateTypeEnum.TransportState]
-    handling_time_model: Optional[str] = None
+    loading_time_model: Optional[str] = None
+    unloading_time_model: Optional[str] = None
 
     class Config:
         schema_extra = {
