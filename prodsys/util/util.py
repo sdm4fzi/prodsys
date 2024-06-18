@@ -80,7 +80,7 @@ def read_initial_solutions(
             continue
         adapter = adapters.JsonProductionSystemAdapter()
         adapter.read_data(join(folder_path, file_path))
-        adapter.scenario_data = base_configuration.scenario_data.copy()
+        adapter.scenario_data = base_configuration.scenario_data.model_copy()
         if not adapter.ID:
             adapter.ID = f"initial_solution_{counter}"
         adapter_objects.append(adapter)

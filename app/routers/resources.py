@@ -8,20 +8,16 @@ from prodsys.models import resource_data
 from app.dao import resources_dao
 
 RESOURCE_EXAMPLES = {
-    "Production Resource": resource_data.ProductionResourceData.Config.schema_extra[
-        "example"
-    ],
-    "Transport Resource": resource_data.TransportResourceData.Config.schema_extra[
-        "example"
-    ],
+    "Production Resource": resource_data.ProductionResourceData.model_config["json_schema_extra"]["examples"],
+    "Transport Resource": resource_data.TransportResourceData.model_config["json_schema_extra"]["examples"],
 }
 
-RESOURCE_LIST_EXAMPLE = [item["value"] for item in RESOURCE_EXAMPLES.values()]
+RESOURCE_LIST_EXAMPLE = [item for item in RESOURCE_EXAMPLES.values()]
 PRODUCTION_RESOURCE_LIST_EXAMPLE = [
-    resource_data.ProductionResourceData.Config.schema_extra["example"]["value"]
+    resource_data.ProductionResourceData.model_config["json_schema_extra"]["examples"]
 ]
 TRANSPORT_RESOURCE_LIST_EXAMPLE = [
-    resource_data.TransportResourceData.Config.schema_extra["example"]["value"]
+    resource_data.TransportResourceData.model_config["json_schema_extra"]["examples"]
 ]
 
 

@@ -8,31 +8,31 @@ from prodsys.models import performance_data, performance_indicators
 from app.dependencies import prodsys_backend
 
 KPI_EXAMPLES = {
-    "Output": performance_indicators.Output.Config.schema_extra["example"],
-    "Throughput": performance_indicators.Throughput.Config.schema_extra["example"],
-    "Cost": performance_indicators.Cost.Config.schema_extra["example"],
-    "WIP": performance_indicators.WIP.Config.schema_extra["example"],
-    "ThroughputTime": performance_indicators.ThroughputTime.Config.schema_extra[
-        "example"
+    "Output": performance_indicators.Output.model_config["json_schema_extra"]["examples"],
+    "Throughput": performance_indicators.Throughput.model_config["json_schema_extra"]["examples"],
+    "Cost": performance_indicators.Cost.model_config["json_schema_extra"]["examples"],
+    "WIP": performance_indicators.WIP.model_config["json_schema_extra"]["examples"],
+    "ThroughputTime": performance_indicators.ThroughputTime.model_config["json_schema_extra"][
+        "examples"
     ],
-    "ProcessingTime": performance_indicators.ProcessingTime.Config.schema_extra[
-        "example"
+    "ProcessingTime": performance_indicators.ProcessingTime.model_config["json_schema_extra"][
+        "examples"
     ],
-    "ProductiveTime": performance_indicators.ProductiveTime.Config.schema_extra[
-        "example"
+    "ProductiveTime": performance_indicators.ProductiveTime.model_config["json_schema_extra"][
+        "examples"
     ],
-    "StandbyTime": performance_indicators.StandbyTime.Config.schema_extra["example"],
-    "SetupTime": performance_indicators.SetupTime.Config.schema_extra["example"],
-    "UnscheduledDowntime": performance_indicators.UnscheduledDowntime.Config.schema_extra[
-        "example"
+    "StandbyTime": performance_indicators.StandbyTime.model_config["json_schema_extra"]["examples"],
+    "SetupTime": performance_indicators.SetupTime.model_config["json_schema_extra"]["examples"],
+    "UnscheduledDowntime": performance_indicators.UnscheduledDowntime.model_config["json_schema_extra"][
+        "examples"
     ],
-    "DynamicWIP": performance_indicators.DynamicWIP.Config.schema_extra["example"],
-    "DynamicThroughputTime": performance_indicators.DynamicThroughputTime.Config.schema_extra[
-        "example"
+    "DynamicWIP": performance_indicators.DynamicWIP.model_config["json_schema_extra"]["examples"],
+    "DynamicThroughputTime": performance_indicators.DynamicThroughputTime.model_config["json_schema_extra"][
+        "examples"
     ],
 }
 
-KPI_LIST_EXAMPLE = [item["value"] for item in KPI_EXAMPLES.values()]
+KPI_LIST_EXAMPLE = [item for item in KPI_EXAMPLES.values()]
 
 
 router = APIRouter(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, TypeAdapter
 
 from prodsys.factories import time_model_factory
 from prodsys.models import processes_data
@@ -38,6 +38,8 @@ class ProcessFactory(BaseModel):
         if not (isinstance(process_data, processes_data.CompoundProcessData) or isinstance(process_data, processes_data.RequiredCapabilityProcessData)):
             time_model = self.time_model_factory.get_time_model(process_data.time_model_id)
             values.update({"time_model": time_model})
+        else:
+            values.update({"time_model": None})
         values.update({"process_data": process_data})
         if "failure_rate" in process_data:
             values.update({"failure_rate": process_data.failure_rate})
@@ -46,13 +48,13 @@ class ProcessFactory(BaseModel):
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})
-            self.processes.append(parse_obj_as(process.LinkTransportProcess, values))
+            self.processes.append(TypeAdapter(process.LinkTransportProcess).validate_python(values))
         elif isinstance(process_data, processes_data.ReworkProcessData):
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
             values.update({"blocking": process_data.blocking})
             self.processes.append(parse_obj_as(process.ReworkProcess, values))
         else:
-            self.processes.append(parse_obj_as(process.PROCESS_UNION, values))
+            self.processes.append(TypeAdapter(process.PROCESS_UNION).validate_python(values))
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """
@@ -92,4 +94,3 @@ class ProcessFactory(BaseModel):
 
 
 from prodsys.simulation import process
-ProcessFactory.update_forward_refs()

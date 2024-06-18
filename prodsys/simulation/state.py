@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 from simpy import events
 from simpy import exceptions
-from pydantic import BaseModel, Extra, root_validator, Field
+from pydantic import BaseModel, ConfigDict, model_validator, Field
 
 from prodsys.simulation import sim, time_model
 from prodsys.models.state_data import (
@@ -20,10 +20,6 @@ from prodsys.models.state_data import (
     SetupStateData,
     ProcessBreakDownStateData,
 )
-
-if TYPE_CHECKING:
-    from prodsys.simulation import product, resources
-
 
 class StateEnum(str, Enum):
     """
@@ -50,7 +46,7 @@ class StateTypeEnum(str, Enum):
     sink = "Sink"
 
 
-class StateInfo(BaseModel, extra=Extra.allow):
+class StateInfo(BaseModel):
     """
     Class that represents the current event information of a state while simulating.
 
@@ -74,6 +70,8 @@ class StateInfo(BaseModel, extra=Extra.allow):
     _target_ID: str = ""
     _origin_ID: str = ""
     _empty_transport: Optional[bool] = None
+
+    model_config=ConfigDict(extra="allow")
 
     def log_transport(self, origin: Optional[product.Locatable], target: product.Locatable, state_type: StateTypeEnum, empty_transport: bool):
         """
@@ -195,8 +193,8 @@ class State(ABC, BaseModel):
     process: Optional[events.Process] = Field(default=None)
     state_info: StateInfo = Field(None)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
+
 
     def set_resource(self, resource_model: resources.Resource) -> None:
         """
@@ -483,7 +481,7 @@ class BreakDownState(State):
     repair_time_model: time_model.TimeModel
     active_breakdown: bool = False
 
-    @root_validator
+    @model_validator(mode="before")
     def post_init(cls, values):
         values["active"] = events.Event(values["env"])
         return values
@@ -532,7 +530,7 @@ class ProcessBreakDownState(State):
     production_states: List[State] = None
     repair_time_model: time_model.TimeModel
 
-    @root_validator
+    @model_validator(mode="before")
     def post_init(cls, values):
         values["active"] = events.Event(values["env"])
         return values
@@ -676,3 +674,8 @@ STATE_UNION = Union[
 """
 Union Type of all states.
 """
+
+from prodsys.simulation import resources
+
+if TYPE_CHECKING:
+    from prodsys.simulation import product

@@ -7,7 +7,7 @@ from prodsys.models import (
 )
 from app.dao import product_dao
 
-PRODUCT_LIST_EXAMPLE = product_data.ProductData.Config.schema_extra["examples"]
+PRODUCT_LIST_EXAMPLE = product_data.ProductData.model_config["json_schema_extra"]["examples"]
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/products",

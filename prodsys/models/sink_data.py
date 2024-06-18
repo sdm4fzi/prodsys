@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hashlib import md5
 from typing import List, Optional, TYPE_CHECKING
-from pydantic import conlist
+from pydantic import ConfigDict, conlist
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -35,23 +35,21 @@ class SinkData(CoreAsset):
         ```
     """
 
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     product_type: str
-    input_queues: Optional[List[str]]
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Sink",
-                "value": {
-                    "ID": "SK1",
-                    "description": "Sink 1",
-                    "location": [50.0, 50.0],
-                    "product_type": "Product_1",
-                    "input_queues": ["SinkQueue"],
-                },
+    input_queues: List[str] = []
+
+    model_config=ConfigDict(json_schema_extra= {
+        "examples": [
+            {
+                "ID": "SK1",
+                "description": "Sink 1",
+                "location": [50.0, 50.0],
+                "product_type": "Product_1",
+                "input_queues": ["SinkQueue"],
             }
-        }
+        ]
+    })
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """

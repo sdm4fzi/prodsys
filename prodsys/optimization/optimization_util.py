@@ -152,14 +152,14 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
     if machine_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE):
         if not check_states_for_heterogenous_time_models(machine_breakdown_states, adapter_object):
             raise ValueError(f"The machine breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct machine breakdown state called {BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE}.")
-        machine_breakdown_state = machine_breakdown_states[0].copy(deep=True)
+        machine_breakdown_state = machine_breakdown_states[0].model_copy(deep=True)
         machine_breakdown_state.ID = BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
         adapter_object.state_data.append(machine_breakdown_state)
         logger.info(f"Added default breakdown state for production resources to the production system.")
     if transport_resource_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE):
         if not check_states_for_heterogenous_time_models(transport_resource_breakdown_states, adapter_object):
             raise ValueError(f"The transport resource breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct transport resource breakdown state called {BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE}.")
-        transport_resource_breakdown_state = transport_resource_breakdown_states[0].copy(deep=True)
+        transport_resource_breakdown_state = transport_resource_breakdown_states[0].model_copy(deep=True)
         transport_resource_breakdown_state.ID = BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
         adapter_object.state_data.append(transport_resource_breakdown_state)
         logger.info(f"Added default breakdown state for transport resources to the production system.")
@@ -167,7 +167,7 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
     # if process_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE):
     #     if not check_states_for_heterogenous_time_models(process_breakdown_states, adapter_object):
     #         raise ValueError(f"The process breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct process breakdown state called {BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE}.")
-    #     process_breakdown_state = process_breakdown_states[0].copy()
+    #     process_breakdown_state = process_breakdown_states[0].model_copy()
     #     process_breakdown_state.ID = BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
     #     adapter_object.state_data.append(process_breakdown_state)
     #     logger.info(f"Added default breakdown state for process modules to the production system.")
@@ -851,7 +851,7 @@ def random_configuration(
     transformations = baseline.scenario_data.options.transformations
     invalid_configuration_counter = 0
     while True:
-        adapter_object = baseline.copy(deep=True)
+        adapter_object = baseline.model_copy(deep=True)
         adapter_object.ID = str(uuid1())
 
         if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
@@ -1018,7 +1018,7 @@ def document_individual(
             "ID": adapter_object.ID,
         }
 
-    adapters.JsonProductionSystemAdapter(**adapter_object.dict()).write_data(
+    adapters.JsonProductionSystemAdapter(**adapter_object.model_dump()).write_data(
         f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
     )
 

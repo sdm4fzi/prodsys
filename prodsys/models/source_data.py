@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hashlib import md5
 from typing import List, Optional, TYPE_CHECKING
-from pydantic import conlist
+from pydantic import ConfigDict, conlist
 from enum import Enum
 
 from prodsys.models.core_asset import CoreAsset
@@ -48,11 +48,11 @@ class SourceData(CoreAsset):
             output_queues=["SourceQueue"],
         )
     """
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     product_type: str
     time_model_id: str
     routing_heuristic: RoutingHeuristic
-    output_queues: Optional[List[str]]
+    output_queues: List[str] = []
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -92,19 +92,17 @@ class SourceData(CoreAsset):
 
         return md5(("".join([*map(str, self.location), product_hash, time_model_hash, self.routing_heuristic, *sorted(output_queue_hashes)])).encode("utf-8")).hexdigest()
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Source",
-                "value": {
-                    "ID": "S1",
-                    "description": "Source 1",
-                    "location": [0.0, 0.0],
-                    "product_type": "Product_1",
-                    "time_model_id": "function_time_model_4",
-                    "router": "SimpleRouter",
-                    "routing_heuristic": "shortest_queue",
-                    "output_queues": ["SourceQueue"],
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "S1",
+                "description": "Source 1",
+                "location": [0.0, 0.0],
+                "product_type": "Product_1",
+                "time_model_id": "function_time_model_4",
+                "router": "SimpleRouter",
+                "routing_heuristic": "shortest_queue",
+                "output_queues": ["SourceQueue"],
             }
-        }
+        ]
+    })

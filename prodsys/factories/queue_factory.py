@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from prodsys.simulation import sim, store
 
@@ -25,8 +25,7 @@ class QueueFactory(BaseModel):
 
     queues: List[store.Queue] = []
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_queues(self, adapter: adapter.ProductionSystemAdapter):
         """

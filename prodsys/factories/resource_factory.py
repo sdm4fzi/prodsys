@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as
+from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
@@ -20,6 +20,7 @@ from prodsys.models.resource_data import (
 from prodsys.factories import process_factory, state_factory, queue_factory
 
 from prodsys.simulation import control, resources
+from prodsys.simulation.resources import RESOURCE_UNION
 
 if TYPE_CHECKING:
     from prodsys.simulation import store
@@ -83,7 +84,6 @@ def register_production_states_for_processes(
         existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
         if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess) or isinstance(process_instance, process.ReworkProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
-            #TODO: also implement production state for rework processess -> done
         elif isinstance(process_instance, (process.TransportProcess, process.LinkTransportProcess)) and not existence_condition:
             if "loading_time_model" in process_instance.process_data.dict():
                 values["new_state"]["loading_time_model"] = process_instance.process_data.loading_time_model
@@ -123,13 +123,12 @@ class ResourceFactory(BaseModel):
     queue_factory: queue_factory.QueueFactory
 
     resource_data: List[RESOURCE_DATA_UNION] = []
-    resources: List[resources.RESOURCE_UNION] = []
+    resources: List[RESOURCE_UNION] = []
     controllers: List[
         Union[control.ProductionController, control.TransportController, control.BatchController]
     ] = []
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_resources(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -139,7 +138,7 @@ class ResourceFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the resource data.
         """
         for resource_data in adapter.resource_data:
-            self.add_resource(resource_data.copy(deep=True))
+            self.add_resource(resource_data.model_copy(deep=True))
 
     def get_queues_for_resource(
         self, resource_data: ProductionResourceData
@@ -183,7 +182,7 @@ class ResourceFactory(BaseModel):
             if "batch_size" in resource_data.dict():
                 values.update({"batch_size": resource_data.batch_size})
   
-        resource_object = parse_obj_as(resources.RESOURCE_UNION, values)
+        resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
         # print(resource_object._env)
         controller.set_resource(resource_object)
 
@@ -205,7 +204,7 @@ class ResourceFactory(BaseModel):
         for controller in self.controllers:
             self.env.process(controller.control_loop())  # type: ignore
 
-    def get_resource(self, ID: str) -> resources.RESOURCE_UNION:
+    def get_resource(self, ID: str) -> RESOURCE_UNION:
         """
         Method returns a resource object with the given ID.
 
