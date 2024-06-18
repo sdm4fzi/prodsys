@@ -3,14 +3,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional
 
-from numpy import isin
 from pydantic import BaseModel
 
 
-if TYPE_CHECKING:
-    from prodsys.simulation import resources, source, sink, node
 
-from prodsys.simulation import route_finder, time_model, request
+if TYPE_CHECKING:
+    from prodsys.simulation.resources import ProductionResource, TransportResource
+    from prodsys.simulation.source import Source
+    from prodsys.simulation.sink import Sink
+    from prodsys.simulation.node import Node
+    from prodsys.simulation import request
+from prodsys.simulation import route_finder, time_model
 
 from prodsys.models import processes_data
 
@@ -145,7 +148,7 @@ class TransportProcess(Process):
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
     
-def is_process_with_capability(process: PROCESS_UNION) -> bool:
+def is_process_with_capability(process: "PROCESS_UNION") -> bool:
     """
     Returns True if the given process is a process with capability.
 
@@ -157,7 +160,7 @@ def is_process_with_capability(process: PROCESS_UNION) -> bool:
     """
     return isinstance(process, CapabilityProcess) or isinstance(process, RequiredCapabilityProcess) or (isinstance(process, LinkTransportProcess) and process.process_data.capability)
 
-def is_available_process_with_capability(process: PROCESS_UNION) -> bool:
+def is_available_process_with_capability(process: "PROCESS_UNION") -> bool:
     """
     Returns True if the given process is an available process with capability.
 
@@ -276,7 +279,7 @@ class LinkTransportProcess(TransportProcess):
     Class that represents a transport link process.
     """
     process_data: processes_data.LinkTransportProcessData
-    links: Optional[List[List[Union[node.Node, source.Source, sink.Sink, resources.ProductionResource]]]]
+    links: Optional[List[List[Union[Node, Source, Sink, ProductionResource]]]]
 
     def matches_request(self, request: request.TransportResquest) -> bool:
         requested_process = request.process
@@ -336,6 +339,10 @@ PROCESS_UNION = Union[
 """
 Union type for all processes.
 """
-from prodsys.simulation import resources, source, sink, node
-LinkTransportProcess.update_forward_refs()
+from prodsys.simulation.resources import ProductionResource, TransportResource
+from prodsys.simulation.source import Source
+from prodsys.simulation.sink import Sink
+from prodsys.simulation.node import Node
+from prodsys.simulation import request
+# LinkTransportProcess.model_rebuild()
 Process.update_forward_refs()

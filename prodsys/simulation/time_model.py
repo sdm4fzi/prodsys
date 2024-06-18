@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 import itertools
 from typing import Callable, Iterator, List, Optional, Tuple, Union
 from typing_extensions import deprecated
 
 import numpy as np
-from pydantic import BaseModel, Field, PrivateAttr, validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from prodsys.models.time_model_data import (
     FunctionTimeModelData,
@@ -75,7 +73,7 @@ class FunctionTimeModel(TimeModel):
         [FunctionTimeModelData], List[float]
     ] = FUNCTION_DICT[FunctionTimeModelEnum.Constant]
 
-    @validator("distribution_function_object", always=True)
+    @field_validator("distribution_function_object")
     def initialize_distribution_function(cls, v, values):
         return FUNCTION_DICT[values["time_model_data"].distribution_function]
 
@@ -163,8 +161,8 @@ class ScheduledTimeModel(TimeModel):
         super().__init__(**kwargs)
         self._time_value_iterator = self._get_time_value_iterator()
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
+
 
     def _get_time_value_iterator(self) -> Iterator[float]:
         """

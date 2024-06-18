@@ -1,11 +1,6 @@
-from __future__ import annotations
+from typing import Union, Optional, Generator, List
 
-from abc import ABC
-from enum import Enum
-from collections.abc import Iterable
-from typing import List, Union, Optional, TYPE_CHECKING, Generator
-
-from pydantic import BaseModel, Field, Extra
+from pydantic import BaseModel, ConfigDict, Field
 
 import logging
 logger = logging.getLogger(__name__)
@@ -13,23 +8,22 @@ logger = logging.getLogger(__name__)
 import numpy as np
 from simpy import events
 
+from prodsys.models import product_data
+
 from prodsys.simulation import (
-    process,
     request,
+    process,
     router,
     resources,
     sim,
     sink,
     source,
     proces_models,
-    state,
     node
 )
+from prodsys.simulation.state import StateTypeEnum, StateEnum
 
-from prodsys.models import product_data
-
-
-class ProductInfo(BaseModel, extra=Extra.allow):
+class ProductInfo(BaseModel):
     """
     Class that represents information of the current state of a product.
 
@@ -45,14 +39,16 @@ class ProductInfo(BaseModel, extra=Extra.allow):
     resource_ID: str = Field(init=False, default=None)
     state_ID: str = Field(init=False, default=None)
     event_time: float = Field(init=False, default=None)
-    activity: state.StateEnum = Field(init=False, default=None)
+    activity: StateEnum = Field(init=False, default=None)
     product_ID: str = Field(init=False, default=None)
-    state_type: state.StateTypeEnum = Field(init=False, default=None)
+    state_type: StateTypeEnum = Field(init=False, default=None)
+
+    model_config=ConfigDict(extra="allow")
 
     def log_finish_product(
         self,
         resource: Union[resources.Resource, sink.Sink, source.Source],
-        _product: Product,
+        _product: "Product",
         event_time: float,
     ):
         """
@@ -67,13 +63,13 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.product_data.ID
-        self.activity = state.StateEnum.finished_product
-        self.state_type = state.StateTypeEnum.sink
+        self.activity = StateEnum.finished_product
+        self.state_type = StateTypeEnum.sink
 
     def log_create_product(
         self,
         resource: Union[resources.Resource, sink.Sink, source.Source],
-        _product: Product,
+        _product: "Product",
         event_time: float,
     ) -> None:
         """
@@ -88,15 +84,15 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.product_data.ID
-        self.activity = state.StateEnum.created_product
-        self.state_type = state.StateTypeEnum.source
+        self.activity = StateEnum.created_product
+        self.state_type = StateTypeEnum.source
 
     def log_start_process(
         self,
         resource: resources.Resource,
-        _product: Product,
+        _product: "Product",
         event_time: float,
-        state_type: state.StateTypeEnum,
+        state_type: StateTypeEnum,
     ) -> None:
         """
         Logs the start of a process.
@@ -111,15 +107,15 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.product_data.ID
-        self.activity = state.StateEnum.start_state
+        self.activity = StateEnum.start_state
         self.state_type = state_type
 
     def log_end_process(
         self,
         resource: resources.Resource,
-        _product: Product,
+        _product: "Product",
         event_time: float,
-        state_type: state.StateTypeEnum,
+        state_type: StateTypeEnum,
     ) -> None:
         """
         Logs the end of a process.
@@ -134,7 +130,7 @@ class ProductInfo(BaseModel, extra=Extra.allow):
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.product_data.ID
-        self.activity = state.StateEnum.end_state
+        self.activity = StateEnum.end_state
         self.state_type = state_type
 
 Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink]
@@ -154,21 +150,20 @@ class Product(BaseModel):
     env: sim.Environment
     product_data: product_data.ProductData
     process_model: proces_models.ProcessModel
-    transport_process: Union[process.LinkTransportProcess, process.TransportProcess, process.RequiredCapabilityProcess]
+    transport_process: Union[process.TransportProcess, process.RequiredCapabilityProcess, process.LinkTransportProcess]
     product_router: router.Router
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
+    processes_needing_rework: List[process.Process] = Field(default_factory=list, init=False)
     process: events.Process = Field(default=None, init=False)
     current_locatable: Locatable = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
-    product_info: ProductInfo = ProductInfo()
-    processes_needing_rework: List[process.Process] = Field(default_factory=list, init=False)
+    product_info: ProductInfo = Field(default_factory=ProductInfo, init=False)
     rework_needed: bool = Field(default=False, init=False)
     blocking: bool = Field(default=None, init=False)
     executed_production_processes: List = Field(default_factory=list, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
 
     def update_location(self, resource: Locatable):
         """
@@ -208,9 +203,9 @@ class Product(BaseModel):
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
         """
         if isinstance(processing_request, request.TransportResquest):
-            type_ = state.StateTypeEnum.transport
+            type_ = StateTypeEnum.transport
         else:
-            type_ = state.StateTypeEnum.production
+            type_ = StateTypeEnum.production
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
         self.env.request_process_of_resource(
             request=processing_request

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional
 from uuid import uuid1
 
@@ -5,10 +7,10 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
+from prodsys.express import core, time_model
+
 from prodsys.models import source_data, queue_data
 import prodsys
-
-from prodsys.express import core, product, time_model
 
 @dataclass
 class Source(core.ExpressObject):
@@ -18,7 +20,7 @@ class Source(core.ExpressObject):
     Args:
         product (product.Product): Product of the source.
         time_model (time_model.TIME_MODEL_UNION): Time model of the source that determines the inter-arrival time of products.
-        location (conlist(float, min_items=2, max_items=2)): Location of the source.
+        location (conlist(float, min_length=2, max_length=2)): Location of the source.
         routing_heuristic (source_data.RoutingHeuristic, optional): Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.random.
         ID (str): ID of the source.
     
@@ -64,15 +66,11 @@ class Source(core.ExpressObject):
     """
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
-
-
-    def __post_init_post_parse__(self):
-        pass
 
     def to_model(self) -> source_data.SourceData:
         """
@@ -92,3 +90,5 @@ class Source(core.ExpressObject):
         self._output_queues = [prodsys.adapters.get_default_queue_for_source(source)]
         source.output_queues = [q.ID for q in self._output_queues]
         return source
+
+from prodsys.express import product

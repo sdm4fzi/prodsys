@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Tuple, Generator
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from simpy import events
 
 import logging
@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 
 from prodsys.simulation import router, sim, store, time_model
 from prodsys.models import source_data, product_data
-
-if TYPE_CHECKING:
-    from prodsys.factories import product_factory
 
 
 class Source(BaseModel):
@@ -36,8 +33,7 @@ class Source(BaseModel):
     router: router.Router
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         """
@@ -110,4 +106,4 @@ class Source(BaseModel):
         return self.data.location
     
 from prodsys.factories import product_factory
-Source.update_forward_refs()
+# Source.model_rebuild()

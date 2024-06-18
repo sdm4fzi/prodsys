@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import field
-from typing import List, TYPE_CHECKING, Optional
+from typing import List, TYPE_CHECKING, Optional, List
 
-from pydantic import parse_obj_as, BaseModel
+from pydantic import ConfigDict, BaseModel, TypeAdapter
 
 from prodsys.simulation import sim
 from prodsys.factories import time_model_factory
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from prodsys.adapters import adapter
 
 
-class StateFactory(BaseModel):
+class StateFactory:
     """
     Factory class that creates and stores `prodsys.simulation` state objects from `prodsys.models` state objects.
 
@@ -23,21 +23,19 @@ class StateFactory(BaseModel):
         env (sim.Environment): prodsys simulation environment.
         time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
     """
-    env: sim.Environment
-    time_model_factory: time_model_factory.TimeModelFactory
 
-    state_data: List[state_data.STATE_DATA_UNION] = []
-    states: List[state.STATE_UNION] = []
-
-    class Config:
-        arbitrary_types_allowed = True
+    def __init__(self, env: sim.Environment, time_model_factory: time_model_factory.TimeModelFactory):
+        self.env = env
+        self.time_model_factory = time_model_factory
+        self.state_data: List[state_data.STATE_DATA_UNION] = []
+        self.states: List[state.STATE_UNION] = []
 
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
             for values in items.values():
                 values.update({"type": cls_name})
                 self.state_data.append(
-                    parse_obj_as(state_data.STATE_DATA_UNION, values)
+                    TypeAdapter(state_data.STATE_DATA_UNION).validate_python(values)
                 )
                 self.add_state(self.state_data[-1])
 
@@ -48,22 +46,23 @@ class StateFactory(BaseModel):
             values["state_data"].time_model_id
         )
         values.update({"time_model": time_model, "env": self.env})
-        if "loading_time_model" in state_data.dict() and state_data.dict()["loading_time_model"] is not None:
+        if "loading_time_model" in state_data.model_dump() and state_data.dict()["loading_time_model"] is not None:
             loading_time_model = self.time_model_factory.get_time_model(
                 state_data.loading_time_model
             )
             values.update({"loading_time_model": loading_time_model})
-        if "unloading_time_model" in state_data.dict() and state_data.dict()["unloading_time_model"] is not None:
+        if "unloading_time_model" in state_data.model_dump() and state_data.dict()["unloading_time_model"] is not None:
             unloading_time_model = self.time_model_factory.get_time_model(
                 state_data.unloading_time_model
             )
             values.update({"unloading_time_model": unloading_time_model})
-        if "repair_time_model_id" in state_data.dict():
+        if "repair_time_model_id" in state_data.model_dump():
             repair_time_model = self.time_model_factory.get_time_model(
                 state_data.repair_time_model_id
             )
             values.update({"repair_time_model": repair_time_model})
-        self.states.append(parse_obj_as(state.STATE_UNION, values))
+        # FIXME: resolve bug when importing simulation types
+        self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
 
     def create_states(self, adapter: adapter.ProductionSystemAdapter):
         """

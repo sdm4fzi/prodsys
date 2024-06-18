@@ -2,7 +2,7 @@ from typing import List, Annotated
 
 
 from fastapi import APIRouter, Body
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 from prodsys.models import scenario_data, performance_indicators
@@ -11,22 +11,14 @@ from app.dao import scenario_dao
 
 class UserSettingsIn(BaseModel):
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
-
-SCENARIO_EXAMPLE = scenario_data.ScenarioData.Config.schema_extra["example"]["value"]
-SCENARIO_CONSTRAINT_EXAMPLE = scenario_data.ScenarioConstrainsData.Config.schema_extra[
-    "example"
-]["value"]
-SCENARIO_OPTIONS_EXAMPLE = scenario_data.ScenarioOptionsData.Config.schema_extra[
-    "example"
-]["value"]
-SCENARIO_INFO_EXAMPLE = scenario_data.ScenarioInfoData.Config.schema_extra["example"][
-    "value"
-]
+SCENARIO_EXAMPLE = scenario_data.ScenarioData.model_config["json_schema_extra"]["examples"]
+SCENARIO_CONSTRAINT_EXAMPLE = scenario_data.ScenarioConstrainsData.model_config["json_schema_extra"]["examples"]
+SCENARIO_OPTIONS_EXAMPLE = scenario_data.ScenarioOptionsData.model_config["json_schema_extra"]["examples"]
+SCENARIO_INFO_EXAMPLE = scenario_data.ScenarioInfoData.model_config["json_schema_extra"]["examples"]
 OBJECTIVES_LIST_EXAMPLE = [
-    item for item in scenario_data.Objective.Config.schema_extra["examples"]
+    item for item in scenario_data.Objective.model_config["json_schema_extra"]["examples"]
 ]
 
 router = APIRouter(

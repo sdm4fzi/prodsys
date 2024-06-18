@@ -2,30 +2,42 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from hashlib import md5
-import warnings
 from typing import List, Any, Set, Optional, Tuple, Union
-from numpy import isin
-from pydantic import BaseModel, validator, ValidationError
+from pydantic import BaseModel, ConfigDict, field_validator, ValidationError, ValidationInfo
 
 import logging
 logger = logging.getLogger(__name__)
 
-from prodsys.models import (
-    product_data,
-    queue_data,
-    resource_data,
-    node_data,
-    time_model_data,
-    state_data,
-    processes_data,
-    sink_data,
-    source_data,
-    scenario_data,
-)
+# from prodsys.models import (
+#     time_model_data,
+#     node_data,
+#     product_data,
+#     queue_data,
+#     resource_data,
+#     state_data,
+#     processes_data,
+#     sink_data,
+#     source_data,
+#     scenario_data,
+# )
+from prodsys.models import time_model_data as time_model_data_module
+from prodsys.models import state_data as state_data_module
+from prodsys.models import processes_data as processes_data_module
+from prodsys.models import sink_data as sink_data_module
+from prodsys.models import source_data as source_data_module
+from prodsys.models import resource_data as resource_data_module
+from prodsys.models import product_data as product_data_module
+from prodsys.models import queue_data as queue_data_module
+from prodsys.models import node_data as node_data_module
+from prodsys.models import scenario_data as scenario_data_module
+
+
+
+
 from prodsys.util import util
 
 
-def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data.ProductionResourceData]:
+def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data_module.ProductionResourceData]:
     """
     Returns a list of all machines in the adapter.
 
@@ -33,18 +45,18 @@ def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data.Product
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
 
     Returns:
-        List[resource_data.ProductionResourceData]: List of all machines in the adapter
+        List[resource_data_module.ProductionResourceData]: List of all machines in the adapter
     """
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data.ProductionResourceData)
+        if isinstance(resource, resource_data_module.ProductionResourceData)
     ]
 
 
 def get_transport_resources(
     adapter: ProductionSystemAdapter,
-) -> List[resource_data.TransportResourceData]:
+) -> List[resource_data_module.TransportResourceData]:
     """
     Returns a list of all transport resources in the adapter.
 
@@ -52,12 +64,12 @@ def get_transport_resources(
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
 
     Returns:
-        List[resource_data.TransportResourceData]: List of all transport resources in the adapter
+        List[resource_data_module.TransportResourceData]: List of all transport resources in the adapter
     """
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data.TransportResourceData)
+        if isinstance(resource, resource_data_module.TransportResourceData)
     ]
 
 
@@ -75,28 +87,28 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
 
 
 def get_default_queues_for_resource(
-    resource: resource_data.ProductionResourceData,
+    resource: resource_data_module.ProductionResourceData,
     queue_capacity: Union[float, int] = 0.0,
-) -> Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]:
+) -> Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]:
     """
     Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
 
     Args:
-        resource (resource_data.ProductionResourceData): Resource for which the default queues should be returned
+        resource (resource_data_module.ProductionResourceData): Resource for which the default queues should be returned
         queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        Tuple[List[queue_data.QueueData], List[queue_data.QueueData]]: Tuple of two lists of default queues for the given resource
+        Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]: Tuple of two lists of default queues for the given resource
     """
     input_queues = [
-        queue_data.QueueData(
+        queue_data_module.QueueData(
             ID=resource.ID + "_default_input_queue",
             description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
         )
     ]
     output_queues = [
-        queue_data.QueueData(
+        queue_data_module.QueueData(
             ID=resource.ID + "_default_output_queue",
             description="Default output queue of " + resource.ID,
             capacity=queue_capacity,
@@ -106,7 +118,7 @@ def get_default_queues_for_resource(
 
 
 def remove_queues_from_resource(
-    machine: resource_data.ProductionResourceData, adapter: ProductionSystemAdapter
+    machine: resource_data_module.ProductionResourceData, adapter: ProductionSystemAdapter
 ) -> ProductionSystemAdapter:
     if machine.input_queues or machine.output_queues:
         for queue_ID in machine.input_queues + machine.output_queues:
@@ -161,19 +173,19 @@ def add_default_queues_to_resources(
 
 
 def get_default_queue_for_source(
-    source: source_data.SourceData, queue_capacity=0.0
-) -> queue_data.QueueData:
+    source: source_data_module.SourceData, queue_capacity=0.0
+) -> queue_data_module.QueueData:
     """
     Returns a default queue for the given source.
 
     Args:
-        source (source_data.SourceData): Source for which the default queue should be returned
+        source (source_data_module.SourceData): Source for which the default queue should be returned
         queue_capacity (float, optional): Capacity of the default queue. Defaults to 0.0 (infinite queue).
 
     Returns:
-        queue_data.QueueData: Default queue for the given source
+        queue_data_module.QueueData: Default queue for the given source
     """
-    return queue_data.QueueData(
+    return queue_data_module.QueueData(
         ID=source.ID + "_default_output_queue",
         description="Default output queue of " + source.ID,
         capacity=queue_capacity,
@@ -202,19 +214,19 @@ def add_default_queues_to_sources(
 
 
 def get_default_queue_for_sink(
-    sink: sink_data.SinkData, queue_capacity=0.0
-) -> queue_data.QueueData:
+    sink: sink_data_module.SinkData, queue_capacity=0.0
+) -> queue_data_module.QueueData:
     """
     Returns a default queue for the given sink.
 
     Args:
-        sink (sink_data.SinkData): Sink for which the default queue should be returned
+        sink (sink_data_module.SinkData): Sink for which the default queue should be returned
         queue_capacity (float, optional): Capacity of the default queue. Defaults to 0.0 (infinite queue).
 
     Returns:
-        queue_data.QueueData: Default queue for the given sink
+        queue_data_module.QueueData: Default queue for the given sink
     """
-    return queue_data.QueueData(
+    return queue_data_module.QueueData(
         ID=sink.ID + "_default_input_queue",
         description="Default input queue of " + sink.ID,
         capacity=queue_capacity,
@@ -272,41 +284,41 @@ class ProductionSystemAdapter(ABC, BaseModel):
     Args:
         ID (str, optional): ID of the production system. Defaults to "".
         seed (int, optional): Seed for the random number generator used in simulation. Defaults to 0.
-        time_model_data (List[time_model_data.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
-        state_data (List[state_data.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
-        process_data (List[processes_data.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
-        queue_data (List[queue_data.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
-        node_data (List[resource_data.NodeData], optional): List of nodes in the production system. Defaults to [].
-        resource_data (List[resource_data.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
-        product_data (List[product_data.ProductData], optional): List of products in the production system. Defaults to []
-        sink_data (List[sink_data.SinkData], optional): List of sinks in the production system. Defaults to [].
-        source_data (List[source_data.SourceData], optional): List of sources in the production system. Defaults to [].
-        scenario_data (Optional[scenario_data.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
+        time_model_data (List[time_model_data_module.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
+        state_data (List[state_data_module.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
+        process_data (List[processes_data_module.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
+        queue_data (List[queue_data_module.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
+        node_data (List[resource_data_module.NodeData], optional): List of nodes in the production system. Defaults to [].
+        resource_data (List[resource_data_module.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
+        product_data (List[product_data_module.ProductData], optional): List of products in the production system. Defaults to []
+        sink_data (List[sink_data_module.SinkData], optional): List of sinks in the production system. Defaults to [].
+        source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
+        scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
     # TODO: add check, that throws an error, if items have the same ID!
     ID: str = ""
     seed: int = 0
-    time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
-    state_data: List[state_data.STATE_DATA_UNION] = []
-    process_data: List[processes_data.PROCESS_DATA_UNION] = []
-    queue_data: List[queue_data.QueueData] = []
-    node_data: List[node_data.NodeData] = []
-    resource_data: List[resource_data.RESOURCE_DATA_UNION] = []
-    product_data: List[product_data.ProductData] = []
-    sink_data: List[sink_data.SinkData] = []
-    source_data: List[source_data.SourceData] = []
-    scenario_data: Optional[scenario_data.ScenarioData] = None
+    time_model_data: List[time_model_data_module.TIME_MODEL_DATA] = []
+    state_data: List[state_data_module.STATE_DATA_UNION] = []
+    process_data: List[processes_data_module.PROCESS_DATA_UNION] = []
+    queue_data: List[queue_data_module.QueueData] = []
+    node_data: List[node_data_module.NodeData] = []
+    resource_data: List[resource_data_module.RESOURCE_DATA_UNION] = []
+    product_data: List[product_data_module.ProductData] = []
+    sink_data: List[sink_data_module.SinkData] = []
+    source_data: List[source_data_module.SourceData] = []
+    scenario_data: Optional[scenario_data_module.ScenarioData] = None
 
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
 
-    class Config:
-        validate = True
-        validate_assignment = True
-        schema_extra = {
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        json_schema_extra={
             "examples": [{
                 "ID": "Example Adapter",
                 "valid_configuration": True,
@@ -677,6 +689,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
             }
             ]
         }
+    )
 
     def hash(self) -> str:
         """
@@ -701,138 +714,150 @@ class ProductionSystemAdapter(ABC, BaseModel):
             )).encode("utf-8")
             ).hexdigest()
 
-    @validator("state_data", each_item=True)
-    def check_states(cls, state: state_data.STATE_DATA_UNION, values):
-        time_models = get_set_of_IDs(values["time_model_data"])
-        if state.time_model_id not in time_models:
-            raise ValueError(
-                f"The time model {state.time_model_id} of state {state.ID} is not a valid time model of {time_models}."
-            )
-        return state
-
-    @validator("process_data", each_item=True)
-    def check_processes(cls, process: processes_data.PROCESS_DATA_UNION, values):
-        if isinstance(process, processes_data.CompoundProcessData) or isinstance(process, processes_data.RequiredCapabilityProcessData):
-            return process
-        time_models = get_set_of_IDs(values["time_model_data"])
-        if process.time_model_id not in time_models:
-            raise ValueError(
-                f"The time model {process.time_model_id} of process {process.ID} is not a valid time model of {time_models}."
-            )
-        return process
-
-    @validator("resource_data", each_item=True)
-    def check_resources(cls, resource: resource_data.RESOURCE_DATA_UNION, values):
-        processes = get_set_of_IDs(values["process_data"])
-        for process in resource.process_ids:
-            if process not in processes:
+    @field_validator("state_data")
+    def check_states(cls, states: List[state_data_module.STATE_DATA_UNION], info: ValidationInfo):
+        values = info.data
+        for state in states:
+            time_models = get_set_of_IDs(values["time_model_data"])
+            if state.time_model_id not in time_models:
                 raise ValueError(
-                    f"The process {process} of resource {resource.ID} is not a valid process of {processes}."
+                    f"The time model {state.time_model_id} of state {state.ID} is not a valid time model of {time_models}."
                 )
-        states = get_set_of_IDs(values["state_data"])
-        for state in resource.state_ids:
-            if state not in states:
+        return states
+
+    @field_validator("process_data")
+    def check_processes(cls, processes: List[processes_data_module.PROCESS_DATA_UNION], info: ValidationInfo):
+        values = info.data
+        for process in processes:
+            if isinstance(process, processes_data_module.CompoundProcessData) or isinstance(process, processes_data_module.RequiredCapabilityProcessData):
+                continue
+            time_models = get_set_of_IDs(values["time_model_data"])
+            if process.time_model_id not in time_models:
                 raise ValueError(
-                    f"The state {state} of resource {resource.ID} is not a valid state of {states}."
+                    f"The time model {process.time_model_id} of process {process.ID} is not a valid time model of {time_models}."
                 )
-        if isinstance(resource, resource_data.ProductionResourceData):
+        return processes
+
+    @field_validator("resource_data")
+    def check_resources(cls, resources: List[resource_data_module.RESOURCE_DATA_UNION], info: ValidationInfo):
+        values = info.data
+        for resource in resources:
+            processes = get_set_of_IDs(values["process_data"])
+            for process in resource.process_ids:
+                if process not in processes:
+                    raise ValueError(
+                        f"The process {process} of resource {resource.ID} is not a valid process of {processes}."
+                    )
+            states = get_set_of_IDs(values["state_data"])
+            for state in resource.state_ids:
+                if state not in states:
+                    raise ValueError(
+                        f"The state {state} of resource {resource.ID} is not a valid state of {states}."
+                    )
+            if isinstance(resource, resource_data_module.ProductionResourceData):
+                queues = get_set_of_IDs(values["queue_data"])
+                if resource.input_queues and resource.output_queues:
+                    for queue in resource.input_queues + resource.output_queues:
+                        if queue not in queues:
+                            raise ValueError(
+                                f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
+                            )
+                else:
+                    input_queues, output_queues = get_default_queues_for_resource(resource)
+                    resource.input_queues = list(get_set_of_IDs(input_queues))
+                    resource.output_queues = list(get_set_of_IDs(output_queues))
+                    values["queue_data"] += input_queues + output_queues
+
+        return resources
+
+    @field_validator("product_data")
+    def check_products(cls, products: List[product_data_module.ProductData], info: ValidationInfo):
+        values = info.data
+        for product in products:
+            all_processes = get_set_of_IDs(values["process_data"])
+            if product.transport_process not in all_processes:
+                raise ValidationError(
+                    f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {all_processes}."
+                )
+            required_processes = set()
+            if isinstance(product.processes, list) and isinstance(
+                product.processes[0], str
+            ):
+                required_processes = set(product.processes)
+            elif isinstance(product.processes, list) and isinstance(
+                product.processes[0], list
+            ):
+                required_processes = set(util.flatten(product.processes))
+            elif isinstance(product.processes, dict):
+                required_processes = set(product.processes.keys())
+            if required_processes - all_processes != set():
+                raise ValueError(
+                    f"The processes {required_processes - all_processes} of product {product.ID} are not a valid processes of {all_processes}."
+                )
+
+        return products
+
+    @field_validator("sink_data")
+    def check_sinks(cls, sinks: List[sink_data_module.SinkData], info: ValidationInfo):
+        values = info.data
+        for sink in sinks:
+            try:
+                products = get_set_of_IDs(values["product_data"])
+            except KeyError:
+                raise ValueError("Product data is missing or faulty.")
+            if sink.product_type not in products:
+                raise ValueError(
+                    f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
+                )
+            if not sink.input_queues:
+                input_queue = get_default_queue_for_sink(sink)
+                sink.input_queues = list(get_set_of_IDs([input_queue]))
+                values["queue_data"] += [input_queue]
+                continue
             queues = get_set_of_IDs(values["queue_data"])
-            if resource.input_queues and resource.output_queues:
-                for queue in resource.input_queues + resource.output_queues:
-                    if queue not in queues:
-                        raise ValueError(
-                            f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
-                        )
-            else:
-                input_queues, output_queues = get_default_queues_for_resource(resource)
-                resource.input_queues = list(get_set_of_IDs(input_queues))
-                resource.output_queues = list(get_set_of_IDs(output_queues))
-                values["queue_data"] += input_queues + output_queues
+            for q in sink.input_queues:
+                if q not in queues:
+                    raise ValueError(
+                        f"The queue {q} of sink {sink.ID} is not a valid queue of {queues}."
+                    )
+                for queue in values["queue_data"]:
+                    if queue.ID == q:
+                        if queue.capacity != 0:
+                            logger.warning(
+                                f"The capacity of the queue {queue.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
+                            )
+                            queue.capacity = 0
+        return sinks
 
-        return resource
-
-    @validator("product_data", each_item=True)
-    def check_products(cls, product: product_data.ProductData, values):
-        all_processes = get_set_of_IDs(values["process_data"])
-        if product.transport_process not in all_processes:
-            raise ValidationError(
-                f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {all_processes}."
-            )
-        required_processes = set()
-        if isinstance(product.processes, list) and isinstance(
-            product.processes[0], str
-        ):
-            required_processes = set(product.processes)
-        elif isinstance(product.processes, list) and isinstance(
-            product.processes[0], list
-        ):
-            required_processes = set(util.flatten(product.processes))
-        elif isinstance(product.processes, dict):
-            required_processes = set(product.processes.keys())
-        if required_processes - all_processes != set():
-            raise ValueError(
-                f"The processes {required_processes - all_processes} of product {product.ID} are not a valid processes of {all_processes}."
-            )
-
-        return product
-
-    @validator("sink_data", each_item=True)
-    def check_sinks(cls, sink: sink_data.SinkData, values):
-        try:
-            products = get_set_of_IDs(values["product_data"])
-        except KeyError:
-            raise ValueError("Product data is missing or faulty.")
-        if sink.product_type not in products:
-            raise ValueError(
-                f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
-            )
-        if not sink.input_queues:
-            input_queue = get_default_queue_for_sink(sink)
-            sink.input_queues = list(get_set_of_IDs([input_queue]))
-            values["queue_data"] += [input_queue]
-            return sink
-        queues = get_set_of_IDs(values["queue_data"])
-        for q in sink.input_queues:
-            if q not in queues:
+    @field_validator("source_data")
+    def check_sources(cls, sources: List[source_data_module.SourceData], info: ValidationInfo):
+        values = info.data
+        for source in sources:
+            time_models = get_set_of_IDs(values["time_model_data"])
+            if source.time_model_id not in time_models:
                 raise ValueError(
-                    f"The queue {q} of sink {sink.ID} is not a valid queue of {queues}."
+                    f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
                 )
-            for queue in values["queue_data"]:
-                if queue.ID == q:
-                    if queue.capacity != 0:
-                        logger.warning(
-                            f"The capacity of the queue {queue.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
-                        )
-                        queue.capacity = 0
-        return sink
-
-    @validator("source_data", each_item=True)
-    def check_sources(cls, source: source_data.SourceData, values):
-        time_models = get_set_of_IDs(values["time_model_data"])
-        if source.time_model_id not in time_models:
-            raise ValueError(
-                f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
-            )
-        try:
-            products = get_set_of_IDs(values["product_data"])
-        except KeyError:
-            raise ValueError("Product data is missing or faulty.")
-        if source.product_type not in products:
-            raise ValueError(
-                f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
-            )
-        if not source.output_queues:
-            output_queue = get_default_queue_for_source(source)
-            source.output_queues = list(get_set_of_IDs([output_queue]))
-            values["queue_data"] += [output_queue]
-            return source
-        queues = get_set_of_IDs(values["queue_data"])
-        for q in source.output_queues:
-            if q not in queues:
+            try:
+                products = get_set_of_IDs(values["product_data"])
+            except KeyError:
+                raise ValueError("Product data is missing or faulty.")
+            if source.product_type not in products:
                 raise ValueError(
-                    f"The queue {q} of source {source.ID} is not a valid queue of {queues}."
+                    f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
                 )
-        return source
+            if not source.output_queues:
+                output_queue = get_default_queue_for_source(source)
+                source.output_queues = list(get_set_of_IDs([output_queue]))
+                values["queue_data"] += [output_queue]
+                continue
+            queues = get_set_of_IDs(values["queue_data"])
+            for q in source.output_queues:
+                if q not in queues:
+                    raise ValueError(
+                        f"The queue {q} of source {source.ID} is not a valid queue of {queues}."
+                    )
+        return sources
 
     @abstractmethod
     def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
@@ -856,7 +881,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
         pass
 
     def read_scenario(self, scenario_file_path: str):
-        self.scenario_data = scenario_data.ScenarioData.parse_file(scenario_file_path)
+        self.scenario_data = scenario_data_module.ScenarioData.parse_file(scenario_file_path)
 
     def validate_proceses_available(self):
         required_processes = set(
@@ -921,7 +946,7 @@ def assert_all_links_available(adapter: ProductionSystemAdapter):
     Raises:
         ValueError: If the start or target of a link is not a valid location.
     """
-    link_transport_processes = [process for process in adapter.process_data if isinstance(process, processes_data.LinkTransportProcessData)]
+    link_transport_processes = [process for process in adapter.process_data if isinstance(process, processes_data_module.LinkTransportProcessData)]
     if not link_transport_processes:
         return 
     nodes = get_set_of_IDs(adapter.node_data)
@@ -978,8 +1003,8 @@ def get_possible_production_processes_IDs(
     Returns:
         Union[List[str], List[Tuple[str, ...]]]: List of production process IDs
     """
-    possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data.TransportProcessData) and not isinstance(process, processes_data.RequiredCapabilityProcessData)]  
-    compund_processes = [process for process in adapter_object.process_data if isinstance(process, processes_data.CompoundProcessData)]
+    possible_processes = [process for process in adapter_object.process_data if not isinstance(process, processes_data_module.TransportProcessData) and not isinstance(process, processes_data_module.RequiredCapabilityProcessData)]  
+    compund_processes = [process for process in adapter_object.process_data if isinstance(process, processes_data_module.CompoundProcessData)]
     compound_process_id_tuples = [tuple(compound_process.process_ids) for compound_process in compund_processes]
 
     compound_processes_ids = set([compound_process.ID for compound_process in compund_processes])
@@ -996,17 +1021,17 @@ def get_possible_transport_processes_IDs(
     return [
         process.ID
         for process in possible_processes
-        if isinstance(process, processes_data.TransportProcessData)
+        if isinstance(process, processes_data_module.TransportProcessData)
     ]
 
 
 def get_production_processes_from_ids(
     adapter_object: ProductionSystemAdapter, process_ids: List[str]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and (isinstance(process, processes_data.ProductionProcessData) or isinstance(process, processes_data.ReworkProcessData)):
+            if process.ID == process_id and (isinstance(process, processes_data_module.ProductionProcessData) or isinstance(process, processes_data_module.ReworkProcessData)):
                 processes.append(process)
                 break
     return processes
@@ -1014,22 +1039,22 @@ def get_production_processes_from_ids(
 
 def get_transport_processes_from_ids(
     adapter_object: ProductionSystemAdapter, process_ids: List[str]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.TransportProcessData) and not (hasattr(process, "capability") and getattr(process, "capability")):
+            if process.ID == process_id and isinstance(process, processes_data_module.TransportProcessData) and not (hasattr(process, "capability") and getattr(process, "capability")):
                 processes.append(process)
                 break
     return processes
 
 def get_capability_processes_from_ids(
         adapter_object: ProductionSystemAdapter, process_ids: List[str]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and (isinstance(process, processes_data.CapabilityProcessData) or (hasattr(process, "capability") and getattr(process, "capability"))):
+            if process.ID == process_id and (isinstance(process, processes_data_module.CapabilityProcessData) or (hasattr(process, "capability") and getattr(process, "capability"))):
                 processes.append(process)
                 break
     return processes
@@ -1037,28 +1062,28 @@ def get_capability_processes_from_ids(
 
 def get_compound_processes_from_ids(
     adapter_object: ProductionSystemAdapter, process_ids: List[str]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.CompoundProcessData):
+            if process.ID == process_id and isinstance(process, processes_data_module.CompoundProcessData):
                 processes.append(process)
     return processes
 
 
 def get_required_capability_processes_from_ids(
     adapter_object: ProductionSystemAdapter, process_ids: List[str]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data.RequiredCapabilityProcessData):
+            if process.ID == process_id and isinstance(process, processes_data_module.RequiredCapabilityProcessData):
                 processes.append(process)
     return processes
 
 def get_contained_production_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data_module.CompoundProcessData]
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for compound_process in compound_processes:
         for process_id in compound_process.process_ids:
@@ -1071,8 +1096,8 @@ def get_contained_production_processes_from_compound_processes(
     return processes
 
 def get_contained_capability_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data_module.CompoundProcessData]
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for compound_process in compound_processes:
         for process_id in compound_process.process_ids:
@@ -1085,8 +1110,8 @@ def get_contained_capability_processes_from_compound_processes(
     return processes
 
 def get_contained_transport_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data_module.CompoundProcessData]
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for compound_process in compound_processes:
         for process_id in compound_process.process_ids:
@@ -1100,8 +1125,8 @@ def get_contained_transport_processes_from_compound_processes(
     
 
 def get_contained_required_capability_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data.CompoundProcessData]
-) -> List[processes_data.PROCESS_DATA_UNION]:
+    adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data_module.CompoundProcessData]
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for compound_process in compound_processes:
         for process_id in compound_process.process_ids:
@@ -1113,14 +1138,14 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
-def assert_production_processes_available(available: List[Union[processes_data.ProductionProcessData, processes_data.ReworkProcessData]], 
-    required: List[Union[processes_data.ProductionProcessData, processes_data.ReworkProcessData]]):
+def assert_production_processes_available(available: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]], 
+    required: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]]):
     """
     Checks if all required production processes are available.
 
     Args:
-        available (List[processes_data.ProductionProcessData]): production processes that are available in the production system resources
-        required (List[processes_data.ProductionProcessData]): production processes that are required from the products
+        available (List[processes_data_module.ProductionProcessData]): production processes that are available in the production system resources
+        required (List[processes_data_module.ProductionProcessData]): production processes that are required from the products
     Raises:
         ValueError: If required production processes are not available
     """
@@ -1129,13 +1154,13 @@ def assert_production_processes_available(available: List[Union[processes_data.P
     if required - available != set():
         raise ValueError(f"Required production processes {required - available} are not available.")
 
-def assert_transport_processes_available(available: List[processes_data.TransportProcessData], required: List[processes_data.TransportProcessData]):
+def assert_transport_processes_available(available: List[processes_data_module.TransportProcessData], required: List[processes_data_module.TransportProcessData]):
     """
     Checks if all required transport processes are available.
 
     Args:
-        available (List[processes_data.TransportProcessData]): transport processes that are available in the production system resources
-        required (List[processes_data.TransportProcessData]): transport processes that are required from the products
+        available (List[processes_data_module.TransportProcessData]): transport processes that are available in the production system resources
+        required (List[processes_data_module.TransportProcessData]): transport processes that are required from the products
 
     Raises:
         ValueError: If required transport processes are not available
@@ -1145,13 +1170,13 @@ def assert_transport_processes_available(available: List[processes_data.Transpor
     if required - available != set():
         raise ValueError(f"Required transport processes {required - available} are not available.")
 
-def assert_capability_processes_available(available: List[processes_data.CapabilityProcessData], required: List[processes_data.CapabilityProcessData]):
+def assert_capability_processes_available(available: List[processes_data_module.CapabilityProcessData], required: List[processes_data_module.CapabilityProcessData]):
     """
     Checks if all required capability processes are available.
 
     Args:
-        available (List[processes_data.CapabilityProcessData]): capability processes that are available in the production system resources
-        required (List[processes_data.CapabilityProcessData]): capability processes that are required from the products
+        available (List[processes_data_module.CapabilityProcessData]): capability processes that are available in the production system resources
+        required (List[processes_data_module.CapabilityProcessData]): capability processes that are required from the products
 
     Raises:
         ValueError: If required capability processes are not available

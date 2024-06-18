@@ -12,6 +12,7 @@ import numpy as np
 
 from simpy import events
 
+from prodsys.simulation import request
 from prodsys.simulation import resources
 from prodsys.simulation import request
 from prodsys.simulation.process import ReworkProcess
