@@ -24,10 +24,12 @@ class ControllerEnum(str, Enum):
 
     - PipelineController: Pipeline controller.
     - TransportController: Transport controller.
+    - BatchController: Batch controller.
     """
 
     PipelineController = "PipelineController"
     TransportController = "TransportController"
+    BatchController = "BatchController"
 
 
 class ResourceControlPolicy(str, Enum):
@@ -77,6 +79,7 @@ class ResourceData(CoreAsset):
 
     capacity: int
     location: conlist(float, min_length=2, max_length=2) # type: ignore
+    # TODO: add attributes for input and output location
 
     controller: ControllerEnum
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
@@ -98,6 +101,9 @@ class ResourceData(CoreAsset):
         if max(values["process_capacities"]) > values["capacity"]:
             raise ValueError("process_capacities must be smaller than capacity")
         return values
+    
+    
+    # TODO: add validation for loaction, input location and output location
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -144,7 +150,7 @@ class ProductionResourceData(ResourceData):
         description (str): Description of the resource.
         capacity (int): Capacity of the resource.
         location (List[float]): Location of the resource. Has to be a list of length 2.
-        controller (Literal[ControllerEnum.PipelineController]): Controller of the resource, has to be a PipelineController.
+        controller (ControllerEnum): Controller of the resource.
         control_policy (ResourceControlPolicy): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
         process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
@@ -175,11 +181,11 @@ class ProductionResourceData(ResourceData):
         ```
     """
 
-    controller: Literal[ControllerEnum.PipelineController]
+    controller: Literal[ControllerEnum.PipelineController, ControllerEnum.BatchController]
     control_policy: ResourceControlPolicy
-
     input_queues: List[str] = []
     output_queues: List[str] = []
+    batch_size: Optional[int] = None
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """

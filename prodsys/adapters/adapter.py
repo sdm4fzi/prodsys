@@ -1031,7 +1031,7 @@ def get_production_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data_module.ProductionProcessData):
+            if process.ID == process_id and (isinstance(process, processes_data_module.ProductionProcessData) or isinstance(process, processes_data_module.ReworkProcessData)):
                 processes.append(process)
                 break
     return processes
@@ -1138,7 +1138,8 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
-def assert_production_processes_available(available: List[processes_data_module.ProductionProcessData], required: List[processes_data_module.ProductionProcessData]):
+def assert_production_processes_available(available: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]], 
+    required: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]]):
     """
     Checks if all required production processes are available.
 
