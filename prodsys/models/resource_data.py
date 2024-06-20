@@ -78,8 +78,6 @@ class ResourceData(CoreAsset):
     """
 
     capacity: int
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
-    # TODO: add attributes for input and output location
 
     controller: ControllerEnum
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
@@ -102,8 +100,19 @@ class ResourceData(CoreAsset):
             raise ValueError("process_capacities must be smaller than capacity")
         return values
     
-    
-    # TODO: add validation for loaction, input location and output location
+    @model_validator(mode="before")
+    def check_locations(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if issubclass(cls, ProductionResourceData):
+            if "input_location" not in values or values["input_location"] is None:
+                raise ValueError("input_location is required for ProductionResourceData")
+            if "output_location" not in values or values["output_location"] is None:
+                raise ValueError("output_location is required for ProductionResourceData")
+        elif issubclass(cls, TransportResourceData):
+            if "location" not in values or values["location"] is None:
+                raise ValueError("location is required for TransportResourceData")
+        return values
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -180,7 +189,9 @@ class ProductionResourceData(ResourceData):
         )
         ```
     """
-
+    # TODO: add attributes for input and output location -> done
+    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
+    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     controller: Literal[ControllerEnum.PipelineController, ControllerEnum.BatchController]
     control_policy: ResourceControlPolicy
     input_queues: List[str] = []
@@ -218,7 +229,8 @@ class ProductionResourceData(ResourceData):
                 "ID": "R1",
                 "description": "Resource 1",
                 "capacity": 2,
-                "location": [10.0, 10.0],
+                "input_location": [10.0, 10.0],
+                "output_location": [20.0, 20.0],
                 "controller": "PipelineController",
                 "control_policy": "FIFO",
                 "process_ids": ["P1", "P2"],
@@ -264,7 +276,7 @@ class TransportResourceData(ResourceData):
         )
         ```
     """
-
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     controller: Literal[ControllerEnum.TransportController]
     control_policy: TransportControlPolicy
 

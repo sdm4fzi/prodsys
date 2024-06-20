@@ -407,8 +407,6 @@ class TransportState(State):
 
         # TODO: also use intial and last_transport_step to add loading times
 
-        # if self.loading_time_model:
-        #     self.loading_time = self.loading_time_model.get_next_time()
         while True:
             try:
                 if self.interrupted:
