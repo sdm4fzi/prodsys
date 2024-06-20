@@ -96,14 +96,14 @@ class Source(BaseModel):
             product.update_location(self)
             product.process = self.env.process(product.process_product())
 
-    def get_location(self) -> List[float]:
+    def get_output_location(self) -> List[float]:
         """
         Returns the location of the source.
 
         Returns:
             List[float]: The location. Has to be a list of length 2.
         """
-        return self.data.location
+        return self.data.output_location
     
 from prodsys.factories import product_factory
 # Source.model_rebuild()

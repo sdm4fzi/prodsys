@@ -37,14 +37,14 @@ class Sink(BaseModel):
         """
         self.input_queues.extend(input_queues)
 
-    def get_location(self) -> List[float]:
+    def get_input_location(self) -> List[float]:
         """
         Returns the location of the sink.
 
         Returns:
             List[float]: The location. Has to be a list of length 2.
         """
-        return self.data.location
+        return self.data.input_location
 
     def get_input_queue_length(self) -> int:
         """

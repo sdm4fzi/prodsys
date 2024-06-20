@@ -232,7 +232,7 @@ class Resource(BaseModel, ABC, resource.Resource):
                 return actual_state
         return None
     
-    def get_free_processes(self, process: process.PROCESS_UNION) -> Optional[List[state.State]]:
+    def get_free_processes(self, process: PROCESS_UNION) -> Optional[List[state.State]]:
         """
         Returns all free ProductionState or CapabilityState of the resource for a process.
 
@@ -249,16 +249,33 @@ class Resource(BaseModel, ABC, resource.Resource):
                 actual_state.process is None or not actual_state.process.is_alive
             )
         ]
-
+    
     def get_location(self) -> List[float]:
         """
-        Returns the location of the resource.
+        Returns the location of the transport resource.
 
         Returns:
             List[float]: The location of the resource. Has to have length 2.
         """
         return self.data.location
     
+    def get_input_location(self) -> List[float]:
+        """
+        Returns the input location of the production resource.
+
+        Returns:
+            List[float]: The input location of the resource. Has to have length 2.
+        """
+        return self.data.input_location
+    
+    def get_output_location(self) -> List[float]:
+        """
+        Returns the output location of the production resource.
+
+        Returns:
+            List[float]: The output location of the resource. Has to have length 2.
+        """
+        return self.data.output_location
 
     def get_input_queue_length(self) -> int:
         """

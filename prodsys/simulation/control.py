@@ -714,7 +714,7 @@ class TransportController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
                 self.requested.succeed()
 
-    def update_location(self, locatable: product.Locatable) -> None:
+    def update_location(self, locatable: product.Locatable, to_output: Optional[bool] = None) -> None:
         """
         Set the current position of the transport resource.
 
@@ -722,7 +722,19 @@ class TransportController(Controller):
             locatable (product.Locatable): The current position.
         """
         self._current_locatable = locatable
-        self.resource.set_location(locatable.get_location())
+        if isinstance(locatable, source.Source):
+            self.resource.set_location(locatable.get_output_location())
+        elif isinstance(locatable, sink.Sink):
+            self.resource.set_location(locatable.get_input_location())
+        elif isinstance(locatable, resources.TransportResource):
+            self.resource.set_location(locatable.get_location())
+        elif isinstance(locatable, resources.ProductionResource):
+            if to_output:
+                self.resource.set_location(locatable.get_output_location())
+            else:
+                self.resource.set_location(locatable.get_input_location())
+        else:
+            raise ValueError("Locatable is not a valid type")
 
     def start_process(self) -> Generator:
         """
@@ -759,29 +771,27 @@ class TransportController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            # TODO: adjust logic, that get_location function also handels the case for a resource with different input and output locations.
-            # TODO: use below a function to get the output location of the origin
-            if origin.get_location() != resource.get_location():
+            if origin.get_output_location() != resource.get_location():
                 route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport to pick up {product.product_data.ID} for transport"})
-                yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
+                yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True, to_output=True))
 
             product_retrieval_events = self.get_next_product_for_process(origin, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
-
+            
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
-            yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False))
+            yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False, to_output=False))
             
             product_put_events = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
-            
+
             if isinstance(target, resources.ProductionResource):
                 target.unreserve_input_queues()
             if not resource.got_free.triggered:
@@ -789,7 +799,7 @@ class TransportController(Controller):
             product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
 
-    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool) -> Generator:
+    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool, to_output: bool) -> Generator:
         """
         Run the transport process and every single transport step in the route of the transport process.
 
@@ -812,8 +822,8 @@ class TransportController(Controller):
             else:
                 last_transport_step = False
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
-            yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step))
-            self.update_location(next_location)
+            yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step, to_output=to_output))
+            self.update_location(next_location, to_output=to_output)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
             transport_state.process = None
 
@@ -824,7 +834,8 @@ class TransportController(Controller):
         target: product.Locatable,
         empty_transport: bool,
         initial_transport_step: bool,
-        last_transport_step: bool
+        last_transport_step: bool,
+        to_output: bool
     ):
         """
         Run the process of a product. The process is started and the product is logged.
@@ -837,7 +848,10 @@ class TransportController(Controller):
             initial_transport_step (bool): If this is the initial transport step.
             last_transport_step (bool): If this is the last transport step.
         """
-        target_location = target.get_location()
+        if to_output:
+            target_location = target.get_output_location()
+        else:
+            target_location = target.get_input_location()
         input_state.prepare_for_run()
         input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         if self._current_locatable.data.ID is self.resource.data.ID:
@@ -855,7 +869,6 @@ class TransportController(Controller):
             self.env.now,
             state.StateTypeEnum.transport,
         )
-    
         input_state.process = self.env.process(
             input_state.process_state(target=target_location, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
@@ -919,7 +932,7 @@ def SPT_transport_control_policy(requests: List[request_module.TransportResquest
     """
     requests.sort(
         key=lambda x: x.process.get_expected_process_time(
-            x.origin.get_location(), x.target.get_location()
+            x.origin.get_output_location(), x.target.get_input_location()
         )
     )
 def nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
@@ -932,7 +945,7 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(requests: 
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                x.resource.data.location, x.origin.get_location()),
+                x.resource.data.location, x.origin.get_output_location()),
                 - x.target.get_output_queue_length()
                 )
     )
@@ -948,7 +961,7 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(req
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                x.resource.data.location, x.origin.get_location()),
+                x.resource.data.location, x.origin.get_output_location()),
             x.target.get_input_queue_length()
             )
     )

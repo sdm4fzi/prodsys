@@ -60,7 +60,6 @@ class SourceFactory(BaseModel):
                     self.add_source(values, product_d)
 
     def get_router(self, routing_heuristic: str):
-        #TODO: incorporate  product_factory
         return router.Router(
             self.product_factory,
             self.resource_factory,
