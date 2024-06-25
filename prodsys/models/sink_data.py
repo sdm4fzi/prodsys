@@ -35,7 +35,7 @@ class SinkData(CoreAsset):
         ```
     """
 
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
+    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
     product_type: str
     input_queues: List[str] = []
 

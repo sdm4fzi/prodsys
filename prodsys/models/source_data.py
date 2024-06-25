@@ -48,7 +48,7 @@ class SourceData(CoreAsset):
             output_queues=["SourceQueue"],
         )
     """
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
+    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     product_type: str
     time_model_id: str
     routing_heuristic: RoutingHeuristic

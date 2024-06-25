@@ -924,14 +924,15 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
     Raises:
         ValueError: If multiple objects are positioned at the same location.
     """
-    machine_locations = [machine.location for machine in get_machines(adapter)]
+    machine_input_locations = [machine.input_location for machine in get_machines(adapter)]
+    machine_output_locations = [machine.output_location for machine in get_machines(adapter)]
     source_locations = remove_duplicate_locations(
-        [source.location for source in adapter.source_data]
+        [source.output_location for source in adapter.source_data]
     )
     sink_locations = remove_duplicate_locations(
-        [sink.location for sink in adapter.sink_data]
+        [sink.input_location for sink in adapter.sink_data]
     )
-    positions = machine_locations + source_locations + sink_locations
+    positions = machine_input_locations + machine_output_locations + source_locations + sink_locations
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(f"Multiple objects are positioned at the same location: {location}")
@@ -1031,7 +1032,7 @@ def get_production_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data_module.ProductionProcessData):
+            if process.ID == process_id and (isinstance(process, processes_data_module.ProductionProcessData) or isinstance(process, processes_data_module.ReworkProcessData)):
                 processes.append(process)
                 break
     return processes
@@ -1138,7 +1139,8 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
-def assert_production_processes_available(available: List[processes_data_module.ProductionProcessData], required: List[processes_data_module.ProductionProcessData]):
+def assert_production_processes_available(available: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]], 
+    required: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]]):
     """
     Checks if all required production processes are available.
 

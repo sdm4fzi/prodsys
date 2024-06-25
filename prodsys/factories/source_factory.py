@@ -61,6 +61,7 @@ class SourceFactory(BaseModel):
 
     def get_router(self, routing_heuristic: str):
         return router.Router(
+            self.product_factory,
             self.resource_factory,
             self.sink_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
