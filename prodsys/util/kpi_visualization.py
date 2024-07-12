@@ -87,6 +87,7 @@ def plot_oee(post_processor: post_processing.PostProcessor):
     Parameters:
     - post_processor: An instance of the post_processing.PostProcessor class.
     """
+    # FIXME: resolve bug in this plotting function...
     df_tp = post_processor.df_oee_production_system    
     fig = make_subplots(rows=1, cols=4,
                         specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}]])
@@ -175,6 +176,7 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
     """
+    # FIXME: resolve bug here, that resource utilization differs to time spend in states....
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states_boxplot
     fig = go.Figure()
     resources = df_time_per_state['Resource'].unique()
@@ -267,8 +269,9 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
-    df_time_per_state = post_processor.df_mean_WIP_per_station
-    df_time_per_state.sort_values(by='column_to_sort', inplace=True)
+    # FIXME: function is buggy and not working properly...
+    df_time_per_state = post_processor.df_mean_wip_per_station
+    # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
     fig1 = go.Figure()
     df_time_per_state['Mean_WIP'] = np.maximum(np.ceil(df_time_per_state['Mean_WIP']), 1)
     fig1.add_trace(go.Bar(name='Mean_WIP', x=df_time_per_state['Resource'], y=df_time_per_state['Mean_WIP'], marker_color='purple', yaxis='y2'))
@@ -307,6 +310,7 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
     """
+    # FIXME: resolve bug here that plot is empty...
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states
     df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
     fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['Percentage'], mode='lines', name='PR'))
