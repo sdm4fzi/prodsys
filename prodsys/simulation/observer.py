@@ -97,4 +97,3 @@ class ResourceObserver(BaseModel):
     
 from prodsys.factories import resource_factory, product_factory
 from prodsys.simulation import resources, state
-ResourceObserver.update_forward_refs()

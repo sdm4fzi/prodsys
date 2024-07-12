@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 import prodsys
@@ -20,15 +20,16 @@ class Project(BaseModel):
     # TODO: maybe allow saving performances in project also for adapter_id and specific seed
     performances: Optional[Dict[str, Performance]] = {}
 
-    class Config:
-        schema_extra = {
+    model_config=ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "ID": "Example Project",
-                    "adapters": prodsys.adapters.ProductionSystemAdapter.Config.schema_extra["examples"],
+                    "adapters": prodsys.adapters.ProductionSystemAdapter.model_config["json_schema_extra"]["examples"],
                     "performances": {
-                        "Example Adapter": Performance.Config.schema_extra["examples"][0]
+                        "Example Adapter": Performance.model_config["json_schema_extra"]["examples"][0]
                     }
                 }
             ]
         }
+    )

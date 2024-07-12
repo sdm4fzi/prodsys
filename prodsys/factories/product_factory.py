@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import TYPE_CHECKING, List, Dict
 
-from pydantic import BaseModel, Field
-
-
-from prodsys.simulation import router, sim
-from prodsys.models import product_data
-from prodsys.factories import process_factory
-from prodsys.simulation import logger, proces_models, process
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProductFactory(BaseModel):
+from prodsys.models.product_data import ProductData
+from prodsys.simulation import proces_models
+from prodsys.simulation import process
+
+if TYPE_CHECKING:
+    from prodsys.factories import process_factory
+    from prodsys.simulation import sim, router, product
+
+
+
+class ProductFactory:
     """
     Factory class that creates and stores `prodsys.simulation` product objects from `prodsys.models` product objects.
 
@@ -20,24 +24,24 @@ class ProductFactory(BaseModel):
         process_factory (process_factory.ProcessFactory): Factory that creates process objects.
     """
 
-    env: sim.Environment
-    process_factory: process_factory.ProcessFactory
-    products: List[product.Product] = []
-    finished_products: List[product.Product] = []
-    event_logger: logger.EventLogger = Field(default=False, init=False)
-    product_counter = 0
-
-    class Config:
-        arbitrary_types_allowed = True
+    def __init__(
+        self, env: sim.Environment, process_factory: process_factory.ProcessFactory
+    ):
+        self.env = env
+        self.process_factory = process_factory
+        self.products = []
+        self.finished_products = []
+        self.event_logger = False
+        self.product_counter = 0
 
     def create_product(
-        self, product_data: product_data.ProductData, router: router.Router
+        self, product_data: ProductData, router: router.Router
     ) -> product.Product:
         """
         Creates a product object based on the given product data and router.
 
         Args:
-            product_data (product_data.ProductData): Product data that is used to create the product object.
+            product_data (ProductData): Product data that is used to create the product object.
             router (router.Router): Router that is used to route the product object.
 
         Raises:
@@ -46,7 +50,7 @@ class ProductFactory(BaseModel):
         Returns:
             product.Product: Created product object.
         """
-        product_data = product_data.copy()
+        product_data = product_data.model_copy()
         product_data.ID = (
             str(product_data.product_type) + "_" + str(self.product_counter)
         )
@@ -95,13 +99,13 @@ class ProductFactory(BaseModel):
         return precedence_graph
 
     def create_process_model(
-        self, product_data: product_data.ProductData
+        self, product_data: ProductData
     ) -> proces_models.ProcessModel:
         """
         Creates a process model based on the given product data.
 
         Args:
-            product_data (product_data.ProductData): Product data that is used to create the process model.
+            product_data (ProductData): Product data that is used to create the process model.
 
         Raises:
             ValueError: If the process model is not recognized.
@@ -165,7 +169,4 @@ class ProductFactory(BaseModel):
         self.finished_products.append(product)
         self.remove_product(product)
 
-
 from prodsys.simulation import product
-
-product.Product.update_forward_refs()

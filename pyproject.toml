@@ -1,20 +1,20 @@
 [tool.poetry]
 name = "prodsys"
-version = "0.6.5"
+version = "0.7.1"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
 license = "MIT"
 readme = ["README.md", "LICENSE"]
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.13"
-pydantic = "^1.10.7"
+python = "^3.10"
+pydantic = "^2.7.1"
 simpy = "^4.0.1"
-fastapi = "0.99.1"
-uvicorn = {extras = ["standard"], version = "^0.21.1"}
+fastapi = "^0.111.0"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
 deap = "^1.3.3"
 simanneal = "^0.5.0"
-gurobipy = "^10.0.1"
+gurobipy = "^11.0.0"
 hydra-core = "^1.3.2"
 pandas = "^2.0.0"
 openpyxl = "^3.1.2"

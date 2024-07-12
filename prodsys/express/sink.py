@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional
 from uuid import uuid1
 
@@ -5,10 +7,11 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
+from prodsys.express import core
+
 from prodsys.models import sink_data, queue_data
 import prodsys
 
-from prodsys.express import core, product
 
 @dataclass
 class Sink(core.ExpressObject):
@@ -17,7 +20,7 @@ class Sink(core.ExpressObject):
 
     Args:
         product (product.Product): Product of the sink.
-        location (conlist(float, min_items=2, max_items=2)): Location of the sink.
+        location (conlist(float, min_length=2, max_length=2)): Location of the sink.
         ID (str): ID of the sink.
     
     Attributes:
@@ -56,7 +59,7 @@ class Sink(core.ExpressObject):
         ```
     """
     product: product.Product
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
+    location: conlist(float, min_length=2, max_length=2) # type: ignore
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
@@ -77,3 +80,5 @@ class Sink(core.ExpressObject):
         self._input_queues = [prodsys.adapters.get_default_queue_for_sink(sink)]
         sink.input_queues = [q.ID for q in self._input_queues]
         return sink
+    
+from prodsys.express import product

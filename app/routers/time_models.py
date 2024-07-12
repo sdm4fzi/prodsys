@@ -10,21 +10,21 @@ from prodsys.models import (
 )
 
 TIME_MODEL_EXAMPLES = {
-    "Sample time model": time_model_data.SampleTimeModelData.Config.schema_extra[
-        "example"
+    "Sample time model": time_model_data.SampleTimeModelData.model_config["json_schema_extra"][
+        "examples"
     ],
-    "Scheduled time model": time_model_data.ScheduledTimeModelData.Config.schema_extra[
-        "example"
+    "Scheduled time model": time_model_data.ScheduledTimeModelData.model_config["json_schema_extra"][
+        "examples"
     ],
-    "Functional time model": time_model_data.FunctionTimeModelData.Config.schema_extra[
-        "example"
+    "Functional time model": time_model_data.FunctionTimeModelData.model_config["json_schema_extra"][
+        "examples"
     ],
-    "Distance time model": time_model_data.DistanceTimeModelData.Config.schema_extra[
-        "example"
+    "Distance time model": time_model_data.DistanceTimeModelData.model_config["json_schema_extra"][
+        "examples"
     ],
 }
 
-TIME_MODEL_LIST_EXAMPLE = [item["value"] for item in TIME_MODEL_EXAMPLES.values()]
+TIME_MODEL_LIST_EXAMPLE = [item for item in TIME_MODEL_EXAMPLES.values()]
 
 
 router = APIRouter(

@@ -10,7 +10,7 @@ from prodsys.models import (
 )
 
 QUEUE_LIST_EXAMPLE = [
-    item for item in queue_data.QueueData.Config.schema_extra["examples"]
+    item for item in queue_data.QueueData.model_config["json_schema_extra"]["examples"]
 ]
 
 router = APIRouter(
@@ -44,7 +44,7 @@ async def create_queue(
     adapter_id: str,
     queue: Annotated[
         queue_data.QueueData,
-        Body(examples=queue_data.QueueData.Config.schema_extra["examples"]),
+        Body(examples=queue_data.QueueData.model_config["json_schema_extra"]["examples"]),
     ],
 ) -> queue_data.QueueData:
     return queue_dao.add(project_id, adapter_id, queue)
@@ -56,7 +56,7 @@ async def create_queue(
     responses={
         200: {
             "description": "Sucessfully returned queue",
-            "content": {"application/json": queue_data.QueueData.Config.schema_extra},
+            "content": {"application/json": queue_data.QueueData.model_config["json_schema_extra"]["examples"]},
         },
         404: {"description": "Queue not found"},
     },

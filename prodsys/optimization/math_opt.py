@@ -10,7 +10,7 @@ import random
 import logging
 logger = logging.getLogger(__name__)
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from prodsys import adapters
 from prodsys.models import (
     resource_data,
@@ -39,7 +39,7 @@ def adjust_number_of_transport_resources(
     existing_transport_resource = adapter_object.resource_data[0]
     existing_transport_resource.ID = "TR0"
     for i in range(number_of_transport_resources - 1):
-        new_transport_resource = existing_transport_resource.copy(deep=True)
+        new_transport_resource = existing_transport_resource.model_copy(deep=True)
         new_transport_resource.ID = f"TR{i + 1}"
         adapter_object.resource_data.append(new_transport_resource)
 
@@ -80,8 +80,7 @@ class MathOptimizer(BaseModel):
 
     processing_times_per_product_and_step: dict = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config=ConfigDict(arbitrary_types_allowed=True)
 
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.adapter.scenario_data.info.process_module_cost
@@ -466,7 +465,7 @@ class MathOptimizer(BaseModel):
         performances["00"] = {}
 
         for result_counter in range(nSolutions):
-            new_adapter = self.adapter.copy(deep=True)
+            new_adapter = self.adapter.model_copy(deep=True)
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
@@ -546,17 +545,16 @@ class MathOptHyperparameters(BaseModel):
     adjusted_number_of_transport_resources: int = 1
     number_of_seeds: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "optimization_time_portion": 0.5,
-                    "number_of_solutions": 1,
-                    "adjusted_number_of_transport_resources": 1,
-                    "number_of_seeds": 1,
-                },
-            ]
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "optimization_time_portion": 0.5,
+                "number_of_solutions": 1,
+                "adjusted_number_of_transport_resources": 1,
+                "number_of_seeds": 1,
+            },
+        ]
+    })
 
 
 def run_mathematical_optimization(

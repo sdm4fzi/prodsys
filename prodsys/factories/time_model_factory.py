@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, parse_obj_as
-
-from prodsys.models import time_model_data
-from prodsys.simulation import time_model
+from pydantic import BaseModel, TypeAdapter
+from prodsys.models.time_model_data import TIME_MODEL_DATA
+from prodsys.simulation.time_model import TIME_MODEL, TimeModel
 
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
@@ -17,8 +16,8 @@ class TimeModelFactory(BaseModel):
     Returns:
         _type_: _description_
     """
-    time_model_data: List[time_model_data.TIME_MODEL_DATA] = []
-    time_models: List[time_model.TIME_MODEL] = []
+    time_model_data: List[TIME_MODEL_DATA] = []
+    time_models: List[TIME_MODEL] = []
 
     def create_time_models(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -28,11 +27,10 @@ class TimeModelFactory(BaseModel):
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the time model data.
         """
         for time_model_data in adapter.time_model_data:
-            self.time_models.append(
-                parse_obj_as(time_model.TIME_MODEL, {"time_model_data": time_model_data})
+            self.time_models.append(TypeAdapter(TIME_MODEL).validate_python({"time_model_data": time_model_data})
             )
 
-    def get_time_models(self, IDs: List[str]) -> List[time_model.TimeModel]:
+    def get_time_models(self, IDs: List[str]) -> List[TimeModel]:
         """
         Returns a list of time model objects with the given IDs.
 
@@ -44,7 +42,7 @@ class TimeModelFactory(BaseModel):
         """
         return [tm for tm in self.time_models if tm.time_model_data.ID in IDs]
 
-    def get_time_model(self, ID: str) -> time_model.TimeModel:
+    def get_time_model(self, ID: str) -> TimeModel:
         """
         Returns a time model object with the given ID.
 

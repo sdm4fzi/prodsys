@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
-from pydantic import BaseModel, Field, Extra
+from pydantic import BaseModel, ConfigDict, Field
 import random
 
 import logging
@@ -13,7 +13,8 @@ from simpy.resources import resource
 from simpy import events
 from prodsys.simulation import sim, store
 if TYPE_CHECKING:
-    from prodsys.simulation import process, control, state
+    from prodsys.simulation import control, state
+    from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
@@ -29,19 +30,19 @@ class Resource(BaseModel, ABC, resource.Resource):
     Args:
         env (sim.Environment): The simpy environment.
         data (RESOURCE_DATA_UNION): The resource data.
-        processes (List[process.PROCESS_UNION]): The processes.
+        processes (List[PROCESS_UNION]): The processes.
         controller (control.Controller): The controller.
         states (List[state.State]): The states of the resource for breakdowns.
         production_states (List[state.State]): The states of the resource for production.
         setup_states (List[state.SetupState]): The states of the resource for setups.
         got_free (events.Event): The event that is triggered when the resource gets free of processes.
         active (events.Event): The event that is triggered when the resource is active.
-        current_setup (process.PROCESS_UNION): The current setup.
-        reserved_setup (process.PROCESS_UNION): The reserved setup.
+        current_setup (PROCESS_UNION): The current setup.
+        reserved_setup (PROCESS_UNION): The reserved setup.
     """
     env: sim.Environment
     data: RESOURCE_DATA_UNION
-    processes: List[process.PROCESS_UNION]
+    processes: List[PROCESS_UNION]
     controller: control.Controller
 
     states: List[state.State] = Field(default_factory=list, init=False)
@@ -50,12 +51,10 @@ class Resource(BaseModel, ABC, resource.Resource):
 
     got_free: events.Event = Field(default=None, init=False)
     active: events.Event = Field(default=None, init=False)
-    current_setup: process.PROCESS_UNION = Field(default=None, init=False)
-    reserved_setup: process.PROCESS_UNION = Field(default=None, init=False)
+    current_setup: PROCESS_UNION = Field(default=None, init=False)
+    reserved_setup: PROCESS_UNION = Field(default=None, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = Extra.allow
+    model_config=ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     @property
     def capacity_current_setup(self) -> int:
@@ -84,12 +83,12 @@ class Resource(BaseModel, ABC, resource.Resource):
         )
         return length
 
-    def reserve_setup(self, process: process.PROCESS_UNION) -> None:
+    def reserve_setup(self, process: PROCESS_UNION) -> None:
         """
         Reserves the setup of the resource for a process. This is used to prevent that capacity is wrong estimated during setup.
 
         Args:
-            process (process.PROCESS_UNION): The process that wants to reserve the setup.
+            process (PROCESS_UNION): The process that wants to reserve the setup.
         """
         self.reserved_setup = process
 
@@ -168,12 +167,12 @@ class Resource(BaseModel, ABC, resource.Resource):
         for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())
 
-    def get_process(self, process: process.PROCESS_UNION) -> state.State:
+    def get_process(self, process: PROCESS_UNION) -> state.State:
         """
         Returns the ProducitonState or CapabilityState of the resource for a process.
 
         Args:
-            process (process.PROCESS_UNION): The process to get the state for.
+            process (PROCESS_UNION): The process to get the state for.
 
         Raises:
             ValueError: If the process is not found in the resource.
@@ -192,12 +191,12 @@ class Resource(BaseModel, ABC, resource.Resource):
             )
         return random.choice(possible_states)
 
-    def get_processes(self, process: process.PROCESS_UNION) -> List[state.State]:
+    def get_processes(self, process: PROCESS_UNION) -> List[state.State]:
         """
         Returns the ProducitonState or CapabilityState of the resource for a process.
 
         Args:
-            process (process.PROCESS_UNION): The process to get the state for.
+            process (PROCESS_UNION): The process to get the state for.
 
         Raises:
             ValueError: If the process is not found in the resource.
@@ -216,12 +215,12 @@ class Resource(BaseModel, ABC, resource.Resource):
             )
         return possible_states
 
-    def get_free_process(self, process: process.PROCESS_UNION) -> Optional[state.State]:
+    def get_free_process(self, process: PROCESS_UNION) -> Optional[state.State]:
         """
         Returns a free ProductionState or CapabilityState of the resource for a process.
 
         Args:
-            process (process.PROCESS_UNION): The process to get the state for.
+            process (PROCESS_UNION): The process to get the state for.
 
         Returns:
             Optional[state.State]: The state of the resource for the process.
@@ -333,12 +332,12 @@ class Resource(BaseModel, ABC, resource.Resource):
         yield events.AllOf(self.env, running_processes)
         logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Finished waiting for free of processes in preparation"})
 
-    def setup(self, _process: process.PROCESS_UNION) -> Generator:
+    def setup(self, _process: PROCESS_UNION) -> Generator:
         """
         Sets up the resource for a process.
 
         Args:
-            _process (process.PROCESS_UNION): The process to set up the resource for.
+            _process (PROCESS_UNION): The process to set up the resource for.
 
         Yields:
             Generator: The type of the yield depends on the process.
@@ -386,15 +385,15 @@ class ProductionResource(Resource):
     Args:
         env (sim.Environment): The simpy environment.
         data (ProductionResourceData): The resource data.
-        processes (List[process.PROCESS_UNION]): The processes.
+        processes (List[PROCESS_UNION]): The processes.
         controller (control.ProductionController): The controller.
         states (List[state.State]): The states of the resource for breakdowns.
         production_states (List[state.State]): The states of the resource for production.
         setup_states (List[state.SetupState]): The states of the resource for setups.
         got_free (events.Event): The event that is triggered when the resource gets free of processes.
         active (events.Event): The event that is triggered when the resource is active.
-        current_setup (process.PROCESS_UNION): The current setup.
-        reserved_setup (process.PROCESS_UNION): The reserved setup.
+        current_setup (PROCESS_UNION): The current setup.
+        reserved_setup (PROCESS_UNION): The reserved setup.
         input_queues (List[store.Queue]): The input queues.
         output_queues (List[store.Queue]): The output queues.
 
@@ -427,15 +426,15 @@ class TransportResource(Resource):
     Args:
         env (sim.Environment): The simpy environment.
         data (TransportResourceData): The resource data.
-        processes (List[process.PROCESS_UNION]): The processes.
+        processes (List[PROCESS_UNION]): The processes.
         controller (control.TransportController): The controller.
         states (List[state.State]): The states of the resource for breakdowns.
         production_states (List[state.State]): The states of the resource for production.
         setup_states (List[state.SetupState]): The states of the resource for setups.
         got_free (events.Event): The event that is triggered when the resource gets free of processes.
         active (events.Event): The event that is triggered when the resource is active.
-        current_setup (process.PROCESS_UNION): The current setup.
-        reserved_setup (process.PROCESS_UNION): The reserved setup.
+        current_setup (PROCESS_UNION): The current setup.
+        reserved_setup (PROCESS_UNION): The reserved setup.
     """
     data: TransportResourceData
     controller: control.TransportController
@@ -444,7 +443,5 @@ class TransportResource(Resource):
 RESOURCE_UNION = Union[ProductionResource, TransportResource]
 """ Union Type for Resources. """
 
-from prodsys.simulation import process, control, state
-Resource.update_forward_refs()
-ProductionResource.update_forward_refs()
-TransportResource.update_forward_refs()
+from prodsys.simulation import control, state
+from prodsys.simulation.process import PROCESS_UNION

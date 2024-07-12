@@ -8,18 +8,12 @@ from prodsys.models import processes_data
 from app.dao import process_dao
 
 PROCESSES_EXAMPLES = {
-    "Production process": processes_data.ProductionProcessData.Config.schema_extra[
-        "example"
-    ],
-    "Transport process": processes_data.TransportProcessData.Config.schema_extra[
-        "example"
-    ],
-    "Capability process": processes_data.CapabilityProcessData.Config.schema_extra[
-        "example"
-    ],
+    "Production process": processes_data.ProductionProcessData.model_config["json_schema_extra"]["examples"],
+    "Transport process": processes_data.TransportProcessData.model_config["json_schema_extra"]["examples"],
+    "Capability process": processes_data.CapabilityProcessData.model_config["json_schema_extra"]["examples"],
 }
 
-PROCESSES_LIST_EXAMPLE = [item["value"] for item in PROCESSES_EXAMPLES.values()]
+PROCESSES_LIST_EXAMPLE = [item for item in PROCESSES_EXAMPLES.values()]
 
 
 router = APIRouter(
