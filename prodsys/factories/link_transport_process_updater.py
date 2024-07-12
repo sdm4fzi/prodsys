@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, Union
 
-from pydantic import BaseModel
 
 from prodsys.factories import process_factory, source_factory, sink_factory, resource_factory, node_factory
 from prodsys.simulation import process
@@ -11,7 +10,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import resources, sink, source, node
 
 
-class LinkTransportProcessUpdater(BaseModel):
+class LinkTransportProcessUpdater:
     """
     Updater class that updates the links of `prodsys.simulation` LinkTransportProcess objects in the process factory based on the created node, resource, source and sink objects.
 
@@ -22,11 +21,12 @@ class LinkTransportProcessUpdater(BaseModel):
         resource_factory (resource_factory.ResourceFactory): Factory that contains all resource objects.
         node_factory (node_factory.NodeFactory): Factory that contains all node objects.
     """
-    process_factory: process_factory.ProcessFactory
-    source_factory: source_factory.SourceFactory
-    sink_factory: sink_factory.SinkFactory
-    resource_factory: resource_factory.ResourceFactory
-    node_factory: node_factory.NodeFactory
+    def __init__(self, process_factory: process_factory.ProcessFactory, source_factory: source_factory.SourceFactory, sink_factory: sink_factory.SinkFactory, resource_factory: resource_factory.ResourceFactory, node_factory: node_factory.NodeFactory):
+        self.process_factory = process_factory
+        self.source_factory = source_factory
+        self.sink_factory = sink_factory
+        self.resource_factory = resource_factory
+        self.node_factory = node_factory
 
     def update_links_with_objects(self):
         """

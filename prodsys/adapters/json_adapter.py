@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from pydantic import parse_obj_as, BaseModel
+from pydantic import BaseModel
+from pydantic import TypeAdapter
 from warnings import warn
 
 
@@ -117,7 +118,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         warn("This method is deprecated. Use create_objects_from_configuration_data instead.", DeprecationWarning)
         objects = []
         for values in configuration_data.values():
-            objects.append(parse_obj_as(type, values))
+            objects.append(TypeAdapter(type).validate_python(values))
         return objects
     
     def create_objects_from_configuration_data(
@@ -125,7 +126,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
     ):  
         objects = []
         for values in configuration_data:
-            objects.append(parse_obj_as(type, values))
+            objects.append(TypeAdapter(type).validate_python(values))
         return objects
 
     def write_data(self, file_path: str):
@@ -163,9 +164,9 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         Args:
             file_path (str): File path for the scenario data.
         """
-        data = self.scenario_data.dict()
+        data = self.scenario_data.model_dump()
         with open(file_path, "w") as json_file:
             json.dump(data, json_file)
 
     def get_list_of_dict_objects(self, values: List[BaseModel]) -> List[dict]:
-        return  [data.dict() for data in values]
+        return  [data.model_dump() for data in values]

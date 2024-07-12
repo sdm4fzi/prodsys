@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import random
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
 import numpy as np
@@ -10,7 +10,7 @@ import time
 from functools import cached_property
 
 from prodsys.adapters import adapter
-from prodsys.simulation import sim
+from prodsys.simulation import sim, logger
 from prodsys.factories import (
     link_transport_process_updater,
     state_factory,
@@ -23,8 +23,10 @@ from prodsys.factories import (
     source_factory,
     node_factory,
 )
-from prodsys.simulation import logger
-from prodsys.util import post_processing, kpi_visualization, util
+
+from prodsys.util.post_processing import PostProcessor
+
+from prodsys.util import kpi_visualization, util
 from prodsys.models import performance_data
 
 VERBOSE = 1
@@ -65,7 +67,7 @@ def temp_seed(seed: int):
         random.setstate(p_state)
 
 
-class Runner(BaseModel):
+class Runner:
     """
     Class to represent the simulation runner. It allows to run the simulation based on a provided adapter.
 
@@ -87,27 +89,23 @@ class Runner(BaseModel):
         time_stamp (str): The time stamp of the simulation run.
         post_processor (post_processing.PostProcessor): The post processor to process the simulation results.
     """
-    adapter: adapter.ProductionSystemAdapter
-    env: sim.Environment = Field(
-        None, description="The environment to run the simulation in", init=False
-    )
-    time_model_factory: time_model_factory.TimeModelFactory = Field(
-        init=False, default=None
-    )
-    state_factory: state_factory.StateFactory = Field(init=False, default=None)
-    process_factory: process_factory.ProcessFactory = Field(init=False, default=None)
-    queue_factory: queue_factory.QueueFactory = Field(init=False, default=None)
-    resource_factory: resource_factory.ResourceFactory = Field(init=False, default=None)
-    node_factory: node_factory.NodeFactory = Field(init=False, default=None)
-    sink_factory: sink_factory.SinkFactory = Field(init=False, default=None)
-    source_factory: source_factory.SourceFactory = Field(init=False, default=None)
-    product_factory: product_factory.ProductFactory = Field(init=False, default=None)
-    event_logger: logger.Logger = Field(init=False, default=None)
-    time_stamp: str = Field(init=False, default="")
-    post_processor: post_processing.PostProcessor = Field(init=False, default=None)
 
-    class Config:
-        arbitrary_types_allowed = True
+    def __init__(self, adapter: adapter.ProductionSystemAdapter):
+        self.adapter = adapter
+        self.env = sim.Environment(seed=self.adapter.seed)
+        self.time_model_factory: time_model_factory.TimeModelFactory = None
+        self.state_factory: state_factory.StateFactory = None
+        self.process_factory: process_factory.ProcessFactory = None
+        self.queue_factory: queue_factory.QueueFactory = None
+        self.resource_factory: resource_factory.ResourceFactory = None
+        self.node_factory: node_factory.NodeFactory = None
+        self.sink_factory: sink_factory.SinkFactory = None
+        self.source_factory: source_factory.SourceFactory = None
+        self.product_factory: product_factory.ProductFactory = None
+        self.event_logger: logger.Logger = None
+        self.time_stamp: str = ""
+        self.post_processor: PostProcessor = None
+
 
     def initialize_simulation(self):
         """
@@ -200,7 +198,7 @@ class Runner(BaseModel):
         t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
-    def get_post_processor(self) -> post_processing.PostProcessor:
+    def get_post_processor(self) -> PostProcessor:
         """
         Returns the post processor to process the simulation results.
 
@@ -208,7 +206,7 @@ class Runner(BaseModel):
             post_processing.PostProcessor: The post processor to process the simulation results.
         """
         if not self.post_processor:
-            self.post_processor = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
+            self.post_processor = PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return self.post_processor
 
 
@@ -288,7 +286,7 @@ class Runner(BaseModel):
         Returns:
             dict: The aggregated simulation results.
         """
-        p = post_processing.PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
+        p = PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
         return p.get_aggregated_data()
 
     def save_results_as_csv(self, save_folder="data"):
