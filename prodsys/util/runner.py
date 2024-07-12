@@ -231,8 +231,8 @@ class Runner:
         kpi_visualization.plot_line_balance_kpis(p)
         kpi_visualization.plot_production_flow_rate_per_product(p)
         kpi_visualization.plot_transport_utilization_over_time(p)
-        kpi_visualization.plot_util_WIP_resource(p)
-        kpi_visualization.plot_oee(p)
+        # kpi_visualization.plot_util_WIP_resource(p)
+        # kpi_visualization.plot_oee(p)
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
         """
