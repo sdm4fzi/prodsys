@@ -11,8 +11,7 @@ The following processes are possible:
 from __future__ import annotations
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, Optional, List, TYPE_CHECKING
-
+from typing import Literal, Union, List, TYPE_CHECKING, Optional
 from pydantic import ConfigDict, Field
 
 from prodsys.models.core_asset import CoreAsset
@@ -35,6 +34,7 @@ class ProcessTypeEnum(str, Enum):
     CompoundProcesses = "CompoundProcesses"
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
+    ReworkProcesses = "ReworkProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -48,6 +48,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
+    failure_rate: Optional[float] = 0.0
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [
@@ -77,7 +78,10 @@ class ProcessData(CoreAsset):
                 break
         else:
             raise ValueError(f"Time model with ID {self.time_model_id} not found for process {self.ID}.")
-        return md5((time_model_hash).encode("utf-8")).hexdigest()
+        
+        failure_rate_str = str(self.failure_rate)
+        input_hash = time_model_hash + failure_rate_str
+        return md5((input_hash).encode("utf-8")).hexdigest()
 
 
 class ProductionProcessData(ProcessData):
@@ -179,6 +183,8 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
+        loading_time_model (str): ID of the loading time model of the process.
+        unloading_time_model (str): ID of the loading time model of the process.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
@@ -189,11 +195,17 @@ class TransportProcessData(ProcessData):
             description="Transport Process 1",
             time_model_id="manhattan_time_model_1",
             type="TransportProcesses",
+            loading_time_model="function_time_model_2",
+            unloading_time_model="function_time_model_3",
         )
         ```
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
+    loading_time_model: Optional[str] = None
+    unloading_time_model: Optional[str] = None
+    #TODO: implement charging_time_model for charging times for the AGV
+
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [
@@ -202,10 +214,58 @@ class TransportProcessData(ProcessData):
                 "description": "Transport Process 1",
                 "time_model_id": "manhattan_time_model_1",
                 "type": "TransportProcesses",
+                "loading_time_model": "function_time_model_2",
+                "unloading_time_model": "function_time_model_3",
             }
         ]
     })
 
+
+
+class ReworkProcessData(ProcessData):
+    """
+    Class that represents rework process data.
+
+    Args:
+        ID (str): ID of the process.
+        description (str): Description of the process.
+        time_model_id (str): ID of the time model of the process.
+        type (Literal[ProcessTypeEnum.ProductionProcesses]): Type of the process.
+        reworked_process_ids (List[str]): Process IDs of the reworked processes.
+        blocking (bool): If the rework process is blocking.
+
+    Examples:
+        A rework process with ID "RP1", description "Rework Process 1" and time model ID "function_time_model_1":
+        ``` py
+        import prodsys
+        prodsys.processes_data.ReworkProcessData(
+            ID="RP1",
+            description="Rework Process 1",
+            time_model_id="function_time_model_1",
+            type="ProductionProcesses",
+            reworked_process_ids=["P1", "P2"],
+            blocking=True
+        )
+        ```
+    """
+
+    type: Literal[ProcessTypeEnum.ReworkProcesses]
+    reworked_process_ids: List[str]
+    blocking: bool 
+
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "summary": "Rework process",
+                "ID": "RP1",
+                "description": "Rework Process 1",
+                "time_model_id": "function_time_model_1",
+                "type": "ProductionProcesses",
+                "reworked_process_ids": ["P1", "P2"],
+                "blocking": True,
+            }
+        ]
+    })
 
 class CompoundProcessData(CoreAsset):
     """
@@ -335,6 +395,8 @@ class LinkTransportProcessData(TransportProcessData):
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
+    loading_time_model: Optional[str] = None
+
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -364,5 +426,5 @@ class LinkTransportProcessData(TransportProcessData):
 
 PROCESS_DATA_UNION = Union[
     CompoundProcessData, RequiredCapabilityProcessData,
-    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData
+    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData, ReworkProcessData
 ]

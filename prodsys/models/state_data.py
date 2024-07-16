@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, TYPE_CHECKING
+from typing import Literal, Union, TYPE_CHECKING, Optional
 
 from pydantic import ConfigDict
 
@@ -275,6 +275,8 @@ class TransportStateData(StateData):
     """
 
     type: Literal[StateTypeEnum.TransportState]
+    loading_time_model: Optional[str] = None
+    unloading_time_model: Optional[str] = None
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [

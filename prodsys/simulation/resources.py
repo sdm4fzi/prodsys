@@ -231,6 +231,24 @@ class Resource(BaseModel, ABC, resource.Resource):
             ):
                 return actual_state
         return None
+    
+    def get_free_processes(self, process: process.PROCESS_UNION) -> Optional[List[state.State]]:
+        """
+        Returns all free ProductionState or CapabilityState of the resource for a process.
+
+        Args:
+            process (process.PROCESS_UNION): The process to get the state for.
+
+        Returns:
+            List[state.State]: The state of the resource for the process.
+        """
+        return [
+            actual_state
+            for actual_state in self.production_states
+            if actual_state.state_data.ID == process.process_data.ID and (
+                actual_state.process is None or not actual_state.process.is_alive
+            )
+        ]
 
     def get_location(self) -> List[float]:
         """
@@ -400,10 +418,11 @@ class ProductionResource(Resource):
 
     """
     data: ProductionResourceData
-    controller: control.ProductionController
+    controller: control.Controller
 
     input_queues: List[store.Queue] = []
     output_queues: List[store.Queue] = []
+    batch_size: Optional[int] = None
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
