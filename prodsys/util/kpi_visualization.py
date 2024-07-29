@@ -1,4 +1,5 @@
 import os
+from typing import List
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -87,32 +88,31 @@ def plot_oee(post_processor: post_processing.PostProcessor):
     Parameters:
     - post_processor: An instance of the post_processing.PostProcessor class.
     """
-    # FIXME: resolve bug in this plotting function...
-    df_tp = post_processor.df_oee_production_system    
+    df_oee = post_processor.df_oee_production_system    
     fig = make_subplots(rows=1, cols=4,
                         specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}]])
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][0],
+        value = df_oee['Value'][0],
         title = {"text": "Availability in %"},
     ), row=1, col=1)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][1],
+        value = df_oee['Value'][1],
         title = {"text": "Performance in %"},
     ), row=1, col=2)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][2],
+        value = df_oee['Value'][2],
         title = {"text": "Quality in %"},
     ), row=1, col=3)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][3],
+        value = df_oee['Value'][3],
         title = {"text": "OEE in %"},
     ), row=1, col=4)
 
@@ -176,17 +176,19 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
     """
-    # FIXME: resolve bug here, that resource utilization differs to time spend in states....
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states_boxplot
-    fig = go.Figure()
     resources = df_time_per_state['Resource'].unique()
+    df_productive_time = df_time_per_state.loc[df_time_per_state['Time_type'] == 'PR']
+    fig = go.Figure()
 
     for resource in resources:
-        df_resource = df_time_per_state[df_time_per_state['Resource'] == resource]
+        df_resource = df_productive_time.loc[df_time_per_state['Resource'] == resource]
+
+        if len(df_resource) == 0:
+            df_resource = pd.DataFrame({'Resource': [resource], 'percentage': [0]})
         
-        df_time_per_state = df_time_per_state[df_time_per_state['Time_type'] == 'PR']
         fig.add_trace(go.Box(
-            y=df_resource['Percentage'],
+            y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True,
         ))
@@ -269,12 +271,11 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
-    # FIXME: function is buggy and not working properly...
     df_time_per_state = post_processor.df_mean_wip_per_station
     # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
     fig1 = go.Figure()
-    df_time_per_state['Mean_WIP'] = np.maximum(np.ceil(df_time_per_state['Mean_WIP']), 1)
-    fig1.add_trace(go.Bar(name='Mean_WIP', x=df_time_per_state['Resource'], y=df_time_per_state['Mean_WIP'], marker_color='purple', yaxis='y2'))
+    df_time_per_state['mean_wip'] = np.maximum(np.ceil(df_time_per_state['mean_wip']), 1)
+    fig1.add_trace(go.Bar(name='mean_wip', x=df_time_per_state['Resource'], y=df_time_per_state['mean_wip'], marker_color='purple', yaxis='y2'))
 
     df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
     fig2 = go.Figure()
@@ -284,7 +285,7 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         
         df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
         fig2.add_trace(go.Box(
-            y=df_resource['Percentage'],
+            y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True  # mean and standard deviation
         ))
@@ -303,17 +304,26 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=True)
 
-def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor):
+def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor, transport_resource_names: List[str]):
     """
     Plots the utilization of the transport_agv resource over time.
 
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        transport_resource_names (List[str]): List of names of the transport resources.
     """
-    # FIXME: resolve bug here that plot is empty...
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states
-    df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
-    fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['Percentage'], mode='lines', name='PR'))
+    transport_resource_names = set(transport_resource_names)
+    df_agv_pr = df_time_per_state.loc[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'].isin(transport_resource_names))]
+    fig = go.Figure()
+    for resource in transport_resource_names:
+        df_agv_pr_resource = df_agv_pr.loc[df_agv_pr['Resource'] == resource]
+        fig.add_trace(
+        go.Scatter(x=df_agv_pr_resource['Time'], y=df_agv_pr_resource['percentage'], mode='lines', name=resource,
+                        #    line=dict(shape='spline', smoothing=2),  # Apply smoothing
+                        #    line=dict(shape='hv'),  # Apply smoothing
+            ),     
+        )
 
     fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
 
