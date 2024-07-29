@@ -176,15 +176,17 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
     """
-    # FIXME: resolve bug here, that resource utilization differs to time spend in states....
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states_boxplot
-    fig = go.Figure()
     resources = df_time_per_state['Resource'].unique()
+    df_productive_time = df_time_per_state.loc[df_time_per_state['Time_type'] == 'PR']
+    fig = go.Figure()
 
     for resource in resources:
-        df_resource = df_time_per_state[df_time_per_state['Resource'] == resource]
+        df_resource = df_productive_time.loc[df_time_per_state['Resource'] == resource]
+
+        if len(df_resource) == 0:
+            df_resource = pd.DataFrame({'Resource': [resource], 'Percentage': [0]})
         
-        df_time_per_state = df_time_per_state[df_time_per_state['Time_type'] == 'PR']
         fig.add_trace(go.Box(
             y=df_resource['Percentage'],
             name=f'{resource}',
@@ -269,10 +271,10 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
-    # FIXME: function is buggy and not working properly...
     df_time_per_state = post_processor.df_mean_wip_per_station
     # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
     fig1 = go.Figure()
+    # FIXME: KeyError: 'Mean_WIP'
     df_time_per_state['Mean_WIP'] = np.maximum(np.ceil(df_time_per_state['Mean_WIP']), 1)
     fig1.add_trace(go.Bar(name='Mean_WIP', x=df_time_per_state['Resource'], y=df_time_per_state['Mean_WIP'], marker_color='purple', yaxis='y2'))
 
