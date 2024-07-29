@@ -87,32 +87,31 @@ def plot_oee(post_processor: post_processing.PostProcessor):
     Parameters:
     - post_processor: An instance of the post_processing.PostProcessor class.
     """
-    # FIXME: resolve bug in this plotting function...
-    df_tp = post_processor.df_oee_production_system    
+    df_oee = post_processor.df_oee_production_system    
     fig = make_subplots(rows=1, cols=4,
                         specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}]])
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][0],
+        value = df_oee['Value'][0],
         title = {"text": "Availability in %"},
     ), row=1, col=1)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][1],
+        value = df_oee['Value'][1],
         title = {"text": "Performance in %"},
     ), row=1, col=2)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][2],
+        value = df_oee['Value'][2],
         title = {"text": "Quality in %"},
     ), row=1, col=3)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = df_tp['Value'][3],
+        value = df_oee['Value'][3],
         title = {"text": "OEE in %"},
     ), row=1, col=4)
 
@@ -185,10 +184,10 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
         df_resource = df_productive_time.loc[df_time_per_state['Resource'] == resource]
 
         if len(df_resource) == 0:
-            df_resource = pd.DataFrame({'Resource': [resource], 'Percentage': [0]})
+            df_resource = pd.DataFrame({'Resource': [resource], 'percentage': [0]})
         
         fig.add_trace(go.Box(
-            y=df_resource['Percentage'],
+            y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True,
         ))
@@ -286,7 +285,7 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         
         df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
         fig2.add_trace(go.Box(
-            y=df_resource['Percentage'],
+            y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True  # mean and standard deviation
         ))
@@ -315,7 +314,7 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
     # FIXME: resolve bug here that plot is empty...
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states
     df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
-    fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['Percentage'], mode='lines', name='PR'))
+    fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['percentage'], mode='lines', name='PR'))
 
     fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
 
