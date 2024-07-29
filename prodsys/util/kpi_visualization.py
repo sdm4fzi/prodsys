@@ -1,4 +1,5 @@
 import os
+from typing import List
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -303,17 +304,26 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=True)
 
-def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor):
+def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor, transport_resource_names: List[str]):
     """
     Plots the utilization of the transport_agv resource over time.
 
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        transport_resource_names (List[str]): List of names of the transport resources.
     """
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states
-    # FIXME: do not use the resource transport_agv here but a list of resource names of transport resources!
-    df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
-    fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['percentage'], mode='lines', name='PR'))
+    transport_resource_names = set(transport_resource_names)
+    df_agv_pr = df_time_per_state.loc[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'].isin(transport_resource_names))]
+    fig = go.Figure()
+    for resource in transport_resource_names:
+        df_agv_pr_resource = df_agv_pr.loc[df_agv_pr['Resource'] == resource]
+        fig.add_trace(
+        go.Scatter(x=df_agv_pr_resource['Time'], y=df_agv_pr_resource['percentage'], mode='lines', name=resource,
+                        #    line=dict(shape='spline', smoothing=2),  # Apply smoothing
+                        #    line=dict(shape='hv'),  # Apply smoothing
+            ),     
+        )
 
     fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
 

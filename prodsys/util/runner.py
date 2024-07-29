@@ -237,7 +237,8 @@ class Runner:
         kpi_visualization.plot_boxplot_resource_utilization(p)
         kpi_visualization.plot_line_balance_kpis(p)
         kpi_visualization.plot_production_flow_rate_per_product(p)
-        kpi_visualization.plot_transport_utilization_over_time(p)
+        transport_resource_ids = [resource_data.ID for resource_data in adapter.get_transport_resources(self.adapter)]
+        kpi_visualization.plot_transport_utilization_over_time(p, transport_resource_ids)
         kpi_visualization.plot_util_WIP_resource(p)
         kpi_visualization.plot_oee(p)
 
