@@ -501,7 +501,7 @@ class PostProcessor:
             df = pd.concat([example_row, df]).reset_index(drop=True)
 
         df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
-        df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'), inplace=True)
+        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'))
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
@@ -883,7 +883,7 @@ class PostProcessor:
         # Calculate mean WIP per station
         df_mean_wip_per_station = df.groupby("wip_resource")["wip"].mean().reset_index()
         df_mean_wip_per_station.rename(columns={"wip": "mean_wip"}, inplace=True)
-        df_mean_wip_per_station.rename(columns={"wip_resource": "resource"}, inplace=True)
+        df_mean_wip_per_station.rename(columns={"wip_resource": "Resource"}, inplace=True)
 
         return df_mean_wip_per_station
 
