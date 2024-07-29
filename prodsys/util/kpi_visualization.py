@@ -273,9 +273,8 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
     df_time_per_state = post_processor.df_mean_wip_per_station
     # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
     fig1 = go.Figure()
-    # FIXME: KeyError: 'Mean_WIP'
-    df_time_per_state['Mean_WIP'] = np.maximum(np.ceil(df_time_per_state['Mean_WIP']), 1)
-    fig1.add_trace(go.Bar(name='Mean_WIP', x=df_time_per_state['Resource'], y=df_time_per_state['Mean_WIP'], marker_color='purple', yaxis='y2'))
+    df_time_per_state['mean_wip'] = np.maximum(np.ceil(df_time_per_state['mean_wip']), 1)
+    fig1.add_trace(go.Bar(name='mean_wip', x=df_time_per_state['Resource'], y=df_time_per_state['mean_wip'], marker_color='purple', yaxis='y2'))
 
     df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
     fig2 = go.Figure()
@@ -311,8 +310,8 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
     """
-    # FIXME: resolve bug here that plot is empty...
     df_time_per_state = post_processor.df_aggregated_resource_bucket_states
+    # FIXME: do not use the resource transport_agv here but a list of resource names of transport resources!
     df_agv_pr = df_time_per_state[(df_time_per_state['Time_type'] == 'PR') & (df_time_per_state['Resource'] == 'transport_agv')]
     fig = go.Figure(data=go.Scatter(x=df_agv_pr['Time'], y=df_agv_pr['percentage'], mode='lines', name='PR'))
 

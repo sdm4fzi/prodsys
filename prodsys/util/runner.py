@@ -227,12 +227,20 @@ class Runner:
         # kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
+    
+
+    def plot_results_executive(self):
+        """
+        Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.
+        """
+        p = self.get_post_processor()
         kpi_visualization.plot_boxplot_resource_utilization(p)
         kpi_visualization.plot_line_balance_kpis(p)
         kpi_visualization.plot_production_flow_rate_per_product(p)
         kpi_visualization.plot_transport_utilization_over_time(p)
-        # kpi_visualization.plot_util_WIP_resource(p)
+        kpi_visualization.plot_util_WIP_resource(p)
         kpi_visualization.plot_oee(p)
+
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
         """
