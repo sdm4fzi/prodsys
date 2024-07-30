@@ -501,7 +501,7 @@ class PostProcessor:
             df = pd.concat([example_row, df]).reset_index(drop=True)
 
         df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
-        df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'), inplace=True)
+        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'))
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
@@ -541,6 +541,7 @@ class PostProcessor:
             pd.DataFrame: Data frame with the total time spent in each state of each resource.
         """
         df = self.df_resource_states_buckets.copy()
+        # TODO: locate is nan with function
         df = df.loc[df["Time_type"] != "na"]
 
         df_time_per_state = df.groupby(["Resource", "Bucket", "Time_type"]).agg({
@@ -554,7 +555,7 @@ class PostProcessor:
             columns={"time_increment": "resource_time"}, inplace=True
         )
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
-        df_time_per_state["Percentage"] = (
+        df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
 
@@ -674,7 +675,7 @@ class PostProcessor:
             columns={"time_increment": "resource_time"}, inplace=True
         )
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
-        df_time_per_state["Percentage"] = (
+        df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
 
@@ -728,14 +729,16 @@ class PostProcessor:
         """
         df_resource_states = self.df_aggregated_resource_states.copy()
         df_resource_states = df_resource_states.reset_index()
-        average_kpis = df_resource_states.groupby("Time_type")["Percentage"].mean()
+        average_kpis = df_resource_states.groupby("Time_type")["percentage"].mean()
         unplanned_downtime = average_kpis.get('UD', 0)
-        utilization_value = (100 - unplanned_downtime) / 100
+        availibility = (100 - unplanned_downtime) / 100
+        # TODO: also calculate performance based on arrival rates, available time and output of the system
+        # TODO: calculate scrap rate after merging scrap simulation from feature branch
 
         # Create new DataFrame
         oee_df = pd.DataFrame({
             'KPI': ['Availability', 'Performance', 'Quality', 'OEE'],
-            'Value': [utilization_value * 100, 1 * 100, 1 * 100, utilization_value * 100]
+            'Value': [availibility * 100, 1 * 100, 1 * 100, availibility * 100]
         })
         oee_df['Value'] = oee_df['Value'].round(2)
 
@@ -880,7 +883,7 @@ class PostProcessor:
         # Calculate mean WIP per station
         df_mean_wip_per_station = df.groupby("wip_resource")["wip"].mean().reset_index()
         df_mean_wip_per_station.rename(columns={"wip": "mean_wip"}, inplace=True)
-        df_mean_wip_per_station.rename(columns={"wip_resource": "resource"}, inplace=True)
+        df_mean_wip_per_station.rename(columns={"wip_resource": "Resource"}, inplace=True)
 
         return df_mean_wip_per_station
 
