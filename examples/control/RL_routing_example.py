@@ -70,7 +70,7 @@ if __name__ == '__main__':
     
 
     adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
-    adapter_object.read_data('examples/control/control_example_data/example_configuration.json')
+    adapter_object.read_data('examples/control/control_example_data/control_configuration.json')
 
     num_of_resources = len(adapter_object.resource_data)
 

@@ -619,7 +619,7 @@ class PostProcessor:
                 df = pd.concat([example_row, df]).reset_index(drop=True)
 
             df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
-            df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'), inplace=True)
+            df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "Bucket"])["Time"].transform('max'))
             df["time_increment"] = df["next_Time"] - df["Time"]
 
             standby_condition = (
