@@ -186,11 +186,27 @@ class Product(BaseModel):
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
         while self.next_prodution_process:
-            production_request, transport_request = yield self.env.process(self.product_router.route_product(self))
+            while True:
+                production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
+                if not production_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            while True:
+                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_product(self, production_request))
+                if not transport_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
             self.set_next_production_process()
-        transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
+        while True:
+            transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
+            if not transport_to_sink_request:
+                yield self.env.timeout(0)
+                continue
+            break
         yield self.env.process(self.request_process(transport_to_sink_request))
         self.product_info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
