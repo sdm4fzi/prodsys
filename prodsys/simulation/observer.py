@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 
@@ -82,6 +82,8 @@ class ResourceObserver(BaseModel):
     resource_factory: resource_factory.ResourceFactory
     product_factory: product_factory.ProductFactory
     resource: resources.Resource
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def observe_processes(self) -> List[ProcessObservation]:
         return observe_processes(self.resource)
