@@ -10,6 +10,7 @@ from app.models.progress_report import ProgressReport
 import prodsys
 import prodsys.simulation
 import prodsys.simulation.sim
+from prodsys.util.post_processing import PostProcessor
 
 
 import logging
@@ -63,7 +64,19 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
+    post_processor = runner_object.get_post_processor()
+    try:
+        prodsys_backend.create_post_processor(project_id, adapter_id, post_processor)
+    except:
+        prodsys_backend.update_post_processor(project_id, adapter_id, post_processor)
 
+def get_post_processor(
+    project_id: str, adapter_id: str
+) -> PostProcessor:
+    try:
+        return prodsys_backend.get_post_processor(project_id, adapter_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
     # TODO: implement function that returns progress of optimization

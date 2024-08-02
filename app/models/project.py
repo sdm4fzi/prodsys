@@ -1,9 +1,10 @@
 from typing import Dict, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List
 
 import prodsys
 from prodsys.models.performance_data import Performance
+from prodsys.util.post_processing import PostProcessor
 
 
 class Project(BaseModel):
@@ -19,8 +20,14 @@ class Project(BaseModel):
     adapters: List[prodsys.adapters.JsonProductionSystemAdapter] = []
     # TODO: maybe allow saving performances in project also for adapter_id and specific seed
     performances: Optional[Dict[str, Performance]] = {}
+    post_processor: Optional[PostProcessor] = Field(default=None, exclude=True)
+    #TODO: make wrapper for postprocessor for schema
 
-    model_config=ConfigDict(
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={
+            PostProcessor: lambda v: "PostProcessor object" if v else None
+        },
         json_schema_extra={
             "examples": [
                 {
@@ -28,7 +35,8 @@ class Project(BaseModel):
                     "adapters": prodsys.adapters.ProductionSystemAdapter.model_config["json_schema_extra"]["examples"],
                     "performances": {
                         "Example Adapter": Performance.model_config["json_schema_extra"]["examples"][0]
-                    }
+                    },
+                    "post_processor": None
                 }
             ]
         }

@@ -12,6 +12,7 @@ from app.routers import (
     optimization,
     time_models,
     performance,
+    plots,
     processes,
     queue,
     resources, 
@@ -58,6 +59,7 @@ app.include_router(adapters.router)
 app.include_router(simulation.router)
 app.include_router(optimization.router)
 app.include_router(performance.router)
+app.include_router(plots.router)
 app.include_router(time_models.router)
 app.include_router(processes.router)
 app.include_router(queue.router)
@@ -82,4 +84,4 @@ def prodsys_app(cfg: DictConfig) -> None:
         uvicorn.run(app, host=cfg.fastapi.host, port=cfg.fastapi.port)
 
 if __name__ == "__main__":
-   prodsys_app()
+    prodsys_app()
