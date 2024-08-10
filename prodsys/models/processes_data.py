@@ -396,6 +396,7 @@ class LinkTransportProcessData(TransportProcessData):
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
     loading_time_model: Optional[str] = None
+    unloading_time_model: Optional[str] = None
 
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:

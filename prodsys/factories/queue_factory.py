@@ -34,8 +34,8 @@ class QueueFactory(BaseModel):
         Args:
             adapter (adapter.ProductionSystemAdapter): _description_
         """
-        for queue_data in adapter.queue_data:
-            self.add_queue(queue_data)
+        for data in adapter.queue_data:
+            self.add_queue(data)
 
     def add_queue(self, queue_data: queue_data.QueueData):
         values = {}
@@ -52,7 +52,7 @@ class QueueFactory(BaseModel):
         Returns:
             store.Queue: Queue object with the given ID.
         """
-        return [q for q in self.queues if q.queue_data.ID == ID].pop()
+        return [q for q in self.queues if q.data.ID == ID].pop()
 
     def get_queues(self, IDs: List[str]) -> List[store.Queue]:
         """
@@ -64,4 +64,13 @@ class QueueFactory(BaseModel):
         Returns:
             List[store.Queue]: List of queue objects with the given IDs.
         """
-        return [q for q in self.queues if q.queue_data.ID in IDs]
+        return [q for q in self.queues if q.data.ID in IDs]
+
+    def get_warehouse_queues(self) -> List[store.Queue]:
+        """
+        Method returns a list of queue objects that are warehouses.
+
+        Returns:
+            List[store.Queue]: List of queue objects that are warehouses.
+        """
+        return [q for q in self.queues if q.data.location is not None]

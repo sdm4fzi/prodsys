@@ -17,6 +17,7 @@ from prodsys.simulation import (
     resources,
     sim,
     sink,
+    store,
     source,
     proces_models,
     node
@@ -133,7 +134,7 @@ class ProductInfo(BaseModel):
         self.activity = StateEnum.end_state
         self.state_type = state_type
 
-Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink]
+Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink, store.Queue]
 
 class Product(BaseModel):
     """

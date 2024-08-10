@@ -19,7 +19,7 @@ from prodsys.simulation.process import ReworkProcess
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, process
+    from prodsys.simulation import resources, product, sink, process, store
     from prodsys.factories import resource_factory, sink_factory, product_factory
     from prodsys.control import routing_control_env
 
@@ -60,6 +60,7 @@ class Router:
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic
+        self._is_routing_to_warehouse = None
         # TODO: add possibility to specify a production and a transport heuristic separately
     
     def route_product_to_production_resource(self, product: product.Product) -> Generator[Optional[request.Request]]:
@@ -148,6 +149,70 @@ class Router:
         if not transport_requests:
             return
         routed_transport_request = transport_requests.pop(0)
+        return routed_transport_request
+    
+    def route_product_to_warehouse(self, product: product.Product) -> Generator[request.TransportResquest]:
+        """
+        Routes a product to the warehouse.
+
+        Args:
+            product (product.Product): The product.
+
+        Returns:
+            Generator[request.TransportResquest]: A generator that yields when the product is routed to the warehouse.
+        """
+        #print("Routing to warehouse")
+        warehouses = self.resource_factory.queue_factory.get_warehouse_queues()
+
+        chosen_warehouse = np.random.choice(warehouses)
+        #print(f"Chosen warehouse: {chosen_warehouse.data.ID}")
+
+        warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=chosen_warehouse, origin=product.current_locatable, target=chosen_warehouse)
+
+        self._is_routing_to_warehouse = True
+        potential_transport_requests = self.get_possible_transport_requests([warehouse_request])
+        if not potential_transport_requests:
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any warehouse from resource {product.current_locatable.data.ID}.")
+        self._is_routing_to_warehouse = False
+
+        env = get_env_from_requests(potential_transport_requests)
+        transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
+        
+        if not transport_requests:
+            raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
+        
+        self.routing_heuristic(transport_requests)
+        routed_transport_request = transport_requests.pop(0)
+        return routed_transport_request
+    
+    def route_product_from_warehouse(self, product: product.Product, warehouse: store.Queue, resource: resources.ProductionResource) -> Generator[request.TransportResquest]:
+        """
+        Routes a product from the warehouse.
+
+        Args:
+            product (product.Product): The product.
+
+        Returns:
+            Generator[request.TransportResquest]: A generator that yields when the product is routed from the warehouse.
+        """
+        
+        from_warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=warehouse, origin=warehouse, target=resource)
+        #print(f"Routing from warehouse {warehouse.data.ID} to resource {resource.data.ID}")
+        self._is_routing_to_warehouse = True
+        potential_transport_requests = self.get_possible_transport_requests([from_warehouse_request])
+        if not potential_transport_requests:
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any warehouse from resource {product.current_locatable.data.ID}.")
+        self._is_routing_to_warehouse = False
+
+        env = get_env_from_requests(potential_transport_requests)
+        transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
+        
+        if not transport_requests:
+            raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
+        
+        self.routing_heuristic(transport_requests)
+        routed_transport_request = transport_requests.pop(0)
+        #print(f"Routed transport request: {routed_transport_request}")
         return routed_transport_request
 
 
@@ -244,7 +309,10 @@ class Router:
         Returns:
             List[request.TransportResquest]: A list of possible transport requests for the next transport process of the product.
         """
-        if any(isinstance(production_request, request.SinkRequest) for production_request in production_requests):
+        if self._is_routing_to_warehouse:
+            transport_target_ids = set([request.resource.data.ID for request in production_requests])
+            transport_targets = [resource for resource in self.resource_factory.queue_factory.queues if resource.data.ID in transport_target_ids]
+        elif any(isinstance(production_request, request.SinkRequest) for production_request in production_requests):
             transport_targets = [request.resource for request in production_requests]
         else:
             transport_target_ids = set([request.resource.data.ID for request in production_requests])
@@ -256,6 +324,23 @@ class Router:
 
         for transport_target in transport_targets:
             possible_requests += self.get_transport_requests_to_target(product, transport_target, route_cache)
+
+        for resource in self.resource_factory.get_transport_resources():
+            for process in resource.processes:
+                for target in transport_targets:
+                    transport_request = self.get_transport_request(product, resource, target)
+                    if hasattr(target, 'queue_data'):
+                        target_id = target.data.ID
+                    else:
+                        target_id = target.data.ID
+                    if route_cache.get((target_id, process.process_data.ID)):
+                        transport_request.copy_cached_routes(route_cache[(target_id, process.process_data.ID)])
+                        transport_request.set_process(process)
+                        possible_requests.append(transport_request)
+                    elif process.matches_request(transport_request):
+                        possible_requests.append(transport_request)
+                        transport_request.set_process(process)
+                        route_cache[(target_id, process.process_data.ID)] = transport_request
         return possible_requests
     
 
