@@ -179,9 +179,9 @@ class ResourceFactory(BaseModel):
             values.update(
             {"input_queues": input_queues, "output_queues": output_queues}
             )
-            if "batch_size" in resource_data.dict():
+            if "batch_size" in resource_data:
                 values.update({"batch_size": resource_data.batch_size})
-  
+
         resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
         # print(resource_object._env)
         controller.set_resource(resource_object)

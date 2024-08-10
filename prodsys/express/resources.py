@@ -36,7 +36,9 @@ class Resource(ABC):
         ID (str): ID of the resource.
     """
     processes: List[process.PROCESS_UNION]
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
+    #location: conlist(float, min_length=2, max_length=2) # type: ignore
+    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
+    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
@@ -87,6 +89,8 @@ class ProductionResource(Resource, core.ExpressObject):
         ```
     """
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
+    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
+    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     control_policy: resource_data.ResourceControlPolicy = resource_data.ResourceControlPolicy.FIFO
     queue_size: Optional[int] = 0
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
@@ -103,7 +107,8 @@ class ProductionResource(Resource, core.ExpressObject):
             ID=self.ID,
             description="",
             process_ids=[process.ID for process in self.processes],
-            location=self.location,
+            input_location=self.input_location,
+            output_location=self.output_location,
             capacity=self.capacity,
             state_ids=[state.ID for state in self.states],
             controller=self.controller,

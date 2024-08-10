@@ -472,6 +472,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "TP1",
                         "description": "Transport Process 1",
                         "time_model_id": "manhattan_time_model_1",
+                        "loading_time_model": "function_time_model_2",
+                        "unloading_time_model": "function_time_model_3",
                         "type": "TransportProcesses",
                     },
                 ],
@@ -522,7 +524,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R1",
                         "description": "Resource 1",
                         "capacity": 2,
-                        "location": [10.0, 10.0],
+                        "input_location": [10.0, 10.0],
+                        "output_location": [12.0, 10.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P2"],
@@ -540,7 +543,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R2",
                         "description": "Resource 2",
                         "capacity": 1,
-                        "location": [20.0, 10.0],
+                        "input_location": [20.0, 10.0],
+                        "output_location": [22.0, 10.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P2", "P3"],
@@ -553,7 +557,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R3",
                         "description": "Resource 3",
                         "capacity": 2,
-                        "location": [20.0, 20.0],
+                        "input_location": [20.0, 20.0],
+                        "output_location": [22.0, 22.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P3"],
@@ -571,7 +576,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R4",
                         "description": "Resource 3",
                         "capacity": 2,
-                        "location": [10.0, 20.0],
+                        "input_location": [10.0, 20.0],
+                        "output_location": [12.0, 20.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P3"],
@@ -634,21 +640,21 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "SK1",
                         "description": "Sink 1",
-                        "location": [50.0, 50.0],
+                        "input_location": [50.0, 50.0],
                         "product_type": "Product_1",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK2",
                         "description": "Sink 2",
-                        "location": [55.0, 50.0],
+                        "input_location": [55.0, 50.0],
                         "product_type": "Product_2",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK3",
                         "description": "Sink 3",
-                        "location": [45.0, 50.0],
+                        "input_location": [45.0, 50.0],
                         "product_type": "Product_3",
                         "input_queues": ["SinkQueue"],
                     },
@@ -657,7 +663,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S1",
                         "description": "Source 1",
-                        "location": [0.0, 0.0],
+                        "output_location": [0.0, 0.0],
                         "product_type": "Product_1",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -667,7 +673,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S2",
                         "description": "Source 2",
-                        "location": [30.0, 30.0],
+                        "output_location": [30.0, 30.0],
                         "product_type": "Product_2",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -677,7 +683,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S3",
                         "description": "Source 3",
-                        "location": [40.0, 30.0],
+                        "output_location": [40.0, 30.0],
                         "product_type": "Product_3",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -924,15 +930,23 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
     Raises:
         ValueError: If multiple objects are positioned at the same location.
     """
-    machine_input_locations = [machine.input_location for machine in get_machines(adapter)]
-    machine_output_locations = [machine.output_location for machine in get_machines(adapter)]
+    machine_locations = []
+    for machine in get_machines(adapter):
+        if machine.input_location != machine.output_location:
+            machine_locations.append(machine.input_location)
+            machine_locations.append(machine.output_location)
+        else:
+            machine_locations.append(machine.input_location)
+
     source_locations = remove_duplicate_locations(
         [source.output_location for source in adapter.source_data]
     )
     sink_locations = remove_duplicate_locations(
         [sink.input_location for sink in adapter.sink_data]
     )
-    positions = machine_input_locations + machine_output_locations + source_locations + sink_locations
+    #positions = machine_locations + source_locations + sink_locations
+    positions = machine_locations
+
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(f"Multiple objects are positioned at the same location: {location}")

@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.process import PROCESS_UNION, TransportProcess, LinkTransportProcess
     from prodsys.simulation.resources import Resource, TransportResource
     from prodsys.simulation.sink import Sink
+    from prodsys.simulation.store import Queue
 
 
 

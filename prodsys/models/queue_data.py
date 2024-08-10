@@ -1,7 +1,7 @@
-from typing import Union
+from typing import Union, Optional
 from hashlib import md5
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, conlist
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -35,8 +35,9 @@ class QueueData(CoreAsset):
         )
         ```
     """
-
+    #TODO: add optional location of queue for warehousing
     capacity: Union[int, float] = 0.0
+    location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
 
     def hash(self) -> str:
         """

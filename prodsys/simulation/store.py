@@ -17,20 +17,23 @@ class Queue(store.FilterStore):
 
     Args:
         env (simpy.Environment): The simulation environment.
-        queue_data (queue_data.QueueData): The queue data object.
+        data (data.QueueData): The queue data object.
 
     Attributes:
-        capacity (int, optional): The capacity of the queue. If 0 in the queue_data, the capacity is set to infinity.
+        capacity (int, optional): The capacity of the queue. If 0 in the data, the capacity is set to infinity.
         _pending_put (int): The number of products that are reserved for being put into the queue. Avoids bottleneck in the simulation.
 
     """
-    def __init__(self, env: sim.Environment, queue_data: queue_data.QueueData):
+    #TODO: add locations of queue, if no given default to resource location
+    def __init__(self, env: sim.Environment, data: queue_data.QueueData):
         self.env: sim.Environment = env
-        self.queue_data: queue_data.QueueData = queue_data
-        if queue_data.capacity == 0:
+        self.data: queue_data.QueueData = data
+        if data.capacity == 0:
             capacity = float("inf")
         else:
-            capacity = queue_data.capacity
+            capacity = data.capacity
+        self.location = data.location if data.location is not None else getattr(data, 'location', None)
+        self.warehouse = self.location is not None
         self._pending_put: int = 0
         super().__init__(env, capacity)
 
@@ -42,7 +45,7 @@ class Queue(store.FilterStore):
         Returns:
             bool: True if the queue is full, False otherwise.
         """
-        logger.debug({"ID": self.queue_data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
         return (self.capacity - self._pending_put - len(self.items)) <= 0
     
     def reserve(self) -> None:
@@ -62,6 +65,8 @@ class Queue(store.FilterStore):
         """
         self._pending_put -= 1
 
-
-
-
+    def get_input_location(self):
+        return self.location
+    
+    def get_output_location(self):
+        return self.location
