@@ -12,10 +12,10 @@ import logging
 logger = logging.getLogger(__name__)
 from uuid import uuid1
 from collections.abc import Iterable
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter, parse_obj_as
 
 from prodsys import adapters, runner
-from prodsys.adapters.adapter import add_default_queues_to_resources
+from prodsys.adapters.adapter import add_default_queues_to_resources, remove_queues_from_resources
 from prodsys.adapters.adapter import assert_no_redudant_locations
 from prodsys.adapters.adapter import assert_required_processes_in_resources_available
 from prodsys.adapters.adapter import get_possible_production_processes_IDs, get_possible_transport_processes_IDs
@@ -211,7 +211,7 @@ def get_weights(
     """
     weights = []
     for objective in adapter.scenario_data.objectives:
-        kpi = parse_obj_as(performance_indicators.KPI_UNION, {"name": objective.name})
+        kpi: performance_indicators.KPI_UNION = TypeAdapter(performance_indicators.KPI_UNION).validate_python({"name": objective.name})
         if kpi.target != direction:
             weights.append(objective.weight * -1)
         else:
@@ -228,6 +228,7 @@ def crossover(ind1, ind2):
     adapter2: adapters.ProductionSystemAdapter = ind2[0]
     machines_1 = adapters.get_machines(adapter1)
     machines_2 = adapters.get_machines(adapter2)
+    remove_queues_from_resources(machines_1 + machines_2)
     transport_resources_1 = adapters.get_transport_resources(adapter1)
     transport_resources_2 = adapters.get_transport_resources(adapter2)
     if "machine" in crossover_type:
@@ -1017,8 +1018,7 @@ def document_individual(
             "generation": current_generation,
             "ID": adapter_object.ID,
         }
-
-    adapters.JsonProductionSystemAdapter(**adapter_object.model_dump()).write_data(
+    adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
         f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
     )
 
