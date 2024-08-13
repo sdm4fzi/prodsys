@@ -1,26 +1,23 @@
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from random import randint, random, shuffle
 from collections import deque
 from numpy import argmax
 
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import mutation
+from prodsys.optimization.optimization import check_valid_configuration
+from prodsys.optimization.util import document_individual
 logger = logging.getLogger(__name__)
 
 import json
 import time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    check_valid_configuration,
-    crossover,
-    evaluate,
-    mutation,
-    random_configuration,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states
