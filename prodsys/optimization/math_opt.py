@@ -18,7 +18,7 @@ from prodsys.models import (
     state_data,
     time_model_data,
 )
-from prodsys.optimization import optimization_util
+from prodsys.optimization import util
 from prodsys.util import util
 
 import gurobipy as gp
@@ -249,10 +249,10 @@ class MathOptimizer(BaseModel):
 
     def get_breakdown_values(self):
         machine_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
+            util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
         )
         process_module_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
+            util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
         )
         process_modules, stations = self.get_process_modules_and_stations()
         BZ = self.adapter.scenario_data.info.time_range * self.optimization_time_portion
@@ -492,9 +492,9 @@ class MathOptimizer(BaseModel):
                         processes.append(module)
 
                 states = [
-                    optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
+                    util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
                 ] + len(processes) * [
-                    optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
+                    util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
                 ]
                 location = random.choice(possible_positions)
                 possible_positions.remove(location)
@@ -512,10 +512,10 @@ class MathOptimizer(BaseModel):
                 new_adapter.resource_data.append(new_resource)
             util.add_default_queues_to_resources(new_adapter)
             full_save_folder_path = save_folder if full_save else ""
-            simulation_results = optimization_util.evaluate(
+            simulation_results = util.evaluate(
                 self.adapter, solution_dict, performances, number_of_seeds, full_save_folder_path, [new_adapter]
             )
-            optimization_util.document_individual(
+            util.document_individual(
                 solution_dict, save_folder, [new_adapter]
             )
             performances["00"][new_adapter.ID] = {
@@ -584,8 +584,8 @@ def run_mathematical_optimization(
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     if not adapters.check_for_clean_compound_processes(adapter):
         raise ValueError("Currently, compound processes are not implemented in mathematical optimization.")
-    if not optimization_util.check_breakdown_states_available(adapter):
-        optimization_util.create_default_breakdown_states(adapter)
+    if not util.check_breakdown_states_available(adapter):
+        util.create_default_breakdown_states(adapter)
     util.prepare_save_folder(save_folder)
     hypter_parameters = MathOptHyperparameters(
         optimization_time_portion=optimization_time_portion,

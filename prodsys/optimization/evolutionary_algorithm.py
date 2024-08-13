@@ -1,29 +1,21 @@
 import json
 import time
-from random import random
-from typing import List
-from functools import partial
 import warnings
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import crossover, mutation, random_configuration, random_configuration_with_initial_solution
+from prodsys.optimization.util import document_individual
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-from os import listdir
-from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
 from pydantic import BaseModel, ConfigDict, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    crossover,
-    evaluate,
-    mutation,
-    random_configuration,
-    random_configuration_with_initial_solution,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states,

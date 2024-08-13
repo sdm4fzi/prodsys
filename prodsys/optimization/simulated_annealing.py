@@ -1,10 +1,14 @@
 import json
 import time
 from copy import deepcopy
-from numpy import full
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import mutation
+from prodsys.optimization.optimization import check_valid_configuration
+from prodsys.optimization.util import document_individual
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +16,7 @@ from simanneal import Annealer
 
 from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    check_valid_configuration,
-    evaluate,
-    mutation,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states,
