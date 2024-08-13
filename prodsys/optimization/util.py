@@ -8,6 +8,8 @@ from typing import Dict, List, Union, Tuple, Literal
 from enum import Enum
 import logging
 
+from prodsys.express.state import ProcessBreakdownState
+
 
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,7 @@ from pydantic import TypeAdapter
 from prodsys import adapters
 from prodsys.adapters.adapter import get_possible_production_processes_IDs
 from prodsys.models import (
+    processes_data,
     resource_data,
     state_data,
     performance_indicators,
@@ -30,12 +33,15 @@ class BreakdownStateNamingConvention(str, Enum):
 
 
 def get_breakdown_state_ids_of_machine_with_processes(
-    processes: List[str],
+    processes: List[str], adapter_object: adapters.ProductionSystemAdapter
 ) -> List[str]:
-    # state_ids = [BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE] + len(
-    #     processes
-    # ) * [BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE]
-    state_ids = [BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE]
+    state_ids = []
+    if check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value):
+        state_ids.append(BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value)
+    for process_id in processes:
+        process_breakdown_state_id = f"{BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value}_{process_id}"
+        if check_breakdown_state_available(adapter_object, process_breakdown_state_id):
+            state_ids.append(process_breakdown_state_id)
     return state_ids
 
 
@@ -58,6 +64,23 @@ def check_breakdown_state_available(adapter_object: adapters.ProductionSystemAda
         return False
     return True
 
+def check_process_breakdown_state_available(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+    """
+    Function that checks if process breakdown states are available in the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        bool: True if process breakdown states are available, False otherwise.
+    """
+    process_ids = [process.ID for process in adapter_object.process_data if isinstance(process, processes_data.ProductionProcessData)]
+    for process_id in process_ids:
+        process_breakdown_state_id = f"{BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value}_{process_id}"
+        if not check_breakdown_state_available(adapter_object, process_breakdown_state_id):
+            return False
+    return True
+
 def check_breakdown_states_available(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     """
     Function that checks if breakdown states are available in the production system.
@@ -69,9 +92,9 @@ def check_breakdown_states_available(adapter_object: adapters.ProductionSystemAd
         bool: True if breakdown states are available, False otherwise.
     """
     if (
-        not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE)
-        or not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE)
-        # or not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE)
+        not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value)
+        or not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value)
+        or not check_process_breakdown_state_available(adapter_object)
     ):
         return False
     return True
@@ -87,6 +110,7 @@ def check_heterogenous_time_models(time_models: List[time_model_data.TIME_MODEL_
     Returns:
         bool: True if heterogenous time models are available, False otherwise.
     """
+    # TODO: update this function to use new time models and not the deprecated ones...
     if all(isinstance(time_model, time_model_data.FunctionTimeModelData) for time_model in time_models):
         parameters = []
         for time_model in time_models:
@@ -134,34 +158,39 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
         for state in adapter_object.state_data
         if isinstance(state, state_data.BreakDownStateData)
     ]
-    # process_breakdown_states = [state for state in adapter_object.state_data if isinstance(state, state_data.ProcessBreakDownStateData)]
+    process_breakdown_states = [state for state in adapter_object.state_data if isinstance(state, state_data.ProcessBreakDownStateData)]
     machines = adapters.get_machines(adapter_object)
     transport_resources = adapters.get_transport_resources(adapter_object)
     machine_breakdown_states = [state for state in breakdown_states if any(state.ID in machine.state_ids for machine in machines)]
     transport_resource_breakdown_states = [state for state in breakdown_states if any(state.ID in transport_resource.state_ids for transport_resource in transport_resources)]
-    # process_breakdown_states = [state for state in process_breakdown_states if any(state.ID in machine.state_ids and state.process_id in machine.process_ids for machine in machines)]
-    if machine_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE):
+    process_breakdown_states = [state for state in process_breakdown_states if any(state.ID in machine.state_ids and state.process_id in machine.process_ids for machine in machines)]
+    if machine_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value):
         if not check_states_for_heterogenous_time_models(machine_breakdown_states, adapter_object):
-            raise ValueError(f"The machine breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct machine breakdown state called {BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE}.")
+            raise ValueError(f"The machine breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct machine breakdown state called {BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value}.")
         machine_breakdown_state = machine_breakdown_states[0].model_copy(deep=True)
-        machine_breakdown_state.ID = BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
+        machine_breakdown_state.ID = BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value
         adapter_object.state_data.append(machine_breakdown_state)
         logger.info(f"Added default breakdown state for production resources to the production system.")
-    if transport_resource_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE):
+    if transport_resource_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value):
         if not check_states_for_heterogenous_time_models(transport_resource_breakdown_states, adapter_object):
-            raise ValueError(f"The transport resource breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct transport resource breakdown state called {BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE}.")
+            raise ValueError(f"The transport resource breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct transport resource breakdown state called {BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value}.")
         transport_resource_breakdown_state = transport_resource_breakdown_states[0].model_copy(deep=True)
-        transport_resource_breakdown_state.ID = BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
+        transport_resource_breakdown_state.ID = BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value
         adapter_object.state_data.append(transport_resource_breakdown_state)
         logger.info(f"Added default breakdown state for transport resources to the production system.")
-    # TODO: add later logic for adding breakdown states for process modules automatically again if problems with process id reworked
-    # if process_breakdown_states and not check_breakdown_state_available(adapter_object, BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE):
-    #     if not check_states_for_heterogenous_time_models(process_breakdown_states, adapter_object):
-    #         raise ValueError(f"The process breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct process breakdown state called {BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE}.")
-    #     process_breakdown_state = process_breakdown_states[0].model_copy()
-    #     process_breakdown_state.ID = BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
-    #     adapter_object.state_data.append(process_breakdown_state)
-    #     logger.info(f"Added default breakdown state for process modules to the production system.")
+    if process_breakdown_states: 
+        process_breakdown_states_by_process_id = {}
+        for state in process_breakdown_states:
+            process_breakdown_states_by_process_id[state.process_id] = process_breakdown_states_by_process_id.get(state.process_id, []) + [state]
+        for process_id, process_breakdown_states_for_process in process_breakdown_states_by_process_id.items():
+            if check_breakdown_state_available(adapter_object, f"{BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value}_{process_id}"):
+                continue
+            if not check_states_for_heterogenous_time_models(process_breakdown_states_for_process, adapter_object):
+                raise ValueError(f"The process breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct process breakdown state called {BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE}.")
+            process_breakdown_state: ProcessBreakdownState = process_breakdown_states_for_process[0].model_copy()
+            process_breakdown_state.ID = f"{BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value}_{process_id}"
+            adapter_object.state_data.append(process_breakdown_state)
+            logger.info(f"Added default breakdown state for process modules to the production system.")
 
 def clean_out_breakdown_states_of_resources(
     adapter_object: adapters.ProductionSystemAdapter,
@@ -170,20 +199,20 @@ def clean_out_breakdown_states_of_resources(
         if isinstance(resource, resource_data.ProductionResourceData) and any(
             True
             for state in adapter_object.state_data
-            if state.ID == BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
-            # or state.ID == BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
-        ):  
+            if state.ID == BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value
+            or BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value in state.ID
+        ):
             resource.state_ids = get_breakdown_state_ids_of_machine_with_processes(
-                resource.process_ids
+                resource.process_ids, adapter_object
             )
         elif isinstance(resource, resource_data.TransportResourceData) and any(
             True
             for state in adapter_object.state_data
             if state.ID
-            == BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
+            == BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value
         ):
             resource.state_ids = [
-                BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE
+                BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value
             ]
 
 
