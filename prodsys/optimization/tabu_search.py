@@ -231,8 +231,7 @@ def tabu_search_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
     if not check_breakdown_states_available(base_configuration):

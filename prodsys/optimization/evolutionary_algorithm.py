@@ -256,8 +256,7 @@ def evolutionary_algorithm_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     base_configuration = base_configuration.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")

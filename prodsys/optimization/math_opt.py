@@ -579,8 +579,7 @@ def run_mathematical_optimization(
         adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
         number_of_seeds (int, optional): Number of seeds for the simulation runs. Defaults to 1.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     if not adapters.check_for_clean_compound_processes(adapter):
