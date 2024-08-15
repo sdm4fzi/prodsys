@@ -1,0 +1,968 @@
+{
+    "ID": "example_configuration",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "time_model_process_ap01",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 1.0333333333333334,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap23",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.7833333333333333,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap4",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.5333333333333333,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap5",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.36666666666666664,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap6",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.8666666666666667,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap7",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.95,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap8",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.5333333333333333,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_process_ap9",
+            "description": "constant time model",
+            "distribution_function": "constant",
+            "location": 0.35,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap01",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap01",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap23",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap23",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap4",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap4",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap5",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap5",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap6",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap6",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap7",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap7",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap8",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap8",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_state_resource_ap9",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 540.0,
+            "scale": 90.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "repair_time_model_resource_ap9",
+            "description": "constant time model",
+            "distribution_function": "normal",
+            "location": 60.0,
+            "scale": 10.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "time_model_agv",
+            "description": "Transport Resource",
+            "speed": 60.0,
+            "reaction_time": 0.0,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "arrival_time_model_product_2WP_2WM",
+            "description": "arrival_time_model_product_2WP_2WM",
+            "distribution_function": "constant",
+            "location": 6.08,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "arrival_time_model_product_4WP",
+            "description": "arrival_time_model_product_4WP",
+            "distribution_function": "constant",
+            "location": 1.71,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "arrival_time_model_product_4WM",
+            "description": "arrival_time_model_product_4WM",
+            "distribution_function": "constant",
+            "location": 14.1,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "arrival_time_model_product_6WP_8WP",
+            "description": "arrival_time_model_product_6WP_8WP",
+            "distribution_function": "constant",
+            "location": 1.42,
+            "scale": 0.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [
+        {
+            "ID": "BreakDownState_resource_ap01",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap01",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap01"
+        },
+        {
+            "ID": "BreakDownState_resource_ap23",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap23",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap23"
+        },
+        {
+            "ID": "BreakDownState_resource_ap4",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap4",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap4"
+        },
+        {
+            "ID": "BreakDownState_resource_ap5",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap5",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap5"
+        },
+        {
+            "ID": "BreakDownState_resource_ap6",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap6",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap6"
+        },
+        {
+            "ID": "BreakDownState_resource_ap7",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap7",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap7"
+        },
+        {
+            "ID": "BreakDownState_resource_ap8",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap8",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap8"
+        },
+        {
+            "ID": "BreakDownState_resource_ap9",
+            "description": "Breakdown state",
+            "time_model_id": "time_model_state_resource_ap9",
+            "type": "BreakDownState",
+            "repair_time_model_id": "repair_time_model_resource_ap9"
+        }
+    ],
+    "process_data": [
+        {
+            "ID": "process_ap01",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap01",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap23",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap23",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap4",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap4",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap5",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap5",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap6",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap6",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap7",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap7",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap8",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap8",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "process_ap9",
+            "description": "Production Process",
+            "time_model_id": "time_model_process_ap9",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "TP",
+            "description": "Transport Process",
+            "time_model_id": "time_model_agv",
+            "type": "TransportProcesses"
+        }
+    ],
+    "node_data": [],
+    "queue_data": [
+        {
+            "ID": "IQresource_ap01",
+            "description": "Input-queue for S1",
+            "capacity": 0.0
+        },
+        {
+            "ID": "OQresource_ap01",
+            "description": "Output-queue for S1",
+            "capacity": 0.0
+        },
+        {
+            "ID": "IQresource_ap23",
+            "description": "Input-queue for S2",
+            "capacity": 0.0
+        },
+        {
+            "ID": "OQresource_ap23",
+            "description": "Output-queue for S2",
+            "capacity": 0.0
+        },
+        {
+            "ID": "IQresource_ap4",
+            "description": "Input-queue for S3",
+            "capacity": 0.0
+        },
+        {
+            "ID": "OQresource_ap4",
+            "description": "Output-queue for S3",
+            "capacity": 0.0
+        },
+        {
+            "ID": "IQresource_ap5",
+            "description": "Input-queue for S4",
+            "capacity": 0.0
+        },
+        {
+            "ID": "OQresource_ap5",
+            "description": "Output-queue for S4",
+            "capacity": 0.0
+        },
+        {
+            "ID": "IQresource_ap6",
+            "description": "Input-queue for S5",
+            "capacity": 0.0
+        },
+        {
+            "ID": "OQresource_ap6",
+            "description": "Output-queue for S5",
+            "capacity": 0.0
+        },
+        {
+            "ID": "IQresource_ap7",
+            "description": "Input-queue for S6",
+            "capacity": 0
+        },
+        {
+            "ID": "OQresource_ap7",
+            "description": "Output-queue for S6",
+            "capacity": 0
+        },
+        {
+            "ID": "IQresource_ap8",
+            "description": "Input-queue for S7",
+            "capacity": 0
+        },
+        {
+            "ID": "OQresource_ap8",
+            "description": "Output-queue for S7",
+            "capacity": 0
+        },
+        {
+            "ID": "IQresource_ap9",
+            "description": "Input-queue for S8",
+            "capacity": 0
+        },
+        {
+            "ID": "OQresource_ap9",
+            "description": "Output-queue for S8",
+            "capacity": 0
+        },
+        {
+            "ID": "sink_product_2WP_2WM_default_input_queue",
+            "description": "Default input queue of sink_product_2WP_2WM",
+            "capacity": 0.0
+        },
+        {
+            "ID": "sink_product_4WP_default_input_queue",
+            "description": "Default input queue of sink_product_4WP",
+            "capacity": 0.0
+        },
+        {
+            "ID": "sink_product_4WM_default_input_queue",
+            "description": "Default input queue of sink_product_4WM",
+            "capacity": 0.0
+        },
+        {
+            "ID": "sink_product_6WP_8WP_default_input_queue",
+            "description": "Default input queue of sink_product_6WP_8WP",
+            "capacity": 0.0
+        },
+        {
+            "ID": "source_product_2WP_2WM_default_output_queue",
+            "description": "Default output queue of source_product_2WP_2WM",
+            "capacity": 0.0
+        },
+        {
+            "ID": "source_product_4WP_default_output_queue",
+            "description": "Default output queue of source_product_4WP",
+            "capacity": 0.0
+        },
+        {
+            "ID": "source_product_4WM_default_output_queue",
+            "description": "Default output queue of source_product_4WM",
+            "capacity": 0.0
+        },
+        {
+            "ID": "source_product_6WP_8WP_default_output_queue",
+            "description": "Default output queue of source_product_6WP_8WP",
+            "capacity": 0.0
+        }
+    ],
+    "resource_data": [
+        {
+            "ID": "resource_ap01",
+            "description": "Station resource_ap01",
+            "capacity": 2,
+            "location": [
+                5.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap01"
+            ],
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap01"
+            ],
+            "input_queues": [
+                "IQresource_ap01"
+            ],
+            "output_queues": [
+                "OQresource_ap01"
+            ]
+        },
+        {
+            "ID": "resource_ap23",
+            "description": "Station resource_ap23",
+            "capacity": 2,
+            "location": [
+                10.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap23"
+            ],
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap23"
+            ],
+            "input_queues": [
+                "IQresource_ap23"
+            ],
+            "output_queues": [
+                "OQresource_ap23"
+            ]
+        },
+        {
+            "ID": "resource_ap4",
+            "description": "Station resource_ap4",
+            "capacity": 1,
+            "location": [
+                15.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap4"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap4"
+            ],
+            "input_queues": [
+                "IQresource_ap4"
+            ],
+            "output_queues": [
+                "OQresource_ap4"
+            ]
+        },
+        {
+            "ID": "resource_ap5",
+            "description": "Station resource_ap5",
+            "capacity": 1,
+            "location": [
+                20.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap5"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap5"
+            ],
+            "input_queues": [
+                "IQresource_ap5"
+            ],
+            "output_queues": [
+                "OQresource_ap5"
+            ]
+        },
+        {
+            "ID": "resource_ap6",
+            "description": "Station resource_ap6",
+            "capacity": 2,
+            "location": [
+                20.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap6"
+            ],
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap6"
+            ],
+            "input_queues": [
+                "IQresource_ap6"
+            ],
+            "output_queues": [
+                "OQresource_ap6"
+            ]
+        },
+        {
+            "ID": "resource_ap7",
+            "description": "Station resource_ap7",
+            "capacity": 2,
+            "location": [
+                15.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap7"
+            ],
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap7"
+            ],
+            "input_queues": [
+                "IQresource_ap7"
+            ],
+            "output_queues": [
+                "OQresource_ap7"
+            ]
+        },
+        {
+            "ID": "resource_ap8",
+            "description": "Station resource_ap8",
+            "capacity": 1,
+            "location": [
+                10.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap8"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap8"
+            ],
+            "input_queues": [
+                "IQresource_ap8"
+            ],
+            "output_queues": [
+                "OQresource_ap8"
+            ]
+        },
+        {
+            "ID": "resource_ap9",
+            "description": "Station resource_ap9",
+            "capacity": 1,
+            "location": [
+                5.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "process_ap9"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BreakDownState_resource_ap9"
+            ],
+            "input_queues": [
+                "IQresource_ap9"
+            ],
+            "output_queues": [
+                "OQresource_ap9"
+            ]
+        },
+        {
+            "ID": "Transport_resource_0",
+            "description": "Transport resource 0",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_1",
+            "description": "Transport resource 1",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_2",
+            "description": "Transport resource 2",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_3",
+            "description": "Transport resource 3",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_4",
+            "description": "Transport resource 4",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_5",
+            "description": "Transport resource 5",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "Transport_resource_6",
+            "description": "Transport resource 6",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "product_2WP_2WM",
+            "description": "",
+            "product_type": "product_2WP_2WM",
+            "processes": [
+                "process_ap01",
+                "process_ap9"
+            ],
+            "transport_process": "TP"
+        },
+        {
+            "ID": "product_4WP",
+            "description": "",
+            "product_type": "product_4WP",
+            "processes": [
+                "process_ap01",
+                "process_ap23",
+                "process_ap9"
+            ],
+            "transport_process": "TP"
+        },
+        {
+            "ID": "product_4WM",
+            "description": "",
+            "product_type": "product_4WM",
+            "processes": [
+                "process_ap01",
+                "process_ap23",
+                "process_ap4",
+                "process_ap9"
+            ],
+            "transport_process": "TP"
+        },
+        {
+            "ID": "product_6WP_8WP",
+            "description": "",
+            "product_type": "product_6WP_8WP",
+            "processes": [
+                "process_ap01",
+                "process_ap23",
+                "process_ap5",
+                "process_ap6",
+                "process_ap7",
+                "process_ap8",
+                "process_ap9"
+            ],
+            "transport_process": "TP"
+        }
+    ],
+    "sink_data": [
+        {
+            "ID": "sink_product_2WP_2WM",
+            "description": "Sink product_2WP_2WM",
+            "location": [
+                0.0,
+                5.0
+            ],
+            "product_type": "product_2WP_2WM",
+            "input_queues": [
+                "sink_product_2WP_2WM_default_input_queue"
+            ]
+        },
+        {
+            "ID": "sink_product_4WP",
+            "description": "Sink product_4WP",
+            "location": [
+                0.0,
+                5.0
+            ],
+            "product_type": "product_4WP",
+            "input_queues": [
+                "sink_product_4WP_default_input_queue"
+            ]
+        },
+        {
+            "ID": "sink_product_4WM",
+            "description": "Sink product_4WM",
+            "location": [
+                0.0,
+                5.0
+            ],
+            "product_type": "product_4WM",
+            "input_queues": [
+                "sink_product_4WM_default_input_queue"
+            ]
+        },
+        {
+            "ID": "sink_product_6WP_8WP",
+            "description": "Sink product_6WP_8WP",
+            "location": [
+                0.0,
+                5.0
+            ],
+            "product_type": "product_6WP_8WP",
+            "input_queues": [
+                "sink_product_6WP_8WP_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "ID": "source_product_2WP_2WM",
+            "description": "Source product_2WP_2WM",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "product_2WP_2WM",
+            "time_model_id": "arrival_time_model_product_2WP_2WM",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "source_product_2WP_2WM_default_output_queue"
+            ]
+        },
+        {
+            "ID": "source_product_4WP",
+            "description": "Source product_4WP",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "product_4WP",
+            "time_model_id": "arrival_time_model_product_4WP",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "source_product_4WP_default_output_queue"
+            ]
+        },
+        {
+            "ID": "source_product_4WM",
+            "description": "Source product_4WM",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "product_4WM",
+            "time_model_id": "arrival_time_model_product_4WM",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "source_product_4WM_default_output_queue"
+            ]
+        },
+        {
+            "ID": "source_product_6WP_8WP",
+            "description": "Source product_6WP_8WP",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "product_6WP_8WP",
+            "time_model_id": "arrival_time_model_product_6WP_8WP",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "source_product_6WP_8WP_default_output_queue"
+            ]
+        }
+    ]
+}
