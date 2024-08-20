@@ -7,7 +7,6 @@ import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
-import base64
 
 from prodsys.util import post_processing
 
@@ -227,7 +226,7 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
             boxmean=True,
         ))
 
-    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage', showlegend = False, annotations=[
+    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage [%]', showlegend = False, annotations=[
             dict(
                 x=0.5,
                 y=-0.7,
@@ -270,6 +269,10 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Throughput Time [Minutes]",
+        yaxis_title="Start Time [Minutes]",
+    )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput.html"), auto_open=not return_html)
@@ -361,8 +364,8 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         height=800,  # adjust height if needed
     )
 
-    fig.update_yaxes(title_text='WIP [number of products]', row=2, col=1)
-    fig.update_yaxes(title_text='Percentage', row=1, col=1)
+    fig.update_yaxes(title_text='WIP [Products]', row=2, col=1)
+    fig.update_yaxes(title_text='Percentage [%]', row=1, col=1)
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -465,8 +468,8 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor, return_ht
             showlegend=False,
         )
     fig.update_layout(
-        xaxis_title="Time",
-        yaxis_title="WIP",
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
     )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
@@ -504,6 +507,10 @@ def plot_WIP(post_processor: post_processing.PostProcessor, return_html: bool = 
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -547,8 +554,10 @@ def plot_WIP_per_resource(post_processor: post_processing.PostProcessor, return_
             yanchor="bottom",
             y=-0.3,
             xanchor="center",
-            x=0.5
-        )
+            x=0.5,
+        ),
+        xaxis_title="Resource",
+        yaxis_title="WIP [Products]",
     )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
