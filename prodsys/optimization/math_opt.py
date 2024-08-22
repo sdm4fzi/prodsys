@@ -1,16 +1,15 @@
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict
 
-import math
+from uuid import uuid1
 import scipy.stats
 import datetime
-import time
 from copy import deepcopy
 import json
 import random
 import logging
 logger = logging.getLogger(__name__)
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from prodsys import adapters
 from prodsys.models import (
     resource_data,
@@ -18,13 +17,12 @@ from prodsys.models import (
     state_data,
     time_model_data,
 )
-from prodsys.optimization import optimization_util
+from prodsys.optimization import adapter_manipulation, optimization, util as optimization_util
 from prodsys.util import util
 
 import gurobipy as gp
 from gurobipy import GRB
 
-import numpy as np
 
 
 def adjust_number_of_transport_resources(
@@ -249,10 +247,10 @@ class MathOptimizer(BaseModel):
 
     def get_breakdown_values(self):
         machine_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
+            optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value
         )
         process_module_breakdown_state = self.get_state_with_id(
-            optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
+            optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value
         )
         process_modules, stations = self.get_process_modules_and_stations()
         BZ = self.adapter.scenario_data.info.time_range * self.optimization_time_portion
@@ -460,12 +458,13 @@ class MathOptimizer(BaseModel):
             adjusted_number_of_transport_resources (int, optional): Number of transport resources that are used for the optimization. Defaults to 1.
         """
         nSolutions = self.model.SolCount
-        solution_dict = {"current_generation": "00", "00": []}
+        solution_dict = {"current_generation": "0", "hashes": {}}
         performances = {}
-        performances["00"] = {}
+        performances["0"] = {}
 
         for result_counter in range(nSolutions):
             new_adapter = self.adapter.model_copy(deep=True)
+            new_adapter.ID = str(uuid1())
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
@@ -490,12 +489,8 @@ class MathOptimizer(BaseModel):
                 for module in modules:
                     if self.z[module, resource].Xn == 1:
                         processes.append(module)
-
-                states = [
-                    optimization_util.BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE
-                ] + len(processes) * [
-                    optimization_util.BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE
-                ]
+                if not processes:
+                    continue
                 location = random.choice(possible_positions)
                 possible_positions.remove(location)
                 new_resource = resource_data.ProductionResourceData(
@@ -507,18 +502,22 @@ class MathOptimizer(BaseModel):
                     control_policy="FIFO",
                     process_ids=processes,
                     process_capacity=None,
-                    state_ids=states,
+                    # state_ids=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-            util.add_default_queues_to_resources(new_adapter)
+                optimization_util.add_setup_states_to_machine(new_adapter, new_resource.ID)
+            adapter_manipulation.add_default_queues_to_resources(new_adapter)
+            optimization_util.clean_out_breakdown_states_of_resources(new_adapter)
+            optimization_util.adjust_process_capacities(new_adapter)
+
             full_save_folder_path = save_folder if full_save else ""
-            simulation_results = optimization_util.evaluate(
+            simulation_results = optimization.evaluate(
                 self.adapter, solution_dict, performances, number_of_seeds, full_save_folder_path, [new_adapter]
             )
             optimization_util.document_individual(
                 solution_dict, save_folder, [new_adapter]
             )
-            performances["00"][new_adapter.ID] = {
+            performances["0"][new_adapter.ID] = {
                 "agg_fitness": 0.0,
                 "fitness": [float(value) for value in simulation_results],
                 "time_stamp": 0.0,
@@ -579,8 +578,7 @@ def run_mathematical_optimization(
         adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
         number_of_seeds (int, optional): Number of seeds for the simulation runs. Defaults to 1.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     if not adapters.check_for_clean_compound_processes(adapter):
