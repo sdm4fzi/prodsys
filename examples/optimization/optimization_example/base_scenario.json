@@ -1,4 +1,5 @@
 {
+    "ID": "",
     "seed": 24,
     "time_model_data": [
         {
@@ -233,6 +234,7 @@
             "capacity": 0
         }
     ],
+    "node_data": [],
     "resource_data": [
         {
             "ID": "M1",
@@ -363,7 +365,6 @@
             ]
         }
     ],
-    "process_module_data": [],
     "product_data": [
         {
             "ID": "Product_1",
@@ -426,7 +427,6 @@
             ],
             "product_type": "Product_1",
             "time_model_id": "ftm1",
-            "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
                 "SourceQueue"
@@ -441,11 +441,13 @@
             ],
             "product_type": "Product_2",
             "time_model_id": "ftm2",
-            "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
                 "SourceQueue"
             ]
         }
-    ]
+    ],
+    "scenario_data": null,
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
 }

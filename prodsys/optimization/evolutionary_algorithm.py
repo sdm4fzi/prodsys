@@ -1,29 +1,21 @@
 import json
 import time
-from random import random
-from typing import List
-from functools import partial
 import warnings
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import crossover, mutation, random_configuration, random_configuration_with_initial_solution
+from prodsys.optimization.util import document_individual
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
-from os import listdir
-from os.path import isfile, join
 
 from deap import algorithms, base, creator, tools
 from pydantic import BaseModel, ConfigDict, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    crossover,
-    evaluate,
-    mutation,
-    random_configuration,
-    random_configuration_with_initial_solution,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states,
@@ -256,8 +248,7 @@ def evolutionary_algorithm_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solutions_folder (str, optional): If specified, the initial solutions are read from this folder and considered in optimization. Defaults to "".
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     base_configuration = base_configuration.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
