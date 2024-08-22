@@ -117,32 +117,28 @@ def get_default_queues_for_resource(
     return input_queues, output_queues
 
 
-def remove_queues_from_resource(
-    machine: resource_data_module.ProductionResourceData, adapter: ProductionSystemAdapter
-) -> ProductionSystemAdapter:
-    if machine.input_queues or machine.output_queues:
-        for queue_ID in machine.input_queues + machine.output_queues:
-            for queue in adapter.queue_data:
-                if queue.ID == queue_ID:
-                    adapter.queue_data.remove(queue)
-                    break
-        for machine in get_machines(adapter):
-            machine.input_queues = []
-            machine.output_queues = []
-        return adapter
+def remove_queues_from_resource(machine: resource_data_module.ProductionResourceData):
+    machine.input_queues = []
+    machine.output_queues = []
+
+
+def remove_queues_from_resources(machines: List[resource_data_module.ProductionResourceData]):
+    for machine in machines:
+        remove_queues_from_resource(machine)
 
 
 def remove_unused_queues_from_adapter(adapter: ProductionSystemAdapter) -> ProductionSystemAdapter:
+    used_queues_ids = set(
+        [
+            queue_ID
+            for machine in get_machines(adapter)
+            for queue_ID in machine.input_queues + machine.output_queues
+        ]
+        + [queue_ID for source in adapter.source_data for queue_ID in source.output_queues]
+        + [queue_ID for sink in adapter.sink_data for queue_ID in sink.input_queues]
+    )
     for queue in adapter.queue_data:
-        if not any(
-            [
-                queue.ID in machine.input_queues + machine.output_queues
-                for machine in get_machines(adapter)
-                if machine.input_queues or machine.output_queues
-            ]
-            + [queue.ID in source.output_queues for source in adapter.source_data]
-            + [queue.ID in sink.input_queues for sink in adapter.sink_data]
-        ):
+        if queue.ID not in used_queues_ids:
             adapter.queue_data.remove(queue)
     return adapter
 
@@ -161,14 +157,14 @@ def add_default_queues_to_resources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
     for machine in get_machines(adapter):
-        remove_queues_from_resource(machine, adapter)
+        remove_queues_from_resource(machine)
         remove_unused_queues_from_adapter(adapter)
         input_queues, output_queues = get_default_queues_for_resource(
             machine, queue_capacity
         )
+        adapter.queue_data += input_queues + output_queues
         machine.input_queues = list(get_set_of_IDs(input_queues))
         machine.output_queues = list(get_set_of_IDs(output_queues))
-        adapter.queue_data += input_queues + output_queues
     return adapter
 
 

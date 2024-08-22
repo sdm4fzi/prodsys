@@ -13,5 +13,5 @@ if __name__ == '__main__':
     runner_object.print_results()
     runner_object.plot_results()
     runner_object.plot_results_executive()
-    runner_object.save_results_as_csv()
+    # runner_object.save_results_as_csv()
     # runner_object.save_results_as_json()

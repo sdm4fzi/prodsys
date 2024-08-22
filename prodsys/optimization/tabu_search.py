@@ -1,26 +1,23 @@
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from random import randint, random, shuffle
 from collections import deque
 from numpy import argmax
 
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import mutation
+from prodsys.optimization.optimization import check_valid_configuration
+from prodsys.optimization.util import document_individual
 logger = logging.getLogger(__name__)
 
 import json
 import time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    check_valid_configuration,
-    crossover,
-    evaluate,
-    mutation,
-    random_configuration,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states
@@ -231,8 +228,7 @@ def tabu_search_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
     if not check_breakdown_states_available(base_configuration):

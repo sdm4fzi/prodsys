@@ -1,4 +1,4 @@
-ARG APP_VERSION=0.7.4
+ARG APP_VERSION=0.7.7
 
 FROM python:3.11-slim
 
@@ -11,8 +11,8 @@ RUN pip install --no-cache-dir poetry
 # Copy the pyproject.toml and poetry.lock files into the container
 COPY pyproject.toml poetry.lock /app/
 
-# Install the dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+# TODO: Install dependencies using Poetry instead of pypi
+RUN pip install prodsys==0.7.7
 
 # Copy the rest of the application code
 COPY . /app

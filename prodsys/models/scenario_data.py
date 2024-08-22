@@ -6,12 +6,14 @@ This module contains the data structures for the scenario data that is used in o
 - 'Objectives': The objectives of the scenario.
 - `ScenarioData`: The scenario data that contains the constraints, options, information and objectives of the scenario. 
 """
-from typing import Literal, List, Optional, Dict
+from typing import List, Optional, Dict
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, field_validator, conlist
 
 from prodsys.models.performance_indicators import KPIEnum
+from prodsys.models.resource_data import ResourceControlPolicy, TransportControlPolicy
+from prodsys.models.source_data import RoutingHeuristic
 
 
 class ReconfigurationEnum(str, Enum):
@@ -85,9 +87,9 @@ class ScenarioOptionsData(BaseModel):
     """
 
     transformations: List[ReconfigurationEnum]
-    machine_controllers: List[Literal["FIFO", "LIFO", "SPT"]]
-    transport_controllers: List[Literal["FIFO", "SPT_transport"]]
-    routing_heuristics: List[Literal["shortest_queue", "random", "FIFO"]]
+    machine_controllers: List[ResourceControlPolicy]
+    transport_controllers: List[TransportControlPolicy]
+    routing_heuristics: List[RoutingHeuristic]
     positions: List[conlist(float, min_length=2, max_length=2)] # type: ignore
 
     @field_validator("positions")
