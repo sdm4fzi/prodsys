@@ -1,4 +1,5 @@
 {
+    "ID": "",
     "seed": 24,
     "time_model_data": [
         {
@@ -58,7 +59,8 @@
             "ID": "manhattan_time_model_1",
             "description": "distance time model with speed 180 m/min = 3 m/s",
             "speed": 30.0,
-            "reaction_time": 0.15
+            "reaction_time": 0.15,
+            "metric": "manhattan"
         },
         {
             "ID": "function_time_model_7",
@@ -201,6 +203,7 @@
             "capacity": 20
         }
     ],
+    "node_data": [],
     "resource_data": [
         {
             "ID": "R1",
@@ -450,7 +453,6 @@
             ],
             "product_type": "Product_1",
             "time_model_id": "function_time_model_4",
-            "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
                 "SourceQueue"
@@ -465,7 +467,6 @@
             ],
             "product_type": "Product_2",
             "time_model_id": "function_time_model_4",
-            "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
                 "SourceQueue"
@@ -480,11 +481,13 @@
             ],
             "product_type": "Product_3",
             "time_model_id": "function_time_model_4",
-            "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
                 "SourceQueue"
             ]
         }
-    ]
+    ],
+    "scenario_data": null,
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
 }

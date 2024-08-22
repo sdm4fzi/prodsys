@@ -136,26 +136,8 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         Args:
             file_path (str): File path for the production system configuration
         """
-        data = self.get_dict_object_of_adapter()
         with open(file_path, "w") as json_file:
-            json.dump(data, json_file)
-
-    def get_dict_object_of_adapter(self) -> dict:
-        data = {
-                "ID": self.ID,
-                "seed": self.seed,
-                "time_model_data": self.get_list_of_dict_objects(self.time_model_data),
-                "state_data": self.get_list_of_dict_objects(self.state_data),
-                "process_data": self.get_list_of_dict_objects(self.process_data),
-                "node_data": self.get_list_of_dict_objects(self.node_data),
-                "queue_data": self.get_list_of_dict_objects(self.queue_data),
-                "resource_data": self.get_list_of_dict_objects(self.resource_data),
-                "node_data": self.get_list_of_dict_objects(self.node_data),
-                "product_data": self.get_list_of_dict_objects(self.product_data),
-                "sink_data": self.get_list_of_dict_objects(self.sink_data),
-                "source_data": self.get_list_of_dict_objects(self.source_data)
-        }
-        return data
+            json_file.write(self.model_dump_json(indent=4))
     
     def write_scenario_data(self, file_path: str) -> None:
         """
@@ -164,9 +146,5 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         Args:
             file_path (str): File path for the scenario data.
         """
-        data = self.scenario_data.model_dump()
         with open(file_path, "w") as json_file:
-            json.dump(data, json_file)
-
-    def get_list_of_dict_objects(self, values: List[BaseModel]) -> List[dict]:
-        return  [data.model_dump() for data in values]
+            json_file.write(self.scenario_data.model_dump_json(indent=4))
