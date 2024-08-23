@@ -37,7 +37,9 @@ class QueueData(CoreAsset):
     """
     #TODO: add optional location of queue for warehousing
     capacity: Union[int, float] = 0.0
-    location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
+    #location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
+    input_location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
+    output_location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
 
     def hash(self) -> str:
         """
