@@ -32,6 +32,10 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
     fig = ff.create_distplot(
         values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
     )
+    fig.update_layout(
+        xaxis_title="Throughput Time [Minutes]",
+        yaxis_title="Probability Density",
+    )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=not return_html)
@@ -58,19 +62,19 @@ def plot_line_balance_kpis(post_processor: post_processing.PostProcessor, return
     fig.add_trace(go.Indicator(
         mode = "number",
         value = round(np.sum(list(df_output['Throughput']['Output'].values()))),
-        title = {"text": "Total Output"},
+        title = {"text": "Total Output [Products]"},
     ), row=1, col=1)
 
     fig.add_trace(go.Indicator(
         mode = "number",
         value = round(np.mean(list(df_output['WIP']['WIP'].values()))),
-        title = {"text": "Average Work In Progress (WIP)"},
+        title = {"text": "Average Work In Progress (WIP) [Products]"},
     ), row=1, col=2)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = round(np.mean(list(df_output['Throughput time']['Throughput_time'].values()))),
-        title = {"text": "Average Throughput Time"},
+        value = round(np.nanmean(list(df_output['Throughput time']['Throughput_time'].values()))),
+        title = {"text": "Average Throughput Time [Minutes]"},
     ), row=1, col=3)
 
     fig.update_layout(
@@ -173,7 +177,7 @@ def plot_production_flow_rate_per_product(post_processor: post_processing.PostPr
     ])
     # Change the bar mode
     fig.update_layout(barmode='stack')
-    fig.update_xaxes(title_text="Percentage")
+    fig.update_xaxes(title_text="Percentage [%]")
     fig.update_layout(
         title_text="Production Flow Rate (PFO) per Product",
         annotations=[
@@ -223,16 +227,18 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
             boxmean=True,
         ))
 
-    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage', annotations=[
+    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage [%]', showlegend = False, annotations=[
             dict(
                 x=0.5,
-                y=-0.18,
+                y=-0.7,
                 showarrow=False,
-                text="Dashed Line = Mean & Solid Line = Median, Whiskers = Q1/Q3 +/- 1.5 * IQR(Q3-Q1)",
+                #text="Dashed Line = Mean & Solid Line = Median, Whiskers = Q1/Q3 +/- 1.5 * IQR(Q3-Q1)",
                 xref="paper",
                 yref="paper"
             )
-        ])
+        ],
+        height=600,
+    )
     fig.update_yaxes(range=[0, 100])
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
@@ -264,6 +270,10 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Throughput Time [Minutes]",
+        yaxis_title="Start Time [Minutes]",
+    )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "throughput.html"), auto_open=not return_html)
@@ -286,7 +296,7 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
     df_time_per_state = post_processor.df_aggregated_resource_states
 
     if normalized:
-        y_column = "percentage"
+        y_column = "Percentage"
     else:
         y_column = "time_increment"
 
@@ -323,34 +333,42 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_mean_wip_per_station
-    # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
-    fig1 = go.Figure()
     df_time_per_state['mean_wip'] = np.maximum(np.ceil(df_time_per_state['mean_wip']), 1)
+    fig1 = go.Figure()
     fig1.add_trace(go.Bar(name='mean_wip', x=df_time_per_state['Resource'], y=df_time_per_state['mean_wip'], marker_color='purple', yaxis='y2'))
 
+    #df_time_per_state2 = post_processor.df_aggregated_resource_time_bins_states
     df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
-    fig2 = go.Figure()
+    df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
+
     resources = df_time_per_state2['Resource'].unique()
+    fig2 = go.Figure()
     for resource in resources:
         df_resource = df_time_per_state2[df_time_per_state2['Resource'] == resource]
-        
-        df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
         fig2.add_trace(go.Box(
             y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True  # mean and standard deviation
         ))
+
     fig2.update_xaxes(categoryorder='array', categoryarray=resources)
-    fig = make_subplots(rows=2, cols=1)
+    fig1.update_xaxes(categoryorder='array', categoryarray=resources)
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1)
     for trace in fig1.data:
         fig.add_trace(trace, row=2, col=1)
     for trace in fig2.data:
         fig.add_trace(trace, row=1, col=1)
 
-    fig.update_yaxes(title_text='WIP in #product', row=2, col=1)
-    fig.update_yaxes(title_text='Percentage', row=1, col=1)
+    fig.update_layout(
+        title='Mean WIP and Utilization per Station',
+        showlegend=False,
+        height=800,  # adjust height if needed
+    )
 
-    fig.update_layout(title='Mean WIP and Utilization per Station', showlegend=False)
+    fig.update_yaxes(title_text='Average WIP [Products]', row=2, col=1)
+    fig.update_yaxes(title_text='Percentage [%]', row=1, col=1)
+
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
     fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=not return_html)
@@ -451,6 +469,10 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor, return_ht
             fillcolor="rgba" + str(hex_to_rgba(color, 0.2)),
             showlegend=False,
         )
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -487,6 +509,10 @@ def plot_WIP(post_processor: post_processing.PostProcessor, return_html: bool = 
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -524,6 +550,17 @@ def plot_WIP_per_resource(post_processor: post_processing.PostProcessor, return_
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+        ),
+        xaxis_title="Resource",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -558,87 +595,3 @@ def print_aggregated_data(post_processor: post_processing.PostProcessor):
     print(
         post_processor.df_aggregated_resource_states.copy().set_index(["Resource", "Time_type"])
     )
-
-def generate_html_report(post_processor: post_processing.PostProcessor):
-    """
-    Generates an HTML report of the simulation results by calling all the plot methods and concatenating their HTML outputs.
-
-    Args:
-        post_processor (post_processing.PostProcessor): Post processor of the simulation.
-    """
-    # List of functions to call and their descriptions
-    plot_functions = [
-        (plot_throughput_time_distribution, "Throughput Time Distribution"),
-        (plot_line_balance_kpis, "Line Balance KPIs"),
-        (plot_oee, "Overall Equipment Effectiveness (OEE)"),
-        (plot_production_flow_rate_per_product, "Production Flow Rate per Product"),
-        (plot_boxplot_resource_utilization, "Resource Utilization per Station"),
-        (plot_throughput_time_over_time, "Throughput Time Over Time"),
-        (plot_time_per_state_of_resources, "Time per State of Resources"),
-        (plot_util_WIP_resource, "Utilization and WIP per Resource"),
-        (plot_WIP_with_range, "WIP with Range"),
-        (plot_WIP, "WIP Over Time"),
-        (plot_WIP_per_resource, "WIP per Resource"),
-    ]
-
-    logo_base64 = convert_image_to_base64("resources/logo_ruhlamat.png")
-    # HTML template for the report
-    html_report = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simulation Report</title>
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; }}
-            h2 {{ margin-top: 40px; }}
-            .section {{ page-break-inside: avoid; margin-bottom: 60px; }}
-            .header {{ display: flex; justify-content: space-between; align-items: center; }}
-            .logo {{ width: 150px; height: auto; margin-top: -20px; margin-bottom: 20px; }}
-            .explanation {{ margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }}
-        </style>
-    </head>
-    <body>
-        <h1>Simulation Report</h1>
-    """
-
-    for func, title in plot_functions:
-        html_content = func(post_processor, return_html=True)
-        html_report += f"""
-        <div class='section'>
-            <div class='header'>
-                <h2>{title}</h2>
-                <img src="data:image/png;base64,{logo_base64}" alt="Logo" class="logo">
-            </div>
-            <div>{html_content}</div>
-            <div class='explanation'>
-                <!-- Explanation for {title} goes here -->
-                <p>[Explanation for {title}]</p>
-            </div>
-        </div>
-        """
-
-
-    html_report += """
-    </body>
-    </html>
-    """
-
-    # Path to save the final HTML report
-    report_path = os.path.join(os.getcwd(), "plots", "simulation_report.html")
-
-    # Ensure the plots directory exists
-    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
-        os.makedirs(os.path.join(os.getcwd(), "plots"))
-
-    # Save the HTML report to a file
-    with open(report_path, 'w') as f:
-        f.write(html_report)
-    print(f"HTML report saved at {report_path}")
-
-    return html_report
-
-def convert_image_to_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode('utf-8')

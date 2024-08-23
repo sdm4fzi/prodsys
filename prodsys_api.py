@@ -14,6 +14,7 @@ from app.routers import (
     performance,
     plots,
     processes,
+    plots,
     queue,
     resources, 
     products,

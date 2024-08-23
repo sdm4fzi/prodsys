@@ -114,7 +114,7 @@ def prepare_adapter_from_optimization(
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
-  
+
     prodsys_backend.update_project(project_id, project)
 
 
