@@ -52,7 +52,7 @@ class ProcessFactory(BaseModel):
         elif isinstance(process_data, processes_data.ReworkProcessData):
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
             values.update({"blocking": process_data.blocking})
-            self.processes.append(parse_obj_as(process.ReworkProcess, values))
+            self.processes.append(TypeAdapter(process.ReworkProcess).validate_python(values))
         else:
             self.processes.append(TypeAdapter(process.PROCESS_UNION).validate_python(values))
 

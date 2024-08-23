@@ -73,4 +73,4 @@ class QueueFactory(BaseModel):
         Returns:
             List[store.Queue]: List of queue objects that are warehouses.
         """
-        return [q for q in self.queues if q.data.location is not None]
+        return [q for q in self.queues if q.data.input_location is not None or q.data.output_location is not None]

@@ -32,8 +32,9 @@ class Queue(store.FilterStore):
             capacity = float("inf")
         else:
             capacity = data.capacity
-        self.location = data.location if data.location is not None else getattr(data, 'location', None)
-        self.warehouse = self.location is not None
+        self.input_location = data.input_location if data.input_location is not None else getattr(data, 'input_location', None)
+        self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
+        #self.warehouse = self.location is not None
         self._pending_put: int = 0
         super().__init__(env, capacity)
 
@@ -66,7 +67,7 @@ class Queue(store.FilterStore):
         self._pending_put -= 1
 
     def get_input_location(self):
-        return self.location
+        return self.input_location
     
     def get_output_location(self):
-        return self.location
+        return self.output_location

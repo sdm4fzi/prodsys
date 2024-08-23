@@ -161,11 +161,11 @@ class ProductionController(Controller):
                 events.append(
                     queue.get(filter=lambda item: item is product.product_data)
                 )
-                if queue.location is not None and queue.location != resource.get_input_location():
+                if queue.output_location is not None and queue.output_location != resource.get_input_location():
                     transport_request = yield self.env.process(
                         product.product_router.route_product_from_warehouse(product, queue, resource)
                         )
-                    #print("Transport request get_next_product_for_process: ", transport_request)
+                    print("Transport request get_next_product_for_process: ", transport_request)
                     yield self.env.process(product.request_process(transport_request))
             if not events:
                 raise ValueError("No product in queue")
@@ -190,9 +190,9 @@ class ProductionController(Controller):
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.output_queues:
                 for product in products:
-                    if queue.full:
-                    #if random.random() < 0.3:
-                        #print("Warehouse full")
+                    #if queue.full:
+                    if random.random() < 0.3:
+                        print("Warehouse full")
                         warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product))
                         #print("Warehouse transport request", warehouse_transport_request)
                         yield self.env.process(product.request_process(warehouse_transport_request))
@@ -370,7 +370,7 @@ class BatchController(Controller):
             int: The batch size of the resource.
         """
         if isinstance(resource, resources.ProductionResource):
-            return resource.batch_size
+            return resource.data.batch_size
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -675,13 +675,6 @@ class TransportController(Controller):
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
                 raise ValueError("No product in queue")
-                #product is located in warehouse - check which method instead of put should be used
-                # if queue.location is not None and queue.location != self.resource.get_location():
-                #     #print("Get from warehouse: ",queue.get(filter=lambda x: x is product.product_data))
-                #     events.append(queue.get(filter=lambda x: x is product.product_data))                 
-                # #product is in direct output queue of resource
-                # else:
-                #     events.append(queue.get(filter=lambda x: x is product.product_data))
         elif isinstance(resource, store.Queue):
             print("product retrieved from queue")
             events.append(queue.get(filter=lambda x: x is product.product_data)) 
