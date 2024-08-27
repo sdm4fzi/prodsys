@@ -13,6 +13,7 @@ from app.routers import (
     time_models,
     performance,
     processes,
+    plots,
     queue,
     resources, 
     products,
@@ -58,6 +59,7 @@ app.include_router(adapters.router)
 app.include_router(simulation.router)
 app.include_router(optimization.router)
 app.include_router(performance.router)
+app.include_router(plots.router)
 app.include_router(time_models.router)
 app.include_router(processes.router)
 app.include_router(queue.router)

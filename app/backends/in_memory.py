@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from app.models.project import Project
 from prodsys.adapters import JsonProductionSystemAdapter
 from prodsys.models.performance_data import Performance
+from prodsys.util.post_processing import PostProcessor
 
 
 class InMemoryBackend:
@@ -96,3 +97,32 @@ class InMemoryBackend:
             raise HTTPException(404, f"Performance for adapter {adapter_id} not found in project {project_id}.")
         del project.performances[adapter_id]
 
+    def get_post_processor(self, project_id: str, adapter_id: str) -> PostProcessor:
+        project = self.get_project(project_id)
+        adapter = self.get_adapter(project_id, adapter_id)
+        if not project.post_processor:
+            raise HTTPException(404, f"PostProcessor not found in adapter {adapter_id} of project {project_id}")
+        return project.post_processor
+
+    def create_post_processor(self, project_id: str, adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
+        project = self.get_project(project_id)
+        adapter = self.get_adapter(project_id, adapter_id)
+        if project.post_processor:
+            raise HTTPException(409, f"PostProcessor already exists in project {project_id}. Try updating it with put.")
+        project.post_processor = post_processor
+        return post_processor
+
+    def update_post_processor(self, project_id: str,  adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
+        project = self.get_project(project_id)
+        adapter = self.get_adapter(project_id, adapter_id)
+        if not project.post_processor:
+            raise HTTPException(404, f"PostProcessor not found in project {project_id}. Try creating it with post.")
+        project.post_processor = post_processor
+        return post_processor
+
+    def delete_post_processor(self, project_id: str, adapter_id: str):
+        project = self.get_project(project_id)
+        adapter = self.get_adapter(project_id, adapter_id)
+        if not project.post_processor:
+            raise HTTPException(404, f"PostProcessor not found in project {project_id}.")
+        project.post_processor = None
