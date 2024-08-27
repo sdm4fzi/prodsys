@@ -1,12 +1,11 @@
 from __future__ import annotations
 from hashlib import md5
 from typing import Optional, Union, List, Dict, TYPE_CHECKING
-from pydantic import root_validator
+from pydantic import ConfigDict, model_validator
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
-
 
 class ProductData(CoreAsset):
     """
@@ -107,6 +106,8 @@ class ProductData(CoreAsset):
                     break
             else:
                 raise ValueError(f"Process with ID {self.processes} not found for product {self.ID}.")
+            
+        # TODO: add hashing for auxiliaries!
         
         for transport_process in adapter.process_data:
             if transport_process.ID == self.transport_process:
@@ -117,47 +118,46 @@ class ProductData(CoreAsset):
         
         return md5("".join([*processes_hashes, transport_process_hash]).encode("utf-8")).hexdigest()
                    
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def check_processes(cls, values):
         if "product_type" in values and values["product_type"]:
             values["ID"] = values["product_type"]
         else:
             values["product_type"] = values["ID"]
         return values
-
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "ID": "Product_1",
-                    "description": "Product with sequential process",
-                    "product_type": "Product_1",
-                    "processes": ["P1", "P2", "P3"],
-                    "transport_process": "TP1",
-                    "auxiliaries": ["Pallette"]
+    
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "Product_1",
+                "description": "Product with sequential process",
+                "product_type": "Product_1",
+                "processes": ["P1", "P2", "P3"],
+                "transport_process": "TP1",
+                "auxiliaries": ["Pallette"]
+            },
+            {
+                "ID": "Product_1",
+                "description": "Process with adjacency matrix process",
+                "product_type": "Product_1",
+                "processes": {
+                    "P1": ["P2", "P3"],
+                    "P2": ["P3"],
+                    "P3": [],
                 },
-                {
-                    "ID": "Product_1",
-                    "description": "Process with adjacency matrix process",
-                    "product_type": "Product_1",
-                    "processes": {
-                        "P1": ["P2", "P3"],
-                        "P2": ["P3"],
-                        "P3": [],
-                    },
-                    "transport_process": "TP1",
-                },
-                {
-                    "ID": "Product_1",
-                    "description": "Process with graph edges process",
-                    "product_type": "Product_1",
-                    "processes": [
-                        ["P1", "P2"],
-                        ["P1", "P3"],
-                        ["P2", "P4"],
-                        ["P3", "P4"],
-                    ],
-                    "transport_process": "TP1",
-                },
-            ]
-        }
+                "transport_process": "TP1",
+            },
+            {
+                "ID": "Product_1",
+                "description": "Process with graph edges process",
+                "product_type": "Product_1",
+                "processes": [
+                    ["P1", "P2"],
+                    ["P1", "P3"],
+                    ["P2", "P4"],
+                    ["P3", "P4"],
+                ],
+                "transport_process": "TP1",
+            },
+        ]
+    })

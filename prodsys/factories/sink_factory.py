@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, TYPE_CHECKING
 
-from pydantic import BaseModel, Field, parse_obj_as
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from prodsys.simulation import sim, sink
 from prodsys.models import sink_data
@@ -27,8 +27,7 @@ class SinkFactory(BaseModel):
 
     sinks: List[sink.Sink] = Field(default_factory=list, init=False)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def create_sinks(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -46,7 +45,7 @@ class SinkFactory(BaseModel):
             "data": sink_data,
             "product_factory": self.product_factory,
         }
-        sink_object = parse_obj_as(sink.Sink, values)
+        sink_object = TypeAdapter(sink.Sink).validate_python(values)
         self.add_queues_to_sink(sink_object)
         self.sinks.append(sink_object)
 
@@ -90,4 +89,3 @@ class SinkFactory(BaseModel):
         return [s for s in self.sinks if __product_type == s.data.product_type]
 
 from prodsys.factories import product_factory, queue_factory   
-SinkFactory.update_forward_refs()

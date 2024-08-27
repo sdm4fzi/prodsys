@@ -1,26 +1,23 @@
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-from random import randint, random, shuffle
 from collections import deque
 from numpy import argmax
 
 import logging
+
+from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.adapter_manipulation import mutation
+from prodsys.optimization.optimization import check_valid_configuration
+from prodsys.optimization.util import document_individual
 logger = logging.getLogger(__name__)
 
 import json
 import time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
-from prodsys.simulation import sim
 from prodsys import adapters
-from prodsys.optimization.optimization_util import (
-    check_valid_configuration,
-    crossover,
-    evaluate,
-    mutation,
-    random_configuration,
-    document_individual,
+from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states
@@ -151,18 +148,17 @@ class TabuSearchHyperparameters(BaseModel):
     max_score: float = 500
     number_of_seeds: int = 1
 
-    class Config:
-        schema_extra = {
-            "examples": [
-                 {
-                    "seed": 0,
-                    "tabu_size": 10,
-                    "max_steps": 300,
-                    "max_score": 500,
-                    "number_of_seeds": 1,
-                },
-            ]
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "seed": 0,
+                "tabu_size": 10,
+                "max_steps": 300,
+                "max_score": 500,
+                "number_of_seeds": 1,
+            },
+        ]
+    })
 
 
 def run_tabu_search(
@@ -202,7 +198,7 @@ def run_tabu_search(
         if not initial_solution.ID:
             initial_solution.ID = "initial_solution"
     else:
-        initial_solution = base_configuration.copy(deep=True)
+        initial_solution = base_configuration.model_copy(deep=True)
 
     hyper_parameters = TabuSearchHyperparameters(
         seed=seed, tabu_size=tabu_size, max_steps=max_steps, max_score=max_score, number_of_seeds=number_of_seeds
@@ -232,8 +228,7 @@ def tabu_search_optimization(
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
-    adapters.ProductionSystemAdapter.Config.validate = False
-    adapters.ProductionSystemAdapter.Config.validate_assignment = False
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
     if not check_breakdown_states_available(base_configuration):

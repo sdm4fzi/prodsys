@@ -1,23 +1,15 @@
 from typing import List, Optional, Union
 
 
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from pydantic.dataclasses import dataclass
 
-import prodsys
 from prodsys.util import util
+from prodsys.util import runner
+from prodsys.adapters import adapter, json_adapter
 
 from prodsys.express import (
-    core,
-    node,
-    product,
-    resources,
-    source,
-    sink,
-    process,
-    time_model,
-    state,
-    process
+    core, node, resources, source, time_model, state, process, product, sink
 )
 
 
@@ -56,7 +48,6 @@ def remove_duplicate_items(
         filtered_items.append(item)
     return filtered_items
 
-
 @dataclass
 class ProductionSystem(core.ExpressObject):
     """
@@ -71,14 +62,14 @@ class ProductionSystem(core.ExpressObject):
         sources (List[source.Source]): Sources of the production system.
         sinks (List[sink.Sink]): Sinks of the production system.
     """
-
     resources: List[Union[resources.ProductionResource, resources.TransportResource]]
     sources: List[source.Source]
     sinks: List[sink.Sink]
 
-    _runner: Optional[prodsys.runner.Runner] = Field(default=None, init=False)
+    def __post_init__(self):
+        self._runner: Optional[runner.Runner] = None
 
-    def to_model(self) -> prodsys.adapters.ProductionSystemAdapter:
+    def to_model(self) -> adapter.ProductionSystemAdapter:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -156,7 +147,7 @@ class ProductionSystem(core.ExpressObject):
                 + [s._input_queues for s in self.sinks]
             )
         )
-        return prodsys.adapters.JsonProductionSystemAdapter(
+        return json_adapter.JsonProductionSystemAdapter(
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,
@@ -179,7 +170,7 @@ class ProductionSystem(core.ExpressObject):
             time_range (float, optional): The time range of the simulation. Defaults to 2880.
             seed (int, optional): The seed of the simulation. Defaults to 0.
         """
-        self._runner = prodsys.runner.Runner(adapter=self.to_model())
+        self._runner = runner.Runner(adapter=self.to_model())
         self._runner.adapter.seed = seed
         self._runner.initialize_simulation()
         self._runner.run(time_range)

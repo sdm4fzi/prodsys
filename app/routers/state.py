@@ -10,24 +10,14 @@ from prodsys.models import (
 from app.dao import state_dao
 
 STATE_DATA_EXAMPLES = {
-    state_data.StateTypeEnum.BreakDownState: state_data.BreakDownStateData.Config.schema_extra[
-        "example"
-    ],
-    state_data.StateTypeEnum.ProductionState: state_data.ProductionStateData.Config.schema_extra[
-        "example"
-    ],
-    state_data.StateTypeEnum.TransportState: state_data.TransportStateData.Config.schema_extra[
-        "example"
-    ],
-    state_data.StateTypeEnum.ProcessBreakDownState: state_data.ProcessBreakDownStateData.Config.schema_extra[
-        "example"
-    ],
-    state_data.StateTypeEnum.SetupState: state_data.SetupStateData.Config.schema_extra[
-        "example"
-    ],
+    state_data.StateTypeEnum.BreakDownState: state_data.BreakDownStateData.model_config["json_schema_extra"]["examples"],
+    state_data.StateTypeEnum.ProductionState: state_data.ProductionStateData.model_config["json_schema_extra"]["examples"],
+    state_data.StateTypeEnum.TransportState: state_data.TransportStateData.model_config["json_schema_extra"]["examples"],
+    state_data.StateTypeEnum.ProcessBreakDownState: state_data.ProcessBreakDownStateData.model_config["json_schema_extra"]["examples"],
+    state_data.StateTypeEnum.SetupState: state_data.SetupStateData.model_config["json_schema_extra"]["examples"],
 }
 
-STATE_LIST_EXAMPLE = [item["value"] for item in STATE_DATA_EXAMPLES.values()]
+STATE_LIST_EXAMPLE = [item for item in STATE_DATA_EXAMPLES.values()]
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/states",
