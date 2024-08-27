@@ -5,7 +5,7 @@ from enum import Enum
 from collections.abc import Iterable
 from typing import List, Union, Optional, TYPE_CHECKING, Generator
 
-from pydantic import BaseModel, Field, Extra
+from pydantic import BaseModel, ConfigDict, Field
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,23 +18,16 @@ if TYPE_CHECKING:
     from prodsys.simulation import router, product, resources, sink, source
     from prodsys.factories import auxiliary_factory
 
-
+from prodsys.models import auxiliary_data
 from prodsys.simulation import (
     request,
     process,
-    #router,
-    #resources,
-    #router,
     sim,
-    state,
     store,
-    #sink,
-    #source,
-    #product
+    state,
 )
-from prodsys.models import auxiliary_data, queue_data
 
-class AuxiliaryInfo(BaseModel, extra=Extra.allow):
+class AuxiliaryInfo(BaseModel):
     """
     Class that represents information of the current state of a product.
 
@@ -52,11 +45,13 @@ class AuxiliaryInfo(BaseModel, extra=Extra.allow):
     event_time: float = Field(init=False, default=None)
     activity: state.StateEnum = Field(init=False, default=None)
     product_ID: str = Field(init=False, default=None)
-    state_type: state.StateTypeEnum = Field(init=False, default=None)            
+    state_type: state.StateTypeEnum = Field(init=False, default=None)   
+
+    model_config=ConfigDict(extra="allow")         
 
     def log_create_auxiliary(
         self,
-        resource: Union[resources.Resource, sink.Sink, source.Source, store.Storage],
+        resource: Union[resources.Resource, sink.Sink, source.Source, store.Queue],
         _product: Auxiliary,
         event_time: float,
     ) -> None:
@@ -133,11 +128,11 @@ class Auxiliary(BaseModel):
     env: sim.Environment
     data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
-    storage: store.Storage
+    storage: store.Queue
 
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
-    current_location: Union[product.Location, store.Storage] = Field(default=None, init=False)
+    current_location: Union[product.Locatable, store.Queue] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     finished_auxiliary_process: events.Event = Field(default=None, init=False)
     got_free: events.Event = Field(default=None, init=False)
@@ -147,7 +142,7 @@ class Auxiliary(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    def update_location(self, location: product.Location):
+    def update_location(self, location: product.Locatable):
         """
         Updates the location of the product object.
 
@@ -170,6 +165,7 @@ class Auxiliary(BaseModel):
         """
         self.finished_auxiliary_process = events.Event(self.env)
         self.got_free = events.Event(self.env)
+        # FIXME: resolve here routing
         yield self.env.process(self.auxiliary_router.route_request(transport_request))
         yield self.env.process(self.request_process(transport_request))
 
@@ -196,6 +192,7 @@ class Auxiliary(BaseModel):
             origin=self.current_location,
             target=self.storage
         )
+        # FIXME: resolve here routing
         yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
         yield self.env.process(self.request_process(storage_transport_request))
         self.current_product = None
@@ -227,5 +224,5 @@ class Auxiliary(BaseModel):
         )
         self.finished_auxiliary_process = events.Event(self.env)
 
-# from prodsys.simulation import product
+from prodsys.simulation import product
 # Auxiliary.update_forward_refs()

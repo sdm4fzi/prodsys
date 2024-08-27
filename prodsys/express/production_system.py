@@ -100,8 +100,8 @@ class ProductionSystem(core.ExpressObject):
                     if isinstance(link_element, node.Node):
                         nodes.append(link_element)
         nodes = remove_duplicate_items(nodes)
-        storages = list(util.flatten_object(storage for storage in [auxiliary.storages for auxiliary in auxiliaries ]))
-        storages = remove_duplicate_items(storages)
+        auxiliary_storages = list(util.flatten_object(auxiliary_queue for auxiliary_queue in [auxiliary.storages for auxiliary in auxiliaries ]))
+        auxiliary_storages = remove_duplicate_items(auxiliary_storages)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
         )
@@ -129,7 +129,7 @@ class ProductionSystem(core.ExpressObject):
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
         auxiliary_data = [auxiliary.to_model() for auxiliary in auxiliaries]
-        storage_data = [storage.to_model() for storage in storages]
+        auxiliary_storage_data = [storage.to_model() for storage in auxiliary_storages]
 
         queue_data = list(
             util.flatten_object(
@@ -157,9 +157,8 @@ class ProductionSystem(core.ExpressObject):
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,
-            queue_data=queue_data,
+            queue_data=queue_data + auxiliary_storage_data,
             auxiliary_data = auxiliary_data,
-            storage_data = storage_data
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):

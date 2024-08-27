@@ -1,4 +1,5 @@
 import prodsys.express as psx
+import prodsys.express.queue
 
 t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
@@ -12,8 +13,8 @@ machine = psx.ProductionResource([p1], [5,0], 1, ID="machine")
 
 transport = psx.TransportResource([tp], [3,0], 1, ID="transport")
 
-storage1 = psx.Storage(ID="storage1", location=[5,0], capacity=30)
-storage2 = psx.Storage(ID="storage2", location=[10,0], capacity=20)
+storage1 = psx.Queue(ID="storage1", location=[5,0], capacity=30)
+storage2 = prodsys.express.queue.Queue(ID="storage2", location=[10,0], capacity=20)
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, 
                            storages=[storage1,storage2], 
