@@ -928,9 +928,9 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
         [sink.location for sink in adapter.sink_data]
     )
     positions = machine_locations + source_locations + sink_locations
-    # for location in positions:
-    #     if positions.count(location) > 1:
-    #         raise ValueError(f"Multiple objects are positioned at the same location: {location}")
+    for location in positions:
+        if positions.count(location) > 1:
+            raise ValueError(f"Multiple objects are positioned at the same location: {location}")
 
 def assert_all_links_available(adapter: ProductionSystemAdapter):
     """
