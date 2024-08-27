@@ -166,7 +166,7 @@ class Router:
 
         chosen_warehouse = np.random.choice(warehouses)
         #print(f"Chosen warehouse: {chosen_warehouse.data.ID}")
-
+        # FIXME: resource=chosen_warehouse is wrong, the resource should be the transport resource that transports the product to the warehouse -> use the route_transport_resource_for_product request or a similar logic
         warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=chosen_warehouse, origin=product.current_locatable, target=chosen_warehouse)
 
         self._is_routing_to_warehouse = True
@@ -196,6 +196,7 @@ class Router:
             Generator[request.TransportResquest]: A generator that yields when the product is routed from the warehouse.
         """
         
+        # FIXME: resource=warehouse is wrong, the resource should be the transport resource that transports the product to the warehouse -> use the route_transport_resource_for_product request or a similar logic
         from_warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=warehouse, origin=warehouse, target=resource)
         #print(f"Routing from warehouse {warehouse.data.ID} to resource {resource.data.ID}")
         self._is_routing_to_warehouse = True

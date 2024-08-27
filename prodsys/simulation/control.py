@@ -191,7 +191,7 @@ class ProductionController(Controller):
             for queue in resource.output_queues:
                 for product in products:
                     #if queue.full:
-                    if random.random() < 0.3:
+                    if random.random() < 0.3: # TODO: Add Storing Heuristic in the long run to externalize this behavior
                         print("Warehouse full")
                         warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product))
                         #print("Warehouse transport request", warehouse_transport_request)
@@ -677,7 +677,8 @@ class TransportController(Controller):
                 raise ValueError("No product in queue")
         elif isinstance(resource, store.Queue):
             print("product retrieved from queue")
-            events.append(queue.get(filter=lambda x: x is product.product_data)) 
+            events.append(resource.get(filter=lambda x: x is product.product_data))
+        # TODO: exception hinzufügen, fass get nicht funktioniert hat und das Produkt nicht gefunden wurde
         
         return events
 
