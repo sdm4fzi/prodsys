@@ -313,7 +313,7 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
     df_time_per_state = post_processor.df_aggregated_resource_states
 
     if normalized:
-        y_column = "Percentage"
+        y_column = "percentage"
     else:
         y_column = "time_increment"
 
@@ -418,7 +418,7 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
             ),     
         )
 
-    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
+    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage [%]')
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
