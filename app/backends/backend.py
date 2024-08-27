@@ -3,6 +3,7 @@ from typing import List, Protocol
 from app.models.project import Project
 from prodsys.adapters import JsonProductionSystemAdapter
 from prodsys.models.performance_data import Performance
+from prodsys.util.post_processing import PostProcessor
 
 
 class Backend(Protocol):
@@ -50,4 +51,15 @@ class Backend(Protocol):
 
     def delete_performance(self, project_id: str, adapter_id: str):
         ...
+    
+    def get_post_processor(self, project_id: str, adapter_id: str) -> PostProcessor:
+        ...
 
+    def create_post_processor(self, project_id: str, adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
+        ...
+
+    def update_post_processor(self, project_id: str, adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
+        ...
+
+    def delete_post_processor(self, project_id: str, adapter_id: str):
+        ...

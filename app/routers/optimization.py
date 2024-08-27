@@ -32,12 +32,12 @@ router = APIRouter(
 )
 
 HYPERPARAMETER_EXAMPLES = [
-    EvolutionaryAlgorithmHyperparameters.Config.schema_extra["examples"][0],
-    simulated_annealing.SimulatedAnnealingHyperparameters.Config.schema_extra[
+    EvolutionaryAlgorithmHyperparameters.model_config["json_schema_extra"]["examples"][0],
+    simulated_annealing.SimulatedAnnealingHyperparameters.model_config["json_schema_extra"][
         "examples"
     ][0],
-    tabu_search.TabuSearchHyperparameters.Config.schema_extra["examples"][0],
-    math_opt.MathOptHyperparameters.Config.schema_extra["examples"][0],
+    tabu_search.TabuSearchHyperparameters.model_config["json_schema_extra"]["examples"][0],
+    math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
 
 

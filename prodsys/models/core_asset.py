@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
 
 class CoreAsset(BaseModel):
     """
@@ -8,13 +9,15 @@ class CoreAsset(BaseModel):
         ID (str): The unique ID of the core asset.
         description (str): The description of the core asset.
     """
+
     ID: str
     description: str
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "ID": "Example Core Asset",
                 "description": "Asset data for Example Core Asset",
             }
         }
+    )

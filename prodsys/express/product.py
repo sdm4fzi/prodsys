@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Union
 from uuid import uuid1
 
@@ -73,3 +75,5 @@ class Product(core.ExpressObject):
             transport_process=self.transport_process.ID,
             auxiliaries=[auxiliary.ID for auxiliary in self.auxiliaries]
         )
+
+from prodsys.express import process

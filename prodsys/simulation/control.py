@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from pydantic import BaseModel, Field, validator, Extra
-from typing import Any, List, Generator, TYPE_CHECKING, Union, Optional
+from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
+from typing import List, Generator, TYPE_CHECKING, Optional
 
 import logging
 
@@ -12,15 +12,12 @@ logger = logging.getLogger(__name__)
 # from process import Process
 from simpy import events
 
-from prodsys.simulation import node, request, route_finder, sim, state, auxiliary, process
-
-from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, state, resources, request, sink, source
+    from prodsys.simulation import product, process, state, resources, sink, source, auxiliary
+    from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.product import Locatable
-
 
 
 class Controller(ABC, BaseModel):
@@ -28,48 +25,47 @@ class Controller(ABC, BaseModel):
     A controller is responsible for controlling the processes of a resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
 
     Args:
-        control_policy (Callable[[List[request.Request]], None]): The control policy that determines the sequence of requests to be processed.
+        control_policy (Callable[[List[Request]], None]): The control policy that determines the sequence of requests to be processed.
         env (sim.Environment): The environment in which the controller is running.
 
     Attributes:
         resource (resources.Resource): The resource that is controlled by the controller.
         requested (events.Event): An event that is triggered when a request is made to the controller.
-        requests (List[request.Request]): A list of requests that are made to the controller.
+        requests (List[Request]): A list of requests that are made to the controller.
         running_processes (List[events.Event]): A list of (simpy) processes that are currently running on the resource.
     """
 
     control_policy: Callable[
         [
-            List[request.Request],
+            List[request_module.Request],
         ],
         None,
     ]
     env: sim.Environment
 
     resource: resources.Resource = Field(init=False, default=None)
-    requested: events.Event = Field(init=False, default=None)
-    requests: List[request.Request] = Field(init=False, default_factory=list)
+    requested: events.Event = Field(init=False, validate_default=True, default=None)
+    requests: List[request_module.Request] = Field(init=False, default_factory=list)
     running_processes: List[events.Process] = []
     reserved_requests_count: int = 0
 
-    @validator("requested", pre=True, always=True)
-    def init_requested(cls, v, values):
-        return events.Event(values["env"])
+    @field_validator("requested", mode="before")
+    def init_requested(cls, v, info: ValidationInfo):
+        event = events.Event(info.data["env"])
+        return event
 
-    class Config:
-        arbitrary_types_allowed = True
-        extra = Extra.allow
+    model_config=ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
         self.env = resource.env
 
-    def request(self, process_request: request.Request) -> None:
+    def request(self, process_request: request_module.Request) -> None:
         """
         Request the controller consider the request in the future for processing.
 
         Args:
-            process_request (request.Request): The request to be processed.
+            process_request (Request): The request to be processed.
         """
         self.requests.append(process_request)
         if isinstance(process_request.product, auxiliary.Auxiliary):
@@ -298,14 +294,14 @@ class TransportController(Controller):
     Controller for transport resources.
     """
     resource: resources.TransportResource = Field(init=False, default=None)
-    requests: List[request.TransportResquest] = Field(default_factory=list)
+    requests: List[request_module.TransportResquest] = Field(default_factory=list)
     control_policy: Callable[
         [
-            List[request.TransportResquest],
+            List[request_module.TransportResquest],
         ],
         None,
     ]
-    _current_locatable: Optional[product.Locatable] = Field(init=False, default=None)
+    _current_locatable: Optional[product.Locatable] = None
 
     def get_next_product_for_process(
         self, resource: product.Locatable, product: product.Product
@@ -578,7 +574,7 @@ class TransportController(Controller):
         )
         yield input_state.process
 
-    def find_route_to_origin(self, process_request: request.TransportResquest) -> List[product.Locatable]:
+    def find_route_to_origin(self, process_request: request_module.TransportResquest) -> List[product.Locatable]:
         """
         Find the route to the origin of the transport request.
 
@@ -597,37 +593,37 @@ class TransportController(Controller):
             return [self._current_locatable, process_request.get_origin()]
 
 
-def FIFO_control_policy(requests: List[request.Request]) -> None:
+def FIFO_control_policy(requests: List[request_module.Request]) -> None:
     """
     Sort the requests according to the FIFO principle.
 
     Args:
-        requests (List[request.Request]): The list of requests.
+        requests (List[Request]): The list of requests.
     """
     pass
 
 
-def LIFO_control_policy(requests: List[request.Request]) -> None:
+def LIFO_control_policy(requests: List[request_module.Request]) -> None:
     """
     Sort the requests according to the LIFO principle (reverse the list).
 
     Args:
-        requests (List[request.Request]): The list of requests.
+        requests (List[Request]): The list of requests.
     """
     requests.reverse()
 
 
-def SPT_control_policy(requests: List[request.Request]) -> None:
+def SPT_control_policy(requests: List[request_module.Request]) -> None:
     """
     Sort the requests according to the SPT principle (shortest process time first).
 
     Args:
-        requests (List[request.Request]): The list of requests.
+        requests (List[Request]): The list of requests.
     """
     requests.sort(key=lambda x: x.process.get_expected_process_time())
 
 
-def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+def SPT_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
     """
     Sort the requests according to the SPT principle (shortest process time first).
 
@@ -639,7 +635,7 @@ def SPT_transport_control_policy(requests: List[request.TransportResquest]) -> N
             x.origin.get_location(), x.target.get_location()
         )
     )
-def nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+def nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
     """
     Sort the requests according to nearest origin without considering the target location. 
     Second order sorting by descending length of the target output queues, to prefer targets where a product can be picked up.
@@ -654,7 +650,7 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(requests: 
                 )
     )
 
-def nearest_origin_and_shortest_target_input_queues_transport_control_policy(requests: List[request.TransportResquest]) -> None:
+def nearest_origin_and_shortest_target_input_queues_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
     """
     Sort the requests according to nearest origin without considering the target location.
     Second order sorting by ascending length of the target input queue so that resources with empty input queues get material to process.
@@ -671,14 +667,14 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(req
     )
 
 def agent_control_policy(
-    gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request.Request]
+    gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request_module.Request]
 ) -> None:
     """
     Sort the requests according to the agent's policy.
 
     Args:
         gym_env (gym_env.ProductionControlEnv): A gym environment, where the agent can interact with the simulation.
-        requests (List[request.Request]): The list of requests.
+        requests (List[Request]): The list of requests.
     """
     gym_env.interrupt_simulation_event.succeed()
 
@@ -690,8 +686,6 @@ class BatchController(Controller):
     pass
 
 
-from prodsys.simulation import resources, source, sink
-
-Controller.update_forward_refs()
-ProductionController.update_forward_refs()
-TransportController.update_forward_refs()
+from prodsys.simulation import resources, state, sink, source, route_finder, sim
+from prodsys.simulation import request as request_module
+from prodsys.simulation.process import LinkTransportProcess

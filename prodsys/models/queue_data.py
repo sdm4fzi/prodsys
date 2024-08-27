@@ -1,10 +1,9 @@
-from __future__ import annotations
-
-from typing import Optional, Union
+from typing import Union
 from hashlib import md5
 
+from pydantic import ConfigDict
+
 from prodsys.models.core_asset import CoreAsset
-from pydantic import conlist, validator
 
 
 class QueueData(CoreAsset):
@@ -49,48 +48,18 @@ class QueueData(CoreAsset):
         """
         return md5((str(self.capacity)).encode("utf-8")).hexdigest()
 
-
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "ID": "Q1",
-                    "description": "Finte Queue",
-                    "capacity": 10,
-                },
-                {
-                    "ID": "Q1",
-                    "description": "Infinite Queue",
-                    "capacity": 0.0,
-                },
-            ]
-        }
-
-
-class StorageData(QueueData):
-    """
-    Represents storage data for the auxiliaries.
-
-    Attributes:
-        location (List[float]): The location of the storage in 2D coordinates.
-    """
-
-    location: conlist(float, min_items=2, max_items=2) # type: ignore
-
-    class Config:
-        schema_extra = {
-            "examples": [
-                {
-                    "ID": "S1",
-                    "description": "Storage 1",
-                    "capacity": 100,
-                    "location": [1.0, 2.0],
-                },
-                {
-                    "ID": "S2",
-                    "description": "Storage 2",
-                    "capacity": 0.0,
-                    "location": [3.0, 4.0],
-                },
-            ]
-        }
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "Q1",
+                "description": "Finte Queue",
+                "capacity": 10,
+            },
+            {
+                "ID": "Q1",
+                "description": "Infinite Queue",
+                "capacity": 0.0,
+            },
+        ]
+    
+    })

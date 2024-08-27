@@ -181,7 +181,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.chosen_resource = self.runner.resource_factory.resources[resource_index]
         if not self.chosen_resource.data.ID in [r.resource.data.ID for r in self.possible_requests]:
             invalid_action = True
-            self.chosen_resource = np.random.choice(self.possible_requests)
+            self.chosen_resource = np.random.choice(self.possible_requests).resource
         else:
             invalid_action = False
 

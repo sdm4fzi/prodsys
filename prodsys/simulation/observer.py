@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 
@@ -83,6 +83,8 @@ class ResourceObserver(BaseModel):
     product_factory: product_factory.ProductFactory
     resource: resources.Resource
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     def observe_processes(self) -> List[ProcessObservation]:
         return observe_processes(self.resource)
     
@@ -97,4 +99,3 @@ class ResourceObserver(BaseModel):
     
 from prodsys.factories import resource_factory, product_factory
 from prodsys.simulation import resources, state
-ResourceObserver.update_forward_refs()

@@ -9,6 +9,8 @@ The following states are possible:
 - `Setup`: A state that represents the time needed to change the process of a resource.	    
 
 """
+from __future__ import annotations
+
 from typing import List, Optional, Union
 from uuid import uuid1
 
@@ -17,9 +19,10 @@ from abc import ABC
 from pydantic import Field
 from pydantic.dataclasses import dataclass
 
+from prodsys.express import core, time_model
+
 from prodsys.models import state_data
 
-from prodsys.express import time_model, core, process
 
 
 @dataclass
@@ -213,3 +216,4 @@ class SetupState(State, core.ExpressObject):
         )
     
 STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState]
+from prodsys.express import process

@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
-from pydantic import parse_obj_as, BaseModel
+from pydantic import BaseModel
+from pydantic import TypeAdapter
 from warnings import warn
 
 
@@ -117,7 +118,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         warn("This method is deprecated. Use create_objects_from_configuration_data instead.", DeprecationWarning)
         objects = []
         for values in configuration_data.values():
-            objects.append(parse_obj_as(type, values))
+            objects.append(TypeAdapter(type).validate_python(values))
         return objects
     
     def create_objects_from_configuration_data(
@@ -125,7 +126,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
     ):  
         objects = []
         for values in configuration_data:
-            objects.append(parse_obj_as(type, values))
+            objects.append(TypeAdapter(type).validate_python(values))
         return objects
 
     def write_data(self, file_path: str):
@@ -135,26 +136,8 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         Args:
             file_path (str): File path for the production system configuration
         """
-        data = self.get_dict_object_of_adapter()
         with open(file_path, "w") as json_file:
-            json.dump(data, json_file)
-
-    def get_dict_object_of_adapter(self) -> dict:
-        data = {
-                "ID": self.ID,
-                "seed": self.seed,
-                "time_model_data": self.get_list_of_dict_objects(self.time_model_data),
-                "state_data": self.get_list_of_dict_objects(self.state_data),
-                "process_data": self.get_list_of_dict_objects(self.process_data),
-                "node_data": self.get_list_of_dict_objects(self.node_data),
-                "queue_data": self.get_list_of_dict_objects(self.queue_data),
-                "resource_data": self.get_list_of_dict_objects(self.resource_data),
-                "node_data": self.get_list_of_dict_objects(self.node_data),
-                "product_data": self.get_list_of_dict_objects(self.product_data),
-                "sink_data": self.get_list_of_dict_objects(self.sink_data),
-                "source_data": self.get_list_of_dict_objects(self.source_data)
-        }
-        return data
+            json_file.write(self.model_dump_json(indent=4))
     
     def write_scenario_data(self, file_path: str) -> None:
         """
@@ -163,9 +146,5 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         Args:
             file_path (str): File path for the scenario data.
         """
-        data = self.scenario_data.dict()
         with open(file_path, "w") as json_file:
-            json.dump(data, json_file)
-
-    def get_list_of_dict_objects(self, values: List[BaseModel]) -> List[dict]:
-        return  [data.dict() for data in values]
+            json_file.write(self.scenario_data.model_dump_json(indent=4))

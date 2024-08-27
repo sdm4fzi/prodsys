@@ -10,17 +10,18 @@ The following states are possible:
 - `ProductionStateData`: A state that represents the time needed to process a product.
 - `TransportStateData`: A state that represents the time needed to transport a product.	    
 """
-
 from __future__ import annotations
+
 from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, TYPE_CHECKING
+
+from pydantic import ConfigDict
 
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
-
 
 
 class StateTypeEnum(str, Enum):
@@ -81,19 +82,17 @@ class StateData(CoreAsset):
         else:
             raise ValueError(f"Time model with ID {self.time_model_id} not found for state {self.ID}.")
         return md5(("".join([self.type, time_model_hash])).encode("utf-8")).hexdigest()
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "State",
-                "value": {
-                    "ID": "state_1",
-                    "description": "State data for state_1",
-                    "time_model_id": "time_model_1",
-                    "type": "ProductionState",
-                },
+    
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "state_1",
+                "description": "State data for state_1",
+                "time_model_id": "time_model_1",
+                "type": "ProductionState",
             }
-        }
+        ]
+    })
 
 
 class BreakDownStateData(StateData):
@@ -148,19 +147,17 @@ class BreakDownStateData(StateData):
 
         return md5(("".join([base_class_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()  
     
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Breakdown state",
-                "value": {
-                    "ID": "Breakdownstate_1",
-                    "description": "Breakdown state machine 1",
-                    "time_model_id": "function_time_model_5",
-                    "type": "BreakDownState",
-                    "repair_time_model_id": "function_time_model_8",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "Breakdownstate_1",
+                "description": "Breakdown state machine 1",
+                "time_model_id": "function_time_model_5",
+                "type": "BreakDownState",
+                "repair_time_model_id": "function_time_model_8",
             }
-        }
+        ]
+    })
 
 
 class ProcessBreakDownStateData(StateData):
@@ -226,21 +223,19 @@ class ProcessBreakDownStateData(StateData):
         
 
         return md5(("".join([base_class_hash, process_hash, repair_time_model_hash])).encode("utf-8")).hexdigest()
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Process breakdown state",
-                "value": {
-                    "ID": "ProcessBreakDownState_1",
-                    "description": "Process Breakdown state machine 1",
-                    "time_model_id": "function_time_model_7",
-                    "type": "ProcessBreakDownState",
-                    "process_id": "P1",
-                    "repair_time_model_id": "function_time_model_8",
-                },
+    
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "ProcessBreakDownState_1",
+                "description": "Process Breakdown state machine 1",
+                "time_model_id": "function_time_model_7",
+                "type": "ProcessBreakDownState",
+                "process_id": "P1",
+                "repair_time_model_id": "function_time_model_8",
             }
-        }
+        ]
+    })
 
 
 class ProductionStateData(StateData):
@@ -257,19 +252,16 @@ class ProductionStateData(StateData):
 
     type: Literal[StateTypeEnum.ProductionState]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Production state",
-                "value": {
-                    "ID": "ProductionState_1",
-                    "description": "Production state machine 1",
-                    "time_model_id": "function_time_model_1",
-                    "type": "ProductionState",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "ProductionState_1",
+                "description": "Production state machine 1",
+                "time_model_id": "function_time_model_1",
+                "type": "ProductionState",
             }
-        }
-
+        ]
+    })
 
 class TransportStateData(StateData):
     """
@@ -284,18 +276,16 @@ class TransportStateData(StateData):
 
     type: Literal[StateTypeEnum.TransportState]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Transport state",
-                "value": {
-                    "ID": "TransportState_1",
-                    "description": "Transport state machine 1",
-                    "time_model_id": "function_time_model_3",
-                    "type": "TransportState",
-                },
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "TransportState_1",
+                "description": "Transport state machine 1",
+                "time_model_id": "function_time_model_3",
+                "type": "TransportState",
             }
-        }
+        ]
+    })
 
 
 class SetupStateData(StateData):
@@ -353,21 +343,19 @@ class SetupStateData(StateData):
                 raise ValueError(f"Process with ID {process_id} not found for setup state {self.ID}.")
 
         return md5(("".join([base_class_hash] + setup_process_hashes)).encode("utf-8")).hexdigest()
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "summary": "Setup state",
-                "value": {
-                    "ID": "Setup_State_2",
-                    "description": "Setup state machine 2",
-                    "time_model_id": "function_time_model_2",
-                    "type": "SetupState",
-                    "origin_setup": "P2",
-                    "target_setup": "P1",
-                },
+    
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "Setup_State_2",
+                "description": "Setup state machine 2",
+                "time_model_id": "function_time_model_2",
+                "type": "SetupState",
+                "origin_setup": "P2",
+                "target_setup": "P1",
             }
-        }
+        ]
+    })
 
 
 STATE_DATA_UNION = Union[

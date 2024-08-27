@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List, TYPE_CHECKING, Generator, Tuple
+from typing import List, TYPE_CHECKING, Generator, Optional, Tuple
 
 import logging
 
@@ -77,7 +77,7 @@ class Router:
         self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic
         # TODO: add possibility to specify a production and a transport heuristic separately
     
-    def route_product(self, product: product.Product) -> Generator[Tuple[request.Request, request.TransportResquest]]:
+    def route_product_to_production_resource(self, product: product.Product) -> Generator[Optional[request.Request]]:
         """
         Routes a product to perform the next process by assigning a production resource, that performs the process, to the product 
         and assigning a transport resource to transport the product to the next process.
@@ -93,7 +93,6 @@ class Router:
             raise ValueError(f"No possible production resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID}.")
         potential_transport_requests: List[request.Request] = []
 
-
         potential_transport_requests = self.get_possible_transport_requests(potential_production_requests)
         if not potential_transport_requests:
             raise ValueError(f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}.")
@@ -104,20 +103,43 @@ class Router:
         if not production_requests:
             raise ValueError(f"No production requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
         self.routing_heuristic(production_requests)
+        yield env.timeout(0)
+        if not production_requests:
+            return
         routed_production_request = production_requests.pop(0)
         routed_production_request.resource.reserve_input_queues()
+        return routed_production_request
+    
 
-        transport_requests_of_routed_production_resource = [request for request in potential_transport_requests if request.target.data.ID == routed_production_request.resource.data.ID]
-        transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(transport_requests_of_routed_production_resource))
+    def route_transport_resource_for_product(self, product: product.Product, routed_production_request: request.Request) -> Generator[Optional[request.TransportResquest]]:
+        """
+        Routes a product to perform the next process by assigning a production resource, that performs the process, to the product 
+        and assigning a transport resource to transport the product to the next process.
+
+        Args:
+            product (product.Product): The product.
+
+        Returns:
+            Generator[Tuple[request.Request, request.TransportResquest]]: A generator that yields when the product is routed.
+        """
+        potential_transport_requests: List[request.Request] = self.get_transport_requests_to_target(routed_production_request.product, routed_production_request.resource, {})
+        if not potential_transport_requests:
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}.")
+        
+        env = get_env_from_requests(potential_transport_requests)
+
+        transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
         if not transport_requests:
             raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
         self.routing_heuristic(transport_requests)
-
+        yield env.timeout(0)
+        if not transport_requests:
+            return
         routed_transport_request = transport_requests.pop(0)
-        return routed_production_request, routed_transport_request
+        return routed_transport_request
     
 
-    def route_product_to_sink(self, product: product.Product) -> Generator[request.TransportResquest]:
+    def route_product_to_sink(self, product: product.Product) -> Generator[Optional[request.TransportResquest]]:
         """
         Routes a product to a sink.
 
@@ -137,6 +159,9 @@ class Router:
         if not transport_requests:
             raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
         self.routing_heuristic(transport_requests)
+        yield env.timeout(0)
+        if not transport_requests:
+            return
         routed_transport_request = transport_requests.pop(0)
         return routed_transport_request
 
@@ -277,19 +302,36 @@ class Router:
         possible_requests = []
         route_cache = {}
 
+        for transport_target in transport_targets:
+            possible_requests += self.get_transport_requests_to_target(product, transport_target, route_cache)
+        return possible_requests
+    
+
+
+    def get_transport_requests_to_target(self, product_to_transport: product.Product, target_resource: resources.Resource, route_cache: dict) -> List[request.TransportResquest]:
+        """
+        Returns a list of transport requests with different resources and processes for the next transport process of a product.
+
+        Args:
+            transport_target (resources.Resource): The transport target to get the transport requests for.
+
+        Returns:
+            List[request.TransportResquest]: A list of transport requests for the transport target.
+        """
+        transport_requests = []
         for resource in self.resource_factory.get_transport_resources():
             for process in resource.processes:
-                for target in transport_targets:
-                    transport_request = self.get_transport_request(product, resource, target)
-                    if route_cache.get((target.data.ID, process.process_data.ID)):
-                        transport_request.copy_cached_routes(route_cache[(target.data.ID, process.process_data.ID)])
-                        transport_request.set_process(process)
-                        possible_requests.append(transport_request)
-                    elif process.matches_request(transport_request):
-                        possible_requests.append(transport_request)
-                        transport_request.set_process(process)
-                        route_cache[(target.data.ID, process.process_data.ID)] = transport_request
-        return possible_requests
+                transport_request = self.get_transport_request(product_to_transport, resource, target_resource)
+                if route_cache.get((target_resource.data.ID, process.process_data.ID)):
+                    transport_request.copy_cached_routes(route_cache[(target_resource.data.ID, process.process_data.ID)])
+                    transport_request.set_process(process)
+                    transport_requests.append(transport_request)
+                elif process.matches_request(transport_request):
+                    transport_request.set_process(process)
+                    transport_requests.append(transport_request)
+                    route_cache[(target_resource.data.ID, process.process_data.ID)] = transport_request
+        return transport_requests
+        
 
     def get_requests_with_non_blocked_resources(
         self, requests: List[request.Request]
