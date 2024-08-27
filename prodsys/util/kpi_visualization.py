@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
 
 from prodsys.util import post_processing
@@ -12,7 +13,7 @@ from prodsys.util import post_processing
 def hex_to_rgba(h, alpha):
     return tuple([int(h.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)] + [alpha])
 
-def plot_throughput_time_distribution(post_processor: post_processing.PostProcessor):
+def plot_throughput_time_distribution(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the throughput time distribution of the simulation.
 
@@ -30,11 +31,22 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
     fig = ff.create_distplot(
         values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
     )
+    fig.update_layout(
+        xaxis_title="Throughput Time [Minutes]",
+        yaxis_title="Probability Density",
+    )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput_time_distribution.html"), auto_open=not return_html)
 
-def plot_line_balance_kpis(post_processor: post_processing.PostProcessor):
+    if return_html:
+        return pio.to_html(fig, include_plotlyjs='cdn', full_html=False)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "throughput_time_distribution.png")
+        fig.write_image(image_path)
+        return image_path
+    
+def plot_line_balance_kpis(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots line balancing key performance indicators (throughput, WIP, and Throughput Time) after total time.
 
@@ -49,19 +61,19 @@ def plot_line_balance_kpis(post_processor: post_processing.PostProcessor):
     fig.add_trace(go.Indicator(
         mode = "number",
         value = round(np.sum(list(df_output['Throughput']['Output'].values()))),
-        title = {"text": "Total Output"},
+        title = {"text": "Total Output [Products]"},
     ), row=1, col=1)
 
     fig.add_trace(go.Indicator(
         mode = "number",
         value = round(np.mean(list(df_output['WIP']['WIP'].values()))),
-        title = {"text": "Average Work In Progress (WIP)"},
+        title = {"text": "Average Work In Progress (WIP) [Products]"},
     ), row=1, col=2)
 
     fig.add_trace(go.Indicator(
         mode = "number",
-        value = round(np.mean(list(df_output['Throughput time']['Throughput_time'].values()))),
-        title = {"text": "Average Throughput Time"},
+        value = round(np.nanmean(list(df_output['Throughput time']['Throughput_time'].values()))),
+        title = {"text": "Average Throughput Time [Minutes]"},
     ), row=1, col=3)
 
     fig.update_layout(
@@ -79,9 +91,16 @@ def plot_line_balance_kpis(post_processor: post_processing.PostProcessor):
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "line_balance.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "line_balance.html"), auto_open=not return_html)
 
-def plot_oee(post_processor: post_processing.PostProcessor):
+    if return_html:
+        return pio.to_html(fig, full_html=False)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "line_balance_kpis.png")
+        fig.write_image(image_path)
+        return image_path
+
+def plot_oee(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the Overall Equipment Effectiveness (OEE) with Availability, Performance & Quality using the given post_processor.
 
@@ -131,10 +150,17 @@ def plot_oee(post_processor: post_processing.PostProcessor):
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "oee.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "oee.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "oee.png")
+        fig.write_image(image_path)
+        return image_path
 
 
-def plot_production_flow_rate_per_product(post_processor: post_processing.PostProcessor):
+def plot_production_flow_rate_per_product(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the production flow rate per product.
 
@@ -150,7 +176,7 @@ def plot_production_flow_rate_per_product(post_processor: post_processing.PostPr
     ])
     # Change the bar mode
     fig.update_layout(barmode='stack')
-    fig.update_xaxes(title_text="Percentage")
+    fig.update_xaxes(title_text="Percentage [%]")
     fig.update_layout(
         title_text="Production Flow Rate (PFO) per Product",
         annotations=[
@@ -166,10 +192,17 @@ def plot_production_flow_rate_per_product(post_processor: post_processing.PostPr
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "production_flow_rate_product_type.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "production_flow_rate_product_type.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "production_flow_rate_per_product.png")
+        fig.write_image(image_path)
+        return image_path
 
 
-def plot_boxplot_resource_utilization(post_processor: post_processing.PostProcessor):
+def plot_boxplot_resource_utilization(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots a boxplot to visualize resource utilization per station.
 
@@ -193,24 +226,33 @@ def plot_boxplot_resource_utilization(post_processor: post_processing.PostProces
             boxmean=True,
         ))
 
-    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage', annotations=[
+    fig.update_layout(title_text="Utilization per Station", yaxis_title='Percentage [%]', showlegend = False, annotations=[
             dict(
                 x=0.5,
-                y=-0.18,
+                y=-0.7,
                 showarrow=False,
-                text="Dashed Line = Mean & Solid Line = Median, Whiskers = Q1/Q3 +/- 1.5 * IQR(Q3-Q1)",
+                #text="Dashed Line = Mean & Solid Line = Median, Whiskers = Q1/Q3 +/- 1.5 * IQR(Q3-Q1)",
                 xref="paper",
                 yref="paper"
             )
-        ])
+        ],
+        height=600,
+    )
     fig.update_yaxes(range=[0, 100])
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_box_plots.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_box_plots.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "boxplot_resource_utilization.png")
+        fig.write_image(image_path)
+        return image_path
 
 
-def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor):
+def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the throughput time over time of the simulation.
 
@@ -218,6 +260,10 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
     df_tp = post_processor.df_throughput
+    simulation_time = post_processor.get_total_simulation_time()
+
+    x_position_15_percent = 0.15 * simulation_time
+
     fig = px.scatter(
         df_tp,
         x="Start_time",
@@ -227,11 +273,36 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Start Time [Minutes]",
+        yaxis_title="Throughput Time [Minutes]",
+    )
+    min_start_time = df_tp["Start_time"].min()
+    max_start_time = df_tp["Start_time"].max()
+    
+    new_x_range = [min(min_start_time, x_position_15_percent), max(max_start_time, x_position_15_percent)]
+    
+    fig.update_layout(xaxis_range=new_x_range)
+    
+    fig.add_vline(
+        x=x_position_15_percent, 
+        line_dash="dash", 
+        line_color="red",
+        annotation_text="Steady State",
+        annotation_position="top right"
+    )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "throughput.html"), auto_open=not return_html)
 
-def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor, normalized: bool=True):
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "throughput_time_over_time.png")
+        fig.write_image(image_path)
+        return image_path
+
+def plot_time_per_state_of_resources(post_processor: post_processing.PostProcessor, normalized: bool=True, return_html: bool = False, return_image: bool = False):
     """
     Plots the time per state of the resources of the simulation.
 
@@ -260,10 +331,17 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_states.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "resource_states.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "time_per_state_of_resources.png")
+        fig.write_image(image_path)
+        return image_path
 
 
-def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normalized: bool=True):
+def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normalized: bool=True, return_html: bool = False, return_image: bool = False):
     """
     Plots the time per state of the resources of the simulation.
 
@@ -272,39 +350,54 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_mean_wip_per_station
-    # df_time_per_state.sort_values(by='column_to_sort', inplace=True)
-    fig1 = go.Figure()
     df_time_per_state['mean_wip'] = np.maximum(np.ceil(df_time_per_state['mean_wip']), 1)
+    fig1 = go.Figure()
     fig1.add_trace(go.Bar(name='mean_wip', x=df_time_per_state['Resource'], y=df_time_per_state['mean_wip'], marker_color='purple', yaxis='y2'))
 
+    #df_time_per_state2 = post_processor.df_aggregated_resource_time_bins_states
     df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
-    fig2 = go.Figure()
+    df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
+
     resources = df_time_per_state2['Resource'].unique()
+    fig2 = go.Figure()
     for resource in resources:
         df_resource = df_time_per_state2[df_time_per_state2['Resource'] == resource]
-        
-        df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
         fig2.add_trace(go.Box(
             y=df_resource['percentage'],
             name=f'{resource}',
             boxmean=True  # mean and standard deviation
         ))
+
     fig2.update_xaxes(categoryorder='array', categoryarray=resources)
-    fig = make_subplots(rows=2, cols=1)
+    fig1.update_xaxes(categoryorder='array', categoryarray=resources)
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1)
     for trace in fig1.data:
         fig.add_trace(trace, row=2, col=1)
     for trace in fig2.data:
         fig.add_trace(trace, row=1, col=1)
 
-    fig.update_yaxes(title_text='WIP in #product', row=2, col=1)
-    fig.update_yaxes(title_text='Percentage', row=1, col=1)
+    fig.update_layout(
+        title='Mean WIP and Utilization per Station',
+        showlegend=False,
+        height=800,  # adjust height if needed
+    )
 
-    fig.update_layout(title='Mean WIP and Utilization per Station', showlegend=False)
+    fig.update_yaxes(title_text='Average WIP [Products]', row=2, col=1)
+    fig.update_yaxes(title_text='Percentage [%]', row=1, col=1)
+
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "mean_wip_util_station.html"), auto_open=not return_html)
 
-def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor, transport_resource_names: List[str]):
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "util_WIP_resource.png")
+        fig.write_image(image_path)
+        return image_path
+
+def plot_transport_utilization_over_time(post_processor: post_processing.PostProcessor, transport_resource_names: List[str], return_html: bool = False, return_image: bool = False):
     """
     Plots the utilization of the transport_agv resource over time.
 
@@ -325,14 +418,21 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
             ),     
         )
 
-    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
+    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage [%]')
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "Transport_utilization_over_time.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "Transport_utilization_over_time.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "transport_utilization_over_time.png")
+        fig.write_image(image_path)
+        return image_path
 
 
-def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
+def plot_WIP_with_range(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the WIP of the production system over time of the simulation with a range of the WIP based on a standard deviation.
 
@@ -386,12 +486,23 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor):
             fillcolor="rgba" + str(hex_to_rgba(color, 0.2)),
             showlegend=False,
         )
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_with_range.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_with_range.html"), auto_open=not return_html)
 
-def plot_WIP(post_processor: post_processing.PostProcessor):
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "WIP_with_range.png")
+        fig.write_image(image_path)
+        return image_path
+
+def plot_WIP(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the WIP of the production system over time of the simulation.
 
@@ -415,12 +526,23 @@ def plot_WIP(post_processor: post_processing.PostProcessor):
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP.html"), auto_open=not return_html)
 
-def plot_WIP_per_resource(post_processor: post_processing.PostProcessor):
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "WIP.png")
+        fig.write_image(image_path)
+        return image_path
+
+def plot_WIP_per_resource(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots the WIP of the production system and the resources in the production system over time of the simulation.
 
@@ -445,10 +567,28 @@ def plot_WIP_per_resource(post_processor: post_processing.PostProcessor):
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
+    fig.update_layout(
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+        ),
+        xaxis_title="Resource",
+        yaxis_title="WIP [Products]",
+    )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
-    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_per_resource.html"), auto_open=True)
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP_per_resource.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "WIP_per_resource.png")
+        fig.write_image(image_path)
+        return image_path
 
 def print_aggregated_data(post_processor: post_processing.PostProcessor):
     """
