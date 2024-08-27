@@ -26,13 +26,16 @@ class Queue(store.FilterStore):
         _pending_put (int): The number of products that are reserved for being put into the queue. Avoids bottleneck in the simulation.
 
     """
-    def __init__(self, env: sim.Environment, queue_data: queue_data.QueueData):
+    def __init__(self, env: sim.Environment, data: queue_data.QueueData):
         self.env: sim.Environment = env
-        self.queue_data: queue_data.QueueData = queue_data
-        if queue_data.capacity == 0:
+        self.data: queue_data.QueueData = data
+        if data.capacity == 0:
             capacity = float("inf")
         else:
-            capacity = queue_data.capacity
+            capacity = data.capacity
+        self.input_location = data.input_location if data.input_location is not None else getattr(data, 'input_location', None)
+        self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
+        #self.warehouse = self.location is not None
         self._pending_put: int = 0
         super().__init__(env, capacity)
 
@@ -44,7 +47,7 @@ class Queue(store.FilterStore):
         Returns:
             bool: True if the queue is full, False otherwise.
         """
-        logger.debug({"ID": self.queue_data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
         return (self.capacity - self._pending_put - len(self.items)) <= 0
     
     def reserve(self) -> None:
@@ -64,22 +67,8 @@ class Queue(store.FilterStore):
         """
         self._pending_put -= 1
 
-
-class Storage(BaseModel):
-
-    env: sim.Environment
-    data: queue_data.StorageData
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    def get_location(self) -> List[float]:
-        """
-        Returns the location of the resource.
-
-        Returns:
-            List[float]: The location of the resource. Has to have length 2.
-        """
-        return self.data.location
-
-
+    def get_input_location(self):
+        return self.input_location
+    
+    def get_output_location(self):
+        return self.output_location

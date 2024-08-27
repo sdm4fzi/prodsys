@@ -162,11 +162,10 @@ class Runner:
             self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
                 env=self.env,
                 process_factory=self.process_factory,
-                storage_factory=self.queue_factory,
+                queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
                 sink_factory= self.sink_factory
             )
-            # self.auxiliary_factory.create_auxiliary(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env, 

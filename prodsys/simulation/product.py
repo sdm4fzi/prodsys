@@ -238,7 +238,7 @@ class Product(BaseModel):
         Returns:
             request.Request: The created transport request.
         """
-
+        # FIXME: rework function to get the auxiliary request...
         req = request.TransportResquest(
             process=auxiliary.transport_process,
             product=auxiliary,

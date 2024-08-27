@@ -12,12 +12,12 @@ import numpy as np
 
 from simpy import events
 
-from prodsys.simulation import resources, auxiliary
+from prodsys.simulation import resources
 from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink
+    from prodsys.simulation import resources, product, sink, auxiliary
     from prodsys.factories import resource_factory, sink_factory, auxiliary_factory
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
@@ -220,7 +220,8 @@ class Router:
         possible_auxiliaries = self.get_possible_auxiliaries(processing_request)
         while True:
             free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
-            self.routing_heuristic(free_possible_auxiliaries)
+            # TODO: maybe make heuristic working for selecting auxiliary...
+            np.random.shuffle(free_possible_auxiliaries)
             if free_possible_auxiliaries:
                 break
             logger.debug({"ID": processing_request.product.product_data.ID , "sim_time": processing_request.product.env.now, "event": f"Waiting for free auxiliary."})
@@ -379,12 +380,8 @@ def random_routing_heuristic(possible_requests: List[request.Request]):
     Args:
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
-    
-    if any(isinstance(resource, auxiliary.Auxiliary) for resource in possible_requests):
-        np.random.shuffle(possible_requests)
-    else:
-        possible_requests.sort(key=lambda x: x.resource.data.ID)
-        np.random.shuffle(possible_requests)
+    possible_requests.sort(key=lambda x: x.resource.data.ID)
+    np.random.shuffle(possible_requests)
 
 
 def shortest_queue_routing_heuristic(

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
 
-from prodsys.express.auxiliary import Auxiliary
-
 if TYPE_CHECKING:
     from prodsys.simulation.product import Product, Locatable
     from prodsys.simulation.process import PROCESS_UNION, TransportProcess, LinkTransportProcess
