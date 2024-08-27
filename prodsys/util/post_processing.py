@@ -148,7 +148,6 @@ class PostProcessor:
 
         df = pd.merge(df, df_unique)
         df = df.sort_values(by=["Time", "Resource", "State_sorting_Index"])
-        df.to_csv('df_prepared.csv', index=False)
         return df
 
     @cached_property
@@ -1057,7 +1056,6 @@ class PostProcessor:
         exclude_types = [state.StateTypeEnum.sink, state.StateTypeEnum.source]
         exclude_states = df_temp.loc[df_temp["State Type"].isin(exclude_types), "State"].unique()
         df = df.loc[~df["WIP_resource"].isin(exclude_states)]
-
         df = df.loc[df["WIP_resource"].isin(valid_resources)]
         
         return df
