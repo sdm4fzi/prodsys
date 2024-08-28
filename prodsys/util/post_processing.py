@@ -85,6 +85,20 @@ class PostProcessor:
                 state.StateTypeEnum.transport,
             ]
         )
+    
+    def get_total_simulation_time(self) -> float:
+        """
+        Calculates the total simulation time from the data frame.
+
+        Returns:
+            float: Total simulation time.
+        """
+        if self.df_raw is not None and "Time" in self.df_raw.columns:
+            start_time = self.df_raw["Time"].min()
+            end_time = self.df_raw["Time"].max()
+            return end_time - start_time
+        else:
+            raise ValueError("Data frame is not loaded or 'Time' column is missing.")
 
     @cached_property
     def df_prepared(self) -> pd.DataFrame:
@@ -460,6 +474,8 @@ class PostProcessor:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
         """
         df = self.df_prepared.copy()
+        max_time = df["Time"].max()
+        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -537,8 +553,16 @@ class PostProcessor:
         """
         df = self.df_prepared.copy()
 
-        time_units_bin = 60
-        df['TimeBin'] = (df['Time'] // time_units_bin) * time_units_bin
+        max_time = df["Time"].max()
+        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+
+        df['DateTime'] = pd.to_datetime(df['DateTime'])
+        df.set_index('DateTime', inplace=True)
+
+        # Create hourly bins
+        df['HourBin'] = df.index.floor('h')  # Bins the DateTime to the start of each hour
+
+        df.reset_index(inplace=True)
 
         positive_condition = (
             (df["State_type"] == "Process State")
@@ -557,10 +581,10 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
-        df["Used_Capacity"] = df.groupby(["Resource", "TimeBin"])["Increment"].cumsum()
+        df["Used_Capacity"] = df.groupby(["Resource", "HourBin"])["Increment"].cumsum()
 
-        df["next_Time"] = df.groupby(["Resource", "TimeBin"])["Time"].shift(-1)
-        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "TimeBin"])["Time"].transform('max'))
+        df["next_Time"] = df.groupby(["Resource", "HourBin"])["Time"].shift(-1)
+        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "HourBin"])["Time"].transform('max'))
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
@@ -638,12 +662,12 @@ class PostProcessor:
 
         df = df.loc[df["Time_type"].notna()]
 
-        df_time_per_state = df.groupby(["Resource", "TimeBin", "Time_type"]).agg({
+        df_time_per_state = df.groupby(["Resource", "HourBin", "Time_type"]).agg({
             "time_increment": "sum",
             "Time": "first"  # Ensure 'Time' is available for aggregation
         }).reset_index()
 
-        df_resource_time = df.groupby(["Resource", "TimeBin"]).agg({
+        df_resource_time = df.groupby(["Resource", "HourBin"]).agg({
             "time_increment": "sum",
         }).reset_index()
 
@@ -651,7 +675,7 @@ class PostProcessor:
             columns={"time_increment": "resource_time"}, inplace=True
         )
 
-        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "TimeBin"])
+        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "HourBin"])
 
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
@@ -969,7 +993,6 @@ class PostProcessor:
 
         df["wip"] = df.groupby(by="wip_resource")["wip_increment"].cumsum()
 
-        # remove bug that sinks have resource WIP!
         df_temp = df[["State", "State Type"]].drop_duplicates()
         sinks = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.sink, "State"].unique()
         df = df.loc[~df["wip_resource"].isin(sinks)]
@@ -1009,6 +1032,8 @@ class PostProcessor:
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.loc[df["Time"] != 0]
 
+        valid_resources = df["Resource"].unique()
+
         CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
         FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
 
@@ -1028,8 +1053,10 @@ class PostProcessor:
         
         # FIXME: remove bug that negative WIP is possible
         df_temp = df[["State", "State Type"]].drop_duplicates()
-        sinks = df_temp.loc[df_temp["State Type"] == state.StateTypeEnum.sink, "State"].unique()
-        df = df.loc[~df["WIP_resource"].isin(sinks)]
+        exclude_types = [state.StateTypeEnum.sink, state.StateTypeEnum.source]
+        exclude_states = df_temp.loc[df_temp["State Type"].isin(exclude_types), "State"].unique()
+        df = df.loc[~df["WIP_resource"].isin(exclude_states)]
+        df = df.loc[df["WIP_resource"].isin(valid_resources)]
         
         return df
     

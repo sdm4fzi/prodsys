@@ -261,6 +261,10 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
     df_tp = post_processor.df_throughput
+    simulation_time = post_processor.get_total_simulation_time()
+
+    x_position_15_percent = 0.15 * simulation_time
+
     fig = px.scatter(
         df_tp,
         x="Start_time",
@@ -271,8 +275,22 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
     fig.update_layout(
-        xaxis_title="Throughput Time [Minutes]",
-        yaxis_title="Start Time [Minutes]",
+        xaxis_title="Start Time [Minutes]",
+        yaxis_title="Throughput Time [Minutes]",
+    )
+    min_start_time = df_tp["Start_time"].min()
+    max_start_time = df_tp["Start_time"].max()
+    
+    new_x_range = [min(min_start_time, x_position_15_percent), max(max_start_time, x_position_15_percent)]
+    
+    fig.update_layout(xaxis_range=new_x_range)
+    
+    fig.add_vline(
+        x=x_position_15_percent, 
+        line_dash="dash", 
+        line_color="red",
+        annotation_text="Steady State",
+        annotation_position="top right"
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   
@@ -296,7 +314,7 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
     df_time_per_state = post_processor.df_aggregated_resource_states
 
     if normalized:
-        y_column = "Percentage"
+        y_column = "percentage"
     else:
         y_column = "time_increment"
 
@@ -401,7 +419,7 @@ def plot_transport_utilization_over_time(post_processor: post_processing.PostPro
             ),     
         )
 
-    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage')
+    fig.update_layout(title='AGV Utilization Over Time', xaxis_title='Time in Minutes', yaxis_title='Percentage [%]')
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))   

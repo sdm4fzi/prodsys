@@ -940,9 +940,7 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
     sink_locations = remove_duplicate_locations(
         [sink.input_location for sink in adapter.sink_data]
     )
-    #positions = machine_locations + source_locations + sink_locations
-    positions = machine_locations
-
+    positions = machine_locations + source_locations + sink_locations
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(f"Multiple objects are positioned at the same location: {location}")
