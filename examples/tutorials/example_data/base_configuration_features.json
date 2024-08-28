@@ -270,6 +270,16 @@
             "capacity": 0
         },
         {
+            "ID": "RS1_default_input_queue",
+            "description": "Default input queue of RS1",
+            "capacity": 0
+        },
+        {
+            "ID": "RS1_default_output_queue",
+            "description": "Default output queue of RS1",
+            "capacity": 0
+        },
+        {
             "ID": "warehouse_queue",
             "description": "Warehouse for the simulation",
             "capacity": 200,
@@ -412,6 +422,36 @@
             ],
             "output_queues": [
                 "M4_default_output_queue"
+            ]
+        },
+        {
+            "ID": "RS1",
+            "description": "Rework Station 1",
+            "capacity": 1,
+            "input_location": [
+                10.0,
+                0.0
+            ],
+            "output_location": [
+                11.0,
+                1.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "RP"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BSM"
+            ],
+            "input_queues": [
+                "RS1_default_input_queue"
+            ],
+            "output_queues": [
+                "RS1_default_output_queue"
             ]
         },
         {
