@@ -161,26 +161,44 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the warehouse.
         """
-        #print("Routing to warehouse")
+        print("Routing to warehouse")
         warehouses = self.resource_factory.queue_factory.get_warehouse_queues()
 
         chosen_warehouse = np.random.choice(warehouses)
         #print(f"Chosen warehouse: {chosen_warehouse.data.ID}")
         # FIXME: resource=chosen_warehouse is wrong, the resource should be the transport resource that transports the product to the warehouse -> use the route_transport_resource_for_product request or a similar logic
-        warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=chosen_warehouse, origin=product.current_locatable, target=chosen_warehouse)
+        #warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=chosen_warehouse, origin=product.current_locatable, target=chosen_warehouse)
+        production_request = request.Request(
+            process=None,
+            product=product,
+            resource=chosen_warehouse,
+        )
 
-        self._is_routing_to_warehouse = True
+        # Yield the routing of the transport resource for the product
+        transport_resource = yield from self.route_transport_resource_for_product(product, production_request)
+
+        # Create the transport request using the correct transport resource
+        warehouse_request = request.TransportResquest(
+            process=product.transport_process,
+            product=product,
+            resource=transport_resource.resource,
+            origin=product.current_locatable,
+            target=chosen_warehouse,
+        )
+
+        # Get potential transport requests
         potential_transport_requests = self.get_possible_transport_requests([warehouse_request])
         if not potential_transport_requests:
             raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any warehouse from resource {product.current_locatable.data.ID}.")
-        self._is_routing_to_warehouse = False
 
+        # Get the environment and check for free transport resources
         env = get_env_from_requests(potential_transport_requests)
         transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
         
         if not transport_requests:
             raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
         
+        # Apply routing heuristic and return the chosen transport request
         self.routing_heuristic(transport_requests)
         routed_transport_request = transport_requests.pop(0)
         return routed_transport_request
@@ -197,23 +215,57 @@ class Router:
         """
         
         # FIXME: resource=warehouse is wrong, the resource should be the transport resource that transports the product to the warehouse -> use the route_transport_resource_for_product request or a similar logic
-        from_warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=warehouse, origin=warehouse, target=resource)
-        #print(f"Routing from warehouse {warehouse.data.ID} to resource {resource.data.ID}")
-        self._is_routing_to_warehouse = True
+        # from_warehouse_request = request.TransportResquest(process=product.transport_process, product=product, resource=warehouse, origin=warehouse, target=resource)
+        # #print(f"Routing from warehouse {warehouse.data.ID} to resource {resource.data.ID}")
+        # self._is_routing_to_warehouse = True
+        # potential_transport_requests = self.get_possible_transport_requests([from_warehouse_request])
+        # if not potential_transport_requests:
+        #     raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any warehouse from resource {product.current_locatable.data.ID}.")
+        # self._is_routing_to_warehouse = False
+
+        # env = get_env_from_requests(potential_transport_requests)
+        # transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
+        
+        # if not transport_requests:
+        #     raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
+        
+        # self.routing_heuristic(transport_requests)
+        # routed_transport_request = transport_requests.pop(0)
+        # #print(f"Routed transport request: {routed_transport_request}")
+        # return routed_transport_request
+        production_request = request.Request(
+            process=None,
+            product=product,
+            resource=warehouse,
+        )
+
+        # Yield the routing of the transport resource for the product from the warehouse
+        transport_resource = yield from self.route_transport_resource_for_product(product, production_request)
+
+        # Create the transport request using the correct transport resource
+        from_warehouse_request = request.TransportResquest(
+            process=product.transport_process,
+            product=product,
+            resource=transport_resource.resource,
+            origin=warehouse,
+            target=resource,
+        )
+
+        # Get potential transport requests
         potential_transport_requests = self.get_possible_transport_requests([from_warehouse_request])
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any warehouse from resource {product.current_locatable.data.ID}.")
-        self._is_routing_to_warehouse = False
+            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach the target resource {resource.data.ID} from warehouse {warehouse.data.ID}.")
 
+        # Get the environment and check for free transport resources
         env = get_env_from_requests(potential_transport_requests)
         transport_requests: List[request.TransportResquest] = yield env.process(self.get_requests_with_free_resources(potential_transport_requests))
         
         if not transport_requests:
             raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
         
+        # Apply routing heuristic and return the chosen transport request
         self.routing_heuristic(transport_requests)
         routed_transport_request = transport_requests.pop(0)
-        #print(f"Routed transport request: {routed_transport_request}")
         return routed_transport_request
 
 

@@ -141,7 +141,6 @@ class ProductionController(Controller):
     rework_needed: Optional[bool] = None
     blocking: Optional[bool] = None
 
-    #TODO: add logic to retrieve products from warehouse queue if needed. if location of queue =! location of resource, then transportrequest
     def get_next_product_for_process(
         self, resource: resources.Resource, product: product.Product
     ):
@@ -187,11 +186,13 @@ class ProductionController(Controller):
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """   
         events = []
+        loop = False
         if isinstance(resource, resources.ProductionResource):
             for queue in resource.output_queues:
                 for product in products:
                     #if queue.full:
-                    if random.random() < 0.3: # TODO: Add Storing Heuristic in the long run to externalize this behavior
+                    #if random.random() < 0.3: # TODO: Add Storing Heuristic in the long run to externalize this behavior
+                    if loop:
                         print("Warehouse full")
                         warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product))
                         #print("Warehouse transport request", warehouse_transport_request)
@@ -815,7 +816,7 @@ class TransportController(Controller):
         target = process_request.get_target()
         route_to_target = process_request.get_route()
         logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
-        #TODO: check for direction of transport because of warehouse
+
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
