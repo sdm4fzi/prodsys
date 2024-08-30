@@ -771,12 +771,10 @@ class TransportController(Controller):
         self._current_locatable = locatable
         if isinstance(locatable, source.Source):
             self.resource.set_location(locatable.get_output_location())
-        elif isinstance(locatable, sink.Sink):
+        elif isinstance(locatable, (sink.Sink, store.Queue, node.Node)):
             self.resource.set_location(locatable.get_input_location())
         elif isinstance(locatable, resources.TransportResource):
             self.resource.set_location(locatable.get_location())
-        elif isinstance(locatable, store.Queue):
-            self.resource.set_location(locatable.get_input_location())
         elif isinstance(locatable, resources.ProductionResource):
             if to_output:
                 self.resource.set_location(locatable.get_output_location())
