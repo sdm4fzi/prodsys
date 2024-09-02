@@ -194,7 +194,7 @@ class Product(BaseModel):
                     continue
                 break
             while True:
-                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_product(self, production_request))
+                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_product(production_request.product, production_request.resource))
                 if not transport_request:
                     yield self.env.timeout(0)
                     continue
