@@ -156,16 +156,30 @@ class ProductionController(Controller):
         """
         events = []
         if isinstance(resource, resources.ProductionResource):
+            selected_queue = None
+            product_in_queue_event = None
+            
             for queue in resource.input_queues:
-                events.append(
-                    queue.get(filter=lambda item: item is product.product_data)
+                product_in_queue_event = queue.get(filter=lambda item: item is product.product_data)
+                if product_in_queue_event:
+                    selected_queue = queue
+                    break
+
+            if selected_queue is None:
+                raise ValueError("No product in any queue")
+
+            if selected_queue.output_location is not None and selected_queue.output_location != resource.get_input_location():
+                #transport request origin: warehouse
+                #transport request target: production resource
+                transport_request = yield self.env.process(
+                    product.product_router.route_product_from_warehouse(product, resource)
                 )
-                if queue.output_location is not None and queue.output_location != resource.get_input_location():
-                    transport_request = yield self.env.process(
-                        product.product_router.route_product_from_warehouse(product, queue, resource)
-                        )
-                    print("Transport request get_next_product_for_process: ", transport_request)
-                    yield self.env.process(product.request_process(transport_request))
+                print("Transport request get_next_product_for_process: ", transport_request)
+                yield self.env.process(product.request_process(transport_request))
+                events.append(transport_request)
+
+            events.append(product_in_queue_event)
+
             if not events:
                 raise ValueError("No product in queue")
             return events
@@ -197,6 +211,10 @@ class ProductionController(Controller):
                         warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product))
                         #print("Warehouse transport request", warehouse_transport_request)
                         yield self.env.process(product.request_process(warehouse_transport_request))
+                        warehouse_queue = warehouse_transport_request.target
+                        print("warehouse queue: ",warehouse_queue)
+                        events.append(warehouse_queue.put(product.product_data))
+                        print("events: ", events)
                     else:
                         events.append(queue.put(product.product_data))
         else:
@@ -651,35 +669,20 @@ class TransportController(Controller):
         Returns:
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
-        # events = []
-        # if isinstance(resource, resources.ProductionResource) or isinstance(
-        #     resource, source.Source
-        # ):
-        #     for queue in resource.output_queues:
-        #         events.append(queue.get(filter=lambda x: x is product.product_data))
-        #     if not events:
-        #         raise ValueError("No product in queue")
-        # elif isinstance(resource, store.Queue):
-        #     events.append(resource.get(filter=lambda x: x is product.product_data))
-        # else:
-        #     raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Warehouse")
-        # return events
-
         events = []
         
-        #print(product.product_router._is_routing_to_warehouse)
-        # 1. Transport request: product in output queue of resource: get from output queue from resource
-        # 2. Transport request: product must go to warehouse, go there and release it: get from output queue from resource
-        # 3. Transport request: product is in warehouse, go there and get it: get from warehouse
         if isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source):
             for queue in resource.output_queues:
+                #print(f"Queue items: {[item for item in queue.items]}")
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
                 raise ValueError("No product in queue")
         elif isinstance(resource, store.Queue):
             print("product retrieved from queue")
             events.append(resource.get(filter=lambda x: x is product.product_data))
-        # TODO: exception hinzufügen, fass get nicht funktioniert hat und das Produkt nicht gefunden wurde
+
+        if not events:
+            raise ValueError(f"Product {product.product_data} not found in any queue")
         
         return events
 
@@ -699,9 +702,6 @@ class TransportController(Controller):
         Returns:
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
-        # 1. Transport request: product in output queue of resource: put to input queue of resource
-        # 2. Transport request: product must go to warehouse, go there and release it: put to warehouse
-        # 3. Transport request: product is in warehouse, go there and get it: put to input queue of resource
         events = []
         if isinstance(locatable, resources.ProductionResource) or isinstance(locatable, sink.Sink):
             for queue in locatable.input_queues:
@@ -716,13 +716,6 @@ class TransportController(Controller):
             )
 
         return events
-
-        # if queue.location is not None and queue.location != self.resource.get_location():
-                #     events.append(queue.put(product.product_data))
-                #     #print("Items in warehouse:", queue.items)
-                # else:
-                #     events.append(queue.put(product.product_data))
-        #TODO: check if product goes here (should be because location of target must be queue)
 
     def control_loop(self) -> Generator:
         """
@@ -825,7 +818,15 @@ class TransportController(Controller):
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport to pick up {product.product_data.ID} for transport"})
                 yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True, to_output=True))
 
+            if isinstance(target, store.Queue) or isinstance(origin, store.Queue):
+                transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
+                yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False, to_output=True))
+                product.update_location(target)
+                product.finished_process.succeed()
+                return
+
             product_retrieval_events = self.get_next_product_for_process(origin, product)
+            #print("product retrieval event:", product_retrieval_events)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
@@ -845,7 +846,7 @@ class TransportController(Controller):
                 resource.got_free.succeed()
             product.finished_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
-
+    
     def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool, to_output: bool) -> Generator:
         """
         Run the transport process and every single transport step in the route of the transport process.

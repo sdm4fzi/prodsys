@@ -122,10 +122,25 @@
             "batch_size": 100
         },
         {
+            "ID": "ftm3",
+            "description": "function time model product 2",
+            "distribution_function": "normal",
+            "location": 200.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
             "ID": "md1",
             "description": "manhattan time model 1",
             "speed": 180.0,
             "reaction_time": 0.033,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "md2",
+            "description": "manhattan time model 1",
+            "speed": 18000.0,
+            "reaction_time": 0,
             "metric": "manhattan"
         },
         {
@@ -216,6 +231,107 @@
             "type": "TransportProcesses",
             "loading_time_model_id": "ltm",
             "unloading_time_model_id": "utm"
+        },
+        {
+            "ID": "Link_TP1",
+            "description": "Transport Process Link",
+            "time_model_id": "md2",
+            "type": "LinkTransportProcesses",
+            "loading_time_model_id": "ltm",
+            "unloading_time_model_id": "utm",
+            "links": [
+                [
+                    "S3",
+                    "M1_input"
+                ]
+            ],
+            "capability":"conveyor"
+        },
+        {
+            "ID": "Link_TP2",
+            "description": "Transport Process Link",
+            "time_model_id": "md2",
+            "type": "LinkTransportProcesses",
+            "loading_time_model_id": "ltm",
+            "unloading_time_model_id": "utm",
+            "links": [
+                [
+                    "M1_output",
+                    "M2_input"
+                ]
+            ],
+            "capability":"conveyor"
+        },
+        {
+            "ID": "Link_TP3",
+            "description": "Transport Process Link",
+            "time_model_id": "md2",
+            "type": "LinkTransportProcesses",
+            "loading_time_model_id": "ltm",
+            "unloading_time_model_id": "utm",
+            "links": [
+                [
+                    "M2_output",
+                    "SK3"
+                ]
+            ],
+            "capability":"conveyor"
+        },
+        {
+            "ID": "requiredcapabilityprocess",
+            "description": "Required Capability Process",
+            "type": "RequiredCapabilityProcesses",
+            "capability": "conveyor"
+        }
+    ],
+    "node_data": [
+        {
+            "ID": "S3",
+            "description": "",
+            "location": [
+                -5.0,
+                -5.0
+            ]
+        },
+        {
+            "ID": "M1_input",
+            "description": "",
+            "location": [
+                0.0,
+                0.0
+            ]
+        },
+        {
+            "ID": "M1_output",
+            "description": "",
+            "location": [
+                1.0,
+                1.0
+            ]
+        },
+        {
+            "ID": "M2_input",
+            "description": "",
+            "location": [
+                0.0,
+                5.0
+            ]
+        },
+        {
+            "ID": "M2_output",
+            "description": "",
+            "location": [
+                1.0,
+                6.0
+            ]
+        },
+        {
+            "ID": "SK3",
+            "description": "",
+            "location": [
+                30.0,
+                30.0
+            ]
         }
     ],
     "queue_data": [
@@ -321,12 +437,10 @@
                 "BSM"
             ],
             "input_queues": [
-                "M1_default_input_queue",
-                "warehouse_queue"
+                "M1_default_input_queue"
             ],
             "output_queues": [
-                "M1_default_output_queue",
-                "warehouse_queue"
+                "M1_default_output_queue"
             ]
         },
         {
@@ -355,11 +469,12 @@
                 "BSM"
             ],
             "input_queues": [
-                "M2_default_input_queue",
-                "warehouse_queue"
+                "M2_default_input_queue"
             ],
             "output_queues": [
-                "M2_default_output_queue",
+                "M2_default_output_queue"
+            ],
+            "warehouse_queues": [
                 "warehouse_queue"
             ]
         },
@@ -387,12 +502,10 @@
                 "BSM"
             ],
             "input_queues": [
-                "M3_default_input_queue",
-                "warehouse_queue"
+                "M3_default_input_queue"
             ],
             "output_queues": [
-                "M3_default_output_queue",
-                "warehouse_queue"
+                "M3_default_output_queue"
             ]
         },
         {
@@ -421,12 +534,10 @@
                 "BSM"
             ],
             "input_queues": [
-                "M4_default_input_queue",
-                "warehouse_queue"
+                "M4_default_input_queue"
             ],
             "output_queues": [
-                "M4_default_output_queue",
-                "warehouse_queue"
+                "M4_default_output_queue"
             ]
         },
         {
@@ -478,6 +589,57 @@
             "state_ids": [
                 "BST"
             ]
+        },
+        {
+            "ID": "Link_TR1",
+            "description": "Transport Resource 2 for Linktransport",
+            "capacity": 1,
+            "location": [
+                -5.0,
+                -5.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "Link_TP1"
+            ],
+            "process_capacities": [
+                1
+            ]
+        },
+        {
+            "ID": "Link_TR2",
+            "description": "Transport Resource 2 for Linktransport",
+            "capacity": 1,
+            "location": [ 
+                1.0,
+                1.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "Link_TP2"
+            ],
+            "process_capacities": [
+                1
+            ]
+        },
+        {
+            "ID": "Link_TR3",
+            "description": "Transport Resource 2 for Linktransport",
+            "capacity": 1,
+            "location": [
+                1.0,
+                6.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "Link_TP3"
+            ],
+            "process_capacities": [
+                1
+            ]
         }
     ],
     "process_module_data": [],
@@ -505,6 +667,16 @@
                 "P2"
             ],
             "transport_process": "TP1"
+        },
+        {
+            "ID": "Product_3",
+            "description": "Product 3",
+            "product_type": "Product_3",
+            "processes": [
+                "P1",
+                "P2"
+            ],
+            "transport_process": "requiredcapabilityprocess"
         }
     ],
     "sink_data": [
@@ -528,6 +700,18 @@
                 30.0
             ],
             "product_type": "Product_2",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        },
+        {
+            "ID": "SK3",
+            "description": "Sink 2",
+            "input_location": [
+                30.0,
+                30.0
+            ],
+            "product_type": "Product_3",
             "input_queues": [
                 "SinkQueue"
             ]
@@ -558,6 +742,21 @@
             ],
             "product_type": "Product_2",
             "time_model_id": "ftm2",
+            "router": "SimpleRouter",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        },
+        {
+            "ID": "S3",
+            "description": "Source 3",
+            "output_location": [
+                -5.0,
+                -5.0
+            ],
+            "product_type": "Product_3",
+            "time_model_id": "ftm3",
             "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
             "output_queues": [
