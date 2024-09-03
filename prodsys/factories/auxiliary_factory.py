@@ -44,7 +44,7 @@ class AuxiliaryFactory(BaseModel):
                                 for _ in range(storage):
                                         auxiliary = self.add_auxiliary(auxiliary_data, storr)
                                         auxiliary.auxiliary_info.log_create_auxiliary(
-                                                resource=auxiliary.current_location, _product=auxiliary, event_time=self.env.now
+                                                resource=auxiliary.current_locatable, _product=auxiliary, event_time=self.env.now
                                         )
 
         def add_auxiliary(self, auxiliary_data: auxiliary_data.AuxiliaryData, storage: queue_data.QueueData):
@@ -69,15 +69,25 @@ class AuxiliaryFactory(BaseModel):
                 router = self.get_router(source_data.RoutingHeuristic.FIFO)  # Add the routing_heuristic in auxiliary_data, like in source_data
                 auxiliary_object = auxiliary.Auxiliary.model_validate(values)
                 auxiliary_object.auxiliary_router = router
-                auxiliary_object.current_location = storage
+                auxiliary_object.current_locatable = storage
+                auxiliary_object.init_got_free()
 
                 if self.event_logger:
-                        # FIXME: resolve problem with observation -> raises error because "AuxiliaryInfo" object has no field "log_create_auxiliary"
                         self.event_logger.observe_terminal_auxiliary_states(auxiliary_object)
 
                 self.auxiliary_counter += 1
                 self.auxiliaries.append(auxiliary_object)
                 return auxiliary_object
+        
+        def place_auxiliaries_in_queues(self):
+                """
+                Place the auxiliary objects in the system.
+
+                Returns:
+                        None
+                """
+                for auxiliary in self.auxiliaries:
+                        auxiliary.current_locatable.put(auxiliary.product_data)
 
         def get_auxiliary(self, ID: str) -> auxiliary.Auxiliary:
                 """

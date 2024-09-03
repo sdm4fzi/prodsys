@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Union, Optional
 from hashlib import md5
 
 from pydantic import ConfigDict, conlist
@@ -37,8 +37,7 @@ class QueueData(CoreAsset):
     """
 
     capacity: Union[int, float] = 0.0
-    input_location: Optional[conlist(float, min_length=2, max_length=2)] = None  # type: ignore
-    output_location: Optional[conlist(float, min_length=2, max_length=2)] = None  # type: ignore
+    location: Optional[conlist(float, min_length=2, max_length=2)] = None  # type: ignore
 
     def hash(self) -> str:
         """
