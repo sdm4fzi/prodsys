@@ -162,14 +162,14 @@ class Product(BaseModel):
 
     model_config=ConfigDict(arbitrary_types_allowed=True)
 
-    def update_location(self, resource: Locatable):
+    def update_location(self, locatable: Locatable):
         """
         Updates the location of the product object.
 
         Args:
-            resource (Locatable): Locatable objects where product object currently is.
+            locatable (Locatable): Locatable objects where product object currently is.
         """
-        self.current_locatable = resource
+        self.current_locatable = locatable
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Updated location to {self.current_locatable.data.ID}"})
 
     def process_product(self):
@@ -184,14 +184,25 @@ class Product(BaseModel):
         self.set_next_production_process()
 
         if self.product_data.auxiliaries:
-            auxiliary_request_1 = self.get_auxiliary_request_for_auxiliary()
-            yield self.env.process(self.product_router.get_auxiliary(auxiliary_request_1))
-
-            if auxiliary_request_1.auxiliary.current_location.data.ID != self.current_locatable.data.ID: # doesn't work if storage has same location as source
-                auxiliary_request = self.get_transport_request_for_auxiliary(auxiliary_request_1.auxiliary)
-                yield self.env.process(auxiliary_request_1.auxiliary.get_auxiliary(auxiliary_request))
+            while True:
+                auxiliary_request: request.AuxiliaryRequest = yield self.env.process(self.product_router.route_auxiliary_to_product(self))
+                if not auxiliary_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            print(f"auxiliairy request for product {self.product_data.ID}: product: {auxiliary_request.product.product_data.ID}, resource: {auxiliary_request.resource.data.ID}, aux: {auxiliary_request.auxiliary.product_data.ID}, process: {auxiliary_request.process.process_data.ID}, ")
+            while True:
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request))
+                if not auxiliary_transport_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            print(f"auxiliairy tranport request for product {self.product_data.ID}: product: {auxiliary_transport_request.product.product_data.ID}, resource: {auxiliary_transport_request.resource.data.ID}, process: {auxiliary_transport_request.process.process_data.ID}, origin: {auxiliary_transport_request.origin.data.ID}, target: {auxiliary_transport_request.target.data.ID}")
+            yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
+            print("retrieved aux", auxiliary_request.auxiliary.product_data.ID)
 
         while self.next_prodution_process:
+            print(f"product {self.product_data.ID} is at process {self.next_prodution_process.process_data.ID}")
             while True:
                 production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
                 if not production_request:
@@ -199,13 +210,15 @@ class Product(BaseModel):
                     continue
                 break
             while True:
-                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_product(self, production_request))
+                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request))
                 if not transport_request:
                     yield self.env.timeout(0)
                     continue
                 break
             yield self.env.process(self.request_process(transport_request))
+            print("transported product", self.product_data.ID)
             yield self.env.process(self.request_process(production_request))
+            print("processed product", self.product_data.ID)
             self.set_next_production_process()
         while True:
             transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
@@ -214,54 +227,24 @@ class Product(BaseModel):
                 continue
             break
         yield self.env.process(self.request_process(transport_to_sink_request))
-
-        if self.product_data.auxiliaries:
-            auxiliary_request_1.auxiliary.update_location(self.current_location)
-        
         self.product_info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         self.current_locatable.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
-        
+
         if self.product_data.auxiliaries:
-            yield self.env.process(auxiliary_request_1.auxiliary.release_auxiliary())
-
-
-    def get_transport_request_for_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> request.Request:
-        """
-        Creates a transport request for the given auxiliary.
-
-        Args:
-            auxiliary (auxiliary.Auxiliary): The auxiliary for which the transport request is created.
-
-        Returns:
-            request.Request: The created transport request.
-        """
-        # FIXME: rework function to get the auxiliary request...
-        req = request.TransportResquest(
-            process=auxiliary.transport_process,
-            product=auxiliary,
-            origin=auxiliary.current_location,
-            target=self.current_locatable
-        )
-        return req
-
-    def get_auxiliary_request_for_auxiliary(self) -> request.AuxiliaryRequest:
-        """
-        Returns an AuxiliaryRequest object for the auxiliary process.
-
-        This method creates and returns an AuxiliaryRequest object that represents the request
-        for the auxiliary process associated with the current product.
-
-        Returns:
-            An AuxiliaryRequest object representing the request for the auxiliary process.
-        """
-        req = request.AuxiliaryRequest(
-            process=self.product_data.transport_process,
-            product=self,
-        )
-        return req
+            auxiliary_request.auxiliary.update_location(self.current_locatable)
+            while True:
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_auxiliary_to_store(auxiliary_request.auxiliary))
+                if not auxiliary_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            print(f"auxiliairy tranport request for product {self.product_data.ID}: product: {auxiliary_transport_request.product.product_data.ID}, resource: {auxiliary_transport_request.resource.data.ID}, process: {auxiliary_transport_request.process.process_data.ID}, origin: {auxiliary_transport_request.origin.data.ID}, target: {auxiliary_transport_request.target.data.ID}")
+            yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
+            yield self.env.process(auxiliary_request.auxiliary.release_auxiliary_from_product())
+            print("released aux", auxiliary_request.auxiliary.product_data.ID)
 
 
     def request_process(self, processing_request: request.Request) -> Generator:

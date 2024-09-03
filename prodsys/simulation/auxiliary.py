@@ -118,7 +118,7 @@ class AuxiliaryInfo(BaseModel):
 
 class Auxiliary(BaseModel):
     """
-    Class that represents a product in the discrete event simulation. For easier instantion of the class, use the ProductFactory at prodsys.factories.product_factory.
+    Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
 
     Args:
         env (sim.Environment): prodsys simulation environment.
@@ -132,97 +132,81 @@ class Auxiliary(BaseModel):
 
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
-    current_location: Union[product.Locatable, store.Queue] = Field(default=None, init=False)
+    current_locatable: Union[product.Locatable, store.Queue] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
-    finished_auxiliary_process: events.Event = Field(default=None, init=False)
+    reserved: bool = Field(default=False, init=False)
     got_free: events.Event = Field(default=None, init=False)
+    finished_process: events.Event = Field(default=None, init=False)
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
     class Config:
         arbitrary_types_allowed = True
 
-    def update_location(self, location: product.Locatable):
+    def init_got_free(self):
+        """
+        Sets the got_free event.
+
+        Args:
+            event (events.Event): The event to set.
+        """
+        self.got_free = events.Event(self.env)
+        self.reserved = False
+        self.finished_process = events.Event(self.env)
+
+    @property
+    def product_data(self):
+        return self.data
+
+    def update_location(self, locatable: product.Locatable):
         """
         Updates the location of the product object.
 
         Args:
-            resource (Location): Location of the product object.
+            locatable (Locatable): Location of the product object.
         """
-        self.current_location = location
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.current_location.data.ID, "event": f"Updated location to {self.current_location.data.ID}"})
+        self.current_locatable = locatable
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Updated location to {self.current_locatable.data.ID}"})
 
-    def get_auxiliary(self, transport_request: request.TransportResquest):
+    def reserve(self):
         """
-        Retrieves the auxiliary resources for a given transport request. Processes the auxiliary to the product location.
-        Blocks the auxiliary until the release_auxiliary method is called.
-
-        Args:
-            transport_request (request.TransportResquest): The transport request for which to retrieve auxiliary resources.
-
-        Yields:
-            simpy.events.Event: A SimPy event that represents the completion of the auxiliary resource retrieval process.
+        Reserves the product object.
         """
-        self.finished_auxiliary_process = events.Event(self.env)
+        self.reserved = True
         self.got_free = events.Event(self.env)
-        # FIXME: resolve here routing
-        yield self.env.process(self.auxiliary_router.route_request(transport_request))
-        yield self.env.process(self.request_process(transport_request))
-
-    def release_auxiliary(self) -> Generator:
+    
+    def release_auxiliary_from_product(self):
         """
-        Releases the auxiliary process and performs necessary actions. 
-        After this function the auxiliary is available for other products.
-        The auxiliary is processed from the sink to the storage.
-
-        This method releases the auxiliary process and performs the following actions:
-        1. Creates a storage transport request.
-        2. Routes the storage transport request using the auxiliary router.
-        3. Processes the storage transport request.
-        4. Updates the current auxiliary location to the storage.
-        5. Yields a timeout of 0.
-
-        Yields:
-            Generator: A generator object that represents the execution of the method.
+        Releases the auxiliary from the product after storage of the auxiliary.
         """
-        self.finished_auxiliary_process = events.Event(self.env)
-        storage_transport_request = request.TransportResquest(
-            process=self.transport_process,
-            product=self,
-            origin=self.current_location,
-            target=self.storage
-        )
-        # FIXME: resolve here routing
-        yield self.env.process(self.auxiliary_router.route_request(storage_transport_request))
-        yield self.env.process(self.request_process(storage_transport_request))
+        print("release auxiliary from product", self.data.ID)
         self.current_product = None
-        if not self.got_free.triggered:
-            self.got_free.succeed()
-        self.got_free = events.Event(self.env)
-        self.update_location(self.storage)
+        self.got_free.succeed()
+        self.reserved = False
         yield self.env.timeout(0)
 
-    def request_process(self, processing_request: request.Request) -> Generator:
+
+    def request_process(self, processing_request: request.TransportResquest) -> Generator:
         """
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
         """
-        if isinstance(processing_request, request.TransportResquest):
-            type_ = state.StateTypeEnum.transport
-        else:
-            type_ = state.StateTypeEnum.production
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
+        self.finished_process = events.Event(self.env)
+
+        type_ = state.StateTypeEnum.transport
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Request process {processing_request.process.process_data.ID} for {type_}"})
         self.env.request_process_of_resource(
             request=processing_request
         )
-        yield self.finished_auxiliary_process
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
+        print("start waitining for auxiliary get", self.data.ID)
+        yield self.finished_process
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
         self.auxiliary_info.log_end_process(
             resource=processing_request.resource,
             _product=self,
             event_time=self.env.now,
             state_type=type_,
         )
-        self.finished_auxiliary_process = events.Event(self.env)
+        print("finished auxiliary get", self.data.ID, self.current_locatable.data.ID)
 
 from prodsys.simulation import product
 # Auxiliary.update_forward_refs()

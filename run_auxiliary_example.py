@@ -1,6 +1,9 @@
 import prodsys.express as psx
 import prodsys.express.queue
 
+import prodsys
+prodsys.set_logging("DEBUG")
+
 t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
 p1 = psx.ProductionProcess(t1, "p1")
@@ -18,6 +21,7 @@ storage2 = prodsys.express.queue.Queue(ID="storage2", location=[10,0], capacity=
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, 
                            storages=[storage1,storage2], 
+                           # FIXME: resolve problem that multiple auxiliaries are not routed correctly, after the first transport....
                            initial_quantity_in_stores=[0,1], 
                            relevant_processes=[], 
                            relevant_transport_processes=[tp])
@@ -36,6 +40,6 @@ source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
 system = psx.ProductionSystem([machine, transport], [source1], [sink1])
 
 system.validate()
-system.run(time_range=10 * 60)
+system.run(time_range=10)
 system.runner.print_results()
 system.runner.save_results_as_csv()

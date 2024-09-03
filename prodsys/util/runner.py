@@ -208,6 +208,7 @@ class Runner:
             )
             link_transport_process_updater_instance.update_links_with_objects()
             
+            self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 

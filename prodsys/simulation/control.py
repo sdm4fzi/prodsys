@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
-from typing import List, Generator, TYPE_CHECKING, Optional
+from typing import List, Generator, TYPE_CHECKING, Optional, Union
 
 import logging
 
@@ -68,10 +68,7 @@ class Controller(ABC, BaseModel):
             process_request (Request): The request to be processed.
         """
         self.requests.append(process_request)
-        if isinstance(process_request.product, auxiliary.Auxiliary):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.data.ID}"})
-        else:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
         if not self.requested.triggered:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event"})
             self.requested.succeed()
@@ -328,8 +325,13 @@ class TransportController(Controller):
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
                 raise ValueError("No product in queue")
+        elif isinstance(resource, store.Queue):
+            events.append(resource.get(filter=lambda x: x is product.product_data))
+        elif isinstance(resource, sink.Sink):
+            # TODO: resolve this hack by a more generic approach
+            pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
         else:
-            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source")
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
         return events
 
     def put_product_to_input_queue(
@@ -354,9 +356,13 @@ class TransportController(Controller):
         ):
             for queue in locatable.input_queues:
                 events.append(queue.put(product.product_data))
+        elif isinstance(locatable, store.Queue):
+            events.append(locatable.put(product.product_data))
+        elif isinstance(locatable, source.Source):
+            pass # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
         else:
             raise ValueError(
-                f"Resource {locatable.data.ID} is not a ProductionResource or Sink"
+                f"Cannot place {product.product_data.ID} in locatable {locatable.data.ID} because the locatable is not a ProductionResource or Sink but of type: {type(locatable)}"
             )
 
         return events
@@ -438,59 +444,35 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
         route_to_target = process_request.get_route()
-        if isinstance(product, auxiliary.Auxiliary):
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process for {product.data.ID}"})
-        else:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
                 route_to_origin = self.find_route_to_origin(process_request)
-                if isinstance(product, auxiliary.Auxiliary):
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.data.ID} from {origin.data.ID} to {target.data.ID}"})
-                else:
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-                if isinstance(product, auxiliary.Auxiliary):
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.data.ID} for transport"})
-                else:
-                    logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
                 yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
-            if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.data.ID} for transport"})
-            else:
                 product_retrieval_events = self.get_next_product_for_process(origin, product)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
                 yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
 
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-            if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.data.ID}"})
-            else:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
             yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False))
-            if not isinstance(product, auxiliary.Auxiliary):
-                product_put_events = self.put_product_to_input_queue(target, product)
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
-                yield events.AllOf(resource.env, product_put_events)
+            product_put_events = self.put_product_to_input_queue(target, product)
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
+            yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
-            if not isinstance(product, auxiliary.Auxiliary):
-                if isinstance(target, resources.ProductionResource):
-                    target.unreserve_input_queues()
+            if hasattr(product, "product_info") and isinstance(target, resources.ProductionResource):
+                target.unreserve_input_queues()
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
-            if not isinstance(product, auxiliary.Auxiliary):
-                product.finished_process.succeed() # can be the auxiliary or product
-            else:
-                if not product.finished_auxiliary_process.triggered:
-                    product.finished_auxiliary_process.succeed()
-            if isinstance(product, auxiliary.Auxiliary):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.data.ID}"})
-            else:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
+            product.finished_process.succeed()
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})                           
     
     def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool) -> Generator:
         """
@@ -542,7 +524,7 @@ class TransportController(Controller):
         """
         target_location = target.get_location()
         input_state.prepare_for_run()
-        if isinstance(product, auxiliary.Auxiliary):
+        if not hasattr(product, "product_info"):
             input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
         else:
             input_state.state_info.log_product(product, state.StateTypeEnum.transport)
@@ -555,7 +537,7 @@ class TransportController(Controller):
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
-        if isinstance(product, auxiliary.Auxiliary):
+        if not hasattr(product, "product_info"):
             product.auxiliary_info.log_start_process(
                 self.resource,
                 product,
@@ -686,6 +668,6 @@ class BatchController(Controller):
     pass
 
 
-from prodsys.simulation import resources, state, sink, source, route_finder, sim
+from prodsys.simulation import resources, state, sink, source, route_finder, sim, store
 from prodsys.simulation import request as request_module
 from prodsys.simulation.process import LinkTransportProcess
