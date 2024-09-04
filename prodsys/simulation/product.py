@@ -241,7 +241,7 @@ class Product(BaseModel):
                 break
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
             yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
-            yield self.env.process(auxiliary_request.auxiliary.release_auxiliary_from_product())
+            auxiliary_request.auxiliary.release_auxiliary_from_product()
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
