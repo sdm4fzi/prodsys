@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Union, List, Dict
+from hashlib import md5
+from typing import TYPE_CHECKING, Union, List, Dict
 
 from pydantic import root_validator
 
 from prodsys.models.core_asset import CoreAsset
 from prodsys.models import source_data
+
+if TYPE_CHECKING:
+    from prodsys.adapters.adapter import ProductionSystemAdapter
 
 
 class AuxiliaryData(CoreAsset):
@@ -38,3 +42,28 @@ class AuxiliaryData(CoreAsset):
         else:
             values["auxiliary_type"] = values["ID"]
         return values
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Function to hash the auxiliary component.
+
+        Returns:
+            str: Hash of the auxiliary component.
+        """
+        transport_processes_hash = ""
+        storages_hashes = []
+        relevant_processes_hashes = []
+        relevant_transport_processes_hashes = []
+
+        for queue in adapter.queue_data:
+            if queue.ID in self.storages:
+                storages_hashes.append(queue.hash())
+        for process in adapter.process_data:
+            if process.ID in self.relevant_processes:
+                relevant_processes_hashes.append(process.hash())
+            if process.ID in self.relevant_transport_processes:
+                relevant_transport_processes_hashes.append(process.hash())
+            if process.ID == self.transport_process:
+                transport_processes_hash = process.hash()
+        
+        return md5("".join([*map(str, [self.auxiliary_type, self.initial_quantity_in_stores, transport_processes_hash, *storages_hashes, *self.initial_quantity_in_stores, *relevant_processes_hashes, *relevant_transport_processes_hashes])]).encode("utf-8")).hexdigest()
