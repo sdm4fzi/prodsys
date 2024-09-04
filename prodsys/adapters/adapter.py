@@ -692,7 +692,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 *sorted([node.hash() for node in self.node_data]),
                 *sorted([product.hash(self) for product in self.product_data]),
                 *sorted([sink.hash(self) for sink in self.sink_data]),
-                *sorted([source.hash(self) for source in self.source_data])
+                *sorted([source.hash(self) for source in self.source_data]),
+                *sorted([auxiliary.hash() for auxiliary in self.auxiliary_data]),
                 ]
             )).encode("utf-8")
             ).hexdigest()
