@@ -455,9 +455,10 @@ class TransportController(Controller):
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
                 yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
-                product_retrieval_events = self.get_next_product_for_process(origin, product)
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve {product.product_data.ID} from queue"})
-                yield events.AllOf(resource.env, product_retrieval_events)
+            
+            product_retrieval_events = self.get_next_product_for_process(origin, product)
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve {product.product_data.ID} from queue"})
+            yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
 
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))

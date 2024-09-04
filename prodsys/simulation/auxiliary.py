@@ -230,9 +230,8 @@ class Auxiliary(BaseModel):
         Releases the auxiliary from the product after storage of the auxiliary.
         """
         self.current_product = None
-        self.got_free.succeed()
         self.reserved = False
-        yield self.env.timeout(0)
+        self.got_free.succeed()
         self.auxiliary_info.log_end_auxiliary_usage(
             resource=self.current_locatable,
             _product=self,

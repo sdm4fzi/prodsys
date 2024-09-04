@@ -19,11 +19,11 @@ transport = psx.TransportResource([tp], [3,0], 1, ID="transport")
 transport2 = psx.TransportResource([tp], [4,0], 1, ID="transport2")
 
 storage1 = psx.Queue(ID="storage1", location=[5,0], capacity=30)
-storage2 = prodsys.express.queue.Queue(ID="storage2", location=[10,0], capacity=20)
+storage2 = psx.Queue(ID="storage2", location=[10,0], capacity=20)
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, 
                            storages=[storage1,storage2], 
-                           initial_quantity_in_stores=[5,2], 
+                           initial_quantity_in_stores=[5,20], 
                            relevant_processes=[], 
                            relevant_transport_processes=[tp])
 
@@ -41,6 +41,6 @@ source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
 system = psx.ProductionSystem([machine, transport, transport2], [source1], [sink1])
 
 system.validate()
-system.run(time_range=100)
+system.run(time_range=1000)
 system.runner.print_results()
 system.runner.save_results_as_csv()
