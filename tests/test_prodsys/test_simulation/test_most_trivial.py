@@ -49,7 +49,6 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
-            print(kpi.value)
             assert kpi.product_type == "product1"
             assert kpi.value > 1650 and kpi.value < 1750
     for kpi in post_processor.machine_state_KPIS:

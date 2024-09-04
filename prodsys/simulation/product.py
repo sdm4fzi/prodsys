@@ -190,19 +190,19 @@ class Product(BaseModel):
                     yield self.env.timeout(0)
                     continue
                 break
-            print(f"auxiliairy request for product {self.product_data.ID}: product: {auxiliary_request.product.product_data.ID}, resource: {auxiliary_request.resource.data.ID}, aux: {auxiliary_request.auxiliary.product_data.ID}, process: {auxiliary_request.process.process_data.ID}, ")
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_request.resource.data.ID, "aux": auxiliary_request.auxiliary.product_data.ID, "process": auxiliary_request.process.process_data.ID, "event": f"auxiliary request for {auxiliary_request.product.product_data.ID}"})
             while True:
                 auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request))
                 if not auxiliary_transport_request:
                     yield self.env.timeout(0)
                     continue
                 break
-            print(f"auxiliairy tranport request for product {self.product_data.ID}: product: {auxiliary_transport_request.product.product_data.ID}, resource: {auxiliary_transport_request.resource.data.ID}, process: {auxiliary_transport_request.process.process_data.ID}, origin: {auxiliary_transport_request.origin.data.ID}, target: {auxiliary_transport_request.target.data.ID}")
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
             yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
-            print("retrieved aux", auxiliary_request.auxiliary.product_data.ID)
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"finished waiting for auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
 
         while self.next_prodution_process:
-            print(f"product {self.product_data.ID} is at process {self.next_prodution_process.process_data.ID}")
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "process": self.next_prodution_process.process_data.ID, "event": f"Start process of product"})
             while True:
                 production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
                 if not production_request:
@@ -216,9 +216,7 @@ class Product(BaseModel):
                     continue
                 break
             yield self.env.process(self.request_process(transport_request))
-            print("transported product", self.product_data.ID)
             yield self.env.process(self.request_process(production_request))
-            print("processed product", self.product_data.ID)
             self.set_next_production_process()
         while True:
             transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))
@@ -241,11 +239,9 @@ class Product(BaseModel):
                     yield self.env.timeout(0)
                     continue
                 break
-            print(f"auxiliairy tranport request for product {self.product_data.ID}: product: {auxiliary_transport_request.product.product_data.ID}, resource: {auxiliary_transport_request.resource.data.ID}, process: {auxiliary_transport_request.process.process_data.ID}, origin: {auxiliary_transport_request.origin.data.ID}, target: {auxiliary_transport_request.target.data.ID}")
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
             yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
             yield self.env.process(auxiliary_request.auxiliary.release_auxiliary_from_product())
-            print("released aux", auxiliary_request.auxiliary.product_data.ID)
-
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
