@@ -70,6 +70,51 @@ class AuxiliaryInfo(BaseModel):
         self.activity = state.StateEnum.created_auxiliary        
         self.state_type = state.StateTypeEnum.store
 
+
+    def log_start_auxiliary_usage(
+        self,
+        resource: resources.Resource,
+        _product: Auxiliary,
+        event_time: float,
+    ) -> None:
+        """
+        Logs the start of the usage of an auxiliary.
+
+        Args:
+
+            resource (resources.Resource): Resource that the product is processed at.
+            _product (Product): Product that is processed.
+            event_time (float): Time of the event.
+            state_type (state.StateTypeEnum): Type of the state.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.data.ID
+        self.activity = state.StateEnum.started_auxiliary_usage
+        self.state_type = state.StateTypeEnum.production
+
+    def log_end_auxiliary_usage(
+        self,
+        resource: resources.Resource,
+        _product: Auxiliary,
+        event_time: float,
+    ) -> None:
+        """
+        Logs the end of the usage of an auxiliary.
+
+        Args:
+            resource (resources.Resource): Resource that the product is processed at.
+            _product (Product): Product that is processed.
+            event_time (float): Time of the event.
+        """
+        self.resource_ID = resource.data.ID
+        self.state_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.data.ID
+        self.activity = state.StateEnum.finished_auxiliary_usage
+        self.state_type = state.StateTypeEnum.production
+
     def log_start_process(
         self,
         resource: resources.Resource,
@@ -174,16 +219,26 @@ class Auxiliary(BaseModel):
         """
         self.reserved = True
         self.got_free = events.Event(self.env)
+        self.auxiliary_info.log_start_auxiliary_usage(
+            resource=self.current_locatable,
+            _product=self,
+            event_time=self.env.now,
+        )
     
     def release_auxiliary_from_product(self):
         """
         Releases the auxiliary from the product after storage of the auxiliary.
         """
-        print("release auxiliary from product", self.data.ID)
         self.current_product = None
         self.got_free.succeed()
         self.reserved = False
         yield self.env.timeout(0)
+        self.auxiliary_info.log_end_auxiliary_usage(
+            resource=self.current_locatable,
+            _product=self,
+            event_time=self.env.now,
+        )
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Released auxiliary from product"})
 
 
     def request_process(self, processing_request: request.TransportResquest) -> Generator:
@@ -197,16 +252,14 @@ class Auxiliary(BaseModel):
         self.env.request_process_of_resource(
             request=processing_request
         )
-        print("start waitining for auxiliary get", self.data.ID)
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "origin": processing_request.origin.data.ID, "target": processing_request.target.data.ID, "event": f"Start waiting for request to be finished"})
         yield self.finished_process
-        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "event": f"Finished process {processing_request.process.process_data.ID} for {type_}"})
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": processing_request.resource.data.ID, "origin": processing_request.origin.data.ID, "target": processing_request.target.data.ID, "event": f"Finished waiting for request to be finished"})
         self.auxiliary_info.log_end_process(
             resource=processing_request.resource,
             _product=self,
             event_time=self.env.now,
             state_type=type_,
         )
-        print("finished auxiliary get", self.data.ID, self.current_locatable.data.ID)
 
 from prodsys.simulation import product
-# Auxiliary.update_forward_refs()

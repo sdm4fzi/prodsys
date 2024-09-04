@@ -158,7 +158,6 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
         Returns:
             Tuple[np.ndarray, float, bool, dict]: The observation, reward, done, and info.
         """
-        # TODO: implement action masking here!
         queue_index = np.argmax(action)
 
         if queue_index >= len(self.resource_controller.requests):

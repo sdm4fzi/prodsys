@@ -33,9 +33,15 @@ class StateEnum(str, Enum):
     start_interrupt = "start interrupt"
     end_interrupt = "end interrupt"
     end_state = "end state"
-    finished_product = "finished product"
+
     created_product = "created product"
+    started_product_processing = "started product processing"
+    # TODO: maybe rename finished_product to finished_product_processing for consistency
+    finished_product = "finished product"
+
     created_auxiliary = "created auxiliary"
+    started_auxiliary_usage = "started auxiliary usage"
+    finished_auxiliary_usage = "finished auxiliary usage"
 
 
 class StateTypeEnum(str, Enum):
@@ -391,8 +397,6 @@ class TransportState(State):
         )
         if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
             self.done_in -= self.time_model.time_model_data.reaction_time
-
-        # TODO: also use intial and last_transport_step to add loading times
 
         while True:
             try:

@@ -59,7 +59,7 @@ class AuxiliaryFactory(BaseModel):
                         auxiliary.Auxiliary: The newly created auxiliary object.
                 """
                 values = {}
-                auxiliary_data = auxiliary_data.model_copy()
+                auxiliary_data = auxiliary_data.model_copy(deep=True)
                 auxiliary_data.ID = (str(auxiliary_data.auxiliary_type) + "_" + str(self.auxiliary_counter))
                 values.update({"env": self.env, "data": auxiliary_data})
                 transport_process = self.process_factory.get_process(auxiliary_data.transport_process)
