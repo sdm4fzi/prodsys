@@ -604,6 +604,10 @@ def print_aggregated_data(post_processor: post_processing.PostProcessor):
     print("------------- WIP -------------\n")
     print(post_processor.df_aggregated_WIP)
 
+    if post_processor.get_auxiliary_types():
+        print("\n------------- WIP per auxiliary -------------\n")
+        print(post_processor.df_aggregated_auxiliary_WIP)
+
     print("\n------------- Throughput time -------------\n")
     print(post_processor.df_aggregated_throughput_time)
 
