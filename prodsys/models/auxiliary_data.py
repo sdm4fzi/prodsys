@@ -60,10 +60,10 @@ class AuxiliaryData(CoreAsset):
                 storages_hashes.append(queue.hash())
         for process in adapter.process_data:
             if process.ID in self.relevant_processes:
-                relevant_processes_hashes.append(process.hash())
+                relevant_processes_hashes.append(process.hash(adapter))
             if process.ID in self.relevant_transport_processes:
-                relevant_transport_processes_hashes.append(process.hash())
+                relevant_transport_processes_hashes.append(process.hash(adapter))
             if process.ID == self.transport_process:
-                transport_processes_hash = process.hash()
+                transport_processes_hash = process.hash(adapter)
         
         return md5("".join([*map(str, [self.auxiliary_type, self.initial_quantity_in_stores, transport_processes_hash, *storages_hashes, *self.initial_quantity_in_stores, *relevant_processes_hashes, *relevant_transport_processes_hashes])]).encode("utf-8")).hexdigest()
