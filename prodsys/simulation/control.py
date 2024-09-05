@@ -468,8 +468,6 @@ class TransportController(Controller):
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
-            if hasattr(product, "product_info") and isinstance(target, resources.ProductionResource):
-                target.unreserve_input_queues()
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
             product.finished_process.succeed()
