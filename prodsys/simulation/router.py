@@ -285,10 +285,11 @@ class Router:
         return free_possible_auxiliaries
     
     def get_possible_auxiliaries(self, processing_request: request.AuxiliaryRequest)-> List[auxiliary.Auxiliary]:
-
         possible_auxiliaries = []
         for auxiliary in self.auxiliary_factory.auxiliaries:
-            if auxiliary.transport_process.matches_request(processing_request):
+            if not auxiliary.data.auxiliary_type in processing_request.product.product_data.auxiliaries:
+                continue
+            if any(supported_process.matches_request(processing_request) for supported_process in auxiliary.relevant_processes + auxiliary.relevant_transport_processes):
                 possible_auxiliaries.append(auxiliary)
         return possible_auxiliaries
     

@@ -1260,6 +1260,36 @@ class PostProcessor:
                 )
             )
         return KPIs
+    
+    @cached_property
+    def auxiliary_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average WIP KPI values for each auxiliary.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average WIP KPI values.
+        """
+        ser = self.df_aggregated_auxiliary_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (performance_indicators.KPILevelEnum.SYSTEM,
+                           performance_indicators.KPILevelEnum.ALL_PRODUCTS)
+                index = performance_indicators.KPILevelEnum.ALL_PRODUCTS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.AuxiliaryWIP(
+                    name=performance_indicators.KPIEnum.AUXILIARY_WIP,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
 
     def get_aggregated_data(self) -> dict:
         """

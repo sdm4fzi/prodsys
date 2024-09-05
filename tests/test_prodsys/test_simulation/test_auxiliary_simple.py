@@ -77,6 +77,10 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
         if kpi.name == "WIP" and kpi.product_type == "product1":
             assert kpi.value < 1.9 and kpi.value > 1.7
 
+    for kpi in post_processor.auxiliary_WIP_KPIs:
+        if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary1":
+            assert kpi.value < 2.4 and kpi.value > 2.1
+
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
             assert kpi.value < 1.7 and kpi.value > 1.6

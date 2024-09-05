@@ -174,6 +174,8 @@ class Auxiliary(BaseModel):
     data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
     storage: store.Queue
+    relevant_processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
+    relevant_transport_processes: List[process.TransportProcess]
 
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)

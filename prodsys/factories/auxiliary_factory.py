@@ -64,6 +64,14 @@ class AuxiliaryFactory(BaseModel):
                 values.update({"env": self.env, "data": auxiliary_data})
                 transport_process = self.process_factory.get_process(auxiliary_data.transport_process)
                 values.update({"transport_process": transport_process})
+                relevant_processes = []
+                for process_id in auxiliary_data.relevant_processes:
+                        relevant_processes.append(self.process_factory.get_process(process_id))
+                values.update({"relevant_processes": relevant_processes})
+                relevant_transport_processes = []
+                for transport_process_id in auxiliary_data.relevant_transport_processes:
+                        relevant_transport_processes.append(self.process_factory.get_process(transport_process_id))
+                values.update({"relevant_transport_processes": relevant_transport_processes})
                 storage = self.queue_factory.get_queue(storage.ID)
                 values.update({"storage": storage})
                 router = self.get_router(source_data.RoutingHeuristic.FIFO)  # Add the routing_heuristic in auxiliary_data, like in source_data

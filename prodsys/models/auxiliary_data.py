@@ -3,7 +3,7 @@ from __future__ import annotations
 from hashlib import md5
 from typing import TYPE_CHECKING, Union, List, Dict
 
-from pydantic import root_validator
+from pydantic import model_validator, root_validator
 
 from prodsys.models.core_asset import CoreAsset
 from prodsys.models import source_data
@@ -35,7 +35,7 @@ class AuxiliaryData(CoreAsset):
     relevant_processes: List[str] = []
     relevant_transport_processes: List[str] = []
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def check_processes(cls, values):
         if "auxiliary_type" in values and values["auxiliary_type"]:
             values["ID"] = values["auxiliary_type"]
