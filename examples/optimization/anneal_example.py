@@ -26,7 +26,7 @@ run_simulated_annealing(
 )
 
 PARTIAL_SCENARIO_FILE_PATH = "examples/optimization/optimization_example/scenario_partial.json"
-INITIAL_SOLUTION_FILE_PATH = "examples/optimization/optimization_example/initial_solutions/f_0_6cf4ba93-d45f-11ed-9932-a670a3eb8803.json"
+INITIAL_SOLUTION_FILE_PATH = "examples/optimization/optimization_example/initial_solutions/generation_9_6524d80a-6ba7-11ef-a586-845cf38935ae.json"
 
 # partial optimization
 # run_simulated_annealing(

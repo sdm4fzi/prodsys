@@ -354,14 +354,13 @@ def plot_util_WIP_resource(post_processor: post_processing.PostProcessor, normal
     fig1 = go.Figure()
     fig1.add_trace(go.Bar(name='mean_wip', x=df_time_per_state['Resource'], y=df_time_per_state['mean_wip'], marker_color='purple', yaxis='y2'))
 
-    #df_time_per_state2 = post_processor.df_aggregated_resource_time_bins_states
     df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
-    df_time_per_state2 = df_time_per_state2[df_time_per_state2['Time_type'] == 'PR']
+    df_time_per_state2 = df_time_per_state2.loc[df_time_per_state2['Time_type'] == 'PR']
 
     resources = df_time_per_state2['Resource'].unique()
     fig2 = go.Figure()
     for resource in resources:
-        df_resource = df_time_per_state2[df_time_per_state2['Resource'] == resource]
+        df_resource = df_time_per_state2.loc[df_time_per_state2['Resource'] == resource]
         fig2.add_trace(go.Box(
             y=df_resource['percentage'],
             name=f'{resource}',
