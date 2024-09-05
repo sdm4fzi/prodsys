@@ -1,0 +1,626 @@
+{
+    "ID": "5cbfcc75-6ba7-11ef-9fc0-845cf38935ae",
+    "seed": 24,
+    "time_model_data": [
+        {
+            "ID": "ftmp1",
+            "description": "function time model process 1",
+            "distribution_function": "normal",
+            "location": 0.833,
+            "scale": 0.0833,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp2",
+            "description": "function time model process 2",
+            "distribution_function": "normal",
+            "location": 4.167,
+            "scale": 0.4167,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp3",
+            "description": "function time model process 3",
+            "distribution_function": "normal",
+            "location": 0.667,
+            "scale": 0.0667,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp4",
+            "description": "function time model process 4",
+            "distribution_function": "normal",
+            "location": 3.0,
+            "scale": 0.3,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp5",
+            "description": "function time model process 5",
+            "distribution_function": "normal",
+            "location": 0.667,
+            "scale": 0.0667,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp6",
+            "description": "function time model process 6",
+            "distribution_function": "normal",
+            "location": 3.0,
+            "scale": 0.3,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftbs1",
+            "description": "function time model breakdwon state machines",
+            "distribution_function": "exponential",
+            "location": 3333.33,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftbs2",
+            "description": "function time model breakdwon state transport resources",
+            "distribution_function": "exponential",
+            "location": 3000.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftbs3",
+            "description": "function time model breakdwon state process module",
+            "distribution_function": "exponential",
+            "location": 5000.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftr1",
+            "description": "function time model repair time machine breakdwon",
+            "distribution_function": "constant",
+            "location": 15.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftr2",
+            "description": "function time model repair time transport resource breakdwon",
+            "distribution_function": "constant",
+            "location": 10.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftr3",
+            "description": "function time model repair time process module breakdwon",
+            "distribution_function": "constant",
+            "location": 10.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftm1",
+            "description": "function time model product 1",
+            "distribution_function": "exponential",
+            "location": 4.05,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftm2",
+            "description": "function time model product 2",
+            "distribution_function": "exponential",
+            "location": 5.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "md1",
+            "description": "manhattan time model 1",
+            "speed": 60.0,
+            "reaction_time": 0.033,
+            "metric": "manhattan"
+        }
+    ],
+    "state_data": [
+        {
+            "ID": "BSM",
+            "description": "Breakdownstate for machine",
+            "time_model_id": "ftbs1",
+            "type": "BreakDownState",
+            "repair_time_model_id": "ftr1"
+        },
+        {
+            "ID": "BST",
+            "description": "Breakdownstate for transport resource",
+            "time_model_id": "ftbs2",
+            "type": "BreakDownState",
+            "repair_time_model_id": "ftr2"
+        }
+    ],
+    "process_data": [
+        {
+            "ID": "P1",
+            "description": "Process 1",
+            "time_model_id": "ftmp1",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P2",
+            "description": "Process 2",
+            "time_model_id": "ftmp2",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P3",
+            "description": "Process 3",
+            "time_model_id": "ftmp3",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P4",
+            "description": "Process 4",
+            "time_model_id": "ftmp4",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P5",
+            "description": "Process 5",
+            "time_model_id": "ftmp5",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "P6",
+            "description": "Process 6",
+            "time_model_id": "ftmp6",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "TP1",
+            "description": "Transport Process 1",
+            "time_model_id": "md1",
+            "type": "TransportProcesses"
+        }
+    ],
+    "queue_data": [
+        {
+            "ID": "SourceQueue",
+            "description": "Output-Queue for all sources",
+            "capacity": 0
+        },
+        {
+            "ID": "SinkQueue",
+            "description": "Input-Queue for all sinks",
+            "capacity": 0
+        },
+        {
+            "ID": "28e2b558-6ba7-11ef-8701-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b558-6ba7-11ef-8701-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b557-6ba7-11ef-9cb7-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b557-6ba7-11ef-9cb7-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b558-6ba7-11ef-8701-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b558-6ba7-11ef-8701-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b559-6ba7-11ef-ad2a-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b559-6ba7-11ef-ad2a-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b55a-6ba7-11ef-98ac-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b55a-6ba7-11ef-98ac-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b557-6ba7-11ef-9cb7-845cf38935ae_default_input_queue",
+            "description": "Default input queue of 28e2b557-6ba7-11ef-9cb7-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b557-6ba7-11ef-9cb7-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b557-6ba7-11ef-9cb7-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b558-6ba7-11ef-8701-845cf38935ae_default_input_queue",
+            "description": "Default input queue of 28e2b558-6ba7-11ef-8701-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b558-6ba7-11ef-8701-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b558-6ba7-11ef-8701-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b559-6ba7-11ef-ad2a-845cf38935ae_default_input_queue",
+            "description": "Default input queue of 28e2b559-6ba7-11ef-ad2a-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b559-6ba7-11ef-ad2a-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b559-6ba7-11ef-ad2a-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b55a-6ba7-11ef-98ac-845cf38935ae_default_input_queue",
+            "description": "Default input queue of 28e2b55a-6ba7-11ef-98ac-845cf38935ae",
+            "capacity": 0.0
+        },
+        {
+            "ID": "28e2b55a-6ba7-11ef-98ac-845cf38935ae_default_output_queue",
+            "description": "Default output queue of 28e2b55a-6ba7-11ef-98ac-845cf38935ae",
+            "capacity": 0.0
+        }
+    ],
+    "node_data": [],
+    "resource_data": [
+        {
+            "ID": "28e2b557-6ba7-11ef-9cb7-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "P2"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BSM"
+            ],
+            "input_queues": [
+                "28e2b557-6ba7-11ef-9cb7-845cf38935ae_default_input_queue"
+            ],
+            "output_queues": [
+                "28e2b557-6ba7-11ef-9cb7-845cf38935ae_default_output_queue"
+            ]
+        },
+        {
+            "ID": "28e2b558-6ba7-11ef-8701-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                0.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "SPT",
+            "process_ids": [
+                "P5",
+                "P2",
+                "P4"
+            ],
+            "process_capacities": [
+                1,
+                1,
+                1
+            ],
+            "state_ids": [
+                "BSM"
+            ],
+            "input_queues": [
+                "28e2b558-6ba7-11ef-8701-845cf38935ae_default_input_queue"
+            ],
+            "output_queues": [
+                "28e2b558-6ba7-11ef-8701-845cf38935ae_default_output_queue"
+            ]
+        },
+        {
+            "ID": "28e2b559-6ba7-11ef-ad2a-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                5.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "SPT",
+            "process_ids": [
+                "P6",
+                "P2",
+                "P3"
+            ],
+            "process_capacities": [
+                1,
+                1,
+                1
+            ],
+            "state_ids": [
+                "BSM"
+            ],
+            "input_queues": [
+                "28e2b559-6ba7-11ef-ad2a-845cf38935ae_default_input_queue"
+            ],
+            "output_queues": [
+                "28e2b559-6ba7-11ef-ad2a-845cf38935ae_default_output_queue"
+            ]
+        },
+        {
+            "ID": "28e2b55a-6ba7-11ef-98ac-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                10.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "SPT",
+            "process_ids": [
+                "P2",
+                "P1"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [
+                "BSM"
+            ],
+            "input_queues": [
+                "28e2b55a-6ba7-11ef-98ac-845cf38935ae_default_input_queue"
+            ],
+            "output_queues": [
+                "28e2b55a-6ba7-11ef-98ac-845cf38935ae_default_output_queue"
+            ]
+        },
+        {
+            "ID": "28e2dc47-6ba7-11ef-b47d-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "TP1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BST"
+            ]
+        },
+        {
+            "ID": "28e2dc48-6ba7-11ef-80a4-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "SPT_transport",
+            "process_ids": [
+                "TP1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BST"
+            ]
+        },
+        {
+            "ID": "28e2dc49-6ba7-11ef-9b6a-845cf38935ae",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "TP1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [
+                "BST"
+            ]
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "Product_1",
+            "description": "Product 1",
+            "product_type": "Product_1",
+            "processes": [
+                "P1",
+                "P2",
+                "P3",
+                "P4",
+                "P5"
+            ],
+            "transport_process": "TP1"
+        },
+        {
+            "ID": "Product_2",
+            "description": "Product 2",
+            "product_type": "Product_2",
+            "processes": [
+                "P4",
+                "P6",
+                "P2"
+            ],
+            "transport_process": "TP1"
+        }
+    ],
+    "sink_data": [
+        {
+            "ID": "SK1",
+            "description": "Sink 1",
+            "location": [
+                30.0,
+                30.0
+            ],
+            "product_type": "Product_1",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        },
+        {
+            "ID": "SK2",
+            "description": "Sink 2",
+            "location": [
+                30.0,
+                30.0
+            ],
+            "product_type": "Product_2",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "ID": "S1",
+            "description": "Source 1",
+            "location": [
+                -5.0,
+                -5.0
+            ],
+            "product_type": "Product_1",
+            "time_model_id": "ftm1",
+            "routing_heuristic": "random",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        },
+        {
+            "ID": "S2",
+            "description": "Source 2",
+            "location": [
+                -5.0,
+                -5.0
+            ],
+            "product_type": "Product_2",
+            "time_model_id": "ftm2",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        }
+    ],
+    "scenario_data": {
+        "constraints": {
+            "max_reconfiguration_cost": 100000.0,
+            "max_num_machines": 6,
+            "max_num_processes_per_machine": 3,
+            "max_num_transport_resources": 3,
+            "target_product_count": {
+                "Product_1": 400,
+                "Product_2": 350
+            }
+        },
+        "options": {
+            "transformations": [
+                "production_capacity",
+                "transport_capacity",
+                "layout",
+                "sequencing_logic",
+                "routing_logic"
+            ],
+            "machine_controllers": [
+                "FIFO",
+                "SPT",
+                "LIFO"
+            ],
+            "transport_controllers": [
+                "FIFO",
+                "SPT_transport"
+            ],
+            "routing_heuristics": [
+                "shortest_queue",
+                "random",
+                "FIFO"
+            ],
+            "positions": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    5.0
+                ],
+                [
+                    5.0,
+                    0.0
+                ],
+                [
+                    5.0,
+                    5.0
+                ],
+                [
+                    10.0,
+                    5.0
+                ],
+                [
+                    5.0,
+                    10.0
+                ],
+                [
+                    20.0,
+                    20.0
+                ],
+                [
+                    25.0,
+                    20.0
+                ],
+                [
+                    15.0,
+                    20.0
+                ],
+                [
+                    20.0,
+                    15.0
+                ],
+                [
+                    25.0,
+                    25.0
+                ]
+            ]
+        },
+        "info": {
+            "machine_cost": 30000.0,
+            "transport_resource_cost": 15000.0,
+            "process_module_cost": 5000.0,
+            "breakdown_cost": 0.11,
+            "time_range": 2880,
+            "maximum_breakdown_time": 180
+        },
+        "objectives": [
+            {
+                "name": "throughput",
+                "weight": 0.025
+            },
+            {
+                "name": "cost",
+                "weight": 0.001
+            },
+            {
+                "name": "WIP",
+                "weight": 1.0
+            }
+        ]
+    },
+    "valid_configuration": true,
+    "reconfiguration_cost": 80000.0
+}
