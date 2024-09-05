@@ -39,12 +39,16 @@ def get_reconfiguration_cost(
         * adapter_object.scenario_data.info.transport_resource_cost,
     )
     process_module_cost = 0
-    for process in num_process_modules:
-        process_module_cost += max(
-            0,
-            (num_process_modules[process] - num_process_modules_before[process])
-            * adapter_object.scenario_data.info.process_module_cost,
-        )
+    process_module_costs_dict = adapter_object.scenario_data.info.process_module_costs
+    for process, current_module_count in num_process_modules.items():
+        previous_module_count = num_process_modules_before.get(process, 0)
+        process_str = process[0] if isinstance(process, tuple) else process
+        if process_str in process_module_costs_dict:
+            cost_per_module = process_module_costs_dict[process_str]
+            process_module_cost += max(
+                0,
+                (current_module_count - previous_module_count) * cost_per_module
+            )
 
     return machine_cost + transport_resource_cost + process_module_cost
 
