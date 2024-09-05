@@ -77,7 +77,7 @@ class ProductData(CoreAsset):
     product_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     transport_process: str
-    auxiliaries: Optional[List[str]]
+    auxiliaries: Optional[List[str]] = []
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
