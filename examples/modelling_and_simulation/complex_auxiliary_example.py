@@ -29,13 +29,13 @@ storage2 = psx.Queue(ID="storage2", location=[10,0], capacity=20)
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp_aux, 
                            storages=[storage1], 
-                           initial_quantity_in_stores=[10], 
+                           quantity_in_storages=[10], 
                            relevant_processes=[], 
                            relevant_transport_processes=[tp])
 
 auxiliary2 = psx.Auxiliary(ID="auxiliary2", transport_process=tp_aux, 
                            storages=[storage2], 
-                           initial_quantity_in_stores=[20], 
+                           quantity_in_storages=[20], 
                            relevant_processes=[], 
                            relevant_transport_processes=[tp])
 

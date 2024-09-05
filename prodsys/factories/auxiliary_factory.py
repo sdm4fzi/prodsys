@@ -38,11 +38,11 @@ class AuxiliaryFactory(BaseModel):
                         None
                 """
                 for auxiliary_data in adapter.auxiliary_data:
-                        for i, storage in enumerate(auxiliary_data.initial_quantity_in_stores):
-                                stor = auxiliary_data.storages[i]
-                                storr = next((storage for storage in adapter.queue_data if storage.ID == stor), None)
-                                for _ in range(storage):
-                                        auxiliary = self.add_auxiliary(auxiliary_data, storr)
+                        for i, capacity_auxiliary_in_storage in enumerate(auxiliary_data.quantity_in_storages):
+                                storage_id = auxiliary_data.storages[i]
+                                storage = next((storage for storage in adapter.queue_data if storage.ID == storage_id), None)
+                                for _ in range(capacity_auxiliary_in_storage):
+                                        auxiliary = self.add_auxiliary(auxiliary_data, storage)
                                         auxiliary.auxiliary_info.log_create_auxiliary(
                                                 resource=auxiliary.current_locatable, _product=auxiliary, event_time=self.env.now
                                         )

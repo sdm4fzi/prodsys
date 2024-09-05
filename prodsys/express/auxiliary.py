@@ -18,7 +18,7 @@ class Auxiliary(core.ExpressObject):
                 relevant_transport_processes (List[process.TransportProcess]): List of relevant transport processes.
                 transport_process (process.TransportProcess): The transport process associated with the auxiliary object.
                 storages (List[Storage]): List of storages associated with the auxiliary object.
-                initial_quantity_in_stores (List[int]): List of initial quantities in the storages.
+                quantity_in_storages (List[int]): List of initial quantities in the storages.
                 ID (Optional[str], optional): The ID of the auxiliary object. Defaults to a generated UUID.
         """
 
@@ -26,7 +26,7 @@ class Auxiliary(core.ExpressObject):
         relevant_transport_processes: List[process.TransportProcess]
         transport_process: process.TransportProcess
         storages: List[Queue]
-        initial_quantity_in_stores: List[int]
+        quantity_in_storages: List[int]
         ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
         def to_model(self) -> auxiliary_data.AuxiliaryData:
@@ -41,7 +41,7 @@ class Auxiliary(core.ExpressObject):
                         description="",
                         transport_process=self.transport_process.ID,
                         storages=[storage.ID for storage in self.storages],
-                        initial_quantity_in_stores=[initial_quantity_in_store for initial_quantity_in_store in self.initial_quantity_in_stores],
+                        quantity_in_storages=[initial_quantity_in_store for initial_quantity_in_store in self.quantity_in_storages],
                         relevant_processes=[process.ID for process in self.relevant_processes],
                         relevant_transport_processes=[transportprocess.ID for transportprocess in self.relevant_transport_processes]
                 )

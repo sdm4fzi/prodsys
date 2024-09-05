@@ -25,7 +25,7 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, 
                             storages=[storage1,storage2], 
-                            initial_quantity_in_stores=[5,20], 
+                            quantity_in_storages=[5,20], 
                             relevant_processes=[], 
                             relevant_transport_processes=[tp])
 

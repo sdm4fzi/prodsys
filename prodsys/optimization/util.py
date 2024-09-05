@@ -9,6 +9,7 @@ from enum import Enum
 import logging
 
 from prodsys.express.state import ProcessBreakdownState
+from prodsys.models.auxiliary_data import AuxiliaryData
 
 
 
@@ -43,6 +44,26 @@ def get_breakdown_state_ids_of_machine_with_processes(
         if check_breakdown_state_available(adapter_object, process_breakdown_state_id):
             state_ids.append(process_breakdown_state_id)
     return state_ids
+
+
+def get_required_auxiliaries(
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> List[AuxiliaryData]:
+    """
+    Function that returns the required auxiliaries for the production system.
+
+    Args:
+        adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
+
+    Returns:
+        List[AuxiliaryData]: List of required auxiliaries
+    """
+    auxiliary_ids = set()
+    for product in adapter_object.product_data:
+        auxiliary_ids.update(product.auxiliaries)
+    if not auxiliary_ids:
+        return []
+    return [auxiliary for auxiliary in adapter_object.auxiliary_data if auxiliary.ID in auxiliary_ids or auxiliary.auxiliary_type in auxiliary_ids]
 
 
 def check_breakdown_state_available(adapter_object: adapters.ProductionSystemAdapter, breakdown_state_id: str) -> bool:
