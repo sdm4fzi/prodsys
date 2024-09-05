@@ -11,6 +11,7 @@ from warnings import warn
 from prodsys.adapters import adapter
 
 from prodsys.models import (
+    auxiliary_data,
     product_data,
     queue_data,
     resource_data,
@@ -108,6 +109,8 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)
         if "node_data" in data:
             self.node_data = self.create_objects_from_configuration_data(data["node_data"], node_data.NodeData)
+        if "auxiliary_data" in data:
+            self.auxiliary_data = self.create_objects_from_configuration_data(data["auxiliary_data"], auxiliary_data.AuxiliaryData)
         self.source_data = self.create_objects_from_configuration_data(data["source_data"], source_data.SourceData)
         if scenario_file_path:
             self.read_scenario(scenario_file_path)

@@ -170,8 +170,9 @@ class PostProcessor:
 
     def get_df_with_product_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.copy()
+        auxiliary_types = self.get_auxiliary_types()
         product_types = df.loc[
-            (df["Product_type"].notna()) & (df["Product_type"] != "")
+            (df["Product_type"].notna()) & (df["Product_type"] != "") & (~df["Product_type"].isin(auxiliary_types))
         ]["Product_type"].unique()
         product_types = pd.Series(product_types, name="Product_type")
         df_product_info = pd.merge(df, product_types)
@@ -856,6 +857,76 @@ class PostProcessor:
         df["WIP"] = df["WIP_Increment"].cumsum()
 
         return df
+    
+
+    def get_auxiliary_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        START_USAGE_CONDITION = df["Activity"] == "started auxiliary usage"
+        FINISHED_USAGE_CONDITION = df["Activity"] == "finished auxiliary usage"
+
+        df["Auxiliary_type"] = df["Product"].apply(lambda x: x.split("_")[0])
+        auxiliary_types = self.get_auxiliary_types()
+        df = df.loc[df["Auxiliary_type"].isin(auxiliary_types)]
+
+        df["auxiliary_WIP_Increment"] = 0
+        df.loc[START_USAGE_CONDITION, "auxiliary_WIP_Increment"] = 1
+        df.loc[FINISHED_USAGE_CONDITION, "auxiliary_WIP_Increment"] = -1
+
+        df["auxiliary_WIP"] = df["auxiliary_WIP_Increment"].cumsum()
+
+
+        return df
+    
+    @cached_property
+    def df_auxiliary_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+        """
+        df = self.get_auxiliary_WIP_KPI(self.df_raw)
+        return df
+    
+    @cached_property
+    def df_auxiliary_WIP_per_auxiliary_type(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+        """
+        df = pd.DataFrame()
+        auxiliary_types = self.get_auxiliary_types()
+        for auxiliary_type in auxiliary_types:
+            df_temp = self.df_raw.loc[self.df_raw["Product"].str.contains(auxiliary_type)].copy()
+            df_temp = self.get_auxiliary_WIP_KPI(df_temp)
+            df = df.combine_first(df_temp)
+
+        return df
+    
+
+    @cached_property
+    def df_aggregated_auxiliary_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the average WIP for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the average WIP for each auxiliary.
+        """
+        df = self.df_auxiliary_WIP_per_auxiliary_type.copy()
+        df_total = self.df_auxiliary_WIP.copy()
+        df_total["Auxiliary_type"] = "Total"
+
+        df = pd.concat([df, df_total])
+
+        max_time = df["Time"].max()
+
+        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+
+        group = ["Auxiliary_type"]
+        df = df.groupby(by=group)["auxiliary_WIP"].mean()
+
+        return df
 
     @cached_property
     def df_WIP(self) -> pd.DataFrame:
@@ -908,6 +979,29 @@ class PostProcessor:
         df_mean_wip_per_station.rename(columns={"wip_resource": "Resource"}, inplace=True)
 
         return df_mean_wip_per_station
+    
+
+    def get_auxiliary_ids(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the auxiliary IDs of the resources.
+
+        Returns:
+            pd.DataFrame: Data frame with the auxiliary IDs of the resources.
+        """
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
+        auxiliary_ids = df["Product"].drop_duplicates().to_list()
+        return auxiliary_ids
+    
+    def get_auxiliary_types(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the auxiliary types of the resources.
+
+        Returns:
+            pd.DataFrame: Data frame with the auxiliary types of the resources.
+        """
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
+        auxiliary_types = df["Product"].drop_duplicates().apply(lambda x: x.split("_")[0]).drop_duplicates().to_list()
+        return auxiliary_types
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
@@ -1024,12 +1118,14 @@ class PostProcessor:
         """
         df = self.df_WIP_per_product.copy()
         df_total_wip = self.df_WIP.copy()
+        auxiliary_types = self.get_auxiliary_types()
+        df_total_wip = df_total_wip.loc[~df_total_wip["Product_type"].isin(auxiliary_types)]
         df_total_wip["Product_type"] = "Total"
         df = pd.concat([df, df_total_wip])
 
         max_time = df["Time"].max()
 
-        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         group = ["Product_type"]
 
         df = df.groupby(by=group)["WIP"].mean()
@@ -1059,6 +1155,36 @@ class PostProcessor:
             KPIs.append(
                 performance_indicators.WIP(
                     name=performance_indicators.KPIEnum.WIP,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+    
+    @cached_property
+    def auxiliary_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average WIP KPI values for each auxiliary.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average WIP KPI values.
+        """
+        ser = self.df_aggregated_auxiliary_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (performance_indicators.KPILevelEnum.SYSTEM,
+                           performance_indicators.KPILevelEnum.ALL_PRODUCTS)
+                index = performance_indicators.KPILevelEnum.ALL_PRODUCTS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.AuxiliaryWIP(
+                    name=performance_indicators.KPIEnum.AUXILIARY_WIP,
                     value=value,
                     context=context,
                     product_type=index,

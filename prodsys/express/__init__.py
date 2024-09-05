@@ -20,6 +20,7 @@ The following modules are available:
 - `prodsys.express.time_model`: Contains classes to specify time models.
 
 """
+from prodsys.express.queue import Queue
 from prodsys.express.core import ExpressObject
 from prodsys.express.time_model import (
     SampleTimeModel,
@@ -42,4 +43,5 @@ from prodsys.express.resources import ProductionResource, TransportResource
 from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
+from prodsys.express.auxiliary import Auxiliary
 from prodsys.express.production_system import ProductionSystem

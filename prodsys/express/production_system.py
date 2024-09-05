@@ -80,6 +80,8 @@ class ProductionSystem(core.ExpressObject):
             sink.product for sink in self.sinks
         ]
         products = remove_duplicate_items(products)
+        auxiliaries = list(util.flatten_object([product.auxiliaries for product in products]))
+        auxiliaries = remove_duplicate_items(auxiliaries)
         processes = list(
             util.flatten_object(
                 [product.processes for product in products]+
@@ -98,7 +100,8 @@ class ProductionSystem(core.ExpressObject):
                     if isinstance(link_element, node.Node):
                         nodes.append(link_element)
         nodes = remove_duplicate_items(nodes)
-
+        auxiliary_storages = list(util.flatten_object(auxiliary_queue for auxiliary_queue in [auxiliary.storages for auxiliary in auxiliaries ]))
+        auxiliary_storages = remove_duplicate_items(auxiliary_storages)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
         )
@@ -125,6 +128,8 @@ class ProductionSystem(core.ExpressObject):
         resource_data = [resource.to_model() for resource in self.resources]
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
+        auxiliary_data = [auxiliary.to_model() for auxiliary in auxiliaries]
+        auxiliary_storage_data = [storage.to_model() for storage in auxiliary_storages]
 
         queue_data = list(
             util.flatten_object(
@@ -152,7 +157,8 @@ class ProductionSystem(core.ExpressObject):
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,
-            queue_data=queue_data,
+            queue_data=queue_data + auxiliary_storage_data,
+            auxiliary_data = auxiliary_data,
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):
