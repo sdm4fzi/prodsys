@@ -23,8 +23,9 @@ class Product(core.ExpressObject):
     Attributes:
         processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Processes of the product required for its production.
         transport_process (process.TransportProcess): Transport process of the product.
-        auxiliaries (Optional[List[auxiliary.Auxiliary]]): Auxiliary processes of the product.
         ID (Optional[str]): ID of the product.
+        auxiliaries (Optional[List[auxiliary.Auxiliary]]): Auxiliary processes of the product.
+
 
     Examples:
         Product with 2 sequential processes and a transport process:
@@ -58,8 +59,8 @@ class Product(core.ExpressObject):
 
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
     transport_process: Union[process.TransportProcess, process.RequiredCapabilityProcess]
-    auxiliaries: Optional[List[auxiliary.Auxiliary]]= Field(default_factory=list)
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    auxiliaries: Optional[List[auxiliary.Auxiliary]]= Field(default_factory=list)
 
     def to_model(self) -> product_data.ProductData:
         """

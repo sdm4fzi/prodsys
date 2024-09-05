@@ -122,10 +122,14 @@ def remove_unused_queues_from_adapter(adapter: ProductionSystemAdapter) -> Produ
         ]
         + [queue_ID for source in adapter.source_data for queue_ID in source.output_queues]
         + [queue_ID for sink in adapter.sink_data for queue_ID in sink.input_queues]
+        + [queue_ID for auxiliary in adapter.auxiliary_data for queue_ID in auxiliary.storages]
     )
+    queues_to_remove = []
     for queue in adapter.queue_data:
         if queue.ID not in used_queues_ids:
-            adapter.queue_data.remove(queue)
+            queues_to_remove.append(queue)
+    for queue in queues_to_remove:
+        adapter.queue_data.remove(queue)
     return adapter
 
 

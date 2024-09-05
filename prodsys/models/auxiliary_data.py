@@ -24,14 +24,14 @@ class AuxiliaryData(CoreAsset):
         router (str): Router of the auxiliary component.
         transport_process (str): Transport process of the auxiliary component.
         storage_queues (List[str], optional): List of storage queues where the auxiliary component is stored between usages. Defaults to [].
-        initial_quantity_in_queues (List[int], optional): List of initial quantities in the storage queues, in sequence of the storage queues. Defaults to [].
+        quantity_in_storages (List[int], optional): List of initial quantities in the storage queues, in sequence of the storage queues. Defaults to [].
         relevant_processes (List[str], optional): List of relevant processes where the auxiliary component is needed. Defaults to [], meaning all processes.
         relevant_transport_processes (List[str], optional): List of relevant transport processes where the auxiliary component is needed. Defaults to [], meaning all processes.
     """
     auxiliary_type: str
     transport_process: str
     storages: List[str]
-    initial_quantity_in_stores: List[int]
+    quantity_in_storages: List[int]
     relevant_processes: List[str] = []
     relevant_transport_processes: List[str] = []
 
@@ -66,4 +66,4 @@ class AuxiliaryData(CoreAsset):
             if process.ID == self.transport_process:
                 transport_processes_hash = process.hash(adapter)
         
-        return md5("".join([*map(str, [self.auxiliary_type, self.initial_quantity_in_stores, transport_processes_hash, *storages_hashes, *self.initial_quantity_in_stores, *relevant_processes_hashes, *relevant_transport_processes_hashes])]).encode("utf-8")).hexdigest()
+        return md5("".join([*map(str, [self.auxiliary_type, self.quantity_in_storages, transport_processes_hash, *storages_hashes, *self.quantity_in_storages, *relevant_processes_hashes, *relevant_transport_processes_hashes])]).encode("utf-8")).hexdigest()
