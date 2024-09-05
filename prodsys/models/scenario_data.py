@@ -134,7 +134,7 @@ class ScenarioInfoData(BaseModel):
 
     machine_cost: float
     transport_resource_cost: float
-    process_module_cost: float
+    process_module_costs: Optional[Dict[str, float]]
     breakdown_cost: Optional[float]
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int]
@@ -144,9 +144,9 @@ class ScenarioInfoData(BaseModel):
             {
                 "machine_cost": 30000,
                 "transport_resource_cost": 20000,
-                "process_module_cost": 2300,
+                "process_module_costs": {"Process_1": 2300, "Process_2": 3300},
                 "breakdown_cost": 1000,
-                "time_range": 2600,
+                "time_range": 2600, 
                 "maximum_breakdown_time": 10,
             }
         ]
