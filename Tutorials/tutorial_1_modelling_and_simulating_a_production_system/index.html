@@ -399,6 +399,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#advanced-modeling-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced modeling features
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -818,6 +827,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#advanced-modeling-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced modeling features
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -955,6 +973,17 @@
 </span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">model_production_system</span><span class="o">.</span><span class="n">process_data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </span></code></pre></div>
 <p>For now, the express API allows all modeling features as the models API but the creation of products that require processes in a sequence according to an assembly precedence graph. This feature is only available in the models API. For more information, refer to the API reference in the documentation. However, using the algorithms provided by <code>prodsys</code> for optimizing or autonomously controlling a production system requires the models API. For a complete overview of the package's modelling functionalities, please see the <a href="../../API_reference/API_reference_0_overview/">API reference</a>.</p>
+<h2 id="advanced-modeling-features">Advanced modeling features</h2>
+<p>For more complex use cases that need to consider more aspects of a real production system, prodsys contains some handy features. Modeling concepts that are not yet described in the tutorial are:</p>
+<ul>
+<li><strong>Queues and Storages</strong>: If you need to specifically restrict the size of resources queues or storages that contain products, you can manually define them with the <code>Queue</code>. The queues can be placed at different locations in the production system.</li>
+<li><strong>Nodes and Links</strong>: If you need to model a more complex production system with multiple locations and transport routes, you can use the <code>Node</code> class to define the locations and create links with a <code>LinkTransportProcess</code>.</li>
+<li><strong>Auxiliaries</strong>: If some processes require supportive material (e.g. work piece carriers or tools), you can define them with the <code>Auxiliary</code> class. The auxiliaries can be used to model the transport of supportive material. </li>
+</ul>
+<p>Additionally, prodsys provides the possibility to define your own policies that control the decision making in the production system. With this you can integrate your own logic. The policies are:
+- <strong>Routing Policies</strong>: You can create a function that orders a list of requests that contain all possibilities for routing a product to possible resources. Index 0 of the list is the first choice, index 1 the second choice and so on. The routing policy can be used to define the routing of products to resources.
+- <strong>Control Policies</strong>: You can create a function that orders a list of requests that contain all possibilities for processing a product on a resource. Index 0 of the list is the first choice, index 1 the second choice and so on. The control policy can be used to define the sequence of processing of products on resources.</p>
+<p>You can extended the default policies of prodsys by creating your own policies. For more information, refer to the API reference in the documentation or checkout the examples folder of prodsys. For more hands-on experience, you can also check out the examples in the prodsys <a href="https://github.com/sdm4fzi/prodsys/tree/main/examples/modelling_and_simulation">modeling and simulation examples folder</a>.</p>
 
 
 

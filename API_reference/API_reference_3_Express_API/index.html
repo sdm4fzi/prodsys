@@ -519,6 +519,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      auxiliary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="auxiliary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary.Auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auxiliary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auxiliary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary.Auxiliary.to_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      to_model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prodsys.express.core" class="md-nav__link">
     <span class="md-ellipsis">
       core
@@ -864,6 +903,45 @@
       remove_duplicate_items()
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.express.queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      queue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.queue.Queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Queue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.queue.Queue.to_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      to_model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1434,6 +1512,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      auxiliary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="auxiliary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary.Auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auxiliary
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Auxiliary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.auxiliary.Auxiliary.to_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      to_model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#prodsys.express.core" class="md-nav__link">
     <span class="md-ellipsis">
       core
@@ -1779,6 +1896,45 @@
       remove_duplicate_items()
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prodsys.express.queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      queue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.queue.Queue" class="md-nav__link">
+    <span class="md-ellipsis">
+      Queue
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Queue">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.express.queue.Queue.to_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      to_model()
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2242,6 +2398,170 @@
 
 
 
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.express.auxiliary" class="doc doc-heading">
+        <code>auxiliary</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.express.auxiliary.Auxiliary" class="doc doc-heading">
+        <code>
+Auxiliary            (<a class="autorefs autorefs-internal" title="prodsys.express.core.ExpressObject" href="#prodsys.express.core.ExpressObject">ExpressObject</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Represents an auxiliary object in the production system. The auxiliary can be a tool for a station or a pallet or tray for the transport.
+Auxiliaries are stored at storages, which are represented by the <code>Storage</code> class. The auxiliary has a minimum quantity at every storage.
+Processes where the auxiliary is needed, are defined.</p>
+
+<p><strong>Attributes:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>relevant_processes</code></td>
+        <td><code>List[Union[process.ProductionProcess, process.CapabilityProcess]]</code></td>
+        <td><p>List of relevant production or capability processes.</p></td>
+      </tr>
+      <tr>
+        <td><code>relevant_transport_processes</code></td>
+        <td><code>List[process.TransportProcess]</code></td>
+        <td><p>List of relevant transport processes.</p></td>
+      </tr>
+      <tr>
+        <td><code>transport_process</code></td>
+        <td><code>process.TransportProcess</code></td>
+        <td><p>The transport process associated with the auxiliary object.</p></td>
+      </tr>
+      <tr>
+        <td><code>storages</code></td>
+        <td><code>List[Storage]</code></td>
+        <td><p>List of storages associated with the auxiliary object.</p></td>
+      </tr>
+      <tr>
+        <td><code>quantity_in_storages</code></td>
+        <td><code>List[int]</code></td>
+        <td><p>List of initial quantities in the storages.</p></td>
+      </tr>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>The ID of the auxiliary object. Defaults to a generated UUID.</p></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.express.auxiliary.Auxiliary.to_model" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">to_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Converts the Auxiliary object to an AuxiliaryData object.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>auxiliary_data.AuxiliaryData</code></td>
+      <td><p>The converted AuxiliaryData object.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
 
 
 
@@ -3487,6 +3807,38 @@ Product            (<a class="autorefs autorefs-internal" title="prodsys.express
       </tr>
   </tbody>
 </table>
+<p><strong>Attributes:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>processes</code></td>
+        <td><code>List[Union[process.ProductionProcess, process.CapabilityProcess]]</code></td>
+        <td><p>Processes of the product required for its production.</p></td>
+      </tr>
+      <tr>
+        <td><code>transport_process</code></td>
+        <td><code>process.TransportProcess</code></td>
+        <td><p>Transport process of the product.</p></td>
+      </tr>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>ID of the product.</p></td>
+      </tr>
+      <tr>
+        <td><code>auxiliaries</code></td>
+        <td><code>Optional[List[auxiliary.Auxiliary]]</code></td>
+        <td><p>Auxiliary processes of the product.</p></td>
+      </tr>
+  </tbody>
+</table>
 <p><strong>Examples:</strong></p>
     <p>Product with 2 sequential processes and a transport process:
 <div class="language-py highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span> <span class="nn">prodsys.express</span> <span class="k">as</span> <span class="nn">psx</span>
@@ -3518,6 +3870,7 @@ Product            (<a class="autorefs autorefs-internal" title="prodsys.express
 
 
   <div class="doc doc-children">
+
 
 
 
@@ -3827,6 +4180,150 @@ a production system, but more complicated when reviewing the data itself.</p>
     </div>
 
   </div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-module">
+
+
+
+<h2 id="prodsys.express.queue" class="doc doc-heading">
+        <code>queue</code>
+
+
+
+</h2>
+
+    <div class="doc doc-contents ">
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-class">
+
+
+
+<h3 id="prodsys.express.queue.Queue" class="doc doc-heading">
+        <code>
+Queue            (<a class="autorefs autorefs-internal" title="prodsys.express.core.ExpressObject" href="#prodsys.express.core.ExpressObject">ExpressObject</a>)
+        </code>
+
+
+  <span class="doc doc-properties">
+      <small class="doc doc-property doc-property-dataclass"><code>dataclass</code></small>
+  </span>
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Represents a storage object for auxiliaries. If an auxiliary is not needed it is always transported back to the storage.</p>
+
+<p><strong>Attributes:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>location</code></td>
+        <td><code>List[float]</code></td>
+        <td><p>The location coordinates of the storage.</p></td>
+      </tr>
+      <tr>
+        <td><code>ID</code></td>
+        <td><code>Optional[str]</code></td>
+        <td><p>The unique identifier of the storage.</p></td>
+      </tr>
+      <tr>
+        <td><code>capacity</code></td>
+        <td><code>Union[int, float]</code></td>
+        <td><p>The capacity of the storage.</p></td>
+      </tr>
+  </tbody>
+</table>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-object doc-method">
+
+
+
+<h4 id="prodsys.express.queue.Queue.to_model" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">to_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code>
+
+
+</h4>
+
+    <div class="doc doc-contents ">
+
+      <p>Converts the storage object to a <code>StorageData</code> model.</p>
+
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>StorageData</code></td>
+      <td><p>The converted storage data.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+
+
+  </div>
+
+    </div>
+
+  </div>
+
 
 
 

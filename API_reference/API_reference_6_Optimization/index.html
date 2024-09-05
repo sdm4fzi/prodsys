@@ -601,6 +601,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#prodsys.optimization.adapter_manipulation.add_auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_auxiliary()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.optimization.adapter_manipulation.add_machine" class="md-nav__link">
     <span class="md-ellipsis">
       add_machine()
@@ -721,6 +730,15 @@
   <a href="#prodsys.optimization.adapter_manipulation.random_configuration_with_initial_solution" class="md-nav__link">
     <span class="md-ellipsis">
       random_configuration_with_initial_solution()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.adapter_manipulation.remove_auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      remove_auxiliary()
     </span>
   </a>
   
@@ -1348,6 +1366,15 @@
   <a href="#prodsys.optimization.util.check_states_for_heterogenous_time_models" class="md-nav__link">
     <span class="md-ellipsis">
       check_states_for_heterogenous_time_models()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.util.get_required_auxiliaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_required_auxiliaries()
     </span>
   </a>
   
@@ -1480,6 +1507,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#prodsys.optimization.adapter_manipulation.add_auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      add_auxiliary()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.optimization.adapter_manipulation.add_machine" class="md-nav__link">
     <span class="md-ellipsis">
       add_machine()
@@ -1600,6 +1636,15 @@
   <a href="#prodsys.optimization.adapter_manipulation.random_configuration_with_initial_solution" class="md-nav__link">
     <span class="md-ellipsis">
       random_configuration_with_initial_solution()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prodsys.optimization.adapter_manipulation.remove_auxiliary" class="md-nav__link">
+    <span class="md-ellipsis">
+      remove_auxiliary()
     </span>
   </a>
   
@@ -2233,6 +2278,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prodsys.optimization.util.get_required_auxiliaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_required_auxiliaries()
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#prodsys.optimization.util.get_weights" class="md-nav__link">
     <span class="md-ellipsis">
       get_weights()
@@ -2353,6 +2407,60 @@
 
 
 
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.adapter_manipulation.add_auxiliary" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">add_auxiliary</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that adds a random auxiliary component to the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if an auxiliary component was added, False otherwise (if adding is not possible due to constraint violations).</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
 
 
 
@@ -2609,6 +2717,7 @@
     </div>
 
   </div>
+
 
 
 
@@ -3092,6 +3201,60 @@
     <tr>
       <td><code>adapters.ProductionSystemAdapter</code></td>
       <td><p>Random configuration based on an initial solution.</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.adapter_manipulation.remove_auxiliary" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">remove_auxiliary</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that removes a random auxiliary component from the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>bool</code></td>
+      <td><p>True if an auxiliary component was removed, False otherwise (if removing is not possible due to constraint violations).</p></td>
     </tr>
   </tbody>
 </table>
@@ -4398,6 +4561,7 @@ mapping of field names to [<code>FieldInfo</code>][pydantic.fields.FieldInfo] ob
 
 
 
+
   <div class="doc doc-object doc-function">
 
 
@@ -4548,6 +4712,7 @@ mapping of field names to [<code>FieldInfo</code>][pydantic.fields.FieldInfo] ob
     </div>
 
   </div>
+
 
 
 
@@ -6037,6 +6202,60 @@ mapping of field names to [<code>FieldInfo</code>][pydantic.fields.FieldInfo] ob
 
 
 
+
+
+
+  <div class="doc doc-object doc-function">
+
+
+
+<h3 id="prodsys.optimization.util.get_required_auxiliaries" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">get_required_auxiliaries</span><span class="p">(</span><span class="n">adapter_object</span><span class="p">)</span></code>
+
+
+</h3>
+
+    <div class="doc doc-contents ">
+
+      <p>Function that returns the required auxiliaries for the production system.</p>
+
+<p><strong>Parameters:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Description</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><code>adapter_object</code></td>
+        <td><code>adapters.ProductionSystemAdapter</code></td>
+        <td><p>Production system configuration with specified scenario data.</p></td>
+        <td><em>required</em></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>List[AuxiliaryData]</code></td>
+      <td><p>List of required auxiliaries</p></td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+
+  </div>
 
 
 
