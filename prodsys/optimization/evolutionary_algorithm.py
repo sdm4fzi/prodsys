@@ -162,6 +162,7 @@ def run_evolutionary_algorithm(
     crossover_rate: float,
     n_seeds: int,
     n_processes: int,
+    initial_solutions_folder: str="",
 ):
     """
     Run an evolutionary algorithm for configuration optimization.
@@ -197,6 +198,7 @@ def run_evolutionary_algorithm(
         base_configuration,
         hyper_parameters,
         save_folder,
+        initial_solutions_folder=initial_solutions_folder,
         full_save=full_save
     )
 
@@ -226,8 +228,8 @@ def optimize_configuration(
         hyper_parameters.population_size,
         hyper_parameters.mutation_rate,
         hyper_parameters.crossover_rate,
-        hyper_parameters.number_of_processes,
         hyper_parameters.number_of_seeds,
+        hyper_parameters.number_of_processes,
     )
 
 from prodsys.util import util
