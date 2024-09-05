@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List
+from typing import Generator, List
 from pydantic import BaseModel
 
 
@@ -35,6 +35,37 @@ class Queue(store.FilterStore):
             capacity = data.capacity
         self._pending_put: int = 0
         super().__init__(env, capacity)
+        self.state_change = self.env.event()
+
+
+    def put(self, item) -> Generator:
+        """
+        Puts a product into the queue.
+
+        Args:
+            item (object): The product to be put into the queue.
+        """
+        self.unreseve()
+        return_event = super().put(item)
+        self.state_change.succeed()
+        self.state_change = self.env.event()
+        return return_event
+
+    
+    def get(self, filter) -> Generator:
+        """
+        Gets a product from the queue.
+
+        Args:
+            filter (Callable): The filter function to filter the items in the queue.
+
+        Returns:
+            object: The product that was gotten from the queue.
+        """
+        item = super().get(filter=filter)
+        self.state_change.succeed()
+        self.state_change = self.env.event()
+        return item
 
     @property
     def full(self) -> bool:
