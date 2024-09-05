@@ -541,6 +541,47 @@ def plot_WIP(post_processor: post_processing.PostProcessor, return_html: bool = 
         image_path = os.path.join(os.getcwd(), "plots", "WIP.png")
         fig.write_image(image_path)
         return image_path
+    
+
+def plot_auxiliary_WIP(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
+    """
+    Plots the WIP of the production system over time of the simulation.
+
+    Args:
+        post_processor (post_processing.PostProcessor): Post processor of the simulation.
+    """
+    df = post_processor.df_auxiliary_WIP.copy()
+    fig = px.scatter(df, x="Time", y="auxiliary_WIP")
+    df["Auxiliary_type"] = "Total"
+
+    df_per_product = post_processor.df_auxiliary_WIP_per_auxiliary_type.copy()
+
+    df = pd.concat([df, df_per_product])
+    fig = px.scatter(
+        df,
+        x="Time",
+        y="auxiliary_WIP",
+        color="Auxiliary_type",
+        trendline="expanding",
+        opacity=0.01,
+    )
+    fig.data = [t for t in fig.data if t.mode == "lines"]
+    fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="Auxiliary WIP [Auxiliries]",
+    )
+
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))   
+    fig.write_html(os.path.join(os.getcwd(), "plots", "WIP.html"), auto_open=not return_html)
+
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "WIP.png")
+        fig.write_image(image_path)
+        return image_path
 
 def plot_WIP_per_resource(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
