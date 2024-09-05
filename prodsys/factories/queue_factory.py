@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -52,7 +52,7 @@ class QueueFactory(BaseModel):
         Returns:
             store.Queue: Queue object with the given ID.
         """
-        return [q for q in self.queues if q.queue_data.ID == ID].pop()
+        return [q for q in self.queues if q.data.ID == ID].pop()
 
     def get_queues(self, IDs: List[str]) -> List[store.Queue]:
         """
@@ -64,4 +64,4 @@ class QueueFactory(BaseModel):
         Returns:
             List[store.Queue]: List of queue objects with the given IDs.
         """
-        return [q for q in self.queues if q.queue_data.ID in IDs]
+        return [q for q in self.queues if q.data.ID in IDs]

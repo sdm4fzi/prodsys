@@ -21,6 +21,10 @@ from prodsys.models.state_data import (
     ProcessBreakDownStateData,
 )
 
+if TYPE_CHECKING:
+    from prodsys.simulation import product, resources, auxiliary
+
+
 class StateEnum(str, Enum):
     """
     Enum for the different types a state can be in.
@@ -29,8 +33,15 @@ class StateEnum(str, Enum):
     start_interrupt = "start interrupt"
     end_interrupt = "end interrupt"
     end_state = "end state"
-    finished_product = "finished product"
+
     created_product = "created product"
+    started_product_processing = "started product processing"
+    # TODO: maybe rename finished_product to finished_product_processing for consistency
+    finished_product = "finished product"
+
+    created_auxiliary = "created auxiliary"
+    started_auxiliary_usage = "started auxiliary usage"
+    finished_auxiliary_usage = "finished auxiliary usage"
 
 
 class StateTypeEnum(str, Enum):
@@ -44,6 +55,7 @@ class StateTypeEnum(str, Enum):
     setup = "Setup"
     source = "Source"
     sink = "Sink"
+    store = "Store"
 
 
 class StateInfo(BaseModel):
@@ -100,6 +112,17 @@ class StateInfo(BaseModel):
             state_type (StateTypeEnum): The type of the state.
         """
         self._product_ID = _product.product_data.ID
+        self._state_type = state_type
+
+    def log_auxiliary(self, _auxiliary: auxiliary.Auxiliary, state_type: StateTypeEnum):
+        """
+        Logs the product of a transport or production state.
+
+        Args:
+            _product (product.Product): The product.
+            state_type (StateTypeEnum): The type of the state.
+        """
+        self._product_ID = _auxiliary.data.ID
         self._state_type = state_type
 
     def log_start_state(
@@ -374,8 +397,6 @@ class TransportState(State):
         )
         if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
             self.done_in -= self.time_model.time_model_data.reaction_time
-
-        # TODO: also use intial and last_transport_step to add loading times
 
         while True:
             try:

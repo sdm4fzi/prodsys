@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Optional, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
 
 if TYPE_CHECKING:
     from prodsys.simulation.product import Product, Locatable
     from prodsys.simulation.process import PROCESS_UNION, TransportProcess, LinkTransportProcess
     from prodsys.simulation.resources import Resource, TransportResource
     from prodsys.simulation.sink import Sink
+    from prodsys.simulation.auxiliary import Auxiliary
 
 
 
@@ -67,7 +68,7 @@ class Request:
             resources.Resource: The resource.
         """
         return self.resource
-    
+
 
 class SinkRequest(Request):
     """
@@ -85,7 +86,43 @@ class SinkRequest(Request):
         self.product = product
         self.process = None
     
+class AuxiliaryRequest(Request):
+    """
+    Represents an auxiliary request in the simulation. The request is associated with an auxiliary which needs to be transported
 
+    Attributes:
+        process (process.TransportProcess): The transport process associated with the request.
+        product (Optional[product.Product]): The product associated with the request.
+        auxiliary (Optional[auxiliary.Auxiliary]): The auxiliary associated with the request.
+        resource (Optional[resources.Resource]): The resource associated with the request to be the target of the transport of the auxiliaryand where it is needed.
+    """
+
+    def __init__(
+        self,
+        process: TransportProcess,
+        product: Optional[Product]=None,
+        auxiliary: Optional[Auxiliary]=None,
+        resource: Optional[Resource]=None
+    ):
+        self.process: TransportProcess = process
+        self.product: Optional[Product] = product
+        self.auxiliary: Optional[Auxiliary] = auxiliary
+        self.resource: Optional[Resource] = resource
+
+        # TODO: rework this method. It is only used for interface homogenization -> restructure requests to be more general...
+        self.origin: Optional[Locatable] = None
+        self.target: Optional[Locatable] = None
+
+    def set_route(self, route: List[Locatable]):
+        """
+        Caches a possible route of the transport request used later for setting the resource of the transport request.
+
+        Args:
+            process (process.TransportProcess): The process.
+            route (List[product.Locatable]): The route.
+        """
+        # TODO: rework this method. It is only used for interface homogenization -> restructure requests to be more general...
+        pass
 
 class TransportResquest(Request):
     """
@@ -101,7 +138,7 @@ class TransportResquest(Request):
     def __init__(
         self,
         process: Union[TransportProcess, LinkTransportProcess],
-        product: Product,
+        product: Union[Product, Auxiliary],
         resource: TransportResource,
         origin: Locatable,
         target: Locatable,

@@ -8,18 +8,6 @@ from pydantic import BaseModel, ConfigDict, field_validator, ValidationError, Va
 import logging
 logger = logging.getLogger(__name__)
 
-# from prodsys.models import (
-#     time_model_data,
-#     node_data,
-#     product_data,
-#     queue_data,
-#     resource_data,
-#     state_data,
-#     processes_data,
-#     sink_data,
-#     source_data,
-#     scenario_data,
-# )
 from prodsys.models import time_model_data as time_model_data_module
 from prodsys.models import state_data as state_data_module
 from prodsys.models import processes_data as processes_data_module
@@ -30,9 +18,7 @@ from prodsys.models import product_data as product_data_module
 from prodsys.models import queue_data as queue_data_module
 from prodsys.models import node_data as node_data_module
 from prodsys.models import scenario_data as scenario_data_module
-
-
-
+from prodsys.models import auxiliary_data as auxiliary_data_module
 
 from prodsys.util import util
 
@@ -136,10 +122,14 @@ def remove_unused_queues_from_adapter(adapter: ProductionSystemAdapter) -> Produ
         ]
         + [queue_ID for source in adapter.source_data for queue_ID in source.output_queues]
         + [queue_ID for sink in adapter.sink_data for queue_ID in sink.input_queues]
+        + [queue_ID for auxiliary in adapter.auxiliary_data for queue_ID in auxiliary.storages]
     )
+    queues_to_remove = []
     for queue in adapter.queue_data:
         if queue.ID not in used_queues_ids:
-            adapter.queue_data.remove(queue)
+            queues_to_remove.append(queue)
+    for queue in queues_to_remove:
+        adapter.queue_data.remove(queue)
     return adapter
 
 
@@ -306,6 +296,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     sink_data: List[sink_data_module.SinkData] = []
     source_data: List[source_data_module.SourceData] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
+    auxiliary_data: Optional[List[auxiliary_data_module.AuxiliaryData]] = []
 
 
     valid_configuration: bool = True
@@ -705,7 +696,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                 *sorted([node.hash() for node in self.node_data]),
                 *sorted([product.hash(self) for product in self.product_data]),
                 *sorted([sink.hash(self) for sink in self.sink_data]),
-                *sorted([source.hash(self) for source in self.source_data])
+                *sorted([source.hash(self) for source in self.source_data]),
+                *sorted([auxiliary.hash(self) for auxiliary in self.auxiliary_data]),
                 ]
             )).encode("utf-8")
             ).hexdigest()

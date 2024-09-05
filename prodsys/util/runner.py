@@ -13,6 +13,7 @@ from prodsys.adapters import adapter
 from prodsys.simulation import sim, logger
 from prodsys.factories import (
     link_transport_process_updater,
+    auxiliary_factory,
     state_factory,
     time_model_factory,
     process_factory,
@@ -97,6 +98,7 @@ class Runner:
         self.state_factory: state_factory.StateFactory = None
         self.process_factory: process_factory.ProcessFactory = None
         self.queue_factory: queue_factory.QueueFactory = None
+        self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = None
         self.resource_factory: resource_factory.ResourceFactory = None
         self.node_factory: node_factory.NodeFactory = None
         self.sink_factory: sink_factory.SinkFactory = None
@@ -145,7 +147,29 @@ class Runner:
             self.node_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env, process_factory=self.process_factory
+                env=self.env, 
+                process_factory=self.process_factory,
+            )
+
+            self.sink_factory = sink_factory.SinkFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                queue_factory=self.queue_factory,
+            )
+
+            self.sink_factory.create_sinks(self.adapter)
+
+            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
+                env=self.env,
+                process_factory=self.process_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                sink_factory= self.sink_factory
+            )
+
+            self.product_factory = product_factory.ProductFactory(
+                env=self.env, 
+                process_factory=self.process_factory,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -160,6 +184,9 @@ class Runner:
             self.event_logger.observe_resource_states(self.resource_factory)
 
             self.product_factory.event_logger = self.event_logger
+            self.auxiliary_factory.event_logger = self.event_logger
+            self.auxiliary_factory.create_auxiliary(self.adapter)
+
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
@@ -167,6 +194,7 @@ class Runner:
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
+                auxiliary_factory=self.auxiliary_factory,
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
@@ -180,6 +208,7 @@ class Runner:
             )
             link_transport_process_updater_instance.update_links_with_objects()
             
+            self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 
@@ -224,10 +253,11 @@ class Runner:
         p = self.get_post_processor()
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
+        if self.adapter.auxiliary_data:
+            kpi_visualization.plot_auxiliary_WIP(p)
         # kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
-    
 
     def plot_results_executive(self):
         """
