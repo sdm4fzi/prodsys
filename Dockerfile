@@ -1,4 +1,4 @@
-ARG APP_VERSION=0.8.0
+ARG APP_VERSION=0.8.1
 
 FROM python:3.11-slim
 
@@ -9,7 +9,7 @@ WORKDIR /app
 COPY pyproject.toml poetry.lock /app/
 
 # TODO: Install dependencies using Poetry instead of pypi
-RUN pip install prodsys==0.8.0
+RUN pip install prodsys==0.8.1
 
 
 
