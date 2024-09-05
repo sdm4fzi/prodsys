@@ -10,6 +10,8 @@ from typing import List
 
 import pandas as pd
 
+import numpy as np
+
 WARM_UP_CUT_OFF = 0.15
 
 
@@ -494,8 +496,13 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
-        bucket_size = 100
-        df['Bucket'] = df.groupby('Resource').cumcount() // bucket_size
+        df["Bucket"] = 0
+        for resource, group in df.groupby("Resource"):
+            n = len(group)
+            num_bins = int(np.ceil(1 + np.log2(n)))
+            bucket_size = max(1, n // num_bins)
+            df.loc[group.index, "Bucket"] = group.groupby('Resource').cumcount() // bucket_size
+
         df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
 
         df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
@@ -544,73 +551,6 @@ class PostProcessor:
         return df
     
     @cached_property
-    def df_resource_states_time_bins(self) -> pd.DataFrame:
-        """
-        Returns a data frame with the machine states and the time spent in each state,
-        grouped into hourly bins.
-        
-        Returns:
-            pd.DataFrame: Data frame with the machine states and the time spent in each state.
-        """
-        df = self.df_prepared.copy()
-
-        max_time = df["Time"].max()
-        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
-
-        df['DateTime'] = pd.to_datetime(df['DateTime'])
-        df.set_index('DateTime', inplace=True)
-
-        # Create hourly bins
-        df['HourBin'] = df.index.floor('h')  # Bins the DateTime to the start of each hour
-
-        df.reset_index(inplace=True)
-
-        positive_condition = (
-            (df["State_type"] == "Process State")
-            & (df["Activity"] == "start state")
-            & (df["State Type"] != state.StateTypeEnum.setup)
-            & (df["State Type"] != state.StateTypeEnum.breakdown)
-        )
-        negative_condition = (
-            (df["State_type"] == "Process State")
-            & (df["Activity"] == "end state")
-            & (df["State Type"] != state.StateTypeEnum.setup)
-            & (df["State Type"] != state.StateTypeEnum.breakdown)
-        )
-
-        df["Increment"] = 0
-        df.loc[positive_condition, "Increment"] = 1
-        df.loc[negative_condition, "Increment"] = -1
-
-        df["Used_Capacity"] = df.groupby(["Resource", "HourBin"])["Increment"].cumsum()
-
-        df["next_Time"] = df.groupby(["Resource", "HourBin"])["Time"].shift(-1)
-        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "HourBin"])["Time"].transform('max'))
-        df["time_increment"] = df["next_Time"] - df["Time"]
-
-        STANDBY_CONDITION = (
-            (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-        ) | (df["State_sorting_Index"] == 3)
-        PRODUCTIVE_CONDITION = (
-            (df["State_sorting_Index"] == 6)
-            | (df["State_sorting_Index"] == 4)
-            | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
-        )
-        DOWN_CONDITION = ((df["State_sorting_Index"] == 7) | (
-            df["State_sorting_Index"] == 8
-        )) & (df["State Type"] == state.StateTypeEnum.breakdown)
-        SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
-            df["State Type"] == state.StateTypeEnum.setup
-        )
-
-        df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
-        df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
-        df.loc[DOWN_CONDITION, "Time_type"] = "UD"
-        df.loc[SETUP_CONDITION, "Time_type"] = "ST"
-
-        return df
-
-    @cached_property
     def df_aggregated_resource_bucket_states(self) -> pd.DataFrame:
         """
         Returns a data frame with the total time spent in each state of each resource. 
@@ -639,45 +579,6 @@ class PostProcessor:
             columns={"time_increment": "resource_time"}, inplace=True
         )
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
-        df_time_per_state["percentage"] = (
-            df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
-        ) * 100
-
-        return df_time_per_state
-    
-    @cached_property
-    def df_aggregated_resource_time_bins_states(self) -> pd.DataFrame:
-        """
-        Returns a data frame with the total time spent in each state of each resource.
-
-        There are 4 different states a resource can spend its time:
-            -SB: A resource is in standby state, could process but no product is available
-            -PR: A resource is in productive state and performs a process
-            -UD: A resource is in unscheduled downtime state due to a breakdown
-            -ST: A resource is in setup state
-
-        Returns:
-            pd.DataFrame: Data frame with the total time spent in each state of each resource.
-        """
-        df = self.df_resource_states_time_bins.copy()
-
-        df = df.loc[df["Time_type"].notna()]
-
-        df_time_per_state = df.groupby(["Resource", "HourBin", "Time_type"]).agg({
-            "time_increment": "sum",
-            "Time": "first"  # Ensure 'Time' is available for aggregation
-        }).reset_index()
-
-        df_resource_time = df.groupby(["Resource", "HourBin"]).agg({
-            "time_increment": "sum",
-        }).reset_index()
-
-        df_resource_time.rename(
-            columns={"time_increment": "resource_time"}, inplace=True
-        )
-
-        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "HourBin"])
-
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
