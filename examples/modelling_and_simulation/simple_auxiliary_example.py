@@ -40,6 +40,6 @@ source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
 system = psx.ProductionSystem([machine, transport, transport2], [source1], [sink1])
 
 system.validate()
-system.run(time_range=100)
+system.run(time_range=1000)
 system.runner.print_results()
 system.runner.save_results_as_csv()
