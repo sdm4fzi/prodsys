@@ -151,7 +151,7 @@ class Router:
         routed_transport_request = transport_requests.pop(0)
         return routed_transport_request
     
-    def route_product_to_warehouse(self, product: product.Product) -> Generator[request.TransportResquest]:
+    def route_product_to_warehouse(self, product: product.Product, resource: resources.ProductionResource) -> Generator[request.TransportResquest]:
         """
         Routes a product to the warehouse.
 
@@ -161,12 +161,14 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the warehouse.
         """
-        print("Routing to warehouse")
         warehouses = self.resource_factory.queue_factory.get_warehouse_queues()
+        resource_warehouses = [warehouse for warehouse in warehouses if warehouse.data.ID in resource.data.input_queues + resource.data.output_queues]
 
-        chosen_warehouse = np.random.choice(warehouses)
-        
-        transport_request = self.route_transport_resource_for_product(product, chosen_warehouse)
+        chosen_warehouse = np.random.choice(resource_warehouses)
+        env = product.env
+        transport_request = yield env.process(self.route_transport_resource_for_product(product, chosen_warehouse))
+        # TODO: reserve warehouse queue and make sure unreserve is called
+        chosen_warehouse.reserve()
         
         return transport_request
 
@@ -180,8 +182,8 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed from the warehouse.
         """
-        transport_request_gen = self.route_transport_resource_for_product(product, resource)
-        transport_request = next(transport_request_gen)
+        env = product.env
+        transport_request = yield env.process(self.route_transport_resource_for_product(product, resource))
         return transport_request
 
     def get_requests_with_free_resources(self, potential_requests: List[request.Request]) -> Generator[List[request.Request]]:
