@@ -282,7 +282,7 @@
         {
             "ID": "warehouse_queue",
             "description": "Warehouse for the simulation",
-            "capacity": 200,
+            "capacity": 0,
             "input_location": [
                 5.0,
                 5.0
@@ -453,10 +453,12 @@
                 "BSM"
             ],
             "input_queues": [
-                "RS1_default_input_queue"
+                "RS1_default_input_queue",
+                "warehouse_queue"
             ],
             "output_queues": [
-                "RS1_default_output_queue"
+                "RS1_default_output_queue",
+                "warehouse_queue"
             ]
         },
         {
