@@ -190,7 +190,7 @@
         {
             "ID": "SourceQueue",
             "description": "Output-Queue for all sources",
-            "capacity": 20
+            "capacity": 0
         },
         {
             "ID": "SinkQueue",

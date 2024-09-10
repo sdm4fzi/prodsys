@@ -19,7 +19,7 @@ from prodsys.simulation import node, request, route_finder, sim, state, process,
 from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess, ProductionProcess, ReworkProcess
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, state, resources, sink, source
+    from prodsys.simulation import product, process, state, resources, sink, source, auxiliary
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.product import Locatable
@@ -302,6 +302,7 @@ class ProductionController(Controller):
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
                 next_product.finished_process.succeed()
+                #next_product.finished_auxiliary_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished process for {product.product_data.ID}"})
     
     def run_process(self, input_state: state.State, target_product: product.Product, process: process.Process):
@@ -677,11 +678,18 @@ class TransportController(Controller):
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
                 raise ValueError("No product in queue")
-        elif to_warehouse:
-            #TODO: unreserve warehouse queue - get warehouse queue object
-            resource.data.output_queues.unreserve()
-            print("product goes to warehouse")
-            return []
+        elif isinstance(resource, store.Queue):
+            events.append(resource.get(filter=lambda x: x is product.product_data))
+        elif isinstance(resource, sink.Sink):
+            # TODO: resolve this hack by a more generic approach -> items (products + auxiliaries) are transport and retrieved / placed at locatables 
+            pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
+        else:
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
+        # elif to_warehouse:
+        #     #TODO: unreserve warehouse queue - get warehouse queue object
+        #     resource.data.output_queues.unreserve()
+        #     print("product goes to warehouse")
+        #     return []
 
         if not events:
             raise ValueError(f"Product {product.product_data} not found in any queue")
@@ -709,13 +717,13 @@ class TransportController(Controller):
         if isinstance(locatable, resources.ProductionResource) or isinstance(locatable, sink.Sink):
             for queue in locatable.input_queues:
                 events.append(queue.put(product.product_data))
-                
         elif isinstance(locatable, store.Queue):
-            print("product goes in queue")
             events.append(locatable.put(product.product_data))
+        elif isinstance(locatable, source.Source):
+            pass # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
         else:
             raise ValueError(
-                f"Resource {locatable.data.ID} is not a ProductionResource or Sink"
+                f"Cannot place {product.product_data.ID} in locatable {locatable.data.ID} because the locatable is not a ProductionResource or Sink but of type: {type(locatable)}"
             )
 
         return events
@@ -815,7 +823,8 @@ class TransportController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            if origin.get_output_location() != resource.get_location():
+            if origin.data.ID != self._current_locatable.data.ID:
+            #if origin.get_output_location() != resource.get_location():
                 route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
@@ -900,7 +909,10 @@ class TransportController(Controller):
         else:
             target_location = target.get_input_location()
         input_state.prepare_for_run()
-        input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+        if not hasattr(product, "product_info"):
+            input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        else:
+            input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         if self._current_locatable.data.ID is self.resource.data.ID:
             origin = None
         else:
@@ -910,12 +922,20 @@ class TransportController(Controller):
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
-        product.product_info.log_start_process(
-            self.resource,
-            product,
-            self.env.now,
-            state.StateTypeEnum.transport,
-        )
+        if not hasattr(product, "product_info"):
+            product.auxiliary_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
+        else:
+            product.product_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
         input_state.process = self.env.process(
             input_state.process_state(target=target_location, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
@@ -1026,6 +1046,6 @@ def agent_control_policy(
     gym_env.interrupt_simulation_event.succeed()
 
 
-from prodsys.simulation import resources, state, sink, source, route_finder, sim
+from prodsys.simulation import resources, state, sink, source, route_finder, sim, store
 from prodsys.simulation import request as request_module
 from prodsys.simulation.process import LinkTransportProcess

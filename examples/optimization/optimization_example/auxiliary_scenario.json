@@ -1,0 +1,53 @@
+{
+  "constraints": {
+    "max_reconfiguration_cost": 100000,
+    "max_num_machines": 6,
+    "max_num_processes_per_machine": 3,
+    "max_num_transport_resources": 3,
+    "target_product_count": { "Product_1": 400, "Product_2": 350 }
+  },
+  "options": {
+    "transformations": [
+      "auxiliary_capacity"
+    ],
+    "positions": [
+      [0, 0],
+      [0, 5],
+      [5, 0],
+      [5, 5],
+      [10, 5],
+      [5, 10],
+      [20, 20],
+      [25, 20],
+      [15, 20],
+      [20, 15],
+      [25, 25]
+    ],
+    "machine_controllers": ["FIFO", "SPT", "LIFO"],
+    "transport_controllers": ["FIFO", "SPT_transport"],
+    "routing_heuristics": ["shortest_queue", "random", "FIFO"]
+  },
+  "info": {
+    "machine_cost": 30000,
+    "transport_resource_cost": 15000,
+    "process_module_cost": 5000,
+    "auxiliary_cost": 2500,
+    "breakdown_cost": 0.11,
+    "time_range": 360 ,
+    "maximum_breakdown_time": 180
+  },
+  "objectives": [
+    {
+      "name": "throughput",
+      "weight": 0.025
+    },
+    {
+      "name": "cost",
+      "weight": 0.001
+    },
+    {
+      "name": "WIP",
+      "weight": 1
+    }
+  ]
+}
