@@ -175,7 +175,6 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         Returns:
             Tuple[np.ndarray, float, bool, dict]: The observation, reward, done, and info.
         """
-        # TODO: implement action masking here!
         resource_index = np.argmax(action)
 
         self.chosen_resource = self.runner.resource_factory.resources[resource_index]

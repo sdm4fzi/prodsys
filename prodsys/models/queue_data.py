@@ -40,6 +40,7 @@ class QueueData(CoreAsset):
     #location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
     input_location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
     output_location: Optional[conlist(float, min_length=2, max_length=2)] = None # type: ignore
+    location: Optional[conlist(float, min_length=2, max_length=2)] = None  # type: ignore
 
     def hash(self) -> str:
         """
@@ -51,18 +52,19 @@ class QueueData(CoreAsset):
         """
         return md5((str(self.capacity)).encode("utf-8")).hexdigest()
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "Q1",
-                "description": "Finte Queue",
-                "capacity": 10,
-            },
-            {
-                "ID": "Q1",
-                "description": "Infinite Queue",
-                "capacity": 0.0,
-            },
-        ]
-    
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "Q1",
+                    "description": "Finte Queue",
+                    "capacity": 10,
+                },
+                {
+                    "ID": "Q1",
+                    "description": "Infinite Queue",
+                    "capacity": 0.0,
+                },
+            ]
+        }
+    )

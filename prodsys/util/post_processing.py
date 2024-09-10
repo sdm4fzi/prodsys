@@ -10,6 +10,8 @@ from typing import List
 
 import pandas as pd
 
+import numpy as np
+
 WARM_UP_CUT_OFF = 0.15
 
 
@@ -168,8 +170,9 @@ class PostProcessor:
 
     def get_df_with_product_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.copy()
+        auxiliary_types = self.get_auxiliary_types()
         product_types = df.loc[
-            (df["Product_type"].notna()) & (df["Product_type"] != "")
+            (df["Product_type"].notna()) & (df["Product_type"] != "") & (~df["Product_type"].isin(auxiliary_types))
         ]["Product_type"].unique()
         product_types = pd.Series(product_types, name="Product_type")
         df_product_info = pd.merge(df, product_types)
@@ -493,8 +496,13 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
-        bucket_size = 100
-        df['Bucket'] = df.groupby('Resource').cumcount() // bucket_size
+        df["Bucket"] = 0
+        for resource, group in df.groupby("Resource"):
+            n = len(group)
+            num_bins = int(np.ceil(1 + np.log2(n)))
+            bucket_size = max(1, n // num_bins)
+            df.loc[group.index, "Bucket"] = group.groupby('Resource').cumcount() // bucket_size
+
         df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
 
         df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
@@ -543,73 +551,6 @@ class PostProcessor:
         return df
     
     @cached_property
-    def df_resource_states_time_bins(self) -> pd.DataFrame:
-        """
-        Returns a data frame with the machine states and the time spent in each state,
-        grouped into hourly bins.
-        
-        Returns:
-            pd.DataFrame: Data frame with the machine states and the time spent in each state.
-        """
-        df = self.df_prepared.copy()
-
-        max_time = df["Time"].max()
-        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
-
-        df['DateTime'] = pd.to_datetime(df['DateTime'])
-        df.set_index('DateTime', inplace=True)
-
-        # Create hourly bins
-        df['HourBin'] = df.index.floor('h')  # Bins the DateTime to the start of each hour
-
-        df.reset_index(inplace=True)
-
-        positive_condition = (
-            (df["State_type"] == "Process State")
-            & (df["Activity"] == "start state")
-            & (df["State Type"] != state.StateTypeEnum.setup)
-            & (df["State Type"] != state.StateTypeEnum.breakdown)
-        )
-        negative_condition = (
-            (df["State_type"] == "Process State")
-            & (df["Activity"] == "end state")
-            & (df["State Type"] != state.StateTypeEnum.setup)
-            & (df["State Type"] != state.StateTypeEnum.breakdown)
-        )
-
-        df["Increment"] = 0
-        df.loc[positive_condition, "Increment"] = 1
-        df.loc[negative_condition, "Increment"] = -1
-
-        df["Used_Capacity"] = df.groupby(["Resource", "HourBin"])["Increment"].cumsum()
-
-        df["next_Time"] = df.groupby(["Resource", "HourBin"])["Time"].shift(-1)
-        df["next_Time"] = df["next_Time"].fillna(df.groupby(["Resource", "HourBin"])["Time"].transform('max'))
-        df["time_increment"] = df["next_Time"] - df["Time"]
-
-        STANDBY_CONDITION = (
-            (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-        ) | (df["State_sorting_Index"] == 3)
-        PRODUCTIVE_CONDITION = (
-            (df["State_sorting_Index"] == 6)
-            | (df["State_sorting_Index"] == 4)
-            | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
-        )
-        DOWN_CONDITION = ((df["State_sorting_Index"] == 7) | (
-            df["State_sorting_Index"] == 8
-        )) & (df["State Type"] == state.StateTypeEnum.breakdown)
-        SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
-            df["State Type"] == state.StateTypeEnum.setup
-        )
-
-        df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
-        df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
-        df.loc[DOWN_CONDITION, "Time_type"] = "UD"
-        df.loc[SETUP_CONDITION, "Time_type"] = "ST"
-
-        return df
-
-    @cached_property
     def df_aggregated_resource_bucket_states(self) -> pd.DataFrame:
         """
         Returns a data frame with the total time spent in each state of each resource. 
@@ -638,45 +579,6 @@ class PostProcessor:
             columns={"time_increment": "resource_time"}, inplace=True
         )
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "Bucket"])
-        df_time_per_state["percentage"] = (
-            df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
-        ) * 100
-
-        return df_time_per_state
-    
-    @cached_property
-    def df_aggregated_resource_time_bins_states(self) -> pd.DataFrame:
-        """
-        Returns a data frame with the total time spent in each state of each resource.
-
-        There are 4 different states a resource can spend its time:
-            -SB: A resource is in standby state, could process but no product is available
-            -PR: A resource is in productive state and performs a process
-            -UD: A resource is in unscheduled downtime state due to a breakdown
-            -ST: A resource is in setup state
-
-        Returns:
-            pd.DataFrame: Data frame with the total time spent in each state of each resource.
-        """
-        df = self.df_resource_states_time_bins.copy()
-
-        df = df.loc[df["Time_type"].notna()]
-
-        df_time_per_state = df.groupby(["Resource", "HourBin", "Time_type"]).agg({
-            "time_increment": "sum",
-            "Time": "first"  # Ensure 'Time' is available for aggregation
-        }).reset_index()
-
-        df_resource_time = df.groupby(["Resource", "HourBin"]).agg({
-            "time_increment": "sum",
-        }).reset_index()
-
-        df_resource_time.rename(
-            columns={"time_increment": "resource_time"}, inplace=True
-        )
-
-        df_time_per_state = pd.merge(df_time_per_state, df_resource_time, on=["Resource", "HourBin"])
-
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
@@ -955,6 +857,76 @@ class PostProcessor:
         df["WIP"] = df["WIP_Increment"].cumsum()
 
         return df
+    
+
+    def get_auxiliary_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        START_USAGE_CONDITION = df["Activity"] == "started auxiliary usage"
+        FINISHED_USAGE_CONDITION = df["Activity"] == "finished auxiliary usage"
+
+        df["Auxiliary_type"] = df["Product"].apply(lambda x: x.split("_")[0])
+        auxiliary_types = self.get_auxiliary_types()
+        df = df.loc[df["Auxiliary_type"].isin(auxiliary_types)]
+
+        df["auxiliary_WIP_Increment"] = 0
+        df.loc[START_USAGE_CONDITION, "auxiliary_WIP_Increment"] = 1
+        df.loc[FINISHED_USAGE_CONDITION, "auxiliary_WIP_Increment"] = -1
+
+        df["auxiliary_WIP"] = df["auxiliary_WIP_Increment"].cumsum()
+
+
+        return df
+    
+    @cached_property
+    def df_auxiliary_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+        """
+        df = self.get_auxiliary_WIP_KPI(self.df_raw)
+        return df
+    
+    @cached_property
+    def df_auxiliary_WIP_per_auxiliary_type(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the WIP over time for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+        """
+        df = pd.DataFrame()
+        auxiliary_types = self.get_auxiliary_types()
+        for auxiliary_type in auxiliary_types:
+            df_temp = self.df_raw.loc[self.df_raw["Product"].str.contains(auxiliary_type)].copy()
+            df_temp = self.get_auxiliary_WIP_KPI(df_temp)
+            df = df.combine_first(df_temp)
+
+        return df
+    
+
+    @cached_property
+    def df_aggregated_auxiliary_WIP(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the average WIP for each auxiliary.
+
+        Returns:
+            pd.DataFrame: Data frame with the average WIP for each auxiliary.
+        """
+        df = self.df_auxiliary_WIP_per_auxiliary_type.copy()
+        df_total = self.df_auxiliary_WIP.copy()
+        df_total["Auxiliary_type"] = "Total"
+
+        df = pd.concat([df, df_total])
+
+        max_time = df["Time"].max()
+
+        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+
+        group = ["Auxiliary_type"]
+        df = df.groupby(by=group)["auxiliary_WIP"].mean()
+
+        return df
 
     @cached_property
     def df_WIP(self) -> pd.DataFrame:
@@ -1007,6 +979,29 @@ class PostProcessor:
         df_mean_wip_per_station.rename(columns={"wip_resource": "Resource"}, inplace=True)
 
         return df_mean_wip_per_station
+    
+
+    def get_auxiliary_ids(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the auxiliary IDs of the resources.
+
+        Returns:
+            pd.DataFrame: Data frame with the auxiliary IDs of the resources.
+        """
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
+        auxiliary_ids = df["Product"].drop_duplicates().to_list()
+        return auxiliary_ids
+    
+    def get_auxiliary_types(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the auxiliary types of the resources.
+
+        Returns:
+            pd.DataFrame: Data frame with the auxiliary types of the resources.
+        """
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
+        auxiliary_types = df["Product"].drop_duplicates().apply(lambda x: x.split("_")[0]).drop_duplicates().to_list()
+        return auxiliary_types
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
@@ -1123,12 +1118,14 @@ class PostProcessor:
         """
         df = self.df_WIP_per_product.copy()
         df_total_wip = self.df_WIP.copy()
+        auxiliary_types = self.get_auxiliary_types()
+        df_total_wip = df_total_wip.loc[~df_total_wip["Product_type"].isin(auxiliary_types)]
         df_total_wip["Product_type"] = "Total"
         df = pd.concat([df, df_total_wip])
 
         max_time = df["Time"].max()
 
-        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         group = ["Product_type"]
 
         df = df.groupby(by=group)["WIP"].mean()
@@ -1158,6 +1155,36 @@ class PostProcessor:
             KPIs.append(
                 performance_indicators.WIP(
                     name=performance_indicators.KPIEnum.WIP,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+    
+    @cached_property
+    def auxiliary_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of average WIP KPI values for each auxiliary.
+
+        Returns:
+            List[performance_indicators.KPI]: List of average WIP KPI values.
+        """
+        ser = self.df_aggregated_auxiliary_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (performance_indicators.KPILevelEnum.SYSTEM,
+                           performance_indicators.KPILevelEnum.ALL_PRODUCTS)
+                index = performance_indicators.KPILevelEnum.ALL_PRODUCTS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.AuxiliaryWIP(
+                    name=performance_indicators.KPIEnum.AUXILIARY_WIP,
                     value=value,
                     context=context,
                     product_type=index,

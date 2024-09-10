@@ -2,7 +2,7 @@ from typing import Dict, List, Union
 from prodsys import adapters, runner
 from prodsys.adapters.adapter import assert_no_redudant_locations, assert_required_processes_in_resources_available, get_possible_production_processes_IDs
 from prodsys.models import performance_indicators
-from prodsys.optimization.util import get_grouped_processes_of_machine, get_num_of_process_modules, get_weights
+from prodsys.optimization.util import get_grouped_processes_of_machine, get_num_of_process_modules, get_required_auxiliaries, get_weights
 from prodsys.util.post_processing import PostProcessor
 
 
@@ -28,6 +28,11 @@ def get_reconfiguration_cost(
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
+    if adapter_object.auxiliary_data:
+        auxiliary_cost = get_auxiliary_cost(adapter_object, baseline)
+    else:
+        auxiliary_cost = 0
+
     machine_cost = max(
         0,
         (num_machines - num_machines_before)
@@ -46,7 +51,23 @@ def get_reconfiguration_cost(
             * adapter_object.scenario_data.info.process_module_cost,
         )
 
-    return machine_cost + transport_resource_cost + process_module_cost
+    return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
+
+
+def get_auxiliary_cost(
+    adapter_object: adapters.ProductionSystemAdapter,
+    baseline: adapters.ProductionSystemAdapter,
+) -> float:
+    auxiliary_cost = 0
+    for new_auxiliary, auxiliary_before in zip(adapter_object.auxiliary_data, baseline.auxiliary_data):
+        for i, storage in enumerate(new_auxiliary.quantity_in_storages):
+            storage_before = auxiliary_before.quantity_in_storages[i]
+            auxiliary_cost += max(
+                0,
+                (storage - storage_before)
+                * adapter_object.scenario_data.info.auxiliary_cost,
+            )
+    return auxiliary_cost
 
 
 def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
@@ -133,14 +154,29 @@ def check_valid_configuration(
     if not valid_num_process_modules(configuration):
         return False
     try:
+        assert_required_auxiliaries_available(configuration)
+    except ValueError as e:
+        return False
+    try:
         assert_required_processes_in_resources_available(configuration)
     except ValueError as e:
         return False
     if not valid_positions(configuration):
+        # TODO: raise error if the positions cannot be changed (no production capacity or layout in transformations of scenario)
         return False
     if not valid_reconfiguration_cost(configuration, base_configuration):
         return False
     return True
+
+
+def assert_required_auxiliaries_available(
+    configuration: adapters.ProductionSystemAdapter,
+) -> bool:
+    required_auxiliaries = get_required_auxiliaries(configuration)
+    for auxiliary in required_auxiliaries:
+        if not sum(auxiliary.quantity_in_storages) > 0:
+            raise ValueError(f"Required auxiliary {auxiliary.ID} is not available.")
+        
 
 
 def get_throughput_time(pp: PostProcessor) -> float:

@@ -31,6 +31,7 @@ class Source(BaseModel):
     product_factory: product_factory.ProductFactory
     time_model: time_model.TimeModel
     router: router.Router
+    # TODO: add a release policy...
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
     model_config=ConfigDict(arbitrary_types_allowed=True)
