@@ -13,6 +13,7 @@ class KPIEnum(str, Enum):
     THROUGHPUT = "throughput"
     COST = "cost"
     WIP = "WIP"
+    AUXILIARY_WIP = "auxiliary_WIP"
 
     TRHOUGHPUT_TIME = "throughput_time"
     PROCESSING_TIME = "processing_time"
@@ -154,6 +155,25 @@ class WIP(KPI):
         }
     )
 
+    
+class AuxiliaryWIP(KPI):
+    name: Literal[KPIEnum.AUXILIARY_WIP]
+    target: Literal["min"] = "min"
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "AUXILIARY_WIP",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 121,
+                    "context": ["system", "product_type"],
+                    "product_type": "Auxiliary_1",
+                }
+            ]
+        }
+    )
 
 class DynamicWIP(DynamicKPI, WIP):
     name: Literal[KPIEnum.DYNAMIC_WIP]

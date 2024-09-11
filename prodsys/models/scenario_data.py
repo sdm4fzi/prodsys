@@ -22,6 +22,7 @@ class ReconfigurationEnum(str, Enum):
 
     - ProductionCapacity: Reconfiguration of production capacity (number of machines and their configuration)
     - TransportCapacity: Reconfiguration of transport capacity (number of transport resources and their configuration)
+    - AuxiliaryCapacity: Reconfiguration of auxiliary capacity (number of auxiliaries in the system)
     - Layout: Reconfiguration of layout (only position of resources)
     - SequencingLogic: Reconfiguration of sequencing logic (only the control policy of resources)
     - RoutingLogic: Reconfiguration of routing logic (only the routing heuristic of routers)
@@ -29,6 +30,7 @@ class ReconfigurationEnum(str, Enum):
 
     PRODUCTION_CAPACITY = "production_capacity"
     TRANSPORT_CAPACITY = "transport_capacity"
+    AUXILIARY_CAPACITY = "auxiliary_capacity"
     LAYOUT = "layout"
     SEQUENCING_LOGIC = "sequencing_logic"
     ROUTING_LOGIC = "routing_logic"
@@ -135,9 +137,10 @@ class ScenarioInfoData(BaseModel):
     machine_cost: float
     transport_resource_cost: float
     process_module_costs: Optional[Dict[str, float]]
-    breakdown_cost: Optional[float]
+    auxiliary_cost: Optional[float] = None
+    breakdown_cost: Optional[float] = None
     time_range: Optional[int]
-    maximum_breakdown_time: Optional[int]
+    maximum_breakdown_time: Optional[int] = None
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [
@@ -145,6 +148,7 @@ class ScenarioInfoData(BaseModel):
                 "machine_cost": 30000,
                 "transport_resource_cost": 20000,
                 "process_module_costs": {"Process_1": 2300, "Process_2": 3300},
+                "auxiliary_cost": 1000,
                 "breakdown_cost": 1000,
                 "time_range": 2600, 
                 "maximum_breakdown_time": 10,

@@ -38,6 +38,7 @@ class SourceFactory(BaseModel):
     time_model_factory: time_model_factory.TimeModelFactory
     queue_factory: queue_factory.QueueFactory
     resource_factory: resource_factory.ResourceFactory
+    auxiliary_factory: auxiliary_factory.AuxiliaryFactory
     sink_factory: sink_factory.SinkFactory
 
     product_data: List[ProductData] = Field(
@@ -63,6 +64,7 @@ class SourceFactory(BaseModel):
         return router.Router(
             self.resource_factory,
             self.sink_factory,
+            self.auxiliary_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
         )
 
@@ -139,5 +141,6 @@ from prodsys.factories import (
     resource_factory,
     queue_factory,
     time_model_factory,
+    auxiliary_factory,
     sink_factory,
 )

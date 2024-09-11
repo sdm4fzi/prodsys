@@ -12,6 +12,7 @@ from prodsys.models import product_data
 
 from prodsys.simulation import (
     request,
+    auxiliary,
     process,
     router,
     resources,
@@ -161,14 +162,14 @@ class Product(BaseModel):
 
     model_config=ConfigDict(arbitrary_types_allowed=True)
 
-    def update_location(self, resource: Locatable):
+    def update_location(self, locatable: Locatable):
         """
         Updates the location of the product object.
 
         Args:
-            resource (Locatable): Locatable objects where product object currently is.
+            locatable (Locatable): Locatable objects where product object currently is.
         """
-        self.current_locatable = resource
+        self.current_locatable = locatable
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": self.current_locatable.data.ID, "event": f"Updated location to {self.current_locatable.data.ID}"})
 
     def process_product(self):
@@ -181,7 +182,27 @@ class Product(BaseModel):
         """
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Start processing of product"})
         self.set_next_production_process()
+
+        if self.product_data.auxiliaries:
+            while True:
+                auxiliary_request: request.AuxiliaryRequest = yield self.env.process(self.product_router.route_auxiliary_to_product(self))
+                if not auxiliary_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_request.resource.data.ID, "aux": auxiliary_request.auxiliary.product_data.ID, "process": auxiliary_request.process.process_data.ID, "event": f"auxiliary request for {auxiliary_request.product.product_data.ID}"})
+            while True:
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request))
+                if not auxiliary_transport_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
+            yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"finished waiting for auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
+
         while self.next_prodution_process:
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "process": self.next_prodution_process.process_data.ID, "event": f"Start process of product"})
             while True:
                 production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
                 if not production_request:
@@ -189,7 +210,7 @@ class Product(BaseModel):
                     continue
                 break
             while True:
-                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_product(self, production_request))
+                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request))
                 if not transport_request:
                     yield self.env.timeout(0)
                     continue
@@ -209,6 +230,18 @@ class Product(BaseModel):
         )
         self.current_locatable.register_finished_product(self)
         logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Finished processing of product"})
+
+        if self.product_data.auxiliaries:
+            auxiliary_request.auxiliary.update_location(self.current_locatable)
+            while True:
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_auxiliary_to_store(auxiliary_request.auxiliary))
+                if not auxiliary_request:
+                    yield self.env.timeout(0)
+                    continue
+                break
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
+            yield self.env.process(auxiliary_request.auxiliary.request_process(auxiliary_transport_request))
+            auxiliary_request.auxiliary.release_auxiliary_from_product()
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
