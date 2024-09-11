@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
-from typing import List, Generator, TYPE_CHECKING, Optional
+from typing import List, Generator, TYPE_CHECKING, Optional, Union
 
 import logging
 
@@ -14,7 +14,7 @@ from simpy import events
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, state, resources, sink, source
+    from prodsys.simulation import product, process, state, resources, sink, source, auxiliary
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.product import Locatable
@@ -261,6 +261,7 @@ class ProductionController(Controller):
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
                 next_product.finished_process.succeed()
+                #next_product.finished_auxiliary_process.succeed()
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished process for {product.product_data.ID}"})
     
     def run_process(self, input_state: state.State, target_product: product.Product):
@@ -324,8 +325,13 @@ class TransportController(Controller):
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
                 raise ValueError("No product in queue")
+        elif isinstance(resource, store.Queue):
+            events.append(resource.get(filter=lambda x: x is product.product_data))
+        elif isinstance(resource, sink.Sink):
+            # TODO: resolve this hack by a more generic approach -> items (products + auxiliaries) are transport and retrieved / placed at locatables 
+            pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
         else:
-            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source")
+            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
         return events
 
     def put_product_to_input_queue(
@@ -350,9 +356,13 @@ class TransportController(Controller):
         ):
             for queue in locatable.input_queues:
                 events.append(queue.put(product.product_data))
+        elif isinstance(locatable, store.Queue):
+            events.append(locatable.put(product.product_data))
+        elif isinstance(locatable, source.Source):
+            pass # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
         else:
             raise ValueError(
-                f"Resource {locatable.data.ID} is not a ProductionResource or Sink"
+                f"Cannot place {product.product_data.ID} in locatable {locatable.data.ID} because the locatable is not a ProductionResource or Sink but of type: {type(locatable)}"
             )
 
         return events
@@ -439,34 +449,30 @@ class TransportController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            if origin.get_location() != resource.get_location():
+            if origin.data.ID != self._current_locatable.data.ID:
                 route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
                 transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport to pick up {product.product_data.ID} for transport"})
+                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting picking up {product.product_data.ID} for transport"})
                 yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
-
+            
             product_retrieval_events = self.get_next_product_for_process(origin, product)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
 
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting running transport from oringin {origin.data.ID} to target {target.data.ID} for {product.product_data.ID}"})                           
             yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False))
-            
             product_put_events = self.put_product_to_input_queue(target, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
-            
-            if isinstance(target, resources.ProductionResource):
-                target.unreserve_input_queues()
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
             product.finished_process.succeed()
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
-
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID} for transport"})                           
+    
     def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool) -> Generator:
         """
         Run the transport process and every single transport step in the route of the transport process.
@@ -489,10 +495,10 @@ class TransportController(Controller):
                 last_transport_step = True
             else:
                 last_transport_step = False
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}", "empty_transport": empty_transport, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
             yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step))
             self.update_location(next_location)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
+            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}", "empty_transport": empty_transport, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
             transport_state.process = None
 
     def run_process(
@@ -517,7 +523,10 @@ class TransportController(Controller):
         """
         target_location = target.get_location()
         input_state.prepare_for_run()
-        input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+        if not hasattr(product, "product_info"):
+            input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        else:
+            input_state.state_info.log_product(product, state.StateTypeEnum.transport)
         if self._current_locatable.data.ID is self.resource.data.ID:
             origin = None
         else:
@@ -527,13 +536,20 @@ class TransportController(Controller):
             target, state.StateTypeEnum.transport,
             empty_transport=empty_transport
         )
-        product.product_info.log_start_process(
-            self.resource,
-            product,
-            self.env.now,
-            state.StateTypeEnum.transport,
-        )
-       
+        if not hasattr(product, "product_info"):
+            product.auxiliary_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
+        else:
+            product.product_info.log_start_process(
+                self.resource,
+                product,
+                self.env.now,
+                state.StateTypeEnum.transport,
+            )
         input_state.process = self.env.process(
             input_state.process_state(target=target_location, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
@@ -651,6 +667,6 @@ class BatchController(Controller):
     pass
 
 
-from prodsys.simulation import resources, state, sink, source, route_finder, sim
+from prodsys.simulation import resources, state, sink, source, route_finder, sim, store
 from prodsys.simulation import request as request_module
 from prodsys.simulation.process import LinkTransportProcess

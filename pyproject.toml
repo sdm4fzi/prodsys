@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "prodsys"
-version = "0.7.8"
+version = "0.8.1"
 description = "A useful module for production system simulation and optimization"
 authors = ["Sebastian Behrendt <sebastia.behrendt@kit.edu>"]
 license = "MIT"
@@ -51,13 +51,13 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
-mkdocstrings = {version = ">=0.18", extras = ["python-legacy"]}
 mkdocs-material = "^9.1.13"
 mkdocs-include-dir-to-nav = "^1.2.0"
 ipykernel = "^6.23.1"
 nbformat = "^5.8.0"
 ipywidgets = "^8.0.6"
 snakeviz = "^2.2.0"
+mkdocstrings = {extras = ["python-legacy"], version = "^0.26.0"}
 
 
 [tool.poetry.group.build]

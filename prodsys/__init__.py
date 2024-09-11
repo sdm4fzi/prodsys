@@ -3,6 +3,7 @@ from prodsys.models import (
     processes_data,
     product_data,
     queue_data,
+    auxiliary_data,
     resource_data,
     scenario_data,
     sink_data,
@@ -16,4 +17,4 @@ from prodsys.util import runner
 
 
 
-VERSION = "0.7.8"
+VERSION = "0.8.1"
