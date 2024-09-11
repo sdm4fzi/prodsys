@@ -170,7 +170,7 @@ class ProductionController(Controller):
                     product.product_router.route_product_from_warehouse(product, resource)
                 )
                 logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "origin": transport_request.origin.data.ID, "target": transport_request.target.data.ID, "event": "Waiting for transport request"})
-                print("Transport request get_next_product_for_process: ", transport_request)
+                #print("Transport request get_next_product_for_process: ", transport_request)
                 yield self.env.process(product.request_process(transport_request))
 
             # 2. Get from queues
@@ -205,18 +205,16 @@ class ProductionController(Controller):
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """   
         events = []
-        loop = False
-        if isinstance(resource, resources.ProductionResource):
-            for queue in resource.output_queues:
-                for product in products:
-                    #if queue.full:
-                    #if random.random() < 0.3: # TODO: Add Storing Heuristic in the long run to externalize this behavior
-                    if loop:
-                        print("Warehouse full")
-                        warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product, resource))
-                        events.append(self.env.process(product.request_process(warehouse_transport_request)))
-                    else:
-                        events.append(queue.put(product.product_data))
+        if isinstance(resource, resources.ProductionResource):            
+            for product in products:
+                queue_for_product = None
+                queue_for_product = np.random.choice(resource.output_queues)
+                if queue_for_product.input_location is not None:
+                    warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product, resource, queue_for_product))
+                    events.append(self.env.process(product.request_process(warehouse_transport_request)))
+                else:
+                    events.append(queue_for_product.put(product.product_data))
+
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -673,7 +671,7 @@ class TransportController(Controller):
         events = []
         #print(to_warehouse)
         # TODO: special cases for von Ressource -> Warehouse: kein get
-        if (isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source) or isinstance(resource, store.Queue)) and not to_warehouse:
+        if (isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source)) and not to_warehouse:
             for queue in resource.output_queues:
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
@@ -683,16 +681,10 @@ class TransportController(Controller):
         elif isinstance(resource, sink.Sink):
             # TODO: resolve this hack by a more generic approach -> items (products + auxiliaries) are transport and retrieved / placed at locatables 
             pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
+        elif to_warehouse:
+            pass
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
-        # elif to_warehouse:
-        #     #TODO: unreserve warehouse queue - get warehouse queue object
-        #     resource.data.output_queues.unreserve()
-        #     print("product goes to warehouse")
-        #     return []
-
-        if not events:
-            raise ValueError(f"Product {product.product_data} not found in any queue")
         
         return events
 
@@ -713,10 +705,18 @@ class TransportController(Controller):
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
         events = []
-        # TODO: kein special case
+        selected_queue = None
+
         if isinstance(locatable, resources.ProductionResource) or isinstance(locatable, sink.Sink):
+            available_queues = [queue for queue in locatable.input_queues if queue.input_location is None]
+
+            selected_queue = np.random.choice(available_queues)
+            events.append(selected_queue.put(product.product_data))
+            
             for queue in locatable.input_queues:
-                events.append(queue.put(product.product_data))
+                if queue != selected_queue:
+                    queue.unreseve()
+                
         elif isinstance(locatable, store.Queue):
             events.append(locatable.put(product.product_data))
         elif isinstance(locatable, source.Source):
@@ -841,6 +841,7 @@ class TransportController(Controller):
             
             transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
+            #TODO: check if transport to warehouse is necessary -> check for find route to target
             yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False, to_output=False))
             
             product_put_events = self.put_product_to_input_queue(target, product)
@@ -848,8 +849,6 @@ class TransportController(Controller):
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
 
-            if isinstance(target, resources.ProductionResource) or isinstance(target, store.Queue):
-                target.unreserve_input_queues()
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
             product.finished_process.succeed()

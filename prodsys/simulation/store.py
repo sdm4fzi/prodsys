@@ -26,11 +26,8 @@ class Queue(store.FilterStore):
         _pending_put (int): The number of products that are reserved for being put into the queue. Avoids bottleneck in the simulation.
 
     """
-    #TODO: add locations of queue, if no given default to resource location
     def __init__(self, env: sim.Environment, data: queue_data.QueueData):
         self.env: sim.Environment = env
-        self.data: queue_data.QueueData = data
-        if data.capacity == 0:
         self.data: queue_data.QueueData = data
         if data.capacity == 0:
             capacity = float("inf")
@@ -38,7 +35,6 @@ class Queue(store.FilterStore):
             capacity = data.capacity
         self.input_location = data.input_location if data.input_location is not None else getattr(data, 'input_location', None)
         self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
-        #self.warehouse = self.location is not None
         self._pending_put: int = 0
         super().__init__(env, capacity)
         self.state_change = self.env.event()
