@@ -163,9 +163,14 @@ class ProductionController(Controller):
                 if product.product_data in queue.items:
                     selected_queue = queue
                     break
+                
+            if selected_queue is None:
+                raise ValueError(
+                    f"Product '{product.product_data.ID}' not found in any input queue for resource '{resource.data.ID}'."
+        )
 
             # 1. if product in warehouse -> put into input queues of ressource
-            if selected_queue.output_location is not None and selected_queue.output_location != resource.get_input_location():
+            if selected_queue.input_location is not None and selected_queue.input_location != resource.get_input_location():
                 transport_request = yield self.env.process(
                     product.product_router.route_product_from_warehouse(product, resource)
                 )
@@ -685,7 +690,13 @@ class TransportController(Controller):
             pass
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
-        
+        logger.debug({
+            "ID": "controller: get_next_product_for_process", 
+            "sim_time": self.env.now, 
+            "product": product.product_data.ID, 
+            "resource": resource.data.ID, 
+            "events_triggered": events
+        })
         return events
 
     def put_product_to_input_queue(
@@ -715,9 +726,21 @@ class TransportController(Controller):
             
             for queue in locatable.input_queues:
                 if queue != selected_queue:
+                    logger.debug({
+                        "ID": "controller: put_product_to_input_queue", 
+                        "sim_time": self.env.now, 
+                        "queue": queue.data.ID, 
+                        "event": "Unreserving input queues"
+                    })
                     queue.unreseve()
                 
         elif isinstance(locatable, store.Queue):
+            logger.debug({
+                "ID": "controller: put_product_to_input_queue", 
+                "sim_time": self.env.now, 
+                "locatable": locatable.data.ID, 
+                "event": f"Putting product {product.product_data.ID} into store.Queue"
+            })
             events.append(locatable.put(product.product_data))
         elif isinstance(locatable, source.Source):
             pass # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
