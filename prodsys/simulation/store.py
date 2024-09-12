@@ -34,7 +34,7 @@ class Queue(store.FilterStore):
         else:
             capacity = data.capacity
         self.input_location = data.input_location if data.input_location is not None else getattr(data, 'input_location', None)
-        self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
+        #self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
         self._pending_put: int = 0
         super().__init__(env, capacity)
         self.state_change = self.env.event()
