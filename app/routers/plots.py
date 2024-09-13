@@ -163,3 +163,14 @@ async def get_WIP_per_resource(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@router.get("/auxiliary_WIP", response_class=HTMLResponse)
+async def get_auxiliary_WIP(
+    project_id: str,
+    adapter_id: str,
+):
+    try:
+        post_processor = prodsys_backend.get_post_processor(project_id, adapter_id)
+        html_content = kpi_visualization.plot_auxiliary_WIP(post_processor, return_html=True)
+        return Response(content=html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
