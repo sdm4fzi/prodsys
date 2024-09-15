@@ -449,7 +449,9 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor, return_ht
     fig = go.Figure()
 
     window = 5000
-    colors = px.colors.qualitative.G10
+    def get_colors() -> List[str]:
+        return px.colors.qualitative.Dark24 + px.colors.qualitative.Light24 + px.colors.qualitative.G10
+    colors = get_colors()
 
     for product_type, df_product_type in df.groupby(by="Product_type"):
         df_product_type["WIP_avg"] = (
@@ -458,8 +460,9 @@ def plot_WIP_with_range(post_processor: post_processing.PostProcessor, return_ht
         df_product_type["WIP_std"] = (
             df_product_type["WIP"].rolling(window=window).std()
         )
-
-        color = colors.pop()
+        if not colors:
+            colors = get_colors()
+        color = colors.pop(0)
         fig.add_scatter(
             name=product_type,
             x=df_product_type["Time"],
