@@ -95,18 +95,24 @@ async def optimize(
 
 @router.get(
     "/results",
-    response_model=Dict[str, List[performance_indicators.KPI_UNION]],
+    response_model=Dict[str, Union[Dict[str, List[performance_indicators.KPI_UNION]], str]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
+
     adapter_object = prodsys_backend.get_adapter(project_id, adapter_id)
     kpis = adapter_object.scenario_data.objectives
-    response = {}
+    
+    response = {"solutions": {}}
+
     for solution in data.values():
         for adapter_name in solution.keys():
-            response[adapter_name] = []
-            for kpi_name, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
+            response["solutions"][adapter_name] = []
+
+            for kpi_obj, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
+                kpi_name = kpi_obj.name
+                
                 kpi_object = parse_obj_as(
                     performance_indicators.KPI_UNION,
                     {
@@ -115,9 +121,42 @@ def get_optimization_results(project_id: str, adapter_id: str):
                         "context": [performance_indicators.KPILevelEnum.SYSTEM],
                     },
                 )
-                response[adapter_name].append(kpi_object)
+                response["solutions"][adapter_name].append(kpi_object)
+
     return response
 
+@router.get(
+    "/best_solution",
+    response_model=str,
+)
+def get_best_solution_id(project_id: str, adapter_id: str):
+    """
+    Returns the best solution ID based on the highest total fitness value from the optimization results.
+    """
+    try:
+        # Open the optimization results file
+        with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
+            data = json.load(json_file)
+    except FileNotFoundError:
+        raise HTTPException(404, f"Optimization results not found for adapter {adapter_id} in project {project_id}")
+
+    best_solution = None
+    best_fitness = float('-inf')  # Initialize with negative infinity
+
+    # Iterate over the solutions in the results file
+    for solution in data.values():
+        for adapter_name in solution.keys():
+            total_fitness = sum(solution[adapter_name]["fitness"])  # Calculate the total fitness value
+
+            # Check if this solution has the best fitness
+            if total_fitness > best_fitness:
+                best_fitness = total_fitness
+                best_solution = adapter_name
+
+    if best_solution is None:
+        raise HTTPException(404, "No valid solution found.")
+    
+    return best_solution
 
 @router.get(
     "/register/{solution_id}",
