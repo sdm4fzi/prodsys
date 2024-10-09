@@ -207,6 +207,7 @@ class Product(BaseModel):
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"finished waiting for auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
 
         while self.next_prodution_process:
+            #check if it is already on resource or warehouse
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "process": self.next_prodution_process.process_data.ID, "event": f"Start process of product"})
             while True:
                 production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
@@ -214,7 +215,7 @@ class Product(BaseModel):
                     yield self.env.timeout(0)
                     continue
                 break
-            while True:
+            while True: #check if locatable is updated and correctly retrieved from warehouse
                 transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request.product, production_request.resource))
                 if not transport_request:
                     yield self.env.timeout(0)
@@ -222,6 +223,19 @@ class Product(BaseModel):
                 break
             yield self.env.process(self.request_process(transport_request))
             yield self.env.process(self.request_process(production_request))
+            store_in_warehouse = self.product_router.check_store_product_in_warehouse(self)
+            if store_in_warehouse:
+                while True:
+                    transport_to_warehouse_request = yield self.env.process(
+                        self.product_router.route_product_to_warehouse(self)
+                    )
+                    if not transport_to_warehouse_request:
+                        yield self.env.timeout(0)
+                        continue
+                    break
+                yield self.env.process(self.request_process(transport_to_warehouse_request))
+                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Product transported to warehouse"})
+
             self.set_next_production_process()
         while True:
             transport_to_sink_request = yield self.env.process(self.product_router.route_product_to_sink(self))

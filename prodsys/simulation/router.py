@@ -228,7 +228,7 @@ class Router:
         routed_transport_request = transport_requests.pop(0)
         return routed_transport_request
     
-    def route_product_to_warehouse(self, product: product.Product, resource: resources.ProductionResource, chosen_warehouse) -> Generator[request.TransportResquest]:
+    def route_product_to_warehouse(self, product: product.Product) -> Generator[request.TransportResquest]:
         """
         Routes a product to the warehouse.
 
@@ -238,13 +238,13 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the warehouse.
         """
-        warehouses = self.resource_factory.queue_factory.get_warehouse_queues()
-        resource_warehouses = [warehouse for warehouse in warehouses if warehouse.data.ID in resource.data.input_queues + resource.data.output_queues]
+        resource = product.current_locatable
+        external_queues = [queue for queue in resource.output_queues if queue.input_location]
 
-        #chosen_warehouse = np.random.choice(resource_warehouses)
+        chosen_warehouse = np.random.choice(external_queues)
         env = product.env
         transport_request = yield env.process(self.route_transport_resource_for_item(product, chosen_warehouse))
-        # TODO: reserve warehouse queue and make sure unreserve is called
+        
         chosen_warehouse.reserve()
         
         return transport_request
@@ -262,6 +262,20 @@ class Router:
         env = product.env
         transport_request = yield env.process(self.route_transport_resource_for_item(product, resource))
         return transport_request
+    
+    def check_store_product_in_warehouse(product: product.Product) -> bool:
+        """
+        Decides whether a product is stored in the warehouse.
+
+        Returns:
+            bool: If the product is stored in the warehouse.
+        """
+        resource = product.current_locatable
+        external_queues = [queue for queue in resource.output_queues if queue.input_location]
+        if not external_queues:
+            return False
+        #TODO: implement heuristic
+        return np.random.choice([True, False])
 
     def get_requests_with_free_resources(self, potential_requests: List[request.Request]) -> Generator[List[request.Request]]:
         """
