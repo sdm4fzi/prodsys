@@ -157,38 +157,19 @@ class ProductionController(Controller):
         events = []
         if isinstance(resource, resources.ProductionResource):
             selected_queue = None
-            product_in_queue_event = None
 
-            for queue in resource.input_queues:
+            internal_queues = [queue for queue in resource.output_queues if queue.input_location is None]
+            for queue in internal_queues:
                 if product.product_data in queue.items:
                     selected_queue = queue
                     break
                 
             if selected_queue is None:
                 raise ValueError(
-                    f"Product '{product.product_data.ID}' not found in any input queue for resource '{resource.data.ID}'."
-        )
-
-            # 1. if product in warehouse -> put into input queues of ressource
-            if selected_queue.input_location is not None and selected_queue.input_location != resource.get_input_location():
-                transport_request = yield self.env.process(
-                    product.product_router.route_product_from_warehouse(product, resource)
+                    f"Product '{product.product_data.ID}' not found in any internal queue for resource '{resource.data.ID}'."
                 )
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "origin": transport_request.origin.data.ID, "target": transport_request.target.data.ID, "event": "Waiting for transport request"})
-                #print("Transport request get_next_product_for_process: ", transport_request)
-                yield self.env.process(product.request_process(transport_request))
 
-            # 2. Get from queues
-            for queue in resource.input_queues:
-                product_in_queue_event = queue.get(filter=lambda item: item is product.product_data)
-                if product_in_queue_event:
-                    selected_queue = queue
-                    break
-
-            if selected_queue is None:
-                raise ValueError("No product in any queue")
-            
-            events.append(product_in_queue_event)
+            events = [selected_queue.get(filter=lambda item: item is product.product_data)]
 
             if not events:
                 raise ValueError("No product in queue")
@@ -213,12 +194,9 @@ class ProductionController(Controller):
         if isinstance(resource, resources.ProductionResource):            
             for product in products:
                 queue_for_product = None
-                queue_for_product = np.random.choice(resource.output_queues)
-                if queue_for_product.input_location is not None:
-                    warehouse_transport_request = yield self.env.process(product.product_router.route_product_to_warehouse(product, resource, queue_for_product))
-                    events.append(self.env.process(product.request_process(warehouse_transport_request)))
-                else:
-                    events.append(queue_for_product.put(product.product_data))
+                internal_queues = [queue for queue in resource.output_queues if queue.input_location is None]
+                queue_for_product = np.random.choice(internal_queues)
+                events.append(queue_for_product.put(product.product_data))
 
         else:
             raise ValueError("Resource is not a ProductionResource")
@@ -674,20 +652,17 @@ class TransportController(Controller):
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
         events = []
-        #print(to_warehouse)
-        # TODO: special cases for von Ressource -> Warehouse: kein get
-        if (isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source)) and not to_warehouse:
-            for queue in resource.output_queues:
+        if (isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source)):
+            internal_queues = [queue for queue in resource.output_queues if queue.input_location is None]
+            for queue in internal_queues:
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
-                raise ValueError("No product in queue")
+                raise ValueError(f"No product in internal queue {resource.data.ID}")
         elif isinstance(resource, store.Queue):
             events.append(resource.get(filter=lambda x: x is product.product_data))
         elif isinstance(resource, sink.Sink):
             # TODO: resolve this hack by a more generic approach -> items (products + auxiliaries) are transport and retrieved / placed at locatables 
             pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
-        elif to_warehouse:
-            pass
         else:
             raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
         logger.debug({
@@ -716,23 +691,19 @@ class TransportController(Controller):
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
         events = []
-        selected_queue = None
 
         if isinstance(locatable, resources.ProductionResource) or isinstance(locatable, sink.Sink):
-            available_queues = [queue for queue in locatable.input_queues if queue.input_location is None]
-
-            selected_queue = np.random.choice(available_queues)
+            internal_queues = [queue for queue in locatable.input_queues if queue.input_location is None]
+            #selected_queue = np.random.choice(internal_queues)
+            selected_queue = internal_queues[0]
             events.append(selected_queue.put(product.product_data))
             
-            for queue in locatable.input_queues:
-                if queue != selected_queue:
-                    logger.debug({
-                        "ID": "controller: put_product_to_input_queue", 
-                        "sim_time": self.env.now, 
-                        "queue": queue.data.ID, 
-                        "event": "Unreserving input queues"
-                    })
-                    queue.unreseve()
+            logger.debug({
+                "ID": "controller: put_product_to_input_queue", 
+                "sim_time": self.env.now, 
+                "queue": selected_queue.data.ID, 
+                "event": f"Putting product {product.product_data.ID} into store.Queue"
+            })
                 
         elif isinstance(locatable, store.Queue):
             logger.debug({
