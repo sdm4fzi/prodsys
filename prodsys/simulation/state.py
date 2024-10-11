@@ -19,6 +19,7 @@ from prodsys.models.state_data import (
     TransportStateData,
     SetupStateData,
     ProcessBreakDownStateData,
+    ChargingStateData
 )
 
 if TYPE_CHECKING:
@@ -56,6 +57,7 @@ class StateTypeEnum(str, Enum):
     source = "Source"
     sink = "Sink"
     store = "Store"
+    charging = "Charging"
 
 
 class StateInfo(BaseModel):
@@ -309,6 +311,7 @@ class ProductionState(State):
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
+        self.resource.consider_battery_usage(self.done_in)
         while True:
             try:
                 if self.interrupted:
@@ -397,6 +400,7 @@ class TransportState(State):
         )
         if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
             self.done_in -= self.time_model.time_model_data.reaction_time
+        self.resource.consider_battery_usage(self.done_in)
 
         while True:
             try:
@@ -655,8 +659,105 @@ class SetupState(State):
             self.process.interrupt()
 
 
+MINIMUM_BATTERY_LEVEL = 0.1
+
+class ChargingState(State):
+    """
+    Represents a charging state of a resource in the simulation. A charging state has a process that simulates the charging of a resource. This changes the current charge of the resource and allows it processing of other types of processes with their associated production or transport
+
+    Args:
+        state_data (ChargingStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        battery_time_model (time_model.TimeModel): The time model of the battery.
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
+        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        start (float, optional): The start time of the state. Defaults to 0.0.
+        done_in (float, optional): The ramaining time for the state to finish. Defaults to 0.0.
+        interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
+    """
+    state_data: ChargingStateData
+    battery_time_model: time_model.TimeModel
+    start: float = 0.0
+    done_in: float = 0.0
+    interrupted: bool = False
+
+    battery_usage_time_since_charging: float = 0.0
+
+    def requires_charging(self) -> bool:
+        return self.battery_usage_time_since_charging >= (1 - MINIMUM_BATTERY_LEVEL) * self.battery_time_model.get_next_time()
+
+    def prepare_for_run(self):
+        self.finished_process = events.Event(self.env)
+
+    def activate_state(self):
+        self.active = events.Event(self.env).succeed()
+
+    def add_battery_usage_time(self, time: float):
+        self.battery_usage_time_since_charging += time
+
+    def process_state(self) -> Generator:
+        self.done_in = self.time_model.get_next_time()
+        while True:
+            try:
+                if self.interrupted:
+                    debug_logging(self, f"interrupted while waiting for activation or activation of resource")
+                    yield events.AllOf(self.env, [self.active, self.resource.active])
+                    self.interrupted = False
+                debug_logging(self, f"wait for activation or activation of resource before process")
+                yield events.AllOf(self.env, [self.resource.active, self.active])
+                break
+            except exceptions.Interrupt:
+                if not self.interrupted:
+                    raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
+        while self.done_in:
+            try:
+                if self.interrupted:
+                    self.state_info.log_start_interrupt_state(
+                        self.env.now, StateTypeEnum.production
+                    )
+                    self.update_done_in()
+                    debug_logging(self, f"interrupted process that ends in {self.done_in}")
+                    yield events.AllOf(self.env, [self.active, self.resource.active])
+                    debug_logging(self, f"interrupt over for process that ends in {self.done_in}")
+                    self.interrupted = False
+                    self.state_info.log_end_interrupt_state(
+                        self.env.now, self.env.now + self.done_in, StateTypeEnum.charging
+                    )
+                self.start = self.env.now
+                self.state_info.log_start_state(
+                        self.start, self.start + self.done_in, StateTypeEnum.charging
+                )
+                debug_logging(self, f"starting process that ends in {self.done_in}")
+                yield self.env.timeout(self.done_in)
+                self.done_in = 0  # Set to 0 to exit while loop.
+
+            except exceptions.Interrupt:
+                if not self.interrupted:
+                    raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
+        debug_logging(self, f"process finished")
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.charging)
+        self.battery_usage_time_since_charging = 0
+        self.finished_process.succeed()
+
+    def update_done_in(self):
+        if self.start == 0:
+            return
+        self.done_in -= (self.env.now - self.start)  # How much time left?
+        if self.done_in < 0:
+            self.done_in = 0
+
+    def interrupt_process(self):
+        if self.process and self.process.is_alive and not self.interrupted:
+            self.interrupted = True
+            self.process.interrupt()
+
+
 STATE_UNION = Union[
-    BreakDownState, ProductionState, TransportState, SetupState, ProcessBreakDownState
+    ChargingState, BreakDownState, ProductionState, TransportState, SetupState, ProcessBreakDownState
 ]
 """
 Union Type of all states.
