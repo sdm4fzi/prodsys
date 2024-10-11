@@ -215,5 +215,34 @@ class SetupState(State, core.ExpressObject):
             target_setup=self.target_setup.ID
         )
     
-STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState]
+@dataclass
+class ChargingState(State, core.ExpressObject):
+    """
+    Class that represents a charging state.
+
+    Args:
+        time_model (time_model.TIME_MODEL_UNION): Time model of the state.
+        battery_time_model (time_model.TIME_MODEL_UNION): Time model of the battery.
+        ID (str): ID of the state.
+    """
+    battery_time_model: time_model.TIME_MODEL_UNION
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.ChargingState, init=False)
+
+    def to_model(self) -> state_data.ChargingStateData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            state_data.ChargingStateData: Data object of the express object.
+        """
+        return state_data.ChargingStateData(
+            ID=self.ID,
+            description="",
+            time_model_id=self.time_model.ID,
+            type=self.type,
+            battery_time_model_id=self.battery_time_model.ID
+        )
+    
+STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState, ChargingState]
 from prodsys.express import process
