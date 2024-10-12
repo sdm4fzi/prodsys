@@ -174,7 +174,6 @@ class ResourceFactory(BaseModel):
                 {"input_queues": input_queues, "output_queues": output_queues}
             )
         resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
-        # print(resource_object._env)
         controller.set_resource(resource_object)
 
         states = self.state_factory.get_states(resource_data.state_ids)

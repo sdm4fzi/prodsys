@@ -57,7 +57,6 @@ class StateFactory:
             )
             values.update({"battery_time_model": battery_time_model})
         # FIXME: resolve bug when importing simulation types#
-        print(values)
         self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
 
     def create_states(self, adapter: adapter.ProductionSystemAdapter):

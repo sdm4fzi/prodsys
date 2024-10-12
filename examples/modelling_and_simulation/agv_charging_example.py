@@ -17,8 +17,8 @@ setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
 
 
-charging_time_model = psx.FunctionTimeModel("constant", 60, ID="charging_time_model")
-battery_time_model = psx.FunctionTimeModel("constant", 120, ID="battery_time_model") 
+charging_time_model = psx.FunctionTimeModel("constant", 10, ID="charging_time_model")
+battery_time_model = psx.FunctionTimeModel("constant", 20, ID="battery_time_model") 
 charging_state = psx.ChargingState(time_model=charging_time_model, battery_time_model=battery_time_model, ID="charging_state")
 
 machine = psx.ProductionResource([p1, p2], [5,0], 2, states=[setup_state_1, setup_state_2], ID="machine")
@@ -54,7 +54,5 @@ system.run(1000)
 runner_instance = system.runner
 
 runner_instance.print_results()
-runner_instance.plot_results()
+# runner_instance.plot_results()
 runner_instance.save_results_as_csv("examples")
-
-# TODO: add charging time in post processing

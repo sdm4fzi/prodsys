@@ -132,7 +132,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         Returns:
             bool: True if the resource requires charging, False otherwise.
         """
-        return any([state_instance.requires_charging() for state_instance in self.states if isinstance(state_instance, state.ChargingState)])
+        return any([state_instance.requires_charging() for state_instance in self.charging_states if isinstance(state_instance, state.ChargingState)])
 
     
     def charge(self) -> Generator:
@@ -146,6 +146,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         for input_state in self.charging_states:
             if not input_state.requires_charging():
                 continue
+            input_state.prepare_for_run()
             yield self.env.process(input_state.process_state())
 
     def consider_battery_usage(self, amount: float) -> None:
@@ -199,7 +200,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.active = events.Event(self.env).succeed()
         self.got_free = events.Event(self.env)
-        for actual_state in self.states + self.production_states + self.setup_states:
+        for actual_state in self.states + self.production_states + self.setup_states + self.charging_states:
             actual_state.activate_state()
         for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())
