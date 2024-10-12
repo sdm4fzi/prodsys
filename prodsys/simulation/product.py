@@ -225,6 +225,7 @@ class Product(BaseModel):
             yield self.env.process(self.request_process(production_request))
             store_in_warehouse = self.product_router.check_store_product_in_warehouse(self)
             if store_in_warehouse:
+                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Store product in warehouse"})
                 while True:
                     transport_to_warehouse_request = yield self.env.process(
                         self.product_router.route_product_to_warehouse(self)

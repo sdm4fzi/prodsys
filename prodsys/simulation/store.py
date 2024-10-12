@@ -104,4 +104,4 @@ class Queue(store.FilterStore):
         return self.input_location
     
     def get_output_location(self):
-        return self.output_location
+        return self.input_location

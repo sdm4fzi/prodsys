@@ -263,7 +263,7 @@ class Router:
         transport_request = yield env.process(self.route_transport_resource_for_item(product, resource))
         return transport_request
     
-    def check_store_product_in_warehouse(product: product.Product) -> bool:
+    def check_store_product_in_warehouse(self, product: product.Product) -> bool:
         """
         Decides whether a product is stored in the warehouse.
 
