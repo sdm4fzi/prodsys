@@ -48,6 +48,7 @@ class Resource(BaseModel, ABC, resource.Resource):
     states: List[state.State] = Field(default_factory=list, init=False)
     production_states: List[state.State] = Field(default_factory=list, init=False)
     setup_states: List[state.SetupState] = Field(default_factory=list, init=False)
+    charging_states: List[state.ChargingState] = Field(default_factory=list, init=False)
 
     got_free: events.Event = Field(default=None, init=False)
     active: events.Event = Field(default=None, init=False)
@@ -122,7 +123,42 @@ class Resource(BaseModel, ABC, resource.Resource):
             self.capacity_current_setup
             - (len(self.controller.running_processes) + self.controller.reserved_requests_count)
         ) <= 0
+    
+    @property
+    def requires_charging(self) -> bool:
+        """
+        Returns if the resource requires charging.
 
+        Returns:
+            bool: True if the resource requires charging, False otherwise.
+        """
+        return any([state_instance.requires_charging() for state_instance in self.charging_states if isinstance(state_instance, state.ChargingState)])
+
+    
+    def charge(self) -> Generator:
+        """
+        Charges the resource.
+
+        Yields:
+            Generator: The type of the yield depends on the resource.
+        """
+        # TODO: transport AGV to charging station
+        for input_state in self.charging_states:
+            if not input_state.requires_charging():
+                continue
+            input_state.prepare_for_run()
+            yield self.env.process(input_state.process_state())
+
+    def consider_battery_usage(self, amount: float) -> None:
+        """
+        Reduces the battery level of the resource.
+
+        Args:
+            amount (float): The amount to reduce the battery level.
+        """
+        for state_instance in self.charging_states:
+            state_instance.add_battery_usage_time(amount)
+    
     def get_controller(self) -> control.Controller:
         """
         Returns the controller of the resource.
@@ -141,6 +177,8 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         if isinstance(input_state, state.SetupState):
             self.setup_states.append(input_state)
+        elif isinstance(input_state, state.ChargingState):
+            self.charging_states.append(input_state)
         else:
             self.states.append(input_state)
         input_state.set_resource(self)
@@ -162,7 +200,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.active = events.Event(self.env).succeed()
         self.got_free = events.Event(self.env)
-        for actual_state in self.states + self.production_states + self.setup_states:
+        for actual_state in self.states + self.production_states + self.setup_states + self.charging_states:
             actual_state.activate_state()
         for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())

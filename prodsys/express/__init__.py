@@ -30,7 +30,7 @@ from prodsys.express.time_model import (
     SequentialTimeModel,
     ManhattanDistanceTimeModel,
 )
-from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState
+from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState, ChargingState
 from prodsys.express.node import Node
 from prodsys.express.process import (
     ProductionProcess,

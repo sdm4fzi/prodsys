@@ -118,6 +118,11 @@ class ProductionSystem(core.ExpressObject):
             if isinstance(s, state.BreakDownState)
             or isinstance(s, state.ProcessBreakdownState)
         ]
+        time_models += [
+            s.battery_time_model
+            for s in states
+            if isinstance(s, state.ChargingState)
+        ]
         time_models = remove_duplicate_items(time_models)
 
         time_model_data = [time_model.to_model() for time_model in time_models]
