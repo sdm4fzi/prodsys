@@ -1,8 +1,8 @@
 import prodsys.express as psx
 
 
-t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
-t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
+t1 = psx.FunctionTimeModel("normal", 0.8, 0.1, "t1")
+t2 = psx.FunctionTimeModel("normal", 1.6, 0.2, "t2")
 
 p1 = psx.ProductionProcess(t1, "p1")
 p2 = psx.ProductionProcess(t2, "p2")
@@ -17,8 +17,8 @@ setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
 
 
-charging_time_model = psx.FunctionTimeModel("constant", 50, ID="charging_time_model")
-battery_time_model = psx.FunctionTimeModel("constant", 20, ID="battery_time_model") 
+charging_time_model = psx.FunctionTimeModel("constant", 60, ID="charging_time_model")
+battery_time_model = psx.FunctionTimeModel("constant", 180, ID="battery_time_model") 
 charging_state = psx.ChargingState(time_model=charging_time_model, battery_time_model=battery_time_model, ID="charging_state")
 
 machine = psx.ProductionResource([p1, p2], [5,0], 2, states=[setup_state_1, setup_state_2], ID="machine")
@@ -49,7 +49,7 @@ runner_instance.initialize_simulation()
 simulation_source = runner_instance.source_factory.sources[0]
 product_example_1 = runner_instance.product_factory.create_product(simulation_source.product_data, simulation_source.router)
 print(product_example_1.product_data.ID)
-system.run(1000)
+system.run(4000)
 
 runner_instance = system.runner
 
