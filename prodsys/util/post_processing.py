@@ -67,7 +67,7 @@ class PostProcessor:
         """
         # TODO: also consider state.StateTypeEnum.process_breakdown for data analysis in the future
         return df["State Type"].isin(
-            [state.StateTypeEnum.source, state.StateTypeEnum.sink,state.StateTypeEnum.breakdown, state.StateTypeEnum.setup]
+            [state.StateTypeEnum.source, state.StateTypeEnum.sink,state.StateTypeEnum.breakdown, state.StateTypeEnum.setup, state.StateTypeEnum.charging]
         )
 
     def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -389,11 +389,12 @@ class PostProcessor:
     def df_resource_states(self) -> pd.DataFrame:
         """
         Returns a data frame with the machine states and the time spent in each state. 
-        There are 4 different states a resource can spend its time: 
+        There are 5 different states a resource can spend its time: 
             -SB: A resource is in standby state, could process but no product is available
             -PR: A resource is in productive state and performs a process
             -UD: A resource is in unscheduled downtime state due to a breakdown
             -ST: A resource is in setup state
+            -CR: A resource is in charging state
 
         Returns:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
@@ -404,12 +405,14 @@ class PostProcessor:
             & (df["Activity"] == "start state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
         negative_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "end state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
 
         df["Increment"] = 0
@@ -455,11 +458,15 @@ class PostProcessor:
         SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
             df["State Type"] == state.StateTypeEnum.setup
         )
+        CHARGING_CONDITION = ((df["State_sorting_Index"] == 8)) & (
+            df["State Type"] == state.StateTypeEnum.charging
+        )
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
         df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
+        df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
 
         return df
     
@@ -467,11 +474,12 @@ class PostProcessor:
     def df_resource_states_buckets(self) -> pd.DataFrame:
         """
         Returns a data frame with the machine states and the time spent in each state. 
-        There are 4 different states a resource can spend its time: 
+        There are 5 different states a resource can spend its time: 
             -SB: A resource is in standby state, could process but no product is available
             -PR: A resource is in productive state and performs a process
             -UD: A resource is in unscheduled downtime state due to a breakdown
             -ST: A resource is in setup state
+            -CR: A resource is in charging state
 
         Returns:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
@@ -484,12 +492,14 @@ class PostProcessor:
             & (df["Activity"] == "start state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
         negative_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "end state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
 
         df["Increment"] = 0
@@ -542,11 +552,15 @@ class PostProcessor:
         SETUP_CONDITION = ((df["State_sorting_Index"] == 8)) & (
             df["State Type"] == state.StateTypeEnum.setup
         )
+        CHARGING_CONDITION = ((df["State_sorting_Index"] == 8)) & (
+            df["State Type"] == state.StateTypeEnum.charging
+        )
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
         df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
+        df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
 
         return df
     
@@ -555,11 +569,12 @@ class PostProcessor:
         """
         Returns a data frame with the total time spent in each state of each resource. 
 
-        There are 4 different states a resource can spend its time:
+        There are 5 different states a resource can spend its time:
             -SB: A resource is in standby state, could process but no product is available
             -PR: A resource is in productive state and performs a process
             -UD: A resource is in unscheduled downtime state due to a breakdown
             -ST: A resource is in setup state
+            -CR: A resource is in charging state
 
         Returns:
             pd.DataFrame: Data frame with the total time spent in each state of each resource.
@@ -589,11 +604,12 @@ class PostProcessor:
     def df_resource_states_buckets_boxplot(self) -> pd.DataFrame:
         """
         Returns a data frame with the machine states and the time spent in each state. 
-        There are 4 different states a resource can spend its time: 
+        There are 5 different states a resource can spend its time: 
             -SB: A resource is in standby state, could process but no product is available
             -PR: A resource is in productive state and performs a process
             -UD: A resource is in unscheduled downtime state due to a breakdown
             -ST: A resource is in setup state
+            -CR: A resource is in charging state
 
         Returns:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
@@ -604,12 +620,14 @@ class PostProcessor:
             & (df["Activity"] == "start state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
         negative_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "end state")
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.charging)
         )
 
         df["Increment"] = 0
@@ -660,11 +678,15 @@ class PostProcessor:
             setup_condition = ((df["State_sorting_Index"] == 8)) & (
                 df["State Type"] == state.StateTypeEnum.setup
             )
+            charging_condition = ((df["State_sorting_Index"] == 8)) & (
+                df["State Type"] == state.StateTypeEnum.charging
+            )
 
             df.loc[standby_condition, "Time_type"] = "SB"
             df.loc[productive_condition, "Time_type"] = "PR"
             df.loc[downtime_condition, "Time_type"] = "UD"
             df.loc[setup_condition, "Time_type"] = "ST"
+            df.loc[charging_condition, "Time_type"] = "CR"
 
             df_all = pd.concat([df_all, df])
 
@@ -716,6 +738,7 @@ class PostProcessor:
             -PR: A resource is in productive state and performs a process
             -UD: A resource is in unscheduled downtime state due to a breakdown
             -ST: A resource is in setup state
+            -CR: A resource is in charging state
 
         Returns:
             pd.DataFrame: Data frame with the total time spent in each state of each resource.
@@ -834,6 +857,7 @@ class PostProcessor:
             "PR": (performance_indicators.ProductiveTime, performance_indicators.KPIEnum.PRODUCTIVE_TIME),	
             "UD": (performance_indicators.UnscheduledDowntime, performance_indicators.KPIEnum.UNSCHEDULED_DOWNTIME),
             "ST": (performance_indicators.SetupTime, performance_indicators.KPIEnum.SETUP_TIME),
+            "CR": (performance_indicators.ChargingTime, performance_indicators.KPIEnum.CHARGING_TIME),
         }
         for index, values in df.iterrows():
             KPIs.append(
