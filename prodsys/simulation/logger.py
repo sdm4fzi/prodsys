@@ -204,7 +204,7 @@ class EventLogger(Logger):
             resource_factory (resource_factory.ResourceFactory): The resource factory.
         """
         for r in resource_factory.resources:
-            all_states = r.states + r.production_states + r.setup_states
+            all_states = r.states + r.production_states + r.setup_states + r.charging_states
             for __state in all_states:
                 self.register_patch(
                     self.event_data,
