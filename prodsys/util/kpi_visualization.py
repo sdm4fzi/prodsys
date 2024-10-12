@@ -327,6 +327,7 @@ def plot_time_per_state_of_resources(post_processor: post_processing.PostProcess
             "SB": "yellow",
             "UD": "red",
             "ST": "blue",
+            "CR": "grey",
         },
     )
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
