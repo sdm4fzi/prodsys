@@ -128,7 +128,7 @@ class ScenarioInfoData(BaseModel):
     Args:
         machine_cost (float): Cost of a machine.
         transport_resource_cost (float): Cost of a transport resource.
-        process_module_cost (float): Cost of a process module.
+        process_module_costs (float): Cost of a process module.
         breakdown_cost (Optional[float], optional): Cost of a breakdown. Defaults to None.
         time_range (Optional[int], optional): Time range of the scenario in minutes to be considered. Defaults to None.
         maximum_breakdown_time (Optional[int], optional): Maximum allowable breakdown time in the scenario in minutes. Defaults to None.
@@ -136,7 +136,7 @@ class ScenarioInfoData(BaseModel):
 
     machine_cost: float
     transport_resource_cost: float
-    process_module_cost: float
+    process_module_costs: Optional[Dict[str, float]] = None
     auxiliary_cost: Optional[float] = None
     breakdown_cost: Optional[float] = None
     time_range: Optional[int]
@@ -147,10 +147,10 @@ class ScenarioInfoData(BaseModel):
             {
                 "machine_cost": 30000,
                 "transport_resource_cost": 20000,
-                "process_module_cost": 2300,
+                "process_module_costs": {"Process_1": 2300, "Process_2": 3300},
                 "auxiliary_cost": 1000,
                 "breakdown_cost": 1000,
-                "time_range": 2600,
+                "time_range": 2600, 
                 "maximum_breakdown_time": 10,
             }
         ]
@@ -226,7 +226,7 @@ class ScenarioData(BaseModel):
                     "info": {
                         "machine_cost": 30000,
                         "transport_resource_cost": 20000,
-                        "process_module_cost": 2300,
+                        "process_module_costs": {"Process_1": 2300, "Process_2": 3300},
                         "breakdown_cost": 1000,
                         "time_range": 2600,
                         "maximum_breakdown_time": 10,
