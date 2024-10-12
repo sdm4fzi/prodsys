@@ -158,7 +158,7 @@ class ProductionController(Controller):
         if isinstance(resource, resources.ProductionResource):
             selected_queue = None
 
-            internal_queues = [queue for queue in resource.output_queues if queue.input_location is None]
+            internal_queues = [queue for queue in resource.input_queues if queue.input_location is None]
             for queue in internal_queues:
                 if product.product_data in queue.items:
                     selected_queue = queue
@@ -265,7 +265,7 @@ class ProductionController(Controller):
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            product_retrieval_events = yield self.env.process(self.get_next_product_for_process(resource, product))
+            product_retrieval_events = self.get_next_product_for_process(resource, product)
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
             yield events.AllOf(resource.env, product_retrieval_events)
             
@@ -275,7 +275,7 @@ class ProductionController(Controller):
             production_state.process = None
             self.rework_needed = False
             
-            product_put_events = yield self.env.process(self.put_product_to_output_queue(resource, [product]))
+            product_put_events = self.put_product_to_output_queue(resource, [product])
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
             yield events.AllOf(resource.env, product_put_events)
             
