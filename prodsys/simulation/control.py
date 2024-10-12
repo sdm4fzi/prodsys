@@ -221,6 +221,8 @@ class ProductionController(Controller):
         """
         while True:
             logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
+            if self.resource.requires_charging:
+                yield self.env.process(self.resource.charge())
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
@@ -744,6 +746,8 @@ class TransportController(Controller):
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
+            if self.resource.requires_charging:
+                yield self.env.process(self.resource.charge())
             if self.requested.triggered:
                 self.requested = events.Event(self.env)
             for process in self.running_processes:
