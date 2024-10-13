@@ -240,9 +240,13 @@
             "ID": "M1",
             "description": "Machine 1",
             "capacity": 1,
-            "location": [
+            "input_location": [
                 0.0,
                 0.0
+            ],
+            "output_location": [
+                0.0,
+                1.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -268,9 +272,13 @@
             "ID": "M2",
             "description": "Machine 2",
             "capacity": 1,
-            "location": [
+            "input_location": [
                 0.0,
                 5.0
+            ],
+            "output_location": [
+                0.0,
+                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "SPT",
@@ -296,9 +304,13 @@
             "ID": "M3",
             "description": "Machine 3",
             "capacity": 1,
-            "location": [
+            "input_location": [
                 5.0,
                 0.0
+            ],
+            "output_location": [
+                4.0,
+                1.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -322,9 +334,13 @@
             "ID": "M4",
             "description": "Machine 4",
             "capacity": 1,
-            "location": [
+            "input_location": [
                 5.0,
                 5.0
+            ],
+            "output_location": [
+                6.0,
+                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -395,7 +411,7 @@
         {
             "ID": "SK1",
             "description": "Sink 1",
-            "location": [
+            "input_location": [
                 30.0,
                 30.0
             ],
@@ -407,7 +423,7 @@
         {
             "ID": "SK2",
             "description": "Sink 2",
-            "location": [
+            "input_location": [
                 30.0,
                 30.0
             ],
@@ -421,7 +437,7 @@
         {
             "ID": "S1",
             "description": "Source 1",
-            "location": [
+            "output_location": [
                 -5.0,
                 -5.0
             ],
@@ -435,7 +451,7 @@
         {
             "ID": "S2",
             "description": "Source 2",
-            "location": [
+            "output_location": [
                 -5.0,
                 -5.0
             ],

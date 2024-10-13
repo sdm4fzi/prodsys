@@ -112,7 +112,7 @@ def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
     except ValueError as e:
         return False
 
-    positions = [machine.location for machine in adapters.get_machines(configuration)]
+    positions = [machine.input_location for machine in adapters.get_machines(configuration)]
     possible_positions = configuration.scenario_data.options.positions
     if any(position not in possible_positions for position in positions):
         return False

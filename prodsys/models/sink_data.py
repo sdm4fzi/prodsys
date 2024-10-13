@@ -44,7 +44,7 @@ class SinkData(CoreAsset):
             {
                 "ID": "SK1",
                 "description": "Sink 1",
-                "location": [50.0, 50.0],
+                "input_location": [50.0, 50.0],
                 "product_type": "Product_1",
                 "input_queues": ["SinkQueue"],
             }
@@ -80,4 +80,4 @@ class SinkData(CoreAsset):
             else:
                 raise ValueError(f"Queue with ID {queue_id} not found for sink {self.ID}.")
 
-        return md5("".join([*map(str, self.location), product_hash, *sorted(input_queue_hashes)]).encode("utf-8")).hexdigest()
+        return md5("".join([*map(str, self.input_location), product_hash, *sorted(input_queue_hashes)]).encode("utf-8")).hexdigest()
