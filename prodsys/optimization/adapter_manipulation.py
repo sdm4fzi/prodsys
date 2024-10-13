@@ -79,11 +79,12 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     )
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for resource in adapters.get_machines(adapter_object):
-        if resource.location in possible_positions:
-            possible_positions.remove(resource.location)
+        if resource.input_location in possible_positions:
+            possible_positions.remove(resource.input_location)
     if not possible_positions:
         return False
-    location = random.choice(possible_positions)
+    input_location = random.choice(possible_positions)
+    output_location = input_location
     machine_ids = [
         resource.ID
         for resource in adapter_object.resource_data
@@ -95,7 +96,8 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
             ID=machine_id,
             description="",
             capacity=1,
-            location=location,
+            input_location=input_location,
+            output_location=output_location,
             controller=resource_data.ControllerEnum.PipelineController,
             control_policy=control_policy,
             process_ids=process_module_list,
@@ -279,11 +281,13 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     moved_machine = random.choice(possible_machines)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in possible_machines:
-        if machine.location in possible_positions:
-            possible_positions.remove(machine.location)
+        if machine.input_location in possible_positions:
+            possible_positions.remove(machine.input_location)
     if not possible_positions:
         return False
-    moved_machine.location = random.choice(possible_positions)
+    new_input_location = random.choice(possible_positions)
+    moved_machine.input_location = new_input_location
+    moved_machine.output_location = new_input_location
     return True
 
 
@@ -416,9 +420,10 @@ def mutation(individual):
 def arrange_machines(adapter_object: adapters.ProductionSystemAdapter) -> None:
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_machines(adapter_object):
-        machine.location = random.choice(possible_positions)
-        possible_positions.remove(machine.location)
-
+        new_input_location = random.choice(possible_positions)
+        machine.input_location = new_input_location
+        machine.output_location = new_input_location
+        possible_positions.remove(new_input_location)
 
 def get_random_production_capacity(
     adapter_object: adapters.ProductionSystemAdapter,
@@ -499,8 +504,10 @@ def get_random_layout(
     """
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_machines(adapter_object):
-        machine.location = random.choice(possible_positions)
-        possible_positions.remove(machine.location)
+        new_input_location = random.choice(possible_positions)
+        machine.input_location = new_input_location
+        machine.output_location = new_input_location
+        possible_positions.remove(new_input_location)
     return adapter_object
 
 

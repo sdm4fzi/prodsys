@@ -90,14 +90,14 @@ class SourceData(CoreAsset):
             else:
                 raise ValueError(f"Queue with ID {output_queue} not found for source {self.ID}.")
 
-        return md5(("".join([*map(str, self.location), product_hash, time_model_hash, self.routing_heuristic, *sorted(output_queue_hashes)])).encode("utf-8")).hexdigest()
+        return md5(("".join([*map(str, self.output_location), product_hash, time_model_hash, self.routing_heuristic, *sorted(output_queue_hashes)])).encode("utf-8")).hexdigest()
     
     model_config=ConfigDict(json_schema_extra={
         "examples": [
             {
                 "ID": "S1",
                 "description": "Source 1",
-                "location": [0.0, 0.0],
+                "output_location": [0.0, 0.0],
                 "product_type": "Product_1",
                 "time_model_id": "function_time_model_4",
                 "router": "SimpleRouter",

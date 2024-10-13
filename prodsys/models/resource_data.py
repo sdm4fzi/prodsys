@@ -116,7 +116,8 @@ class ResourceData(CoreAsset):
     
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
-        Returns a unique hash of the resource considering the capacity, location, controller, processes, process capacities and states. Can be used to compare resources for equal functionality.
+        Returns a unique hash of the resource considering the capacity, location (input/output for production resources or location for transport resources),
+        controller, processes, process capacities, and states. Can be used to compare resources for equal functionality.
 
         Args:
             adapter (ProductionSystemAdapter): Adapter that contains the process and state data.
@@ -137,8 +138,7 @@ class ResourceData(CoreAsset):
                     break
             else:
                 raise ValueError(f"State with ID {state_id} not found for resource {self.ID}.")
-            
-
+        
         for process_id in self.process_ids:
             for process in adapter.process_data:
                 if process.ID == process_id:
@@ -147,8 +147,26 @@ class ResourceData(CoreAsset):
             else:
                 raise ValueError(f"Process with ID {process_id} not found for resource {self.ID}.")
 
-        return md5(("".join([str(self.capacity), *map(str, self.location), self.controller, *sorted(process_hashes), *map(str, self.process_capacities), *sorted(state_hashes)])).encode("utf-8")).hexdigest()
-    
+        if isinstance(self, ProductionResourceData):
+            location_data = [*map(str, self.input_location), *map(str, self.output_location)]
+        elif isinstance(self, TransportResourceData):
+            location_data = [*map(str, self.location)]
+        else:
+            raise ValueError("Unknown resource type.")
+
+        return md5((
+            "".join(
+                [
+                    str(self.capacity), 
+                    *location_data, 
+                    self.controller, 
+                    *sorted(process_hashes), 
+                    *map(str, self.process_capacities), 
+                    *sorted(state_hashes)
+                ]
+            )
+        ).encode("utf-8")).hexdigest()
+
 
 class ProductionResourceData(ResourceData):
     """
