@@ -528,6 +528,7 @@ class BatchController(Controller):
             product_data_list = yield events.AllOf(resource.env, product_retrieval_events)
 
             for product_data in product_data_list.values():
+                #TODO: check for product_factory
                 simulation_product = product.product_router.product_factory.get_product(product_data.ID)
                 products.append(simulation_product)
 
