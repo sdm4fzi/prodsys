@@ -409,7 +409,32 @@ class LinkTransportProcessData(TransportProcessData):
         Returns:
             str: hash of the required capability process data.
         """
-        raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
+        loading_time_model_hash = ""
+        unloading_time_model_hash = ""
+
+        if self.loading_time_model:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == self.loading_time_model:
+                    loading_time_model_hash = time_model.hash()
+                    break
+
+        if self.unloading_time_model:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == self.unloading_time_model:
+                    unloading_time_model_hash = time_model.hash()
+                    break
+
+        sorted_links = sorted(["-".join(link) for link in self.links])
+
+        input_data = (
+            "".join(sorted_links) +
+            self.capability +
+            loading_time_model_hash +
+            unloading_time_model_hash
+        )
+
+        return md5(input_data.encode("utf-8")).hexdigest()
+        # raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
         # TODO: Implement hash function for LinkTransportProcessData and Nodes
         # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
 
