@@ -87,7 +87,6 @@ class RouteFinder:
 
         for link in links:
         # Determine locations based on object type
-            print(type(link[0]))
             if isinstance(link[0], Source):
                 origin_location = link[0].get_output_location()
             elif isinstance(link[0], ProductionResource):

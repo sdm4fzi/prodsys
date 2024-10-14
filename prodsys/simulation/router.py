@@ -70,13 +70,13 @@ class Router:
 
     def __init__(
         self,
-        product_factory: product_factory.ProductFactory,
+        #product_factory: product_factory.ProductFactory,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
         auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
     ):
-        self.product_factory: product_factory.ProductFactory = product_factory
+        #self.product_factory: product_factory.ProductFactory = product_factory
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
