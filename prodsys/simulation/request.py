@@ -113,6 +113,7 @@ class AuxiliaryRequest(Request):
         # TODO: rework this method. It is only used for interface homogenization -> restructure requests to be more general...
         self.origin: Optional[Locatable] = None
         self.target: Optional[Locatable] = None
+        self.route: Optional[List[Locatable]] = None
 
     def set_route(self, route: List[Locatable]):
         """

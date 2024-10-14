@@ -197,7 +197,7 @@ class Product(BaseModel):
                 break
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_request.resource.data.ID, "aux": auxiliary_request.auxiliary.product_data.ID, "process": auxiliary_request.process.process_data.ID, "event": f"auxiliary request for {auxiliary_request.product.product_data.ID}"})
             while True:
-                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request))
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request.product, auxiliary_request.resource))
                 if not auxiliary_transport_request:
                     yield self.env.timeout(0)
                     continue
@@ -207,7 +207,6 @@ class Product(BaseModel):
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_transport_request.resource.data.ID, "aux": auxiliary_transport_request.product.product_data.ID, "process": auxiliary_transport_request.process.process_data.ID, "origin": auxiliary_transport_request.origin.data.ID, "target": auxiliary_transport_request.target.data.ID, "event": f"finished waiting for auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}"})
 
         while self.next_prodution_process:
-            #check if it is already on resource or warehouse
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "process": self.next_prodution_process.process_data.ID, "event": f"Start process of product"})
             while True:
                 production_request = yield self.env.process(self.product_router.route_product_to_production_resource(self))
@@ -215,7 +214,7 @@ class Product(BaseModel):
                     yield self.env.timeout(0)
                     continue
                 break
-            while True: #check if locatable is updated and correctly retrieved from warehouse
+            while True:
                 transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request.product, production_request.resource))
                 if not transport_request:
                     yield self.env.timeout(0)
