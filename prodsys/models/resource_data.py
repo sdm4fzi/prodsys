@@ -176,7 +176,8 @@ class ProductionResourceData(ResourceData):
         ID (str): ID of the resource.
         description (str): Description of the resource.
         capacity (int): Capacity of the resource.
-        location (List[float]): Location of the resource. Has to be a list of length 2.
+        input_location (List[float]): Input location of the resource. Has to be a list of length 2.
+        output_location (List[float]): Output location of the resource. Has to be a list of length 2.
         controller (ControllerEnum): Controller of the resource.
         control_policy (ResourceControlPolicy): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
@@ -193,7 +194,8 @@ class ProductionResourceData(ResourceData):
             ID="R1",
             description="Resource 1",
             capacity=2,
-            location=[10.0, 10.0],
+            input_location=[10.0, 10.0],
+            output_location=[20.0, 20.0],
             controller=prodsys.resource_data.ControllerEnum.PipelineController,
             control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
             process_ids=["P1", "P2"],
@@ -207,7 +209,6 @@ class ProductionResourceData(ResourceData):
         )
         ```
     """
-    # TODO: add attributes for input and output location -> done
     input_location: conlist(float, min_length=2, max_length=2) # type: ignore
     output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     controller: Literal[ControllerEnum.PipelineController, ControllerEnum.BatchController]

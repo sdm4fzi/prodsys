@@ -80,10 +80,34 @@ class RouteFinder:
         Returns:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
+        from prodsys.simulation.resources import ProductionResource
+        from prodsys.simulation.source import Source
+        from prodsys.simulation.sink import Sink
         pathfinder_edges = []
 
         for link in links:
-            cost = self.calculate_cost(link[0].get_location(), link[1].get_location())
+        # Determine locations based on object type
+            print(type(link[0]))
+            if isinstance(link[0], Source):
+                origin_location = link[0].get_output_location()
+            elif isinstance(link[0], ProductionResource):
+                origin_location = link[0].get_output_location()
+            elif isinstance(link[0], Sink):
+                origin_location = link[0].get_input_location()
+            else:
+                origin_location = link[0].get_location()
+
+            if isinstance(link[1], Source):
+                target_location = link[1].get_output_location()
+            elif isinstance(link[1], ProductionResource):
+                target_location = link[1].get_input_location()
+            elif isinstance(link[1], Sink):
+                target_location = link[1].get_input_location()
+            else:
+                target_location = link[1].get_location()
+
+            # Calculate the cost and get graph nodes
+            cost = self.calculate_cost(origin_location, target_location)
             origin_graph_node, target_graph_node = self.get_graph_nodes_for_link(link)
             edge = (origin_graph_node, target_graph_node, cost)
             pathfinder_edges.append(edge)
@@ -131,12 +155,32 @@ class RouteFinder:
         Returns:
             GraphNode: The graph node.
         """
+        from prodsys.simulation.source import Source
+        from prodsys.simulation.sink import Sink
+        from prodsys.simulation.resources import ProductionResource
+
         existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:
             return existing_node
+
+        if isinstance(locatable, Source):
+            location = tuple(locatable.get_output_location())
+        elif isinstance(locatable, ProductionResource):
+            input_location = tuple(locatable.get_input_location())
+            input_node = self.get_existing_graph_node_for_locatable(locatable)
+            
+            if input_node:
+                location = tuple(locatable.get_output_location())
+            else:
+                location = input_location
+        elif isinstance(locatable, Sink):
+            location = tuple(locatable.get_input_location())
+        else:
+            location = tuple(locatable.get_location())
+
         new_graph_node = GraphNode(node_id=locatable.data.ID)
         self.nodes[locatable.data.ID] = new_graph_node
-        self.node_locatables[tuple(locatable.get_location())] = locatable
+        self.node_locatables[location] = locatable
         return new_graph_node
         
 

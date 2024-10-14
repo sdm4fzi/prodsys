@@ -46,6 +46,15 @@ class Sink(BaseModel):
         """
         return self.data.input_location
 
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the sink.
+
+        Returns:
+            List[float]: The location. Has to be a list of length 2.
+        """
+        return self.data.input_location
+
     def get_input_queue_length(self) -> int:
         """
         Returns total number of items in all input_queues. Defaults to 0 for a sink.

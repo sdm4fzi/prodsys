@@ -106,5 +106,14 @@ class Source(BaseModel):
         """
         return self.data.output_location
     
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the source.
+
+        Returns:
+            List[float]: The location. Has to be a list of length 2.
+        """
+        return self.data.output_location
+    
 from prodsys.factories import product_factory
 # Source.model_rebuild()
