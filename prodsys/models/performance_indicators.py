@@ -21,6 +21,7 @@ class KPIEnum(str, Enum):
     PRODUCTIVE_TIME = "productive_time"
     STANDBY_TIME = "standby_time"
     SETUP_TIME = "setup_time"
+    CHARGING_TIME = "charging_time"
     UNSCHEDULED_DOWNTIME = "unscheduled_downtime"
 
     DYNAMIC_WIP = "dynamic_WIP"
@@ -307,6 +308,24 @@ class SetupTime(KPI):
     })
 
 
+class ChargingTime(KPI):
+    name: Literal[KPIEnum.CHARGING_TIME]
+    target: Literal["min"] = "min"
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "name": "charging_time",
+                "target": "min",
+                "weight": 1,
+                "value": 0.1,
+                "context": ["resource"],
+                "resource": "Resource_1",
+            }
+        ]
+    })
+
+
 class UnscheduledDowntime(KPI):
     name: Literal[KPIEnum.UNSCHEDULED_DOWNTIME]
     target: Literal["min"] = "min"
@@ -335,6 +354,7 @@ KPI_UNION = Union[
     ProductiveTime,
     StandbyTime,
     SetupTime,
+    ChargingTime,
     UnscheduledDowntime,
     DynamicWIP,
     DynamicThroughputTime,

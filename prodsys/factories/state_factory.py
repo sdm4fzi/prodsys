@@ -51,7 +51,12 @@ class StateFactory:
                 state_data.repair_time_model_id
             )
             values.update({"repair_time_model": repair_time_model})
-        # FIXME: resolve bug when importing simulation types
+        if "battery_time_model_id" in state_data.model_dump():
+            battery_time_model = self.time_model_factory.get_time_model(
+                state_data.battery_time_model_id
+            )
+            values.update({"battery_time_model": battery_time_model})
+        # FIXME: resolve bug when importing simulation types#
         self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
 
     def create_states(self, adapter: adapter.ProductionSystemAdapter):

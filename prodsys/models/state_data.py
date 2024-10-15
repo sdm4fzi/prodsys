@@ -40,6 +40,7 @@ class StateTypeEnum(str, Enum):
     TransportState = "TransportState"
     SetupState = "SetupState"
     ProcessBreakDownState = "ProcessBreakDownState"
+    ChargingState = "ChargingState"
 
 
 class StateData(CoreAsset):
@@ -358,8 +359,73 @@ class SetupStateData(StateData):
     })
 
 
+class ChargingStateData(StateData):
+    """
+    Class that represents a battery powered resource.
+
+    Args:
+        ID (str): ID of the state.
+        description (str): Description of the state.
+        time_model_id (str): Time model ID of the state. Specifies the time for charging the AGV fully.
+        type (StateTypeEnum): Type of the state.
+        battery_time_mdoel_id (str): Time model ID of the battery time available for operation of the resource.
+
+    Examples:
+        Breakdown state with a function time model:
+        ``` py  
+        import prodsys
+        prodsys.state_data.ChargingStateData(
+            ID="ChargingState_1",
+            description="Charging state machine 1",
+            time_model_id="function_time_model_5",
+            repair_time_model_id="function_time_model_8",
+        )
+        ```
+    """
+
+    type: Literal[StateTypeEnum.ChargingState]
+    battery_time_model_id: str
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash of the state considering the time model and the repair time model. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the repair time model is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        charging_time_model_hash = ""
+
+        for charging_time_model in adapter.time_model_data:
+            if charging_time_model.ID == self.battery_time_model_id:
+                charging_time_model_hash = charging_time_model.hash()
+                break
+        else:
+            raise ValueError(f"Battery time model with ID {self.battery_time_model_id} not found for state {self.ID}.")
+
+        return md5(("".join([base_class_hash, charging_time_model_hash])).encode("utf-8")).hexdigest()  
+    
+    model_config=ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "ID": "ChargingState_1",
+                "description": "Charging state machine 1",
+                "time_model_id": "function_time_model_5",
+                "type": "ChargingState",
+                "battery_time_mdoel_id": "function_time_model_8",
+            }
+        ]
+    })
+
 STATE_DATA_UNION = Union[
     BreakDownStateData,
+    ChargingStateData,
     ProductionStateData,
     TransportStateData,
     SetupStateData,
