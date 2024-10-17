@@ -346,7 +346,15 @@ class LinkTransportProcessData(TransportProcessData):
         Returns:
             str: hash of the required capability process data.
         """
-        raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
+        base_class_hash = super().hash(adapter)
+        
+        links_str = "".join(["".join(sorted(link)) for link in sorted(self.links)])
+        
+        capability_str = self.capability if self.capability else ""
+        
+        return md5((base_class_hash + links_str + capability_str).encode("utf-8")).hexdigest()
+
+        #raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
         # TODO: Implement hash function for LinkTransportProcessData and Nodes
         # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
 
