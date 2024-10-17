@@ -281,7 +281,7 @@ class LinkTransportProcess(TransportProcess):
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[Node, Source, Sink, ProductionResource]]]]
 
-    def matches_request(self, request: request.TransportResquest) -> bool:
+    def matches_request(self, request: Union[request.TransportResquest, request.AuxiliaryRequest]) -> bool:
         requested_process = request.process
 
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
@@ -302,10 +302,14 @@ class LinkTransportProcess(TransportProcess):
         if is_process_with_capability(requested_process):
             if not requested_process.process_data.capability == self.process_data.capability:
                 return False
+            elif hasattr(request, "auxiliary") and requested_process.process_data.capability == self.process_data.capability:
+                return True
         
         if isinstance(requested_process, LinkTransportProcess):
             if not requested_process.process_data.ID == self.process_data.ID:
                 return False
+            elif hasattr(request, "auxiliary") and requested_process.process_data.ID == self.process_data.ID:
+                return True
             
         route = route_finder.find_route(request=request, process=self)
         if not route:
