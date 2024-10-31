@@ -79,8 +79,24 @@ def get_post_processor(
         raise HTTPException(status_code=500, detail=str(e))
 
 def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
-    # TODO: implement function that returns progress of optimization
-    return 0.5
+    if adapter_id not in runners:
+        raise HTTPException(
+            404, f"No simulation was yet started for adapter {adapter_id} in project {project_id}."
+        )
+    steps_done = runners[adapter_id].env.pbar.n
+    steps_total = runners[adapter_id].env.pbar.total
+    time_done = time.time() - runners[adapter_id].env.pbar.start_t
+
+    ratio_done = steps_done / steps_total
+    expected_total_time = time_done / ratio_done
+    expected_time_left = expected_total_time - time_done
+
+    return ProgressReport(
+        ratio_done=ratio_done,
+        time_done=round(time_done, 2),
+        expected_time_left=round(expected_time_left, 2),
+        expected_total_time=round(expected_total_time, 2),
+    )
 
 
 def prepare_adapter_from_optimization(
