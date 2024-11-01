@@ -378,29 +378,31 @@ class BatchController(Controller):
             raise ValueError("Resource is not a ProductionResource")
 
     def get_next_product_for_process(
-        self, resource: resources.Resource, process_request: request.Request
+        self, resource: resources.Resource, process_request: request_module.Request
     ) -> List[events.Event]:
         """
         Get the next batch of products for a process. The products are removed (get) from the input queues of the resource.
 
         Args:
             resource (resources.Resource): The resource to take the products from.
-            process_request (request.Request): The request that is requesting the products.
+            process_request (request_module.Request): The request that is requesting the products.
 
         Returns:
             List[events.Event]: The events that are triggered when the products are taken from the queue.
         """
         events = []
-
         if isinstance(resource, resources.ProductionResource):
+            batch_size = self.get_batch_size(resource)
             for queue in resource.input_queues:
-                while len(events) < self.get_batch_size(resource):
+                while len(events) < batch_size:
                     event = queue.get(
                         filter=lambda item: item.product_type == process_request.get_product().product_data.product_type
                     )
                     if not event:
                         break
                     events.append(event)
+            if not events:
+                raise ValueError("No products available in the queue to fulfill the batch size requirement")
             return events
         else:
             raise ValueError("Resource is not a ProductionResource")
@@ -409,23 +411,29 @@ class BatchController(Controller):
         self, resource: resources.Resource, products: List[product.Product]
     ) -> List[events.Event]:
         """
-        Place a batch of products to the output queue (put) of the resource.
+        Place a batch of products into the output queue of the resource.
 
         Args:
-            resource (resources.Resource): The resource to place the product to.
+            resource (resources.Resource): The resource to place the products to.
             products (List[product.Product]): The products to be placed.
 
         Returns:
-            List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+            List[events.Event]: The events that are triggered when the products are placed in the queue.
         """
         events = []
         if isinstance(resource, resources.ProductionResource):
-            for queue in resource.output_queues:
-                for product in products:
-                    events.append(queue.put(product.product_data))
+            for product in products:
+                queue_for_product = np.random.choice(resource.output_queues)
+                events.append(queue_for_product.put(product.product_data))
+                logger.debug({
+                    "ID": "controller: put_product_to_output_queue",
+                    "sim_time": self.env.now,
+                    "queue": queue_for_product.data.ID,
+                    "event": f"Putting product {product.product_data.ID} into output queue"
+                })
         else:
             raise ValueError("Resource is not a ProductionResource")
-        
+
         return events
     
     def wait_for_free_process(self, resource: resources.Resource, process: process.Process) -> Generator[List[state.State], None, None]:
