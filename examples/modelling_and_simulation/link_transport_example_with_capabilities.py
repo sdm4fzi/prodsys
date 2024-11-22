@@ -33,12 +33,12 @@ node1 = psx.Node(location=[0, 20], ID="node1")
 node2 = psx.Node(location=[50, 20], ID="node2")
 node3 = psx.Node(location=[100, 20], ID="node3")
 node4 = psx.Node(location=[100, 80], ID="node4")
-node5 = psx.Node(location=[50, 80], ID="node5")
+    node5 = psx.Node(location=[50, 80], ID="node5")
 node6 = psx.Node(location=[0, 80], ID="node6")
 
 
 
-rcp01 = psx.RequiredCapabilityProcess(time_model=time_model_agv, capability="euro_palette_transport", ID="rtp01")
+rcp01 = psx.RequiredCapabilityProcess(capability="euro_palette_transport", ID="rtp01")
 productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
 productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="pp02")
 productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
