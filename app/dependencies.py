@@ -2,6 +2,7 @@ import time
 from typing import Dict
 
 import os
+import json
 
 from fastapi import HTTPException
 from app.backends.backend import Backend
@@ -106,6 +107,7 @@ def prepare_adapter_from_optimization(
     solution_id: str,
 ):
     # TODO: use backend to save and retrieve data here...
+    prodsys_backend.delete_post_processor(project_id, adapter_id)
     origin_adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     adapter_object.scenario_data = origin_adapter.scenario_data
     adapter_object.ID = solution_id
@@ -123,6 +125,12 @@ def prepare_adapter_from_optimization(
     else:
         run_length = 2 * 7 * 24 * 60
     runner_object.run(run_length)
+    
+    post_processor = runner_object.get_post_processor()
+    try:
+        prodsys_backend.create_post_processor(project_id, adapter_id, post_processor)
+    except:
+        prodsys_backend.update_post_processor(project_id, adapter_id, post_processor)
 
     performance = runner_object.get_performance_data()
     project.performances[adapter_object.ID] = performance
@@ -132,6 +140,14 @@ def prepare_adapter_from_optimization(
         prodsys_backend.update_performance(project_id, adapter_id, performance)
 
     prodsys_backend.update_project(project_id, project)
+    save_folder = f"data/{project_id}/{adapter_id}"
+    os.makedirs(save_folder, exist_ok=True)
+    solution_file_path = os.path.join(save_folder, f"{solution_id}.json")
+    
+    adapter_data = adapter_object.model_dump()
+
+    with open(solution_file_path, 'w') as json_file:
+        json.dump(adapter_data, json_file)
 
 
 def get_configuration_results_adapter_from_filesystem(
