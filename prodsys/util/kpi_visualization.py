@@ -572,7 +572,7 @@ def plot_auxiliary_WIP(post_processor: post_processing.PostProcessor, return_htm
     fig.update_traces(showlegend=True)
     fig.update_layout(
         xaxis_title="Time [Minutes]",
-        yaxis_title="Auxiliary WIP [Auxiliries]",
+        yaxis_title="Auxiliary WIP [Auxiliaries]",
     )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
