@@ -89,7 +89,7 @@ async def optimize(
 
     background_tasks.add_task(
         optimization_func,
-        save_folder,
+        save_folder = save_folder,
         base_configuration_file_path=configuration_file_path,
         scenario_file_path=scenario_file_path,
         hyper_parameters=hyper_parameters,
