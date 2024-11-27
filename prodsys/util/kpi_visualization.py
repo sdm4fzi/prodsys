@@ -593,14 +593,17 @@ def plot_WIP_per_resource(post_processor: post_processing.PostProcessor, return_
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
+    pd.set_option('display.max_columns', None)
     df = post_processor.df_WIP.copy()
     fig = px.scatter(df, x="Time", y="WIP")
     df["Resource"] = "Total"
+    print(df.head())
 
     df_per_resource = post_processor.df_WIP_per_resource.copy()
     df_per_resource["Resource"] = df_per_resource["WIP_resource"]
-
+    print(df_per_resource.head())
     df = pd.concat([df, df_per_resource])
+    print(df.head())
     fig = px.scatter(
         df,
         x="Time",
