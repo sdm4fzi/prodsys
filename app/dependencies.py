@@ -80,58 +80,49 @@ def get_post_processor(
         raise HTTPException(status_code=500, detail=str(e))
 
 def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
-    # TODO: implement function that returns progress of optimization
+    # TODO: implement function that returns progress of optimization --> change functional approach of optimization in class and add a progress attribute
     return 0.5
 
 
 def prepare_adapter_from_optimization(
-    adapter_object: prodsys.adapters.JsonProductionSystemAdapter,
+    adapter_object_optimized: prodsys.adapters.JsonProductionSystemAdapter,
     project_id: str,
-    adapter_id: str,
+    baseline_adapter_id: str,
     solution_id: str,
 ):
-    # TODO: use backend to save and retrieve data here...
-    prodsys_backend.delete_post_processor(project_id, adapter_id)
-    origin_adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    adapter_object.scenario_data = origin_adapter.scenario_data
-    adapter_object.ID = solution_id
+    prodsys_backend.delete_post_processor(project_id, baseline_adapter_id)
+    origin_adapter = prodsys_backend.get_adapter(project_id, baseline_adapter_id)
+    adapter_object_optimized.scenario_data = origin_adapter.scenario_data
+    adapter_object_optimized.ID = solution_id
 
-    prodsys_backend.create_adapter(project_id, adapter_object)
+    prodsys_backend.create_adapter(project_id, adapter_object_optimized)
 
     project = prodsys_backend.get_project(project_id)
-    project.adapters.append(adapter_object)
+    project.adapters.append(adapter_object_optimized)
 
 
-    runner_object = prodsys.runner.Runner(adapter=adapter_object)
+    runner_object = prodsys.runner.Runner(adapter=adapter_object_optimized)
     runner_object.initialize_simulation()
-    if adapter_object.scenario_data and adapter_object.scenario_data.info.time_range:
-        run_length = adapter_object.scenario_data.info.time_range
+    if adapter_object_optimized.scenario_data and adapter_object_optimized.scenario_data.info.time_range:
+        run_length = adapter_object_optimized.scenario_data.info.time_range
     else:
         run_length = 2 * 7 * 24 * 60
     runner_object.run(run_length)
     
     post_processor = runner_object.get_post_processor()
     try:
-        prodsys_backend.create_post_processor(project_id, adapter_id, post_processor)
+        prodsys_backend.create_post_processor(project_id, baseline_adapter_id, post_processor)
     except:
-        prodsys_backend.update_post_processor(project_id, adapter_id, post_processor)
+        prodsys_backend.update_post_processor(project_id, baseline_adapter_id, post_processor)
 
     performance = runner_object.get_performance_data()
-    project.performances[adapter_object.ID] = performance
+    project.performances[adapter_object_optimized.ID] = performance
     try:
-        prodsys_backend.create_performance(project_id, adapter_id, performance)
+        prodsys_backend.create_performance(project_id, baseline_adapter_id, performance)
     except:
-        prodsys_backend.update_performance(project_id, adapter_id, performance)
+        prodsys_backend.update_performance(project_id, baseline_adapter_id, performance)
 
     prodsys_backend.update_project(project_id, project)
-    save_folder = f"data/{project_id}/{adapter_id}"
-    os.makedirs(save_folder, exist_ok=True)
-    solution_file_path = os.path.join(save_folder, f"{solution_id}.json")
-    
-    adapter_data = adapter_object.model_dump()
-
-    with open(solution_file_path, 'w') as json_file:
-        json.dump(adapter_data, json_file)
 
 
 def get_configuration_results_adapter_from_filesystem(

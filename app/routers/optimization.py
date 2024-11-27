@@ -1,8 +1,8 @@
 from typing import List, Union, Dict, Annotated
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 
 import json
 import prodsys
@@ -22,6 +22,7 @@ from app.dependencies import (
     prodsys_backend,
     prepare_adapter_from_optimization,
     get_configuration_results_adapter_from_filesystem,
+    get_progress_of_optimization,
 )
 
 
@@ -48,6 +49,7 @@ HYPERPARAMETER_EXAMPLES = [
 async def optimize(
     project_id: str,
     adapter_id: str,
+    background_tasks: BackgroundTasks,
     hyper_parameters: Annotated[
         Union[
             EvolutionaryAlgorithmHyperparameters,
@@ -56,7 +58,7 @@ async def optimize(
             math_opt.MathOptHyperparameters,
         ],
         Body(examples=HYPERPARAMETER_EXAMPLES),
-    ],
+    ]
 ):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
@@ -66,6 +68,7 @@ async def optimize(
     configuration_file_path = f"data/{project_id}/{adapter_id}_configuration.json"
     scenario_file_path = f"data/{project_id}/{adapter_id}_scenario.json"
     save_folder = f"data/{project_id}/{adapter_id}"
+    
     util.prepare_save_folder(save_folder)
     adapter.write_data(configuration_file_path)
     adapter.write_scenario_data(scenario_file_path)
@@ -84,12 +87,14 @@ async def optimize(
     else:
         raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
 
-    optimization_func(
-        save_folder=save_folder,
+    background_tasks.add_task(
+        optimization_func,
+        save_folder = save_folder,
         base_configuration_file_path=configuration_file_path,
         scenario_file_path=scenario_file_path,
         hyper_parameters=hyper_parameters,
     )
+
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
 
@@ -113,8 +118,7 @@ def get_optimization_results(project_id: str, adapter_id: str):
             for kpi_obj, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
                 kpi_name = kpi_obj.name
                 
-                kpi_object = parse_obj_as(
-                    performance_indicators.KPI_UNION,
+                kpi_object = TypeAdapter(performance_indicators.KPI_UNION).validate_python(
                     {
                         "name": kpi_name,
                         "value": kpi_value,

@@ -16,5 +16,4 @@ from prodsys.util import post_processing  # , optimization_util
 from prodsys.util import runner
 
 
-
-VERSION = "0.8.3"
+VERSION = "0.8.4"
