@@ -271,7 +271,7 @@ class LinkTransportProcess(TransportProcess):
 @dataclass
 class RequiredCapabilityProcess(core.ExpressObject):
     """
-    Represents a required capability process. A capability which can be matched with the capability of a linktransportprocess.
+    Represents a required capability process. A capability which can be matched with the capability of another process with a capability.
 
     Attributes:
         ID (Optional[str]): The ID of the process.
