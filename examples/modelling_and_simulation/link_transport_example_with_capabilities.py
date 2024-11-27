@@ -33,7 +33,7 @@ node1 = psx.Node(location=[0, 20], ID="node1")
 node2 = psx.Node(location=[50, 20], ID="node2")
 node3 = psx.Node(location=[100, 20], ID="node3")
 node4 = psx.Node(location=[100, 80], ID="node4")
-    node5 = psx.Node(location=[50, 80], ID="node5")
+node5 = psx.Node(location=[50, 80], ID="node5")
 node6 = psx.Node(location=[0, 80], ID="node6")
 
 
