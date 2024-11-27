@@ -1,9 +1,45 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 from prodsys import adapters, runner
-from prodsys.adapters.adapter import assert_no_redudant_locations, assert_required_processes_in_resources_available, get_possible_production_processes_IDs
+from prodsys.adapters.adapter import (
+    assert_no_redudant_locations,
+    assert_required_processes_in_resources_available,
+    get_possible_production_processes_IDs,
+)
 from prodsys.models import performance_indicators
-from prodsys.optimization.util import get_grouped_processes_of_machine, get_num_of_process_modules, get_required_auxiliaries, get_weights
+from prodsys.optimization.util import (
+    get_grouped_processes_of_machine,
+    get_num_of_process_modules,
+    get_required_auxiliaries,
+    get_weights,
+)
 from prodsys.util.post_processing import PostProcessor
+
+
+def get_process_module_cost(
+    adapter_object: adapters.ProductionSystemAdapter,
+    num_process_modules: Dict[Tuple[str], int],
+    num_process_modules_before: Dict[Tuple[str], int],
+) -> float:
+    num_process_modules = get_num_of_process_modules(adapter_object)
+
+    process_module_cost = 0
+    process_module_cost = adapter_object.scenario_data.info.process_module_cost
+
+    for process_tuple in num_process_modules:
+        process = process_tuple[0]
+        if isinstance(process_module_cost, dict):
+            process_cost = process_module_cost.get(process, 0)
+        else:
+            process_cost = process_module_cost
+        process_module_cost += max(
+            0,
+            (
+                num_process_modules[process_tuple]
+                - num_process_modules_before.get(process_tuple, 0)
+            )
+            * process_cost,
+        )
+    return process_module_cost
 
 
 def get_reconfiguration_cost(
@@ -43,17 +79,9 @@ def get_reconfiguration_cost(
         (num_transport_resources - num_transport_resources_before)
         * adapter_object.scenario_data.info.transport_resource_cost,
     )
-    process_module_cost = 0
-    process_module_costs_dict = adapter_object.scenario_data.info.process_module_costs
-    
-    for process_tuple in num_process_modules:
-        process = process_tuple[0]
-        process_cost = process_module_costs_dict.get(process, 0)
-        process_module_cost += max(
-            0,
-            (num_process_modules[process_tuple] - num_process_modules_before.get(process_tuple, 0))
-            * process_cost,
-        )
+    process_module_cost = get_process_module_cost(
+        adapter_object, num_process_modules, num_process_modules_before
+    )
 
     return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
 
@@ -63,7 +91,9 @@ def get_auxiliary_cost(
     baseline: adapters.ProductionSystemAdapter,
 ) -> float:
     auxiliary_cost = 0
-    for new_auxiliary, auxiliary_before in zip(adapter_object.auxiliary_data, baseline.auxiliary_data):
+    for new_auxiliary, auxiliary_before in zip(
+        adapter_object.auxiliary_data, baseline.auxiliary_data
+    ):
         for i, storage in enumerate(new_auxiliary.quantity_in_storages):
             storage_before = auxiliary_before.quantity_in_storages[i]
             auxiliary_cost += max(
@@ -180,7 +210,6 @@ def assert_required_auxiliaries_available(
     for auxiliary in required_auxiliaries:
         if not sum(auxiliary.quantity_in_storages) > 0:
             raise ValueError(f"Required auxiliary {auxiliary.ID} is not available.")
-        
 
 
 def get_throughput_time(pp: PostProcessor) -> float:
@@ -237,9 +266,13 @@ def evaluate(
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     adapter_object_hash = adapter_object.hash()
     if adapter_object_hash in solution_dict["hashes"]:
-        evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash]["generation"]
+        evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash][
+            "generation"
+        ]
         evaluated_adapter_id = solution_dict["hashes"][adapter_object_hash]["ID"]
-        return performances[evaluated_adapter_generation][evaluated_adapter_id]["fitness"]
+        return performances[evaluated_adapter_generation][evaluated_adapter_id][
+            "fitness"
+        ]
 
     if not check_valid_configuration(adapter_object, base_scenario):
         return [-100000 / weight for weight in get_weights(base_scenario, "max")]

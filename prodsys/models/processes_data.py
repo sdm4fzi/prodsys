@@ -409,6 +409,7 @@ class LinkTransportProcessData(TransportProcessData):
         Returns:
             str: hash of the required capability process data.
         """
+        base_class_hash = super().hash(adapter)
         loading_time_model_hash = ""
         unloading_time_model_hash = ""
 
@@ -427,6 +428,7 @@ class LinkTransportProcessData(TransportProcessData):
         sorted_links = sorted(["-".join(link) for link in self.links])
 
         input_data = (
+            base_class_hash +
             "".join(sorted_links) +
             self.capability +
             loading_time_model_hash +
@@ -434,9 +436,6 @@ class LinkTransportProcessData(TransportProcessData):
         )
 
         return md5(input_data.encode("utf-8")).hexdigest()
-        # raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
-        # TODO: Implement hash function for LinkTransportProcessData and Nodes
-        # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [
