@@ -125,7 +125,6 @@ def prepare_adapter_from_optimization(
     prodsys_backend.update_project(project_id, project)
 
 
-
 def get_configuration_results_adapter_from_filesystem(
     project_id: str, adapter_id: str, solution_id: str
 ):
