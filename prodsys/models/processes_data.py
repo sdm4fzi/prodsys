@@ -354,10 +354,6 @@ class LinkTransportProcessData(TransportProcessData):
         
         return md5((base_class_hash + links_str + capability_str).encode("utf-8")).hexdigest()
 
-        #raise NotImplementedError("Hash function not implemented for LinkTransportProcessData")
-        # TODO: Implement hash function for LinkTransportProcessData and Nodes
-        # return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
-
     model_config=ConfigDict(json_schema_extra={
         "examples": [
             {

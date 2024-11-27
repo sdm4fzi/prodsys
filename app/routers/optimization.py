@@ -1,6 +1,6 @@
 from typing import List, Union, Dict, Annotated
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 
@@ -118,8 +118,7 @@ def get_optimization_results(project_id: str, adapter_id: str):
             for kpi_obj, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
                 kpi_name = kpi_obj.name
                 
-                kpi_object = parse_obj_as(
-                    performance_indicators.KPI_UNION,
+                kpi_object = TypeAdapter(performance_indicators.KPI_UNION).validate_python(
                     {
                         "name": kpi_name,
                         "value": kpi_value,
