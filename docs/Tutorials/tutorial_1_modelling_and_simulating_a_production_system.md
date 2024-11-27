@@ -57,7 +57,117 @@ turning_process = psx.ProductionProcess(turning_time, ID="turning_process")
 transport_process = psx.TransportProcess(transport_time, ID="transport_process")
 ```
 
-`prodsys` also provides the possibility for a `CapabilityProcess` instead of normal `ProductionProcess`. These processes are not matched by their ID but by their capability, which gives more flexibility. This extends the typical PPR modeling principle (Product, Process and Resource) of `prodsys` to the Product, Process, Resource and Skill modelling principle [PPRS](https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content) by considering the capabilities / skills required for performing processes. With this feature, one can specify with `RequiredCapabilityProcess` for products only which kind of capabilities are required and allow that multiple differnt `CapabilityProcess` are matched to these required processes. 
+`prodsys` also provides the possibility for a `CapabilityProcess` instead of normal `ProductionProcess`. These processes are not matched by their ID but by their capability, which gives more flexibility in modeling the operations of a production system. 
+
+The capabilities extends the typical PPR modeling principle (Product, Process and Resource) of `prodsys` to the Product, Process, Resource and Skill modelling principle [PPRS](https://publica-rest.fraunhofer.de/server/api/core/bitstreams/512978c9-389a-43c1-8cbe-016f08e6952d/content) by considering the capabilities / skills required for performing processes. 
+
+One typical use case where this capability-based modeling is useful is when a product requires a certain process but multiple resources can perform this process with different speeds or capacity.
+
+In prodsys, we can realize this by specifying with a `RequiredCapabilityProcess` for a product which kind of capabilities are required for its production. Additionally, we define multiple different `CapabilityProcess` for resources that satisfy the capability and therefore can perform the process on the prodct. During simulation, processes of resources are matchedto the required processes based on a comparison of the capability attribute. 
+
+For example, we could define the following case, where a turning process is required by a product and two machines are available that can perform this process, but with different speeds:
+
+```python
+import prodsys.express as psx
+from prodsys.express import production_system
+
+time_model_agv = psx.DistanceTimeModel(speed=90, reaction_time=0.2, ID="time_model_x")
+transport_process = psx.TransportProcess(
+    time_model=time_model_agv, ID="transport_process"
+)
+agv = psx.TransportResource(ID="agv", processes=[transport_process], location=[5, 5])
+
+time_model_turning_fast = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_turning_fast"
+)
+time_model_turning_slow = psx.FunctionTimeModel(
+    distribution_function="constant", location=9, ID="time_model_turning_slow"
+)
+
+capability_process_turning_fast = psx.CapabilityProcess(
+    time_model=time_model_turning_fast, capability="turning", ID="cp_turning_fast"
+)
+capability_process_turning_slow = psx.CapabilityProcess(
+    time_model=time_model_turning_slow, capability="turning", ID="cp_turning_slow"
+)
+
+resource_fast = psx.ProductionResource(
+    ID="resource_fast", processes=[capability_process_turning_fast], location=[5, 0]
+)
+resource_slow = psx.ProductionResource(
+    ID="resource_slow", processes=[capability_process_turning_slow], location=[5, 10]
+)
+
+required_capability_process_turning = psx.RequiredCapabilityProcess(
+    capability="turning", ID="rcp_turning"
+)
+
+product = psx.Product(
+    processes=[required_capability_process_turning],
+    transport_process=transport_process,
+    ID="product",
+)
+
+source = psx.Source(
+    time_model=psx.FunctionTimeModel(
+        distribution_function="constant", location=6, ID="interarrival_time_model"
+    ),
+    ID="source",
+    product=product,
+    location=[0, 5],
+)
+
+sink = psx.Sink(ID="sink", product=product, location=[10, 5])
+
+system = production_system.ProductionSystem(
+    resources=[resource_fast, resource_slow, agv], sources=[source], sinks=[sink]
+)
+
+system.validate()
+system.run(1000)
+system.runner.print_results()
+```
+
+In this example, we model the `RequiredCapabilityProcess` of the product by stating, it requires the capability "turning":
+
+```python
+required_capability_process_turning = psx.RequiredCapabilityProcess(
+    capability="turning", ID="rcp_turning"
+)
+product = psx.Product(
+    processes=[required_capability_process_turning],
+    transport_process=transport_process,
+    ID="product",
+)
+```
+
+Of course, we could extend the process sequence of the product with other processes, both CapabilityProcesses and normal processes.
+
+To specify that two resources can perform this process with different speed, we define two time models, two `CapabilityProcess` with the capability "turning" and two `ProductionResource`s with the processes:
+
+```python
+time_model_turning_fast = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_turning_fast"
+)
+time_model_turning_slow = psx.FunctionTimeModel(
+    distribution_function="constant", location=9, ID="time_model_turning_slow"
+)
+capability_process_turning_fast = psx.CapabilityProcess(
+    time_model=time_model_turning_fast, capability="turning", ID="cp_turning_fast"
+)
+capability_process_turning_slow = psx.CapabilityProcess(
+    time_model=time_model_turning_slow, capability="turning", ID="cp_turning_slow"
+)
+
+resource_fast = psx.ProductionResource(
+    ID="resource_fast", processes=[capability_process_turning_fast], location=[5, 0]
+)
+resource_slow = psx.ProductionResource(
+    ID="resource_slow", processes=[capability_process_turning_slow], location=[5, 10]
+)
+```
+
+With this, we can achieve that the product is processed on both machines, but with different speeds.
 
 Moreover, there also exists a `LinkTransportProcess` which allows to define that a transport process can only be performed between certain resources. This allows to make transport in `prodsys` more realistic. 
 
