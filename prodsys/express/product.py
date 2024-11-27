@@ -57,7 +57,7 @@ class Product(core.ExpressObject):
 
     """
 
-    processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
+    processes: List[Union[process.ProductionProcess, process.CapabilityProcess, process.RequiredCapabilityProcess]]
     transport_process: Union[process.TransportProcess, process.RequiredCapabilityProcess]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     auxiliaries: Optional[List[auxiliary.Auxiliary]]= Field(default_factory=list)
