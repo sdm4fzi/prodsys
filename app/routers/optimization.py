@@ -2,7 +2,7 @@ from typing import List, Union, Dict, Annotated
 
 from pydantic import parse_obj_as
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 
 import json
 import prodsys
@@ -48,6 +48,7 @@ HYPERPARAMETER_EXAMPLES = [
 async def optimize(
     project_id: str,
     adapter_id: str,
+    background_tasks: BackgroundTasks,
     hyper_parameters: Annotated[
         Union[
             EvolutionaryAlgorithmHyperparameters,
@@ -84,7 +85,8 @@ async def optimize(
     else:
         raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
 
-    optimization_func(
+    background_tasks.add_task(
+        optimization_func,
         save_folder=save_folder,
         base_configuration_file_path=configuration_file_path,
         scenario_file_path=scenario_file_path,

@@ -262,7 +262,6 @@ def evolutionary_algorithm_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    evolution_progress = EvolutionaryProgress(hyper_parameters.number_of_generations, hyper_parameters.population_size)
 
     # TODO: rework solution_dict and performances to classes
     solution_dict = {
@@ -282,7 +281,7 @@ def evolutionary_algorithm_optimization(
         hyper_parameters=hyper_parameters,
         full_save_solutions_folder=save_folder if full_save else "",
     )
-    from tqdm import tqdm
+    #from tqdm import tqdm
     population = toolbox.population(n=hyper_parameters.population_size)
     if hyper_parameters.number_of_processes > 1:
         print(f"First {hyper_parameters.population_size} individuals are generated.")
@@ -292,11 +291,11 @@ def evolutionary_algorithm_optimization(
     else:
         toolbox.register("map", map)
     print("Test1")
-    fitnesses = []
-    for individual in tqdm(population, total = len(population)):
-        fitness = toolbox.evaluate(individual)
-        fitnesses.append(fitness)
-    #fitnesses = list(tqdm(toolbox.map(toolbox.evaluate, population), total=len(population)))
+    #fitnesses = []
+    #for individual in tqdm(population, total = len(population)):
+    #    fitness = toolbox.evaluate(individual)
+    #    fitnesses.append(fitness)
+    fitnesses = toolbox.map(toolbox.evaluate, population)
     save_population_results(
         population, fitnesses, solution_dict, performances, save_folder, start
     )
@@ -322,12 +321,12 @@ def evolutionary_algorithm_optimization(
         #with Pool(hyper_parameters.number_of_processes) as pool:
         #    fitnesses = list(tqdm(pool.imap(toolbox.evaluate, offspring), total=len(population)))
         
-        fitnesses = []
-        for individual in tqdm(offspring, total = len(offspring)):
-            fitness = toolbox.evaluate(individual)
-            fitnesses.append(fitness)
+        #fitnesses = []
+        #for individual in tqdm(offspring, total = len(offspring)):
+        #    fitness = toolbox.evaluate(individual)
+        #    fitnesses.append(fitness)
 
-        #fitnesses = toolbox.map(toolbox.evaluate, offspring)
+        fitnesses = toolbox.map(toolbox.evaluate, offspring)
         save_population_results(
             offspring, fitnesses, solution_dict, performances, save_folder, start
         )
