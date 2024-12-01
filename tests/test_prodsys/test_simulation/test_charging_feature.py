@@ -55,7 +55,7 @@ def test_initialize_simulation(charging_simulation_adapter: JsonProductionSystem
 
 def test_hashing(charging_simulation_adapter: JsonProductionSystemAdapter):
     hash_str = charging_simulation_adapter.hash()
-    assert hash_str == "360cf5cfb271dc0505eeb450058b450a"
+    assert hash_str == "6e935ff657aec4614bb29b25b19e4afb"
 
 def test_run_simulation(charging_simulation_adapter: JsonProductionSystemAdapter):
     runner_instance = runner.Runner(adapter=charging_simulation_adapter)   

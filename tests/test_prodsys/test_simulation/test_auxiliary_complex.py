@@ -26,8 +26,8 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     transport2 = psx.TransportResource([tp], [3, 0], 1, ID="transport2")
     transport_aux = psx.TransportResource([tp_aux], [4, 0], 1, ID="transport_aux")
 
-    storage1 = psx.Store(ID="storage1", location=[5, 0], capacity=30)
-    storage2 = psx.Store(ID="storage2", location=[10, 0], capacity=20)
+    storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
+    storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
 
     auxiliary1 = psx.Auxiliary(
         ID="auxiliary1",
@@ -86,7 +86,7 @@ def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
 def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "6b6a9f931c4f92adacc8a948e0a1f554"
+    assert hash_str == "b9cdb150b8a3260f71382fcb059d0481"
 
 
 def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
