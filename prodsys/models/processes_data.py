@@ -183,8 +183,8 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        loading_time_model (str): ID of the loading time model of the process.
-        unloading_time_model (str): ID of the loading time model of the process.
+        loading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        unloading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
@@ -204,8 +204,6 @@ class TransportProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.TransportProcesses]
     loading_time_model: Optional[str] = None
     unloading_time_model: Optional[str] = None
-    #TODO: implement charging_time_model for charging times for the AGV
-
 
     model_config=ConfigDict(json_schema_extra={
         "examples": [
@@ -232,7 +230,7 @@ class ReworkProcessData(ProcessData):
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.ProductionProcesses]): Type of the process.
         reworked_process_ids (List[str]): Process IDs of the reworked processes.
-        blocking (bool): If the rework process is blocking.
+        blocking (bool): If the rework process is blocking further processing of the product.
 
     Examples:
         A rework process with ID "RP1", description "Rework Process 1" and time model ID "function_time_model_1":
@@ -372,7 +370,10 @@ class LinkTransportProcessData(TransportProcessData):
     Args:
         ID (str): ID of the process.
         description (str): Description of the process.
+        time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
+        loading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        unloading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
         links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
         capability (Optional[str], optional): Capability of the process, which is used for matching if available. Defaults to None.
 
@@ -395,8 +396,6 @@ class LinkTransportProcessData(TransportProcessData):
     type: Literal[ProcessTypeEnum.LinkTransportProcesses]
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
-    loading_time_model: Optional[str] = None
-    unloading_time_model: Optional[str] = None
 
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:

@@ -7,7 +7,6 @@ import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
-import base64
 
 from prodsys.util import post_processing
 

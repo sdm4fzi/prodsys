@@ -3,7 +3,7 @@ from pydantic.dataclasses import dataclass
 from typing import List, Optional, Union
 from pydantic import Field
 from prodsys.express import core, process
-from prodsys.express.queue import Queue
+from prodsys.express.queue import Store
 from prodsys.models import auxiliary_data
 
 @dataclass
@@ -25,7 +25,7 @@ class Auxiliary(core.ExpressObject):
         relevant_processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
         relevant_transport_processes: List[process.TransportProcess]
         transport_process: process.TransportProcess
-        storages: List[Queue]
+        storages: List[Store]
         quantity_in_storages: List[int]
         ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 

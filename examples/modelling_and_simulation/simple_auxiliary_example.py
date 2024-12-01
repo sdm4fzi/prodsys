@@ -17,8 +17,8 @@ machine = psx.ProductionResource([p1], [5,0], 1, ID="machine")
 transport = psx.TransportResource([tp], [3,0], 1, ID="transport")
 transport2 = psx.TransportResource([tp], [4,0], 1, ID="transport2")
 
-storage1 = psx.Queue(ID="storage1", location=[5,0], capacity=30)
-storage2 = psx.Queue(ID="storage2", location=[10,0], capacity=20)
+storage1 = psx.Store(ID="storage1", location=[5,0], capacity=30)
+storage2 = psx.Store(ID="storage2", location=[10,0], capacity=20)
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp, 
                            storages=[storage1,storage2], 

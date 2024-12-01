@@ -47,7 +47,7 @@ class AuxiliaryFactory(BaseModel):
                                                 resource=auxiliary.current_locatable, _product=auxiliary, event_time=self.env.now
                                         )
 
-        def add_auxiliary(self, auxiliary_data: auxiliary_data.AuxiliaryData, storage: queue_data.QueueData):
+        def add_auxiliary(self, auxiliary_data: auxiliary_data.AuxiliaryData, storage: queue_data.StoreData) -> auxiliary.Auxiliary:
                 """
                 Add a new auxiliary object to the factory.
 

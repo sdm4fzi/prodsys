@@ -23,8 +23,8 @@ transport = psx.TransportResource([tp], [3,0], 1, ID="transport")
 transport2 = psx.TransportResource([tp], [3,0], 1, ID="transport2")
 transport_aux = psx.TransportResource([tp_aux], [4,0], 1, ID="transport_aux")
 
-storage1 = psx.Queue(ID="storage1", location=[5,0], capacity=30)
-storage2 = psx.Queue(ID="storage2", location=[10,0], capacity=20)
+storage1 = psx.Store(ID="storage1", location=[5,0], capacity=30)
+storage2 = psx.Store(ID="storage2", location=[10, 0], capacity=20)
 
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp_aux, 
@@ -51,7 +51,6 @@ arrival_model_2 = psx.FunctionTimeModel("constant", 1.3, ID="arrival_model_2")
 
 source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
 source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
-
 
 
 system = psx.ProductionSystem([machine, machine2, transport, transport2, transport_aux], [source1, source2], [sink1, sink2])

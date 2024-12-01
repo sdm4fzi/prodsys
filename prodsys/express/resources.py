@@ -36,9 +36,7 @@ class Resource(ABC):
         ID (str): ID of the resource.
     """
     processes: List[process.PROCESS_UNION]
-    #location: conlist(float, min_length=2, max_length=2) # type: ignore
-    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
-    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
+    location: list[float] = Field(..., min_length=2, max_length=2)
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.PipelineController
@@ -54,6 +52,8 @@ class ProductionResource(Resource, core.ExpressObject):
     Args:
         processes (List[process.ProductionProcess]): Processes of the resource.
         location (conlist(float, min_length=2, max_length=2)): Location of the resource.
+        input_location (Optional[conlist(float, min_length=2, max_length=2)], optional): Input location of the resource. Defaults to None.
+        output_location (Optional[conlist(float, min_length=2, max_length=2)], optional): Output location of the resource. Defaults to None.
         capacity (int): Capacity of the resource. Defaults to 1.
         states (Optional[List[state.STATE_UNION]], optional): States of the resource. Defaults to None.
         controller (resource_data.ControllerEnum, optional): Controller of the resource. Defaults to resource_data.ControllerEnum.PipelineController.
@@ -89,8 +89,8 @@ class ProductionResource(Resource, core.ExpressObject):
         ```
     """
     processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
-    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
-    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
+    input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
+    output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
     control_policy: resource_data.ResourceControlPolicy = resource_data.ResourceControlPolicy.FIFO
     queue_size: Optional[int] = 0
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
@@ -107,6 +107,7 @@ class ProductionResource(Resource, core.ExpressObject):
             ID=self.ID,
             description="",
             process_ids=[process.ID for process in self.processes],
+            location=self.location, 
             input_location=self.input_location,
             output_location=self.output_location,
             capacity=self.capacity,
@@ -152,12 +153,9 @@ class TransportResource(Resource, core.ExpressObject):
         ```
     """
     processes: List[process.TransportProcess]
-    location: conlist(float, min_length=2, max_length=2) = Field(default_factory=list) # type: ignore
-    # capacity: int = 1
-    # states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
+    location: Optional[list[float]] = Field(..., min_length=2, max_length=2)
     controller: resource_data.ControllerEnum = resource_data.ControllerEnum.TransportController
     control_policy: resource_data.TransportControlPolicy = resource_data.TransportControlPolicy.FIFO
-    # ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def __post_init__(self):
         if not self.location:

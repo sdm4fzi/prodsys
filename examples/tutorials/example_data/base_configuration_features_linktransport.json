@@ -473,9 +473,6 @@
             ],
             "output_queues": [
                 "M2_default_output_queue"
-            ],
-            "warehouse_queues": [
-                "warehouse_queue"
             ]
         },
         {

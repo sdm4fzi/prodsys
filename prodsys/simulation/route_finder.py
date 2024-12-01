@@ -7,6 +7,7 @@ import numpy as np
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 
+
 if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
     from prodsys.simulation.product import Locatable
@@ -57,7 +58,7 @@ class RouteFinder:
             List[Locatable]: The route as a list of locatable objects.
         """
         edges = self.process_links_to_graph_edges(links=process.links)
-        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly. 
+        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly.
         # For this feature is it necessary, that the location of the conveyor does not change after a transport.
         graph = Graph(edges=edges, bi_directional=True)
         origin, target = self.get_route_origin_and_target(request=request, route_to_origin=find_route_to_origin)
@@ -80,27 +81,20 @@ class RouteFinder:
         Returns:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
+        # TODO: make the imports at top or bottom of file
         from prodsys.simulation.resources import ProductionResource
-        from prodsys.simulation.source import Source
-        from prodsys.simulation.sink import Sink
+        from prodsys.simulation.store import Store
+
         pathfinder_edges = []
 
         for link in links:
-        # Determine locations based on object type
-            if isinstance(link[0], Source):
+            # Determine locations based on object type
+            if isinstance(link[0], (ProductionResource, Store)):
                 origin_location = link[0].get_output_location()
-            elif isinstance(link[0], ProductionResource):
-                origin_location = link[0].get_output_location()
-            elif isinstance(link[0], Sink):
-                origin_location = link[0].get_input_location()
             else:
                 origin_location = link[0].get_location()
 
-            if isinstance(link[1], Source):
-                target_location = link[1].get_output_location()
-            elif isinstance(link[1], ProductionResource):
-                target_location = link[1].get_input_location()
-            elif isinstance(link[1], Sink):
+            if isinstance(link[1], (ProductionResource, Store)):
                 target_location = link[1].get_input_location()
             else:
                 target_location = link[1].get_location()
@@ -112,7 +106,7 @@ class RouteFinder:
             pathfinder_edges.append(edge)
 
         return pathfinder_edges
-    
+
     def get_graph_nodes_for_link(self, link: List[Locatable]) -> Tuple[GraphNode, GraphNode]:
         """
         Creates a list of links and edges.
@@ -128,7 +122,6 @@ class RouteFinder:
             graph_node = self.get_graph_node_for_locatable(locatable)
             graph_nodes.append(graph_node)
         return tuple(graph_nodes)
-    
 
     def get_existing_graph_node_for_locatable(self, locatable: Locatable) -> Optional[GraphNode]:
         """
@@ -143,7 +136,7 @@ class RouteFinder:
         if locatable.data.ID in self.nodes:
             return self.nodes[locatable.data.ID]
         return None
-    
+
     def get_graph_node_for_locatable(self, locatable: Locatable) -> GraphNode:
         """
         Creates a graph node for a locatable.
@@ -154,26 +147,22 @@ class RouteFinder:
         Returns:
             GraphNode: The graph node.
         """
-        from prodsys.simulation.source import Source
-        from prodsys.simulation.sink import Sink
+        # TODO: make the imports at top or bottom of file
         from prodsys.simulation.resources import ProductionResource
+        from prodsys.simulation.store import Store
 
         existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:
             return existing_node
 
-        if isinstance(locatable, Source):
-            location = tuple(locatable.get_output_location())
-        elif isinstance(locatable, ProductionResource):
+        if isinstance(locatable, (ProductionResource, Store)):
             input_location = tuple(locatable.get_input_location())
             input_node = self.get_existing_graph_node_for_locatable(locatable)
-            
+
             if input_node:
                 location = tuple(locatable.get_output_location())
             else:
                 location = input_location
-        elif isinstance(locatable, Sink):
-            location = tuple(locatable.get_input_location())
         else:
             location = tuple(locatable.get_location())
 
@@ -181,7 +170,6 @@ class RouteFinder:
         self.nodes[locatable.data.ID] = new_graph_node
         self.node_locatables[location] = locatable
         return new_graph_node
-        
 
     def calculate_cost(self, node1: List[float], node2: List[float]) -> float:
         """
@@ -217,7 +205,7 @@ class RouteFinder:
         origin_graph_node = self.get_existing_graph_node_for_locatable(origin_locatable)
         target_graph_node = self.get_existing_graph_node_for_locatable(target_locatable)
         return origin_graph_node, target_graph_node
-    
+
     def get_location_of_transport_resource(self, resource: resources.Resource) -> Locatable:
         """
         Gets the location of a resource.
@@ -272,4 +260,3 @@ class RouteFinder:
                         route.append(locatable)
                         seen_node_ids.append(locatable.data.ID)
         return route
-    

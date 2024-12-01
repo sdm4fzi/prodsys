@@ -135,7 +135,7 @@ class ProductInfo(BaseModel):
         self.activity = StateEnum.end_state
         self.state_type = state_type
 
-Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink, store.Queue]
+Locatable= Union[resources.Resource, node.Node, source.Source, sink.Sink, store.Store]
 
 class Product(BaseModel):
     """
@@ -197,7 +197,7 @@ class Product(BaseModel):
                 break
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "resource": auxiliary_request.resource.data.ID, "aux": auxiliary_request.auxiliary.product_data.ID, "process": auxiliary_request.process.process_data.ID, "event": f"auxiliary request for {auxiliary_request.product.product_data.ID}"})
             while True:
-                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request.product, auxiliary_request.resource))
+                auxiliary_transport_request: request.TransportResquest = yield self.env.process(self.product_router.route_transport_resource_for_item(auxiliary_request))
                 if not auxiliary_transport_request:
                     yield self.env.timeout(0)
                     continue
@@ -215,7 +215,7 @@ class Product(BaseModel):
                     continue
                 break
             while True:
-                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request.product, production_request.resource))
+                transport_request = yield self.env.process(self.product_router.route_transport_resource_for_item(production_request))
                 if not transport_request:
                     yield self.env.timeout(0)
                     continue
@@ -298,27 +298,27 @@ class Product(BaseModel):
         if not next_possible_processes:
             self.next_prodution_process = None
             logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"No next process"})  
-        else:
-            if reworked:         
-                if blocked is not None and blocked is True:
-                    failed_process = self.next_prodution_process
-                    next_possible_processes = self.product_router.get_rework_processes(self, failed_process)
-                    if next_possible_processes is not None:
-                        self.next_prodution_process = next_possible_processes[0]
-                        self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-                        reworked = False
-                        blocked = False
-                        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
-                elif blocked is not None and blocked is False:
-                    for proc in self.processes_needing_rework:
-                        ids_to_rework = [proc.process_data.ID]
-                        processes_on_product = self.executed_production_processes
-                        if all(id in processes_on_product for id in ids_to_rework):
-                            self.next_prodution_process = proc
-                            self.process_model.update_marking_from_transition(self.next_prodution_process)              
+            return
+        if reworked:         
+            if blocked is not None and blocked is True:
+                failed_process = self.next_prodution_process
+                next_possible_processes = self.product_router.get_rework_processes(self, failed_process)
+                if next_possible_processes is not None:
+                    self.next_prodution_process = next_possible_processes[0]
+                    self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
                     reworked = False
-            else: 
-                self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
-                self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-                self.executed_production_processes.append(self.next_prodution_process.process_data.ID)
-                logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
+                    blocked = False
+                    logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
+            elif blocked is not None and blocked is False:
+                for proc in self.processes_needing_rework:
+                    ids_to_rework = [proc.process_data.ID]
+                    processes_on_product = self.executed_production_processes
+                    if all(id in processes_on_product for id in ids_to_rework):
+                        self.next_prodution_process = proc
+                        self.process_model.update_marking_from_transition(self.next_prodution_process)              
+                reworked = False
+        else: 
+            self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
+            self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
+            self.executed_production_processes.append(self.next_prodution_process.process_data.ID)
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})

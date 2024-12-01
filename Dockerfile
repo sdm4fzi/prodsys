@@ -11,11 +11,12 @@ RUN pip install --no-cache-dir poetry
 # Copy the pyproject.toml and poetry.lock files into the container
 COPY pyproject.toml poetry.lock /app/
 
-# TODO: Install dependencies using Poetry instead of pypi
-RUN pip install prodsys==0.8.4
+# Install the dependencies
+RUN poetry install --no-root --no-dev --no-interaction
 
 # Copy the rest of the application code
 COPY . /app
+RUN poetry install --no-interaction
 
 # Expose the port the application will run on
 EXPOSE 8000

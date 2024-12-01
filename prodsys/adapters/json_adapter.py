@@ -70,7 +70,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
             data["processes"], processes_data.PROCESS_DATA_UNION
         )
 
-        self.queue_data = self.create_objects_from_configuration_data_old(data["queues"], queue_data.QueueData)
+        self.queue_data = self.create_objects_from_configuration_data_old(data["queues"], queue_data.QUEUE_DATA_UNION)
         self.resource_data = self.create_objects_from_configuration_data_old(data["resources"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data_old(data["products"], product_data.ProductData)
         self.node_data = self.create_objects_from_configuration_data(data["links"], node_data.NodeData)
@@ -103,7 +103,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.process_data = self.create_objects_from_configuration_data(
             data["process_data"], processes_data.PROCESS_DATA_UNION
         )
-        self.queue_data = self.create_objects_from_configuration_data(data["queue_data"], queue_data.QueueData)
+        self.queue_data = self.create_objects_from_configuration_data(data["queue_data"], queue_data.QUEUE_DATA_UNION)
         self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
         self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
         self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)

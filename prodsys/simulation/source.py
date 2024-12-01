@@ -96,15 +96,6 @@ class Source(BaseModel):
             logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Put product in output queue"})
             product.update_location(self)
             product.process = self.env.process(product.process_product())
-
-    def get_output_location(self) -> List[float]:
-        """
-        Returns the location of the source.
-
-        Returns:
-            List[float]: The location. Has to be a list of length 2.
-        """
-        return self.data.output_location
     
     def get_location(self) -> List[float]:
         """
@@ -113,7 +104,7 @@ class Source(BaseModel):
         Returns:
             List[float]: The location. Has to be a list of length 2.
         """
-        return self.data.output_location
+        return self.data.location
     
 from prodsys.factories import product_factory
 # Source.model_rebuild()

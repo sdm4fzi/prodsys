@@ -13,7 +13,7 @@ from typing import Literal, Union, List, Optional, TYPE_CHECKING
 from enum import Enum
 
 from pydantic import ConfigDict, model_validator, conlist
-from prodsys.models.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset, InOutLocatable, Locatable
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
@@ -61,7 +61,7 @@ class TransportControlPolicy(str, Enum):
     NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT = "Nearest_origin_and_longest_target_queues_transport"
     NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT = "Nearest_origin_and_shortest_target_input_queues_transport"
 
-class ResourceData(CoreAsset):
+class ResourceData(CoreAsset, Locatable):
     """
     Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.
 
@@ -100,20 +100,6 @@ class ResourceData(CoreAsset):
             raise ValueError("process_capacities must be smaller than capacity")
         return values
     
-    @model_validator(mode="before")
-    def check_locations(cls, values):
-        if not isinstance(values, dict):
-            return values
-        if issubclass(cls, ProductionResourceData):
-            if "input_location" not in values or values["input_location"] is None:
-                raise ValueError("input_location is required for ProductionResourceData")
-            if "output_location" not in values or values["output_location"] is None:
-                raise ValueError("output_location is required for ProductionResourceData")
-        elif issubclass(cls, TransportResourceData):
-            if "location" not in values or values["location"] is None:
-                raise ValueError("location is required for TransportResourceData")
-        return values
-    
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
         Returns a unique hash of the resource considering the capacity, location (input/output for production resources or location for transport resources),
@@ -131,6 +117,8 @@ class ResourceData(CoreAsset):
         state_hashes = []
         process_hashes = []
 
+        base_class_hash = Locatable.hash(self)
+
         for state_id in self.state_ids:
             for state in adapter.state_data:
                 if state.ID == state_id:
@@ -147,18 +135,11 @@ class ResourceData(CoreAsset):
             else:
                 raise ValueError(f"Process with ID {process_id} not found for resource {self.ID}.")
 
-        if isinstance(self, ProductionResourceData):
-            location_data = [*map(str, self.input_location), *map(str, self.output_location)]
-        elif isinstance(self, TransportResourceData):
-            location_data = [*map(str, self.location)]
-        else:
-            raise ValueError("Unknown resource type.")
-
         return md5((
             "".join(
                 [
+                    base_class_hash,
                     str(self.capacity), 
-                    *location_data, 
                     self.controller, 
                     *sorted(process_hashes), 
                     *map(str, self.process_capacities), 
@@ -168,7 +149,7 @@ class ResourceData(CoreAsset):
         ).encode("utf-8")).hexdigest()
 
 
-class ProductionResourceData(ResourceData):
+class ProductionResourceData(ResourceData, InOutLocatable):
     """
     Class that represents production resource data.
 
@@ -176,8 +157,9 @@ class ProductionResourceData(ResourceData):
         ID (str): ID of the resource.
         description (str): Description of the resource.
         capacity (int): Capacity of the resource.
-        input_location (List[float]): Input location of the resource. Has to be a list of length 2.
-        output_location (List[float]): Output location of the resource. Has to be a list of length 2.
+        location (List[float]): Location of the resource. Has to be a list of length 2.
+        input_location (Optional[List[float]]): Input location of the resource. Has to be a list of length 2.
+        output_location (Optional[List[float]]): Output location of the resource. Has to be a list of length 2.
         controller (ControllerEnum): Controller of the resource.
         control_policy (ResourceControlPolicy): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
@@ -194,8 +176,7 @@ class ProductionResourceData(ResourceData):
             ID="R1",
             description="Resource 1",
             capacity=2,
-            input_location=[10.0, 10.0],
-            output_location=[20.0, 20.0],
+            location=[10.0, 10.0],
             controller=prodsys.resource_data.ControllerEnum.PipelineController,
             control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
             process_ids=["P1", "P2"],
@@ -209,8 +190,6 @@ class ProductionResourceData(ResourceData):
         )
         ```
     """
-    input_location: conlist(float, min_length=2, max_length=2) # type: ignore
-    output_location: conlist(float, min_length=2, max_length=2) # type: ignore
     controller: Literal[ControllerEnum.PipelineController, ControllerEnum.BatchController]
     control_policy: ResourceControlPolicy
     input_queues: List[str] = []
@@ -230,7 +209,7 @@ class ProductionResourceData(ResourceData):
         Returns:
             str: Hash of the resource.
         """
-        base_class_hash = super().hash(adapter)
+        base_class_hash = ResourceData.hash(self, adapter) + InOutLocatable.hash(self)
         queue_hashes = []
         for queue_id in self.input_queues + self.output_queues:
             for queue in adapter.queue_data:
@@ -248,8 +227,7 @@ class ProductionResourceData(ResourceData):
                 "ID": "R1",
                 "description": "Resource 1",
                 "capacity": 2,
-                "input_location": [10.0, 10.0],
-                "output_location": [20.0, 20.0],
+                "location": [10.0, 10.0],
                 "controller": "PipelineController",
                 "control_policy": "FIFO",
                 "process_ids": ["P1", "P2"],
@@ -295,7 +273,6 @@ class TransportResourceData(ResourceData):
         )
         ```
     """
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
     controller: Literal[ControllerEnum.TransportController]
     control_policy: TransportControlPolicy
 
