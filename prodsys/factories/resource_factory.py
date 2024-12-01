@@ -66,7 +66,6 @@ def register_production_states(
             resource.add_production_state(copy_state)
 
 
-
 def register_production_states_for_processes(
     resource: resources.Resource,
     state_factory: state_factory.StateFactory,
@@ -85,9 +84,9 @@ def register_production_states_for_processes(
         if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess) or isinstance(process_instance, process.ReworkProcess)) and not existence_condition:
             state_factory.create_states_from_configuration_data({"ProductionState": values})
         elif isinstance(process_instance, (process.TransportProcess, process.LinkTransportProcess)) and not existence_condition:
-            if "loading_time_model" in process_instance.process_data.dict():
+            if "loading_time_model" in process_instance.process_data.model_dump():
                 values["new_state"]["loading_time_model"] = process_instance.process_data.loading_time_model
-            if "unloading_time_model" in process_instance.process_data.dict():
+            if "unloading_time_model" in process_instance.process_data.model_dump():
                 values["new_state"]["unloading_time_model"] = process_instance.process_data.unloading_time_model
             state_factory.create_states_from_configuration_data({"TransportState": values})
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
@@ -104,7 +103,6 @@ def adjust_process_breakdown_states(
         process_id = process_breakdown_state.state_data.process_id
         production_states = [state_instance for state_instance in resource.production_states if isinstance(state_instance, state.ProductionState) and state_instance.state_data.ID == process_id]
         process_breakdown_state.set_production_states(production_states)
-
 
 
 class ResourceFactory(BaseModel):

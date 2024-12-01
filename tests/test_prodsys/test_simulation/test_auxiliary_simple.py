@@ -21,8 +21,8 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     transport = psx.TransportResource([tp], [3, 0], 1, ID="transport")
     transport2 = psx.TransportResource([tp], [4, 0], 1, ID="transport2")
 
-    storage1 = psx.Store(ID="storage1", location=[5, 0], capacity=30)
-    storage2 = psx.Store(ID="storage2", location=[10, 0], capacity=20)
+    storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
+    storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
 
     auxiliary1 = psx.Auxiliary(
         ID="auxiliary1",
@@ -57,7 +57,7 @@ def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
 def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "10b5a0cfbf6397ef9368a3bd5681648c"
+    assert hash_str == "3f351ed242a9c18f5a5a1ca68b6a3eaa"
 
 
 def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
@@ -75,13 +75,13 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
             assert kpi.value < 92 and kpi.value > 84
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 40 and kpi.value < 50
+            assert kpi.value > 50 and kpi.value < 52
         if kpi.name == "productive_time" and kpi.resource == "transport2":
-            assert kpi.value > 40 and kpi.value < 50
+            assert kpi.value > 50 and kpi.value < 52
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 1.9 and kpi.value > 1.7
+            assert kpi.value < 2 and kpi.value > 1.9
 
     for kpi in post_processor.auxiliary_WIP_KPIs:
         if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary1":
@@ -89,4 +89,4 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 1.7 and kpi.value > 1.6
+            assert kpi.value < 1.8 and kpi.value > 1.7
