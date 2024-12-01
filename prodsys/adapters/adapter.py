@@ -918,7 +918,6 @@ def get_location_of_locatable(locatable: Union[resource_data_module.ProductionRe
         locations.append(locatable.input_location)
     if hasattr(locatable, "output_location") and locatable.output_location != locatable.location:
         locations.append(locatable.output_location)
-    print(locatable.ID, locations)
     return locations
 
 
