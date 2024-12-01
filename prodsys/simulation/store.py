@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Generator, List
+from typing import Generator, List, Union
 from pydantic import BaseModel
 
 
@@ -33,8 +33,6 @@ class Queue(store.FilterStore):
             capacity = float("inf")
         else:
             capacity = data.capacity
-        self.input_location = data.input_location if data.input_location is not None else getattr(data, 'input_location', None)
-        #self.output_location = data.output_location if data.output_location is not None else getattr(data, 'output_location', None)
         self._pending_put: int = 0
         super().__init__(env, capacity)
         self.state_change = self.env.event()
@@ -96,12 +94,26 @@ class Queue(store.FilterStore):
         Unreserves a spot in the queue for a product to be put into after the put is completed.
         """
         self._pending_put -= 1
+
+
+class Store(Queue):
+    """
+    A store is a storage object for products / auiliaries. It has a location, an input location, and an output location. The input location is the location where products are stored, and the output location is the location where products are retrieved.
+
+    Args:
+        env (simpy.Environment): The simulation environment.
+        data (data.StoreData): The store data object.
+    """
+    def __init__(self, env: sim.Environment, data: queue_data.StoreData):
+        super().__init__(env, data)
+        self.data: queue_data.StoreData = data
     
     def get_location(self):
         return self.data.location
 
     def get_input_location(self):
-        return self.input_location
+        return self.data.input_location
     
     def get_output_location(self):
-        return self.input_location
+        return self.data.output_location
+    

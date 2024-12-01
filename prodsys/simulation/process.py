@@ -349,4 +349,4 @@ from prodsys.simulation.sink import Sink
 from prodsys.simulation.node import Node
 from prodsys.simulation import request
 # LinkTransportProcess.model_rebuild()
-Process.update_forward_refs()
+Process.model_rebuild()

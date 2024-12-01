@@ -46,7 +46,7 @@ def get_reconfiguration_cost(
     adapter_object: adapters.ProductionSystemAdapter,
     baseline: adapters.ProductionSystemAdapter = None,
 ) -> float:
-    num_machines = len(adapters.get_machines(adapter_object))
+    num_machines = len(adapters.get_production_resources(adapter_object))
     num_transport_resources = len(adapters.get_transport_resources(adapter_object))
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
@@ -60,7 +60,7 @@ def get_reconfiguration_cost(
             else:
                 num_process_modules_before[process] = 0
     else:
-        num_machines_before = len(adapters.get_machines(baseline))
+        num_machines_before = len(adapters.get_production_resources(baseline))
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
@@ -106,7 +106,7 @@ def get_auxiliary_cost(
 
 def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
     if (
-        len(adapters.get_machines(configuration))
+        len(adapters.get_production_resources(configuration))
         > configuration.scenario_data.constraints.max_num_machines
     ):
         return False
@@ -142,7 +142,10 @@ def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
     except ValueError as e:
         return False
 
-    positions = [machine.input_location for machine in adapters.get_machines(configuration)]
+    positions = [
+        machine.input_location
+        for machine in adapters.get_production_resources(configuration)
+    ]
     possible_positions = configuration.scenario_data.options.positions
     if any(position not in possible_positions for position in positions):
         return False

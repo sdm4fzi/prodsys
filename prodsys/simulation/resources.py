@@ -296,24 +296,6 @@ class Resource(BaseModel, ABC, resource.Resource):
             List[float]: The location of the resource. Has to have length 2.
         """
         return self.data.location
-    
-    def get_input_location(self) -> List[float]:
-        """
-        Returns the input location of the production resource.
-
-        Returns:
-            List[float]: The input location of the resource. Has to have length 2.
-        """
-        return self.data.input_location
-    
-    def get_output_location(self) -> List[float]:
-        """
-        Returns the output location of the production resource.
-
-        Returns:
-            List[float]: The output location of the resource. Has to have length 2.
-        """
-        return self.data.output_location
 
     def get_input_queue_length(self) -> int:
         """
@@ -477,19 +459,31 @@ class ProductionResource(Resource):
 
     input_queues: List[store.Queue] = []
     output_queues: List[store.Queue] = []
-    warehouse_queues: List[store.Queue] = []
     batch_size: Optional[int] = None
+
+    def get_input_location(self) -> List[float]:
+        """
+        Returns the input location of the production resource.
+
+        Returns:
+            List[float]: The input location of the resource. Has to have length 2.
+        """
+        return self.data.input_location
+    
+    def get_output_location(self) -> List[float]:
+        """
+        Returns the output location of the production resource.
+
+        Returns:
+            List[float]: The output location of the resource. Has to have length 2.
+        """
+        return self.data.output_location
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
-        self.warehouse_queues.extend([queue for queue in input_queues if getattr(queue, 'warehouse', False)])
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         self.output_queues.extend(output_queues)
-        self.warehouse_queues.extend([queue for queue in output_queues if getattr(queue, 'warehouse', False)])
-    
-    def add_warehouse_queues(self, warehouse_queues: List[store.Queue]):
-        self.warehouse_queues.extend(warehouse_queues)
 
     def reserve_input_queues(self):
         for input_queue in self.input_queues:

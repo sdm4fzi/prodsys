@@ -37,10 +37,13 @@ class QueueFactory(BaseModel):
         for data in adapter.queue_data:
             self.add_queue(data)
 
-    def add_queue(self, queue_data: queue_data.QueueData):
+    def add_queue(self, data: queue_data.QueueData):
         values = {}
-        values.update({"env": self.env, "queue_data": queue_data})
-        q = store.Queue(self.env, queue_data)
+        values.update({"env": self.env, "data": data})
+        if hasattr(data, "location"):
+            q = store.Store(**values)
+        else:
+            q = store.Queue(**values)
         self.queues.append(q)
 
     def get_queue(self, ID: str) -> store.Queue:
@@ -65,12 +68,3 @@ class QueueFactory(BaseModel):
             List[store.Queue]: List of queue objects with the given IDs.
         """
         return [q for q in self.queues if q.data.ID in IDs]
-
-    def get_warehouse_queues(self) -> List[store.Queue]:
-        """
-        Method returns a list of queue objects that are warehouses.
-
-        Returns:
-            List[store.Queue]: List of queue objects that are warehouses.
-        """
-        return [q for q in self.queues if q.data.input_location is not None]

@@ -15,8 +15,8 @@ s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
-machine = psx.ProductionResource([p1, p2], [5,0], [5,1], 2, states=[setup_state_1, setup_state_2], ID="machine")
-machine2 = psx.ProductionResource([p1, p2], [7,0], [7,1], 2, states=[setup_state_1, setup_state_2], ID="machine2")
+machine = psx.ProductionResource([p1, p2], [5,0], 2, states=[setup_state_1, setup_state_2], ID="machine", output_location=[5,1])
+machine2 = psx.ProductionResource([p1, p2], [7,0], 2, states=[setup_state_1, setup_state_2], ID="machine2", output_location=[7,1])
 
 transport = psx.TransportResource([tp], [0,0], 1, ID="transport")
 

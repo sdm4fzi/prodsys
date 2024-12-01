@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, Union, TYPE_CHECKING, Generator, List
+from typing import Literal, Optional, Union, TYPE_CHECKING, Generator, List
 
 import logging
 logger = logging.getLogger(__name__)
@@ -403,7 +403,7 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def handle_loading(self, action: str) -> Generator:
+    def handle_loading(self, action: Literal["loading, unloading"]) -> Generator:
         #loading_time = loading_time if loading_time is not None else self.loading_time_model.get_next_time()
         if action == "loading":
             time_model = self.loading_time_model

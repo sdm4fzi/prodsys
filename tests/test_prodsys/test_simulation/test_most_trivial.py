@@ -39,7 +39,7 @@ def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
 def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "934de9573541ea7fcceffda10653ab74"
+    assert hash_str == "41806a296e268d6fa27379df5ac6e35d"
 
 def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     runner_instance = runner.Runner(adapter=simulation_adapter)   

@@ -7,6 +7,7 @@ from copy import deepcopy
 import json
 import random
 import logging
+
 logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, ConfigDict
@@ -17,12 +18,15 @@ from prodsys.models import (
     state_data,
     time_model_data,
 )
-from prodsys.optimization import adapter_manipulation, optimization, util as optimization_util
+from prodsys.optimization import (
+    adapter_manipulation,
+    optimization,
+    util as optimization_util,
+)
 from prodsys.util import util
 
 import gurobipy as gp
 from gurobipy import GRB
-
 
 
 def adjust_number_of_transport_resources(
@@ -65,6 +69,7 @@ class MathOptimizer(BaseModel):
         adapter (adapters.ProductionSystemAdapter): Adapter that contains the configuration of the production system to use for optimization.
         optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
     """
+
     adapter: adapters.ProductionSystemAdapter
     optimization_time_portion: float = 1.0
 
@@ -78,7 +83,7 @@ class MathOptimizer(BaseModel):
 
     processing_times_per_product_and_step: dict = None
 
-    model_config=ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.adapter.scenario_data.info.process_module_cost
@@ -120,13 +125,13 @@ class MathOptimizer(BaseModel):
                     for station in range(
                         self.adapter.scenario_data.constraints.max_num_machines
                     ):
-                        x[product_type.ID][work_piece_index][step][
-                            station
-                        ] = self.model.addVar(
-                            vtype=GRB.BINARY,
-                            name="x[{},{},{},{}]".format(
-                                product_type.ID, work_piece_index, step, station
-                            ),
+                        x[product_type.ID][work_piece_index][step][station] = (
+                            self.model.addVar(
+                                vtype=GRB.BINARY,
+                                name="x[{},{},{},{}]".format(
+                                    product_type.ID, work_piece_index, step, station
+                                ),
+                            )
                         )
         return x
 
@@ -147,7 +152,7 @@ class MathOptimizer(BaseModel):
     def get_opening_cost_of_stations(self):
         opening_cost = {}
         _, stations = self.get_process_modules_and_stations()
-        num_previous_machines = len(adapters.get_machines(self.adapter))
+        num_previous_machines = len(adapters.get_production_resources(self.adapter))
         for counter, station in enumerate(stations):
             if counter < num_previous_machines:
                 opening_cost[station] = 0
@@ -269,13 +274,9 @@ class MathOptimizer(BaseModel):
             machine_breakdown_time = MTTR_machine
 
         if not process_module_breakdown_state:
-            module_breakdown_count = {
-                module: 0 for module in process_modules
-            }
+            module_breakdown_count = {module: 0 for module in process_modules}
 
-            module_breakdown_time = {
-                module: 1 for module in process_modules
-            }
+            module_breakdown_time = {module: 1 for module in process_modules}
         else:
             MTTF_process_module = self.get_expected_time_of_time_model_with_id(
                 process_module_breakdown_state.time_model_id
@@ -344,9 +345,9 @@ class MathOptimizer(BaseModel):
                 )
                 # Adjust processing times with safety factor (0,85-Quantil of the normal distribution)
                 quantil = scipy.stats.norm.ppf(0.85, loc=0, scale=1)
-                processing_times_per_product_and_step[product.ID][
-                    step
-                ] = time_model.location + (time_model.scale * quantil)
+                processing_times_per_product_and_step[product.ID][step] = (
+                    time_model.location + (time_model.scale * quantil)
+                )
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):
@@ -442,10 +443,14 @@ class MathOptimizer(BaseModel):
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
-        self, save_folder: str, adjusted_number_of_transport_resources: int = 1, number_of_seeds: int = 1, full_save: bool = False
+        self,
+        save_folder: str,
+        adjusted_number_of_transport_resources: int = 1,
+        number_of_seeds: int = 1,
+        full_save: bool = False,
     ):
         """
-        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run. 
+        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run.
 
         For saving the configuration, some defaults attributes are used for non-found degrees of freedom in the optimization:
 
@@ -505,14 +510,21 @@ class MathOptimizer(BaseModel):
                     # state_ids=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-                optimization_util.add_setup_states_to_machine(new_adapter, new_resource.ID)
+                optimization_util.add_setup_states_to_machine(
+                    new_adapter, new_resource.ID
+                )
             adapter_manipulation.add_default_queues_to_resources(new_adapter)
             optimization_util.clean_out_breakdown_states_of_resources(new_adapter)
             optimization_util.adjust_process_capacities(new_adapter)
 
             full_save_folder_path = save_folder if full_save else ""
             simulation_results = optimization.evaluate(
-                self.adapter, solution_dict, performances, number_of_seeds, full_save_folder_path, [new_adapter]
+                self.adapter,
+                solution_dict,
+                performances,
+                number_of_seeds,
+                full_save_folder_path,
+                [new_adapter],
             )
             optimization_util.document_individual(
                 solution_dict, save_folder, [new_adapter]
@@ -544,16 +556,18 @@ class MathOptHyperparameters(BaseModel):
     adjusted_number_of_transport_resources: int = 1
     number_of_seeds: int = 1
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "optimization_time_portion": 0.5,
-                "number_of_solutions": 1,
-                "adjusted_number_of_transport_resources": 1,
-                "number_of_seeds": 1,
-            },
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "optimization_time_portion": 0.5,
+                    "number_of_solutions": 1,
+                    "adjusted_number_of_transport_resources": 1,
+                    "number_of_seeds": 1,
+                },
+            ]
+        }
+    )
 
 
 def run_mathematical_optimization(
@@ -567,7 +581,7 @@ def run_mathematical_optimization(
     number_of_seeds: int = 1,
 ):
     """
-    Run a mathematical optimization for configuration planning of production systems. 
+    Run a mathematical optimization for configuration planning of production systems.
 
     Args:
         save_folder (str): Folder to save the results in.
@@ -582,7 +596,9 @@ def run_mathematical_optimization(
     adapter = adapters.JsonProductionSystemAdapter()
     adapter.read_data(base_configuration_file_path, scenario_file_path)
     if not adapters.check_for_clean_compound_processes(adapter):
-        raise ValueError("Currently, compound processes are not implemented in mathematical optimization.")
+        raise ValueError(
+            "Currently, compound processes are not implemented in mathematical optimization."
+        )
     if not optimization_util.check_breakdown_states_available(adapter):
         optimization_util.create_default_breakdown_states(adapter)
     util.prepare_save_folder(save_folder)
@@ -617,14 +633,16 @@ def mathematical_optimization(
     """
     util.prepare_save_folder(save_folder)
     model = MathOptimizer(
-        adapter=base_configuration, optimization_time_portion=hyper_parameters.optimization_time_portion
+        adapter=base_configuration,
+        optimization_time_portion=hyper_parameters.optimization_time_portion,
     )
     model.optimize(n_solutions=hyper_parameters.number_of_solutions)
     model.save_model(save_folder=save_folder)
     model.save_results(
         save_folder=save_folder,
         adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=hyper_parameters.number_of_seeds, full_save=full_save
+        number_of_seeds=hyper_parameters.number_of_seeds,
+        full_save=full_save,
     )
 
 
