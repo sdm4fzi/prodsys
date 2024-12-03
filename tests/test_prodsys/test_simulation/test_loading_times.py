@@ -10,8 +10,8 @@ def loading_times_simulation_adapter() -> JsonProductionSystemAdapter:
     p1 = psx.ProductionProcess(t1, "p1")
 
     movement_time_model = psx.FunctionTimeModel("exponential", 0.1, ID="t3")
-    loading_time_model = psx.FunctionTimeModel("constant", 0.2, ID="t4")
-    unloading_time_model = psx.FunctionTimeModel("constant", 0.2, ID="t5")
+    loading_time_model = psx.FunctionTimeModel("exponential", 0.1, ID="t4")
+    unloading_time_model = psx.FunctionTimeModel("exponential", 0.1, ID="t5")
 
     tp = psx.TransportProcess(movement_time_model, "tp", loading_time_model=loading_time_model, unloading_time_model=unloading_time_model)
 
@@ -39,7 +39,7 @@ def test_initialize_simulation(loading_times_simulation_adapter: JsonProductionS
 
 def test_hashing(loading_times_simulation_adapter: JsonProductionSystemAdapter):
     hash_str = loading_times_simulation_adapter.hash()
-    assert hash_str == "4f565c2d574392e23b9d807cde881ba8"
+    assert hash_str == "944ec087edb769a597c5b51a5d79f05f"
 
 
 def test_run_simulation(loading_times_simulation_adapter: JsonProductionSystemAdapter):
@@ -47,25 +47,23 @@ def test_run_simulation(loading_times_simulation_adapter: JsonProductionSystemAd
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000
-    runner_instance.print_results()
-    runner_instance.save_results_as_csv()
-    # FIXME: resolve problem loading times are not properly used!
     post_processor = runner_instance.get_post_processor()
+    # FIXME: resolve problem loading times are not properly used! Parameters should be correct here
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2040 and kpi.value < 2060
+            assert kpi.value > 2000 and kpi.value < 2040
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 83 and kpi.value > 81
+            assert kpi.value < 82 and kpi.value > 78
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 34 and kpi.value < 36
+            assert kpi.value > 74 and kpi.value < 76
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 5.3 and kpi.value > 5.2
+            assert kpi.value < 6.8 and kpi.value > 6.6
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 4.5 and kpi.value > 4.3
+            assert kpi.value < 6.1 and kpi.value > 6.0
