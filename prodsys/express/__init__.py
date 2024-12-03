@@ -44,6 +44,7 @@ from prodsys.express.process import (
     RequiredCapabilityProcess,
     TransportProcess,
     LinkTransportProcess,
+    ReworkProcess,
 )
 from prodsys.express.resources import ProductionResource, TransportResource
 from prodsys.express.product import Product

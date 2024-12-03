@@ -24,7 +24,11 @@ class StateFactory:
         time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
     """
 
-    def __init__(self, env: sim.Environment, time_model_factory: time_model_factory.TimeModelFactory):
+    def __init__(
+        self,
+        env: sim.Environment,
+        time_model_factory: time_model_factory.TimeModelFactory,
+    ):
         self.env = env
         self.time_model_factory = time_model_factory
         self.state_data: List[state_data.STATE_DATA_UNION] = []
@@ -39,34 +43,67 @@ class StateFactory:
                 )
                 self.add_state(self.state_data[-1])
 
+    def get_loading_time_models_data(
+        self, transport_state: state_data.STATE_DATA_UNION
+    ) -> dict:
+        if not isinstance(transport_state, state_data.TransportStateData):
+            return {}
+        loading_time_model_dict = {}
+        if transport_state.loading_time_model_id is not None:
+            loading_time_model_dict["loading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.loading_time_model_id
+                )
+            )
+        if transport_state.unloading_time_model_id is not None:
+            loading_time_model_dict["unloading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.unloading_time_model_id
+                )
+            )
+        return loading_time_model_dict
+
+    def get_repair_time_model_data(
+        self, state_data: state_data.STATE_DATA_UNION
+    ) -> dict:
+        repair_time_model_dict = {}
+        if (
+            "repair_time_model_id" in state_data.model_dump()
+            and state_data.model_dump()["repair_time_model_id"] is not None
+        ):
+            return {
+                "repair_time_model": self.time_model_factory.get_time_model(
+                    state_data.repair_time_model_id
+                )
+            }
+        return repair_time_model_dict
+
+    def get_battery_time_model_data(
+        self, state_data: state_data.STATE_DATA_UNION
+    ) -> dict:
+        battery_time_model_dict = {}
+        if (
+            "battery_time_model_id" in state_data.model_dump()
+            and state_data.model_dump()["battery_time_model_id"] is not None
+        ):
+            return {
+                "battery_time_model": self.time_model_factory.get_time_model(
+                    state_data.battery_time_model_id
+                )
+            }
+        return battery_time_model_dict
+
     def add_state(self, state_data: state_data.STATE_DATA_UNION):
-        values = {}
-        values.update({"state_data": state_data})
-        time_model = self.time_model_factory.get_time_model(
-            values["state_data"].time_model_id
-        )
-        values.update({"time_model": time_model, "env": self.env})
-        if "loading_time_model" in state_data.model_dump() and state_data.model_dump()["loading_time_model"] is not None:
-            loading_time_model = self.time_model_factory.get_time_model(
-                state_data.loading_time_model
-            )
-            values.update({"loading_time_model": loading_time_model})
-        if "unloading_time_model" in state_data.model_dump() and state_data.model_dump()["unloading_time_model"] is not None:
-            unloading_time_model = self.time_model_factory.get_time_model(
-                state_data.unloading_time_model
-            )
-            values.update({"unloading_time_model": unloading_time_model})
-        if "repair_time_model_id" in state_data.model_dump():
-            repair_time_model = self.time_model_factory.get_time_model(
-                state_data.repair_time_model_id
-            )
-            values.update({"repair_time_model": repair_time_model})
-        if "battery_time_model_id" in state_data.model_dump():
-            battery_time_model = self.time_model_factory.get_time_model(
-                state_data.battery_time_model_id
-            )
-            values.update({"battery_time_model": battery_time_model})
-        # FIXME: resolve bug when importing simulation types#
+        values = {
+            "state_data": state_data,
+            "time_model": self.time_model_factory.get_time_model(
+                state_data.time_model_id
+            ),
+            "env": self.env,
+        }
+        values.update(self.get_loading_time_models_data(state_data))
+        values.update(self.get_repair_time_model_data(state_data))
+        values.update(self.get_battery_time_model_data(state_data))
         self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
 
     def create_states(self, adapter: adapter.ProductionSystemAdapter):
@@ -77,7 +114,7 @@ class StateFactory:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the state data.
         """
         for state_data in adapter.state_data:
-            self.add_state(state_data)        
+            self.add_state(state_data)
 
     def get_states(self, IDs: List[str]) -> List[state.STATE_UNION]:
         """

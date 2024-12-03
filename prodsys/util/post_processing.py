@@ -6,14 +6,16 @@ from functools import cached_property
 from prodsys.simulation import state
 from prodsys.models import performance_indicators
 
-from typing import List
+from typing import List, Literal
 
 import pandas as pd
 
 import numpy as np
 
-WARM_UP_CUT_OFF = 0.15
+import logging
 
+from prodsys.util.warm_up_post_processing import get_warm_up_cutoff_index
+logger = logging.getLogger(__name__)
 
 @dataclass
 class PostProcessor:
@@ -37,6 +39,8 @@ class PostProcessor:
     """
     filepath: str = field(default="")
     df_raw: pd.DataFrame = field(default=None)
+    warm_up_cutoff: bool = field(default=False)
+    cut_off_method: Literal["mser5", "threshold_stabilization", "static_ratio"] = field(default="mser5")
 
     def __post_init__(self):
         if self.filepath:
@@ -87,7 +91,7 @@ class PostProcessor:
                 state.StateTypeEnum.transport,
             ]
         )
-    
+
     def get_total_simulation_time(self) -> float:
         """
         Calculates the total simulation time from the data frame.
@@ -259,6 +263,46 @@ class PostProcessor:
         return df_tpt
     
     @cached_property
+    def warm_up_cutoff_time(self) -> float:
+        """
+        Calculates the warm up cutoff time for the simulation results.
+
+        Returns:
+            float: Warm up cutoff time for the simulation results.
+        """
+        df = self.df_throughput_with_warum_up_cutoff
+        if df["Start_time"].min() == self.df_finished_product["Time"].min():
+            return 0.0
+        return df["Start_time"].min()
+
+    @cached_property
+    def df_throughput_with_warum_up_cutoff(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the throughput time for each finished product with the warm up phase cut off.
+
+        Returns:
+            pd.DataFrame: Data frame with the throughput time for each finished product with the warm up phase cut off.
+        """
+        df = self.df_throughput.copy()
+        product_types_min_start_time = {}
+        product_types_max_start_time = {}
+        for product_type in df["Product_type"].unique():
+            df_product_type = df.loc[df["Product_type"] == product_type].copy()
+            df_product_type.sort_values(by="Start_time", inplace=True)
+            cutoff_index = get_warm_up_cutoff_index(df_product_type, "Throughput_time", self.cut_off_method)
+            if cutoff_index == len(df_product_type):
+                logger.warning(f"The simulation time is too short to perform a warm up cutoff for product type {product_type}. Try to increase the simulation time.")
+                return df
+            product_types_min_start_time[product_type] = df_product_type.iloc[cutoff_index]["Start_time"]
+            product_types_max_start_time[product_type] = df_product_type["Start_time"].max()
+        cut_off_time = min(product_types_min_start_time.values())
+        for product_type, product_type_latest_start in product_types_max_start_time.items():
+            if product_type_latest_start < cut_off_time:
+                logger.warning(f"The simulation time is too short to perform a warm up cutoff for product type {product_type} because the latest start time is before the cut off time.")
+                return df
+        return df.loc[df["Start_time"] >= cut_off_time]
+
+    @cached_property
     def dynamic_thoughput_time_KPIs(self) -> List[performance_indicators.KPI]:
         """
         Returns a list of Dynamic Throughput KPI values for the throughput time of each finished product.
@@ -292,12 +336,13 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the average throughput time for each product type.
         """
-        df = self.df_throughput.copy()
-        max_time = df["End_time"].max()
-        df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
+        if self.warm_up_cutoff:
+            df = self.df_throughput_with_warum_up_cutoff.copy()
+        else:
+            df = self.df_throughput.copy()
         df = df.groupby(by=["Product_type"])["Throughput_time"].mean()
         return df
-    
+
     @cached_property
     def aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
         """
@@ -329,16 +374,18 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the average throughput and output for each product type.
         """
-        df = self.df_throughput.copy()
-        max_time = df["End_time"].max()
-        df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
+        if self.warm_up_cutoff:
+            df = self.df_throughput_with_warum_up_cutoff.copy()
+        else:
+            df = self.df_throughput.copy()
+
+        available_time = df["End_time"].max() - df["Start_time"].min()
         df_tp = df.groupby(by="Product_type")["Product"].count().to_frame()
         df_tp.rename(columns={"Product": "Output"}, inplace=True)
-        available_time = max_time * (1 - WARM_UP_CUT_OFF) / 60
         df_tp["Throughput"] = df_tp["Output"] / available_time
 
         return df_tp
-    
+
     @cached_property
     def throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
         """
@@ -378,9 +425,10 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the total output for each product type.
         """
-        df = self.df_throughput.copy()
-        max_time = df["End_time"].max()
-        df = df.loc[df["Start_time"] >= max_time * WARM_UP_CUT_OFF]
+        if self.warm_up_cutoff:
+            df = self.df_throughput_with_warum_up_cutoff.copy()
+        else:
+            df = self.df_throughput.copy()
         df_tp = df.groupby(by="Product_type")["Product"].count()
 
         return df_tp
@@ -469,7 +517,7 @@ class PostProcessor:
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
 
         return df
-    
+
     @cached_property
     def df_resource_states_buckets(self) -> pd.DataFrame:
         """
@@ -485,8 +533,6 @@ class PostProcessor:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
         """
         df = self.df_prepared.copy()
-        max_time = df["Time"].max()
-        df = df[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -563,7 +609,7 @@ class PostProcessor:
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
 
         return df
-    
+
     @cached_property
     def df_aggregated_resource_bucket_states(self) -> pd.DataFrame:
         """
@@ -582,6 +628,9 @@ class PostProcessor:
         df = self.df_resource_states_buckets.copy()
         # TODO: locate is nan with function
         df = df.loc[df["Time_type"] != "na"]
+
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
         df_time_per_state = df.groupby(["Resource", "Bucket", "Time_type"]).agg({
             "time_increment": "sum",
@@ -692,7 +741,6 @@ class PostProcessor:
 
         return df_all
 
-
     @cached_property
     def df_aggregated_resource_bucket_states_boxplot(self) -> pd.DataFrame:
         """
@@ -709,6 +757,9 @@ class PostProcessor:
         """
         df = self.df_resource_states_buckets_boxplot.copy()
         df = df.loc[df["Time_type"] != "na"]
+
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
         df_time_per_state = df.groupby(["Resource", "Bucket", "Time_type"]).agg({
             "time_increment": "sum",
@@ -727,7 +778,6 @@ class PostProcessor:
 
         return df_time_per_state
 
-
     @cached_property
     def df_aggregated_resource_states(self) -> pd.DataFrame:
         """
@@ -745,6 +795,9 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         df = df.loc[df["Time_type"] != "na"]
+
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
         df_time_per_state = df.groupby(["Resource", "Time_type"])[
             "time_increment"
@@ -765,7 +818,7 @@ class PostProcessor:
         ) * 100
 
         return df_time_per_state
-    
+
     @cached_property
     def df_oee_production_system(self) -> pd.DataFrame:
         """
@@ -790,7 +843,6 @@ class PostProcessor:
         oee_df['Value'] = oee_df['Value'].round(2)
 
         return oee_df
-    
 
     @cached_property
     def df_production_flow_ratio(self) -> pd.DataFrame:
@@ -805,10 +857,14 @@ class PostProcessor:
                 - Transport: The percentage of time spent in transport activities.
                 - Idle: The percentage of idle time.
         """
-        df_finished_product_copy = self.df_finished_product.copy()
+        df_finished_product = self.df_finished_product.copy()
+
+        if self.warm_up_cutoff:
+            df_finished_product = df_finished_product.loc[df_finished_product["Time"] >= self.warm_up_cutoff_time]
+
 
         # Production
-        filtered_df = df_finished_product_copy[df_finished_product_copy['State Type'] == 'Production']
+        filtered_df = df_finished_product[df_finished_product['State Type'] == 'Production']
         df_production = filtered_df[['Product', 'Product_type', 'State Type', 'Activity', 'Time']]
         grouped_production_df = df_production.groupby(['Product','Product_type','Activity'])['Time'].sum().reset_index()
         pivot_production_df = grouped_production_df.pivot(index=['Product', 'Product_type'], columns='Activity', values='Time')
@@ -817,7 +873,7 @@ class PostProcessor:
         mean_production_time = pivot_production_df.groupby('Product_type')['Production Time'].mean().reset_index()
 
         # Transport
-        df_transport = df_finished_product_copy[df_finished_product_copy['State Type'] == 'Transport']
+        df_transport = df_finished_product[df_finished_product['State Type'] == 'Transport']
         df_transport = df_transport[['Product', 'Product_type', 'State Type', 'Activity', 'Time']]
         df_transport = df_transport.groupby(['Product','Product_type','Activity'])['Time'].sum().reset_index()
         df_transport = df_transport.pivot(index=['Product', 'Product_type'], columns='Activity', values='Time')
@@ -840,7 +896,6 @@ class PostProcessor:
 
         return percentage_df
 
-    
     @cached_property
     def machine_state_KPIS(self) -> List[performance_indicators.KPI]:
         """
@@ -881,7 +936,6 @@ class PostProcessor:
         df["WIP"] = df["WIP_Increment"].cumsum()
 
         return df
-    
 
     def get_auxiliary_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         START_USAGE_CONDITION = df["Activity"] == "started auxiliary usage"
@@ -897,9 +951,8 @@ class PostProcessor:
 
         df["auxiliary_WIP"] = df["auxiliary_WIP_Increment"].cumsum()
 
-
         return df
-    
+
     @cached_property
     def df_auxiliary_WIP(self) -> pd.DataFrame:
         """
@@ -910,7 +963,7 @@ class PostProcessor:
         """
         df = self.get_auxiliary_WIP_KPI(self.df_raw)
         return df
-    
+
     @cached_property
     def df_auxiliary_WIP_per_auxiliary_type(self) -> pd.DataFrame:
         """
@@ -927,7 +980,6 @@ class PostProcessor:
             df = df.combine_first(df_temp)
 
         return df
-    
 
     @cached_property
     def df_aggregated_auxiliary_WIP(self) -> pd.DataFrame:
@@ -943,9 +995,8 @@ class PostProcessor:
 
         df = pd.concat([df, df_total])
 
-        max_time = df["Time"].max()
-
-        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
         group = ["Auxiliary_type"]
         df = df.groupby(by=group)["auxiliary_WIP"].mean()
@@ -962,7 +1013,7 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         return self.get_WIP_KPI(df)
-    
+
     @cached_property
     def df_mean_wip_per_station(self) -> pd.DataFrame:
         """
@@ -997,13 +1048,15 @@ class PostProcessor:
         resources = df['Resource'].unique()
         df = df.loc[df['wip_resource'].isin(resources)]
 
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
+
         # Calculate mean WIP per station
         df_mean_wip_per_station = df.groupby("wip_resource")["wip"].mean().reset_index()
         df_mean_wip_per_station.rename(columns={"wip": "mean_wip"}, inplace=True)
         df_mean_wip_per_station.rename(columns={"wip_resource": "Resource"}, inplace=True)
 
         return df_mean_wip_per_station
-    
 
     def get_auxiliary_ids(self) -> pd.DataFrame:
         """
@@ -1015,7 +1068,7 @@ class PostProcessor:
         df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
         auxiliary_ids = df["Product"].drop_duplicates().to_list()
         return auxiliary_ids
-    
+
     def get_auxiliary_types(self) -> pd.DataFrame:
         """
         Returns a data frame with the auxiliary types of the resources.
@@ -1047,7 +1100,7 @@ class PostProcessor:
             df = df.combine_first(df_temp)
 
         return df
-    
+
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.loc[df["Time"] != 0]
 
@@ -1069,16 +1122,16 @@ class PostProcessor:
         df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[MOVE_IN_CONDITION, "Target location"]
 
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
-        
+
         # FIXME: remove bug that negative WIP is possible
         df_temp = df[["State", "State Type"]].drop_duplicates()
         exclude_types = [state.StateTypeEnum.sink, state.StateTypeEnum.source]
         exclude_states = df_temp.loc[df_temp["State Type"].isin(exclude_types), "State"].unique()
         df = df.loc[~df["WIP_resource"].isin(exclude_states)]
         df = df.loc[df["WIP_resource"].isin(valid_resources)]
-        
+
         return df
-    
+
     @cached_property
     def df_WIP_per_resource(self) -> pd.DataFrame:
         """
@@ -1092,7 +1145,7 @@ class PostProcessor:
         df = self.get_WIP_per_resource_KPI(df)
 
         return df
-    
+
     @cached_property
     def dynamic_WIP_KPIs(self) -> List[performance_indicators.KPI]:
         """
@@ -1131,7 +1184,6 @@ class PostProcessor:
             )
         return KPIs       
 
-
     @cached_property
     def df_aggregated_WIP(self) -> pd.DataFrame:
         """
@@ -1147,11 +1199,10 @@ class PostProcessor:
         df_total_wip["Product_type"] = "Total"
         df = pd.concat([df, df_total_wip])
 
-        max_time = df["Time"].max()
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
-        df = df.loc[df["Time"] >= max_time * WARM_UP_CUT_OFF]
         group = ["Product_type"]
-
         df = df.groupby(by=group)["WIP"].mean()
 
         return df
@@ -1185,7 +1236,7 @@ class PostProcessor:
                 )
             )
         return KPIs
-    
+
     @cached_property
     def auxiliary_WIP_KPIs(self) -> List[performance_indicators.KPI]:
         """

@@ -82,6 +82,7 @@ class Router:
         sink_factory: sink_factory.SinkFactory,
         auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
+        product_factory: Optional[product_factory.ProductFactory] = None,
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
@@ -89,6 +90,7 @@ class Router:
         self.routing_heuristic: Callable[[List[request.Request]], None] = (
             routing_heuristic
         )
+        self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         # TODO: add possibility to specify a production and a transport heuristic separately
 
     def route_product_to_production_resource(
@@ -378,7 +380,12 @@ class Router:
         ]
         if not external_queues:
             return False
-        # TODO: implement heuristic
+        internal_queues = [
+            queue for queue in resource.input_queues if isinstance(queue, store.Store)
+        ]
+        if all(queue.full for queue in internal_queues):
+            return True
+        # TODO: implement heuristic for storage
         return np.random.choice([True, False])
 
     def get_requests_with_free_resources(

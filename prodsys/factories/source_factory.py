@@ -66,6 +66,7 @@ class SourceFactory(BaseModel):
             self.sink_factory,
             self.auxiliary_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
+            self.product_factory
         )
 
     def add_source(

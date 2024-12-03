@@ -113,6 +113,16 @@ class ProductionSystem(core.ExpressObject):
             + [source.time_model for source in self.sources]
         )
         time_models += [
+            process_instance.loading_time_model
+            for process_instance in processes
+            if isinstance(process_instance, process.TransportProcess) and process_instance.loading_time_model
+        ]
+        time_models += [
+            process_instance.unloading_time_model
+            for process_instance in processes
+            if isinstance(process_instance, process.TransportProcess) and process_instance.unloading_time_model
+        ]
+        time_models += [
             s.repair_time_model
             for s in states
             if isinstance(s, state.BreakDownState)
@@ -123,6 +133,7 @@ class ProductionSystem(core.ExpressObject):
             for s in states
             if isinstance(s, state.ChargingState)
         ]
+    
         time_models = remove_duplicate_items(time_models)
 
         time_model_data = [time_model.to_model() for time_model in time_models]
@@ -152,6 +163,10 @@ class ProductionSystem(core.ExpressObject):
                 + [s._input_queues for s in self.sinks]
             )
         )
+        stores = [r.input_stores for r in self.resources if isinstance(r, resources.ProductionResource)] + [r.output_stores for r in self.resources if isinstance(r, resources.ProductionResource)]
+        stores = list(util.flatten_object(stores))
+        queue_data += [store.to_model() for store in stores]
+        queue_data = remove_duplicate_items(queue_data)
         return json_adapter.JsonProductionSystemAdapter(
             time_model_data=time_model_data,
             process_data=process_data,

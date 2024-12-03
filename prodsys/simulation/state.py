@@ -369,7 +369,6 @@ class ProductionState(State):
             self.process.interrupt()
 
 
-
 class TransportState(State):
     """
     Represents a transport state of a resource in the simulation. A transport state has a process that simulates the transport of a product. The transport state continues the transport process of a product. If a resource has a higher capacity than 1 for a process, multiple transport states exist, that can run in parallel but only with the same target and end location.
@@ -403,33 +402,28 @@ class TransportState(State):
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
 
-    def handle_loading(self, action: Literal["loading, unloading"]) -> Generator:
-        #loading_time = loading_time if loading_time is not None else self.loading_time_model.get_next_time()
+    def get_handling_time(self, action: Literal["loading, unloading"]) -> float:
         if action == "loading":
             time_model = self.loading_time_model
         elif action == "unloading":
             time_model = self.unloading_time_model
         else:
             raise ValueError(f"Unknown action {action}")
-        
-        time = time_model.get_next_time() if time_model else 0
 
-        try:
-            if self.interrupted:
-                debug_logging(self, f"interrupted during {action}")
-                yield self.env.timeout(time)
-                self.interrupted = False
-            debug_logging(self, f"loading completed")
-        except exceptions.Interrupt:
-            if not self.interrupted:
-                raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        
-    def process_state(self, target: List[float], initial_transport_step: bool, last_transport_step: bool) -> Generator:
+        return time_model.get_next_time() if time_model else 0
+
+    def process_state(self, target: List[float], empty_transport: bool, initial_transport_step: bool, last_transport_step: bool) -> Generator:
         self.done_in = self.time_model.get_next_time(
             origin=self.resource.get_location(), target=target
         )
         if initial_transport_step and hasattr(self.time_model, "reaction_time") and self.time_model.time_model_data.reaction_time:
-            self.done_in -= self.time_model.time_model_data.reaction_time
+            self.done_in += self.time_model.time_model_data.reaction_time
+        if self.loading_time_model and initial_transport_step and not empty_transport:
+            self.loading_time = self.get_handling_time("loading")
+            self.done_in += self.loading_time
+        if self.unloading_time_model and last_transport_step and not empty_transport:
+            self.unloading_time = self.get_handling_time("unloading")
+            self.done_in += self.unloading_time
         self.resource.consider_battery_usage(self.done_in)
 
         while True:
@@ -444,7 +438,6 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        yield self.env.process(self.handle_loading("loading"))
         while self.done_in:
             try:
                 if self.interrupted:
@@ -469,7 +462,6 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted")
-        yield from self.handle_loading("unloading")
         debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
         self.finished_process.succeed()

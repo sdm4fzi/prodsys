@@ -14,7 +14,7 @@ from simpy import events
 from prodsys.simulation import sim, store
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
-    from prodsys.simulation.process import PROCESS_UNION
+    # from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,

@@ -56,7 +56,7 @@ class SequentialTimeModel(core.ExpressObject):
             ID=self.ID,
             description=""
         )
-    
+
 @dataclass
 class SampleTimeModel(core.ExpressObject):
     """
@@ -91,7 +91,7 @@ class SampleTimeModel(core.ExpressObject):
             ID=self.ID,
             description=""
         )
-    
+
 @dataclass
 class ScheduledTimeModel(core.ExpressObject):
     """
@@ -174,9 +174,9 @@ class FunctionTimeModel(core.ExpressObject):
             location=self.location,
             scale=self.scale,
             ID=self.ID,
-            description=""
+            description="",
         )
-    
+
 
 @dataclass
 class DistanceTimeModel(core.ExpressObject):
@@ -268,7 +268,3 @@ TIME_MODEL_UNION = Union[
     SequentialTimeModel,
     ManhattanDistanceTimeModel,
 ]
-    
-
-
-
