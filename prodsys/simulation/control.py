@@ -11,7 +11,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# from process import Process
 from simpy import events
 
 from prodsys.simulation import node, request, route_finder, sim, state, process, router, store
@@ -335,10 +334,13 @@ class ProductionController(Controller):
         Args:
             process (process.Process): The process to check for failure rate.
         """
+        if isinstance(process, ReworkProcess):
+            return
         failure_rate = process.process_data.failure_rate
         if not failure_rate or failure_rate == 0:
             return 
         rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
+        print(f"Rework needed: {rework_needed} for product {product.product_data.ID}")
         product.rework_needed = rework_needed
         if not rework_needed:
             return
@@ -526,7 +528,6 @@ class BatchController(Controller):
             product_data_list = yield events.AllOf(resource.env, product_retrieval_events)
 
             for product_data in product_data_list.values():
-                #TODO: check for product_factory
                 simulation_product = product.product_router.product_factory.get_product(product_data.ID)
                 products.append(simulation_product)
 
@@ -924,7 +925,7 @@ class TransportController(Controller):
                 state.StateTypeEnum.transport,
             )
         input_state.process = self.env.process(
-            input_state.process_state(target=target_location, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
+            input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
         yield input_state.process
 

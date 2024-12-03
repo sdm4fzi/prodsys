@@ -19,6 +19,7 @@ from prodsys.models.core_asset import CoreAsset
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
 
+
 class ProcessTypeEnum(str, Enum):
     """
     Enum that represents the different kind of processes.
@@ -48,18 +49,19 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
-    failure_rate: Optional[float] = 0.0
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "P1",
-                "description": "Process 1",
-                "time_model_id": "function_time_model_1",
-            }
-        ]
-    })
-    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "P1",
+                    "description": "Process 1",
+                    "time_model_id": "function_time_model_1",
+                }
+            ]
+        }
+    )
+
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
         Returns a unique hash for the process data considering the time model data. Can be used to compare two process data objects for equal functionality.
@@ -70,18 +72,17 @@ class ProcessData(CoreAsset):
             ValueError: If the time model with the ID of the process is not found.
 
         Returns:
-            str: hash of the process data. 
+            str: hash of the process data.
         """
         for time_model in adapter.time_model_data:
             if time_model.ID == self.time_model_id:
                 time_model_hash = time_model.hash()
                 break
         else:
-            raise ValueError(f"Time model with ID {self.time_model_id} not found for process {self.ID}.")
-        
-        failure_rate_str = str(self.failure_rate)
-        input_hash = time_model_hash + failure_rate_str
-        return md5((input_hash).encode("utf-8")).hexdigest()
+            raise ValueError(
+                f"Time model with ID {self.time_model_id} not found for process {self.ID}."
+            )
+        return md5((time_model_hash).encode("utf-8")).hexdigest()
 
 
 class ProductionProcessData(ProcessData):
@@ -93,6 +94,7 @@ class ProductionProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.ProductionProcesses]): Type of the process.
+        failure_rate (Optional[float], optional): Failure rate of the process. Defaults to 0.0.
 
     Examples:
         A production process with ID "P1", description "Process 1" and time model ID "function_time_model_1":
@@ -106,19 +108,36 @@ class ProductionProcessData(ProcessData):
         )
         ```
     """
-
     type: Literal[ProcessTypeEnum.ProductionProcesses]
+    failure_rate: Optional[float] = 0.0
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "P1",
-                "description": "Process 1",
-                "time_model_id": "function_time_model_1",
-                "type": "ProductionProcesses",
-            }
-        ]
-    })
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "P1",
+                    "description": "Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "ProductionProcesses",
+                }
+            ]
+        }
+    )
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the production process data considering the time model data. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the production process data.
+        """
+        base_class_hash = super().hash(adapter)
+        failure_rate_hash = str(self.failure_rate)
+        return md5((base_class_hash + failure_rate_hash).encode("utf-8")).hexdigest()
 
 
 class CapabilityProcessData(ProcessData):
@@ -131,6 +150,7 @@ class CapabilityProcessData(ProcessData):
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.CapabilityProcesses]): Type of the process.
         capability (str): Capability of the process.
+        failure_rate (Optional[float], optional): Failure rate of the process. Defaults to 0.0.
 
     Examples:
         A capability process with ID "P1", description "Process 1", time model ID "function_time_model_1" and capability "C1":
@@ -148,18 +168,21 @@ class CapabilityProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.CapabilityProcesses]
     capability: str
+    failure_rate: Optional[float] = 0.0
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "P1",
-                "description": "Process 1",
-                "time_model_id": "function_time_model_1",
-                "type": "CapabilityProcesses",
-                "capability": "C1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "P1",
+                    "description": "Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "CapabilityProcesses",
+                    "capability": "C1",
+                }
+            ]
+        }
+    )
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -172,7 +195,8 @@ class CapabilityProcessData(ProcessData):
             str: hash of the capability process data.
         """
         base_class_hash = super().hash(adapter)
-        return md5((base_class_hash + self.capability).encode("utf-8")).hexdigest()
+        return md5((base_class_hash + self.capability + str(self.failure_rate)).encode("utf-8")).hexdigest()
+
 
 class TransportProcessData(ProcessData):
     """
@@ -183,8 +207,8 @@ class TransportProcessData(ProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        loading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
-        unloading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        loading_time_model_id (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        unloading_time_model_id (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
 
     Examples:
         A transport process with ID "TP1", description "Transport Process 1" and time model ID "manhattan_time_model_1":
@@ -195,29 +219,61 @@ class TransportProcessData(ProcessData):
             description="Transport Process 1",
             time_model_id="manhattan_time_model_1",
             type="TransportProcesses",
-            loading_time_model="function_time_model_2",
-            unloading_time_model="function_time_model_3",
+            loading_time_model_id="function_time_model_2",
+            unloading_time_model_id="function_time_model_3",
         )
         ```
     """
 
     type: Literal[ProcessTypeEnum.TransportProcesses]
-    loading_time_model: Optional[str] = None
-    unloading_time_model: Optional[str] = None
+    loading_time_model_id: Optional[str] = None
+    unloading_time_model_id: Optional[str] = None
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "TP1",
-                "description": "Transport Process 1",
-                "time_model_id": "manhattan_time_model_1",
-                "type": "TransportProcesses",
-                "loading_time_model": "function_time_model_2",
-                "unloading_time_model": "function_time_model_3",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "TP1",
+                    "description": "Transport Process 1",
+                    "time_model_id": "manhattan_time_model_1",
+                    "type": "TransportProcesses",
+                    "loading_time_model_id": "function_time_model_2",
+                    "unloading_time_model_id": "function_time_model_3",
+                }
+            ]
+        }
+    )
 
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the required capability process data.
+        """
+        base_class_hash = super().hash(adapter)
+        loading_time_model_hash = ""
+        unloading_time_model_hash = ""
+
+        if self.loading_time_model_id:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == self.loading_time_model_id:
+                    loading_time_model_hash = time_model.hash()
+                    break
+
+        if self.unloading_time_model_id:
+            for time_model in adapter.time_model_data:
+                if time_model.ID == self.unloading_time_model_id:
+                    unloading_time_model_hash = time_model.hash()
+                    break
+        input_data = (
+            base_class_hash + loading_time_model_hash + unloading_time_model_hash
+        )
+
+        return md5(input_data.encode("utf-8")).hexdigest()
 
 
 class ReworkProcessData(ProcessData):
@@ -249,44 +305,50 @@ class ReworkProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ReworkProcesses]
     reworked_process_ids: List[str]
-    blocking: bool 
+    blocking: bool
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "summary": "Rework process",
-                "ID": "RP1",
-                "description": "Rework Process 1",
-                "time_model_id": "function_time_model_1",
-                "type": "ProductionProcesses",
-                "reworked_process_ids": ["P1", "P2"],
-                "blocking": True,
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "summary": "Rework process",
+                    "ID": "RP1",
+                    "description": "Rework Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "ProductionProcesses",
+                    "reworked_process_ids": ["P1", "P2"],
+                    "blocking": True,
+                }
+            ]
+        }
+    )
+
 
 class CompoundProcessData(CoreAsset):
     """
     Class that represents a compound process. A compound process is a container for multiple processes that belong together, e.g. if a hardware module enables all processes of a CompoundProcess or if multiple similar processes can be performed.
-    
+
     Args:
         ID (str): ID of the process module.
         description (str): Description of the process module.
         process_ids (List[str]): Process IDs of the process module.
     """
+
     process_ids: List[str]
     type: Literal[ProcessTypeEnum.CompoundProcesses]
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "CP1",
-                "description": "Compound Process 1",
-                "process_ids": ["P1", "P2"],
-                "type": "CompoundProcesses",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "CP1",
+                    "description": "Compound Process 1",
+                    "process_ids": ["P1", "P2"],
+                    "type": "CompoundProcesses",
+                }
+            ]
+        }
+    )
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -308,9 +370,10 @@ class CompoundProcessData(CoreAsset):
                     process_hashes.append(process.hash(adapter))
                     break
             else:
-                raise ValueError(f"Process with ID {process_id} not found for compound process {self.ID}.")
+                raise ValueError(
+                    f"Process with ID {process_id} not found for compound process {self.ID}."
+                )
         return md5("".join([*sorted(process_hashes)]).encode("utf-8")).hexdigest()
-
 
 
 class RequiredCapabilityProcessData(CoreAsset):
@@ -339,16 +402,18 @@ class RequiredCapabilityProcessData(CoreAsset):
     type: Literal[ProcessTypeEnum.RequiredCapabilityProcesses]
     capability: str
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "P1",
-                "description": "Process 1",
-                "type": "RequiredCapabilityProcesses",
-                "capability": "C1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "P1",
+                    "description": "Process 1",
+                    "type": "RequiredCapabilityProcesses",
+                    "capability": "C1",
+                }
+            ]
+        }
+    )
 
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
@@ -372,8 +437,8 @@ class LinkTransportProcessData(TransportProcessData):
         description (str): Description of the process.
         time_model_id (str): ID of the time model of the process.
         type (Literal[ProcessTypeEnum.TransportProcesses]): Type of the process.
-        loading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
-        unloading_time_model (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        loading_time_model_id (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
+        unloading_time_model_id (Optional[str], optional): ID of the loading time model of the process. Defaults to None.
         links (Union[List[List[str]], Dict[str, List[str]]]): Links of the route transport process. This can be a list of links or a dictionary of links with their IDs as keys.
         capability (Optional[str], optional): Capability of the process, which is used for matching if available. Defaults to None.
 
@@ -397,7 +462,6 @@ class LinkTransportProcessData(TransportProcessData):
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
 
-
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
@@ -409,46 +473,34 @@ class LinkTransportProcessData(TransportProcessData):
             str: hash of the required capability process data.
         """
         base_class_hash = super().hash(adapter)
-        loading_time_model_hash = ""
-        unloading_time_model_hash = ""
-
-        if self.loading_time_model:
-            for time_model in adapter.time_model_data:
-                if time_model.ID == self.loading_time_model:
-                    loading_time_model_hash = time_model.hash()
-                    break
-
-        if self.unloading_time_model:
-            for time_model in adapter.time_model_data:
-                if time_model.ID == self.unloading_time_model:
-                    unloading_time_model_hash = time_model.hash()
-                    break
 
         sorted_links = sorted(["-".join(link) for link in self.links])
 
-        input_data = (
-            base_class_hash +
-            "".join(sorted_links) +
-            self.capability +
-            loading_time_model_hash +
-            unloading_time_model_hash
-        )
+        input_data = base_class_hash + "".join(sorted_links) + self.capability
 
         return md5(input_data.encode("utf-8")).hexdigest()
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "TP1",
-                "description": "Transport Process 1",
-                "time_model_id": "manhattan_time_model_1",
-                "type": "LinkTransportProcesses",
-                "links": [["Resource1", "Node2"], ["Node2", "Resource1"]]
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "TP1",
+                    "description": "Transport Process 1",
+                    "time_model_id": "manhattan_time_model_1",
+                    "type": "LinkTransportProcesses",
+                    "links": [["Resource1", "Node2"], ["Node2", "Resource1"]],
+                }
+            ]
+        }
+    )
+
 
 PROCESS_DATA_UNION = Union[
-    CompoundProcessData, RequiredCapabilityProcessData,
-    ProductionProcessData, TransportProcessData, CapabilityProcessData, LinkTransportProcessData, ReworkProcessData
+    CompoundProcessData,
+    RequiredCapabilityProcessData,
+    ProductionProcessData,
+    TransportProcessData,
+    CapabilityProcessData,
+    LinkTransportProcessData,
+    ReworkProcessData,
 ]

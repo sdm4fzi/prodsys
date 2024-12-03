@@ -15,7 +15,8 @@ from prodsys.models.resource_data import (
     ProductionResourceData,
     TransportResourceData,
     ControllerEnum,
-    ResourceControlPolicy, TransportControlPolicy
+    ResourceControlPolicy,
+    TransportControlPolicy,
 )
 from prodsys.factories import process_factory, state_factory, queue_factory
 
@@ -38,9 +39,8 @@ CONTROL_POLICY_DICT: Dict = {
     ResourceControlPolicy.LIFO: control.LIFO_control_policy,
     ResourceControlPolicy.SPT: control.SPT_control_policy,
     TransportControlPolicy.SPT_transport: control.SPT_transport_control_policy,
-    TransportControlPolicy.NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT : control.nearest_origin_and_longest_target_queues_transport_control_policy,
-    TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT : control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
-
+    TransportControlPolicy.NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT: control.nearest_origin_and_longest_target_queues_transport_control_policy,
+    TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT: control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
 }
 
 
@@ -53,6 +53,7 @@ def register_states(
         copy_state = copy.deepcopy(actual_state)
         copy_state.env = _env
         resource.add_state(copy_state)
+
 
 def register_production_states(
     resource: resources.Resource,
@@ -72,7 +73,10 @@ def register_production_states_for_processes(
     _env: sim.Environment,
 ):
     states: List[state.State] = []
-    for process_instance, capacity in zip(resource.processes, resource.data.process_capacities):
+    for process_instance, capacity in zip(
+        resource.processes, resource.data.process_capacities
+    ):
+        process_instance: process.PROCESS_UNION
         values = {
             "new_state": {
                 "ID": process_instance.process_data.ID,
@@ -80,28 +84,60 @@ def register_production_states_for_processes(
                 "time_model_id": process_instance.process_data.time_model_id,
             }
         }
-        existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
-        if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess) or isinstance(process_instance, process.ReworkProcess)) and not existence_condition:
-            state_factory.create_states_from_configuration_data({"ProductionState": values})
-        elif isinstance(process_instance, (process.TransportProcess, process.LinkTransportProcess)) and not existence_condition:
-            if "loading_time_model" in process_instance.process_data.model_dump():
-                values["new_state"]["loading_time_model"] = process_instance.process_data.loading_time_model
-            if "unloading_time_model" in process_instance.process_data.model_dump():
-                values["new_state"]["unloading_time_model"] = process_instance.process_data.unloading_time_model
-            state_factory.create_states_from_configuration_data({"TransportState": values})
+        existence_condition = any(
+            True
+            for state in state_factory.states
+            if state.state_data.ID == process_instance.process_data.ID
+        )
+        if (
+            isinstance(process_instance, process.ProductionProcess)
+            or isinstance(process_instance, process.CapabilityProcess)
+            or isinstance(process_instance, process.ReworkProcess)
+        ) and not existence_condition:
+            state_factory.create_states_from_configuration_data(
+                {"ProductionState": values}
+            )
+        elif (
+            isinstance(
+                process_instance,
+                (process.TransportProcess, process.LinkTransportProcess),
+            )
+            and not existence_condition
+        ):
+            if "loading_time_model_id" in process_instance.process_data.model_dump():
+                values["new_state"][
+                    "loading_time_model"
+                ] = process_instance.process_data.loading_time_model_id
+            if "unloading_time_model_id" in process_instance.process_data.model_dump():
+                values["new_state"][
+                    "unloading_time_model"
+                ] = process_instance.process_data.unloading_time_model_id
+            state_factory.create_states_from_configuration_data(
+                {"TransportState": values}
+            )
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)  # type: ignore
+
 
 def adjust_process_breakdown_states(
     resource: resources.Resource,
     state_factory: state_factory.StateFactory,
     _env: sim.Environment,
-):  
-    process_breakdown_states = [state_instance for state_instance in resource.states if isinstance(state_instance, state.ProcessBreakDownState)]
+):
+    process_breakdown_states = [
+        state_instance
+        for state_instance in resource.states
+        if isinstance(state_instance, state.ProcessBreakDownState)
+    ]
     for process_breakdown_state in process_breakdown_states:
         process_id = process_breakdown_state.state_data.process_id
-        production_states = [state_instance for state_instance in resource.production_states if isinstance(state_instance, state.ProductionState) and state_instance.state_data.ID == process_id]
+        production_states = [
+            state_instance
+            for state_instance in resource.production_states
+            if isinstance(state_instance, state.ProductionState)
+            and state_instance.state_data.ID == process_id
+        ]
         process_breakdown_state.set_production_states(production_states)
 
 
@@ -115,6 +151,7 @@ class ResourceFactory(BaseModel):
         state_factory (state_factory.StateFactory): Factory that creates state objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
+
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     state_factory: state_factory.StateFactory
@@ -123,7 +160,11 @@ class ResourceFactory(BaseModel):
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[RESOURCE_UNION] = []
     controllers: List[
-        Union[control.ProductionController, control.TransportController, control.BatchController]
+        Union[
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
+        ]
     ] = []
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -156,8 +197,10 @@ class ResourceFactory(BaseModel):
 
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
-        processes = self.process_factory.get_processes_in_order(resource_data.process_ids)
-        
+        processes = self.process_factory.get_processes_in_order(
+            resource_data.process_ids
+        )
+
         values.update({"processes": processes})
 
         controller_class = get_class_from_str(
@@ -167,7 +210,9 @@ class ResourceFactory(BaseModel):
             name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
         )
         controller: Union[
-            control.ProductionController, control.TransportController, control.BatchController
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env)
         self.controllers.append(controller)
         values.update({"controller": controller})
@@ -175,7 +220,7 @@ class ResourceFactory(BaseModel):
         if isinstance(resource_data, ProductionResourceData):
             input_queues, output_queues = self.get_queues_for_resource(resource_data)
             values.update(
-            {"input_queues": input_queues, "output_queues": output_queues}
+                {"input_queues": input_queues, "output_queues": output_queues}
             )
             if "batch_size" in resource_data:
                 values.update({"batch_size": resource_data.batch_size})
@@ -213,10 +258,13 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
-
-    def get_controller_of_resource(
-        self, _resource: resources.Resource
-    ) -> Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]:
+    def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
+        Union[
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
+        ]
+    ]:
         """
         Method returns the controller of the given resource.
 
@@ -259,7 +307,7 @@ class ResourceFactory(BaseModel):
             for res in self.resources
             if target_process.process_data.ID in res.data.process_ids
         ]
-    
+
     def get_transport_resources(self) -> List[resources.TransportResource]:
         """
         Method returns a list of transport resource objects.
@@ -268,7 +316,6 @@ class ResourceFactory(BaseModel):
             List[resources.TransportResource]: List of transport resource objects.
         """
         return [r for r in self.resources if isinstance(r, resources.TransportResource)]
-    
 
     def get_production_resources(self) -> List[resources.ProductionResource]:
         """
@@ -277,4 +324,6 @@ class ResourceFactory(BaseModel):
         Returns:
             List[resources.ProductionResource]: List of production resource objects.
         """
-        return [r for r in self.resources if isinstance(r, resources.ProductionResource)]
+        return [
+            r for r in self.resources if isinstance(r, resources.ProductionResource)
+        ]

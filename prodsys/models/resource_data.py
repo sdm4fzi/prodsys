@@ -9,10 +9,10 @@ The following resources are available:
 
 from __future__ import annotations
 from hashlib import md5
-from typing import Literal, Union, List, Optional, TYPE_CHECKING
+from typing import Any, Literal, Union, List, Optional, TYPE_CHECKING
 from enum import Enum
 
-from pydantic import ConfigDict, model_validator, conlist
+from pydantic import ConfigDict, ValidationInfo, field_validator, model_validator, conlist
 from prodsys.models.core_asset import CoreAsset, InOutLocatable, Locatable
 
 if TYPE_CHECKING:
@@ -196,6 +196,18 @@ class ProductionResourceData(ResourceData, InOutLocatable):
     output_queues: List[str] = []
     batch_size: Optional[int] = None
 
+    @model_validator(mode="before")
+    def validate_batch_size(cls, data: Any):
+        if not isinstance(data, dict):
+            return data
+        if ("batch_size" in data and data["batch_size"] is not None) and data["controller"] != ControllerEnum.BatchController:
+            raise ValueError("Batch size can only be set for resources with a BatchController.")
+        if ("batch_size" not in data or data["batch_size"] is None) and data["controller"] == ControllerEnum.BatchController:
+            raise ValueError("Batch size has to be set for resources with a BatchController.")
+        if ("batch_size" in data and data["batch_size"] is not None) and data["batch_size"] > data["capacity"]:
+            raise ValueError("Batch size cannot be greater than the capacity of the resource.")
+        return data
+
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
         Returns a unique hash of the resource considering the capacity, location, controller, processes, process capacities, states, input queues and output queues. Can be used to compare resources for equal functionality.
@@ -217,7 +229,9 @@ class ProductionResourceData(ResourceData, InOutLocatable):
                     queue_hashes.append(queue.hash())
                     break
             else:
-                raise ValueError(f"Queue with ID {queue_id} not found for resource {self.ID}.")
+                raise ValueError(
+                    f"Queue with ID {queue_id} not found for resource {self.ID}."
+                )
 
         return md5(("".join([base_class_hash, *sorted(queue_hashes)])).encode("utf-8")).hexdigest()
 

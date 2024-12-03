@@ -45,7 +45,7 @@ def plot_throughput_time_distribution(post_processor: post_processing.PostProces
         image_path = os.path.join(os.getcwd(), "plots", "throughput_time_distribution.png")
         fig.write_image(image_path)
         return image_path
-    
+
 def plot_line_balance_kpis(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """
     Plots line balancing key performance indicators (throughput, WIP, and Throughput Time) after total time.
@@ -260,9 +260,6 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
     df_tp = post_processor.df_throughput
-    simulation_time = post_processor.get_total_simulation_time()
-
-    x_position_15_percent = 0.15 * simulation_time
 
     fig = px.scatter(
         df_tp,
@@ -279,13 +276,15 @@ def plot_throughput_time_over_time(post_processor: post_processing.PostProcessor
     )
     min_start_time = df_tp["Start_time"].min()
     max_start_time = df_tp["Start_time"].max()
-    
-    new_x_range = [min(min_start_time, x_position_15_percent), max(max_start_time, x_position_15_percent)]
-    
+
+    warum_up_cut_off_time = post_processor.warm_up_cutoff_time
+
+    new_x_range = [min_start_time, max_start_time]
+
     fig.update_layout(xaxis_range=new_x_range)
-    
+
     fig.add_vline(
-        x=x_position_15_percent, 
+        x=warum_up_cut_off_time, 
         line_dash="dash", 
         line_color="red",
         annotation_text="Steady State",
@@ -544,7 +543,7 @@ def plot_WIP(post_processor: post_processing.PostProcessor, return_html: bool = 
         image_path = os.path.join(os.getcwd(), "plots", "WIP.png")
         fig.write_image(image_path)
         return image_path
-    
+
 
 def plot_auxiliary_WIP(post_processor: post_processing.PostProcessor, return_html: bool = False, return_image: bool = False):
     """

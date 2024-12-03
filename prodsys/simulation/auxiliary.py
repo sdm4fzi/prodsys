@@ -187,8 +187,7 @@ class Auxiliary(BaseModel):
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def init_got_free(self):
         """

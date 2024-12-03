@@ -37,8 +37,8 @@ def charging_simulation_adapter() -> JsonProductionSystemAdapter:
     sink2 = psx.Sink(product2, [10, 0], "sink2")
 
 
-    arrival_model_1 = psx.FunctionTimeModel("exponential", 1, ID="arrival_model_1")
-    arrival_model_2 = psx.FunctionTimeModel("exponential", 2, ID="arrival_model_2")
+    arrival_model_1 = psx.FunctionTimeModel("exponential", 2, ID="arrival_model_1")
+    arrival_model_2 = psx.FunctionTimeModel("exponential", 3, ID="arrival_model_2")
 
 
     source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
@@ -61,22 +61,23 @@ def test_run_simulation(charging_simulation_adapter: JsonProductionSystemAdapter
     runner_instance = runner.Runner(adapter=charging_simulation_adapter)   
     runner_instance.initialize_simulation()
     runner_instance.run(4000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 4000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
-            assert kpi.value > 3340 and kpi.value < 3350
+            assert kpi.value > 2000 and kpi.value < 2020
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 73 and kpi.value > 69
+            assert kpi.value < 42 and kpi.value > 40
 
         if kpi.name == "charging_time" and kpi.resource == "transport":
-            assert kpi.value < 12.5 and kpi.value > 11.5
+            assert kpi.value < 11 and kpi.value > 10
         
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 82 and kpi.value > 78
+            assert kpi.value < 8 and kpi.value > 6
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
-        if kpi.name == "throughput_time":
-            assert kpi.value < 82 and kpi.value > 78
+        if kpi.name == "throughput_time" and kpi.product_type == "product1":
+            assert kpi.value < 12 and kpi.value > 11

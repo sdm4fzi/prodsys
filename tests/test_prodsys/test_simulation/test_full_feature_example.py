@@ -13,13 +13,11 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     tm_p4 = psx.FunctionTimeModel("lognormal", 1.5, 0.4, "tm_p4")
     tm_p5 = psx.FunctionTimeModel("exponential", 1, ID="tm_p5")
 
-
     tm_cp1 = psx.FunctionTimeModel("normal", 1, 0.1, "tm_cp1")
     tm_cp2 = psx.FunctionTimeModel("normal", 2, 0.5, "tm_cp2")
     tm_cp3 = psx.SampleTimeModel([1.6, 0.7, 1.4, 0.6], "tm_cp3")
 
     tm_tp = psx.DistanceTimeModel(120, 0.1, "manhattan", "tm_tp")
-
 
     tm_p1_p2 = psx.FunctionTimeModel("exponential", 0.4, ID="s1")
     tm_p2_p1 = psx.FunctionTimeModel("exponential", 0.6, ID="s2")
@@ -32,10 +30,8 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     tm_transport_breakdown = psx.FunctionTimeModel("exponential", 530, ID="tm_transport_breakdown")
     tm_transport_repair = psx.FunctionTimeModel("exponential", 45, ID="tm_transport_repair")
 
-
     tm_p1_process_breakdown = psx.FunctionTimeModel("exponential", 540, ID="tm_p1_process_breakdown")
     tm_p1_process_repair = psx.FunctionTimeModel("exponential", 30, ID="tm_p1_process_repair")
-
 
     tm_arrival_model_1 = psx.FunctionTimeModel("exponential", 5.2, ID="tm_arrival_model_1")
     tm_arrival_model_2 = psx.FunctionTimeModel("exponential", 4.3, ID="tm_arrival_model_2")
@@ -49,9 +45,9 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     p4 = psx.ProductionProcess(tm_p4, "p4")
     p5 = psx.ProductionProcess(tm_p5, "p5")
 
-    cp1 = psx.CapabilityProcess(tm_cp1, "p1", "cp1")
-    cp2 = psx.CapabilityProcess(tm_cp2, "p2", "cp2")
-    cp3 = psx.CapabilityProcess(tm_cp3, "p3", "cp3")
+    cp1 = psx.CapabilityProcess(tm_cp1, "p1", ID="cp1")
+    cp2 = psx.CapabilityProcess(tm_cp2, "p2", ID="cp2")
+    cp3 = psx.CapabilityProcess(tm_cp3, "p3", ID="cp3")
 
     tp = psx.TransportProcess(tm_tp, "tp")
 
@@ -64,12 +60,9 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     setup_state_3 = psx.SetupState(tm_p4_p5, p4, p5, "setup_state_3")
     setup_state_4 = psx.SetupState(tm_p5_p4, p5, p4, "setup_state_4")
 
-
     breakdown_state_1 = psx.BreakDownState(tm_resource_breakdown, tm_resource_repair, "breakdown_state_1")
     breakdown_state_2 = psx.BreakDownState(tm_transport_breakdown, tm_transport_repair, "breakdown_state_2")
     breakdown_state_3 = psx.BreakDownState(tm_p1_process_breakdown, tm_p1_process_repair, "breakdown_state_3")
-
-
 
     # All resources
     machine_1 = psx.ProductionResource([p1, p2, cp1, cp2], [5,0], 1, states=[setup_state_1, setup_state_2, setup_state_c1, setup_state_c2, breakdown_state_1, breakdown_state_3], ID="machine_1")
@@ -91,12 +84,10 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     product3 = psx.Product([cp1, cp2, cp3], tp, "product3")
     product4 = psx.Product([p1, p3, p4, p3, p5], tp, "product4")
 
-
     sink1 = psx.Sink(product1, [10, 0], "sink1")
     sink2 = psx.Sink(product2, [10, 0], "sink2")
     sink3 = psx.Sink(product3, [10, 0], "sink3")
     sink4 = psx.Sink(product4, [10, 0], "sink4")
-
 
     source1 = psx.Source(product1, tm_arrival_model_1, [0, 0], ID="source_1")
     source2 = psx.Source(product2, tm_arrival_model_2, [0, 0], ID="source_2")
