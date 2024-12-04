@@ -6,13 +6,12 @@ from typing import TYPE_CHECKING, Union, List, Optional
 from pydantic import BaseModel
 
 
-
 if TYPE_CHECKING:
     from prodsys.simulation.resources import ProductionResource, TransportResource
     from prodsys.simulation.source import Source
     from prodsys.simulation.sink import Sink
     from prodsys.simulation.node import Node
-    from prodsys.simulation import request
+    from prodsys.simulation import request as request_module
 from prodsys.simulation import route_finder, time_model
 
 from prodsys.models import processes_data
@@ -28,7 +27,7 @@ class Process(ABC, BaseModel):
     failure_rate: Optional[float] = None
 
     @abstractmethod
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         """
         Returns True if the process matches the request.
 
@@ -71,7 +70,7 @@ class ProductionProcess(Process):
 
     process_data: processes_data.ProductionProcessData
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if not isinstance(requested_process, ProductionProcess) and not isinstance(
             requested_process, CompoundProcess
@@ -98,7 +97,7 @@ class CapabilityProcess(Process):
     """
     process_data: processes_data.CapabilityProcessData
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if (
             not is_process_with_capability(requested_process) and not isinstance(requested_process, CompoundProcess)
@@ -129,7 +128,7 @@ class TransportProcess(Process):
     """
     process_data: processes_data.TransportProcessData
 
-    def matches_request(self, request: request.TransportResquest) -> bool:
+    def matches_request(self, request: request_module.TransportResquest) -> bool:
         requested_process = request.process
         if not isinstance(requested_process, TransportProcess) and not isinstance(
             requested_process, CompoundProcess
@@ -147,7 +146,7 @@ class TransportProcess(Process):
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
-    
+
 def is_process_with_capability(process: "PROCESS_UNION") -> bool:
     """
     Returns True if the given process is a process with capability.
@@ -192,7 +191,7 @@ class CompoundProcess(Process):
         ]
     ]
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if isinstance(requested_process, ProductionProcess) or isinstance(
             requested_process, TransportProcess
@@ -237,7 +236,7 @@ class RequiredCapabilityProcess(Process):
     """
     process_data: processes_data.RequiredCapabilityProcessData
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         raise NotImplementedError("RequiredCapabilityProcess does not match requests but only generates them.")
 
     def get_process_time(self) -> float:
@@ -249,7 +248,7 @@ class RequiredCapabilityProcess(Process):
         raise NotImplementedError(
             "RequiredCapabilityProcess does not have a process time."
         )
-    
+
 class ReworkProcess(Process):
     """
     Class that represents a rework process.
@@ -258,15 +257,20 @@ class ReworkProcess(Process):
     reworked_process_ids: List[str]
     blocking: bool 
 
-    def matches_request(self, request: request.Request) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
-        if not isinstance(requested_process, ProductionProcess) and not isinstance(requested_process, CompoundProcess) and not isinstance(requested_process, ReworkProcess):
+        if not isinstance(request, request_module.ReworkRequest):
+            if not isinstance(requested_process, ReworkProcess):
+                return False
+            return requested_process.process_data.ID == self.process_data.ID
+
+        if not isinstance(requested_process, (ProductionProcess, CapabilityProcess, CompoundProcess)):
             return False
+
         if isinstance(requested_process, CompoundProcess):
             return any(reworked_process_id in requested_process.process_data.process_ids for reworked_process_id in self.reworked_process_ids)
-        if isinstance(requested_process, ReworkProcess):
-            return True
-        return requested_process.process_data.ID in self.reworked_process_ids
+        else:
+            return requested_process.process_data.ID in self.reworked_process_ids
 
     def get_process_time(self) -> float:
         return self.time_model.get_next_time()
@@ -281,14 +285,19 @@ class LinkTransportProcess(TransportProcess):
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[Node, Source, Sink, ProductionResource]]]]
 
-    def matches_request(self, request: Union[request.TransportResquest, request.AuxiliaryRequest]) -> bool:
+    def matches_request(
+        self,
+        request: Union[
+            request_module.TransportResquest, request_module.AuxiliaryRequest
+        ],
+    ) -> bool:
         requested_process = request.process
 
         if not isinstance(requested_process, LinkTransportProcess) and not isinstance(requested_process, RequiredCapabilityProcess) and not isinstance(
             requested_process, CompoundProcess
         ):
             return False
-        
+
         if isinstance(requested_process, CompoundProcess):
             possible_processes = []
             for process_data_instance in requested_process.contained_processes_data:
@@ -304,19 +313,19 @@ class LinkTransportProcess(TransportProcess):
                 return False
             elif hasattr(request, "auxiliary") and requested_process.process_data.capability == self.process_data.capability:
                 return True
-        
+
         if isinstance(requested_process, LinkTransportProcess):
             if not requested_process.process_data.ID == self.process_data.ID:
                 return False
             elif hasattr(request, "auxiliary") and requested_process.process_data.ID == self.process_data.ID:
                 return True
-            
+
         route = route_finder.find_route(request=request, process=self)
         if not route:
             return False
         return True
-    
-    def get_process_time(self, request: request.TransportResquest) -> float:
+
+    def get_process_time(self, request: request_module.TransportResquest) -> float:
         route = request.get_route()
         total_time = 0
         link_route = [route[i:i+2] for i in range(len(route)-1)]
@@ -328,8 +337,7 @@ class LinkTransportProcess(TransportProcess):
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
-    
-    
+
 
 PROCESS_UNION = Union[
     CompoundProcess,
@@ -347,6 +355,6 @@ from prodsys.simulation.resources import ProductionResource, TransportResource
 from prodsys.simulation.source import Source
 from prodsys.simulation.sink import Sink
 from prodsys.simulation.node import Node
-from prodsys.simulation import request
+from prodsys.simulation import request as request_module
 # LinkTransportProcess.model_rebuild()
 Process.model_rebuild()

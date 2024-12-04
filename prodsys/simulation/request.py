@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
 
+
 if TYPE_CHECKING:
     from prodsys.simulation.product import Product, Locatable
     from prodsys.simulation.process import (
         PROCESS_UNION,
         TransportProcess,
         LinkTransportProcess,
+        CapabilityProcess,
+        ProductionProcess
     )
     from prodsys.simulation.resources import Resource, TransportResource
     from prodsys.simulation.sink import Sink
@@ -81,6 +84,22 @@ class ToTransportRequest(Request):
         self.product = product
         self.process = None
 
+
+class ReworkRequest(Request):
+    """
+    Class to represents requests of a product for a rework process to be executed by a resource.
+
+    Args:
+        Request (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    def __init__(self, failed_process: ProductionProcess | CapabilityProcess, product: Product):
+        self.process = failed_process
+        self.product = product
+        self.resource = None
 
 class AuxiliaryRequest(Request):
     """

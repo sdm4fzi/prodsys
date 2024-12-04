@@ -736,27 +736,28 @@ class Router:
 
     def get_rework_processes(
         self, product: product.Product, failed_process: process.Process
-    ) -> process.Process:
+    ) -> list[process.ReworkProcess]:
         """
         Returns a list of possible rework requests with different resources and processes for the rework process of a product.
 
         Args:
             product (product.Product): The product to get the rework request for.
+            failed_process (process.Process): The failed process.
 
         Returns:
-            List[request.Request]: A list of possible rework requests for the rework process of the product.
+            list[process.ReworkProcess]: A list of possible rework processes for the product.
         """
-
+        possible_rework_processes = []
         for potential_rework_process in self.resource_factory.process_factory.processes:
             if isinstance(potential_rework_process, ReworkProcess):
-                rework_request = request.Request(
-                    process=failed_process,
+                rework_request = request.ReworkRequest(
+                    failed_process=failed_process,
                     product=product,
-                    resource=None,
                 )
-                if potential_rework_process.matches_request(rework_request):
-                    return [potential_rework_process]
-        return None
+                if not potential_rework_process.matches_request(rework_request):
+                    continue
+                possible_rework_processes.append(potential_rework_process)
+        return possible_rework_processes 
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """
