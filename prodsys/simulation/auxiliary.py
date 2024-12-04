@@ -51,7 +51,7 @@ class AuxiliaryInfo(BaseModel):
 
     def log_create_auxiliary(
         self,
-        resource: Union[resources.Resource, sink.Sink, source.Source, store.Queue],
+        resource: Union[resources.Resource, sink.Sink, source.Source, store.Store],
         _product: Auxiliary,
         event_time: float,
     ) -> None:
@@ -59,7 +59,7 @@ class AuxiliaryInfo(BaseModel):
         Logs the creation of an auxiliary.
 
         Args:
-            resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
+            resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the auxiliary.
             _product (Product): Product that is created.
             event_time (float): Time of the event.
         """
@@ -173,13 +173,13 @@ class Auxiliary(BaseModel):
     env: sim.Environment
     data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
-    storage: store.Queue
+    storage: store.Store
     relevant_processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
     relevant_transport_processes: List[process.TransportProcess]
 
     
     auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
-    current_locatable: Union[product.Locatable, store.Queue] = Field(default=None, init=False)
+    current_locatable: Union[product.Locatable, store.Store] = Field(default=None, init=False)
     current_product: product.Product = Field(default=None, init=False)
     reserved: bool = Field(default=False, init=False)
     got_free: events.Event = Field(default=None, init=False)
@@ -187,8 +187,7 @@ class Auxiliary(BaseModel):
     auxiliary_info: AuxiliaryInfo = AuxiliaryInfo()
 
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def init_got_free(self):
         """

@@ -1,16 +1,16 @@
 from __future__ import annotations
 from hashlib import md5
-from typing import List, Optional, TYPE_CHECKING
-from pydantic import ConfigDict, conlist
+from typing import List, TYPE_CHECKING
+from pydantic import ConfigDict
 
-from prodsys.models.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter
 
 
 
-class SinkData(CoreAsset):
+class SinkData(CoreAsset, Locatable):
     """
     Class that represents a sink.
 
@@ -34,8 +34,6 @@ class SinkData(CoreAsset):
         )
         ```
     """
-
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
     product_type: str
     input_queues: List[str] = []
 
@@ -44,7 +42,7 @@ class SinkData(CoreAsset):
             {
                 "ID": "SK1",
                 "description": "Sink 1",
-                "location": [50.0, 50.0],
+                "input_location": [50.0, 50.0],
                 "product_type": "Product_1",
                 "input_queues": ["SinkQueue"],
             }
@@ -64,6 +62,7 @@ class SinkData(CoreAsset):
         Returns:
             str: Hash of the sink.
         """
+        base_class_hash = Locatable.hash(self)
         for product in adapter.product_data:
             if product.product_type == self.product_type:
                 product_hash = product.hash(adapter)
@@ -80,4 +79,4 @@ class SinkData(CoreAsset):
             else:
                 raise ValueError(f"Queue with ID {queue_id} not found for sink {self.ID}.")
 
-        return md5("".join([*map(str, self.location), product_hash, *sorted(input_queue_hashes)]).encode("utf-8")).hexdigest()
+        return md5("".join([base_class_hash, product_hash, *sorted(input_queue_hashes)]).encode("utf-8")).hexdigest()

@@ -244,6 +244,14 @@
                 0.0,
                 0.0
             ],
+            "input_location": [
+                0.0,
+                0.0
+            ],
+            "output_location": [
+                0.0,
+                1.0
+            ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
             "process_ids": [
@@ -271,6 +279,14 @@
             "location": [
                 0.0,
                 5.0
+            ],
+            "input_location": [
+                0.0,
+                5.0
+            ],
+            "output_location": [
+                0.0,
+                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "SPT",
@@ -300,6 +316,14 @@
                 5.0,
                 0.0
             ],
+            "input_location": [
+                5.0,
+                0.0
+            ],
+            "output_location": [
+                4.0,
+                1.0
+            ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
             "process_ids": [
@@ -325,6 +349,14 @@
             "location": [
                 5.0,
                 5.0
+            ],
+            "input_location": [
+                5.0,
+                5.0
+            ],
+            "output_location": [
+                6.0,
+                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",

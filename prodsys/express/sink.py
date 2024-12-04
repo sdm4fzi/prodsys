@@ -59,7 +59,7 @@ class Sink(core.ExpressObject):
         ```
     """
     product: product.Product
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
+    location: list[float] = Field(..., min_length=2, max_length=2)
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)

@@ -69,13 +69,6 @@ class FunctionTimeModel(TimeModel):
     """
     time_model_data: FunctionTimeModelData
     statistics_buffer: List[float] = []
-    distribution_function_object: Callable[
-        [FunctionTimeModelData], List[float]
-    ] = FUNCTION_DICT[FunctionTimeModelEnum.Constant]
-
-    @field_validator("distribution_function_object")
-    def initialize_distribution_function(cls, v, values):
-        return FUNCTION_DICT[values["time_model_data"].distribution_function]
 
     def get_next_time(
         self,
@@ -98,9 +91,10 @@ class FunctionTimeModel(TimeModel):
             return self.get_next_time()
 
     def _fill_buffer(self):
-        self.statistics_buffer = self.distribution_function_object(
-            self.time_model_data
-        )
+        distribution_function = FUNCTION_DICT[
+            self.time_model_data.distribution_function
+        ]
+        self.statistics_buffer = distribution_function(self.time_model_data)
 
     def get_expected_time(
         self,
@@ -114,7 +108,7 @@ class FunctionTimeModel(TimeModel):
             float: The expected time of the time model.
         """
         return self.time_model_data.location
-    
+
 
 class SampleTimeModel(TimeModel):
     """
@@ -144,7 +138,7 @@ class SampleTimeModel(TimeModel):
         target: Optional[List[float]] = None,
     ) -> float:
         return sum(self.time_model_data.samples) / len(self.time_model_data.samples)
-    
+
 
 class ScheduledTimeModel(TimeModel):
     """
@@ -218,7 +212,7 @@ class ScheduledTimeModel(TimeModel):
         else:
             relative_schedule = self.time_model_data.schedule
         return sum(relative_schedule) / len(relative_schedule)
-    
+
 class DistanceTimeModel(TimeModel):
     """
     Class for time models that are based on a distance between two points and time calculation based on reaction time and speed and distance metric.

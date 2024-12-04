@@ -17,7 +17,7 @@ def get_production_resources(
     project_id: str, adapter_id: str
 ) -> List[resource_data.ProductionResourceData]:
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
-    return prodsys_adapter.get_machines(adapter)
+    return prodsys_adapter.get_production_resources(adapter)
 
 
 def get_transport_resources(

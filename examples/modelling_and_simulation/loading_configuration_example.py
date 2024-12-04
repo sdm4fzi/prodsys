@@ -6,6 +6,7 @@ if __name__ == '__main__':
     adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
 
     adapter_object.read_data('examples/modelling_and_simulation/simulation_example_data/example_configuration.json')
+    # prodsys.set_logging("DEBUG")
 
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
