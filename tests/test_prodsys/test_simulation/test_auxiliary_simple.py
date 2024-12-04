@@ -65,6 +65,7 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
     assert runner_instance.env.now == 1000
+    runner_instance.print_results()
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
@@ -81,12 +82,12 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 5.2 and kpi.value > 5.1
+            assert kpi.value < 5.7 and kpi.value > 5.6
 
     for kpi in post_processor.auxiliary_WIP_KPIs:
         if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary1":
-            assert kpi.value < 5.7 and kpi.value > 5.6
+            assert kpi.value < 6.2 and kpi.value > 6.1
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 5.7 and kpi.value > 4.5
+            assert kpi.value < 5.1 and kpi.value > 5.0

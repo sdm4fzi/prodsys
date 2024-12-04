@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import random
 from typing import List, TYPE_CHECKING, Generator, Optional, Union
 
 import logging
@@ -8,8 +9,6 @@ import logging
 import simpy
 
 logger = logging.getLogger(__name__)
-
-import numpy as np
 
 from simpy import events
 
@@ -152,6 +151,13 @@ class Router:
         for resource in possible_resources:
             for queue in resource.input_queues:
                 input_queue_get_events.append(queue.state_change)
+        stores: list[store.Store] = []
+        for request in possible_requests:
+            if not isinstance(request.resource, store.Store):
+                continue
+            stores.append(request.resource)
+        for store_instance in stores:
+            input_queue_get_events.append(store_instance.state_change)
         return input_queue_get_events
 
     def get_routed_production_request(
@@ -189,8 +195,10 @@ class Router:
         if not production_requests:
             return
         routed_production_request = production_requests.pop(0)
-        # TODO: change logic with reservation of queues -> do not reserve all input queues but make routing to queue here
-        routed_production_request.resource.reserve_input_queues()
+        chosen_resource: resources.ProductionResource = (
+            routed_production_request.resource
+        )
+        chosen_resource.reserve_internal_input_queues()
         return routed_production_request
 
     def route_transport_resource_for_item(
@@ -317,62 +325,104 @@ class Router:
         if not transport_requests:
             return
         routed_transport_request = transport_requests.pop(0)
+        for queue in sink.input_queues:
+            queue.reserve()
         return routed_transport_request
 
-    def route_product_to_warehouse(
+    def route_product_to_storage(
         self, product: product.Product
     ) -> Generator[request.TransportResquest]:
         """
-        Routes a product to the warehouse.
+        Routes a product to the store.
 
         Args:
             product (product.Product): The product.
 
         Returns:
-            Generator[request.TransportResquest]: A generator that yields when the product is routed to the warehouse.
+            Generator[request.TransportResquest]: A generator that yields when the product is routed to the store.
         """
         resource = product.current_locatable
         external_queues = [
             queue for queue in resource.output_queues if isinstance(queue, store.Store)
         ]
+        if not external_queues:
+            raise ValueError(
+                f"No external queues found for product {product.product_data.ID} to reach any store from resource {product.current_locatable.data.ID}."
+            )
 
-        chosen_warehouse = np.random.choice(external_queues)
-        env = product.env
-        storage_request = request.ToTransportRequest(product=product, target=resource)
+        potential_to_transport_requests = []
+        for external_queue in external_queues:
+            to_transport_request = request.ToTransportRequest(
+                product=product, target=external_queue
+            )
+            potential_to_transport_requests.append(to_transport_request)
+
+        env = get_env_from_requests(potential_to_transport_requests)
+        while True:
+            to_transport_requests: List[request.ToTransportRequest] = (
+                self.get_requests_with_non_blocked_resources(
+                    potential_to_transport_requests
+                )
+            )
+            if to_transport_requests:
+                break
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Waiting for free resources for storage.",
+                }
+            )
+            yield events.AnyOf(
+                env,
+                self.get_input_queue_state_change_events(
+                    potential_to_transport_requests
+                ),
+            )
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Free resources available for storage.",
+                }
+            )
+
+        storage_request = random.choice(to_transport_requests)
+        storage_request.resource.reserve()
         transport_request = yield env.process(
             self.route_transport_resource_for_item(storage_request)
         )
 
-        chosen_warehouse.reserve()
-
         return transport_request
 
-    def route_product_from_warehouse(
+    def route_product_from_storage(
         self, product: product.Product, resource: resources.ProductionResource
     ) -> Generator[request.TransportResquest]:
         """
-        Routes a product from the warehouse.
+        Routes a product from the store.
 
         Args:
             product (product.Product): The product.
             resource (resources.ProductionResource): The production resource.
 
         Returns:
-            Generator[request.TransportResquest]: A generator that yields when the product is routed from the warehouse.
+            Generator[request.TransportResquest]: A generator that yields when the product is routed from the store.
         """
         env = product.env
-        to_transport_request = request.ToTransportRequest(product=product, target=resource)
+        to_transport_request = request.ToTransportRequest(
+            product=product, target=resource
+        )
         transport_request = yield env.process(
             self.route_transport_resource_for_item(to_transport_request)
         )
         return transport_request
 
-    def check_store_product_in_warehouse(self, product: product.Product) -> bool:
+    def check_store_product(self, product: product.Product) -> bool:
         """
-        Decides whether a product is stored in the warehouse.
+        Decides whether a product is stored in the store.
 
         Returns:
-            bool: If the product is stored in the warehouse.
+            bool: If the product is stored in the store.
         """
         resource = product.current_locatable
         external_queues = [
@@ -381,50 +431,14 @@ class Router:
         if not external_queues:
             return False
         internal_queues = [
-            queue for queue in resource.input_queues if isinstance(queue, store.Store)
+            queue
+            for queue in resource.output_queues
+            if not isinstance(queue, store.Store)
         ]
         if all(queue.full for queue in internal_queues):
             return True
         # TODO: implement heuristic for storage
-        return np.random.choice([True, False])
-
-    def get_requests_with_free_resources(
-        self, potential_requests: List[request.Request]
-    ) -> Generator[List[request.Request]]:
-        """
-        Returns a list of requests with free resources.
-
-        Args:
-            potential_requests (List[request.Request]): A list of potential requests.
-
-        Returns:
-            Generator[List[request.Request]]: A generator that yields when the requests are routed.
-        """
-        while True:
-            free_resources = self.get_requests_with_non_blocked_resources(
-                potential_requests
-            )
-            env = get_env_from_requests(potential_requests)
-            yield env.timeout(0)
-            if free_resources:
-                return free_resources
-            logger.debug(
-                {
-                    "ID": potential_requests[0].product.product_data.ID,
-                    "sim_time": env.now,
-                    "event": f"Waiting for free resources.",
-                }
-            )
-            yield events.AnyOf(
-                [resource.got_free for resource in self.resource_factory.resources],
-            )
-            logger.debug(
-                {
-                    "ID": potential_requests[0].product.product_data.ID,
-                    "sim_time": env.now,
-                    "event": f"Free resources available.",
-                }
-            )
+        return random.choice([True, False])
 
     def get_production_request(
         self, product: product.Product, resource: resources.Resource
@@ -512,7 +526,7 @@ class Router:
         while True:
             free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
             # TODO: maybe make heuristic working for selecting auxiliary...
-            np.random.shuffle(free_possible_auxiliaries)
+            random.shuffle(free_possible_auxiliaries)
             if free_possible_auxiliaries:
                 break
             logger.info(
@@ -648,29 +662,6 @@ class Router:
             possible_requests += self.get_transport_requests_to_target(
                 product, transport_target, route_cache
             )
-        # TODO: most likely delete this here!
-        # for resource in self.resource_factory.get_transport_resources():
-        #     for process in resource.processes:
-        #         for target in transport_targets:
-        #             transport_request = self.get_transport_request(
-        #                 product, resource, target
-        #             )
-        #             if hasattr(target, "queue_data"):
-        #                 target_id = target.data.ID
-        #             else:
-        #                 target_id = target.data.ID
-        #             if route_cache.get((target_id, process.process_data.ID)):
-        #                 transport_request.copy_cached_routes(
-        #                     route_cache[(target_id, process.process_data.ID)]
-        #                 )
-        #                 transport_request.set_process(process)
-        #                 possible_requests.append(transport_request)
-        #             elif process.matches_request(transport_request):
-        #                 possible_requests.append(transport_request)
-        #                 transport_request.set_process(process)
-        #                 route_cache[(target_id, process.process_data.ID)] = (
-        #                     transport_request
-        #                 )
         return possible_requests
 
     def get_transport_requests_to_target(
@@ -732,6 +723,7 @@ class Router:
                 isinstance(request.resource, resources.ProductionResource)
                 and not any(q.full for q in request.resource.input_queues)
             )
+            or (isinstance(request.resource, store.Store) and not request.resource.full)
         ]
 
     def get_rework_processes(
@@ -757,7 +749,7 @@ class Router:
                 if not potential_rework_process.matches_request(rework_request):
                     continue
                 possible_rework_processes.append(potential_rework_process)
-        return possible_rework_processes 
+        return possible_rework_processes
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """
@@ -770,7 +762,7 @@ class Router:
             sink.Sink: The sink for the product type.
         """
         possible_sinks = self.sink_factory.get_sinks_with_product_type(_product_type)
-        chosen_sink = np.random.choice(possible_sinks)
+        chosen_sink = random.choice(possible_sinks)
         return chosen_sink  # type: ignore False
 
 
@@ -792,7 +784,7 @@ def random_routing_heuristic(possible_requests: List[request.Request]):
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
     possible_requests.sort(key=lambda x: x.resource.data.ID)
-    np.random.shuffle(possible_requests)
+    random.shuffle(possible_requests)
 
 
 def shortest_queue_routing_heuristic(
@@ -809,10 +801,10 @@ def shortest_queue_routing_heuristic(
         not isinstance(request.resource, resources.ProductionResource)
         for request in possible_requests
     ):
-        np.random.shuffle(possible_requests)
+        random.shuffle(possible_requests)
         possible_requests.sort(key=lambda x: len(x.resource.get_controller().requests))
         return
-    np.random.shuffle(possible_requests)
+    random.shuffle(possible_requests)
     possible_requests.sort(
         key=lambda x: sum([len(q.items) for q in x.resource.input_queues])
     )

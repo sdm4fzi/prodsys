@@ -7,7 +7,7 @@ from prodsys import runner
 
 @pytest.fixture
 def storage_simulation_adapter() -> JsonProductionSystemAdapter:
-    t1 = psx.FunctionTimeModel("constant", 0.8, 0, "t1")
+    t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
     p1 = psx.ProductionProcess(t1, "p1")
     p2 = psx.ProductionProcess(t1, "p2")
@@ -16,15 +16,15 @@ def storage_simulation_adapter() -> JsonProductionSystemAdapter:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    storage = psx.Store(ID="storage", location=[5, 1], input_location=[4,1], output_location=[6, 1], capacity=30)
-    storage2 = psx.Store(ID="output_storage", location=[9, 1], capacity=30)
+    storage = psx.Store(ID="storage", location=[5, 1], input_location=[4,1], output_location=[6, 1], capacity=10)
+    storage2 = psx.Store(ID="output_storage", location=[9, 1], capacity=5)
 
     machine = psx.ProductionResource(
         [p1],
         [5, 0],
-        1,
+        3,
         ID="machine",
-        internal_queue_size=5,
+        internal_queue_size=2,
         # FIXME: storages are buggy, no result is produced and transport is locked. Pending put increases...
         input_stores=[storage],
         output_stores=[storage],
@@ -33,8 +33,10 @@ def storage_simulation_adapter() -> JsonProductionSystemAdapter:
     machine2 = psx.ProductionResource(
         [p2],
         [9, 0],
-        1, ID="machine2",
-        # input_stores=[storage, storage2],
+        3,
+        ID="machine2",
+        internal_queue_size=2,
+        output_stores=[storage, storage2],
     )
 
     transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
@@ -59,33 +61,30 @@ def test_initialize_simulation(storage_simulation_adapter: JsonProductionSystemA
 
 def test_hashing(storage_simulation_adapter: JsonProductionSystemAdapter):
     hash_str = storage_simulation_adapter.hash()
-    assert hash_str == "7c670d1d11502a4b691787fa9c7ff71c"
+    assert hash_str == "747f8669f99074930561a959d72a9219"
 
 
 def test_run_simulation(storage_simulation_adapter: JsonProductionSystemAdapter):
-    prodsys.set_logging("DEBUG")
     runner_instance = runner.Runner(adapter=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000
-    runner_instance.print_results()
-    runner_instance.save_results_as_csv()
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2000 and kpi.value < 2040
+            assert kpi.value > 2075 and kpi.value < 2085
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 82 and kpi.value > 78
+            assert kpi.value < 58 and kpi.value > 57
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 30 and kpi.value < 35
+            assert kpi.value > 77 and kpi.value < 78
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 3.6 and kpi.value < 3.75
+            assert kpi.value > 6.1 and kpi.value < 6.25
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 2.8 and kpi.value < 3.0
+            assert kpi.value > 5.0 and kpi.value < 5.1

@@ -174,7 +174,7 @@ class TransportResource(Resource, core.ExpressObject):
     """
 
     processes: List[process.TransportProcess]
-    location: Optional[list[float]] = Field(..., min_length=2, max_length=2)
+    location: Optional[list[float]] = Field(default=[0,0], min_length=2, max_length=2)
     controller: resource_data.ControllerEnum = (
         resource_data.ControllerEnum.TransportController
     )

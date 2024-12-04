@@ -291,14 +291,14 @@ class PostProcessor:
             df_product_type.sort_values(by="Start_time", inplace=True)
             cutoff_index = get_warm_up_cutoff_index(df_product_type, "Throughput_time", self.cut_off_method)
             if cutoff_index == len(df_product_type):
-                logger.warning(f"The simulation time is too short to perform a warm up cutoff for product type {product_type}. Try to increase the simulation time.")
+                logger.info(f"The simulation time is too short to perform a warm up cutoff for product type {product_type}. Try to increase the simulation time.")
                 return df
             product_types_min_start_time[product_type] = df_product_type.iloc[cutoff_index]["Start_time"]
             product_types_max_start_time[product_type] = df_product_type["Start_time"].max()
         cut_off_time = min(product_types_min_start_time.values())
         for product_type, product_type_latest_start in product_types_max_start_time.items():
             if product_type_latest_start < cut_off_time:
-                logger.warning(f"The simulation time is too short to perform a warm up cutoff for product type {product_type} because the latest start time is before the cut off time.")
+                logger.info(f"The simulation time is too short to perform a warm up cutoff for product type {product_type} because the latest start time is before the cut off time.")
                 return df
         return df.loc[df["Start_time"] >= cut_off_time]
 

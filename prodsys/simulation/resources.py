@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from sys import intern
 from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -469,7 +470,7 @@ class ProductionResource(Resource):
             List[float]: The input location of the resource. Has to have length 2.
         """
         return self.data.input_location
-    
+
     def get_output_location(self) -> List[float]:
         """
         Returns the output location of the production resource.
@@ -485,13 +486,16 @@ class ProductionResource(Resource):
     def add_output_queues(self, output_queues: List[store.Queue]):
         self.output_queues.extend(output_queues)
 
-    def reserve_input_queues(self):
-        for input_queue in self.input_queues:
-            input_queue.reserve()
+    def reserve_internal_input_queues(self):
+        internal_queues = [q for q in self.input_queues if not isinstance(q, store.Store)]
+        for internal_queue in internal_queues:
+            internal_queue.reserve()
 
-    def unreserve_input_queues(self):
-        for input_queue in self.input_queues:
-            input_queue.unreseve()
+    def adjust_pending_put_of_output_queues(self, batch_size: int = 1):
+        internal_queues = [q for q in self.output_queues if not isinstance(q, store.Store)]
+        for output_queue in internal_queues:
+            for i in range(batch_size):
+                output_queue.reserve()
 
 class TransportResource(Resource):
     """
