@@ -100,13 +100,13 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
         if kpi.name == "output" and kpi.product_type == "product1":
             assert kpi.value > 370 and kpi.value < 390
         if kpi.name == "output" and kpi.product_type == "product2":
-            assert kpi.value > 740 and kpi.value < 760
+            assert kpi.value > 760 and kpi.value < 770
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 92 and kpi.value > 88
+            assert kpi.value < 96 and kpi.value > 94
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 48 and kpi.value < 53
+            assert kpi.value > 47 and kpi.value < 49
         if kpi.name == "productive_time" and kpi.resource == "transport2":
             assert kpi.value > 48 and kpi.value < 53
         if kpi.name == "productive_time" and kpi.resource == "transport_aux":
@@ -114,18 +114,18 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 3.2 and kpi.value > 3.0
+            assert kpi.value < 4.6 and kpi.value > 4.5
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 6 and kpi.value > 5.8
+            assert kpi.value < 8.7 and kpi.value > 8.6
 
     for kpi in post_processor.auxiliary_WIP_KPIs:
         if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary1":
-            assert kpi.value < 3.5 and kpi.value > 3.3
+            assert kpi.value < 4.9 and kpi.value > 4.8
         if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary2":
-            assert kpi.value < 6.4 and kpi.value > 6.2
+            assert kpi.value < 9.1 and kpi.value > 8.9
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 7.9 and kpi.value > 7.7
+            assert kpi.value < 11.6 and kpi.value > 11.4
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
-            assert kpi.value < 7.6 and kpi.value > 7.4
+            assert kpi.value < 11.3 and kpi.value > 11.2

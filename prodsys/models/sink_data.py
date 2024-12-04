@@ -1,9 +1,9 @@
 from __future__ import annotations
 from hashlib import md5
-from typing import List, Optional, TYPE_CHECKING
-from pydantic import ConfigDict, conlist
+from typing import List, TYPE_CHECKING
+from pydantic import ConfigDict
 
-from prodsys.models.core_asset import CoreAsset, InLocatable, InOutLocatable, Locatable
+from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter

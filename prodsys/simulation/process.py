@@ -40,16 +40,6 @@ class Process(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_process_time(self, *args) -> float:
-        """
-        Returns the time it takes to execute the process.
-
-        Returns:
-            float: Time it takes to execute the process.
-        """
-        pass
-
-    @abstractmethod
     def get_expected_process_time(self, *args) -> float:
         """
         Returns the expected time it takes to execute the process.
@@ -80,9 +70,6 @@ class ProductionProcess(Process):
             return self.process_data.ID in requested_process.process_data.process_ids
         return requested_process.process_data.ID == self.process_data.ID
 
-    def get_process_time(self) -> float:
-        return self.time_model.get_next_time()
-
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
 
@@ -111,9 +98,6 @@ class CapabilityProcess(Process):
             ]
         return requested_process.process_data.capability == self.process_data.capability
 
-    def get_process_time(self) -> float:
-        return self.time_model.get_next_time()
-
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
 
@@ -140,9 +124,6 @@ class TransportProcess(Process):
             return False
         request.set_route(route=[request.origin, request.target])
         return True
-
-    def get_process_time(self, origin: List[float], target: List[float]) -> float:
-        return self.time_model.get_next_time(origin=origin, target=target)
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)
@@ -220,9 +201,6 @@ class CompoundProcess(Process):
             )
         return False
 
-    def get_process_time(self) -> float:
-        raise NotImplementedError("CompoundProcess does not have a process time.")
-
     def get_expected_process_time(self) -> float:
         raise NotImplementedError("CompoundProcess does not have a process time.")
 
@@ -238,11 +216,6 @@ class RequiredCapabilityProcess(Process):
 
     def matches_request(self, request: request_module.Request) -> bool:
         raise NotImplementedError("RequiredCapabilityProcess does not match requests but only generates them.")
-
-    def get_process_time(self) -> float:
-        raise NotImplementedError(
-            "RequiredCapabilityProcess does not have a process time."
-        )
 
     def get_expected_process_time(self) -> float:
         raise NotImplementedError(
@@ -271,9 +244,6 @@ class ReworkProcess(Process):
             return any(reworked_process_id in requested_process.process_data.process_ids for reworked_process_id in self.reworked_process_ids)
         else:
             return requested_process.process_data.ID in self.reworked_process_ids
-
-    def get_process_time(self) -> float:
-        return self.time_model.get_next_time()
 
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
@@ -324,16 +294,6 @@ class LinkTransportProcess(TransportProcess):
         if not route:
             return False
         return True
-
-    def get_process_time(self, request: request_module.TransportResquest) -> float:
-        route = request.get_route()
-        total_time = 0
-        link_route = [route[i:i+2] for i in range(len(route)-1)]
-
-        for link in link_route:
-            time = self.time_model.get_next_time(origin=link[0].get_location(), target=link[1].get_location())
-            total_time += time
-        return total_time
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)

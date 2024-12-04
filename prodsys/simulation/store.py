@@ -45,7 +45,7 @@ class Queue(store.FilterStore):
         Args:
             item (object): The product to be put into the queue.
         """
-        self.unreseve()
+        self.unreserve()
         return_event = super().put(item)
         self.state_change.succeed()
         self.state_change = self.env.event()
@@ -86,10 +86,11 @@ class Queue(store.FilterStore):
             RuntimeError: If the queue is full.
         """
         self._pending_put += 1
+        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "event": f"reserving spot in queue {self.data.ID}, current level: {len(self.items)}, pendings: {self._pending_put}"})
         if self._pending_put + len(self.items) > self.capacity:
             raise RuntimeError("Queue is full")
     
-    def unreseve(self) -> None:
+    def unreserve(self) -> None:
         """
         Unreserves a spot in the queue for a product to be put into after the put is completed.
         """

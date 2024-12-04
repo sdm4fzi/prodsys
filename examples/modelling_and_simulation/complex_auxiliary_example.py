@@ -23,8 +23,8 @@ transport = psx.TransportResource([tp], [3,0], 1, ID="transport")
 transport2 = psx.TransportResource([tp], [3,0], 1, ID="transport2")
 transport_aux = psx.TransportResource([tp_aux], [4,0], 1, ID="transport_aux")
 
-storage1 = psx.Store(ID="storage1", location=[5,0], capacity=30)
-storage2 = psx.Store(ID="storage2", location=[10, 0], capacity=20)
+storage1 = psx.Store(ID="storage1", location=[5,2.5], capacity=30)
+storage2 = psx.Store(ID="storage2", location=[10, 2.5], capacity=20)
 
 
 auxiliary1 = psx.Auxiliary(ID="auxiliary1", transport_process=tp_aux, 

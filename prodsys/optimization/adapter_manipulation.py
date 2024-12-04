@@ -274,6 +274,29 @@ def move_process_module(adapter_object: adapters.ProductionSystemAdapter) -> boo
     return True
 
 
+def update_production_resource_location(resource: resource_data.ProductionResourceData, new_location: List[float]) -> None:
+    """
+    Function that updates the location of a machine.
+
+    Args:
+        resource (resource_data.ProductionResourceData): Machine to update.
+        location (List[float]): New location of the machine.
+    """
+    position_delta = [
+        new_location[0] - resource.location[0],
+        new_location[1] - resource.location[1],
+    ]
+    resource.location = new_location
+    resource.input_location = [
+        resource.input_location[0] + position_delta[0],
+        resource.input_location[1] + position_delta[1],
+    ]
+    resource.output_location = [
+        resource.output_location[0] + position_delta[0],
+        resource.output_location[1] + position_delta[1],
+    ]
+
+
 def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     """
     Function that moves a random machine to a random position of the production system.
@@ -295,9 +318,7 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     if not possible_positions:
         return False
     new_location = random.choice(possible_positions)
-    moved_machine.location = new_location
-    moved_machine.input_location = new_location
-    moved_machine.output_location = new_location
+    update_production_resource_location(moved_machine, new_location)
     return True
 
 
@@ -436,9 +457,7 @@ def arrange_machines(adapter_object: adapters.ProductionSystemAdapter) -> None:
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
-        machine.location = new_location
-        machine.input_location = new_location
-        machine.output_location = new_location
+        update_production_resource_location(machine, new_location)
         possible_positions.remove(new_location)
 
 
@@ -526,9 +545,7 @@ def get_random_layout(
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
-        machine.location = new_location
-        machine.input_location = new_location
-        machine.output_location = new_location
+        update_production_resource_location(machine, new_location)
         possible_positions.remove(new_location)
     return adapter_object
 

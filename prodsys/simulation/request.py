@@ -149,8 +149,8 @@ class TransportResquest(Request):
         process (process.TransportProcess): The transport process.
         product (product.Product): The product.
         resource (resources.TransportResource): The transport resource.
-        origin (product.Location): The origin location, either a resource, source or sink.
-        target (product.Location): The target location, either a resource, source or sink.
+        origin (product.Locatable): The origin locatable, either a resource, node, source, store or sink.
+        target (product.Locatable): The target locatable, either a resource, node, source, store or sink.
     """
 
     def __init__(

@@ -4,7 +4,7 @@ from typing import List, Optional, TYPE_CHECKING
 from pydantic import ConfigDict, conlist
 from enum import Enum
 
-from prodsys.models.core_asset import CoreAsset, Locatable, OutLocatable
+from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
     from prodsys.adapters.adapter import ProductionSystemAdapter

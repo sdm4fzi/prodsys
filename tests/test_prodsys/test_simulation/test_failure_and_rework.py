@@ -68,7 +68,6 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
-    runner_instance.save_results_as_csv()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
