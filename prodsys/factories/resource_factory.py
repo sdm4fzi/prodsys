@@ -77,7 +77,7 @@ def register_production_states_for_processes(
         resource.processes, resource.data.process_capacities
     ):
         process_instance: process.PROCESS_UNION
-        values = {
+        state_data_dict = {
             "new_state": {
                 "ID": process_instance.process_data.ID,
                 "description": process_instance.process_data.description,
@@ -95,7 +95,7 @@ def register_production_states_for_processes(
             or isinstance(process_instance, process.ReworkProcess)
         ) and not existence_condition:
             state_factory.create_states_from_configuration_data(
-                {"ProductionState": values}
+                {"ProductionState": state_data_dict}
             )
         elif (
             isinstance(
@@ -104,16 +104,16 @@ def register_production_states_for_processes(
             )
             and not existence_condition
         ):
-            if "loading_time_model_id" in process_instance.process_data.model_dump():
-                values["new_state"][
-                    "loading_time_model"
+            if process_instance.process_data.loading_time_model_id:
+                state_data_dict["new_state"][
+                    "loading_time_model_id"
                 ] = process_instance.process_data.loading_time_model_id
-            if "unloading_time_model_id" in process_instance.process_data.model_dump():
-                values["new_state"][
-                    "unloading_time_model"
+            if process_instance.process_data.unloading_time_model_id:
+                state_data_dict["new_state"][
+                    "unloading_time_model_id"
                 ] = process_instance.process_data.unloading_time_model_id
             state_factory.create_states_from_configuration_data(
-                {"TransportState": values}
+                {"TransportState": state_data_dict}
             )
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)

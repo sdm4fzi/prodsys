@@ -38,7 +38,7 @@ def test_initialize_simulation(batch_simulation_adapter: JsonProductionSystemAda
 
 def test_hashing(batch_simulation_adapter: JsonProductionSystemAdapter):
     hash_str = batch_simulation_adapter.hash()
-    assert hash_str == "0805aa75d91edebfcc58d0f46afbaf10"
+    assert hash_str == "2859c60df4a5dd05f362af67d1d43293"
 
 
 def test_run_simulation(batch_simulation_adapter: JsonProductionSystemAdapter):
