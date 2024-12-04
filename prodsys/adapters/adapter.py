@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, ValidationError, Va
 import logging
 logger = logging.getLogger(__name__)
 
-from prodsys.models import time_model_data as time_model_data_module
+from prodsys.models import queue_data, time_model_data as time_model_data_module
 from prodsys.models import state_data as state_data_module
 from prodsys.models import processes_data as processes_data_module
 from prodsys.models import sink_data as sink_data_module
@@ -23,7 +23,7 @@ from prodsys.models import auxiliary_data as auxiliary_data_module
 from prodsys.util import util
 
 
-def get_machines(adapter: ProductionSystemAdapter) -> List[resource_data_module.ProductionResourceData]:
+def get_production_resources(adapter: ProductionSystemAdapter) -> List[resource_data_module.ProductionResourceData]:
     """
     Returns a list of all machines in the adapter.
 
@@ -91,6 +91,7 @@ def get_default_queues_for_resource(
             ID=resource.ID + "_default_input_queue",
             description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
+            location=resource.input_location or resource.location,
         )
     ]
     output_queues = [
@@ -98,6 +99,7 @@ def get_default_queues_for_resource(
             ID=resource.ID + "_default_output_queue",
             description="Default output queue of " + resource.ID,
             capacity=queue_capacity,
+            location=resource.output_location or resource.location,
         )
     ]
     return input_queues, output_queues
@@ -117,7 +119,7 @@ def remove_unused_queues_from_adapter(adapter: ProductionSystemAdapter) -> Produ
     used_queues_ids = set(
         [
             queue_ID
-            for machine in get_machines(adapter)
+            for machine in get_production_resources(adapter)
             for queue_ID in machine.input_queues + machine.output_queues
         ]
         + [queue_ID for source in adapter.source_data for queue_ID in source.output_queues]
@@ -146,7 +148,7 @@ def add_default_queues_to_resources(
     Returns:
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
-    for machine in get_machines(adapter):
+    for machine in get_production_resources(adapter):
         remove_queues_from_resource(machine)
         remove_unused_queues_from_adapter(adapter)
         input_queues, output_queues = get_default_queues_for_resource(
@@ -175,6 +177,7 @@ def get_default_queue_for_source(
         ID=source.ID + "_default_output_queue",
         description="Default output queue of " + source.ID,
         capacity=queue_capacity,
+        location=source.location,
     )
 
 
@@ -216,6 +219,7 @@ def get_default_queue_for_sink(
         ID=sink.ID + "_default_input_queue",
         description="Default input queue of " + sink.ID,
         capacity=queue_capacity,
+        location=sink.location,
     )
 
 
@@ -459,6 +463,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "TP1",
                         "description": "Transport Process 1",
                         "time_model_id": "manhattan_time_model_1",
+                        "loading_time_model_id": "function_time_model_2",
+                        "unloading_time_model_id": "function_time_model_3",
                         "type": "TransportProcesses",
                     },
                 ],
@@ -509,7 +515,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R1",
                         "description": "Resource 1",
                         "capacity": 2,
-                        "location": [10.0, 10.0],
+                        "input_location": [10.0, 10.0],
+                        "output_location": [12.0, 10.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P2"],
@@ -527,7 +534,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R2",
                         "description": "Resource 2",
                         "capacity": 1,
-                        "location": [20.0, 10.0],
+                        "input_location": [20.0, 10.0],
+                        "output_location": [22.0, 10.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P2", "P3"],
@@ -540,7 +548,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R3",
                         "description": "Resource 3",
                         "capacity": 2,
-                        "location": [20.0, 20.0],
+                        "input_location": [20.0, 20.0],
+                        "output_location": [22.0, 22.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P3"],
@@ -558,7 +567,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         "ID": "R4",
                         "description": "Resource 3",
                         "capacity": 2,
-                        "location": [10.0, 20.0],
+                        "input_location": [10.0, 20.0],
+                        "output_location": [12.0, 20.0],
                         "controller": "PipelineController",
                         "control_policy": "FIFO",
                         "process_ids": ["P1", "P3"],
@@ -621,21 +631,21 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "SK1",
                         "description": "Sink 1",
-                        "location": [50.0, 50.0],
+                        "input_location": [50.0, 50.0],
                         "product_type": "Product_1",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK2",
                         "description": "Sink 2",
-                        "location": [55.0, 50.0],
+                        "input_location": [55.0, 50.0],
                         "product_type": "Product_2",
                         "input_queues": ["SinkQueue"],
                     },
                     {
                         "ID": "SK3",
                         "description": "Sink 3",
-                        "location": [45.0, 50.0],
+                        "input_location": [45.0, 50.0],
                         "product_type": "Product_3",
                         "input_queues": ["SinkQueue"],
                     },
@@ -644,7 +654,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S1",
                         "description": "Source 1",
-                        "location": [0.0, 0.0],
+                        "output_location": [0.0, 0.0],
                         "product_type": "Product_1",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -654,7 +664,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S2",
                         "description": "Source 2",
-                        "location": [30.0, 30.0],
+                        "output_location": [30.0, 30.0],
                         "product_type": "Product_2",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -664,7 +674,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     {
                         "ID": "S3",
                         "description": "Source 3",
-                        "location": [40.0, 30.0],
+                        "output_location": [40.0, 30.0],
                         "product_type": "Product_3",
                         "time_model_id": "function_time_model_4",
                         "router": "SimpleRouter",
@@ -902,6 +912,15 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
     return [list(x) for x in set(tuple(x) for x in input_list)]
 
 
+def get_location_of_locatable(locatable: Union[resource_data_module.ProductionResourceData, source_data_module.SourceData, sink_data_module.SinkData, queue_data.StoreData]) -> List[List[float]]:
+    locations = [locatable.location]
+    if hasattr(locatable, "input_location") and locatable.input_location != locatable.location:
+        locations.append(locatable.input_location)
+    if hasattr(locatable, "output_location") and locatable.output_location != locatable.location:
+        locations.append(locatable.output_location)
+    return locations
+
+
 def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
     """
     Asserts that no multiple objects are positioned at the same location.
@@ -912,14 +931,28 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
     Raises:
         ValueError: If multiple objects are positioned at the same location.
     """
-    machine_locations = [machine.location for machine in get_machines(adapter)]
+    machine_locations = []
+    for production_resource in get_production_resources(adapter):
+        machine_locations += get_location_of_locatable(production_resource)
+    source_locations = []
+    for source in adapter.source_data:
+        source_locations += get_location_of_locatable(source)
     source_locations = remove_duplicate_locations(
-        [source.location for source in adapter.source_data]
+        source_locations
     )
+    sink_locations = []
+    for sink in adapter.sink_data:
+        sink_locations += get_location_of_locatable(sink)
     sink_locations = remove_duplicate_locations(
         [sink.location for sink in adapter.sink_data]
     )
-    positions = machine_locations + source_locations + sink_locations
+    store_locations = []
+    for store in adapter.queue_data:
+        if not isinstance(store, queue_data.StoreData):
+            continue
+        store_locations += get_location_of_locatable(store)
+
+    positions = machine_locations + source_locations + sink_locations + store_locations
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(f"Multiple objects are positioned at the same location: {location}")
@@ -1019,7 +1052,7 @@ def get_production_processes_from_ids(
     processes = []
     for process_id in process_ids:
         for process in adapter_object.process_data:
-            if process.ID == process_id and isinstance(process, processes_data_module.ProductionProcessData):
+            if process.ID == process_id and (isinstance(process, processes_data_module.ProductionProcessData) or isinstance(process, processes_data_module.ReworkProcessData)):
                 processes.append(process)
                 break
     return processes
@@ -1110,7 +1143,7 @@ def get_contained_transport_processes_from_compound_processes(
                 process = processes[0]
                 processes.append(process)
     return processes
-    
+
 
 def get_contained_required_capability_processes_from_compound_processes(
     adapter_object: ProductionSystemAdapter, compound_processes: List[processes_data_module.CompoundProcessData]
@@ -1126,7 +1159,8 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
-def assert_production_processes_available(available: List[processes_data_module.ProductionProcessData], required: List[processes_data_module.ProductionProcessData]):
+def assert_production_processes_available(available: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]], 
+    required: List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]]):
     """
     Checks if all required production processes are available.
 

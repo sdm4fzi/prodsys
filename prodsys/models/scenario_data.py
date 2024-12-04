@@ -6,6 +6,7 @@ This module contains the data structures for the scenario data that is used in o
 - 'Objectives': The objectives of the scenario.
 - `ScenarioData`: The scenario data that contains the constraints, options, information and objectives of the scenario. 
 """
+
 from typing import List, Optional, Dict
 from enum import Enum
 
@@ -58,17 +59,20 @@ class ScenarioConstrainsData(BaseModel):
     max_num_transport_resources: int
     target_product_count: Optional[Dict[str, int]]
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "max_reconfiguration_cost": 120000,
-                "max_num_machines": 10,
-                "max_num_processes_per_machine": 2,
-                "max_num_transport_resources": 2,
-                "target_product_count": {"Product_1": 120, "Product_2": 200},
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "max_reconfiguration_cost": 120000,
+                    "max_num_machines": 10,
+                    "max_num_processes_per_machine": 2,
+                    "max_num_transport_resources": 2,
+                    "target_product_count": {"Product_1": 120, "Product_2": 200},
+                }
+            ]
+        }
+    )
+
 
 class ScenarioOptionsData(BaseModel):
     """
@@ -92,7 +96,7 @@ class ScenarioOptionsData(BaseModel):
     machine_controllers: List[ResourceControlPolicy]
     transport_controllers: List[TransportControlPolicy]
     routing_heuristics: List[RoutingHeuristic]
-    positions: List[conlist(float, min_length=2, max_length=2)] # type: ignore
+    positions: List[conlist(float, min_length=2, max_length=2)]  # type: ignore
 
     @field_validator("positions")
     def check_positions(cls, v):
@@ -101,23 +105,25 @@ class ScenarioOptionsData(BaseModel):
                 raise ValueError("positions must be a list of tuples of length 2")
         return v
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "transformations": [
-                    "production_capacity",
-                    "transport_capacity",
-                    "layout",
-                    "sequencing_logic",
-                    "routing_logic",
-                ],
-                "machine_controllers": ["FIFO", "LIFO", "SPT"],
-                "transport_controllers": ["FIFO", "SPT_transport"],
-                "routing_heuristics": ["shortest_queue", "random", "FIFO"],
-                "positions": [[10.0, 10.0], [20.0, 20.0]],
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "transformations": [
+                        "production_capacity",
+                        "transport_capacity",
+                        "layout",
+                        "sequencing_logic",
+                        "routing_logic",
+                    ],
+                    "machine_controllers": ["FIFO", "LIFO", "SPT"],
+                    "transport_controllers": ["FIFO", "SPT_transport"],
+                    "routing_heuristics": ["shortest_queue", "random", "FIFO"],
+                    "positions": [[10.0, 10.0], [20.0, 20.0]],
+                }
+            ]
+        }
+    )
 
 
 class ScenarioInfoData(BaseModel):
@@ -128,7 +134,7 @@ class ScenarioInfoData(BaseModel):
     Args:
         machine_cost (float): Cost of a machine.
         transport_resource_cost (float): Cost of a transport resource.
-        process_module_cost (float): Cost of a process module.
+        process_module_cost (Optional[float | Dict[str, float]]): Cost of a process module. Either a const value or a mapping of process ID to cost.
         breakdown_cost (Optional[float], optional): Cost of a breakdown. Defaults to None.
         time_range (Optional[int], optional): Time range of the scenario in minutes to be considered. Defaults to None.
         maximum_breakdown_time (Optional[int], optional): Maximum allowable breakdown time in the scenario in minutes. Defaults to None.
@@ -136,47 +142,51 @@ class ScenarioInfoData(BaseModel):
 
     machine_cost: float
     transport_resource_cost: float
-    process_module_cost: float
+    process_module_cost: Optional[float | Dict[str, float]] = None
     auxiliary_cost: Optional[float] = None
     breakdown_cost: Optional[float] = None
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int] = None
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "machine_cost": 30000,
-                "transport_resource_cost": 20000,
-                "process_module_cost": 2300,
-                "auxiliary_cost": 1000,
-                "breakdown_cost": 1000,
-                "time_range": 2600,
-                "maximum_breakdown_time": 10,
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "machine_cost": 30000,
+                    "transport_resource_cost": 20000,
+                    "process_module_cost": {"Process_1": 2300, "Process_2": 3300},
+                    "auxiliary_cost": 1000,
+                    "breakdown_cost": 1000,
+                    "time_range": 2600,
+                    "maximum_breakdown_time": 10,
+                }
+            ]
+        }
+    )
 
 
 class Objective(BaseModel):
     name: KPIEnum
     weight: float = 1.0
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": KPIEnum.COST,
-                "weight": 0.6,
-            },
-            {
-                "name": KPIEnum.THROUGHPUT,
-                "weight": 0.1,
-            },
-            {
-                "name": KPIEnum.WIP,
-                "weight": 0.5,
-            },
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": KPIEnum.COST,
+                    "weight": 0.6,
+                },
+                {
+                    "name": KPIEnum.THROUGHPUT,
+                    "weight": 0.1,
+                },
+                {
+                    "name": KPIEnum.WIP,
+                    "weight": 0.5,
+                },
+            ]
+        }
+    )
 
 
 class ScenarioData(BaseModel):
@@ -198,54 +208,63 @@ class ScenarioData(BaseModel):
     info: ScenarioInfoData
     objectives: List[Objective]
 
-    model_config=ConfigDict(use_enum_values=True, json_schema_extra={
-        "examples": [
-            {
-                "summary": "Scenario",
-                "value": {
-                    "constraints": {
-                        "max_reconfiguration_cost": 120000,
-                        "max_num_machines": 10,
-                        "max_num_processes_per_machine": 2,
-                        "max_num_transport_resources": 2,
-                        "target_product_count": {"Product_1": 120, "Product_2": 200},
-                    },
-                    "options": {
-                        "transformations": [
-                            "production_capacity",
-                            "transport_capacity",
-                            "layout",
-                            "sequencing_logic",
-                            "routing_logic",
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "summary": "Scenario",
+                    "value": {
+                        "constraints": {
+                            "max_reconfiguration_cost": 120000,
+                            "max_num_machines": 10,
+                            "max_num_processes_per_machine": 2,
+                            "max_num_transport_resources": 2,
+                            "target_product_count": {
+                                "Product_1": 120,
+                                "Product_2": 200,
+                            },
+                        },
+                        "options": {
+                            "transformations": [
+                                "production_capacity",
+                                "transport_capacity",
+                                "layout",
+                                "sequencing_logic",
+                                "routing_logic",
+                            ],
+                            "machine_controllers": ["FIFO", "LIFO", "SPT"],
+                            "transport_controllers": ["FIFO", "SPT_transport"],
+                            "routing_heuristics": ["shortest_queue", "random", "FIFO"],
+                            "positions": [[10.0, 10.0], [20.0, 20.0]],
+                        },
+                        "info": {
+                            "machine_cost": 30000,
+                            "transport_resource_cost": 20000,
+                            "process_module_costs": {
+                                "Process_1": 2300,
+                                "Process_2": 3300,
+                            },
+                            "breakdown_cost": 1000,
+                            "time_range": 2600,
+                            "maximum_breakdown_time": 10,
+                        },
+                        "objectives": [
+                            {
+                                "name": KPIEnum.COST,
+                                "weight": 0.6,
+                            },
+                            {
+                                "name": KPIEnum.THROUGHPUT,
+                                "weight": 0.1,
+                            },
+                            {
+                                "name": KPIEnum.WIP,
+                                "weight": 0.5,
+                            },
                         ],
-                        "machine_controllers": ["FIFO", "LIFO", "SPT"],
-                        "transport_controllers": ["FIFO", "SPT_transport"],
-                        "routing_heuristics": ["shortest_queue", "random", "FIFO"],
-                        "positions": [[10.0, 10.0], [20.0, 20.0]],
                     },
-                    "info": {
-                        "machine_cost": 30000,
-                        "transport_resource_cost": 20000,
-                        "process_module_cost": 2300,
-                        "breakdown_cost": 1000,
-                        "time_range": 2600,
-                        "maximum_breakdown_time": 10,
-                    },
-                    "objectives": [
-                        {
-                            "name": KPIEnum.COST,
-                            "weight": 0.6,
-                        },
-                        {
-                            "name": KPIEnum.THROUGHPUT,
-                            "weight": 0.1,
-                        },
-                        {
-                            "name": KPIEnum.WIP,
-                            "weight": 0.5,
-                        },
-                    ],
-                },
-            }
-        ]
-    })
+                }
+            ]
+        },
+    )

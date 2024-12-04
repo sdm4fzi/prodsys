@@ -1,8 +1,8 @@
 from typing import List, Union, Dict, Annotated
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 
 import json
 import prodsys
@@ -22,6 +22,7 @@ from app.dependencies import (
     prodsys_backend,
     prepare_adapter_from_optimization,
     get_configuration_results_adapter_from_filesystem,
+    get_progress_of_optimization,
 )
 
 
@@ -48,6 +49,7 @@ HYPERPARAMETER_EXAMPLES = [
 async def optimize(
     project_id: str,
     adapter_id: str,
+    background_tasks: BackgroundTasks,
     hyper_parameters: Annotated[
         Union[
             EvolutionaryAlgorithmHyperparameters,
@@ -56,7 +58,7 @@ async def optimize(
             math_opt.MathOptHyperparameters,
         ],
         Body(examples=HYPERPARAMETER_EXAMPLES),
-    ],
+    ]
 ):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
@@ -66,6 +68,7 @@ async def optimize(
     configuration_file_path = f"data/{project_id}/{adapter_id}_configuration.json"
     scenario_file_path = f"data/{project_id}/{adapter_id}_scenario.json"
     save_folder = f"data/{project_id}/{adapter_id}"
+    
     util.prepare_save_folder(save_folder)
     adapter.write_data(configuration_file_path)
     adapter.write_scenario_data(scenario_file_path)
@@ -84,40 +87,80 @@ async def optimize(
     else:
         raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
 
-    optimization_func(
-        save_folder=save_folder,
+    background_tasks.add_task(
+        optimization_func,
+        save_folder = save_folder,
         base_configuration_file_path=configuration_file_path,
         scenario_file_path=scenario_file_path,
         hyper_parameters=hyper_parameters,
     )
+
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
 
 @router.get(
     "/results",
-    response_model=Dict[str, List[performance_indicators.KPI_UNION]],
+    response_model=Dict[str, Union[Dict[str, List[performance_indicators.KPI_UNION]], str]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
         data = json.load(json_file)
+
     adapter_object = prodsys_backend.get_adapter(project_id, adapter_id)
     kpis = adapter_object.scenario_data.objectives
-    response = {}
+    
+    response = {"solutions": {}}
+
     for solution in data.values():
         for adapter_name in solution.keys():
-            response[adapter_name] = []
-            for kpi_name, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
-                kpi_object = parse_obj_as(
-                    performance_indicators.KPI_UNION,
+            response["solutions"][adapter_name] = []
+
+            for kpi_obj, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
+                kpi_name = kpi_obj.name
+                
+                kpi_object = TypeAdapter(performance_indicators.KPI_UNION).validate_python(
                     {
                         "name": kpi_name,
                         "value": kpi_value,
                         "context": [performance_indicators.KPILevelEnum.SYSTEM],
                     },
                 )
-                response[adapter_name].append(kpi_object)
+                response["solutions"][adapter_name].append(kpi_object)
+
     return response
 
+@router.get(
+    "/best_solution",
+    response_model=str,
+)
+def get_best_solution_id(project_id: str, adapter_id: str):
+    """
+    Returns the best solution ID based on the highest total fitness value from the optimization results.
+    """
+    try:
+        # Open the optimization results file
+        with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
+            data = json.load(json_file)
+    except FileNotFoundError:
+        raise HTTPException(404, f"Optimization results not found for adapter {adapter_id} in project {project_id}")
+
+    best_solution = None
+    best_fitness = float('-inf')  # Initialize with negative infinity
+
+    # Iterate over the solutions in the results file
+    for solution in data.values():
+        for adapter_name in solution.keys():
+            total_fitness = sum(solution[adapter_name]["fitness"])  # Calculate the total fitness value
+
+            # Check if this solution has the best fitness
+            if total_fitness > best_fitness:
+                best_fitness = total_fitness
+                best_solution = adapter_name
+
+    if best_solution is None:
+        raise HTTPException(404, "No valid solution found.")
+    
+    return best_solution
 
 @router.get(
     "/register/{solution_id}",

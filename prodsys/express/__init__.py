@@ -20,7 +20,8 @@ The following modules are available:
 - `prodsys.express.time_model`: Contains classes to specify time models.
 
 """
-from prodsys.express.queue import Queue
+
+from prodsys.express.queue import Queue, Store
 from prodsys.express.core import ExpressObject
 from prodsys.express.time_model import (
     SampleTimeModel,
@@ -30,7 +31,12 @@ from prodsys.express.time_model import (
     SequentialTimeModel,
     ManhattanDistanceTimeModel,
 )
-from prodsys.express.state import SetupState, BreakDownState, ProcessBreakdownState, ChargingState
+from prodsys.express.state import (
+    SetupState,
+    BreakDownState,
+    ProcessBreakdownState,
+    ChargingState,
+)
 from prodsys.express.node import Node
 from prodsys.express.process import (
     ProductionProcess,
@@ -38,6 +44,7 @@ from prodsys.express.process import (
     RequiredCapabilityProcess,
     TransportProcess,
     LinkTransportProcess,
+    ReworkProcess,
 )
 from prodsys.express.resources import ProductionResource, TransportResource
 from prodsys.express.product import Product

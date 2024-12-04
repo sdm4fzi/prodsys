@@ -91,12 +91,13 @@ class Source(BaseModel):
             logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Created product"})
             available_events_events = []
             for queue in self.output_queues:
+                queue.reserve()
                 available_events_events.append(queue.put(product.product_data))
             yield events.AllOf(self.env, available_events_events)
             logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Put product in output queue"})
             product.update_location(self)
             product.process = self.env.process(product.process_product())
-
+    
     def get_location(self) -> List[float]:
         """
         Returns the location of the source.

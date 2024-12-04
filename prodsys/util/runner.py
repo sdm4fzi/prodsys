@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import random
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import numpy as np
 import time
@@ -74,6 +74,9 @@ class Runner:
 
     Args:
         adapter (adapter.ProductionSystemAdapter): The adapter containing the production system to simulate.
+        warm_up_cutoff (bool, optional): Whether to use warm-up cutoff. Defaults to False.
+        cut_off_method (Literal["mser5", "threshold_stabilization", "static_ratio"], optional): The method to use for warm-up cutoff. Defaults to "mser5".
+
 
     Attributes:
         adapter (adapter.ProductionSystemAdapter): The adapter containing the production system to simulate.
@@ -91,7 +94,15 @@ class Runner:
         post_processor (post_processing.PostProcessor): The post processor to process the simulation results.
     """
 
-    def __init__(self, adapter: adapter.ProductionSystemAdapter):
+    def __init__(
+        self,
+        adapter: adapter.ProductionSystemAdapter,
+        warm_up_cutoff: bool = False,
+        cut_off_method: Literal[
+            "mser5", "threshold_stabilization", "static_ratio"
+        ] = "mser5",
+    ):
+        """"""
         self.adapter = adapter
         self.env = sim.Environment(seed=self.adapter.seed)
         self.time_model_factory: time_model_factory.TimeModelFactory = None
@@ -107,7 +118,8 @@ class Runner:
         self.event_logger: logger.Logger = None
         self.time_stamp: str = ""
         self.post_processor: PostProcessor = None
-
+        self.warm_up_cutoff = warm_up_cutoff
+        self.cut_off_method = cut_off_method
 
     def initialize_simulation(self):
         """
@@ -187,7 +199,6 @@ class Runner:
             self.auxiliary_factory.event_logger = self.event_logger
             self.auxiliary_factory.create_auxiliary(self.adapter)
 
-
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
                 product_factory=self.product_factory,
@@ -207,7 +218,7 @@ class Runner:
                 node_factory=self.node_factory,
             )
             link_transport_process_updater_instance.update_links_with_objects()
-            
+
             self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
@@ -235,9 +246,8 @@ class Runner:
             post_processing.PostProcessor: The post processor to process the simulation results.
         """
         if not self.post_processor:
-            self.post_processor = PostProcessor(df_raw=self.event_logger.get_data_as_dataframe())
+            self.post_processor = PostProcessor(df_raw=self.event_logger.get_data_as_dataframe(), warm_up_cutoff=self.warm_up_cutoff, cut_off_method=self.cut_off_method)
         return self.post_processor
-
 
     def print_results(self):
         """
@@ -272,7 +282,6 @@ class Runner:
         kpi_visualization.plot_util_WIP_resource(p)
         kpi_visualization.plot_oee(p)
 
-
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
         """
         Returns the event data of the simulation.
@@ -287,7 +296,7 @@ class Runner:
         df_raw["Target location"] = df_raw["Target location"].fillna(value="")
         df_raw["Product"] = df_raw["Product"].fillna(value="")
         for index, row in df_raw.iterrows():
-            
+
             events.append(
                 performance_data.Event(
                     time=row["Time"],
@@ -301,7 +310,7 @@ class Runner:
                 )
             )
         return events
-    
+
     def get_performance_data(self) -> performance_data.Performance:
         """
         Returns the performance data of the simulation.
@@ -317,7 +326,7 @@ class Runner:
         kpis += p.machine_state_KPIS
         event_data = self.get_event_data_of_simulation()
         return performance_data.Performance(kpis=kpis, event_log=event_data)
-    
+
     def get_aggregated_data_simulation_results(self) -> dict:
         """
         Returns the aggregated simulation results.
@@ -355,4 +364,3 @@ class Runner:
             save_name = f"{self.adapter.ID}_"
         save_name += self.time_stamp
         self.event_logger.log_data_to_json(filepath=f"{save_folder}/{save_name}.json")
-

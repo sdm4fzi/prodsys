@@ -34,13 +34,16 @@ class QueueFactory(BaseModel):
         Args:
             adapter (adapter.ProductionSystemAdapter): _description_
         """
-        for queue_data in adapter.queue_data:
-            self.add_queue(queue_data)
+        for data in adapter.queue_data:
+            self.add_queue(data)
 
-    def add_queue(self, queue_data: queue_data.QueueData):
+    def add_queue(self, data: queue_data.QueueData):
         values = {}
-        values.update({"env": self.env, "queue_data": queue_data})
-        q = store.Queue(self.env, queue_data)
+        values.update({"env": self.env, "data": data})
+        if hasattr(data, "location"):
+            q = store.Store(**values)
+        else:
+            q = store.Queue(**values)
         self.queues.append(q)
 
     def get_queue(self, ID: str) -> store.Queue:

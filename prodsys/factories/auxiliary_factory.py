@@ -1,6 +1,6 @@
 
 from typing import TYPE_CHECKING, Generator, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from prodsys.adapters import adapter
 from prodsys.factories import process_factory, queue_factory, resource_factory, sink_factory
 from prodsys.models import queue_data, auxiliary_data
@@ -24,8 +24,7 @@ class AuxiliaryFactory(BaseModel):
         event_logger: logger.EventLogger = Field(default=False, init=False)
         auxiliary_counter: int = 0
 
-        class Config:
-                arbitrary_types_allowed = True
+        model_config = ConfigDict(arbitrary_types_allowed=True)
 
         def create_auxiliary(self, adapter: adapter.ProductionSystemAdapter):
                 """
@@ -47,7 +46,7 @@ class AuxiliaryFactory(BaseModel):
                                                 resource=auxiliary.current_locatable, _product=auxiliary, event_time=self.env.now
                                         )
 
-        def add_auxiliary(self, auxiliary_data: auxiliary_data.AuxiliaryData, storage: queue_data.QueueData):
+        def add_auxiliary(self, auxiliary_data: auxiliary_data.AuxiliaryData, storage: queue_data.StoreData) -> auxiliary.Auxiliary:
                 """
                 Add a new auxiliary object to the factory.
 

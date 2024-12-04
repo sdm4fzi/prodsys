@@ -66,7 +66,7 @@ class Source(core.ExpressObject):
     """
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
+    location: list[float] = Field(..., min_length=2, max_length=2)
     routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
