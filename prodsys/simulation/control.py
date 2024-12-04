@@ -307,25 +307,9 @@ class ProductionController(Controller):
             state.StateTypeEnum.production,
         )
         input_state.process = self.env.process(input_state.process_state())
-        self.handle_blocking_of_processing(target_product, process)
         self.handle_rework_required(target_product, process)
 
         yield input_state.process
-
-    def handle_blocking_of_processing(self, product: product.Product, proc: process.Process):
-        """
-        Check if the process is blocking.
-
-        Args:
-            product (product.Product): The product that is processed.
-            proc (process.Process): The process that is processed.
-        """        
-        blocking = False  
-        for proc in self.resource.processes:
-            if isinstance(proc, ReworkProcess):
-                blocking = proc.process_data.blocking
-                if blocking is not None:
-                    product.blocking = blocking
 
     def handle_rework_required(self, product: product.Product, process: process.Process):
         """
@@ -340,13 +324,10 @@ class ProductionController(Controller):
         if not failure_rate or failure_rate == 0:
             return 
         rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
-        print(f"Rework needed: {rework_needed} for product {product.product_data.ID}")
-        product.rework_needed = rework_needed
         if not rework_needed:
             return
-        product.processes_needing_rework = product.processes_needing_rework or []
-        product.processes_needing_rework.append(process)
-
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Rework needed for {product.product_data.ID}"})
+        product.add_needed_rework(process)
 
 class BatchController(Controller):
     """
@@ -576,25 +557,9 @@ class BatchController(Controller):
             input_state.process = self.env.process(input_state.process_state(process_time_for_batch))
             states.append(input_state.process)
 
-            self.handle_blocking_of_processing(product, process)
             self.handle_rework_required(product, process)
         
         yield events.AllOf(self.env, states)
-
-    def handle_blocking_of_processing(self, product: product.Product, proc: process.Process):
-        """
-        Check if the process is blocking.
-
-        Args:
-            product (product.Product): The product that is processed.
-            proc (process.Process): The process that is processed.
-        """        
-        blocking = False  
-        for proc in self.resource.processes:
-            if isinstance(proc, ReworkProcess):
-                blocking = proc.process_data.blocking
-                if blocking is not None:
-                    product.blocking = blocking
 
     def handle_rework_required(self, product: product.Product, process: process.Process):
         """
@@ -603,15 +568,16 @@ class BatchController(Controller):
         Args:
             process (process.Process): The process to check for failure rate.
         """
+        if isinstance(process, ReworkProcess):
+            return
         failure_rate = process.process_data.failure_rate
         if not failure_rate or failure_rate == 0:
             return 
         rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
-        product.rework_needed = rework_needed
         if not rework_needed:
             return
-        product.processes_needing_rework = product.processes_needing_rework or []
-        product.processes_needing_rework.append(process)
+        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Rework needed for {product.product_data.ID}"})
+        product.add_needed_rework(process)
 
 class TransportController(Controller):
     """

@@ -47,10 +47,11 @@ def test_run_simulation(batch_simulation_adapter: JsonProductionSystemAdapter):
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
+    runner_instance.print_results()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 1940 and kpi.value < 1960
+            assert kpi.value > 1930 and kpi.value < 1940
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
             assert kpi.value < 41 and kpi.value > 39

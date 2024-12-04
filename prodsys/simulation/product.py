@@ -1,3 +1,4 @@
+import random
 from typing import Union, Optional, Generator, List
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -5,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field
 import logging
 logger = logging.getLogger(__name__)
 
-import numpy as np
 from simpy import events
 
 from prodsys.models import product_data
@@ -24,6 +24,7 @@ from prodsys.simulation import (
     node
 )
 from prodsys.simulation.state import StateTypeEnum, StateEnum
+from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
 
 class ProductInfo(BaseModel):
     """
@@ -157,12 +158,12 @@ class Product(BaseModel):
 
     next_prodution_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     processes_needing_rework: List[process.Process] = Field(default_factory=list, init=False)
+    blocking_rework_process_mappings: list[list[process.PROCESS_UNION, list[ReworkProcess]]] = Field(default_factory=list, init=False)
+    non_blocking_rework_process_mappings: list[list[process.PROCESS_UNION, list[ReworkProcess]]] = Field(default_factory=list, init=False)
     process: events.Process = Field(default=None, init=False)
     current_locatable: Locatable = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = Field(default_factory=ProductInfo, init=False)
-    rework_needed: bool = Field(default=False, init=False)
-    blocking: bool = Field(default=None, init=False)
     executed_production_processes: List = Field(default_factory=list, init=False)
 
     model_config=ConfigDict(arbitrary_types_allowed=True)
@@ -283,42 +284,78 @@ class Product(BaseModel):
             state_type=type_,
         )
         self.finished_process = events.Event(self.env)
+        if isinstance(processing_request.process, process.ReworkProcess):
+            self.register_rework(processing_request.process)
+
+    def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
+        """
+        Adds a process to the list of processes that need rework.
+
+        Args:
+            failed_process (PROCESS_UNION): Process that needs rework.
+        """
+        self.processes_needing_rework.append(failed_process)
+        possible_rework_processes = self.product_router.get_rework_processes(self, failed_process)
+        if not possible_rework_processes:
+            raise ValueError(f"No rework processes found for process {failed_process.process_data.ID}")
+        if any(rework_process.blocking for rework_process in possible_rework_processes):
+            self.blocking_rework_process_mappings.append(
+                [failed_process, possible_rework_processes]
+            )
+        else:   
+            self.non_blocking_rework_process_mappings.append(
+                [failed_process, possible_rework_processes]
+            )
+
+    def register_rework(self, rework_process: ReworkProcess) -> None:
+        """
+        Register a rework process that has been executed.
+        """
+        for process_rework_mapping in self.blocking_rework_process_mappings + self.non_blocking_rework_process_mappings:
+            if not rework_process in process_rework_mapping[1]:
+                continue
+            reworked_process = process_rework_mapping[0]
+            break
+        self.processes_needing_rework.remove(reworked_process)
+        in_blocking_list = any(reworked_process == process_rework_mapping[0] for process_rework_mapping in self.blocking_rework_process_mappings)
+        if in_blocking_list:
+            mapping_to_adjust = self.blocking_rework_process_mappings
+        else:
+            mapping_to_adjust = self.non_blocking_rework_process_mappings
+        for index, process_rework_mapping in enumerate(mapping_to_adjust):
+            if reworked_process == process_rework_mapping[0]:
+                index_to_remove = index
+                break
+        mapping_to_adjust.pop(index_to_remove)
 
     def set_next_production_process(self):
         """
         Sets the next process of the product object based on the current state of the product and its process model.
-        """ 
-        blocked = bool
-        if self.blocking is not None:
-            blocked = self.blocking 
-        reworked = self.rework_needed
-        
+        """
+        # check if rework is needed due to blocking rework processes. If so, execute these rework processes
+        if self.blocking_rework_process_mappings:
+            process_mapping_to_rework = random.choice(self.blocking_rework_process_mappings)
+            next_possible_processes = process_mapping_to_rework[1]
+            self.next_prodution_process = random.choice(next_possible_processes)
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Blocking rework as next process with ID {self.next_prodution_process.process_data.ID}"})
+            return
+
         next_possible_processes = self.process_model.get_next_possible_processes()
-        
+
+        # if all normal processes are done, i.e. the product has finished its process sequence, execute rework processes without blocking.
+        if not next_possible_processes and self.non_blocking_rework_process_mappings:
+            process_mapping_to_rework = random.choice(self.non_blocking_rework_process_mappings)
+            failed_process = process_mapping_to_rework[0]
+            next_possible_processes = process_mapping_to_rework[1]
+            self.next_prodution_process = random.choice(next_possible_processes)
+            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Non-blocking rework as next process with ID {self.next_prodution_process.process_data.ID}"})
+            return
+        # if all normal processes are done and no rework processes are needed, the product has finished its process sequence.
         if not next_possible_processes:
             self.next_prodution_process = None
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"No next process"})  
             return
-        if reworked:         
-            if blocked is not None and blocked is True:
-                failed_process = self.next_prodution_process
-                next_possible_processes = self.product_router.get_rework_processes(self, failed_process)
-                if next_possible_processes is not None:
-                    self.next_prodution_process = next_possible_processes[0]
-                    self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-                    reworked = False
-                    blocked = False
-                    logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
-            elif blocked is not None and blocked is False:
-                for proc in self.processes_needing_rework:
-                    ids_to_rework = [proc.process_data.ID]
-                    processes_on_product = self.executed_production_processes
-                    if all(id in processes_on_product for id in ids_to_rework):
-                        self.next_prodution_process = proc
-                        self.process_model.update_marking_from_transition(self.next_prodution_process)              
-                reworked = False
-        else: 
-            self.next_prodution_process = np.random.choice(next_possible_processes)  # type: ignore
-            self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-            self.executed_production_processes.append(self.next_prodution_process.process_data.ID)
-            logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
+
+        self.next_prodution_process = random.choice(next_possible_processes)  # type: ignore
+        self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
+        self.executed_production_processes.append(self.next_prodution_process.process_data.ID)
+        logger.debug({"ID": self.product_data.ID, "sim_time": self.env.now, "event": f"Next process {self.next_prodution_process.process_data.ID}"})
