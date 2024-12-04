@@ -1,5 +1,3 @@
-ARG APP_VERSION=0.8.4
-
 FROM python:3.11-slim
 
 # Set the working directory in the container

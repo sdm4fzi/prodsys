@@ -1,5 +1,7 @@
 import prodsys.express as psx
-
+import prodsys
+print("version used:", prodsys.VERSION)
+# prodsys.set_logging("DEBUG")
 
 t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
 t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")

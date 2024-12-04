@@ -22,7 +22,7 @@ def get_process_module_cost(
 ) -> float:
     num_process_modules = get_num_of_process_modules(adapter_object)
 
-    process_module_cost = 0
+    sum_process_module_cost = 0
     process_module_cost = adapter_object.scenario_data.info.process_module_cost
 
     for process_tuple in num_process_modules:
@@ -31,7 +31,7 @@ def get_process_module_cost(
             process_cost = process_module_cost.get(process, 0)
         else:
             process_cost = process_module_cost
-        process_module_cost += max(
+        sum_process_module_cost += max(
             0,
             (
                 num_process_modules[process_tuple]
@@ -39,7 +39,7 @@ def get_process_module_cost(
             )
             * process_cost,
         )
-    return process_module_cost
+    return sum_process_module_cost
 
 
 def get_reconfiguration_cost(

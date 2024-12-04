@@ -240,6 +240,10 @@
             "ID": "M1",
             "description": "Machine 1",
             "capacity": 1,
+            "location": [
+                0.0,
+                0.0
+            ],
             "input_location": [
                 0.0,
                 0.0
@@ -272,6 +276,10 @@
             "ID": "M2",
             "description": "Machine 2",
             "capacity": 1,
+            "location": [
+                0.0,
+                5.0
+            ],
             "input_location": [
                 0.0,
                 5.0
@@ -304,6 +312,10 @@
             "ID": "M3",
             "description": "Machine 3",
             "capacity": 1,
+            "location": [
+                5.0,
+                0.0
+            ],
             "input_location": [
                 5.0,
                 0.0
@@ -334,6 +346,10 @@
             "ID": "M4",
             "description": "Machine 4",
             "capacity": 1,
+            "location": [
+                5.0,
+                5.0
+            ],
             "input_location": [
                 5.0,
                 5.0
@@ -411,7 +427,7 @@
         {
             "ID": "SK1",
             "description": "Sink 1",
-            "input_location": [
+            "location": [
                 30.0,
                 30.0
             ],
@@ -423,7 +439,7 @@
         {
             "ID": "SK2",
             "description": "Sink 2",
-            "input_location": [
+            "location": [
                 30.0,
                 30.0
             ],
@@ -437,7 +453,7 @@
         {
             "ID": "S1",
             "description": "Source 1",
-            "output_location": [
+            "location": [
                 -5.0,
                 -5.0
             ],
@@ -451,7 +467,7 @@
         {
             "ID": "S2",
             "description": "Source 2",
-            "output_location": [
+            "location": [
                 -5.0,
                 -5.0
             ],
