@@ -12,6 +12,7 @@ from prodsys.optimization.util import (
     get_required_auxiliaries,
     get_weights,
 )
+from prodsys.simulation import sim
 from prodsys.util.post_processing import PostProcessor
 
 
@@ -265,7 +266,7 @@ def evaluate(
     Returns:
         List[float]: List of the fitness values of the configuration.
     """
-
+    sim.VERBOSE = 0
     adapter_object: adapters.ProductionSystemAdapter = individual[0]
     adapter_object_hash = adapter_object.hash()
     if adapter_object_hash in solution_dict["hashes"]:

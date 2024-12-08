@@ -482,6 +482,7 @@ def document_individual(
             "generation": current_generation,
             "ID": adapter_object.ID,
         }
-    adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
-        f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
-    )
+    if save_folder:
+        adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
+            f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
+        )

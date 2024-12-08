@@ -5,7 +5,7 @@ from pydantic import Field, PrivateAttr
 from pydantic.dataclasses import dataclass
 
 from prodsys.util import util
-from prodsys.util import runner
+from prodsys.simulation import runner
 from prodsys.adapters import adapter, json_adapter
 
 from prodsys.express import (
