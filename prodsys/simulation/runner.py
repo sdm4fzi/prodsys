@@ -230,7 +230,6 @@ class Runner:
         Args:
             time_range (int): The time range to run the simulation for.
         """
-
         t_0 = time.perf_counter()
 
         self.env.run(time_range)

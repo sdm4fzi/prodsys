@@ -23,9 +23,6 @@ from prodsys.optimization.util import (
 )
 from prodsys.util.util import set_seed
 
-sim.VERBOSE = 0
-
-
 class ProductionSystemOptimization(Annealer):
     def __init__(
         self,

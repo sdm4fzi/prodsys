@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from copy import deepcopy
 import logging
 from typing import Callable, List
@@ -418,26 +420,8 @@ def get_mutation_operations(
 ) -> List[Callable[[adapters.ProductionSystemAdapter], bool]]:
     mutations_operations = []
     transformations = adapter_object.scenario_data.options.transformations
-    if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
-        mutations_operations.append(add_machine)
-        mutations_operations.append(remove_machine)
-        mutations_operations.append(move_machine)
-        mutations_operations.append(change_control_policy)
-        mutations_operations.append(add_process_module)
-        mutations_operations.append(remove_process_module)
-        mutations_operations.append(move_process_module)
-    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
-        mutations_operations.append(add_transport_resource)
-        mutations_operations.append(remove_transport_resource)
-    if scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY in transformations:
-        mutations_operations.append(add_auxiliary)
-        mutations_operations.append(remove_auxiliary)
-    if scenario_data.ReconfigurationEnum.LAYOUT in transformations:
-        mutations_operations.append(move_machine)
-    if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations:
-        mutations_operations.append(change_control_policy)
-    if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
-        mutations_operations.append(change_routing_policy)
+    for transformation in transformations:
+        mutations_operations += TRANSFORMATIONS[transformation]
     return mutations_operations
 
 
@@ -663,3 +647,27 @@ def random_configuration_with_initial_solution(
     """
     adapter_object = random.choice(initial_adapters)
     return random_configuration(adapter_object)
+
+TRANSFORMATIONS = {
+    scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY: [add_machine, remove_machine, move_machine, change_control_policy, add_process_module, remove_process_module, move_process_module],
+    scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY: [add_transport_resource, remove_transport_resource],
+    scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY: [add_auxiliary, remove_auxiliary],
+    scenario_data.ReconfigurationEnum.LAYOUT: [move_machine],
+    scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC: [change_control_policy],
+    scenario_data.ReconfigurationEnum.ROUTING_LOGIC: [change_routing_policy],
+    }
+
+
+def add_transformation_operation(
+    transformation: scenario_data.ReconfigurationEnum,
+    operation: Callable[[adapters.ProductionSystemAdapter], bool],
+) -> None:
+    """
+    Function that adds a transformation operation to the transformation dictionary.
+
+    Args:
+        transformation (scenario_data.ReconfigurationEnum): Transformation to add the operation to.
+        operation (Callable[[adapters.ProductionSystemAdapter], bool]): Operation to add to the transformation.
+    """
+    if transformation in TRANSFORMATIONS:
+        TRANSFORMATIONS[transformation].append(operation)
