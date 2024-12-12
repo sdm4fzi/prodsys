@@ -157,6 +157,4 @@ class AuxiliaryFactory(BaseModel):
             router.ROUTING_HEURISTIC[routing_heuristic],
         )
 
-
-# from prodsys.factories import resource_factory, sink_factory
-# AuxiliaryFactory.update_forward_refs()
+AuxiliaryFactory.model_rebuild()
