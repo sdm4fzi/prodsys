@@ -180,19 +180,6 @@ class Runner:
                 sink_factory=self.sink_factory,
             )
 
-            # self.product_factory = product_factory.ProductFactory(
-            #     env=self.env,
-            #     process_factory=self.process_factory,
-            # )
-
-            # self.sink_factory = sink_factory.SinkFactory(
-            #     env=self.env,
-            #     product_factory=self.product_factory,
-            #     queue_factory=self.queue_factory,
-            # )
-
-            # self.sink_factory.create_sinks(self.adapter)
-
             self.event_logger = logger.EventLogger()
             self.event_logger.observe_resource_states(self.resource_factory)
 
