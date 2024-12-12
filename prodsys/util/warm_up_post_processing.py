@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from functools import cached_property
-
-from prodsys.simulation import state
-from prodsys.models import performance_indicators
-
-from typing import List, Literal, LiteralString
+from typing import Literal
 
 import pandas as pd
 
