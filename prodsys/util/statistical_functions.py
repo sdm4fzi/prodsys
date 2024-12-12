@@ -8,6 +8,7 @@ from enum import Enum
 if TYPE_CHECKING:
     from prodsys.models.time_model_data import FunctionTimeModelData
 
+
 class FunctionTimeModelEnum(str, Enum):
     Constant = "constant"
     Exponential = "exponential"
@@ -51,7 +52,12 @@ def get_normal_list(time_model_data: FunctionTimeModelData) -> List[float]:
     Returns:
         List[float]: A list of normally distributed values.
     """
-    return list(normal(time_model_data.location, time_model_data.scale, time_model_data.batch_size))
+    return list(
+        normal(
+            time_model_data.location, time_model_data.scale, time_model_data.batch_size
+        )
+    )
+
 
 def get_lognormal_list(time_model_data: FunctionTimeModelData) -> List[float]:
     """
@@ -63,10 +69,16 @@ def get_lognormal_list(time_model_data: FunctionTimeModelData) -> List[float]:
     Returns:
         List[float]: A list of lognormally distributed values.
     """
-    mu = np.log(time_model_data.location **2 / np.sqrt(time_model_data.location**2 + time_model_data.scale**2))
-    sigma = np.sqrt(np.log(1 + (time_model_data.scale**2 / time_model_data.location**2)))
+    mu = np.log(
+        time_model_data.location**2
+        / np.sqrt(time_model_data.location**2 + time_model_data.scale**2)
+    )
+    sigma = np.sqrt(
+        np.log(1 + (time_model_data.scale**2 / time_model_data.location**2))
+    )
     exponential_values = lognormal(mu, sigma, time_model_data.batch_size)
     return list(exponential_values)
+
 
 FUNCTION_DICT: Dict[str, Callable[[float, float, int], List[float]]] = {
     FunctionTimeModelEnum.Normal: get_normal_list,

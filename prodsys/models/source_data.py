@@ -14,6 +14,7 @@ class RoutingHeuristic(str, Enum):
     """
     Enum that represents the routing heuristic of a source.
     """
+
     random = "random"
     shortest_queue = "shortest_queue"
     FIFO = "FIFO"
@@ -48,6 +49,7 @@ class SourceData(CoreAsset, Locatable):
             output_queues=["SourceQueue"],
         )
     """
+
     product_type: str
     time_model_id: str
     routing_heuristic: RoutingHeuristic
@@ -110,17 +112,19 @@ class SourceData(CoreAsset, Locatable):
             ).encode("utf-8")
         ).hexdigest()
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "ID": "S1",
-                "description": "Source 1",
-                "output_location": [0.0, 0.0],
-                "product_type": "Product_1",
-                "time_model_id": "function_time_model_4",
-                "router": "SimpleRouter",
-                "routing_heuristic": "shortest_queue",
-                "output_queues": ["SourceQueue"],
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "S1",
+                    "description": "Source 1",
+                    "output_location": [0.0, 0.0],
+                    "product_type": "Product_1",
+                    "time_model_id": "function_time_model_4",
+                    "router": "SimpleRouter",
+                    "routing_heuristic": "shortest_queue",
+                    "output_queues": ["SourceQueue"],
+                }
+            ]
+        }
+    )

@@ -50,16 +50,16 @@ class StateFactory:
             return {}
         loading_time_model_dict = {}
         if transport_state.loading_time_model_id is not None:
-            loading_time_model_dict["loading_time_model"] = (
-                self.time_model_factory.get_time_model(
-                    transport_state.loading_time_model_id
-                )
+            loading_time_model_dict[
+                "loading_time_model"
+            ] = self.time_model_factory.get_time_model(
+                transport_state.loading_time_model_id
             )
         if transport_state.unloading_time_model_id is not None:
-            loading_time_model_dict["unloading_time_model"] = (
-                self.time_model_factory.get_time_model(
-                    transport_state.unloading_time_model_id
-                )
+            loading_time_model_dict[
+                "unloading_time_model"
+            ] = self.time_model_factory.get_time_model(
+                transport_state.unloading_time_model_id
             )
         return loading_time_model_dict
 

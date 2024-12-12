@@ -32,7 +32,10 @@ from prodsys.models import performance_data
 
 VERBOSE = 1
 
-def run_simulation(adapter_object: adapter.ProductionSystemAdapter, run_length: int) -> Runner:
+
+def run_simulation(
+    adapter_object: adapter.ProductionSystemAdapter, run_length: int
+) -> Runner:
     """
     Runs the simulation for the given adapter and run length.
 
@@ -127,7 +130,6 @@ class Runner:
         """
         self.adapter.validate_configuration()
         with temp_seed(self.adapter.seed):
-
             self.time_model_factory = time_model_factory.TimeModelFactory()
             self.time_model_factory.create_time_models(self.adapter)
 
@@ -150,16 +152,15 @@ class Runner:
                 env=self.env,
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
-                process_factory= self.process_factory
+                process_factory=self.process_factory,
             )
             self.resource_factory.create_resources(self.adapter)
 
-            self.node_factory = node_factory.NodeFactory(
-                env=self.env)
+            self.node_factory = node_factory.NodeFactory(env=self.env)
             self.node_factory.create_nodes(self.adapter)
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env, 
+                env=self.env,
                 process_factory=self.process_factory,
             )
 
@@ -176,11 +177,11 @@ class Runner:
                 process_factory=self.process_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
-                sink_factory= self.sink_factory
+                sink_factory=self.sink_factory,
             )
 
             self.product_factory = product_factory.ProductFactory(
-                env=self.env, 
+                env=self.env,
                 process_factory=self.process_factory,
             )
 
@@ -210,12 +211,14 @@ class Runner:
             )
             self.source_factory.create_sources(self.adapter)
 
-            link_transport_process_updater_instance = link_transport_process_updater.LinkTransportProcessUpdater(
-                process_factory=self.process_factory,
-                source_factory=self.source_factory,
-                sink_factory=self.sink_factory,
-                resource_factory=self.resource_factory,
-                node_factory=self.node_factory,
+            link_transport_process_updater_instance = (
+                link_transport_process_updater.LinkTransportProcessUpdater(
+                    process_factory=self.process_factory,
+                    source_factory=self.source_factory,
+                    sink_factory=self.sink_factory,
+                    resource_factory=self.resource_factory,
+                    node_factory=self.node_factory,
+                )
             )
             link_transport_process_updater_instance.update_links_with_objects()
 
@@ -246,7 +249,11 @@ class Runner:
             post_processing.PostProcessor: The post processor to process the simulation results.
         """
         if not self.post_processor:
-            self.post_processor = PostProcessor(df_raw=self.event_logger.get_data_as_dataframe(), warm_up_cutoff=self.warm_up_cutoff, cut_off_method=self.cut_off_method)
+            self.post_processor = PostProcessor(
+                df_raw=self.event_logger.get_data_as_dataframe(),
+                warm_up_cutoff=self.warm_up_cutoff,
+                cut_off_method=self.cut_off_method,
+            )
         return self.post_processor
 
     def print_results(self):
@@ -277,8 +284,13 @@ class Runner:
         kpi_visualization.plot_boxplot_resource_utilization(p)
         kpi_visualization.plot_line_balance_kpis(p)
         kpi_visualization.plot_production_flow_rate_per_product(p)
-        transport_resource_ids = [resource_data.ID for resource_data in adapter.get_transport_resources(self.adapter)]
-        kpi_visualization.plot_transport_utilization_over_time(p, transport_resource_ids)
+        transport_resource_ids = [
+            resource_data.ID
+            for resource_data in adapter.get_transport_resources(self.adapter)
+        ]
+        kpi_visualization.plot_transport_utilization_over_time(
+            p, transport_resource_ids
+        )
         kpi_visualization.plot_util_WIP_resource(p)
         kpi_visualization.plot_oee(p)
 
@@ -290,13 +302,12 @@ class Runner:
             List[performance_data.Event]: The event data of the simulation.
         """
         p = self.get_post_processor()
-        df_raw=self.event_logger.get_data_as_dataframe()
+        df_raw = self.event_logger.get_data_as_dataframe()
         events = []
         df_raw["Expected End Time"] = df_raw["Expected End Time"].fillna(value=-1)
         df_raw["Target location"] = df_raw["Target location"].fillna(value="")
         df_raw["Product"] = df_raw["Product"].fillna(value="")
         for index, row in df_raw.iterrows():
-
             events.append(
                 performance_data.Event(
                     time=row["Time"],

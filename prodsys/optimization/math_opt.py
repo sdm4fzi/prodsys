@@ -125,13 +125,13 @@ class MathOptimizer(BaseModel):
                     for station in range(
                         self.adapter.scenario_data.constraints.max_num_machines
                     ):
-                        x[product_type.ID][work_piece_index][step][station] = (
-                            self.model.addVar(
-                                vtype=GRB.BINARY,
-                                name="x[{},{},{},{}]".format(
-                                    product_type.ID, work_piece_index, step, station
-                                ),
-                            )
+                        x[product_type.ID][work_piece_index][step][
+                            station
+                        ] = self.model.addVar(
+                            vtype=GRB.BINARY,
+                            name="x[{},{},{},{}]".format(
+                                product_type.ID, work_piece_index, step, station
+                            ),
                         )
         return x
 
@@ -345,9 +345,9 @@ class MathOptimizer(BaseModel):
                 )
                 # Adjust processing times with safety factor (0,85-Quantil of the normal distribution)
                 quantil = scipy.stats.norm.ppf(0.85, loc=0, scale=1)
-                processing_times_per_product_and_step[product.ID][step] = (
-                    time_model.location + (time_model.scale * quantil)
-                )
+                processing_times_per_product_and_step[product.ID][
+                    step
+                ] = time_model.location + (time_model.scale * quantil)
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):

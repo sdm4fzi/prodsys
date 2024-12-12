@@ -21,12 +21,13 @@ class Sink(BaseModel):
         product_factory (product_factory.ProductFactory): The product factory.
         input_queues (List[store.Queue], optional): The input queues. Defaults to [].
     """
+
     env: sim.Environment
     data: sink_data.SinkData
     product_factory: product_factory.ProductFactory
     input_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
-    model_config=ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         """
@@ -62,7 +63,7 @@ class Sink(BaseModel):
             int(0)
         """
         return 0
-    
+
     def register_finished_product(self, product: product.Product):
         """
         Registers a finished product when it reaches the sink.
@@ -72,5 +73,5 @@ class Sink(BaseModel):
         """
         self.product_factory.register_finished_product(product)
 
-from prodsys.factories import product_factory    
 
+from prodsys.factories import product_factory

@@ -8,13 +8,16 @@ from pydantic import BaseModel, ConfigDict, Field
 import random
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
 from simpy import events
 from prodsys.simulation import sim, store
+
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
+
     # from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
@@ -23,6 +26,7 @@ from prodsys.models.resource_data import (
     TransportResourceData,
 )
 from prodsys.util import util
+
 
 class Resource(BaseModel, ABC, resource.Resource):
     """
@@ -41,6 +45,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         current_setup (PROCESS_UNION): The current setup.
         reserved_setup (PROCESS_UNION): The reserved setup.
     """
+
     env: sim.Environment
     data: RESOURCE_DATA_UNION
     processes: List[PROCESS_UNION]
@@ -56,7 +61,7 @@ class Resource(BaseModel, ABC, resource.Resource):
     current_setup: PROCESS_UNION = Field(default=None, init=False)
     reserved_setup: PROCESS_UNION = Field(default=None, init=False)
 
-    model_config=ConfigDict(arbitrary_types_allowed=True, extra="allow")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     @property
     def capacity_current_setup(self) -> int:
@@ -122,9 +127,12 @@ class Resource(BaseModel, ABC, resource.Resource):
             return True
         return (
             self.capacity_current_setup
-            - (len(self.controller.running_processes) + self.controller.reserved_requests_count)
+            - (
+                len(self.controller.running_processes)
+                + self.controller.reserved_requests_count
+            )
         ) <= 0
-    
+
     @property
     def requires_charging(self) -> bool:
         """
@@ -133,9 +141,14 @@ class Resource(BaseModel, ABC, resource.Resource):
         Returns:
             bool: True if the resource requires charging, False otherwise.
         """
-        return any([state_instance.requires_charging() for state_instance in self.charging_states if isinstance(state_instance, state.ChargingState)])
+        return any(
+            [
+                state_instance.requires_charging()
+                for state_instance in self.charging_states
+                if isinstance(state_instance, state.ChargingState)
+            ]
+        )
 
-    
     def charge(self) -> Generator:
         """
         Charges the resource.
@@ -159,7 +172,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         for state_instance in self.charging_states:
             state_instance.add_battery_usage_time(amount)
-    
+
     def get_controller(self) -> control.Controller:
         """
         Returns the controller of the resource.
@@ -201,7 +214,12 @@ class Resource(BaseModel, ABC, resource.Resource):
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.active = events.Event(self.env).succeed()
         self.got_free = events.Event(self.env)
-        for actual_state in self.states + self.production_states + self.setup_states + self.charging_states:
+        for actual_state in (
+            self.states
+            + self.production_states
+            + self.setup_states
+            + self.charging_states
+        ):
             actual_state.activate_state()
         for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())
@@ -270,7 +288,7 @@ class Resource(BaseModel, ABC, resource.Resource):
             ):
                 return actual_state
         return None
-    
+
     def get_free_processes(self, process: PROCESS_UNION) -> Optional[List[state.State]]:
         """
         Returns all free ProductionState or CapabilityState of the resource for a process.
@@ -284,11 +302,10 @@ class Resource(BaseModel, ABC, resource.Resource):
         return [
             actual_state
             for actual_state in self.production_states
-            if actual_state.state_data.ID == process.process_data.ID and (
-                actual_state.process is None or not actual_state.process.is_alive
-            )
+            if actual_state.state_data.ID == process.process_data.ID
+            and (actual_state.process is None or not actual_state.process.is_alive)
         ]
-    
+
     def get_location(self) -> List[float]:
         """
         Returns the location of the transport resource.
@@ -310,7 +327,7 @@ class Resource(BaseModel, ABC, resource.Resource):
     def get_output_queue_length(self) -> int:
         """
         Returns total number of items in all output_queues.
-        
+
         Returns:
             int: Sum of items in the resources output-queues.
         """
@@ -338,8 +355,21 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         Activates the resource after a breakdwon.
         """
-        if any([state_instance.active_breakdown for state_instance in self.states if isinstance(state_instance, state.BreakDownState)]):
-            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Breakdown still active that blocks activation of resource"})
+        if any(
+            [
+                state_instance.active_breakdown
+                for state_instance in self.states
+                if isinstance(state_instance, state.BreakDownState)
+            ]
+        ):
+            logger.debug(
+                {
+                    "ID": self.data.ID,
+                    "sim_time": self.env.now,
+                    "resource": self.data.ID,
+                    "event": f"Breakdown still active that blocks activation of resource",
+                }
+            )
             return
         self.active.succeed()
 
@@ -347,14 +377,31 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         Interrupts the states of the resource.
         """
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start interrupting processes of resource"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Start interrupting processes of resource",
+            }
+        )
         if self.active.triggered:
             self.active = events.Event(self.env)
         for state_instance in self.setup_states + self.production_states:
-            if state_instance.process and state_instance.process.is_alive and not state_instance.interrupted:
+            if (
+                state_instance.process
+                and state_instance.process.is_alive
+                and not state_instance.interrupted
+            ):
                 state_instance.interrupt_process()
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Interrupted processes of resource"})
-
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Interrupted processes of resource",
+            }
+        )
 
     def get_free_of_setups(self) -> Generator:
         """
@@ -368,9 +415,23 @@ class Resource(BaseModel, ABC, resource.Resource):
             for state in self.setup_states
             if (state.process and state.process.is_alive)
         ]
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start waiting for free of setups"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Start waiting for free of setups",
+            }
+        )
         yield events.AllOf(self.env, running_setups)
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Finished waiting for free of setups"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Finished waiting for free of setups",
+            }
+        )
 
     def get_free_of_processes_in_preparation(self) -> Generator:
         """
@@ -384,9 +445,23 @@ class Resource(BaseModel, ABC, resource.Resource):
             for state in self.production_states
             if (state.process and state.process.is_alive)
         ]
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Start waiting for free of processes in preparation"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Start waiting for free of processes in preparation",
+            }
+        )
         yield events.AllOf(self.env, running_processes)
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Finished waiting for free of processes in preparation"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.data.ID,
+                "event": f"Finished waiting for free of processes in preparation",
+            }
+        )
 
     def setup(self, _process: PROCESS_UNION) -> Generator:
         """
@@ -422,9 +497,25 @@ class Resource(BaseModel, ABC, resource.Resource):
                 yield self.env.process(self.get_free_of_setups())
                 input_state.prepare_for_run()
                 input_state.process = self.env.process(input_state.process_state())
-                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "process": _process.process_data.ID, "event": f"Start setup process"})
+                logger.debug(
+                    {
+                        "ID": self.data.ID,
+                        "sim_time": self.env.now,
+                        "resource": self.data.ID,
+                        "process": _process.process_data.ID,
+                        "event": f"Start setup process",
+                    }
+                )
                 yield input_state.process
-                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "process": _process.process_data.ID, "event": f"Finished setup process"})
+                logger.debug(
+                    {
+                        "ID": self.data.ID,
+                        "sim_time": self.env.now,
+                        "resource": self.data.ID,
+                        "process": _process.process_data.ID,
+                        "event": f"Finished setup process",
+                    }
+                )
                 input_state.process = None
                 self.current_setup = _process
                 self.unreserve_setup()
@@ -455,6 +546,7 @@ class ProductionResource(Resource):
 
 
     """
+
     data: ProductionResourceData
     controller: control.Controller
 
@@ -487,15 +579,20 @@ class ProductionResource(Resource):
         self.output_queues.extend(output_queues)
 
     def reserve_internal_input_queues(self):
-        internal_queues = [q for q in self.input_queues if not isinstance(q, store.Store)]
+        internal_queues = [
+            q for q in self.input_queues if not isinstance(q, store.Store)
+        ]
         for internal_queue in internal_queues:
             internal_queue.reserve()
 
     def adjust_pending_put_of_output_queues(self, batch_size: int = 1):
-        internal_queues = [q for q in self.output_queues if not isinstance(q, store.Store)]
+        internal_queues = [
+            q for q in self.output_queues if not isinstance(q, store.Store)
+        ]
         for output_queue in internal_queues:
             for i in range(batch_size):
                 output_queue.reserve()
+
 
 class TransportResource(Resource):
     """
@@ -514,6 +611,7 @@ class TransportResource(Resource):
         current_setup (PROCESS_UNION): The current setup.
         reserved_setup (PROCESS_UNION): The reserved setup.
     """
+
     data: TransportResourceData
     controller: control.TransportController
 

@@ -21,10 +21,11 @@ class TimeModel(ABC, BaseModel):
     """
     Abstract base class for time models.
     """
+
     @abstractmethod
     def get_next_time(
         self,
-        origin: Optional[List[float]] = None, # TOOO: rework this with kwargs
+        origin: Optional[List[float]] = None,  # TOOO: rework this with kwargs
         target: Optional[List[float]] = None,
     ) -> float:
         """
@@ -67,6 +68,7 @@ class FunctionTimeModel(TimeModel):
         statistics_buffer (List[float], optional): A buffer for the statistics. Defaults to [].
         distribution_function_object (Callable[[FunctionTimeModelData], List[float]], optional): The distribution function object. Defaults to FUNCTION_DICT[FunctionTimeModelEnum.Constant].
     """
+
     time_model_data: FunctionTimeModelData
     statistics_buffer: List[float] = []
 
@@ -117,6 +119,7 @@ class SampleTimeModel(TimeModel):
     Args:
         time_model_data (SampleTimeModelData): The time model data object.
     """
+
     time_model_data: SampleTimeModelData
 
     def get_next_time(
@@ -147,6 +150,7 @@ class ScheduledTimeModel(TimeModel):
     Args:
         time_model_data (ScheduledTimeModelData): The time model data object.
     """
+
     time_model_data: ScheduledTimeModelData
 
     _time_value_iterator: Iterator[float] = PrivateAttr()
@@ -155,8 +159,7 @@ class ScheduledTimeModel(TimeModel):
         super().__init__(**kwargs)
         self._time_value_iterator = self._get_time_value_iterator()
 
-    model_config=ConfigDict(arbitrary_types_allowed=True)
-
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def _get_time_value_iterator(self) -> Iterator[float]:
         """
@@ -167,7 +170,9 @@ class ScheduledTimeModel(TimeModel):
         """
         schedule = self.time_model_data.schedule
         if self.time_model_data.absolute:
-            relative_schedule = [schedule[0]] + [schedule[i] - schedule[i - 1] for i in range(1, len(schedule))]
+            relative_schedule = [schedule[0]] + [
+                schedule[i] - schedule[i - 1] for i in range(1, len(schedule))
+            ]
         else:
             relative_schedule = schedule
         if self.time_model_data.cyclic:
@@ -190,7 +195,6 @@ class ScheduledTimeModel(TimeModel):
         except StopIteration:
             return -1
 
-
     def get_expected_time(
         self,
         origin: Optional[List[float]] = None,
@@ -208,10 +212,13 @@ class ScheduledTimeModel(TimeModel):
         """
         if self.time_model_data.absolute:
             schedule = self.time_model_data.schedule
-            relative_schedule = [schedule[0]] + [schedule[i] - schedule[i - 1] for i in range(1, len(schedule))]
+            relative_schedule = [schedule[0]] + [
+                schedule[i] - schedule[i - 1] for i in range(1, len(schedule))
+            ]
         else:
             relative_schedule = self.time_model_data.schedule
         return sum(relative_schedule) / len(relative_schedule)
+
 
 class DistanceTimeModel(TimeModel):
     """
@@ -220,6 +227,7 @@ class DistanceTimeModel(TimeModel):
     Args:
         time_model_data (DistanceTimeModelData): The time model data object.
     """
+
     time_model_data: DistanceTimeModelData
 
     def calculate_distance(self, origin: List[float], target: List[float]) -> float:
@@ -258,7 +266,9 @@ class DistanceTimeModel(TimeModel):
         if origin is None or target is None:
             raise ValueError("Origin and target must be defined for DistanceTimeModel")
         distance = self.calculate_distance(origin, target)
-        return distance / self.time_model_data.speed + self.time_model_data.reaction_time
+        return (
+            distance / self.time_model_data.speed + self.time_model_data.reaction_time
+        )
 
     def get_expected_time(
         self,
@@ -277,9 +287,10 @@ class DistanceTimeModel(TimeModel):
         """
         return self.get_next_time(origin, target)
 
+
 @deprecated(
     "SequentialTimeModel is deprecated and will be removed in the next release. Use SampleTimeModel instead.",
-    category=None
+    category=None,
 )
 class SequentialTimeModel(TimeModel):
     """
@@ -288,6 +299,7 @@ class SequentialTimeModel(TimeModel):
     Args:
         time_model_data (SequentialTimeModelData): The time model data object.
     """
+
     time_model_data: SequentialTimeModelData
 
     def get_next_time(
@@ -323,7 +335,7 @@ class SequentialTimeModel(TimeModel):
 
 @deprecated(
     "ManhattanDistanceTimeModel is deprecated and will be removed in the next release. Use DistanceTimeModel instead.",
-    category=None
+    category=None,
 )
 class ManhattanDistanceTimeModel(TimeModel):
     """
@@ -332,7 +344,9 @@ class ManhattanDistanceTimeModel(TimeModel):
     Args:
         time_model_data (ManhattanDistanceTimeModelData): The time model data object.
     """
+
     time_model_data: ManhattanDistanceTimeModelData
+
     def get_next_time(
         self,
         origin: Optional[List[float]] = None,
@@ -376,7 +390,14 @@ class ManhattanDistanceTimeModel(TimeModel):
         return self.get_next_time(origin, target)
 
 
-TIME_MODEL = Union[SampleTimeModel, ScheduledTimeModel, DistanceTimeModel, SequentialTimeModel, ManhattanDistanceTimeModel, FunctionTimeModel]
+TIME_MODEL = Union[
+    SampleTimeModel,
+    ScheduledTimeModel,
+    DistanceTimeModel,
+    SequentialTimeModel,
+    ManhattanDistanceTimeModel,
+    FunctionTimeModel,
+]
 """
 Union type for all time models.
 """

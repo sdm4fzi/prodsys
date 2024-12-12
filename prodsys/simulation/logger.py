@@ -4,7 +4,8 @@ import functools
 import warnings
 from enum import Enum
 from abc import ABC, abstractmethod
-warnings.simplefilter(action = "ignore", category = RuntimeWarning)
+
+warnings.simplefilter(action="ignore", category=RuntimeWarning)
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
@@ -41,8 +42,6 @@ class Logger(BaseModel, ABC):
         pre: Optional[functools.partial] = None,
         post: Optional[functools.partial] = None,
     ):
-
-
         def get_wrapper(func: Callable) -> Callable:
             # Generate a wrapper for a process state function
             @wraps(func)
@@ -88,7 +87,7 @@ class Logger(BaseModel, ABC):
         if post is not None:
             post = partial(post, data)
         self.patch_state(object, attr, pre, post)
-    
+
     def log_data_to_csv(self, filepath: str):
         """
         Log the data to a csv file.
@@ -109,7 +108,7 @@ class Logger(BaseModel, ABC):
         df = self.get_data_as_dataframe()
         df.to_json(filepath)
 
- 
+
 def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
     """
     Post function for monitoring resource states. With this post monitor, every state change is logged.
@@ -152,7 +151,10 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
     }
     data.append(item)
 
-def post_monitor_auxiliary_info(data: List[dict], auxiliary_info: auxiliary.AuxiliaryInfo):
+
+def post_monitor_auxiliary_info(
+    data: List[dict], auxiliary_info: auxiliary.AuxiliaryInfo
+):
     """
     Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
 
@@ -171,12 +173,13 @@ def post_monitor_auxiliary_info(data: List[dict], auxiliary_info: auxiliary.Auxi
     }
     data.append(item)
 
+
 class EventLogger(Logger):
     """
     Logger for logging events.
     """
-    event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
 
+    event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
 
     def get_data_as_dataframe(self) -> pd.DataFrame:
         """
@@ -188,15 +191,15 @@ class EventLogger(Logger):
         df = pd.DataFrame(self.event_data)
         df["Activity"] = pd.Categorical(
             df["Activity"],
-            categories=[
-                v.value for v in list(state.StateEnum)
-            ],
+            categories=[v.value for v in list(state.StateEnum)],
             ordered=True,
         )
         df["Activity"] = df["Activity"].astype("string")
         return df
-    
-    def observe_resource_states(self, resource_factory: resource_factory.ResourceFactory):
+
+    def observe_resource_states(
+        self, resource_factory: resource_factory.ResourceFactory
+    ):
         """
         Create patch to observe the resource states.
 
@@ -204,7 +207,9 @@ class EventLogger(Logger):
             resource_factory (resource_factory.ResourceFactory): The resource factory.
         """
         for r in resource_factory.resources:
-            all_states = r.states + r.production_states + r.setup_states + r.charging_states
+            all_states = (
+                r.states + r.production_states + r.setup_states + r.charging_states
+            )
             for __state in all_states:
                 self.register_patch(
                     self.event_data,
@@ -226,12 +231,12 @@ class EventLogger(Logger):
             product (product.Product): The product.
         """
         self.register_patch(
-                    self.event_data,
-                    product.product_info,
-                    attr=["log_create_product", "log_finish_product"],
-                    post=post_monitor_product_info,
-                )
-        
+            self.event_data,
+            product.product_info,
+            attr=["log_create_product", "log_finish_product"],
+            post=post_monitor_product_info,
+        )
+
     def observe_terminal_auxiliary_states(self, auxiliary: auxiliary.Auxiliary):
         """
         Create path to observe the terminal auxiliary states.
@@ -240,8 +245,12 @@ class EventLogger(Logger):
             auxiliary (auxiliary.Auxiliary): The auxiliary.
         """
         self.register_patch(
-                    self.event_data,
-                    auxiliary.auxiliary_info,
-                    attr=["log_create_auxiliary", "log_start_auxiliary_usage", "log_end_auxiliary_usage"],
-                    post=post_monitor_auxiliary_info,
-                )
+            self.event_data,
+            auxiliary.auxiliary_info,
+            attr=[
+                "log_create_auxiliary",
+                "log_start_auxiliary_usage",
+                "log_end_auxiliary_usage",
+            ],
+            post=post_monitor_auxiliary_info,
+        )

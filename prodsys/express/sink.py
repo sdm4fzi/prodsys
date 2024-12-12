@@ -22,10 +22,10 @@ class Sink(core.ExpressObject):
         product (product.Product): Product of the sink.
         location (conlist(float, min_length=2, max_length=2)): Location of the sink.
         ID (str): ID of the sink.
-    
+
     Attributes:
         _input_queues (List[queue_data.QueueData]): Input queues of the sink.
-    
+
     Examples:
         Creation of a sink with a product and a location:
         ```py
@@ -50,7 +50,7 @@ class Sink(core.ExpressObject):
         )
         product = psx.Product(
             processes=[welding_process_1, welding_process_2],
-            transport_process=transport_process 
+            transport_process=transport_process
         )
         psx.Sink(
             product=product,
@@ -58,6 +58,7 @@ class Sink(core.ExpressObject):
         )
         ```
     """
+
     product: product.Product
     location: list[float] = Field(..., min_length=2, max_length=2)
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -80,5 +81,6 @@ class Sink(core.ExpressObject):
         self._input_queues = [prodsys.adapters.get_default_queue_for_sink(sink)]
         sink.input_queues = [q.ID for q in self._input_queues]
         return sink
-    
+
+
 from prodsys.express import product

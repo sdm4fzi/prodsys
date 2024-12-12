@@ -24,7 +24,6 @@ from prodsys.express import core, time_model
 from prodsys.models import state_data
 
 
-
 @dataclass
 class State(ABC):
     """
@@ -36,6 +35,7 @@ class State(ABC):
 
     time_model: time_model.TIME_MODEL_UNION
 
+
 @dataclass
 class BreakDownState(State, core.ExpressObject):
     """
@@ -43,7 +43,7 @@ class BreakDownState(State, core.ExpressObject):
 
     Args:
         time_model (time_model.TIME_MODEL_UNION): Breakdwon occurence time model of the state.
-        repair_time_model (time_model.TIME_MODEL_UNION): Reapit time model of the state.    
+        repair_time_model (time_model.TIME_MODEL_UNION): Reapit time model of the state.
         ID (str): ID of the state.
 
     Attributes:
@@ -69,9 +69,12 @@ class BreakDownState(State, core.ExpressObject):
         )
         ```
     """
+
     repair_time_model: time_model.TIME_MODEL_UNION
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.BreakDownState, init=False)
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.BreakDownState, init=False
+    )
 
     def to_model(self) -> state_data.BreakDownStateData:
         """
@@ -85,9 +88,10 @@ class BreakDownState(State, core.ExpressObject):
             description="",
             time_model_id=self.time_model.ID,
             type=self.type,
-            repair_time_model_id=self.repair_time_model.ID
+            repair_time_model_id=self.repair_time_model.ID,
         )
-    
+
+
 @dataclass
 class ProcessBreakdownState(State, core.ExpressObject):
     """
@@ -104,7 +108,7 @@ class ProcessBreakdownState(State, core.ExpressObject):
 
     Examples:
         Process breakdown state with a normally distributed repair and breakdwon time for an examplary process:
-       
+
         ``` py
         import prodsys.express as psx
         breakdown_time_model = psx.FunctionTimeModel(
@@ -132,10 +136,13 @@ class ProcessBreakdownState(State, core.ExpressObject):
         )
         ```
     """
+
     repair_time_model: time_model.TIME_MODEL_UNION
     process: process.PROCESS_UNION
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.ProcessBreakDownState, init=False)
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.ProcessBreakDownState, init=False
+    )
 
     def to_model(self) -> state_data.ProcessBreakDownStateData:
         """
@@ -150,8 +157,9 @@ class ProcessBreakdownState(State, core.ExpressObject):
             time_model_id=self.time_model.ID,
             type=self.type,
             repair_time_model_id=self.repair_time_model.ID,
-            process_id=self.process.ID
+            process_id=self.process.ID,
         )
+
 
 @dataclass
 class SetupState(State, core.ExpressObject):
@@ -194,10 +202,13 @@ class SetupState(State, core.ExpressObject):
         )
         ```
     """
+
     origin_setup: process.PROCESS_UNION
     target_setup: process.PROCESS_UNION
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.SetupState, init=False)
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.SetupState, init=False
+    )
 
     def to_model(self) -> state_data.SetupStateData:
         """
@@ -212,9 +223,10 @@ class SetupState(State, core.ExpressObject):
             time_model_id=self.time_model.ID,
             type=self.type,
             origin_setup=self.origin_setup.ID,
-            target_setup=self.target_setup.ID
+            target_setup=self.target_setup.ID,
         )
-    
+
+
 @dataclass
 class ChargingState(State, core.ExpressObject):
     """
@@ -225,9 +237,12 @@ class ChargingState(State, core.ExpressObject):
         battery_time_model (time_model.TIME_MODEL_UNION): Time model of the battery.
         ID (str): ID of the state.
     """
+
     battery_time_model: time_model.TIME_MODEL_UNION
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    type: state_data.StateTypeEnum = Field(default=state_data.StateTypeEnum.ChargingState, init=False)
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.ChargingState, init=False
+    )
 
     def to_model(self) -> state_data.ChargingStateData:
         """
@@ -241,8 +256,9 @@ class ChargingState(State, core.ExpressObject):
             description="",
             time_model_id=self.time_model.ID,
             type=self.type,
-            battery_time_model_id=self.battery_time_model.ID
+            battery_time_model_id=self.battery_time_model.ID,
         )
-    
+
+
 STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState, ChargingState]
 from prodsys.express import process
