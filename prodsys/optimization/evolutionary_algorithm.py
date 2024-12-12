@@ -4,8 +4,14 @@ import warnings
 import logging
 
 from prodsys.optimization.optimization import evaluate
-from prodsys.optimization.adapter_manipulation import crossover, mutation, random_configuration, random_configuration_with_initial_solution
+from prodsys.optimization.adapter_manipulation import (
+    crossover,
+    mutation,
+    random_configuration,
+    random_configuration_with_initial_solution,
+)
 from prodsys.optimization.util import document_individual
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -24,7 +30,6 @@ from prodsys.util.util import set_seed, read_initial_solutions, run_from_ipython
 from prodsys import optimization
 
 
-
 if run_from_ipython():
     from multiprocessing.pool import ThreadPool as Pool
 else:
@@ -35,6 +40,7 @@ sim.VERBOSE = 1
 
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
+
 
 class EvolutionaryAlgorithmHyperparameters(BaseModel):
     """
@@ -58,19 +64,21 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
     number_of_seeds: int = 1
     number_of_processes: int = 1
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "seed": 0,
-                "number_of_generations": 10,
-                "population_size": 10,
-                "mutation_rate": 0.1,
-                "crossover_rate": 0.1,
-                "number_of_seeds": 1,
-                "number_of_processes": 1,
-            },
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "seed": 0,
+                    "number_of_generations": 10,
+                    "population_size": 10,
+                    "mutation_rate": 0.1,
+                    "crossover_rate": 0.1,
+                    "number_of_seeds": 1,
+                    "number_of_processes": 1,
+                },
+            ]
+        }
+    )
 
 
 def register_functions_in_toolbox(
@@ -80,7 +88,7 @@ def register_functions_in_toolbox(
     weights: tuple,
     initial_solutions_folder: str,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
-    full_save_solutions_folder: str="",
+    full_save_solutions_folder: str = "",
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -114,8 +122,8 @@ def register_functions_in_toolbox(
         base_configuration,
         solution_dict,
         performances,
-        hyper_parameters.number_of_seeds, 
-        full_save_solutions_folder
+        hyper_parameters.number_of_seeds,
+        full_save_solutions_folder,
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -162,7 +170,7 @@ def run_evolutionary_algorithm(
     crossover_rate: float,
     n_seeds: int,
     n_processes: int,
-    initial_solutions_folder: str="",
+    initial_solutions_folder: str = "",
 ):
     """
     Run an evolutionary algorithm for configuration optimization.
@@ -199,8 +207,9 @@ def run_evolutionary_algorithm(
         hyper_parameters,
         save_folder,
         initial_solutions_folder=initial_solutions_folder,
-        full_save=full_save
+        full_save=full_save,
     )
+
 
 def optimize_configuration(
     base_configuration_file_path: str,
@@ -232,14 +241,16 @@ def optimize_configuration(
         hyper_parameters.number_of_processes,
     )
 
+
 from prodsys.util import util
 
+
 def evolutionary_algorithm_optimization(
-        base_configuration: adapters.ProductionSystemAdapter,
-        hyper_parameters: EvolutionaryAlgorithmHyperparameters,
-        save_folder: str = "results",
-        initial_solutions_folder: str = "",
-        full_save: bool = False,
+    base_configuration: adapters.ProductionSystemAdapter,
+    hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    save_folder: str = "results",
+    initial_solutions_folder: str = "",
+    full_save: bool = False,
 ):
     """
     Optimize a production system configuration using an evolutionary algorithm.
@@ -253,7 +264,9 @@ def evolutionary_algorithm_optimization(
     adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     base_configuration = base_configuration.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
+        logger.warning(
+            "Both compound processes and normal processes are used. This may lead to unexpected results."
+        )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
@@ -263,10 +276,7 @@ def evolutionary_algorithm_optimization(
     weights = get_weights(base_configuration, "max")
 
     # TODO: rework solution_dict and performances to classes
-    solution_dict = {
-        "current_generation": "0", 
-        "hashes": {} 
-    }
+    solution_dict = {"current_generation": "0", "hashes": {}}
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -307,7 +317,10 @@ def evolutionary_algorithm_optimization(
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
         offspring = algorithms.varAnd(
-            offspring, toolbox, cxpb=hyper_parameters.crossover_rate, mutpb=hyper_parameters.mutation_rate
+            offspring,
+            toolbox,
+            cxpb=hyper_parameters.crossover_rate,
+            mutpb=hyper_parameters.mutation_rate,
         )
 
         # Evaluate the individuals
@@ -316,10 +329,11 @@ def evolutionary_algorithm_optimization(
             offspring, fitnesses, solution_dict, performances, save_folder, start
         )
 
-        population = toolbox.select(population + offspring, hyper_parameters.population_size)
+        population = toolbox.select(
+            population + offspring, hyper_parameters.population_size
+        )
 
         with open(f"{save_folder}/optimization_results.json", "w") as json_file:
             json.dump(performances, json_file)
     if hyper_parameters.number_of_processes > 1:
         pool.close()
-

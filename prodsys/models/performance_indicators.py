@@ -118,6 +118,7 @@ class Throughput(KPI):
         }
     )
 
+
 class Cost(KPI):
     name: Literal[KPIEnum.COST]
     target: Literal["min"] = "min"
@@ -156,7 +157,7 @@ class WIP(KPI):
         }
     )
 
-    
+
 class AuxiliaryWIP(KPI):
     name: Literal[KPIEnum.AUXILIARY_WIP]
     target: Literal["min"] = "min"
@@ -176,172 +177,191 @@ class AuxiliaryWIP(KPI):
         }
     )
 
+
 class DynamicWIP(DynamicKPI, WIP):
     name: Literal[KPIEnum.DYNAMIC_WIP]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "dynamic_WIP",
-                "target": "min",
-                "weight": 1,
-                "value": 121,
-                "context": ["system", "product"],
-                "product_type": "ProductType_1",
-                "start_time": 21.2,
-                "end_time": 23.4,
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "dynamic_WIP",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 121,
+                    "context": ["system", "product"],
+                    "product_type": "ProductType_1",
+                    "start_time": 21.2,
+                    "end_time": 23.4,
+                }
+            ]
+        }
+    )
 
 
 class ThroughputTime(KPI):
     name: Literal[KPIEnum.TRHOUGHPUT_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "throughput_time",
-                "target": "min",
-                "weight": 1,
-                "value": 221.1,
-                "context": ["system", "product_type"],
-                "product_type": "ProductType_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "throughput_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 221.1,
+                    "context": ["system", "product_type"],
+                    "product_type": "ProductType_1",
+                }
+            ]
+        }
+    )
 
 
 class DynamicThroughputTime(DynamicKPI, ThroughputTime):
     name: Literal[KPIEnum.DYNAMIC_THROUGHPUT_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "dynamic_throughput_time",
-                "target": "min",
-                "weight": 1,
-                "value": 221.1,
-                "context": ["system", "product"],
-                "product_type": "ProductType_1",
-                "product": "Product_1_23",
-                "start_time": 21.2,
-                "end_time": 23.4,
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "dynamic_throughput_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 221.1,
+                    "context": ["system", "product"],
+                    "product_type": "ProductType_1",
+                    "product": "Product_1_23",
+                    "start_time": 21.2,
+                    "end_time": 23.4,
+                }
+            ]
+        }
+    )
 
 
 class ProcessingTime(KPI):
     name: Literal[KPIEnum.PROCESSING_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "processing_time",
-                "target": "min",
-                "weight": 1,
-                "value": 1.2,
-                "context": ["resource", "process"],
-                "resource": "Resource_1",
-                "process": "P1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "processing_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 1.2,
+                    "context": ["resource", "process"],
+                    "resource": "Resource_1",
+                    "process": "P1",
+                }
+            ]
+        }
+    )
 
 
 class ProductiveTime(KPI):
     name: Literal[KPIEnum.PRODUCTIVE_TIME]
     target: Literal["max"] = "max"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "productive_time",
-                "target": "max",
-                "weight": 1,
-                "value": 0.65,
-                "context": ["resource"],
-                "resource": "Resource_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "productive_time",
+                    "target": "max",
+                    "weight": 1,
+                    "value": 0.65,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
 
 
 class StandbyTime(KPI):
     name: Literal[KPIEnum.STANDBY_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "standby_time",
-                "target": "min",
-                "weight": 1,
-                "value": 0.12,
-                "context": ["resource"],
-                "resource": "Resource_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "standby_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 0.12,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
 
 
 class SetupTime(KPI):
     name: Literal[KPIEnum.SETUP_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "setup_time",
-                "target": "min",
-                "weight": 1,
-                "value": 0.08,
-                "context": ["resource"],
-                "resource": "Resource_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "setup_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 0.08,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
 
 
 class ChargingTime(KPI):
     name: Literal[KPIEnum.CHARGING_TIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "charging_time",
-                "target": "min",
-                "weight": 1,
-                "value": 0.1,
-                "context": ["resource"],
-                "resource": "Resource_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "charging_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 0.1,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
 
 
 class UnscheduledDowntime(KPI):
     name: Literal[KPIEnum.UNSCHEDULED_DOWNTIME]
     target: Literal["min"] = "min"
 
-    model_config = ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "name": "unscheduled_downtime",
-                "target": "min",
-                "weight": 1,
-                "value": 0.1,
-                "context": ["resource"],
-                "resource": "Resource_1",
-            }
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "unscheduled_downtime",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 0.1,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
 
 
 KPI_UNION = Union[

@@ -27,9 +27,7 @@ class ProcessModel(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def update_marking_from_transition(
-        self, chosen_process: PROCESS_UNION
-    ) -> None:
+    def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
         """
         Updates the marking of the process model based on the chosen process.
 
@@ -55,10 +53,9 @@ class ListProcessModel(ProcessModel):
             return None
         return [self.process_list[self.current_marking]]
 
-    def update_marking_from_transition(
-        self, chosen_process: PROCESS_UNION
-    ) -> None:
+    def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
         self.current_marking += 1
+
 
 class PrecendeGraphNode(BaseModel):
     """
@@ -195,9 +192,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
         ]
         return possible_processes
 
-    def update_marking_from_transition(
-        self, chosen_process: PROCESS_UNION
-    ) -> None:
+    def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
         chosen_node = [
             node for node in self.nodes if node.process == chosen_process
         ].pop()
@@ -252,5 +247,6 @@ class PrecedenceGraphProcessModel(ProcessModel):
             )
 
         node.predecessors = predecessor_nodes
+
 
 from prodsys.simulation.process import PROCESS_UNION

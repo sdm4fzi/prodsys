@@ -42,12 +42,8 @@ class Locatable(BaseModel):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5(
-            (
-                str(self.location)
-            ).encode("utf-8")
-        ).hexdigest()
-    
+        return md5((str(self.location)).encode("utf-8")).hexdigest()
+
 
 class InLocatable(Locatable):
     """
@@ -57,6 +53,7 @@ class InLocatable(Locatable):
         location (list[float]): The location of the locatable asset. It has to be a list of length 2.
         input_location (list[float], optional): The input location of the locatable asset. It has to be a list of length 2. Defaults to None.
     """
+
     input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
 
     @model_validator(mode="before")
@@ -74,8 +71,11 @@ class InLocatable(Locatable):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5((str(self.location) + str(self.input_location)).encode("utf-8")).hexdigest()
-    
+        return md5(
+            (str(self.location) + str(self.input_location)).encode("utf-8")
+        ).hexdigest()
+
+
 class OutLocatable(Locatable):
     """
     Class that represents a locatable entity with an output location. The location parameter is the center point of the asset. It needs to be defined. The output location parameter specifies where products are removed from the asset. If not specified, the location is set as output location.
@@ -84,6 +84,7 @@ class OutLocatable(Locatable):
         location (list[float]): The location of the locatable asset. It has to be a list of length 2.
         output_location (list[float], optional): The output location of the locatable asset. It has to be a list of length 2. Defaults to None.
     """
+
     output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
 
     @model_validator(mode="before")
@@ -101,7 +102,9 @@ class OutLocatable(Locatable):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5((str(self.location) + str(self.output_location)).encode("utf-8")).hexdigest()
+        return md5(
+            (str(self.location) + str(self.output_location)).encode("utf-8")
+        ).hexdigest()
 
 
 class InOutLocatable(InLocatable, OutLocatable):
@@ -120,7 +123,7 @@ class InOutLocatable(InLocatable, OutLocatable):
         data = InLocatable.check_locations(data)
         data = OutLocatable.check_locations(data)
         return data
-    
+
     def hash(self) -> str:
         """
         Returns a unique hash for the locatable asset considering its location, input location and output location.
@@ -128,4 +131,10 @@ class InOutLocatable(InLocatable, OutLocatable):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5((str(self.location) + str(self.input_location) + str(self.output_location)).encode("utf-8")).hexdigest()
+        return md5(
+            (
+                str(self.location)
+                + str(self.input_location)
+                + str(self.output_location)
+            ).encode("utf-8")
+        ).hexdigest()

@@ -86,9 +86,9 @@ class Router:
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
-        self.routing_heuristic: Callable[[List[request.Request]], None] = (
-            routing_heuristic
-        )
+        self.routing_heuristic: Callable[
+            [List[request.Request]], None
+        ] = routing_heuristic
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         # TODO: add possibility to specify a production and a transport heuristic separately
 
@@ -165,10 +165,10 @@ class Router:
     ) -> Generator[Optional[request.Request]]:
         env = get_env_from_requests(possible_production_requests)
         while True:
-            production_requests: List[request.Request] = (
-                self.get_requests_with_non_blocked_resources(
-                    possible_production_requests
-                )
+            production_requests: List[
+                request.Request
+            ] = self.get_requests_with_non_blocked_resources(
+                possible_production_requests
             )
             if production_requests:
                 break
@@ -219,10 +219,10 @@ class Router:
             Generator[Optional[request.TransportResquest]]: A generator that yields when the product is routed.
         """
         item_to_transport = get_item_to_transport(routed_production_request)
-        potential_transport_requests: List[request.Request] = (
-            self.get_transport_requests_to_target(
-                item_to_transport, routed_production_request.resource, {}
-            )
+        potential_transport_requests: List[
+            request.Request
+        ] = self.get_transport_requests_to_target(
+            item_to_transport, routed_production_request.resource, {}
         )
 
         if not potential_transport_requests:
@@ -232,10 +232,10 @@ class Router:
 
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[request.TransportResquest] = (
-                self.get_requests_with_non_blocked_resources(
-                    potential_transport_requests
-                )
+            transport_requests: List[
+                request.TransportResquest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_transport_requests
             )
             if transport_requests:
                 break
@@ -291,10 +291,10 @@ class Router:
             )
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[request.TransportResquest] = (
-                self.get_requests_with_non_blocked_resources(
-                    potential_transport_requests
-                )
+            transport_requests: List[
+                request.TransportResquest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_transport_requests
             )
             if transport_requests:
                 break
@@ -359,10 +359,10 @@ class Router:
 
         env = get_env_from_requests(potential_to_transport_requests)
         while True:
-            to_transport_requests: List[request.ToTransportRequest] = (
-                self.get_requests_with_non_blocked_resources(
-                    potential_to_transport_requests
-                )
+            to_transport_requests: List[
+                request.ToTransportRequest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_to_transport_requests
             )
             if to_transport_requests:
                 break
@@ -521,7 +521,6 @@ class Router:
         return transport_request
 
     def get_auxiliary(self, processing_request: request.AuxiliaryRequest) -> Generator:
-
         possible_auxiliaries = self.get_possible_auxiliaries(processing_request)
         while True:
             free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
@@ -557,7 +556,6 @@ class Router:
     def get_free_auxiliary(
         self, possible_auxiliaries: List[auxiliary.Auxiliary]
     ) -> List[auxiliary.Auxiliary]:
-
         free_possible_auxiliaries = []
         for auxiliary in possible_auxiliaries:
             if not auxiliary.reserved and auxiliary.current_product is None:
@@ -694,9 +692,9 @@ class Router:
                 elif process.matches_request(transport_request):
                     transport_request.set_process(process)
                     transport_requests.append(transport_request)
-                    route_cache[(target.data.ID, process.process_data.ID)] = (
-                        transport_request
-                    )
+                    route_cache[
+                        (target.data.ID, process.process_data.ID)
+                    ] = transport_request
         return transport_requests
 
     def get_requests_with_non_blocked_resources(

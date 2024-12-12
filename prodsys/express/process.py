@@ -81,6 +81,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
         )
         ```
     """
+
     failure_rate: Optional[float] = None
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(
@@ -95,7 +96,11 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
             processes_data.ProductionProcessData: Data object of the express object.
         """
         return processes_data.ProductionProcessData(
-            time_model_id=self.time_model.ID, ID=self.ID, description="", type=self.type, failure_rate=self.failure_rate
+            time_model_id=self.time_model.ID,
+            ID=self.ID,
+            description="",
+            type=self.type,
+            failure_rate=self.failure_rate,
         )
 
 
@@ -153,7 +158,8 @@ class CapabilityProcess(Process, core.ExpressObject):
             type=self.type,
             failure_rate=self.failure_rate,
         )
-    
+
+
 @dataclass
 class ReworkProcess(Process, core.ExpressObject):
     """
@@ -165,6 +171,7 @@ class ReworkProcess(Process, core.ExpressObject):
         blocking (Optional[bool]): If the rework process is blocking.
         ID (str): ID of the process.
     """
+
     reworked_processes: list[Union[ProductionProcess, CapabilityProcess]]
     blocking: Optional[bool] = False
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -178,7 +185,9 @@ class ReworkProcess(Process, core.ExpressObject):
             description="",
             type=self.type,
             time_model_id=self.time_model.ID,
-            reworked_process_ids=[reworked_process.ID for reworked_process in self.reworked_processes],
+            reworked_process_ids=[
+                reworked_process.ID for reworked_process in self.reworked_processes
+            ],
             blocking=self.blocking,
         )
 

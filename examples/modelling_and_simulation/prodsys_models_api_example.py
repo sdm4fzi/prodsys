@@ -7,7 +7,7 @@ welding_time_model = prodsys.time_model_data.FunctionTimeModelData(
     description="Time model 1 is create!",
     distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
     location=25.0,
-    scale=0.0
+    scale=0.0,
 )
 
 transport_time_model = prodsys.time_model_data.DistanceTimeModelData(
@@ -65,7 +65,7 @@ product = prodsys.product_data.ProductData(
     ID="product 1",
     description="Product 1 data description",
     processes=[welding_process.ID],
-    transport_process=transport_process.ID
+    transport_process=transport_process.ID,
 )
 
 # Create a time model for product arrival in the system and a source that creates the product
@@ -76,7 +76,7 @@ arrival_time_model = prodsys.time_model_data.FunctionTimeModelData(
     type=prodsys.time_model_data.TimeModelEnum.FunctionTimeModel,
     distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
     location=30,
-    scale=0
+    scale=0,
 )
 
 source = prodsys.source_data.SourceData(
@@ -104,7 +104,7 @@ production_system = prodsys.adapters.JsonProductionSystemAdapter(
     product_data=[product],
     source_data=[source],
     sink_data=[sink],
-    )
+)
 
 
 production_system.validate_configuration()
@@ -118,7 +118,3 @@ from prodsys.util import post_processing
 post_processing.WARM_UP_CUT_OFF = 0
 
 runner.print_results()
-
-
-
-

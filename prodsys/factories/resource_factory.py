@@ -258,7 +258,9 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
-    def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
+    def get_controller_of_resource(
+        self, _resource: resources.Resource
+    ) -> Optional[
         Union[
             control.ProductionController,
             control.TransportController,

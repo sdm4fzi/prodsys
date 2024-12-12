@@ -45,7 +45,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.mutation_rate,
                 cfg.optimization.crossover_rate,
                 cfg.optimization.number_of_processes,
-                initial_solutions_folder
+                initial_solutions_folder,
             )
         elif cfg.optimization.algorithm == "simulated_annealing":
             if (
@@ -69,7 +69,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.Tmin,
                 cfg.optimization.steps,
                 cfg.optimization.updates,
-                initial_solution_file_path
+                initial_solution_file_path,
             )
 
         elif cfg.optimization.algorithm == "tabu_search":
@@ -93,7 +93,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.tabu_size,
                 cfg.optimization.max_steps,
                 cfg.optimization.max_score,
-                initial_solution_file_path
+                initial_solution_file_path,
             )
         elif cfg.optimization.algorithm == "mathematical":
             cfg.general.save_folder += "/mathematical"

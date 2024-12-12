@@ -5,7 +5,6 @@ from typing import List, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict
 
 
-
 if TYPE_CHECKING:
     from prodsys.simulation import resources, state
     from prodsys.factories import resource_factory
@@ -17,12 +16,14 @@ class ProcessObservation(BaseModel):
     activity: state.StateEnum
     state: state.StateTypeEnum
 
+
 class QueueObservation(BaseModel):
     product: str
     activity: str
     process: str
     next_resource: str
     waiting_since: float
+
 
 def observe_processes(resource: resources.Resource) -> List[ProcessObservation]:
     process_observations = []
@@ -32,12 +33,15 @@ def observe_processes(resource: resources.Resource) -> List[ProcessObservation]:
                 process=production_state.state_info.ID,
                 product=production_state.state_info._product_ID,
                 activity=production_state.state_info._activity,
-                state=production_state.state_info._state_type
+                state=production_state.state_info._state_type,
             )
             process_observations.append(observation)
     return process_observations
 
-def observe_input_queue(resource: resources.Resource, product_factory: product_factory.ProductFactory) -> List[QueueObservation]:
+
+def observe_input_queue(
+    resource: resources.Resource, product_factory: product_factory.ProductFactory
+) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.input_queues:
         for product_data in queue.items:
@@ -48,13 +52,16 @@ def observe_input_queue(resource: resources.Resource, product_factory: product_f
                 activity="waiting",
                 process=product.next_prodution_process.process_data.ID,
                 next_resource=product.current_locatable.data.ID,
-                waiting_since=product.product_info.event_time
+                waiting_since=product.product_info.event_time,
             )
             queue_observation.append(production_process_info)
 
     return queue_observation
 
-def observe_output_queue(resource: resources.Resource, product_factory: product_factory.ProductFactory) -> List[QueueObservation]:
+
+def observe_output_queue(
+    resource: resources.Resource, product_factory: product_factory.ProductFactory
+) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.output_queues:
         for product_data in queue.items:
@@ -65,18 +72,22 @@ def observe_output_queue(resource: resources.Resource, product_factory: product_
                 activity="waiting",
                 process=product.next_prodution_process,
                 next_resource=product.current_locatable,
-                waiting_since=product.product_info.event_time
+                waiting_since=product.product_info.event_time,
             )
             queue_observation.append(production_process_info)
 
     return queue_observation
 
+
 class ResourceAvailableObservation(BaseModel):
     available: bool
 
-def observe_resource_available(resource: resources.Resource) -> ResourceAvailableObservation:
+
+def observe_resource_available(
+    resource: resources.Resource,
+) -> ResourceAvailableObservation:
     return ResourceAvailableObservation(available=resource.active.triggered)
-    
+
 
 class ResourceObserver(BaseModel):
     resource_factory: resource_factory.ResourceFactory
@@ -87,15 +98,16 @@ class ResourceObserver(BaseModel):
 
     def observe_processes(self) -> List[ProcessObservation]:
         return observe_processes(self.resource)
-    
+
     def observe_input_queue(self) -> List[QueueObservation]:
         return observe_input_queue(self.resource, self.product_factory)
-    
+
     def observe_output_queue(self) -> List[QueueObservation]:
         return observe_output_queue(self.resource, self.product_factory)
-    
+
     def observe_resource_available(self) -> ResourceAvailableObservation:
         return observe_resource_available(self.resource)
-    
+
+
 from prodsys.factories import resource_factory, product_factory
 from prodsys.simulation import resources, state

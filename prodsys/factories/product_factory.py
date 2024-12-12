@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from prodsys.simulation import sim, router, product
 
 
-
 class ProductFactory:
     """
     Factory class that creates and stores `prodsys.simulation` product objects from `prodsys.models` product objects.
@@ -62,7 +61,7 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
-        
+
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
@@ -169,5 +168,6 @@ class ProductFactory:
         """
         self.finished_products.append(product)
         self.remove_product(product)
+
 
 from prodsys.simulation import product

@@ -9,6 +9,7 @@ from prodsys.optimization.optimization import evaluate
 from prodsys.optimization.adapter_manipulation import mutation
 from prodsys.optimization.optimization import check_valid_configuration
 from prodsys.optimization.util import document_individual
+
 logger = logging.getLogger(__name__)
 
 import json
@@ -20,13 +21,12 @@ from prodsys import adapters
 from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
-    create_default_breakdown_states
+    create_default_breakdown_states,
 )
 from prodsys.util.util import set_seed
 
 
 class TabuSearch:
-
     __metaclass__ = ABCMeta
 
     cur_steps = None
@@ -128,7 +128,7 @@ class TabuSearch:
                 return self.best, self._score(self.best)
         print("TERMINATING - REACHED MAXIMUM STEPS")
         return self.best, self._score(self.best)
-    
+
 
 class TabuSearchHyperparameters(BaseModel):
     """
@@ -148,17 +148,19 @@ class TabuSearchHyperparameters(BaseModel):
     max_score: float = 500
     number_of_seeds: int = 1
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "seed": 0,
-                "tabu_size": 10,
-                "max_steps": 300,
-                "max_score": 500,
-                "number_of_seeds": 1,
-            },
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "seed": 0,
+                    "tabu_size": 10,
+                    "max_steps": 300,
+                    "max_score": 500,
+                    "number_of_seeds": 1,
+                },
+            ]
+        }
+    )
 
 
 def run_tabu_search(
@@ -201,7 +203,11 @@ def run_tabu_search(
         initial_solution = base_configuration.model_copy(deep=True)
 
     hyper_parameters = TabuSearchHyperparameters(
-        seed=seed, tabu_size=tabu_size, max_steps=max_steps, max_score=max_score, number_of_seeds=number_of_seeds
+        seed=seed,
+        tabu_size=tabu_size,
+        max_steps=max_steps,
+        max_score=max_score,
+        number_of_seeds=number_of_seeds,
     )
     tabu_search_optimization(
         base_configuration=base_configuration,
@@ -213,11 +219,11 @@ def run_tabu_search(
 
 
 def tabu_search_optimization(
-        base_configuration: adapters.ProductionSystemAdapter,
-        hyper_parameters: TabuSearchHyperparameters,
-        save_folder: str,
-        initial_solution: adapters.ProductionSystemAdapter = None,
-        full_save: bool = False,
+    base_configuration: adapters.ProductionSystemAdapter,
+    hyper_parameters: TabuSearchHyperparameters,
+    save_folder: str,
+    initial_solution: adapters.ProductionSystemAdapter = None,
+    full_save: bool = False,
 ):
     """
     Optimize a production system configuration using tabu search.
@@ -230,7 +236,9 @@ def tabu_search_optimization(
     """
     adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
+        logger.warning(
+            "Both compound processes and normal processes are used. This may lead to unexpected results."
+        )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
@@ -238,10 +246,7 @@ def tabu_search_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {
-        "current_generation": "0", 
-        "hashes": {} 
-    }
+    solution_dict = {"current_generation": "0", "hashes": {}}
     performances = {}
     performances["0"] = {}
     start = time.perf_counter()
@@ -268,7 +273,7 @@ def tabu_search_optimization(
                 "agg_fitness": performance,
                 "fitness": [float(value) for value in values],
                 "time_stamp": time.perf_counter() - start,
-                "hash": state.hash()
+                "hash": state.hash(),
             }
             with open(f"{save_folder}/optimization_results.json", "w") as json_file:
                 json.dump(performances, json_file)
@@ -295,8 +300,9 @@ def tabu_search_optimization(
         max_score=hyper_parameters.max_score,
     )
     best_solution, best_objective_value = alg.run()
-    print(f"Best solution has ID {best_solution.ID} and objectives values: {best_objective_value}")
-
+    print(
+        f"Best solution has ID {best_solution.ID} and objectives values: {best_objective_value}"
+    )
 
 
 def optimize_configuration(

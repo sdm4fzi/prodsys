@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from prodsys.adapters import adapter
     from prodsys.models import queue_data
 
+
 class QueueFactory(BaseModel):
     """
     Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.models` queue objects.
@@ -21,6 +22,7 @@ class QueueFactory(BaseModel):
     Returns:
         _type_: _description_
     """
+
     env: sim.Environment
 
     queues: List[store.Queue] = []
