@@ -42,10 +42,9 @@ sk2 = psx.Sink(m2, [20.0, 20.0])
 
 ps = psx.ProductionSystem([r1, r2], [s1, s2], [sk1, sk2])
 
-ps.run(7*24*60)
+ps.run(7 * 24 * 60)
 
 ps.runner.print_results()
 
 print("Example Results data:\n")
 print(ps.post_processor.df_WIP.head())
-

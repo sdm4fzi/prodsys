@@ -9,6 +9,7 @@ from pydantic import ConfigDict
 
 from prodsys.models.core_asset import CoreAsset, Locatable
 
+
 class NodeData(CoreAsset, Locatable):
     """
     Represents a node data object of a link for a Transport process.
@@ -27,14 +28,15 @@ class NodeData(CoreAsset, Locatable):
             str: Hash of the node data object.
         """
         return Locatable.hash(self)
-    
-    model_config = ConfigDict(json_schema_extra= {
-        "examples": [
-            {
-                "ID": "N1",
-                "description": "Node 1",
-                "location": [0.0, 0.0],
-            }
-        ]
-    })
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "N1",
+                    "description": "Node 1",
+                    "location": [0.0, 0.0],
+                }
+            ]
+        }
+    )

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from simpy.resources import store
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from prodsys.models import queue_data
@@ -15,7 +16,7 @@ from prodsys.simulation import sim
 
 class Queue(store.FilterStore):
     """
-    Class for storing products in a queue. The queue is a filter store with a limited or unlimited capacity, where product can be put and get from. 
+    Class for storing products in a queue. The queue is a filter store with a limited or unlimited capacity, where product can be put and get from.
 
     Args:
         env (simpy.Environment): The simulation environment.
@@ -26,6 +27,7 @@ class Queue(store.FilterStore):
         _pending_put (int): The number of products that are reserved for being put into the queue. Avoids bottleneck in the simulation.
 
     """
+
     def __init__(self, env: sim.Environment, data: queue_data.QueueData):
         self.env: sim.Environment = env
         self.data: queue_data.QueueData = data
@@ -36,7 +38,6 @@ class Queue(store.FilterStore):
         self._pending_put: int = 0
         super().__init__(env, capacity)
         self.state_change = self.env.event()
-
 
     def put(self, item) -> Generator:
         """
@@ -51,7 +52,6 @@ class Queue(store.FilterStore):
         self.state_change = self.env.event()
         return return_event
 
-    
     def get(self, filter) -> Generator:
         """
         Gets a product from the queue.
@@ -75,9 +75,15 @@ class Queue(store.FilterStore):
         Returns:
             bool: True if the queue is full, False otherwise.
         """
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}",
+            }
+        )
         return (self.capacity - self._pending_put - len(self.items)) <= 0
-    
+
     def reserve(self) -> None:
         """
         Reserves a spot in the queue for a product to be put into.
@@ -86,10 +92,16 @@ class Queue(store.FilterStore):
             RuntimeError: If the queue is full.
         """
         self._pending_put += 1
-        logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "event": f"reserving spot in queue {self.data.ID}, current level: {len(self.items)}, pendings: {self._pending_put}"})
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "event": f"reserving spot in queue {self.data.ID}, current level: {len(self.items)}, pendings: {self._pending_put}",
+            }
+        )
         if self._pending_put + len(self.items) > self.capacity:
             raise RuntimeError("Queue is full")
-    
+
     def unreserve(self) -> None:
         """
         Unreserves a spot in the queue for a product to be put into after the put is completed.
@@ -105,16 +117,16 @@ class Store(Queue):
         env (simpy.Environment): The simulation environment.
         data (data.StoreData): The store data object.
     """
+
     def __init__(self, env: sim.Environment, data: queue_data.StoreData):
         super().__init__(env, data)
         self.data: queue_data.StoreData = data
-    
+
     def get_location(self):
         return self.data.location
 
     def get_input_location(self):
         return self.data.input_location
-    
+
     def get_output_location(self):
         return self.data.output_location
-    

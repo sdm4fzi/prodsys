@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from prodsys.adapters import adapter
     from prodsys.simulation import sim
 
+
 class NodeFactory:
     """
     Factory class that creates and stores `prodsys.simulation` resource objects from `prodsys.models` node objects.
@@ -30,7 +31,7 @@ class NodeFactory:
 
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the node data.
-        """        
+        """
         for node_data in adapter.node_data:
             self.create_node(node_data)
 

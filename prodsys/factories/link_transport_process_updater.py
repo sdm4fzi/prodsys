@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING, Union
 
 
-from prodsys.factories import process_factory, source_factory, sink_factory, resource_factory, node_factory
+from prodsys.factories import (
+    process_factory,
+    source_factory,
+    sink_factory,
+    resource_factory,
+    node_factory,
+)
 from prodsys.simulation import process
 
 if TYPE_CHECKING:
@@ -21,7 +27,15 @@ class LinkTransportProcessUpdater:
         resource_factory (resource_factory.ResourceFactory): Factory that contains all resource objects.
         node_factory (node_factory.NodeFactory): Factory that contains all node objects.
     """
-    def __init__(self, process_factory: process_factory.ProcessFactory, source_factory: source_factory.SourceFactory, sink_factory: sink_factory.SinkFactory, resource_factory: resource_factory.ResourceFactory, node_factory: node_factory.NodeFactory):
+
+    def __init__(
+        self,
+        process_factory: process_factory.ProcessFactory,
+        source_factory: source_factory.SourceFactory,
+        sink_factory: sink_factory.SinkFactory,
+        resource_factory: resource_factory.ResourceFactory,
+        node_factory: node_factory.NodeFactory,
+    ):
         self.process_factory = process_factory
         self.source_factory = source_factory
         self.sink_factory = sink_factory
@@ -46,16 +60,22 @@ class LinkTransportProcessUpdater:
 
             start_obj = self.get_node_resource_source_sink(start)
             if not start_obj:
-                raise ValueError(f"LinkTransportProcessUpdater: Could not find object with ID {start} for a link in Process {process_instance.process_data.ID}.")
+                raise ValueError(
+                    f"LinkTransportProcessUpdater: Could not find object with ID {start} for a link in Process {process_instance.process_data.ID}."
+                )
             end_obj = self.get_node_resource_source_sink(end)
             if not end_obj:
-                raise ValueError(f"LinkTransportProcessUpdater: Could not find object with ID {end} for a link in Process {process_instance.process_data.ID}.")
+                raise ValueError(
+                    f"LinkTransportProcessUpdater: Could not find object with ID {end} for a link in Process {process_instance.process_data.ID}."
+                )
 
             links_list.append([start_obj, end_obj])
 
         process_instance.links = links_list
 
-    def get_node_resource_source_sink(self, ID: str) -> Optional[Union[node.Node, resources.Resource, source.Source, sink.Sink]]:
+    def get_node_resource_source_sink(
+        self, ID: str
+    ) -> Optional[Union[node.Node, resources.Resource, source.Source, sink.Sink]]:
         try:
             node = self.node_factory.get_node(ID)
             return node

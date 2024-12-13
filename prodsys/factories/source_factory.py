@@ -33,6 +33,7 @@ class SourceFactory(BaseModel):
         resource_factory (resource_factory.ResourceFactory): Factory that creates resource objects.
         sink_factory (sink_factory.SinkFactory): Factory that creates sink objects.
     """
+
     env: sim.Environment
     product_factory: product_factory.ProductFactory
     time_model_factory: time_model_factory.TimeModelFactory
@@ -41,9 +42,7 @@ class SourceFactory(BaseModel):
     auxiliary_factory: auxiliary_factory.AuxiliaryFactory
     sink_factory: sink_factory.SinkFactory
 
-    product_data: List[ProductData] = Field(
-        default_factory=list, init=False
-    )
+    product_data: List[ProductData] = Field(default_factory=list, init=False)
     sources: List[source.Source] = Field(default_factory=list, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -66,7 +65,7 @@ class SourceFactory(BaseModel):
             self.sink_factory,
             self.auxiliary_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
-            self.product_factory
+            self.product_factory,
         )
 
     def add_source(
@@ -129,7 +128,7 @@ class SourceFactory(BaseModel):
         Method returns a list of source objects with the given product type.
 
         Args:
-            __product_type (str): Product type that is used to sort the source objects. 
+            __product_type (str): Product type that is used to sort the source objects.
 
         Returns:
             List[source.Source]: List of source objects with the given product type.

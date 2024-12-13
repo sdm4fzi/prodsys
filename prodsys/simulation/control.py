@@ -13,12 +13,34 @@ logger = logging.getLogger(__name__)
 
 from simpy import events
 
-from prodsys.simulation import node, request, route_finder, sim, state, process, router, store
+from prodsys.simulation import (
+    node,
+    request,
+    route_finder,
+    sim,
+    state,
+    process,
+    router,
+    store,
+)
 
-from prodsys.simulation.process import LinkTransportProcess, RequiredCapabilityProcess, ProductionProcess, ReworkProcess
+from prodsys.simulation.process import (
+    LinkTransportProcess,
+    RequiredCapabilityProcess,
+    ProductionProcess,
+    ReworkProcess,
+)
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, process, state, resources, sink, source, auxiliary
+    from prodsys.simulation import (
+        product,
+        process,
+        state,
+        resources,
+        sink,
+        source,
+        auxiliary,
+    )
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.product import Locatable
@@ -58,7 +80,7 @@ class Controller(ABC, BaseModel):
         event = events.Event(info.data["env"])
         return event
 
-    model_config=ConfigDict(arbitrary_types_allowed=True, extra="allow")
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
@@ -72,12 +94,28 @@ class Controller(ABC, BaseModel):
             process_request (Request): The request to be processed.
         """
         self.requests.append(process_request)
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Got requested by {process_request.product.product_data.ID}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Got requested by {process_request.product.product_data.ID}",
+            }
+        )
         if not self.requested.triggered:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": "Triggered requested event",
+                }
+            )
             self.requested.succeed()
 
-    def wait_for_free_process(self, resource: resources.Resource, process: process.Process) -> Generator[state.State, None, None]:
+    def wait_for_free_process(
+        self, resource: resources.Resource, process: process.Process
+    ) -> Generator[state.State, None, None]:
         """
         Wait for a free process of a resource.
 
@@ -96,7 +134,14 @@ class Controller(ABC, BaseModel):
             free_state = resource.get_free_process(process)
             if free_state is not None:
                 return free_state
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting for free process"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting for free process",
+                }
+            )
             yield events.AnyOf(
                 self.env,
                 [
@@ -105,7 +150,6 @@ class Controller(ABC, BaseModel):
                     if state.process is not None and state.process.is_alive
                 ],
             )
-    
 
     @abstractmethod
     def control_loop(self) -> None:
@@ -136,6 +180,7 @@ class ProductionController(Controller):
     """
     A production controller is responsible for controlling the processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
+
     resource: resources.ProductionResource = Field(init=False, default=None)
 
     def get_next_product_for_process(
@@ -171,7 +216,9 @@ class ProductionController(Controller):
                     f"Product '{product.product_data.ID}' not found in any internal queue for resource '{resource.data.ID}'."
                 )
 
-            events = [selected_queue.get(filter=lambda item: item is product.product_data)]
+            events = [
+                selected_queue.get(filter=lambda item: item is product.product_data)
+            ]
 
             if not events:
                 raise ValueError("No product in queue")
@@ -191,12 +238,16 @@ class ProductionController(Controller):
 
         Returns:
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
-        """   
+        """
         events = []
-        if isinstance(resource, resources.ProductionResource):            
+        if isinstance(resource, resources.ProductionResource):
             for product in products:
                 queue_for_product = None
-                internal_queues = [queue for queue in resource.output_queues if not isinstance(queue, store.Store)]
+                internal_queues = [
+                    queue
+                    for queue in resource.output_queues
+                    if not isinstance(queue, store.Store)
+                ]
                 queue_for_product = random.choice(internal_queues)
                 events.append(queue_for_product.put(product.product_data))
                 logger.debug(
@@ -229,7 +280,14 @@ class ProductionController(Controller):
             Generator: The generator yields when a request is made or a process is finished.
         """
         while True:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": "Waiting for request or process to finish",
+                }
+            )
             if self.resource.requires_charging:
                 yield self.env.process(self.resource.charge())
             yield events.AnyOf(
@@ -240,15 +298,33 @@ class ProductionController(Controller):
             for process in self.running_processes:
                 if not process.is_alive:
                     self.running_processes.remove(process)
-            if self.resource.full or not self.requests or self.reserved_requests_count == len(self.requests):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full}) or all requests reserved ({self.reserved_requests_count == len(self.requests)})"})
+            if (
+                self.resource.full
+                or not self.requests
+                or self.reserved_requests_count == len(self.requests)
+            ):
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full}) or all requests reserved ({self.reserved_requests_count == len(self.requests)})",
+                    }
+                )
                 continue
             self.control_policy(self.requests)
             self.reserved_requests_count += 1
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": "Triggered requested event after process",
+                    }
+                )
                 self.requested.succeed()
 
     def start_process(self) -> Generator:
@@ -264,39 +340,90 @@ class ProductionController(Controller):
         Yields:
             Generator: The generator yields when the process is finished.
         """
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Starting process",
+            }
+        )
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()
         product = process_request.get_product()
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Starting setup for process for {product.product_data.ID}",
+            }
+        )
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            product_retrieval_events = self.get_next_product_for_process(resource, product)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
+            product_retrieval_events = self.get_next_product_for_process(
+                resource, product
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to retrieve product {product.product_data.ID} from queue",
+                }
+            )
             yield events.AllOf(resource.env, product_retrieval_events)
 
-            production_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting process for {product.product_data.ID}"})
+            production_state: state.State = yield self.env.process(
+                self.wait_for_free_process(resource, process)
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Starting process for {product.product_data.ID}",
+                }
+            )
             yield self.env.process(self.run_process(production_state, product, process))
             production_state.process = None
 
             product_put_events = self.put_product_to_output_queue(resource, [product])
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to put product {product.product_data.ID} to queue",
+                }
+            )
             yield events.AllOf(resource.env, product_put_events)
-            resource.adjust_pending_put_of_output_queues() # output queues do not get reserved, so the pending put has to be adjusted manually
+            resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
 
             for next_product in [product]:
                 if not resource.got_free.triggered:
                     resource.got_free.succeed()
                 next_product.finished_process.succeed()
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished process for {product.product_data.ID}"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Finished process for {product.product_data.ID}",
+                }
+            )
 
-    def run_process(self, input_state: state.State, target_product: product.Product, process: process.Process):
+    def run_process(
+        self,
+        input_state: state.State,
+        target_product: product.Product,
+        process: process.Process,
+    ):
         """
         Run the process of a product. The process is started and the product is logged.
 
@@ -319,7 +446,9 @@ class ProductionController(Controller):
 
         yield input_state.process
 
-    def handle_rework_required(self, product: product.Product, process: process.Process):
+    def handle_rework_required(
+        self, product: product.Product, process: process.Process
+    ):
         """
         Determine if rework is needed based on the process's failure rate.
 
@@ -330,17 +459,28 @@ class ProductionController(Controller):
             return
         failure_rate = process.process_data.failure_rate
         if not failure_rate or failure_rate == 0:
-            return 
-        rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
+            return
+        rework_needed = np.random.choice(
+            [True, False], p=[failure_rate, 1 - failure_rate]
+        )
         if not rework_needed:
             return
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Rework needed for {product.product_data.ID}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Rework needed for {product.product_data.ID}",
+            }
+        )
         product.add_needed_rework(process)
+
 
 class BatchController(Controller):
     """
     A batch controller is responsible for controlling the batch processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
+
     resource: resources.ProductionResource = Field(init=False, default=None)
 
     def get_batch_size(self, resource: resources.Resource) -> int:
@@ -382,13 +522,16 @@ class BatchController(Controller):
             for queue in internal_input_queues:
                 while len(events) < batch_size:
                     event = queue.get(
-                        filter=lambda item: item.product_type == process_request.get_product().product_data.product_type
+                        filter=lambda item: item.product_type
+                        == process_request.get_product().product_data.product_type
                     )
                     if not event:
                         break
                     events.append(event)
             if not events:
-                raise ValueError("No products available in the queue to fulfill the batch size requirement")
+                raise ValueError(
+                    "No products available in the queue to fulfill the batch size requirement"
+                )
             return events
         else:
             raise ValueError("Resource is not a ProductionResource")
@@ -409,7 +552,11 @@ class BatchController(Controller):
         events = []
         if isinstance(resource, resources.ProductionResource):
             for product in products:
-                internal_output_queues = [queue for queue in resource.output_queues if not isinstance(queue, store.Store)]
+                internal_output_queues = [
+                    queue
+                    for queue in resource.output_queues
+                    if not isinstance(queue, store.Store)
+                ]
                 queue_for_product = random.choice(internal_output_queues)
                 events.append(queue_for_product.put(product.product_data))
                 logger.debug(
@@ -425,7 +572,9 @@ class BatchController(Controller):
 
         return events
 
-    def wait_for_free_process(self, resource: resources.Resource, process: process.Process) -> Generator[List[state.State], None, None]:
+    def wait_for_free_process(
+        self, resource: resources.Resource, process: process.Process
+    ) -> Generator[List[state.State], None, None]:
         """
         Wait for free processes of a resource.
 
@@ -444,7 +593,14 @@ class BatchController(Controller):
             free_states = resource.get_free_processes(process)
             if free_states:
                 return free_states
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": resource.data.ID, "event": "Waiting for free process"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": resource.data.ID,
+                    "event": "Waiting for free process",
+                }
+            )
             yield events.AnyOf(
                 self.env,
                 [
@@ -472,7 +628,14 @@ class BatchController(Controller):
         """
         while True:
             batch_size = self.get_batch_size(self.resource)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": "Waiting for request or process to finish",
+                }
+            )
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
@@ -481,15 +644,31 @@ class BatchController(Controller):
             for process in self.running_processes:
                 if not process.is_alive:
                     self.running_processes.remove(process)
-            if self.resource.full or (len(self.requests) < batch_size and len(self.requests) > 0):
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Not enough requests ({len(self.requests)}) or resource full ({self.resource.full})"})
+            if self.resource.full or (
+                len(self.requests) < batch_size and len(self.requests) > 0
+            ):
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"Not enough requests ({len(self.requests)}) or resource full ({self.resource.full})",
+                    }
+                )
                 continue
             self.control_policy(self.requests)
             self.reserved_requests_count += 1
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": "Triggered requested event after process",
+                    }
+                )
                 self.requested.succeed()
 
     def start_process(self) -> Generator:
@@ -506,7 +685,14 @@ class BatchController(Controller):
             Generator: The generator yields when the process is finished.
         """
         batch_size = self.get_batch_size(self.resource)
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Starting batch process",
+            }
+        )
         yield self.env.timeout(0)
         process_request = self.requests.pop(0)
         self.reserved_requests_count -= 1
@@ -515,40 +701,92 @@ class BatchController(Controller):
         product = process_request.get_product()
         products = []
         production_states = []
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID} with batch size {batch_size}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Starting setup for process for {product.product_data.ID} with batch size {batch_size}",
+            }
+        )
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            product_retrieval_events = self.get_next_product_for_process(resource, process_request)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve products for batch from queue"})
-            product_data_list = yield events.AllOf(resource.env, product_retrieval_events)
+            product_retrieval_events = self.get_next_product_for_process(
+                resource, process_request
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to retrieve products for batch from queue",
+                }
+            )
+            product_data_list = yield events.AllOf(
+                resource.env, product_retrieval_events
+            )
 
             for product_data in product_data_list.values():
-                simulation_product = product.product_router.product_factory.get_product(product_data.ID)
+                simulation_product = product.product_router.product_factory.get_product(
+                    product_data.ID
+                )
                 products.append(simulation_product)
 
             for simulation_product in products:
-                production_states: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
+                production_states: state.State = yield self.env.process(
+                    self.wait_for_free_process(resource, process)
+                )
 
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting batch process"})
-            yield self.env.process(self.run_process(production_states, products, process))
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Starting batch process",
+                }
+            )
+            yield self.env.process(
+                self.run_process(production_states, products, process)
+            )
             for state in production_states:
                 state.process = None
 
             product_put_events = self.put_product_to_output_queue(resource, products)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put products to queue"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to put products to queue",
+                }
+            )
             yield events.AllOf(resource.env, product_put_events)
-            resource.adjust_pending_put_of_output_queues(batch_size) # output queues do not get reserved, so the pending put has to be adjusted manually
+            resource.adjust_pending_put_of_output_queues(
+                batch_size
+            )  # output queues do not get reserved, so the pending put has to be adjusted manually
 
             for product in products:
                 for next_product in [product]:
                     if not resource.got_free.triggered:
                         resource.got_free.succeed()
                     next_product.finished_process.succeed()
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished batch process"})
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"Finished batch process",
+                    }
+                )
 
-    def run_process(self, input_states: List[state.State], products: List[product.Product], process: process.Process):
+    def run_process(
+        self,
+        input_states: List[state.State],
+        products: List[product.Product],
+        process: process.Process,
+    ):
         """
         Run the process of a product. The process is started and the product is logged.
 
@@ -562,23 +800,25 @@ class BatchController(Controller):
 
         for product, input_state in zip(products, input_states):
             input_state.prepare_for_run()
-            input_state.state_info.log_product(
-                product, state.StateTypeEnum.production
-            )
+            input_state.state_info.log_product(product, state.StateTypeEnum.production)
             product.product_info.log_start_process(
                 self.resource,
                 product,
                 self.env.now,
                 state.StateTypeEnum.production,
             )
-            input_state.process = self.env.process(input_state.process_state(process_time_for_batch))
+            input_state.process = self.env.process(
+                input_state.process_state(process_time_for_batch)
+            )
             states.append(input_state.process)
 
             self.handle_rework_required(product, process)
 
         yield events.AllOf(self.env, states)
 
-    def handle_rework_required(self, product: product.Product, process: process.Process):
+    def handle_rework_required(
+        self, product: product.Product, process: process.Process
+    ):
         """
         Determine if rework is needed based on the process's failure rate.
 
@@ -589,17 +829,28 @@ class BatchController(Controller):
             return
         failure_rate = process.process_data.failure_rate
         if not failure_rate or failure_rate == 0:
-            return 
-        rework_needed = np.random.choice([True, False], p=[failure_rate, 1-failure_rate])
+            return
+        rework_needed = np.random.choice(
+            [True, False], p=[failure_rate, 1 - failure_rate]
+        )
         if not rework_needed:
             return
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Rework needed for {product.product_data.ID}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Rework needed for {product.product_data.ID}",
+            }
+        )
         product.add_needed_rework(process)
+
 
 class TransportController(Controller):
     """
     Controller for transport resources.
     """
+
     resource: resources.TransportResource = Field(init=False, default=None)
     requests: List[request_module.TransportResquest] = Field(default_factory=list)
     control_policy: Callable[
@@ -628,8 +879,14 @@ class TransportController(Controller):
             List[events.Event]: The event that is triggered when the product is in the queue.
         """
         events = []
-        if (isinstance(resource, resources.ProductionResource) or isinstance(resource, source.Source)):
-            internal_queues = [queue for queue in resource.output_queues if not isinstance(queue, store.Store)]
+        if isinstance(resource, resources.ProductionResource) or isinstance(
+            resource, source.Source
+        ):
+            internal_queues = [
+                queue
+                for queue in resource.output_queues
+                if not isinstance(queue, store.Store)
+            ]
             for queue in internal_queues:
                 events.append(queue.get(filter=lambda x: x is product.product_data))
             if not events:
@@ -637,16 +894,20 @@ class TransportController(Controller):
         elif isinstance(resource, store.Store):
             events.append(resource.get(filter=lambda x: x is product.product_data))
         elif isinstance(resource, sink.Sink):
-            pass # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
+            pass  # if a product is finished, the auxiliary is retrieved from the sink location by releasing it from the product, no get required
         else:
-            raise ValueError(f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries")
-        logger.debug({
-            "ID": "controller: get_next_product_for_process", 
-            "sim_time": self.env.now, 
-            "product": product.product_data.ID, 
-            "resource": resource.data.ID, 
-            "events_triggered": events
-        })
+            raise ValueError(
+                f"Resource {resource.data.ID} is not a ProductionResource or Source or Store of Auxiliaries"
+            )
+        logger.debug(
+            {
+                "ID": "controller: get_next_product_for_process",
+                "sim_time": self.env.now,
+                "product": product.product_data.ID,
+                "resource": resource.data.ID,
+                "events_triggered": events,
+            }
+        )
         return events
 
     def put_product_to_input_queue(
@@ -667,7 +928,9 @@ class TransportController(Controller):
         """
         events = []
 
-        if isinstance(locatable, resources.ProductionResource) or isinstance(locatable, sink.Sink):
+        if isinstance(locatable, resources.ProductionResource) or isinstance(
+            locatable, sink.Sink
+        ):
             internal_queues = [
                 queue
                 for queue in locatable.input_queues
@@ -677,23 +940,27 @@ class TransportController(Controller):
             selected_queue = internal_queues[0]
             events.append(selected_queue.put(product.product_data))
 
-            logger.debug({
-                "ID": "controller: put_product_to_input_queue", 
-                "sim_time": self.env.now, 
-                "queue": selected_queue.data.ID, 
-                "event": f"Putting product {product.product_data.ID} into store.Queue"
-            })
+            logger.debug(
+                {
+                    "ID": "controller: put_product_to_input_queue",
+                    "sim_time": self.env.now,
+                    "queue": selected_queue.data.ID,
+                    "event": f"Putting product {product.product_data.ID} into store.Queue",
+                }
+            )
 
         elif isinstance(locatable, store.Queue):
-            logger.debug({
-                "ID": "controller: put_product_to_input_queue", 
-                "sim_time": self.env.now, 
-                "locatable": locatable.data.ID, 
-                "event": f"Putting product {product.product_data.ID} into store.Queue"
-            })
+            logger.debug(
+                {
+                    "ID": "controller: put_product_to_input_queue",
+                    "sim_time": self.env.now,
+                    "locatable": locatable.data.ID,
+                    "event": f"Putting product {product.product_data.ID} into store.Queue",
+                }
+            )
             events.append(locatable.put(product.product_data))
         elif isinstance(locatable, source.Source):
-            pass # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
+            pass  # if a product is started, the auxiliary is retrieved from the sink location by releasing it from the product, no put required
         else:
             raise ValueError(
                 f"Cannot place {product.product_data.ID} in locatable {locatable.data.ID} because the locatable is not a ProductionResource or Sink but of type: {type(locatable)}"
@@ -719,7 +986,14 @@ class TransportController(Controller):
         """
         self.update_location(self.resource, self.resource.get_location())
         while True:
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Waiting for request or process to finish"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": "Waiting for request or process to finish",
+                }
+            )
             yield events.AnyOf(
                 env=self.env, events=self.running_processes + [self.requested]
             )
@@ -731,16 +1005,32 @@ class TransportController(Controller):
                 if not process.is_alive:
                     self.running_processes.remove(process)
             if self.resource.full or not self.requests:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full})"})
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"No request ({len(self.requests)}) or resource full ({self.resource.full})",
+                    }
+                )
                 continue
             self.control_policy(self.requests)
             running_process = self.env.process(self.start_process())
             self.running_processes.append(running_process)
             if not self.resource.full:
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": "Triggered requested event after process"})
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": "Triggered requested event after process",
+                    }
+                )
                 self.requested.succeed()
 
-    def update_location(self, locatable: product.Locatable, location: list[float]) -> None:
+    def update_location(
+        self, locatable: product.Locatable, location: list[float]
+    ) -> None:
         """
         Set the current position of the transport resource.
 
@@ -781,38 +1071,107 @@ class TransportController(Controller):
         origin = process_request.get_origin()
         target = process_request.get_target()
         route_to_target = process_request.get_route()
-        logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting setup for process for {product.product_data.ID}"})
+        logger.debug(
+            {
+                "ID": "controller",
+                "sim_time": self.env.now,
+                "resource": self.resource.data.ID,
+                "event": f"Starting setup for process for {product.product_data.ID}",
+            }
+        )
 
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
             if origin.data.ID != self._current_locatable.data.ID:
                 route_to_origin = self.find_route_to_origin(process_request)
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}"})
-                transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-                logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport to pick up {product.product_data.ID} for transport"})
-                yield self.env.process(self.run_transport(transport_state, product, route_to_origin, empty_transport=True))
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"Empty transport needed for {product.product_data.ID} from {origin.data.ID} to {target.data.ID}",
+                    }
+                )
+                transport_state: state.State = yield self.env.process(
+                    self.wait_for_free_process(resource, process)
+                )
+                logger.debug(
+                    {
+                        "ID": "controller",
+                        "sim_time": self.env.now,
+                        "resource": self.resource.data.ID,
+                        "event": f"Starting transport to pick up {product.product_data.ID} for transport",
+                    }
+                )
+                yield self.env.process(
+                    self.run_transport(
+                        transport_state, product, route_to_origin, empty_transport=True
+                    )
+                )
 
-            product_retrieval_events = self.get_next_product_for_process(origin, product)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to retrieve product {product.product_data.ID} from queue"})
+            product_retrieval_events = self.get_next_product_for_process(
+                origin, product
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to retrieve product {product.product_data.ID} from queue",
+                }
+            )
             yield events.AllOf(resource.env, product_retrieval_events)
             product.update_location(self.resource)
 
-            transport_state: state.State = yield self.env.process(self.wait_for_free_process(resource, process))
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Starting transport of {product.product_data.ID}"})
-            yield self.env.process(self.run_transport(transport_state, product, route_to_target, empty_transport=False))
+            transport_state: state.State = yield self.env.process(
+                self.wait_for_free_process(resource, process)
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Starting transport of {product.product_data.ID}",
+                }
+            )
+            yield self.env.process(
+                self.run_transport(
+                    transport_state, product, route_to_target, empty_transport=False
+                )
+            )
 
             product_put_events = self.put_product_to_input_queue(target, product)
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Waiting to put product {product.product_data.ID} to queue"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Waiting to put product {product.product_data.ID} to queue",
+                }
+            )
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
 
             if not resource.got_free.triggered:
                 resource.got_free.succeed()
             product.finished_process.succeed()
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Finished transport of {product.product_data.ID}"})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Finished transport of {product.product_data.ID}",
+                }
+            )
 
-    def run_transport(self, transport_state: state.State, product: product.Product, route: List[product.Locatable], empty_transport: bool) -> Generator:
+    def run_transport(
+        self,
+        transport_state: state.State,
+        product: product.Product,
+        route: List[product.Locatable],
+        empty_transport: bool,
+    ) -> Generator:
         """
         Run the transport process and every single transport step in the route of the transport process.
 
@@ -834,13 +1193,46 @@ class TransportController(Controller):
                 last_transport_step = True
             else:
                 last_transport_step = False
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Moving from {location.data.ID} to {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
-            yield self.env.process(self.run_process(transport_state, product, target=next_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step))
-            logger.debug({"ID": "controller", "sim_time": self.env.now, "resource": self.resource.data.ID, "event": f"Arrived at {next_location.data.ID}", "empty_transport": True, "initial_transport_step": initial_transport_step, "last_transport_step": last_transport_step})
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Moving from {location.data.ID} to {next_location.data.ID}",
+                    "empty_transport": True,
+                    "initial_transport_step": initial_transport_step,
+                    "last_transport_step": last_transport_step,
+                }
+            )
+            yield self.env.process(
+                self.run_process(
+                    transport_state,
+                    product,
+                    target=next_location,
+                    empty_transport=empty_transport,
+                    initial_transport_step=initial_transport_step,
+                    last_transport_step=last_transport_step,
+                )
+            )
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.resource.data.ID,
+                    "event": f"Arrived at {next_location.data.ID}",
+                    "empty_transport": True,
+                    "initial_transport_step": initial_transport_step,
+                    "last_transport_step": last_transport_step,
+                }
+            )
             transport_state.process = None
 
-    
-    def get_target_location(self, target: product.Locatable, empty_transport: bool, last_transport_step: bool) -> list[float]:
+    def get_target_location(
+        self,
+        target: product.Locatable,
+        empty_transport: bool,
+        last_transport_step: bool,
+    ) -> list[float]:
         """
         Get the position of the target where the material exchange is done (either picking up or putting down)
 
@@ -852,7 +1244,9 @@ class TransportController(Controller):
         Returns:
             list[float]: The position of the target, list with 2 floats.
         """
-        if not last_transport_step or not isinstance(target, (resources.ProductionResource, store.Store)):
+        if not last_transport_step or not isinstance(
+            target, (resources.ProductionResource, store.Store)
+        ):
             return target.get_location()
         if empty_transport:
             return target.get_output_location()
@@ -890,8 +1284,9 @@ class TransportController(Controller):
             origin = self._current_locatable
         input_state.state_info.log_transport(
             origin,
-            target, state.StateTypeEnum.transport,
-            empty_transport=empty_transport
+            target,
+            state.StateTypeEnum.transport,
+            empty_transport=empty_transport,
         )
         if not hasattr(product, "product_info"):
             product.auxiliary_info.log_start_process(
@@ -907,14 +1302,18 @@ class TransportController(Controller):
                 self.env.now,
                 state.StateTypeEnum.transport,
             )
-        target_location = self.get_target_location(target, empty_transport, last_transport_step=last_transport_step)
+        target_location = self.get_target_location(
+            target, empty_transport, last_transport_step=last_transport_step
+        )
         input_state.process = self.env.process(
             input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
         yield input_state.process
         self.update_location(target, location=target_location)
 
-    def find_route_to_origin(self, process_request: request_module.TransportResquest) -> List[product.Locatable]:
+    def find_route_to_origin(
+        self, process_request: request_module.TransportResquest
+    ) -> List[product.Locatable]:
         """
         Find the route to the origin of the transport request.
 
@@ -925,9 +1324,15 @@ class TransportController(Controller):
             List[product.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
-            route_to_origin = route_finder.find_route(request=process_request, find_route_to_origin=True, process=process_request.get_process())
+            route_to_origin = route_finder.find_route(
+                request=process_request,
+                find_route_to_origin=True,
+                process=process_request.get_process(),
+            )
             if not route_to_origin:
-                raise ValueError(f"Route to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin.")
+                raise ValueError(
+                    f"Route to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
+                )
             return route_to_origin
         else:
             return [self._current_locatable, process_request.get_origin()]
@@ -962,6 +1367,7 @@ def SPT_control_policy(requests: List[request_module.Request]) -> None:
     """
     requests.sort(key=lambda x: x.process.get_expected_process_time())
 
+
 def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
     if not isinstance(locatable, (resources.ProductionResource, store.Store)):
         return locatable.get_location()
@@ -971,7 +1377,9 @@ def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
         return locatable.get_output_location()
 
 
-def SPT_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
+def SPT_transport_control_policy(
+    requests: List[request_module.TransportResquest],
+) -> None:
     """
     Sort the requests according to the SPT principle (shortest process time first).
 
@@ -983,9 +1391,13 @@ def SPT_transport_control_policy(requests: List[request_module.TransportResquest
             get_location(x.origin, "origin"), get_location(x.target, "target")
         )
     )
-def nearest_origin_and_longest_target_queues_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
+
+
+def nearest_origin_and_longest_target_queues_transport_control_policy(
+    requests: List[request_module.TransportResquest],
+) -> None:
     """
-    Sort the requests according to nearest origin without considering the target location. 
+    Sort the requests according to nearest origin without considering the target location.
     Second order sorting by descending length of the target output queues, to prefer targets where a product can be picked up.
     Args:
         requests (List[request.TransportResquest]): The list of requests.
@@ -993,12 +1405,16 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(requests: 
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")),
-                - x.target.get_output_queue_length()
-                )
+                get_location(x.resource), get_location(x.origin, mode="origin")
+            ),
+            -x.target.get_output_queue_length(),
+        )
     )
 
-def nearest_origin_and_shortest_target_input_queues_transport_control_policy(requests: List[request_module.TransportResquest]) -> None:
+
+def nearest_origin_and_shortest_target_input_queues_transport_control_policy(
+    requests: List[request_module.TransportResquest],
+) -> None:
     """
     Sort the requests according to nearest origin without considering the target location.
     Second order sorting by ascending length of the target input queue so that resources with empty input queues get material to process.
@@ -1009,13 +1425,16 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(req
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")),
-            x.target.get_input_queue_length()
-            )
+                get_location(x.resource), get_location(x.origin, mode="origin")
+            ),
+            x.target.get_input_queue_length(),
+        )
     )
 
+
 def agent_control_policy(
-    gym_env: sequencing_control_env.AbstractSequencingControlEnv, requests: List[request_module.Request]
+    gym_env: sequencing_control_env.AbstractSequencingControlEnv,
+    requests: List[request_module.Request],
 ) -> None:
     """
     Sort the requests according to the agent's policy.

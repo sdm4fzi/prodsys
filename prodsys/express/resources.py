@@ -96,7 +96,11 @@ class ProductionResource(Resource, core.ExpressObject):
         ```
     """
 
-    processes: List[Union[process.ProductionProcess, process.CapabilityProcess, process.ReworkProcess]]
+    processes: List[
+        Union[
+            process.ProductionProcess, process.CapabilityProcess, process.ReworkProcess
+        ]
+    ]
     input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
     output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
     control_policy: resource_data.ResourceControlPolicy = (
@@ -129,10 +133,11 @@ class ProductionResource(Resource, core.ExpressObject):
             controller=self.controller,
             control_policy=self.control_policy,
         )
-        self._input_queues, self._output_queues = (
-            prodsys.adapters.get_default_queues_for_resource(
-                resource, self.internal_queue_size
-            )
+        (
+            self._input_queues,
+            self._output_queues,
+        ) = prodsys.adapters.get_default_queues_for_resource(
+            resource, self.internal_queue_size
         )
         resource.input_queues = [q.ID for q in self._input_queues + self.input_stores]
         resource.output_queues = [
@@ -174,7 +179,7 @@ class TransportResource(Resource, core.ExpressObject):
     """
 
     processes: List[process.TransportProcess]
-    location: Optional[list[float]] = Field(default=[0,0], min_length=2, max_length=2)
+    location: Optional[list[float]] = Field(default=[0, 0], min_length=2, max_length=2)
     controller: resource_data.ControllerEnum = (
         resource_data.ControllerEnum.TransportController
     )

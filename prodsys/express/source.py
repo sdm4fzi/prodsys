@@ -12,6 +12,7 @@ from prodsys.express import core, time_model
 from prodsys.models import source_data, queue_data
 import prodsys
 
+
 @dataclass
 class Source(core.ExpressObject):
     """
@@ -23,13 +24,13 @@ class Source(core.ExpressObject):
         location (conlist(float, min_length=2, max_length=2)): Location of the source.
         routing_heuristic (source_data.RoutingHeuristic, optional): Routing heuristic of the source. Defaults to source_data.RoutingHeuristic.random.
         ID (str): ID of the source.
-    
+
     Attributes:
         _output_queues (List[queue_data.QueueData]): Output queues of the source.
 
     Examples:
         Creation of a source with a product, a time model and a location:
-        ```py	
+        ```py
         import prodsys.express as psx
         welding_time_model = psx.time_model_data.FunctionTimeModel(
             distribution_function="normal",
@@ -64,10 +65,13 @@ class Source(core.ExpressObject):
         )
         ```
     """
+
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
     location: list[float] = Field(..., min_length=2, max_length=2)
-    routing_heuristic: source_data.RoutingHeuristic = source_data.RoutingHeuristic.random
+    routing_heuristic: source_data.RoutingHeuristic = (
+        source_data.RoutingHeuristic.random
+    )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
@@ -90,5 +94,6 @@ class Source(core.ExpressObject):
         self._output_queues = [prodsys.adapters.get_default_queue_for_source(source)]
         source.output_queues = [q.ID for q in self._output_queues]
         return source
+
 
 from prodsys.express import product
