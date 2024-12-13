@@ -130,7 +130,7 @@ class ProductionSystem(core.ExpressObject):
                 for process_instance in processes
                 if not isinstance(process_instance, process.RequiredCapabilityProcess)
             ]
-            + [state.time_model for state in states]
+            + [state_instance.time_model for state_instance in states]
             + [source.time_model for source in self.sources]
         )
         time_models += [

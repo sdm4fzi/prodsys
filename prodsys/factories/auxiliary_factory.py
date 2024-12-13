@@ -37,10 +37,7 @@ class AuxiliaryFactory(BaseModel):
         Create auxiliary objects based on the provided adapter's auxiliary data.
 
         Args:
-                adapter (adapter.ProductionSystemAdapter): The adapter containing auxiliary data.
-
-        Returns:
-                None
+            adapter (adapter.ProductionSystemAdapter): The adapter containing auxiliary data.
         """
         for auxiliary_data in adapter.auxiliary_data:
             for i, capacity_auxiliary_in_storage in enumerate(
@@ -118,9 +115,6 @@ class AuxiliaryFactory(BaseModel):
     def place_auxiliaries_in_queues(self):
         """
         Place the auxiliary objects in the system.
-
-        Returns:
-                None
         """
         for auxiliary in self.auxiliaries:
             auxiliary.current_locatable.put(auxiliary.product_data)
@@ -130,13 +124,13 @@ class AuxiliaryFactory(BaseModel):
         Get the auxiliary object with the specified ID.
 
         Args:
-                ID (str): The ID of the auxiliary object.
+            ID (str): The ID of the auxiliary object.
 
         Returns:
-                auxiliary.Auxiliary: The auxiliary object with the specified ID.
+            auxiliary.Auxiliary: The auxiliary object with the specified ID.
 
         Raises:
-                IndexError: If no auxiliary object with the specified ID is found.
+            IndexError: If no auxiliary object with the specified ID is found.
         """
         return [s for s in self.auxiliaries if s.data.ID == ID].pop()
 
@@ -145,10 +139,10 @@ class AuxiliaryFactory(BaseModel):
         Get the router object with the specified routing heuristic.
 
         Args:
-                routing_heuristic (str): The routing heuristic to use.
+            routing_heuristic (str): The routing heuristic to use.
 
         Returns:
-                router.Router: The router object with the specified routing heuristic.
+            router.Router: The router object with the specified routing heuristic.
         """
         return router.Router(
             self.resource_factory,
