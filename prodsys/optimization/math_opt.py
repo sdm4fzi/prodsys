@@ -1,4 +1,6 @@
-from typing import Any, Dict
+from typing import Any, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.optimization.optimizer import Optimizer
 
 from uuid import uuid1
 import scipy.stats
@@ -617,32 +619,43 @@ def run_mathematical_optimization(
 
 
 def mathematical_optimization(
-    base_configuration: adapters.ProductionSystemAdapter,
-    hyper_parameters: MathOptHyperparameters,
-    save_folder: str = "results",
-    full_save: bool = False,
+    optimizer: "Optimizer",
+    #base_configuration: adapters.ProductionSystemAdapter,
+    #hyper_parameters: MathOptHyperparameters,
+    #save_folder: str = "results",
+    #full_save: bool = False,
 ):
     """
     Optimize the configuration of the production system with mathematical optimization.
 
     Args:
+        optimizer (Optimizer): The optimizer object containing the adapter, hyperparameters, and settings for optimization.
         base_configuration (adapters.ProductionSystemAdapter): Base configuration for the optimization.
         hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
         save_folder (str, optional): Folder to save the results in. Defaults to "results".
         full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
     """
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+
+    base_configuration = optimizer.adapter.model_copy(deep=True)
+    if not adapters.check_for_clean_compound_processes(base_configuration):
+        raise ValueError("Compound processes are not supported in the current configuration.")
+    if not check_breakdown_states_available(base_configuration):
+        create_default_breakdown_states(base_configuration)
+
     util.prepare_save_folder(save_folder)
     model = MathOptimizer(
-        adapter=base_configuration,
-        optimization_time_portion=hyper_parameters.optimization_time_portion,
+        adapter=optimizer.adapter,
+        optimization_time_portion=optimizer.hyperparameters.optimization_time_portion,
     )
-    model.optimize(n_solutions=hyper_parameters.number_of_solutions)
-    model.save_model(save_folder=save_folder)
+
+    model.optimize(n_solutions=optimizer.hyper_parameters.number_of_solutions)
+    model.save_model(save_folder=optimizer.save_folder)
     model.save_results(
-        save_folder=save_folder,
-        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=hyper_parameters.number_of_seeds,
-        full_save=full_save,
+        save_folder=optimizer.save_folder,
+        adjusted_number_of_transport_resources=optimizer.hyper_parameters.adjusted_number_of_transport_resources,
+        number_of_seeds=optimizer.hyper_parameters.number_of_seeds,
+        full_save=optimizer.full_save,
     )
 
 

@@ -1,7 +1,8 @@
 import json
 import time
 from copy import deepcopy
-
+from typing import TYPE_CHECKING
+from prodsys.util import util 
 from pydantic import BaseModel, ConfigDict
 import logging
 
@@ -22,6 +23,10 @@ from prodsys.optimization.util import (
     create_default_breakdown_states,
 )
 from prodsys.util.util import set_seed
+
+if TYPE_CHECKING:
+    from prodsys.optimization.optimizer import Optimizer
+
 
 class ProductionSystemOptimization(Annealer):
     def __init__(
@@ -179,11 +184,12 @@ def run_simulated_annealing(
 
 
 def simulated_annealing_optimization(
-    base_configuration: adapters.ProductionSystemAdapter,
-    hyper_parameters: SimulatedAnnealingHyperparameters,
-    save_folder: str = "results",
-    initial_solution: adapters.ProductionSystemAdapter = None,
-    full_save: bool = False,
+    optimizer: "Optimizer"
+    #base_configuration: adapters.ProductionSystemAdapter,
+    #hyper_parameters: SimulatedAnnealingHyperparameters,
+    #save_folder: str = "results",
+    #initial_solution: adapters.ProductionSystemAdapter = None,
+    #full_save: bool = False,
 ):
     """
     Optimize a production system configuration using simulated anealing.
@@ -195,6 +201,8 @@ def simulated_annealing_optimization(
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
     adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    base_configuration = optimizer.adapter.model_copy(deep=True)
+
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning(
             "Both compound processes and normal processes are used. This may lead to unexpected results."
@@ -203,26 +211,33 @@ def simulated_annealing_optimization(
         create_default_breakdown_states(base_configuration)
     if not initial_solution:
         initial_solution = base_configuration.model_copy(deep=True)
+    
+    hyper_parameters: SimulatedAnnealingHyperparameters = optimizer.hyperparameters
+
+    if optimizer.save_folder:
+        util.prepare_save_fodler(optimizer.save_folder + "/")
 
     set_seed(hyper_parameters.seed)
 
     weights = get_weights(base_configuration, "min")
 
-    solution_dict = {"current_generation": "0", "hashes": {}}
-    performances = {}
-    performances["0"] = {}
+    #solution_dict = {"current_generation": "0", "hashes": {}}
+    #performances = {}
+    #performances["0"] = {}
     start = time.perf_counter()
+    solutions_dict = optimizer.solutions_dict
+    performances = optimizer.performances
 
     pso = ProductionSystemOptimization(
         base_configuration=base_configuration,
-        save_folder=save_folder,
+        save_folder=optimizer.save_folder,
         performances=performances,
-        solutions_dict=solution_dict,
+        solutions_dict=solutions_dict,
         start=start,
         weights=weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
-        initial_solution=initial_solution,
-        full_save=full_save,
+        initial_solution=optimizer.initial_solution,
+        full_save=optimizer.save_folder if optimizer.full_save else "",
     )
 
     pso.Tmax = hyper_parameters.Tmax
@@ -230,7 +245,7 @@ def simulated_annealing_optimization(
     pso.steps = hyper_parameters.steps
     pso.updates = hyper_parameters.updates
 
-    internary, performance = pso.anneal()
+    internary, performance = pso.anneal(optimizer)
 
 
 def optimize_configuration(
