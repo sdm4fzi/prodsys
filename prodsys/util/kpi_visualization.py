@@ -147,8 +147,8 @@ def plot_oee(
     """
     Plots the Overall Equipment Effectiveness (OEE) with Availability, Performance & Quality using the given post_processor.
 
-    Parameters:
-    - post_processor: An instance of the post_processing.PostProcessor class.
+    Args:
+        post_processor: An instance of the post_processing.PostProcessor class.
     """
     df_oee = post_processor.df_oee_production_system
     fig = make_subplots(
