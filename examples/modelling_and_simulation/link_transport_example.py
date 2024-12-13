@@ -3,9 +3,7 @@ import prodsys
 
 
 # all time models
-time_model_agv = psx.DistanceTimeModel(
-    speed=360, reaction_time=0, ID="time_model_x"
-)
+time_model_agv = psx.DistanceTimeModel(speed=360, reaction_time=0, ID="time_model_x")
 time_model_machine1 = psx.FunctionTimeModel(
     distribution_function="constant", location=3, ID="time_model_ap23"
 )
@@ -39,15 +37,9 @@ node4 = psx.Node(location=[0, 20], ID="node4")
 
 # All processes
 ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, ID="ltp01")
-productionprocess01 = psx.ProductionProcess(
-    time_model=time_model_machine1, ID="pp01"
-)
-productionprocess02 = psx.ProductionProcess(
-    time_model=time_model_machine2, ID="pp02"
-)
-productionprocess03 = psx.ProductionProcess(
-    time_model=time_model_machine3, ID="pp03"
-)
+productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
+productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="pp02")
+productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
 
 # All resources
 machine01 = psx.ProductionResource(
@@ -133,15 +125,16 @@ ltp01.set_links(links)
 
 # Add production system
 productionsystem = psx.ProductionSystem(
-resources=[
-    agv01,
-    machine01,
-    machine02,
-    machine03,
-],
-sources=[source01, source02],
-sinks=[sink01, sink02],
-ID="productionsystem01",)
+    resources=[
+        agv01,
+        machine01,
+        machine02,
+        machine03,
+    ],
+    sources=[source01, source02],
+    sinks=[sink01, sink02],
+    ID="productionsystem01",
+)
 
 adapter = productionsystem.to_model()
 runner = prodsys.runner.Runner(adapter=adapter)

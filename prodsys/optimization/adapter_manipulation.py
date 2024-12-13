@@ -276,7 +276,9 @@ def move_process_module(adapter_object: adapters.ProductionSystemAdapter) -> boo
     return True
 
 
-def update_production_resource_location(resource: resource_data.ProductionResourceData, new_location: List[float]) -> None:
+def update_production_resource_location(
+    resource: resource_data.ProductionResourceData, new_location: List[float]
+) -> None:
     """
     Function that updates the location of a machine.
 

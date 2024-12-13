@@ -7,8 +7,14 @@ import warnings
 import logging
 
 from prodsys.optimization.optimization import evaluate
-from prodsys.optimization.adapter_manipulation import crossover, mutation, random_configuration, random_configuration_with_initial_solution
+from prodsys.optimization.adapter_manipulation import (
+    crossover,
+    mutation,
+    random_configuration,
+    random_configuration_with_initial_solution,
+)
 from prodsys.optimization.util import document_individual
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -39,6 +45,7 @@ if TYPE_CHECKING:
 
 creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
+
 
 class EvolutionaryAlgorithmHyperparameters(BaseModel):
     """
@@ -75,6 +82,7 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
             },
         ]
     })
+
 
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonProductionSystemAdapter,
@@ -150,7 +158,9 @@ def save_population_results(
     #     )
 
 
+
 from prodsys.util import util
+
 
 def evolutionary_algorithm_optimization(
         optimizer: "Optimizer",
@@ -165,7 +175,9 @@ def evolutionary_algorithm_optimization(
 
     base_configuration = optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        logger.warning("Both compound processes and normal processes are used. This may lead to unexpected results.")
+        logger.warning(
+            "Both compound processes and normal processes are used. This may lead to unexpected results."
+        )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     hyper_parameters: EvolutionaryAlgorithmHyperparameters = optimizer.hyperparameters
@@ -225,7 +237,10 @@ def evolutionary_algorithm_optimization(
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
         offspring = algorithms.varAnd(
-            offspring, toolbox, cxpb=hyper_parameters.crossover_rate, mutpb=hyper_parameters.mutation_rate
+            offspring,
+            toolbox,
+            cxpb=hyper_parameters.crossover_rate,
+            mutpb=hyper_parameters.mutation_rate,
         )
 
     #     # Evaluate the individuals

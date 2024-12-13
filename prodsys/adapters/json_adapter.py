@@ -23,10 +23,12 @@ from prodsys.models import (
     source_data,
 )
 
+
 def load_json(file_path: str) -> dict:
     with open(file_path, "r", encoding="utf-8") as json_file:
         data = json.load(json_file)
     return data
+
 
 class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
     """
@@ -70,12 +72,24 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
             data["processes"], processes_data.PROCESS_DATA_UNION
         )
 
-        self.queue_data = self.create_objects_from_configuration_data_old(data["queues"], queue_data.QUEUE_DATA_UNION)
-        self.resource_data = self.create_objects_from_configuration_data_old(data["resources"], resource_data.RESOURCE_DATA_UNION)
-        self.product_data = self.create_objects_from_configuration_data_old(data["products"], product_data.ProductData)
-        self.node_data = self.create_objects_from_configuration_data(data["links"], node_data.NodeData)
-        self.sink_data = self.create_objects_from_configuration_data_old(data["sinks"], sink_data.SinkData)
-        self.source_data = self.create_objects_from_configuration_data_old(data["sources"], source_data.SourceData)
+        self.queue_data = self.create_objects_from_configuration_data_old(
+            data["queues"], queue_data.QUEUE_DATA_UNION
+        )
+        self.resource_data = self.create_objects_from_configuration_data_old(
+            data["resources"], resource_data.RESOURCE_DATA_UNION
+        )
+        self.product_data = self.create_objects_from_configuration_data_old(
+            data["products"], product_data.ProductData
+        )
+        self.node_data = self.create_objects_from_configuration_data(
+            data["links"], node_data.NodeData
+        )
+        self.sink_data = self.create_objects_from_configuration_data_old(
+            data["sinks"], sink_data.SinkData
+        )
+        self.source_data = self.create_objects_from_configuration_data_old(
+            data["sources"], source_data.SourceData
+        )
         if scenario_file_path:
             self.read_scenario(scenario_file_path)
 
@@ -103,30 +117,47 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.process_data = self.create_objects_from_configuration_data(
             data["process_data"], processes_data.PROCESS_DATA_UNION
         )
-        self.queue_data = self.create_objects_from_configuration_data(data["queue_data"], queue_data.QUEUE_DATA_UNION)
-        self.resource_data = self.create_objects_from_configuration_data(data["resource_data"], resource_data.RESOURCE_DATA_UNION)
-        self.product_data = self.create_objects_from_configuration_data(data["product_data"], product_data.ProductData)
-        self.sink_data = self.create_objects_from_configuration_data(data["sink_data"], sink_data.SinkData)
+        self.queue_data = self.create_objects_from_configuration_data(
+            data["queue_data"], queue_data.QUEUE_DATA_UNION
+        )
+        self.resource_data = self.create_objects_from_configuration_data(
+            data["resource_data"], resource_data.RESOURCE_DATA_UNION
+        )
+        self.product_data = self.create_objects_from_configuration_data(
+            data["product_data"], product_data.ProductData
+        )
+        self.sink_data = self.create_objects_from_configuration_data(
+            data["sink_data"], sink_data.SinkData
+        )
         if "node_data" in data:
-            self.node_data = self.create_objects_from_configuration_data(data["node_data"], node_data.NodeData)
+            self.node_data = self.create_objects_from_configuration_data(
+                data["node_data"], node_data.NodeData
+            )
         if "auxiliary_data" in data:
-            self.auxiliary_data = self.create_objects_from_configuration_data(data["auxiliary_data"], auxiliary_data.AuxiliaryData)
-        self.source_data = self.create_objects_from_configuration_data(data["source_data"], source_data.SourceData)
+            self.auxiliary_data = self.create_objects_from_configuration_data(
+                data["auxiliary_data"], auxiliary_data.AuxiliaryData
+            )
+        self.source_data = self.create_objects_from_configuration_data(
+            data["source_data"], source_data.SourceData
+        )
         if scenario_file_path:
             self.read_scenario(scenario_file_path)
-    
+
     def create_objects_from_configuration_data_old(
         self, configuration_data: Dict[str, Any], type
-    ):  
-        warn("This method is deprecated. Use create_objects_from_configuration_data instead.", DeprecationWarning)
+    ):
+        warn(
+            "This method is deprecated. Use create_objects_from_configuration_data instead.",
+            DeprecationWarning,
+        )
         objects = []
         for values in configuration_data.values():
             objects.append(TypeAdapter(type).validate_python(values))
         return objects
-    
+
     def create_objects_from_configuration_data(
         self, configuration_data: List[Any], type
-    ):  
+    ):
         objects = []
         for values in configuration_data:
             objects.append(TypeAdapter(type).validate_python(values))
@@ -141,7 +172,7 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         """
         with open(file_path, "w") as json_file:
             json_file.write(self.model_dump_json(indent=4))
-    
+
     def write_scenario_data(self, file_path: str) -> None:
         """
         Writes the scenario data to the given file path.

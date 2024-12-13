@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from prodsys.simulation import sim, sink
 from prodsys.models import sink_data
+
 if TYPE_CHECKING:
     from prodsys.factories import product_factory, queue_factory
     from prodsys.adapters import adapter
@@ -21,6 +22,7 @@ class SinkFactory(BaseModel):
         product_factory (product_factory.ProductFactory): Factory that creates product objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
+
     env: sim.Environment
     product_factory: product_factory.ProductFactory
     queue_factory: queue_factory.QueueFactory
@@ -56,7 +58,7 @@ class SinkFactory(BaseModel):
     def get_sink(self, ID: str) -> sink.Sink:
         """
         Method returns a sink object with the given ID.
-        
+
         Args:
             ID (str): ID of the sink object.
         Returns:
@@ -88,4 +90,5 @@ class SinkFactory(BaseModel):
         """
         return [s for s in self.sinks if __product_type == s.data.product_type]
 
-from prodsys.factories import product_factory, queue_factory   
+
+from prodsys.factories import product_factory, queue_factory

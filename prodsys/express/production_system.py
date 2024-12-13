@@ -9,7 +9,15 @@ from prodsys.simulation import runner
 from prodsys.adapters import adapter, json_adapter
 
 from prodsys.express import (
-    core, node, resources, source, time_model, state, process, product, sink
+    core,
+    node,
+    resources,
+    source,
+    time_model,
+    state,
+    process,
+    product,
+    sink,
 )
 
 
@@ -48,6 +56,7 @@ def remove_duplicate_items(
         filtered_items.append(item)
     return filtered_items
 
+
 @dataclass
 class ProductionSystem(core.ExpressObject):
     """
@@ -62,6 +71,7 @@ class ProductionSystem(core.ExpressObject):
         sources (List[source.Source]): Sources of the production system.
         sinks (List[sink.Sink]): Sinks of the production system.
     """
+
     resources: List[Union[resources.ProductionResource, resources.TransportResource]]
     sources: List[source.Source]
     sinks: List[sink.Sink]
@@ -80,12 +90,14 @@ class ProductionSystem(core.ExpressObject):
             sink.product for sink in self.sinks
         ]
         products = remove_duplicate_items(products)
-        auxiliaries = list(util.flatten_object([product.auxiliaries for product in products]))
+        auxiliaries = list(
+            util.flatten_object([product.auxiliaries for product in products])
+        )
         auxiliaries = remove_duplicate_items(auxiliaries)
         processes = list(
             util.flatten_object(
-                [product.processes for product in products]+
-                [product.transport_process for product in products]
+                [product.processes for product in products]
+                + [product.transport_process for product in products]
                 + [resource.processes for resource in self.resources]
             )
         )
@@ -100,7 +112,12 @@ class ProductionSystem(core.ExpressObject):
                     if isinstance(link_element, node.Node):
                         nodes.append(link_element)
         nodes = remove_duplicate_items(nodes)
-        auxiliary_storages = list(util.flatten_object(auxiliary_queue for auxiliary_queue in [auxiliary.storages for auxiliary in auxiliaries ]))
+        auxiliary_storages = list(
+            util.flatten_object(
+                auxiliary_queue
+                for auxiliary_queue in [auxiliary.storages for auxiliary in auxiliaries]
+            )
+        )
         auxiliary_storages = remove_duplicate_items(auxiliary_storages)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
@@ -108,19 +125,25 @@ class ProductionSystem(core.ExpressObject):
         states = remove_duplicate_items(states)
 
         time_models = (
-            [process_instance.time_model for process_instance in processes if not isinstance(process_instance, process.RequiredCapabilityProcess)]
-            + [state.time_model for state in states]
+            [
+                process_instance.time_model
+                for process_instance in processes
+                if not isinstance(process_instance, process.RequiredCapabilityProcess)
+            ]
+            + [state_instance.time_model for state_instance in states]
             + [source.time_model for source in self.sources]
         )
         time_models += [
             process_instance.loading_time_model
             for process_instance in processes
-            if isinstance(process_instance, process.TransportProcess) and process_instance.loading_time_model
+            if isinstance(process_instance, process.TransportProcess)
+            and process_instance.loading_time_model
         ]
         time_models += [
             process_instance.unloading_time_model
             for process_instance in processes
-            if isinstance(process_instance, process.TransportProcess) and process_instance.unloading_time_model
+            if isinstance(process_instance, process.TransportProcess)
+            and process_instance.unloading_time_model
         ]
         time_models += [
             s.repair_time_model
@@ -129,11 +152,9 @@ class ProductionSystem(core.ExpressObject):
             or isinstance(s, state.ProcessBreakdownState)
         ]
         time_models += [
-            s.battery_time_model
-            for s in states
-            if isinstance(s, state.ChargingState)
+            s.battery_time_model for s in states if isinstance(s, state.ChargingState)
         ]
-    
+
         time_models = remove_duplicate_items(time_models)
 
         time_model_data = [time_model.to_model() for time_model in time_models]
@@ -163,7 +184,15 @@ class ProductionSystem(core.ExpressObject):
                 + [s._input_queues for s in self.sinks]
             )
         )
-        stores = [r.input_stores for r in self.resources if isinstance(r, resources.ProductionResource)] + [r.output_stores for r in self.resources if isinstance(r, resources.ProductionResource)]
+        stores = [
+            r.input_stores
+            for r in self.resources
+            if isinstance(r, resources.ProductionResource)
+        ] + [
+            r.output_stores
+            for r in self.resources
+            if isinstance(r, resources.ProductionResource)
+        ]
         stores = list(util.flatten_object(stores))
         queue_data += [store.to_model() for store in stores]
         queue_data = remove_duplicate_items(queue_data)
@@ -178,13 +207,13 @@ class ProductionSystem(core.ExpressObject):
             source_data=source_data,
             sink_data=sink_data,
             queue_data=queue_data + auxiliary_storage_data,
-            auxiliary_data = auxiliary_data,
+            auxiliary_data=auxiliary_data,
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):
         """
         Runs the simulation of the production system.
-        
+
         Args:
             time_range (float, optional): The time range of the simulation. Defaults to 2880.
             seed (int, optional): The seed of the simulation. Defaults to 0.

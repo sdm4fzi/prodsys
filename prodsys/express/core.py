@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from prodsys.models import core_asset
 
+
 class ExpressObject(ABC):
     """
     Abstract base class to represents an express object.

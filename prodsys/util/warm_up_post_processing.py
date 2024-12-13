@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from functools import cached_property
-
-from prodsys.simulation import state
-from prodsys.models import performance_indicators
-
-from typing import List, Literal, LiteralString
+from typing import Literal
 
 import pandas as pd
 
@@ -24,12 +18,12 @@ def mser5(data: pd.DataFrame, column: str) -> int:
     Implements the MSER-5 method to determine the optimal truncation point
     for a given column in a DataFrame.
 
-    Parameters:
-    - data (pd.DataFrame): The input DataFrame containing simulation output data.
-    - column (str): The name of the column to analyze.
+    Args:
+        data (pd.DataFrame): The input DataFrame containing simulation output data.
+        column (str): The name of the column to analyze.
 
     Returns:
-    - int: The index of the optimal truncation point.
+        int: The index of the optimal truncation point.
     """
     if column not in data.columns:
         raise ValueError(f"Column '{column}' does not exist in the DataFrame.")

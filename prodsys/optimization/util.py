@@ -310,10 +310,11 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
     if process_breakdown_states:
         process_breakdown_states_by_process_id = {}
         for state in process_breakdown_states:
-            process_breakdown_states_by_process_id[state.process_id] = (
-                process_breakdown_states_by_process_id.get(state.process_id, [])
-                + [state]
-            )
+            process_breakdown_states_by_process_id[
+                state.process_id
+            ] = process_breakdown_states_by_process_id.get(state.process_id, []) + [
+                state
+            ]
         for (
             process_id,
             process_breakdown_states_for_process,

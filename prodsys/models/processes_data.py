@@ -108,9 +108,9 @@ class ProductionProcessData(ProcessData):
         )
         ```
     """
+
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -195,7 +195,9 @@ class CapabilityProcessData(ProcessData):
             str: hash of the capability process data.
         """
         base_class_hash = super().hash(adapter)
-        return md5((base_class_hash + self.capability + str(self.failure_rate)).encode("utf-8")).hexdigest()
+        return md5(
+            (base_class_hash + self.capability + str(self.failure_rate)).encode("utf-8")
+        ).hexdigest()
 
 
 class TransportProcessData(ProcessData):

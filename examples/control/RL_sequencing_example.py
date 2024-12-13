@@ -56,12 +56,13 @@ class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
 
     def get_info(self) -> dict:
         return {"info": 0}
-    
 
     def get_termination_condition(self) -> bool:
         return self.runner.env.now >= 100000
-    
-    def get_reward(self, processed_request: request.Request, invalid_action: bool = False) -> float:
+
+    def get_reward(
+        self, processed_request: request.Request, invalid_action: bool = False
+    ) -> float:
         if invalid_action:
             reward = -1
         else:
@@ -71,11 +72,11 @@ class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
                 == self.resource.current_setup.process_data.ID
             )
         if self.step_count % 10 == 0:
-            reward += self.resource.input_queues[0].capacity - len(self.resource_controller.requests) 
-        
+            reward += self.resource.input_queues[0].capacity - len(
+                self.resource_controller.requests
+            )
+
         return reward
-
-
 
 
 class TensorboardCallback(BaseCallback):
@@ -86,26 +87,37 @@ class TensorboardCallback(BaseCallback):
     def __init__(self, verbose=0):
         super(TensorboardCallback, self).__init__(verbose)
 
-    def _on_step(self) -> bool:                
-        self.logger.record('reward', self.training_env.get_attr('reward')[0])
-        self.logger.record('time', self.training_env.get_attr('runner')[0].env.now)
+    def _on_step(self) -> bool:
+        self.logger.record("reward", self.training_env.get_attr("reward")[0])
+        self.logger.record("time", self.training_env.get_attr("runner")[0].env.now)
         return True
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     resource_id = "R2"
     adapter = prodsys.adapters.JsonProductionSystemAdapter()
-    adapter.read_data('examples/control/control_example_data/control_configuration.json')
+    adapter.read_data(
+        "examples/control/control_example_data/control_configuration.json"
+    )
     resource_data = [r for r in adapter.resource_data if r.ID == resource_id][0]
     queue = [q for q in adapter.queue_data if q.ID == resource_data.input_queues[0]][0]
     shape = (queue.capacity + resource_data.capacity, len(resource_data.process_ids))
     observation_space = spaces.Box(0, 1, shape=shape, dtype=int)
     action_space = spaces.Box(0, 1, shape=(queue.capacity,), dtype=float)
-    env = ProductionControlEnv(adapter, "R2", observation_space=observation_space, action_space=action_space, render_mode="human")
-    
-    tmp_path = os.getcwd() + "\\tensorboard_log\\sequencing\\" + time.strftime("%Y%m%d-%H%M%S")
+    env = ProductionControlEnv(
+        adapter,
+        "R2",
+        observation_space=observation_space,
+        action_space=action_space,
+        render_mode="human",
+    )
+
+    tmp_path = (
+        os.getcwd() + "\\tensorboard_log\\sequencing\\" + time.strftime("%Y%m%d-%H%M%S")
+    )
     new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 
-    model = PPO(env=env, policy='MlpPolicy', verbose=1)
+    model = PPO(env=env, policy="MlpPolicy", verbose=1)
     model.set_logger(new_logger)
     model.learn(total_timesteps=1000000, callback=TensorboardCallback())
 

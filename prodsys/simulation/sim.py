@@ -27,6 +27,7 @@ VERBOSE = 1
 Determines whether the simulation should be verbose or not. If set to 1, a progress bar will be shown. Otherwise, no progress bar will be shown.
 """
 
+
 @contextlib.contextmanager
 def temp_seed(seed: int):
     """
@@ -45,6 +46,7 @@ def temp_seed(seed: int):
         np.random.set_state(np_state)
         random.setstate(p_state)
 
+
 class Environment(core.Environment):
     """
     Class to represent the simulation environment. It is a subclass of simpy.Environment and adds a progress bar to the simulation.
@@ -57,7 +59,8 @@ class Environment(core.Environment):
         pbar (Any): The progress bar.
         last_update (int): The last time the progress bar was updated.
     """
-    def __init__(self, seed: int=0) -> None:
+
+    def __init__(self, seed: int = 0) -> None:
         super().__init__()
         self.seed: int = seed
         self.pbar: Any = None

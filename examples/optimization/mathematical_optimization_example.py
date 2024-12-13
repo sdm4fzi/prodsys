@@ -1,7 +1,9 @@
 from prodsys.optimization.math_opt import run_mathematical_optimization
 
 
-BASE_CONFIGURATION_FILE_PATH = "examples/optimization/optimization_example/base_scenario.json"
+BASE_CONFIGURATION_FILE_PATH = (
+    "examples/optimization/optimization_example/base_scenario.json"
+)
 SCENARIO_FILE_PATH = "examples/optimization/optimization_example/scenario.json"
 SAVE_FOLDER = "data/math_results"
 OPTIMIZATION_TIME_PORTION = 1
@@ -16,5 +18,5 @@ run_mathematical_optimization(
     OPTIMIZATION_TIME_PORTION,
     NUMBER_OF_SOLUTIONS,
     ADJUSTED_NUMBER_OF_TRANSPORT_RESOURCES,
-    NUMBER_OF_SEEDS
+    NUMBER_OF_SEEDS,
 )

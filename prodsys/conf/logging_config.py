@@ -15,13 +15,18 @@ logging_handler_dict = {
 }
 import logging.handlers
 
+
 class DelayedRotatingFileHandler(logging.handlers.RotatingFileHandler):
-    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=True):
+    def __init__(
+        self, filename, mode="a", maxBytes=0, backupCount=0, encoding=None, delay=True
+    ):
         super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
 
-def set_logging(log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "WARNING",
+
+def set_logging(
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "WARNING",
     logging_handler: Literal["null", "console", "file"] = "console",
-    Log_file_path: str = LOG_FILE_PATH
+    Log_file_path: str = LOG_FILE_PATH,
 ):
     logging.config.fileConfig(
         CONFIG_LOCATION,

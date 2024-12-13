@@ -35,6 +35,7 @@ class QueueData(CoreAsset):
         )
         ```
     """
+
     capacity: Union[int, float] = 0.0
 
     def hash(self) -> str:
