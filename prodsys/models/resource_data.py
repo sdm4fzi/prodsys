@@ -95,7 +95,7 @@ class ResourceData(CoreAsset):
             raise ValueError(
                 f"process_capacities {values['process_capacities']} must have the same length as processes {values['process_ids']}"
             )
-        if max(values["process_capacities"]) > values["capacity"]:
+        if values["process_capacities"] and max(values["process_capacities"]) > values["capacity"]:
             raise ValueError("process_capacities must be smaller than capacity")
         return values
     
