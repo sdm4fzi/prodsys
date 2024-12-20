@@ -26,15 +26,14 @@ def main():
         "examples/optimization/optimization_example/base_scenario.json",
         "examples/optimization/optimization_example/scenario.json"
     )
-
-    if not hasattr(base_configuration, 'scenario_data') or base_configuration.scenario_data is None:
-        logger.error("Failed to load necessary scenario data.")
-        return  # Exit the function to avoid further execution
-
+    #if base_configuration.scenario_data != None:
+    #    logger.error("No scenario data loaded.")
+    #    return
     optimizer = Optimizer(
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
-        save_folder="data/tabu_results"
+        save_folder="data/tabu_results", 
+        
     )
 
     # Ausführung der vollständigen Optimierung
