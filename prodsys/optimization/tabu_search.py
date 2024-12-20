@@ -5,6 +5,10 @@ from numpy import argmax
 
 import logging
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.optimization.optimizer import Optimizer
+
 from prodsys.optimization.optimization import evaluate
 from prodsys.optimization.adapter_manipulation import mutation
 from prodsys.optimization.optimization import check_valid_configuration
@@ -93,10 +97,11 @@ class TabuSearch:
     def _best(self, neighborhood):
         return neighborhood[argmax([self._score(x) for x in neighborhood])]
 
-    def run(self, verbose=True):
+    def run(self, optimizer, verbose=True):
         self._clear()
         for i in range(self.max_steps):
             self.cur_steps += 1
+            optimizer.update_progress()
 
             if ((i + 1) % 100 == 0) and verbose:
                 print(self)
@@ -219,22 +224,17 @@ def run_tabu_search(
 
 
 def tabu_search_optimization(
-    base_configuration: adapters.ProductionSystemAdapter,
-    hyper_parameters: TabuSearchHyperparameters,
-    save_folder: str,
-    initial_solution: adapters.ProductionSystemAdapter = None,
-    full_save: bool = False,
+    optimizer: "Optimizer",
 ):
     """
     Optimize a production system configuration using tabu search.
 
     Args:
-        base_configuration (adapters.ProductionSystemAdapter): production system to optimize.
-        hyper_parameters (SimulatedAnnealingHyperparameters): Hyperparameters for tabu search.
-        save_folder (str): Folder to save the results in. Defaults to "results".
-        initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
+        optimizer (Optimizer): The optimizer that contains the adapter, hyperparameters for tabu search, and initial solution (Defaults to None). 
     """
     adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    
+    base_configuration =optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
         logger.warning(
             "Both compound processes and normal processes are used. This may lead to unexpected results."
@@ -242,23 +242,31 @@ def tabu_search_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
+    hyper_parameters: TabuSearchHyperparameters = optimizer.hyperparameters
     set_seed(hyper_parameters.seed)
 
     weights = get_weights(base_configuration, "max")
 
-    solution_dict = {"current_generation": "0", "hashes": {}}
-    performances = {}
-    performances["0"] = {}
+    #solution_dict = {"current_generation": "0", "hashes": {}}
+    #performances = {}
+    #performances["0"] = {}
     start = time.perf_counter()
 
+    performances=optimizer.performances,
+    solution_dict=optimizer.solutions_dict,
+
     class Algorithm(TabuSearch):
+        def __init__(self, optimizer: "Optimizer", initial_state, tabu_size, max_steps, max_score=None):
+            super().__init__(initial_state, tabu_size, max_steps, max_score)
+            self.optimizer = optimizer 
+
         def _score(self, state):
             values = evaluate(
                 base_scenario=base_configuration,
                 performances=performances,
                 solution_dict=solution_dict,
                 number_of_seeds=hyper_parameters.number_of_seeds,
-                full_save_folder_file_path=save_folder if full_save else "",
+                full_save_folder_file_path = optimizer.save_folder if optimizer.full_save else "",
                 individual=[state],
             )
 
@@ -267,7 +275,7 @@ def tabu_search_optimization(
             )
             counter = len(performances["0"]) - 1
             print(counter, performance)
-            document_individual(solution_dict, save_folder, [state])
+            document_individual(solution_dict, optimizer.save_folder, [state])
 
             performances["0"][state.ID] = {
                 "agg_fitness": performance,
@@ -275,9 +283,8 @@ def tabu_search_optimization(
                 "time_stamp": time.perf_counter() - start,
                 "hash": state.hash(),
             }
-            with open(f"{save_folder}/optimization_results.json", "w") as json_file:
+            with open(f"{optimizer.save_folder}/optimization_results.json", "w") as json_file:
                 json.dump(performances, json_file)
-
             return performance
 
         def _neighborhood(self):
@@ -294,12 +301,13 @@ def tabu_search_optimization(
             return neighboarhood
 
     alg = Algorithm(
-        initial_state=initial_solution,
+        optimizer = optimizer, 
+        initial_state=optimizer.initial_solutions,
         tabu_size=hyper_parameters.tabu_size,
         max_steps=hyper_parameters.max_steps,
         max_score=hyper_parameters.max_score,
     )
-    best_solution, best_objective_value = alg.run()
+    best_solution, best_objective_value = alg.run(optimizer)
     print(
         f"Best solution has ID {best_solution.ID} and objectives values: {best_objective_value}"
     )

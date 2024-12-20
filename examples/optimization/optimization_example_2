@@ -1,0 +1,68 @@
+from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
+from prodsys.models.scenario_data import ReconfigurationEnum
+from prodsys.optimization.adapter_manipulation import add_transformation_operation
+from prodsys.optimization.math_opt import run_mathematical_optimization, MathOptHyperparameters
+from prodsys.optimization.optimizer import Optimizer
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+def main():
+    # Setzen der Hyperparameter für mathematische Optimierung
+    hyper_parameters = MathOptHyperparameters(
+        full_save = "data/math_results",
+        optimization_time_portion=1,
+        number_of_solutions=1,
+        adjusted_number_of_transport_resources=2,
+        number_of_seeds=2
+    )
+
+    def new_transformation(adapter: JsonProductionSystemAdapter) -> bool:
+        print("Transformation function called.")
+    add_transformation_operation(transformation=ReconfigurationEnum.PRODUCTION_CAPACITY, operation=new_transformation)
+
+    base_configuration = JsonProductionSystemAdapter()
+    base_configuration.read_data(
+        "examples/optimization/optimization_example/base_scenario.json",
+        "examples/optimization/optimization_example/scenario.json"
+    )
+
+    optimizer = Optimizer(
+        adapter=base_configuration,
+        hyperparameters=hyper_parameters,
+        save_folder="data/math_results"
+    )
+
+    # Ausführung der vollständigen Optimierung
+    run_mathematical_optimization(
+        full_save = "data/math_results",
+        optimization_time_portion=1,
+        number_of_solutions=1,
+        adjusted_number_of_transport_resources=2
+    )
+
+    # Partielle Optimierung als zusätzliche Option
+    partial_base_configuration = JsonProductionSystemAdapter()
+    partial_base_configuration.read_data(
+        "examples/optimization/optimization_example/base_scenario.json",
+        "examples/optimization/optimization_example/scenario_partial.json"
+    )
+
+    # Angabe des Pfades zur initialen Lösung für die partielle Optimierung
+    initial_solution_file_path = "examples/optimization/optimization_example/initial_solutions/generation_9_6524d80a-6ba7-11ef-a586-845cf38935ae.json"
+    partial_optimizer = Optimizer(
+        adapter=partial_base_configuration,
+        hyperparameters=hyper_parameters,
+        initial_solution_path=initial_solution_file_path
+    )
+
+    # Partielle Optimierung ausführen, falls gewünscht
+    run_mathematical_optimization(
+        partial_optimizer.save_folder,
+        partial_base_configuration,
+        hyper_parameters
+    )
+
+if __name__ == "__main__":
+    main()
