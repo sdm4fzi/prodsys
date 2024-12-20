@@ -1,7 +1,9 @@
 from typing import Any, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from prodsys.optimization.optimizer import Optimizer
-
+from prodsys.optimization.util import (
+    check_breakdown_states_available, create_default_breakdown_states
+    )
 from uuid import uuid1
 import scipy.stats
 import datetime
@@ -643,18 +645,18 @@ def mathematical_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
-    util.prepare_save_folder(save_folder)
+    util.prepare_save_folder(optimizer.save_folder)
     model = MathOptimizer(
         adapter=optimizer.adapter,
         optimization_time_portion=optimizer.hyperparameters.optimization_time_portion,
     )
 
-    model.optimize(n_solutions=optimizer.hyper_parameters.number_of_solutions)
+    model.optimize(n_solutions=optimizer.hyperparameters.number_of_solutions)
     model.save_model(save_folder=optimizer.save_folder)
     model.save_results(
         save_folder=optimizer.save_folder,
-        adjusted_number_of_transport_resources=optimizer.hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=optimizer.hyper_parameters.number_of_seeds,
+        adjusted_number_of_transport_resources=optimizer.hyperparameters.adjusted_number_of_transport_resources,
+        number_of_seeds=optimizer.hyperparameters.number_of_seeds,
         full_save=optimizer.full_save,
     )
 

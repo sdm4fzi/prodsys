@@ -10,7 +10,7 @@ from prodsys.optimization.optimizer import Optimizer
 
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
-        seed=0, number_of_generations=10, population_size=8, mutation_rate=0.15, crossover_rate=0.1, number_of_seeds=2, number_of_processes=8
+        seed=0, number_of_generations=2, population_size=8, mutation_rate=0.15, crossover_rate=0.1, number_of_seeds=2, number_of_processes=8
     )
 
     def new_transformation(adapter: JsonProductionSystemAdapter) -> bool:
