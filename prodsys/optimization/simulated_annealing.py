@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 class ProductionSystemOptimization(Annealer):
     def __init__(
         self,
+        optimizer: "Optimizer",
         base_configuration: adapters.ProductionSystemAdapter,
         save_folder: str,
         performances: dict,
@@ -42,7 +43,8 @@ class ProductionSystemOptimization(Annealer):
         full_save: bool = False,
     ):
         super().__init__(initial_solution, None)
-        self.save_folder = save_folder
+        self.optimizer = optimizer
+        self.save_folder = optimizer.save_folder
         self.base_configuration = base_configuration
         self.performances = performances
         self.solution_dict = solutions_dict
@@ -209,13 +211,13 @@ def simulated_annealing_optimization(
         )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
-    if not initial_solution:
-        initial_solution = base_configuration.model_copy(deep=True)
+    if not optimizer.initial_solutions:
+        optimizer.initial_solutions = base_configuration.model_copy(deep=True)
     
     hyper_parameters: SimulatedAnnealingHyperparameters = optimizer.hyperparameters
 
     if optimizer.save_folder:
-        util.prepare_save_fodler(optimizer.save_folder + "/")
+        util.prepare_save_folder(optimizer.save_folder + "/")
 
     set_seed(hyper_parameters.seed)
 
@@ -229,6 +231,7 @@ def simulated_annealing_optimization(
     performances = optimizer.performances
 
     pso = ProductionSystemOptimization(
+        optimizer=optimizer,
         base_configuration=base_configuration,
         save_folder=optimizer.save_folder,
         performances=performances,
@@ -236,7 +239,7 @@ def simulated_annealing_optimization(
         start=start,
         weights=weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
-        initial_solution=optimizer.initial_solution,
+        initial_solution=optimizer.initial_solutions,
         full_save=optimizer.save_folder if optimizer.full_save else "",
     )
 
