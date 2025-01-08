@@ -4,6 +4,7 @@ from pydantic import TypeAdapter
 
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
 
+import os
 import json
 import prodsys
 from prodsys.util import util
@@ -100,7 +101,7 @@ async def optimize(
 
 @router.get(
     "/results",
-    response_model=Dict[str, Union[Dict[str, List[performance_indicators.KPI_UNION]], str]],
+    response_model=Dict[str, Dict[str, List[performance_indicators.KPI_UNION]]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
@@ -213,6 +214,18 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
 ) -> prodsys.adapters.JsonProductionSystemAdapter:
-    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
+    folder_path = f"data/{project_id}/{adapter_id}/"
+    matching_files = [
+        f for f in os.listdir(folder_path)
+        if solution_id in f and f.endswith(".json")
+    ]
+
+    if not matching_files: 
+        raise FileNotFoundError(f"I couldn`t find a file for solution ID {solution_id} in {folder_path}.")
+    
+    #Just need the first file - they should be similar when ID is similar.                            
+    matching_files = matching_files[0]
+
+    with open(os.path.join(folder_path, matching_files)) as json_file:
         data = json.load(json_file)
     return data
