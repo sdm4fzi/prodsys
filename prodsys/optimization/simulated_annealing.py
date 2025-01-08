@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 class ProductionSystemOptimization(Annealer):
     def __init__(
         self,
-        optimizer: "Optimizer",
+        optimizer,
         base_configuration: adapters.ProductionSystemAdapter,
         save_folder: str,
         performances: dict,
@@ -248,7 +248,7 @@ def simulated_annealing_optimization(
     pso.steps = hyper_parameters.steps
     pso.updates = hyper_parameters.updates
 
-    internary, performance = pso.anneal(optimizer)
+    internary, performance = pso.anneal()
 
 
 def optimize_configuration(
