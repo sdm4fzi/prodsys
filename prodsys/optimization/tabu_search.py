@@ -252,8 +252,8 @@ def tabu_search_optimization(
     #performances["0"] = {}
     start = time.perf_counter()
 
-    performances=optimizer.performances,
-    solution_dict=optimizer.solutions_dict,
+    performances=optimizer.performances
+    solution_dict=optimizer.solutions_dict
 
     class Algorithm(TabuSearch):
         def __init__(self, optimizer: "Optimizer", initial_state, tabu_size, max_steps, max_score=None):
