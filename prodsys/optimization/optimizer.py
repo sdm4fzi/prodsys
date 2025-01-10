@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 
 from typing import Any, Callable, Optional
 from prodsys.util import util
@@ -40,9 +41,17 @@ class Optimizer:
         self.solutions_dict = {"current_generation": "0", "hashes": {}}
         self.performances = {"0": {}}
 
+        self.progress = {
+            "total_steps": 0,
+            "completed_steps": 0, 
+            "hashes": {},
+        }
+
+        self.start_time = None
+
     def get_algorithm_and_steps(self) -> tuple[Callable, int]:
         if isinstance(self.hyperparameters, EvolutionaryAlgorithmHyperparameters):
-            updates = self.hyperparameters.number_of_generations * self.hyperparameters.population_size
+            updates = self.hyperparameters.number_of_generations * self.hyperparameters.population_size + self.hyperparameters.population_size
             return evolutionary_algorithm_optimization, updates
         elif isinstance(self.hyperparameters, SimulatedAnnealingHyperparameters):
             updates = self.hyperparameters.steps
@@ -67,11 +76,15 @@ class Optimizer:
         if not self.adapter:
             raise ValueError("No adapter provided for the optimizer.")
         # TODO: reset performance and solutions dict when starting a new optimization
-    
+        self.start_time = time.time()
+        
         algorithm, steps = self.get_algorithm_and_steps()
+        self.progress["total_steps"] = steps
         self.pbar = tqdm(total=steps, desc="Optimization Progress", leave=True)
         self.pbar.update(0)
         algorithm(self)
+        self.pbar.close()
+        print("Optimization runs are finished.")
 
     def update_progress(self, num_steps: int = 1) -> None:
         """
@@ -82,7 +95,17 @@ class Optimizer:
         """
         # TODO: maybe also consider best performance or so in the progress bar
         # TODO: also test if this is working for all algorithms that 100% is reached exactly
-        self.pbar.update(num_steps)
+        if self.pbar:
+            self.pbar.update(num_steps)
+            self.progress["completed_steps"] += num_steps
+        else:
+            raise ValueError("Progress bar not initialized.")
+
+    def get_progress(self) -> dict:
+        return {
+            "total_steps": self.progress["total_steps"],
+            "completed_steps": self.progress["completed_steps"],
+        }
 
 
     def save_solutions(self) -> None:
