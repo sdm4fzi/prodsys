@@ -1,7 +1,7 @@
 from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
 from prodsys.models.scenario_data import ReconfigurationEnum
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
-from prodsys.optimization.math_opt import run_mathematical_optimization, MathOptHyperparameters
+from prodsys.optimization.math_opt import MathOptHyperparameters
 from prodsys.optimization.optimizer import Optimizer
 import time
 import logging

@@ -1,7 +1,7 @@
 from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
 from prodsys.models.scenario_data import ReconfigurationEnum
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
-from prodsys.optimization.tabu_search import TabuSearchHyperparameters, optimize_configuration
+from prodsys.optimization.tabu_search import TabuSearchHyperparameters
 from prodsys.optimization.optimizer import Optimizer
 import logging
 
