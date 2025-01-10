@@ -88,7 +88,8 @@ async def optimize(
 
     optimizer = Optimizer(
         adapter=adapter,
-        hyperparameters=hyper_parameters
+        hyperparameters=hyper_parameters,
+        save_folder=save_folder
     )
     
     set_optimizer(optimizer)
