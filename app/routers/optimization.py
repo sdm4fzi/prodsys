@@ -3,6 +3,7 @@ from typing import List, Union, Dict, Annotated
 from pydantic import TypeAdapter
 
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
+from app.models.progress_report import ProgressReport
 
 import os
 import json
@@ -21,7 +22,8 @@ from prodsys.models import performance_indicators
 from app.dependencies import (
     prodsys_backend,
     prepare_adapter_from_optimization,
-    get_configuration_results_adapter_from_filesystem
+    get_configuration_results_adapter_from_filesystem,
+    get_progress_of_optimization
 )
 from prodsys.optimization.optimizer import Optimizer
 
@@ -41,6 +43,17 @@ HYPERPARAMETER_EXAMPLES = [
     math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
 
+#Global instance of the optimizer
+optimizer = None
+
+def set_optimizer(optimizer: Optimizer):
+    global current_optimizer
+    current_optimizer = optimizer
+
+def get_current_optimizer() -> Optimizer:
+    if current_optimizer is None:
+        raise ValueError("Optimizer wurde noch nicht initialisiert.")
+    return current_optimizer
 
 @router.post(
     "/",
@@ -78,11 +91,21 @@ async def optimize(
         hyperparameters=hyper_parameters
     )
     
+    set_optimizer(optimizer)
+
     background_tasks.add_task(
         optimizer.optimize
     )
 
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
+
+@router.get(
+    "/optimization_progress",
+    response_model=ProgressReport,
+)
+async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
+    optimizer = get_current_optimizer()
+    return get_progress_of_optimization(optimizer)
 
 
 @router.get(
