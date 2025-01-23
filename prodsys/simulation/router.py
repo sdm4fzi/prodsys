@@ -528,24 +528,12 @@ class Router:
             random.shuffle(free_possible_auxiliaries)
             if free_possible_auxiliaries:
                 break
-            logger.info(
-                {
-                    "ID": processing_request.product.product_data.ID,
-                    "sim_time": processing_request.product.env.now,
-                    "event": f"Waiting for free auxiliary.",
-                }
-            )
+
             yield events.AnyOf(
                 processing_request.product.env,
                 [auxiliary.got_free for auxiliary in possible_auxiliaries],
             )
-            logger.info(
-                {
-                    "ID": processing_request.product.product_data.ID,
-                    "sim_time": processing_request.product.env.now,
-                    "event": f"Free auxiliary available.",
-                }
-            )
+
         routed_auxiliary = free_possible_auxiliaries[0]
         routed_auxiliary.reserve()
         routed_auxiliary.got_free = events.Event(processing_request.product.env)
