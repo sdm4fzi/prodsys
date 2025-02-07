@@ -16,6 +16,7 @@ def main():
         max_score=500,
         number_of_seeds=2
     )
+    # FIXME: this is not working!
 
     def new_transformation(adapter: JsonProductionSystemAdapter) -> bool:
         print("Transformation function called.")
@@ -33,7 +34,6 @@ def main():
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
         save_folder="data/tabu_results", 
-        
     )
 
     # Ausführung der vollständigen Optimierung

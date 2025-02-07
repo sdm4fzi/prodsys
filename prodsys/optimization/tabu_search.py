@@ -191,9 +191,6 @@ def tabu_search_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    #solution_dict = {"current_generation": "0", "hashes": {}}
-    #performances = {}
-    #performances["0"] = {}
     start = time.perf_counter()
 
     performances=optimizer.performances
