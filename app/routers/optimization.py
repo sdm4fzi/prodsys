@@ -45,16 +45,15 @@ HYPERPARAMETER_EXAMPLES = [
 
 # TODO: allow mulitple optimizers in parallel here -> dict for saving them as runner
 # Global instance of the optimizer
-optimizer = None
+optimizers: Dict[str, Optimizer] = {}
 
-def set_optimizer(optimizer: Optimizer):
-    global current_optimizer
-    current_optimizer = optimizer
+def set_optimizer(adapter_id: str, optimizer: Optimizer):
+    optimizers[adapter_id] = optimizer #Saves Opti. for specific adapter ID
 
-def get_current_optimizer() -> Optimizer:
-    if current_optimizer is None:
-        raise ValueError("Optimizer wurde noch nicht initialisiert.")
-    return current_optimizer
+def get_current_optimizer(adapter_id: str) -> Optimizer:
+    if adapter_id not in optimizers:
+        raise HTTPException(404, f"Optimizer for Adapter {adapter_id} wasn't initialized.")
+    return optimizers[adapter_id]
 
 @router.post(
     "/",
@@ -93,7 +92,7 @@ async def optimize(
         save_folder=save_folder
     )
     
-    set_optimizer(optimizer)
+    set_optimizer(adapter_id, optimizer)
 
     background_tasks.add_task(
         optimizer.optimize
@@ -106,7 +105,7 @@ async def optimize(
     response_model=ProgressReport,
 )
 async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
-    optimizer = get_current_optimizer()
+    optimizer = get_current_optimizer(adapter_id)
     return get_progress_of_optimization(optimizer)
 
 
