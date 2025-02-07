@@ -43,7 +43,6 @@ HYPERPARAMETER_EXAMPLES = [
     math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
 
-# TODO: allow mulitple optimizers in parallel here -> dict for saving them as runner
 # Global instance of the optimizer
 optimizers: Dict[str, Optimizer] = {}
 
