@@ -220,11 +220,7 @@ class Runner:
         Args:
             time_range (int): The time range to run the simulation for.
         """
-        t_0 = time.perf_counter()
-
         self.env.run(time_range)
-
-        t_1 = time.perf_counter()
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
     def get_post_processor(self) -> PostProcessor:

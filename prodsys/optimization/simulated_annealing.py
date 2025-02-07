@@ -53,6 +53,10 @@ class ProductionSystemOptimization(Annealer):
         self.number_of_seeds = number_of_seeds
         self.full_save = full_save
 
+    def default_update(self, step, T, E, acceptance, improvement):
+        # ignore this function, it is only here to overwrite the print of the super class...
+        pass
+
     def move(self):
         while True:
             configuration = mutation(individual=[deepcopy(self.state)])[0][0]
@@ -64,6 +68,7 @@ class ProductionSystemOptimization(Annealer):
                 break
 
     def energy(self):
+        # TODO: update progress bar here!
         values = evaluate(
             base_scenario=self.base_configuration,
             performances=self.performances,
@@ -126,11 +131,6 @@ class SimulatedAnnealingHyperparameters(BaseModel):
 
 def simulated_annealing_optimization(
     optimizer: "Optimizer"
-    #base_configuration: adapters.ProductionSystemAdapter,
-    #hyper_parameters: SimulatedAnnealingHyperparameters,
-    #save_folder: str = "results",
-    #initial_solution: adapters.ProductionSystemAdapter = None,
-    #full_save: bool = False,
 ):
     """
     Optimize a production system configuration using simulated anealing.
@@ -162,9 +162,6 @@ def simulated_annealing_optimization(
 
     weights = get_weights(base_configuration, "min")
 
-    #solution_dict = {"current_generation": "0", "hashes": {}}
-    #performances = {}
-    #performances["0"] = {}
     start = time.perf_counter()
     solutions_dict = optimizer.solutions_dict
     performances = optimizer.performances

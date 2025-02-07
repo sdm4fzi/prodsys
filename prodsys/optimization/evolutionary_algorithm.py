@@ -69,19 +69,21 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
     number_of_seeds: int = 1
     number_of_processes: int = 1
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "seed": 0,
-                "number_of_generations": 10,
-                "population_size": 10,
-                "mutation_rate": 0.1,
-                "crossover_rate": 0.1,
-                "number_of_seeds": 1,
-                "number_of_processes": 1,
-            },
-        ]
-    })
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "seed": 0,
+                    "number_of_generations": 10,
+                    "population_size": 10,
+                    "mutation_rate": 0.1,
+                    "crossover_rate": 0.1,
+                    "number_of_seeds": 1,
+                    "number_of_processes": 1,
+                },
+            ]
+        }
+    )
 
 
 def register_functions_in_toolbox(
@@ -150,20 +152,12 @@ def save_population_results(
             "hash": ind[0].hash(),
         }
 
-    # if optimization.VERBOSE:
-    #     print("Best Performance: ", max(generation_performances))
-    #     print(
-    #         "Average Performance: ",
-    #         sum(generation_performances) / len(generation_performances),
-    #     )
-
-
 
 from prodsys.util import util
 
 
 def evolutionary_algorithm_optimization(
-        optimizer: "Optimizer",
+    optimizer: "Optimizer",
 ):
     """
     Optimize a production system configuration using an evolutionary algorithm.
@@ -188,13 +182,6 @@ def evolutionary_algorithm_optimization(
 
     weights = get_weights(base_configuration, "max")
 
-    # # TODO: rework solution_dict and performances to classes
-    # solution_dict = {
-    #     "current_generation": "0",
-    #     "hashes": {}
-    # }
-    # performances = {}
-    # performances["0"] = {}
     start = time.perf_counter()
 
     solutions_dict = optimizer.solutions_dict
@@ -221,19 +208,21 @@ def evolutionary_algorithm_optimization(
     for fitness in fitnesses:
         optimizer.update_progress()
     save_population_results(
-        population, fitnesses, solutions_dict, performances, optimizer.save_folder, start
+        population,
+        fitnesses,
+        solutions_dict,
+        performances,
+        optimizer.save_folder,
+        start,
     )
     population = toolbox.select(population, len(population))
 
     for g in range(hyper_parameters.number_of_generations):
         current_generation = g + 1
-        # optimization.VERBOSE = True
-        # if optimization.VERBOSE:
-        #     print(f"\nGeneration: {current_generation}")
         solutions_dict["current_generation"] = str(current_generation)
         performances[str(current_generation)] = {}
 
-    #     # Vary population
+        # Vary population
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
         offspring = algorithms.varAnd(
@@ -243,17 +232,26 @@ def evolutionary_algorithm_optimization(
             mutpb=hyper_parameters.mutation_rate,
         )
 
-    #     # Evaluate the individuals
+        # Evaluate the individuals
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
         for fitness in fitnesses:
             optimizer.update_progress()
         save_population_results(
-                offspring, fitnesses, solutions_dict, performances, optimizer.save_folder, start
-            )
+            offspring,
+            fitnesses,
+            solutions_dict,
+            performances,
+            optimizer.save_folder,
+            start,
+        )
 
-        population = toolbox.select(population + offspring, hyper_parameters.population_size)
+        population = toolbox.select(
+            population + offspring, hyper_parameters.population_size
+        )
         if optimizer.save_folder:
-            with open(f"{optimizer.save_folder}/optimization_results.json", "w") as json_file:
+            with open(
+                f"{optimizer.save_folder}/optimization_results.json", "w"
+            ) as json_file:
                 json.dump(performances, json_file)
     if hyper_parameters.number_of_processes > 1:
         pool.close()

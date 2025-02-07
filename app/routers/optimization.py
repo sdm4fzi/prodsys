@@ -23,7 +23,7 @@ from app.dependencies import (
     prodsys_backend,
     prepare_adapter_from_optimization,
     get_configuration_results_adapter_from_filesystem,
-    get_progress_of_optimization
+    get_progress_of_optimization,
 )
 from prodsys.optimization.optimizer import Optimizer
 
@@ -43,7 +43,8 @@ HYPERPARAMETER_EXAMPLES = [
     math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
 
-#Global instance of the optimizer
+# TODO: allow mulitple optimizers in parallel here -> dict for saving them as runner
+# Global instance of the optimizer
 optimizer = None
 
 def set_optimizer(optimizer: Optimizer):

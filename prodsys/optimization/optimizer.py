@@ -93,8 +93,7 @@ class Optimizer:
         Args:
             steps (int, optional): Number of steps to update the progress bar. Defaults to 1.
         """
-        # TODO: maybe also consider best performance or so in the progress bar
-        # TODO: also test if this is working for all algorithms that 100% is reached exactly
+        # TODO: consider best performance or so in the progress bar
         if self.pbar:
             self.pbar.update(num_steps)
             self.progress["completed_steps"] += num_steps
