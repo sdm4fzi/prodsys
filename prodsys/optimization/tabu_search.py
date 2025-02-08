@@ -101,7 +101,6 @@ class TabuSearch:
         self._clear()
         for i in range(self.max_steps):
             self.cur_steps += 1
-            self.optimizer.update_progress()
 
             if ((i + 1) % 100 == 0) and verbose:
                 print(self)
@@ -131,6 +130,7 @@ class TabuSearch:
             if self.max_score is not None and self._score(self.best) > self.max_score:
                 print("TERMINATING - REACHED MAXIMUM SCORE")
                 return self.best, self._score(self.best)
+            self.optimizer.update_progress()  
         print("TERMINATING - REACHED MAXIMUM STEPS")
         return self.best, self._score(self.best)
 
