@@ -46,7 +46,7 @@ options = scenario_data.ScenarioOptionsData(
 )
 ```
 
-We specify in the scenario options the transformations that can be performed by the optmizer, which control policies and routing heuristics are available and what kind of positions are available to place resources. By choosing the transformation `PRODUCTION_CAPACITY`, the optimizer can add, remove or move production resources from the system or processes from single production resources.
+We specify in the scenario options the transformations that can be performed by the optimizer, which control policies and routing heuristics are available and what kind of positions are available to place resources. By choosing the transformation `PRODUCTION_CAPACITY`, the optimizer can add, remove or move production resources from the system or processes from single production resources.
 
 At last, we need to specify our info for optimization:
 
@@ -80,26 +80,27 @@ scenario = scenario_data.ScenarioData(
 production_system.scenario_data = scenario
 ```
 
-Next, we define the hyper parameters for our optimization. At first, we will use evolutionary algorithm for our optimization, because it allows parallelization. The hyper parameters for optimization are strongly problem dependant and need to be adjusted accordingly. For this example, we will use the following parameters and run the optimization for 10 generations. Note, that this can take some time...
+Instead of calling the optimization algorithms directly, we use the Optimizer class to manage the optimization process. This allows us to run different optimization algorithms within a unified interface while tracking optimization progress in real-time. Next, we define the hyper parameters for our optimization. At first, we will use evolutionary algorithm for our optimization, because it allows parallelization. The hyper parameters for optimization are strongly problem dependant and need to be adjusted accordingly. For this example, we will use the following parameters and run the optimization for 10 generations. Note, that this can take some time...
 
 ```python
-from prodsys.optimization import evolutionary_algorithm_optimization
-from prodsys.optimization import evolutionary_algorithm
-from prodsys.simulation import sim
-sim.VERBOSE = 0
+from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
+from prodsys.optimization.optimizer import Optimizer
 
-hyper_parameters = evolutionary_algorithm.EvolutionaryAlgorithmHyperparameters(
+hyper_parameters = EvolutionaryAlgorithmHyperparameters(
     seed=0,
     number_of_generations=10,
     population_size=16,
     mutation_rate=0.2,
     crossover_rate=0.1,
-    number_of_processes=4
+    number_of_processes=1
 )
-evolutionary_algorithm_optimization(
-    production_system,
-    hyper_parameters,
+#Create an optimizer instance
+optimizer = Optimizer(
+    adapter=production_system,
+    hyperparameters=hyper_parameters,
 )
+#Run the optimization
+optimizer.optimize()
 ```
 
 All algorithms in `prodsys` can be utilized with the same interface. Also available are the following algorithms:
