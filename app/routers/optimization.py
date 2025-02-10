@@ -46,13 +46,13 @@ HYPERPARAMETER_EXAMPLES = [
 # Global instance of the optimizer
 optimizers: Dict[str, Optimizer] = {}
 
-def set_optimizer(adapter_id: str, optimizer: Optimizer):
-    optimizers[adapter_id] = optimizer #Saves Opti. for specific adapter ID
+def set_optimizer(project_id: str, adapter_id: str, optimizer: Optimizer):
+    optimizers[(project_id, adapter_id)] = optimizer #Saves Opti. for specific adapter ID and project_id
 
-def get_current_optimizer(adapter_id: str) -> Optimizer:
-    if adapter_id not in optimizers:
-        raise HTTPException(404, f"Optimizer for Adapter {adapter_id} wasn't initialized.")
-    return optimizers[adapter_id]
+def get_current_optimizer(project_id: str, adapter_id: str) -> Optimizer:
+    if (project_id, adapter_id) not in optimizers:
+        raise HTTPException(404, f"Optimizer for Adapter {adapter_id} in project {project_id} wasn't initialized.")
+    return optimizers[(project_id, adapter_id)]
 
 @router.post(
     "/",
@@ -75,7 +75,7 @@ async def optimize(
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
         raise HTTPException(
-            404, f"Adapter {adapter_id} is missing scenario data for optimization."
+            404, f"Adapter {adapter_id} in project {project_id} is missing scenario data for optimization."
         )
     configuration_file_path = f"data/{project_id}/{adapter_id}_configuration.json"
     scenario_file_path = f"data/{project_id}/{adapter_id}_scenario.json"
@@ -91,7 +91,7 @@ async def optimize(
         save_folder=save_folder
     )
     
-    set_optimizer(adapter_id, optimizer)
+    set_optimizer(project_id, adapter_id, optimizer)
 
     background_tasks.add_task(
         optimizer.optimize
@@ -104,7 +104,7 @@ async def optimize(
     response_model=ProgressReport,
 )
 async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
-    optimizer = get_current_optimizer(adapter_id)
+    optimizer = get_current_optimizer(project_id, adapter_id)
     return get_progress_of_optimization(optimizer)
 
 

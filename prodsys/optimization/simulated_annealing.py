@@ -52,6 +52,7 @@ class ProductionSystemOptimization(Annealer):
         self.weights = weights
         self.number_of_seeds = number_of_seeds
         self.full_save = full_save
+        self.previous_counter = None
 
     def default_update(self, step, T, E, acceptance, improvement):
         # ignore this function, it is only here to overwrite the print of the super class...
@@ -68,7 +69,6 @@ class ProductionSystemOptimization(Annealer):
                 break
 
     def energy(self):
-        # TODO: update progress bar here!
         values = evaluate(
             base_scenario=self.base_configuration,
             performances=self.performances,
@@ -83,6 +83,9 @@ class ProductionSystemOptimization(Annealer):
         )
         # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(self.performances["0"]) - 1
+        if self.previous_counter is not None:
+            self.optimizer.update_progress()
+        self.previous_counter = counter
         document_individual(self.solution_dict, self.save_folder, [self.state])
         self.performances["0"][self.state.ID] = {
             "agg_fitness": performance,

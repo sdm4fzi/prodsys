@@ -130,7 +130,6 @@ class TabuSearch:
             if self.max_score is not None and self._score(self.best) > self.max_score:
                 print("TERMINATING - REACHED MAXIMUM SCORE")
                 return self.best, self._score(self.best)
-            self.optimizer.update_progress()  
         print("TERMINATING - REACHED MAXIMUM STEPS")
         return self.best, self._score(self.best)
 
@@ -200,6 +199,7 @@ def tabu_search_optimization(
         def __init__(self, optimizer, initial_state, tabu_size, max_steps, max_score=None):
             super().__init__(initial_state, tabu_size, max_steps, max_score)
             self.optimizer = optimizer 
+            self.previous_counter = None
 
         def _score(self, state):
             values = evaluate(
@@ -215,7 +215,9 @@ def tabu_search_optimization(
                 [value * weight for value, weight in zip(values, weights)]
             )
             counter = len(performances["0"]) - 1
-            print(counter, performance)
+            if self.previous_counter is not None and counter == self.previous_counter + 1:
+                self.optimizer.update_progress()
+            self.previous_counter = counter
             document_individual(solution_dict, optimizer.save_folder, [state])
 
             performances["0"][state.ID] = {
