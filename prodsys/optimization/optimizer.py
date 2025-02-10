@@ -54,10 +54,10 @@ class Optimizer:
             updates = self.hyperparameters.number_of_generations * self.hyperparameters.population_size + self.hyperparameters.population_size
             return evolutionary_algorithm_optimization, updates
         elif isinstance(self.hyperparameters, SimulatedAnnealingHyperparameters):
-            updates = self.hyperparameters.steps
+            updates = self.hyperparameters.steps 
             return simulated_annealing_optimization, updates
         elif isinstance(self.hyperparameters, TabuSearchHyperparameters):
-            num_updates = self.hyperparameters.max_steps
+            num_updates = self.hyperparameters.max_steps * 10 #Number of max_steps multiplied by 10 (Represent 10 neighbors in the search area as in function def _neighborhood()).
             return tabu_search_optimization, num_updates
         elif isinstance(self.hyperparameters, MathOptHyperparameters):
             return mathematical_optimization, 1
