@@ -6,7 +6,7 @@ from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorit
 from prodsys.optimization.math_opt import MathOptimizer
 from prodsys.optimization.simulated_annealing import run_simulated_annealing
 from prodsys.optimization.tabu_search import run_tabu_search
-from prodsys.util.runner import run_simulation
+from prodsys.simulation.runner import run_simulation
 from prodsys.util.util import get_initial_solution_file_pth, prepare_save_folder
 
 

@@ -7,10 +7,6 @@ from pydantic import BaseModel, Field
 
 from prodsys.util.util import flatten
 
-if TYPE_CHECKING:
-    from prodsys.simulation.process import PROCESS_UNION
-
-
 class ProcessModel(ABC, BaseModel):
     """
     Abstract process model base class that defines the interface for all process models.

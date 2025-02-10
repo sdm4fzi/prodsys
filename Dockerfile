@@ -10,7 +10,7 @@ RUN pip install --no-cache-dir poetry
 COPY pyproject.toml poetry.lock /app/
 
 # Install the dependencies
-RUN poetry install --no-root --no-dev --no-interaction
+RUN poetry install --no-root --without dev --no-interaction
 
 # Copy the rest of the application code
 COPY . /app
@@ -20,4 +20,4 @@ RUN poetry install --no-interaction
 EXPOSE 8000
 
 # Start the application
-CMD ["uvicorn", "prodsys_api:app", "--host",  "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "prodsys_api:app", "--host",  "0.0.0.0", "--port", "8000"]

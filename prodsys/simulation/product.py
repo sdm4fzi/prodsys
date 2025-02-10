@@ -12,6 +12,7 @@ from simpy import events
 from prodsys.models import product_data
 
 from prodsys.simulation import (
+    process_models,
     request,
     auxiliary,
     process,
@@ -21,7 +22,6 @@ from prodsys.simulation import (
     sink,
     store,
     source,
-    proces_models,
     node,
 )
 from prodsys.simulation.state import StateTypeEnum, StateEnum
@@ -156,7 +156,7 @@ class Product(BaseModel):
 
     env: sim.Environment
     product_data: product_data.ProductData
-    process_model: proces_models.ProcessModel
+    process_model: process_models.ProcessModel
     transport_process: Union[
         process.TransportProcess,
         process.RequiredCapabilityProcess,

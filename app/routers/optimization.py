@@ -3,7 +3,9 @@ from typing import List, Union, Dict, Annotated
 from pydantic import TypeAdapter
 
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
+from app.models.progress_report import ProgressReport
 
+import os
 import json
 import prodsys
 from prodsys.util import util
@@ -14,8 +16,7 @@ from prodsys.optimization import (
     optimization_analysis,
 )
 from prodsys.optimization.evolutionary_algorithm import (
-    EvolutionaryAlgorithmHyperparameters,
-    optimize_configuration,
+    EvolutionaryAlgorithmHyperparameters
 )
 from prodsys.models import performance_indicators
 from app.dependencies import (
@@ -24,6 +25,7 @@ from app.dependencies import (
     get_configuration_results_adapter_from_filesystem,
     get_progress_of_optimization,
 )
+from prodsys.optimization.optimizer import Optimizer
 
 
 router = APIRouter(
@@ -41,6 +43,16 @@ HYPERPARAMETER_EXAMPLES = [
     math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
 
+# Global instance of the optimizer
+optimizers: Dict[str, Optimizer] = {}
+
+def set_optimizer(adapter_id: str, optimizer: Optimizer):
+    optimizers[adapter_id] = optimizer #Saves Opti. for specific adapter ID
+
+def get_current_optimizer(adapter_id: str) -> Optimizer:
+    if adapter_id not in optimizers:
+        raise HTTPException(404, f"Optimizer for Adapter {adapter_id} wasn't initialized.")
+    return optimizers[adapter_id]
 
 @router.post(
     "/",
@@ -73,34 +85,32 @@ async def optimize(
     adapter.write_data(configuration_file_path)
     adapter.write_scenario_data(scenario_file_path)
 
-    # TODO: move this to background task
-    if isinstance(hyper_parameters, EvolutionaryAlgorithmHyperparameters):
-        optimization_func = optimize_configuration
-    elif isinstance(
-        hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters
-    ):
-        optimization_func = simulated_annealing.optimize_configuration
-    elif isinstance(hyper_parameters, tabu_search.TabuSearchHyperparameters):
-        optimization_func = tabu_search.optimize_configuration
-    elif isinstance(hyper_parameters, math_opt.MathOptHyperparameters):
-        optimization_func = math_opt.optimize_configuration
-    else:
-        raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
+    optimizer = Optimizer(
+        adapter=adapter,
+        hyperparameters=hyper_parameters,
+        save_folder=save_folder
+    )
+    
+    set_optimizer(adapter_id, optimizer)
 
     background_tasks.add_task(
-        optimization_func,
-        save_folder = save_folder,
-        base_configuration_file_path=configuration_file_path,
-        scenario_file_path=scenario_file_path,
-        hyper_parameters=hyper_parameters,
+        optimizer.optimize
     )
 
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
+@router.get(
+    "/optimization_progress",
+    response_model=ProgressReport,
+)
+async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
+    optimizer = get_current_optimizer(adapter_id)
+    return get_progress_of_optimization(optimizer)
+
 
 @router.get(
     "/results",
-    response_model=Dict[str, Union[Dict[str, List[performance_indicators.KPI_UNION]], str]],
+    response_model=Dict[str, Dict[str, List[performance_indicators.KPI_UNION]]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
     with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
@@ -213,6 +223,13 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
 ) -> prodsys.adapters.JsonProductionSystemAdapter:
-    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
-        data = json.load(json_file)
-    return data
+    folder_path = f"data/{project_id}/{adapter_id}/"
+    #Check if there is a matching file in the folder. 
+    for filename in os.listdir(folder_path):
+        #If there is a file, it is getting loaded and the loop is closed.
+        if solution_id in filename and filename.endswith(".json"):
+            with open(os.path.join(folder_path, filename)) as json_file:
+                data = json.load(json_file)
+            return data 
+    
+    raise FileNotFoundError(f"I couldn`t find a file for solution ID {solution_id} in {folder_path}.")

@@ -12,6 +12,7 @@ import prodsys
 import prodsys.simulation
 import prodsys.simulation.sim
 from prodsys.util.post_processing import PostProcessor
+from prodsys.optimization.optimizer import Optimizer
 
 
 import logging
@@ -79,9 +80,44 @@ def get_post_processor(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def get_progress_of_optimization(project_id: str, adapter_id: str) -> float:
-    # TODO: implement function that returns progress of optimization --> change functional approach of optimization in class and add a progress attribute
-    return 0.5
+def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
+    # Get the current progress from the optimizer
+    progress = optimizer.get_progress()
+    
+    total_steps = progress["total_steps"]
+    completed_steps = progress["completed_steps"]
+    
+    # Calculate the ratio of completed steps
+    if total_steps > 0:
+        ratio_done = completed_steps / total_steps
+    else:
+        ratio_done = 0.0
+    
+    # Get the starting time from the optimizer (ensure you store the start time somewhere in the optimizer)
+    start_time = optimizer.start_time  # This should be initialized when optimization starts
+    current_time = time.time()  # Current time
+    
+    # Time already spent (in seconds)
+    time_done = current_time - start_time
+    
+    # Estimate remaining time based on the ratio of completion
+    if ratio_done > 0:
+        # If we have made progress, estimate the total time and remaining time
+        expected_total_time = time_done / ratio_done
+        expected_time_left = expected_total_time - time_done
+    else:
+        # If no progress has been made, assume 0 for the remaining time (initial stage)
+        expected_total_time = 0.0
+        expected_time_left = 0.0
+    
+    # Round the times to two decimal places
+    return ProgressReport(
+        ratio_done=round(ratio_done, 2),
+        time_done=round(time_done, 2),
+        expected_time_left=round(expected_time_left, 2),
+        expected_total_time=round(expected_total_time, 2),
+    )
+    
 
 
 def prepare_adapter_from_optimization(
