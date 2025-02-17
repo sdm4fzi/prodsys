@@ -315,7 +315,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     time_model_data: List[time_model_data_module.TIME_MODEL_DATA] = []
     state_data: List[state_data_module.STATE_DATA_UNION] = []
     process_data: List[processes_data_module.PROCESS_DATA_UNION] = []
-    queue_data: List[queue_data_module.QueueData] = []
+    queue_data: List[queue_data_module.QUEUE_DATA_UNION] = []
     node_data: List[node_data_module.NodeData] = []
     resource_data: List[resource_data_module.RESOURCE_DATA_UNION] = []
     product_data: List[product_data_module.ProductData] = []
