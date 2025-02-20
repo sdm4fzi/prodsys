@@ -102,7 +102,10 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
         for resource in adapter_object.resource_data
         if isinstance(resource, resource_data.ProductionResourceData)
     ]
-    machine_id = str(uuid1())
+    process_identifiers = "_".join(
+        [process.split("_")[1] for process in process_module_list]
+    )
+    machine_id = f"resource_{process_identifiers}_{uuid1()}"
     adapter_object.resource_data.append(
         resource_data.ProductionResourceData(
             ID=machine_id,
@@ -143,6 +146,10 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
     transport_process = random.choice(possible_processes)
     while transport_resource_id in transport_resource_ids:
         transport_resource_id = str(uuid1())
+
+    process_identifiers = "".join([process for process in transport_process])
+    transport_resource_id = f"Transport_resource_{process_identifiers}_{uuid1()}"
+
     adapter_object.resource_data.append(
         resource_data.TransportResourceData(
             ID=transport_resource_id,
