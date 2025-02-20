@@ -32,14 +32,10 @@ def get_process_module_cost(
             process_cost = process_module_cost.get(process, 0)
         else:
             process_cost = process_module_cost
-        sum_process_module_cost += max(
-            0,
-            (
+        sum_process_module_cost += (
                 num_process_modules[process_tuple]
                 - num_process_modules_before.get(process_tuple, 0)
-            )
-            * process_cost,
-        )
+            )* process_cost
     return sum_process_module_cost
 
 
@@ -51,8 +47,8 @@ def get_reconfiguration_cost(
     num_transport_resources = len(adapters.get_transport_resources(adapter_object))
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
-        num_machines_before = 4
-        num_transport_resources_before = 1
+        num_machines_before = 0
+        num_transport_resources_before = 0
         possible_processes = get_possible_production_processes_IDs(adapter_object)
         num_process_modules_before = {}
         for process in possible_processes:
@@ -70,20 +66,19 @@ def get_reconfiguration_cost(
     else:
         auxiliary_cost = 0
 
-    machine_cost = max(
-        0,
-        (num_machines - num_machines_before)
-        * adapter_object.scenario_data.info.machine_cost,
-    )
-    transport_resource_cost = max(
-        0,
-        (num_transport_resources - num_transport_resources_before)
-        * adapter_object.scenario_data.info.transport_resource_cost,
-    )
+    machine_cost = (num_machines - num_machines_before)* adapter_object.scenario_data.info.machine_cost
+    transport_resource_cost = (num_transport_resources - num_transport_resources_before) * adapter_object.scenario_data.info.transport_resource_cost
     process_module_cost = get_process_module_cost(
         adapter_object, num_process_modules, num_process_modules_before
     )
-
+    if not adapter_object.scenario_data.info.selling_machines:
+        machine_cost = max(0, machine_cost)
+    if not adapter_object.scenario_data.info.selling_transport_resources:
+        transport_resource_cost = max(0, transport_resource_cost)
+    if not adapter_object.scenario_data.info.selling_process_modules:
+        process_module_cost = max(0, process_module_cost)
+    if not adapter_object.scenario_data.info.selling_auxiliaries:
+        auxiliary_cost = max(0, auxiliary_cost)
     return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
 
 
