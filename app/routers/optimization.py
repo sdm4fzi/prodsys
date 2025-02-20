@@ -149,6 +149,42 @@ def get_optimization_results(project_id: str, adapter_id: str):
                 )
                 response["solutions"][adapter_name].append(kpi_object)
 
+    try:
+        with open(f"data/{project_id}/{adapter_id}_kpis.json") as json_file:
+            manual_kpis = json.load(json_file)
+
+        wip_value = None
+        throughput_value = None
+
+        for kpi in manual_kpis:
+            if kpi["name"].lower() == "wip" and "all_products" in kpi["context"]:
+                wip_value = kpi["value"]
+            if kpi["name"].lower() == "throughput":
+                throughput_value = kpi["value"]
+
+        if wip_value is not None and throughput_value is not None:
+            # Annahme: No reconfiguration costs for the existing solution
+            fitness_values = [0.0, throughput_value, wip_value]
+
+            # Erzeuge KPI-Objekte wie bei den anderen Lösungen
+            manual_solution_kpis = []
+            for kpi_obj, kpi_value in zip(kpis, fitness_values):
+                kpi_name = kpi_obj.name
+                kpi_object = TypeAdapter(performance_indicators.KPI_UNION).validate_python(
+                    {
+                        "name": kpi_name,
+                        "value": kpi_value,
+                        "context": [performance_indicators.KPILevelEnum.SYSTEM],
+                    },
+                )
+                manual_solution_kpis.append(kpi_object)
+
+            response["solutions"]["manual_solution"] = manual_solution_kpis
+
+    except FileNotFoundError:
+        # Falls die Datei nicht existiert, einfach nichts tun
+        pass
+
     return response
 
 @router.get(
@@ -177,10 +213,11 @@ def get_best_solution_id(project_id: str, adapter_id: str):
 
     best_solution = None
     best_fitness = float('-inf')  # Initialize with negative infinity
-    num_objectives = 3  # Number of objectives in the optimization - WIP, Throughput, WIP
-    min_values = [float('inf')] * num_objectives
-    max_values = [float('-inf')] * num_objectives
+    #num_objectives = 3  # Number of objectives in the optimization - WIP, Throughput, WIP
+    min_values = [float('inf')] * len(weights)
+    max_values = [float('-inf')] * len(weights)
 
+    # 1. Find the best solution based on the weighted fitness value from the optimization
     for solution in data.values():
         for adapter_name in solution.keys():
             agg_fitness = solution[adapter_name].get("agg_fitness", None)
@@ -189,7 +226,7 @@ def get_best_solution_id(project_id: str, adapter_id: str):
 
             fitness_values = solution[adapter_name]["fitness"]
 
-            for i in range(num_objectives):
+            for i in range(len(weights)):
                 min_values[i] = min(min_values[i], fitness_values[i])
                 max_values[i] = max(max_values[i], fitness_values[i]) 
 
@@ -202,7 +239,7 @@ def get_best_solution_id(project_id: str, adapter_id: str):
             fitness_values = solution[adapter_name]["fitness"]
 
             normalized_fitness = []
-            for i in range(num_objectives):
+            for i in range(len(weights)):
                 if max_values[i] == min_values[i]:
                     normalized_value = 0.5
                 else:
@@ -216,8 +253,31 @@ def get_best_solution_id(project_id: str, adapter_id: str):
             if weighted_fitness > best_fitness:
                 best_fitness = weighted_fitness
                 best_solution = adapter_name
+                best_fitness_values = fitness_values
 
-    if best_solution is None:
+    # 2. Check the KPIs from the initial solution which was used for the simulation run. 
+    try: 
+        with open(f"data/{project_id}/{adapter_id}_kpis.json") as json_file:
+            manual_kpis = json.load(json_file)
+
+        wip_value = None
+        throughput_value = None
+
+        for kpi in manual_kpis:
+            if kpi["name"].lower() == "wip" and "all_products" in kpi["context"]:
+                wip_value = kpi["value"]
+            if kpi["name"].lower() == "output":
+                throughput_value = kpi["value"]
+
+        if (best_fitness_values[0] > 0 and best_fitness_values[1] < throughput_value and best_fitness_values[2] > wip_value or best_solution is None):
+            best_solution = "initial_simulation"
+
+    except FileNotFoundError:
+        pass 
+
+
+    if best_solution is None or best_solution == "initial_simulation":
+        print(f"No valid or better solution then the start configuration found! Increase the number runs of optimization significantly or loose the constraints.")
         raise HTTPException(404, "No valid solution found.")
     
     return best_solution
