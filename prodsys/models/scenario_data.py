@@ -135,6 +135,11 @@ class ScenarioInfoData(BaseModel):
         machine_cost (float): Cost of a machine.
         transport_resource_cost (float): Cost of a transport resource.
         process_module_cost (Optional[float | Dict[str, float]]): Cost of a process module. Either a const value or a mapping of process ID to cost.
+        auxiliary_cost (Optional[float], optional): Cost of an auxiliary. Defaults to None.
+        selling_machines (Optional[bool], optional): Flag that indicates if machines can be sold. Defaults to None.
+        selling_transport_resources (Optional[bool], optional): Flag that indicates if transport resources can be sold. Defaults to None.
+        selling_process_modules (Optional[bool], optional): Flag that indicates if process modules can be sold. Defaults to None.
+        selling_auxiliaries (Optional[bool], optional): Flag that indicates if auxiliaries can be sold. Defaults to None.
         breakdown_cost (Optional[float], optional): Cost of a breakdown. Defaults to None.
         time_range (Optional[int], optional): Time range of the scenario in minutes to be considered. Defaults to None.
         maximum_breakdown_time (Optional[int], optional): Maximum allowable breakdown time in the scenario in minutes. Defaults to None.
@@ -144,6 +149,10 @@ class ScenarioInfoData(BaseModel):
     transport_resource_cost: float
     process_module_cost: Optional[float | Dict[str, float]] = None
     auxiliary_cost: Optional[float] = None
+    selling_machines: bool = None
+    selling_transport_resources: bool = None
+    selling_process_modules: bool = False
+    selling_auxiliaries: bool = False
     breakdown_cost: Optional[float] = None
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int] = None

@@ -35,6 +35,8 @@
     "machine_cost": 30000,
     "transport_resource_cost": 15000,
     "process_module_cost": 5000,
+    "selling_machines": true,
+    "selling_transport_resources": false,
     "breakdown_cost": 0.11,
     "time_range": 2880 ,
     "maximum_breakdown_time": 180
