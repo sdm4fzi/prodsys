@@ -15,8 +15,20 @@ from prodsys.optimization import (
     math_opt,
     optimization_analysis,
 )
+from prodsys.optimization.util import (
+    get_weights,
+)
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters
+)
+from prodsys.optimization.tabu_search import (
+    TabuSearchHyperparameters
+)
+from prodsys.optimization.simulated_annealing import (
+    SimulatedAnnealingHyperparameters
+)
+from prodsys.optimization.math_opt import (
+    MathOptHyperparameters
 )
 from prodsys.models import performance_indicators
 from app.dependencies import (
@@ -153,18 +165,56 @@ def get_best_solution_id(project_id: str, adapter_id: str):
             data = json.load(json_file)
     except FileNotFoundError:
         raise HTTPException(404, f"Optimization results not found for adapter {adapter_id} in project {project_id}")
+    
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+    hyperparameters = get_current_optimizer(project_id, adapter_id).hyperparameters
+    if isinstance(hyperparameters, (EvolutionaryAlgorithmHyperparameters, TabuSearchHyperparameters)): 
+        direction = "max"
+    elif isinstance(hyperparameters, SimulatedAnnealingHyperparameters,  MathOptHyperparameters): #TODO: Check case for math_opt - should me min because costs are minimized
+        direction = "min"
+
+    weights = get_weights(adapter, direction)
 
     best_solution = None
     best_fitness = float('-inf')  # Initialize with negative infinity
+    num_objectives = 3  # Number of objectives in the optimization - WIP, Throughput, WIP
+    min_values = [float('inf')] * num_objectives
+    max_values = [float('-inf')] * num_objectives
 
-    # Iterate over the solutions in the results file
     for solution in data.values():
         for adapter_name in solution.keys():
-            total_fitness = sum(solution[adapter_name]["fitness"])  # Calculate the total fitness value
+            agg_fitness = solution[adapter_name].get("agg_fitness", None)
+            if agg_fitness == -300000.0:
+                continue
 
-            # Check if this solution has the best fitness
-            if total_fitness > best_fitness:
-                best_fitness = total_fitness
+            fitness_values = solution[adapter_name]["fitness"]
+
+            for i in range(num_objectives):
+                min_values[i] = min(min_values[i], fitness_values[i])
+                max_values[i] = max(max_values[i], fitness_values[i]) 
+
+    for solution in data.values():
+        for adapter_name in solution.keys():  
+            fitness_values = solution[adapter_name]["fitness"]
+            if agg_fitness == -300000.0:
+                continue
+
+            fitness_values = solution[adapter_name]["fitness"]
+
+            normalized_fitness = []
+            for i in range(num_objectives):
+                if max_values[i] == min_values[i]:
+                    normalized_value = 0.5
+                else:
+                    normalized_value = (fitness_values[i] - min_values[i]) / (max_values[i] - min_values[i])
+                normalized_fitness.append(normalized_value)
+
+            solution[adapter_name]["fitness_normalized"] = normalized_fitness
+            
+            weighted_fitness = sum(w * f for w, f in zip(weights, normalized_fitness))
+
+            if weighted_fitness > best_fitness:
+                best_fitness = weighted_fitness
                 best_solution = adapter_name
 
     if best_solution is None:
