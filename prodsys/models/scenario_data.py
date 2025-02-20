@@ -149,8 +149,8 @@ class ScenarioInfoData(BaseModel):
     transport_resource_cost: float
     process_module_cost: Optional[float | Dict[str, float]] = None
     auxiliary_cost: Optional[float] = None
-    selling_machines: bool = None
-    selling_transport_resources: bool = None
+    selling_machines: bool = False
+    selling_transport_resources: bool = False
     selling_process_modules: bool = False
     selling_auxiliaries: bool = False
     breakdown_cost: Optional[float] = None
