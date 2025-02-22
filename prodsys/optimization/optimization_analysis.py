@@ -6,8 +6,10 @@ import plotly.graph_objects as go
 import numpy as np
 from copy import copy
 
+from prodsys.optimization.optimization_data import OptimizationResults
 
-def read_optimization_results_file_to_df(filepath: str, label: str) -> pd.DataFrame:
+
+def transform_optimization_results_to_df(data: OptimizationResults, label: str) -> pd.DataFrame:
     """
     Function reads the results of an optimization run from a json file and returns a pandas dataframe.
 
@@ -18,31 +20,27 @@ def read_optimization_results_file_to_df(filepath: str, label: str) -> pd.DataFr
     Returns:
         pd.DataFrame: Dataframe containing the optimization results.
     """
-    with open(filepath) as json_file:
-        data = json.load(json_file)
     new_data = {}
     row_number = 1
     for generation, values in data.items():
         population_number = 0
-        for individual, individual_values in values.items():
-            ID = individual
+        for adapter_id, individual_values in values.items():
             population_number += 1
-            if "agg_fitness" in individual_values.keys():
-                row_value = {
-                    "Generation": int(generation),
-                    "population_number": population_number,
-                    "ID": ID,
-                    "agg_fitness": individual_values["agg_fitness"],
-                    "time": individual_values["time_stamp"],
+            row_value = {
+                "Generation": int(generation),
+                "population_number": population_number,
+                "ID": adapter_id,
+                "agg_fitness": individual_values.agg_fitness,
+                "time": individual_values.time_stamp,
+            }
+            for counter, KPI in enumerate(individual_values.fitness):
+                row_value.update({f"KPI_{counter}": KPI})
+            new_data.update(
+                {
+                    str(row_number): row_value,
                 }
-                for counter, KPI in enumerate(individual_values["fitness"]):
-                    row_value.update({f"KPI_{counter}": KPI})
-                new_data.update(
-                    {
-                        str(row_number): row_value,
-                    }
-                )
-                row_number += 1
+            )
+            row_number += 1
     df = pd.DataFrame(new_data)
     df = df.T
     df["optimizer"] = label
@@ -97,7 +95,7 @@ def is_pareto_efficient(costs):
 
 
 def get_pareto_solutions_from_result_files(
-    file_path: str,
+    optimization_results: OptimizationResults
 ) -> List[str]:
     """
     Analyses an optimization result file and returns the IDs of the pareto efficient solutions.
@@ -108,10 +106,11 @@ def get_pareto_solutions_from_result_files(
     Returns:
         List[str]: List of IDs of the pareto efficient solutions.
     """
-    df = read_optimization_results_file_to_df(file_path, label="optimizer")
+    df = transform_optimization_results_to_df(optimization_results, label="optimizer")
     df = df.drop_duplicates(
         subset=["agg_fitness", "cost", "throughput", "wip", "optimizer"]
     )
+    # TODO: update here method to not use all kpis but those which are in optimizarion_results[generation][ID].objective_names
     df["cost"] = df["cost"].astype(float)
     df["agg_fitness"] = df["agg_fitness"].astype(float)
     # df = df.loc[df["wip"] < 150]

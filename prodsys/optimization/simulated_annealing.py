@@ -2,14 +2,14 @@ import json
 import time
 from copy import deepcopy
 from typing import TYPE_CHECKING
-from prodsys.util import util 
+from prodsys.util import util
 from pydantic import BaseModel, ConfigDict
 import logging
 
 from prodsys.optimization.optimization import evaluate
 from prodsys.optimization.adapter_manipulation import mutation
 from prodsys.optimization.optimization import check_valid_configuration
-from prodsys.optimization.util import document_individual
+# from prodsys.optimization.util import document_individual
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +31,8 @@ if TYPE_CHECKING:
 class ProductionSystemOptimization(Annealer):
     def __init__(
         self,
-        optimizer,
+        optimizer: "Optimizer",
         base_configuration: adapters.ProductionSystemAdapter,
-        save_folder: str,
         performances: dict,
         solutions_dict: dict,
         start: float,
@@ -65,37 +64,30 @@ class ProductionSystemOptimization(Annealer):
                 configuration=configuration,
                 base_configuration=self.base_configuration,
             ):
-                self.state = configuration
+                self.state: adapters.ProductionSystemAdapter = configuration
                 break
 
     def energy(self):
-        values = evaluate(
+        fitness_values, event_log_dict = evaluate(
             base_scenario=self.base_configuration,
             performances=self.performances,
             solution_dict=self.solution_dict,
             number_of_seeds=self.number_of_seeds,
-            full_save_folder_file_path=self.save_folder if self.full_save else "",
-            individual=[self.state],
+            adapter_object=self.state,
         )
 
         performance = sum(
-            [value * weight for value, weight in zip(values, self.weights)]
+            [value * weight for value, weight in zip(fitness_values, self.weights)]
         )
-        # print("\n\t########## Evaluted ind", self.counter, "for value:", performance)
         counter = len(self.performances["0"]) - 1
         if self.previous_counter is not None:
-            self.optimizer.update_progress()
+            fitness = [float(value) for value in fitness_values]
+            self.optimizer.save_optimization_step(
+                fitness_values=fitness,
+                configuration=self.state,
+                event_log_dict=event_log_dict,
+            )
         self.previous_counter = counter
-        document_individual(self.solution_dict, self.save_folder, [self.state])
-        self.performances["0"][self.state.ID] = {
-            "agg_fitness": performance,
-            "fitness": [float(value) for value in values],
-            "time_stamp": time.perf_counter() - self.start,
-            "hash": self.state.hash(),
-        }
-        with open(f"{self.save_folder}/optimization_results.json", "w") as json_file:
-            json.dump(self.performances, json_file)
-
         return performance
 
 
@@ -132,9 +124,8 @@ class SimulatedAnnealingHyperparameters(BaseModel):
         }
     )
 
-def simulated_annealing_optimization(
-    optimizer: "Optimizer"
-):
+
+def simulated_annealing_optimization(optimizer: "Optimizer"):
     """
     Optimize a production system configuration using simulated anealing.
 
@@ -155,7 +146,7 @@ def simulated_annealing_optimization(
         create_default_breakdown_states(base_configuration)
     if not optimizer.initial_solutions:
         optimizer.initial_solutions = base_configuration.model_copy(deep=True)
-    
+
     hyper_parameters: SimulatedAnnealingHyperparameters = optimizer.hyperparameters
 
     if optimizer.save_folder:
@@ -163,20 +154,17 @@ def simulated_annealing_optimization(
 
     set_seed(hyper_parameters.seed)
 
-    weights = get_weights(base_configuration, "min")
-
     start = time.perf_counter()
-    solutions_dict = optimizer.solutions_dict
-    performances = optimizer.performances
+    solutions_dict = optimizer.optimization_cache_first_found_hashes
+    performances = optimizer.performances_cache
 
     pso = ProductionSystemOptimization(
         optimizer=optimizer,
         base_configuration=base_configuration,
-        save_folder=optimizer.save_folder,
         performances=performances,
         solutions_dict=solutions_dict,
         start=start,
-        weights=weights,
+        weights=optimizer.weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
         initial_solution=optimizer.initial_solutions,
         full_save=optimizer.save_folder if optimizer.full_save else "",

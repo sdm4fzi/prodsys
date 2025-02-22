@@ -6,14 +6,15 @@ from typing import TYPE_CHECKING
 import warnings
 import logging
 
-from prodsys.optimization.optimization import evaluate
+from prodsys.optimization.optimization import evaluate, evaluate_ea_wrapper
 from prodsys.optimization.adapter_manipulation import (
     crossover,
     mutation,
     random_configuration,
     random_configuration_with_initial_solution,
 )
-from prodsys.optimization.util import document_individual
+from prodsys.optimization.optimization_data import FitnessData
+# from prodsys.optimization.util import document_individual
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,6 @@ def register_functions_in_toolbox(
     weights: tuple,
     initial_solutions: list[adapters.JsonProductionSystemAdapter],
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
-    full_save_solutions_folder: str = "",
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -120,12 +120,11 @@ def register_functions_in_toolbox(
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register(
         "evaluate",
-        evaluate,
+        evaluate_ea_wrapper,
         base_configuration,
         solutions_dict,
         performances,
         hyper_parameters.number_of_seeds,
-        full_save_solutions_folder,
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -133,24 +132,6 @@ def register_functions_in_toolbox(
     toolbox.register("select", tools.selNSGA2)
 
     return toolbox
-
-
-def save_population_results(
-    population, fitnesses, solution_dict, performances, save_folder, start
-):
-    generation_performances = []
-
-    for ind, fit in zip(population, fitnesses):
-        document_individual(solution_dict, save_folder, ind)
-        ind.fitness.values = fit
-        aggregated_fitness = sum(ind.fitness.wvalues)
-        generation_performances.append(aggregated_fitness)
-        performances[str(solution_dict["current_generation"])][ind[0].ID] = {
-            "agg_fitness": aggregated_fitness,
-            "fitness": [float(value) for value in ind.fitness.values],
-            "time_stamp": time.perf_counter() - start,
-            "hash": ind[0].hash(),
-        }
 
 
 from prodsys.util import util
@@ -180,21 +161,15 @@ def evolutionary_algorithm_optimization(
         util.prepare_save_folder(optimizer.save_folder + "/")
     set_seed(hyper_parameters.seed)
 
-    weights = get_weights(base_configuration, "max")
-
     start = time.perf_counter()
-
-    solutions_dict = optimizer.solutions_dict
-    performances = optimizer.performances
 
     toolbox = register_functions_in_toolbox(
         base_configuration=base_configuration,
-        solutions_dict=solutions_dict,
-        performances=optimizer.performances,
-        weights=weights,
+        solutions_dict=optimizer.optimization_cache_first_found_hashes,
+        performances=optimizer.performances_cache,
+        weights=optimizer.weights,
         initial_solutions=optimizer.initial_solutions,
         hyper_parameters=hyper_parameters,
-        full_save_solutions_folder=optimizer.save_folder if optimizer.full_save else "",
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)
@@ -205,23 +180,16 @@ def evolutionary_algorithm_optimization(
         toolbox.register("map", map)
 
     fitnesses = toolbox.map(toolbox.evaluate, population)
-    for fitness in fitnesses:
-        optimizer.update_progress()
-    save_population_results(
-        population,
-        fitnesses,
-        solutions_dict,
-        performances,
-        optimizer.save_folder,
-        start,
-    )
+    for ind, (fit, event_log_dict) in zip(population, fitnesses):
+        optimizer.save_optimization_step(fit, ind[0], event_log_dict)
+        ind.fitness.values = fit
     population = toolbox.select(population, len(population))
 
     for g in range(hyper_parameters.number_of_generations):
         current_generation = g + 1
-        solutions_dict["current_generation"] = str(current_generation)
-        performances[str(current_generation)] = {}
-
+        optimizer.optimization_cache_first_found_hashes.current_generation = str(
+            current_generation
+        )
         # Vary population
         offspring = tools.selTournamentDCD(population, len(population))
         offspring = [toolbox.clone(ind) for ind in offspring]
@@ -234,24 +202,13 @@ def evolutionary_algorithm_optimization(
 
         # Evaluate the individuals
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
-        for fitness in fitnesses:
-            optimizer.update_progress()
-        save_population_results(
-            offspring,
-            fitnesses,
-            solutions_dict,
-            performances,
-            optimizer.save_folder,
-            start,
-        )
+        for ind, fit_response in zip(offspring, fitnesses):
+            fit, event_log_dict = fit_response
+            optimizer.save_optimization_step(fit, ind[0], event_log_dict)
+            ind.fitness.values = fit
 
         population = toolbox.select(
             population + offspring, hyper_parameters.population_size
         )
-        if optimizer.save_folder:
-            with open(
-                f"{optimizer.save_folder}/optimization_results.json", "w"
-            ) as json_file:
-                json.dump(performances, json_file)
     if hyper_parameters.number_of_processes > 1:
         pool.close()

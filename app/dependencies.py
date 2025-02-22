@@ -16,7 +16,9 @@ from prodsys.optimization.optimizer import Optimizer
 
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 def get_backend() -> Backend:
     backend_name = os.getenv("PRODSYS_BACKEND") or "in_memory"
@@ -37,7 +39,8 @@ runners: Dict[str, prodsys.runner.Runner] = {}
 def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressReport:
     if adapter_id not in runners:
         raise HTTPException(
-            404, f"No simulation was yet started for adapter {adapter_id} in project {project_id}."
+            404,
+            f"No simulation was yet started for adapter {adapter_id} in project {project_id}.",
         )
     steps_done = runners[adapter_id].env.pbar.n
     steps_total = runners[adapter_id].env.pbar.total
@@ -54,6 +57,7 @@ def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressRepo
         expected_total_time=round(expected_total_time, 2),
     )
 
+
 def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: int):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     adapter.seed = seed
@@ -65,7 +69,7 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
 
     kpi_file_path = f"data/{project_id}/{adapter_id}_kpis.json"
     kpis = [kpi.model_dump() for kpi in performance.kpis]
-    with open(kpi_file_path, 'w') as kpi_file:
+    with open(kpi_file_path, "w") as kpi_file:
         json.dump(kpis, kpi_file, indent=4)
 
     try:
@@ -78,34 +82,36 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
     except:
         prodsys_backend.update_post_processor(project_id, adapter_id, post_processor)
 
-def get_post_processor(
-    project_id: str, adapter_id: str
-) -> PostProcessor:
+
+def get_post_processor(project_id: str, adapter_id: str) -> PostProcessor:
     try:
         return prodsys_backend.get_post_processor(project_id, adapter_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
     # Get the current progress from the optimizer
     progress = optimizer.get_progress()
-    
+
     total_steps = progress["total_steps"]
     completed_steps = progress["completed_steps"]
-    
+
     # Calculate the ratio of completed steps
     if total_steps > 0:
         ratio_done = completed_steps / total_steps
     else:
         ratio_done = 0.0
-    
+
     # Get the starting time from the optimizer (ensure you store the start time somewhere in the optimizer)
-    start_time = optimizer.start_time  # This should be initialized when optimization starts
+    start_time = (
+        optimizer.start_time
+    )  # This should be initialized when optimization starts
     current_time = time.time()  # Current time
-    
+
     # Time already spent (in seconds)
     time_done = current_time - start_time
-    
+
     # Estimate remaining time based on the ratio of completion
     if ratio_done > 0:
         # If we have made progress, estimate the total time and remaining time
@@ -115,7 +121,7 @@ def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
         # If no progress has been made, assume 0 for the remaining time (initial stage)
         expected_total_time = 0.0
         expected_time_left = 0.0
-    
+
     # Round the times to two decimal places
     return ProgressReport(
         ratio_done=round(ratio_done, 2),
@@ -123,7 +129,6 @@ def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
         expected_time_left=round(expected_time_left, 2),
         expected_total_time=round(expected_total_time, 2),
     )
-    
 
 
 def prepare_adapter_from_optimization(
@@ -142,20 +147,26 @@ def prepare_adapter_from_optimization(
     project = prodsys_backend.get_project(project_id)
     project.adapters.append(adapter_object_optimized)
 
-
     runner_object = prodsys.runner.Runner(adapter=adapter_object_optimized)
     runner_object.initialize_simulation()
-    if adapter_object_optimized.scenario_data and adapter_object_optimized.scenario_data.info.time_range:
+    if (
+        adapter_object_optimized.scenario_data
+        and adapter_object_optimized.scenario_data.info.time_range
+    ):
         run_length = adapter_object_optimized.scenario_data.info.time_range
     else:
         run_length = 2 * 7 * 24 * 60
     runner_object.run(run_length)
-    
+
     post_processor = runner_object.get_post_processor()
     try:
-        prodsys_backend.create_post_processor(project_id, baseline_adapter_id, post_processor)
+        prodsys_backend.create_post_processor(
+            project_id, baseline_adapter_id, post_processor
+        )
     except:
-        prodsys_backend.update_post_processor(project_id, baseline_adapter_id, post_processor)
+        prodsys_backend.update_post_processor(
+            project_id, baseline_adapter_id, post_processor
+        )
 
     performance = runner_object.get_performance_data()
     project.performances[adapter_object_optimized.ID] = performance
@@ -167,7 +178,7 @@ def prepare_adapter_from_optimization(
     prodsys_backend.update_project(project_id, project)
 
 
-def get_configuration_results_adapter_from_filesystem(
+def get_optimization_result_configuration(
     project_id: str, adapter_id: str, solution_id: str
 ):
     # TODO: use backend to save and retrieve data here...

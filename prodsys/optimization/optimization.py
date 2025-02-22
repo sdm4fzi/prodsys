@@ -6,6 +6,7 @@ from prodsys.adapters.adapter import (
     get_possible_production_processes_IDs,
 )
 from prodsys.models import performance_indicators
+from prodsys.optimization.optimization_data import OptimizationResults, OptimizationSolutions
 from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_num_of_process_modules,
@@ -13,6 +14,7 @@ from prodsys.optimization.util import (
     get_weights,
 )
 from prodsys.simulation import sim
+from prodsys.simulation.runner import Runner
 from prodsys.util.post_processing import PostProcessor
 
 
@@ -237,14 +239,29 @@ KPI_function_dict = {
 }
 
 
-def evaluate(
+def evaluate_ea_wrapper(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     number_of_seeds: int,
-    full_save_folder_file_path: str,
     individual,
-) -> List[float]:
+) -> tuple[list[float], dict]:
+    return evaluate(
+        base_scenario,
+        solution_dict,
+        performances,
+        number_of_seeds,
+        individual[0],
+    )
+
+
+def evaluate(
+    base_scenario: adapters.ProductionSystemAdapter,
+    solution_dict: OptimizationSolutions,
+    performances: OptimizationResults,
+    number_of_seeds: int,
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> tuple[list[float], dict]:
     """
     Function that evaluates a configuration.
 
@@ -259,22 +276,17 @@ def evaluate(
         ValueError: If the time range is not defined in the scenario data.
 
     Returns:
-        List[float]: List of the fitness values of the configuration.
+        tuple[list[float], dict]: The fitness values and the event log dict
     """
     sim.VERBOSE = 0
-    adapter_object: adapters.ProductionSystemAdapter = individual[0]
     adapter_object_hash = adapter_object.hash()
-    if adapter_object_hash in solution_dict["hashes"]:
-        evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash][
-            "generation"
-        ]
-        evaluated_adapter_id = solution_dict["hashes"][adapter_object_hash]["ID"]
-        return performances[evaluated_adapter_generation][evaluated_adapter_id][
-            "fitness"
-        ]
-
+    if adapter_object_hash in solution_dict.hashes:
+        evaluated_adapter_generation = solution_dict.hashes[adapter_object_hash].generation
+        evaluated_adapter_id = solution_dict.hashes[adapter_object_hash].ID
+        fitness_data = performances[evaluated_adapter_generation][evaluated_adapter_id]
+        return fitness_data.fitness, fitness_data.event_log_dict
     if not check_valid_configuration(adapter_object, base_scenario):
-        return [-100000 / weight for weight in get_weights(base_scenario, "max")]
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")], {}
 
     fitness_values = []
 
@@ -285,8 +297,6 @@ def evaluate(
         adapter_object.seed = seed
         runner_object.initialize_simulation()
         runner_object.run(adapter_object.scenario_data.info.time_range)
-        if full_save_folder_file_path:
-            runner_object.save_results_as_csv(full_save_folder_file_path)
         df = runner_object.event_logger.get_data_as_dataframe()
         p = PostProcessor(df_raw=df)
         fitness = []
@@ -298,4 +308,5 @@ def evaluate(
         fitness_values.append(fitness)
 
     mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
-    return mean_fitness
+    # TODO: allow to return multiple runner objects in the future
+    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()
