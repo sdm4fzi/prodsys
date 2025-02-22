@@ -448,10 +448,9 @@ class MathOptimizer(BaseModel):
 
     def save_results(
         self,
-        save_folder: str,
+        optimizer: "Optimizer",
         adjusted_number_of_transport_resources: int = 1,
         number_of_seeds: int = 1,
-        full_save: bool = False,
     ):
         """
         Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run.
@@ -521,27 +520,16 @@ class MathOptimizer(BaseModel):
             optimization_util.clean_out_breakdown_states_of_resources(new_adapter)
             optimization_util.adjust_process_capacities(new_adapter)
 
-            full_save_folder_path = save_folder if full_save else ""
-            simulation_results = optimization.evaluate(
+            fintess_values, event_log_dict = optimization.evaluate(
                 self.adapter,
                 solution_dict,
                 performances,
                 number_of_seeds,
-                full_save_folder_path,
-                [new_adapter],
+                new_adapter,
             )
-            optimization_util.document_individual(
-                solution_dict, save_folder, [new_adapter]
+            optimizer.save_optimization_step(
+                fintess_values, new_adapter, event_log_dict
             )
-            performances["0"][new_adapter.ID] = {
-                "agg_fitness": 0.0,
-                "fitness": [float(value) for value in simulation_results],
-                "time_stamp": 0.0,
-                "hash": new_adapter.hash(),
-            }
-        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
-            json.dump(performances, json_file)
-
 
 class MathOptHyperparameters(BaseModel):
     """
@@ -607,9 +595,8 @@ def mathematical_optimization(
     model.optimize(n_solutions=optimizer.hyperparameters.number_of_solutions)
     model.save_model(save_folder=optimizer.save_folder)
     model.save_results(
-        save_folder=optimizer.save_folder,
+        optimizer=optimizer,
         adjusted_number_of_transport_resources=optimizer.hyperparameters.adjusted_number_of_transport_resources,
         number_of_seeds=optimizer.hyperparameters.number_of_seeds,
-        full_save=optimizer.full_save,
     )
 

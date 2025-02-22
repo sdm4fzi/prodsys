@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import prcal
 from copy import deepcopy
 import logging
 from typing import Callable, List
@@ -97,15 +98,8 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     if not possible_positions:
         return False
     machine_location = random.choice(possible_positions)
-    machine_ids = [
-        resource.ID
-        for resource in adapter_object.resource_data
-        if isinstance(resource, resource_data.ProductionResourceData)
-    ]
-    process_identifiers = "_".join(
-        [process.split("_")[1] for process in process_module_list]
-    )
-    machine_id = f"resource_{process_identifiers}_{uuid1()}"
+    machine_id = f"resource_{uuid1().hex}"
+
     adapter_object.resource_data.append(
         resource_data.ProductionResourceData(
             ID=machine_id,
@@ -136,20 +130,10 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
         adapter_object.scenario_data.options.transport_controllers
     )
 
-    transport_resource_ids = [
-        resource.ID
-        for resource in adapter_object.resource_data
-        if isinstance(resource, resource_data.TransportResourceData)
-    ]
-    transport_resource_id = str(uuid1())
     possible_processes = get_possible_transport_processes_IDs(adapter_object)
     transport_process = random.choice(possible_processes)
-    while transport_resource_id in transport_resource_ids:
-        transport_resource_id = str(uuid1())
 
-    process_identifiers = "".join([process for process in transport_process])
-    transport_resource_id = f"Transport_resource_{process_identifiers}_{uuid1()}"
-
+    transport_resource_id = f"resource_{uuid1().hex}"
     adapter_object.resource_data.append(
         resource_data.TransportResourceData(
             ID=transport_resource_id,
@@ -644,18 +628,58 @@ def random_configuration(
 
 def random_configuration_with_initial_solution(
     initial_adapters: List[adapters.ProductionSystemAdapter],
+    max_manipulations: int = 1,
+    new_solution_probability: float = 0.1,
 ) -> adapters.ProductionSystemAdapter:
     """
-    Function that creates a random configuration based on an list of initial solutions.
+    Creates a new configuration based on a list of initial solutions.
+    With probability new_solution_probability, a completely new configuration is generated.
+    Otherwise, a randomly chosen initial adapter is manipulated by applying a random number
+    (from 1 to max_manipulations) of mutation operations.
 
     Args:
         initial_adapters (List[adapters.ProductionSystemAdapter]): List of initial solutions.
+        max_manipulations (int, optional): Maximum number of mutation operations to apply. Defaults to 3.
+        new_solution_probability (float, optional): Chance to generate a completely new configuration. Defaults to 0.1.
 
     Returns:
-        adapters.ProductionSystemAdapter: Random configuration based on an initial solution.
+        adapters.ProductionSystemAdapter: A new configuration derived either by manipulation or by complete randomization.
     """
-    adapter_object = random.choice(initial_adapters)
-    return random_configuration(adapter_object)
+    invalid_configuration_counter = 0
+
+    while True:
+        # Select a baseline adapter from the list.
+        baseline = random.choice(initial_adapters)
+        # With a given probability, generate a completely new random configuration.
+        if random.random() < new_solution_probability:
+            return random_configuration(baseline)
+
+        # Otherwise, start with a deep copy of the baseline and apply random manipulations.
+        adapter_object = baseline.model_copy(deep=True)
+        num_manipulations = (
+            random.randint(1, max_manipulations)
+        )
+
+        mutation_ops = get_mutation_operations(adapter_object)
+        for _ in range(num_manipulations):
+            mutation_op = random.choice(mutation_ops)
+            # Apply the chosen mutation operation.
+            mutation_op(adapter_object)
+            # Update the adapter's ID to mark the change.
+            adapter_object.ID = str(uuid1())
+            add_default_queues_to_resources(adapter_object)
+            clean_out_breakdown_states_of_resources(adapter_object)
+            adjust_process_capacities(adapter_object)
+
+        # Fallback: if the manipulated configuration is not valid, generate a completely new one.
+        if check_valid_configuration(adapter_object, baseline):
+            return adapter_object
+        invalid_configuration_counter += 1
+        if invalid_configuration_counter % 1 == 0:
+            logging.warning(
+                f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
+            )
+
 
 TRANSFORMATIONS = {
     scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY: [add_machine, remove_machine, move_machine, change_control_policy, add_process_module, remove_process_module, move_process_module],

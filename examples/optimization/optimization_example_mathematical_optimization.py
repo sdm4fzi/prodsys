@@ -2,7 +2,7 @@ from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
 from prodsys.models.scenario_data import ReconfigurationEnum
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
 from prodsys.optimization.math_opt import MathOptHyperparameters
-from prodsys.optimization.optimizer import Optimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer, Optimizer
 import time
 import logging
 
@@ -28,7 +28,7 @@ def main():
         "examples/optimization/optimization_example/scenario.json"
     )
 
-    optimizer = Optimizer(
+    optimizer = FileSystemSaveOptimizer(
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
         save_folder="data/math_results"

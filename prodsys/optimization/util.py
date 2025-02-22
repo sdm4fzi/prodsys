@@ -470,20 +470,20 @@ def adjust_process_capacities(
         resource.process_capacities = [resource.capacity] * len(resource.process_ids)
 
 
-def document_individual(
-    solution_dict: Dict[str, Union[list, str]],
-    save_folder: str,
-    individual,
-):
-    adapter_object: adapters.ProductionSystemAdapter = individual[0]
-    current_generation = solution_dict["current_generation"]
+# def document_individual(
+#     solution_dict: Dict[str, Union[list, str]],
+#     save_folder: str,
+#     individual,
+# ):
+#     adapter_object: adapters.ProductionSystemAdapter = individual[0]
+#     current_generation = solution_dict["current_generation"]
 
-    if adapter_object.hash() not in solution_dict["hashes"]:
-        solution_dict["hashes"][adapter_object.hash()] = {
-            "generation": current_generation,
-            "ID": adapter_object.ID,
-        }
-    if save_folder:
-        adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
-            f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
-        )
+#     if adapter_object.hash() not in solution_dict["hashes"]:
+#         solution_dict["hashes"][adapter_object.hash()] = {
+#             "generation": current_generation,
+#             "ID": adapter_object.ID,
+#         }
+#     if save_folder:
+#         adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
+#             f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
+#         )

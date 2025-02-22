@@ -1,8 +1,9 @@
-from typing import List, Protocol
+from typing import List, Protocol, Union
 
 from app.models.project import Project
 from prodsys.adapters import JsonProductionSystemAdapter
 from prodsys.models.performance_data import Performance
+from prodsys.optimization.optimizer import HyperParameters
 from prodsys.util.post_processing import PostProcessor
 
 
@@ -23,7 +24,6 @@ class Backend(Protocol):
     def delete_project(self, project_id: str):
         ...
 
-    
     def get_adapters(self, project_id: str) -> List[JsonProductionSystemAdapter]:
         ...
 
@@ -39,7 +39,6 @@ class Backend(Protocol):
     def delete_adapter(self, project_id: str, adapter_id: str):
         ...
 
-
     def get_performance(self, project_id: str, adapter_id: str) -> Performance:
         ...
 
@@ -51,7 +50,7 @@ class Backend(Protocol):
 
     def delete_performance(self, project_id: str, adapter_id: str):
         ...
-    
+
     def get_post_processor(self, project_id: str, adapter_id: str) -> PostProcessor:
         ...
 
@@ -63,3 +62,10 @@ class Backend(Protocol):
 
     def delete_post_processor(self, project_id: str, adapter_id: str):
         ...
+
+    def save_optimizer_hyperparameters(self, project_id: str, adapter_id: str, optimizer_hyperparameters: Union[HyperParameters]):
+        ...
+
+    def get_last_optimizer_hyperparameters(
+        self, project_id: str, adapter_id: str
+    ) -> HyperParameters: ...
