@@ -200,6 +200,7 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
     # TODO: move this calculations to a function and also make it optional to normalize kpis
     best_solution = None
     best_fitness = float("-inf")  # Initialize with negative infinity
+    fitness_storage = {}
     # num_objectives = 3  # Number of objectives in the optimization - WIP, Throughput, WIP
     min_values = [float("inf")] * len(weights)
     max_values = [float("-inf")] * len(weights)
@@ -207,11 +208,11 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
     # 1. Find the best solution based on the weighted fitness value from the optimization
     for solution in optimizer.get_optimization_results().values():
         for adapter_name in solution.keys():
-            agg_fitness = solution[adapter_name].get("agg_fitness", None)
+            agg_fitness = getattr(solution[adapter_name], "agg_fitness", None)
             if agg_fitness == -300000.0:
                 continue
 
-            fitness_values = solution[adapter_name]["fitness"]
+            fitness_values = getattr(solution[adapter_name], "fitness")
 
             for i in range(len(weights)):
                 min_values[i] = min(min_values[i], fitness_values[i])
@@ -219,11 +220,11 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
 
     for solution in optimizer.get_optimization_results().values():
         for adapter_name in solution.keys():
-            fitness_values = solution[adapter_name]["fitness"]
+            agg_fitness = getattr(solution[adapter_name], "agg_fitness", None)
             if agg_fitness == -300000.0:
                 continue
 
-            fitness_values = solution[adapter_name]["fitness"]
+            fitness_values = getattr(solution[adapter_name], "fitness")
 
             normalized_fitness = []
             for i in range(len(weights)):
@@ -235,7 +236,7 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
                     )
                 normalized_fitness.append(normalized_value)
 
-            solution[adapter_name]["fitness_normalized"] = normalized_fitness
+            fitness_storage[adapter_name] = normalized_fitness
 
             weighted_fitness = sum(w * f for w, f in zip(weights, normalized_fitness))
 
@@ -250,12 +251,11 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
 
         wip_value = None
         throughput_value = None
-
-        for kpi in original_kpis:
-            if kpi["name"].lower() == "wip" and "all_products" in kpi["context"]:
-                wip_value = kpi["value"]
-            if kpi["name"].lower() == "output":
-                throughput_value = kpi["value"]
+        for kpi in original_kpis.kpis:
+            if kpi.name.value.lower() == "wip" and any(ctx == performance_indicators.KPILevelEnum.ALL_PRODUCTS for ctx in kpi.context):
+                wip_value = kpi.value
+            if kpi.name.value.lower() == "output":
+                throughput_value = kpi.value
 
         if (
             best_fitness_values[0] > 0
