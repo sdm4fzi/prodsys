@@ -6,7 +6,7 @@ from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorit
 from prodsys.optimization.math_opt import MathOptimizer
 from prodsys.optimization.simulated_annealing import run_simulated_annealing
 from prodsys.optimization.tabu_search import run_tabu_search
-from prodsys.util.runner import run_simulation
+from prodsys.simulation.runner import run_simulation
 from prodsys.util.util import get_initial_solution_file_pth, prepare_save_folder
 
 
@@ -45,7 +45,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.mutation_rate,
                 cfg.optimization.crossover_rate,
                 cfg.optimization.number_of_processes,
-                initial_solutions_folder
+                initial_solutions_folder,
             )
         elif cfg.optimization.algorithm == "simulated_annealing":
             if (
@@ -69,7 +69,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.Tmin,
                 cfg.optimization.steps,
                 cfg.optimization.updates,
-                initial_solution_file_path
+                initial_solution_file_path,
             )
 
         elif cfg.optimization.algorithm == "tabu_search":
@@ -93,7 +93,7 @@ def my_app(cfg: DictConfig) -> None:
                 cfg.optimization.tabu_size,
                 cfg.optimization.max_steps,
                 cfg.optimization.max_score,
-                initial_solution_file_path
+                initial_solution_file_path,
             )
         elif cfg.optimization.algorithm == "mathematical":
             cfg.general.save_folder += "/mathematical"

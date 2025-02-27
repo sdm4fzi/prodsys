@@ -28,6 +28,7 @@ class AuxiliaryData(CoreAsset):
         relevant_processes (List[str], optional): List of relevant processes where the auxiliary component is needed. Defaults to [], meaning all processes.
         relevant_transport_processes (List[str], optional): List of relevant transport processes where the auxiliary component is needed. Defaults to [], meaning all processes.
     """
+
     auxiliary_type: str
     transport_process: str
     storages: List[str]
@@ -65,5 +66,22 @@ class AuxiliaryData(CoreAsset):
                 relevant_transport_processes_hashes.append(process.hash(adapter))
             if process.ID == self.transport_process:
                 transport_processes_hash = process.hash(adapter)
-        
-        return md5("".join([*map(str, [self.auxiliary_type, self.quantity_in_storages, transport_processes_hash, *storages_hashes, *self.quantity_in_storages, *relevant_processes_hashes, *relevant_transport_processes_hashes])]).encode("utf-8")).hexdigest()
+
+        return md5(
+            "".join(
+                [
+                    *map(
+                        str,
+                        [
+                            self.auxiliary_type,
+                            self.quantity_in_storages,
+                            transport_processes_hash,
+                            *storages_hashes,
+                            *self.quantity_in_storages,
+                            *relevant_processes_hashes,
+                            *relevant_transport_processes_hashes,
+                        ],
+                    )
+                ]
+            ).encode("utf-8")
+        ).hexdigest()

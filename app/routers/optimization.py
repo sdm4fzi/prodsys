@@ -1,9 +1,11 @@
 from typing import List, Union, Dict, Annotated
 
-from pydantic import parse_obj_as
+from pydantic import TypeAdapter
 
 from fastapi import APIRouter, HTTPException, Body, BackgroundTasks
+from app.models.progress_report import ProgressReport
 
+import os
 import json
 import prodsys
 from prodsys.util import util
@@ -13,16 +15,22 @@ from prodsys.optimization import (
     math_opt,
     optimization_analysis,
 )
+from prodsys.optimization.util import (
+    get_weights,
+)
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
-    optimize_configuration,
 )
+from prodsys.optimization.tabu_search import TabuSearchHyperparameters
+from prodsys.optimization.simulated_annealing import SimulatedAnnealingHyperparameters
+from prodsys.optimization.math_opt import MathOptHyperparameters
 from prodsys.models import performance_indicators
 from app.dependencies import (
     prodsys_backend,
     prepare_adapter_from_optimization,
-    get_configuration_results_adapter_from_filesystem,
+    get_progress_of_optimization,
 )
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer, Optimizer
 
 
 router = APIRouter(
@@ -32,13 +40,44 @@ router = APIRouter(
 )
 
 HYPERPARAMETER_EXAMPLES = [
-    EvolutionaryAlgorithmHyperparameters.model_config["json_schema_extra"]["examples"][0],
-    simulated_annealing.SimulatedAnnealingHyperparameters.model_config["json_schema_extra"][
-        "examples"
-    ][0],
-    tabu_search.TabuSearchHyperparameters.model_config["json_schema_extra"]["examples"][0],
+    EvolutionaryAlgorithmHyperparameters.model_config["json_schema_extra"]["examples"][
+        0
+    ],
+    simulated_annealing.SimulatedAnnealingHyperparameters.model_config[
+        "json_schema_extra"
+    ]["examples"][0],
+    tabu_search.TabuSearchHyperparameters.model_config["json_schema_extra"]["examples"][
+        0
+    ],
     math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
+
+# Global instance of the optimizer
+optimizer_cache: Dict[str, Optimizer] = {}
+
+
+def get_optimizer(project_id: str, adapter_id: str) -> Optimizer:
+    # TODO: move this function probably to the backend code or to the dependencies!
+    if (project_id, adapter_id) not in optimizer_cache:
+        save_folder = f"data/{project_id}/{adapter_id}/optimization_results/"
+        # maybe move these functions to the backend to save the complete optimizer and make it easily changeable in the future with mongo db or so
+        optimizer = FileSystemSaveOptimizer(
+            adapter=prodsys_backend.get_adapter(project_id, adapter_id),
+            hyperparameters=prodsys_backend.get_last_optimizer_hyperparameters(
+                project_id, adapter_id
+            ),
+            save_folder=save_folder,
+            initial_solutions=None,
+            full_save=True,
+        )
+        optimizer_cache[(project_id, adapter_id)] = optimizer
+    return optimizer_cache[(project_id, adapter_id)]
+
+
+def set_optimizer_in_cache(project_id: str, adapter_id: str, optimizer: Optimizer):
+    optimizer_cache[(project_id, adapter_id)] = (
+        optimizer  # Saves Opti. for specific adapter ID and project_id
+    )
 
 
 @router.post(
@@ -62,103 +101,181 @@ async def optimize(
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not adapter.scenario_data:
         raise HTTPException(
-            404, f"Adapter {adapter_id} is missing scenario data for optimization."
+            404,
+            f"Adapter {adapter_id} in project {project_id} is missing scenario data for optimization.",
         )
-    configuration_file_path = f"data/{project_id}/{adapter_id}_configuration.json"
-    scenario_file_path = f"data/{project_id}/{adapter_id}_scenario.json"
-    save_folder = f"data/{project_id}/{adapter_id}"
+    save_folder = f"data/{project_id}/{adapter_id}/optimization_results"
+
     util.prepare_save_folder(save_folder)
-    adapter.write_data(configuration_file_path)
-    adapter.write_scenario_data(scenario_file_path)
+    # TODO: maybe allow later also to insert initial solutions to optimization or use existing best solutions to further optimize
 
-    # TODO: move this to background task
-    if isinstance(hyper_parameters, EvolutionaryAlgorithmHyperparameters):
-        optimization_func = optimize_configuration
-    elif isinstance(
-        hyper_parameters, simulated_annealing.SimulatedAnnealingHyperparameters
-    ):
-        optimization_func = simulated_annealing.optimize_configuration
-    elif isinstance(hyper_parameters, tabu_search.TabuSearchHyperparameters):
-        optimization_func = tabu_search.optimize_configuration
-    elif isinstance(hyper_parameters, math_opt.MathOptHyperparameters):
-        optimization_func = math_opt.optimize_configuration
-    else:
-        raise HTTPException(404, f"Wrong Hyperparameters for optimization.")
-
-    background_tasks.add_task(
-        optimization_func,
-        save_folder=save_folder,
-        base_configuration_file_path=configuration_file_path,
-        scenario_file_path=scenario_file_path,
-        hyper_parameters=hyper_parameters,
+    prodsys_backend.save_optimizer_hyperparameters(
+        project_id, adapter_id, hyper_parameters
     )
+    optimizer = FileSystemSaveOptimizer(
+        adapter=adapter,
+        hyperparameters=hyper_parameters,
+        initial_solutions=None,
+        save_folder=save_folder,
+        full_save=True,
+    )
+
+    # name this optimizer cache, maybe delete it, if access is easier with backend usage
+    set_optimizer_in_cache(project_id, adapter_id, optimizer)
+
+    background_tasks.add_task(optimizer.optimize)
+
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
 
 
 @router.get(
+    "/optimization_progress",
+    response_model=ProgressReport,
+)
+async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
+    try:
+        optimizer = get_optimizer(project_id, adapter_id)
+    except ValueError as e:
+        raise HTTPException(
+            404,
+            f"Optimization progress cannot be found, because optimizer is not available in cache. Start optimization for. {adapter_id} in {project_id} first.",
+        )
+    optimizer = get_optimizer(project_id, adapter_id)
+    return get_progress_of_optimization(optimizer)
+
+
+@router.get(
     "/results",
-    response_model=Dict[str, Union[Dict[str, List[performance_indicators.KPI_UNION]], str]],
+    response_model=Dict[str, Dict[str, List[performance_indicators.KPI_UNION]]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
-    with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
-        data = json.load(json_file)
+    optimizer = get_optimizer(project_id, adapter_id)
 
-    adapter_object = prodsys_backend.get_adapter(project_id, adapter_id)
-    kpis = adapter_object.scenario_data.objectives
-    
     response = {"solutions": {}}
+    for generation, fitness_entry in optimizer.get_optimization_results().items():
+        for adapter_id, fitness_data in fitness_entry.items():
+            response["solutions"][adapter_id] = []
 
-    for solution in data.values():
-        for adapter_name in solution.keys():
-            response["solutions"][adapter_name] = []
+            for kpi_name, kpi_value in zip(
+                fitness_data.objective_names, fitness_data.fitness
+            ):
 
-            for kpi_obj, kpi_value in zip(kpis, solution[adapter_name]["fitness"]):
-                kpi_name = kpi_obj.name
-                
-                kpi_object = parse_obj_as(
-                    performance_indicators.KPI_UNION,
+                kpi_object = TypeAdapter(
+                    performance_indicators.KPI_UNION
+                ).validate_python(
                     {
                         "name": kpi_name,
                         "value": kpi_value,
                         "context": [performance_indicators.KPILevelEnum.SYSTEM],
                     },
                 )
-                response["solutions"][adapter_name].append(kpi_object)
+                response["solutions"][adapter_id].append(kpi_object)
 
     return response
+
 
 @router.get(
     "/best_solution",
     response_model=str,
 )
-def get_best_solution_id(project_id: str, adapter_id: str):
+def get_best_solution_id(project_id: str, adapter_id: str) -> str:
     """
     Returns the best solution ID based on the highest total fitness value from the optimization results.
     """
-    try:
-        # Open the optimization results file
-        with open(f"data/{project_id}/{adapter_id}/optimization_results.json") as json_file:
-            data = json.load(json_file)
-    except FileNotFoundError:
-        raise HTTPException(404, f"Optimization results not found for adapter {adapter_id} in project {project_id}")
+    optimizer = get_optimizer(project_id, adapter_id)
+    if isinstance(
+        optimizer.hyperparameters,
+        (EvolutionaryAlgorithmHyperparameters, TabuSearchHyperparameters),
+    ):
+        direction = "max"
+    elif isinstance(
+        optimizer.hyperparameters,
+        SimulatedAnnealingHyperparameters,
+        MathOptHyperparameters,
+    ): 
+        direction = "min"
 
+    weights = get_weights(optimizer.adapter, direction)
+
+    # TODO: move this calculations to a function and also make it optional to normalize kpis
     best_solution = None
-    best_fitness = float('-inf')  # Initialize with negative infinity
+    best_fitness = float("-inf")  # Initialize with negative infinity
+    fitness_storage = {}
+    # num_objectives = 3  # Number of objectives in the optimization - WIP, Throughput, WIP
+    min_values = [float("inf")] * len(weights)
+    max_values = [float("-inf")] * len(weights)
 
-    # Iterate over the solutions in the results file
-    for solution in data.values():
+    # 1. Find the best solution based on the weighted fitness value from the optimization
+    for solution in optimizer.get_optimization_results().values():
         for adapter_name in solution.keys():
-            total_fitness = sum(solution[adapter_name]["fitness"])  # Calculate the total fitness value
+            agg_fitness = getattr(solution[adapter_name], "agg_fitness", None)
+            if agg_fitness == -300000.0:
+                continue
 
-            # Check if this solution has the best fitness
-            if total_fitness > best_fitness:
-                best_fitness = total_fitness
+            fitness_values = getattr(solution[adapter_name], "fitness")
+
+            for i in range(len(weights)):
+                min_values[i] = min(min_values[i], fitness_values[i])
+                max_values[i] = max(max_values[i], fitness_values[i])
+
+    for solution in optimizer.get_optimization_results().values():
+        for adapter_name in solution.keys():
+            agg_fitness = getattr(solution[adapter_name], "agg_fitness", None)
+            if agg_fitness == -300000.0:
+                continue
+
+            fitness_values = getattr(solution[adapter_name], "fitness")
+
+            normalized_fitness = []
+            for i in range(len(weights)):
+                if max_values[i] == min_values[i]:
+                    normalized_value = 0.5
+                else:
+                    normalized_value = (fitness_values[i] - min_values[i]) / (
+                        max_values[i] - min_values[i]
+                    )
+                normalized_fitness.append(normalized_value)
+
+            fitness_storage[adapter_name] = normalized_fitness
+
+            weighted_fitness = sum(w * f for w, f in zip(weights, normalized_fitness))
+
+            if weighted_fitness > best_fitness:
+                best_fitness = weighted_fitness
                 best_solution = adapter_name
+                best_fitness_values = fitness_values
 
-    if best_solution is None:
+    # 2. Check the KPIs from the initial solution which was used for the simulation run.
+    try:
+        original_kpis = prodsys_backend.get_performance(project_id, adapter_id)
+
+        wip_value = None
+        throughput_value = None
+        for kpi in original_kpis.kpis:
+            if kpi.name.value.lower() == "wip" and any(ctx == performance_indicators.KPILevelEnum.ALL_PRODUCTS for ctx in kpi.context):
+                wip_value = kpi.value
+            if kpi.name.value.lower() == "output":
+                throughput_value = kpi.value
+
+        if (
+            best_fitness_values[0] > 0
+            and best_fitness_values[1] < throughput_value
+            and best_fitness_values[2] > wip_value
+            or best_solution is None
+        ):
+            best_solution = "initial_simulation"
+
+    except Exception as e:
+        pass
+
+    if best_solution is None or best_solution == "initial_simulation":
+        print(
+            f"No valid or better solution then the start configuration found! Increase the number runs of optimization significantly or loose the constraints."
+        )
         raise HTTPException(404, "No valid solution found.")
-    
+
     return best_solution
+
 
 @router.get(
     "/register/{solution_id}",
@@ -168,8 +285,9 @@ def get_best_solution_id(project_id: str, adapter_id: str):
 def register_adapter_with_evaluation(
     project_id: str, adapter_id: str, solution_id: str
 ):
-    adapter_object = get_configuration_results_adapter_from_filesystem(
-        project_id, adapter_id, solution_id
+    optimizer = get_optimizer(project_id, adapter_id)
+    adapter_object = optimizer.get_optimization_result_configuration(
+        solution_id
     )
     prepare_adapter_from_optimization(
         adapter_object, project_id, adapter_id, solution_id
@@ -186,13 +304,10 @@ def register_adapter_with_evaluation(
     response_model=str,
 )
 def get_optimization_pareto_front(project_id: str, adapter_id: str):
-    IDs = optimization_analysis.get_pareto_solutions_from_result_files(
-        f"data/{project_id}/{adapter_id}/optimization_results.json"
-    )
+    optimizer = get_optimizer(project_id, adapter_id)
+    IDs = optimization_analysis.get_pareto_solutions_from_result_files(optimizer.get_optimization_results())
     for solution_id in IDs:
-        adapter_object = get_configuration_results_adapter_from_filesystem(
-            project_id, adapter_id, solution_id
-        )
+        adapter_object = optimizer.get_optimization_result_configuration(solution_id)
         prepare_adapter_from_optimization(
             adapter_object, project_id, adapter_id, solution_id
         )
@@ -211,6 +326,5 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
 ) -> prodsys.adapters.JsonProductionSystemAdapter:
-    with open(f"data/{project_id}/{adapter_id}/{solution_id}.json") as json_file:
-        data = json.load(json_file)
-    return data
+    optimizer = get_optimizer(project_id, adapter_id)
+    return optimizer.get_optimization_result_configuration(solution_id)

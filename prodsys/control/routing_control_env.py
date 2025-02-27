@@ -49,7 +49,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         adapter: adapters.ProductionSystemAdapter,
         observation_space: Optional[spaces.Space] = None,
         action_space: Optional[spaces.Space] = None,
-        render_mode: Optional[str]=None,
+        render_mode: Optional[str] = None,
     ):
         self.adapter = adapter
         self.observation_space = observation_space
@@ -87,7 +87,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         pass
 
     @abstractmethod
-    def get_reward(self, invalid_action:bool=False) -> float:
+    def get_reward(self, invalid_action: bool = False) -> float:
         """
         Get reward of the environment.
 
@@ -123,17 +123,23 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.interrupt_simulation_event = events.Event(self.runner.env)
         self.chose_resource_event = events.Event(self.runner.env)
         agent_routing_heuristic = partial(router.agent_routing_heuristic, self)
-        self.router = router.Router(self.runner.resource_factory, self.runner.sink_factory, agent_routing_heuristic)  
-        
+        self.router = router.Router(
+            self.runner.resource_factory,
+            self.runner.sink_factory,
+            agent_routing_heuristic,
+        )
+
         sources = self.runner.source_factory.sources
         for source in sources:
             source.router = self.router
-        
+
         self.observers = []
         for resource in self.runner.resource_factory.resources:
-            obs = observer.ResourceObserver(resource_factory=self.runner.resource_factory, 
-                                                  product_factory=self.runner.product_factory, 
-                                                  resource=resource)
+            obs = observer.ResourceObserver(
+                resource_factory=self.runner.resource_factory,
+                product_factory=self.runner.product_factory,
+                resource=resource,
+            )
             self.observers.append(obs)
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
@@ -146,7 +152,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             self.render()
 
         return observation, info
-    
+
     def set_possible_requests(self, requests: List[request.Request]):
         """
         Set possible requests for the RL agent environment.
@@ -178,18 +184,23 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         resource_index = np.argmax(action)
 
         self.chosen_resource = self.runner.resource_factory.resources[resource_index]
-        if not self.chosen_resource.data.ID in [r.resource.data.ID for r in self.possible_requests]:
+        if not self.chosen_resource.data.ID in [
+            r.resource.data.ID for r in self.possible_requests
+        ]:
             invalid_action = True
             self.chosen_resource = np.random.choice(self.possible_requests).resource
         else:
             invalid_action = False
 
-        self.possible_requests.sort(key=lambda r: r.resource.data.ID == self.chosen_resource.data.ID, reverse=True)
+        self.possible_requests.sort(
+            key=lambda r: r.resource.data.ID == self.chosen_resource.data.ID,
+            reverse=True,
+        )
 
         self.runner.env.run_until(until=self.interrupt_simulation_event)
         self.step_count += 1
         self.interrupt_simulation_event = events.Event(self.runner.env)
-        
+
         terminated = self.get_termination_condition()
         self.reward = self.get_reward(invalid_action)
         observation = self.get_observation()
@@ -199,14 +210,14 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             self.render()
 
         return observation, self.reward, terminated, False, info
-    
+
     def render(self):
         """
         Render the environment.
         """
         if self.render_mode == "human":
             pass
-            
+
     def set_observation_space(self, observation_space: spaces.Space):
         """
         Set the observation space of the environment.
@@ -233,7 +244,6 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             shape (Tuple[int, ...]): The shape of the observation space.
         """
         self.observation_space = spaces.Box(0, 1, shape=shape, dtype=int)
-
 
     def set_binary_box_action_space_from_shape(self, shape: Tuple[int, ...]):
         """

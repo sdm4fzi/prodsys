@@ -1,3 +1,7 @@
+import logging
+
+import importlib_metadata
+import toml
 from prodsys.conf.logging_config import set_logging
 from prodsys.models import (
     processes_data,
@@ -13,8 +17,28 @@ from prodsys.models import (
 )
 from prodsys import adapters
 from prodsys.util import post_processing  # , optimization_util
-from prodsys.util import runner
+from prodsys.simulation import runner
+
+logger = logging.getLogger(__name__)
 
 
+def get_version() -> str:
+    try:
+        return importlib_metadata.version("prodsys")
+    except:
+        logger.info(
+            "Could not find version in package metadata. Trying to read from pyproject.toml"
+        )
+    try:
+        pyproject = toml.load("pyproject.toml")
+        return pyproject["tool"]["poetry"]["version"]
+    except:
+        logger.error(
+            "Could not find pyproject.toml file. Trying to read from poetry.lock"
+        )
+    raise ModuleNotFoundError(
+        "Could not find version in package metadata or pyproject.toml"
+    )
 
-VERSION = "0.8.3"
+
+VERSION = get_version()

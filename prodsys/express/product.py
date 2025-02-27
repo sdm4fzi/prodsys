@@ -10,6 +10,7 @@ from prodsys.models import product_data
 
 from prodsys.express import core, process, auxiliary
 
+
 @dataclass
 class Product(core.ExpressObject):
     """
@@ -57,10 +58,18 @@ class Product(core.ExpressObject):
 
     """
 
-    processes: List[Union[process.ProductionProcess, process.CapabilityProcess]]
-    transport_process: Union[process.TransportProcess, process.RequiredCapabilityProcess]
+    processes: List[
+        Union[
+            process.ProductionProcess,
+            process.CapabilityProcess,
+            process.RequiredCapabilityProcess,
+        ]
+    ]
+    transport_process: Union[
+        process.TransportProcess, process.RequiredCapabilityProcess
+    ]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    auxiliaries: Optional[List[auxiliary.Auxiliary]]= Field(default_factory=list)
+    auxiliaries: Optional[List[auxiliary.Auxiliary]] = Field(default_factory=list)
 
     def to_model(self) -> product_data.ProductData:
         """
@@ -74,7 +83,8 @@ class Product(core.ExpressObject):
             description="",
             processes=[process.ID for process in self.processes],
             transport_process=self.transport_process.ID,
-            auxiliaries=[auxiliary.ID for auxiliary in self.auxiliaries]
+            auxiliaries=[auxiliary.ID for auxiliary in self.auxiliaries],
         )
+
 
 from prodsys.express import process

@@ -113,7 +113,6 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     sink01 = psx.Sink(product=product01, ID="sink01", location=[20, 25])
     sink02 = psx.Sink(product=product02, ID="sink02", location=[20, 25])
 
-
     # Update processes
     links = [
         [source01, node1],
@@ -160,6 +159,7 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
     runner_instance.initialize_simulation()
     runner_instance.run(480)
     assert runner_instance.env.now == 480
+    runner_instance.print_results()
     post_processor = runner_instance.get_post_processor()
     for counter, kpi in enumerate(post_processor.throughput_and_output_KPIs):
         if kpi.name == "output":

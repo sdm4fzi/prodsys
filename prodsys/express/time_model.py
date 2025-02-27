@@ -18,9 +18,10 @@ from prodsys.express import core
 
 from prodsys.models import time_model_data
 
+
 @deprecated(
     "The SequentialTimeModel is deprecated and will be removed in the next version. Please use the SampleTimeModel instead.",
-    category=None
+    category=None,
 )
 @dataclass
 class SequentialTimeModel(core.ExpressObject):
@@ -40,9 +41,9 @@ class SequentialTimeModel(core.ExpressObject):
         )
         ```
     """
+
     sequence: List[float]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
 
     def to_model(self) -> time_model_data.SequentialTimeModelData:
         """
@@ -52,11 +53,10 @@ class SequentialTimeModel(core.ExpressObject):
             time_model_data.SequentialTimeModelData: Data object of the express object.
         """
         return time_model_data.SequentialTimeModelData(
-            sequence=self.sequence,
-            ID=self.ID,
-            description=""
+            sequence=self.sequence, ID=self.ID, description=""
         )
-    
+
+
 @dataclass
 class SampleTimeModel(core.ExpressObject):
     """
@@ -75,9 +75,9 @@ class SampleTimeModel(core.ExpressObject):
         )
         ```
     """
+
     samples: List[float]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
 
     def to_model(self) -> time_model_data.SampleTimeModelData:
         """
@@ -87,11 +87,10 @@ class SampleTimeModel(core.ExpressObject):
             time_model_data.SequentialTimeModelData: Data object of the express object.
         """
         return time_model_data.SampleTimeModelData(
-            samples=self.samples,
-            ID=self.ID,
-            description=""
+            samples=self.samples, ID=self.ID, description=""
         )
-    
+
+
 @dataclass
 class ScheduledTimeModel(core.ExpressObject):
     """
@@ -113,11 +112,11 @@ class ScheduledTimeModel(core.ExpressObject):
         )
         ```
     """
+
     schedule: List[float]
     absolute: bool = True
     cyclic: bool = True
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
 
     def to_model(self) -> time_model_data.ScheduledTimeModelData:
         """
@@ -131,8 +130,9 @@ class ScheduledTimeModel(core.ExpressObject):
             absolute=self.absolute,
             cyclic=self.cyclic,
             ID=self.ID,
-            description=""
+            description="",
         )
+
 
 @dataclass
 class FunctionTimeModel(core.ExpressObject):
@@ -157,6 +157,7 @@ class FunctionTimeModel(core.ExpressObject):
         )
         ```
     """
+
     distribution_function: time_model_data.FunctionTimeModelEnum
     location: float
     scale: float = 0.0
@@ -174,9 +175,9 @@ class FunctionTimeModel(core.ExpressObject):
             location=self.location,
             scale=self.scale,
             ID=self.ID,
-            description=""
+            description="",
         )
-    
+
 
 @dataclass
 class DistanceTimeModel(core.ExpressObject):
@@ -199,6 +200,7 @@ class DistanceTimeModel(core.ExpressObject):
         )
         ```
     """
+
     speed: float
     reaction_time: float
     metric: Literal["manhattan", "euclidean"] = "manhattan"
@@ -216,12 +218,13 @@ class DistanceTimeModel(core.ExpressObject):
             reaction_time=self.reaction_time,
             metric=self.metric,
             ID=self.ID,
-            description=""
+            description="",
         )
+
 
 @deprecated(
     "The ManhattanDistanceTimeModel is deprecated and will be removed in the next version. Please use the DistanceTimeModel instead.",
-    category=None
+    category=None,
 )
 @dataclass
 class ManhattanDistanceTimeModel(core.ExpressObject):
@@ -242,6 +245,7 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
         )
         ```
     """
+
     speed: float
     reaction_time: float
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -257,8 +261,9 @@ class ManhattanDistanceTimeModel(core.ExpressObject):
             speed=self.speed,
             reaction_time=self.reaction_time,
             ID=self.ID,
-            description=""
+            description="",
         )
+
 
 TIME_MODEL_UNION = Union[
     SampleTimeModel,
@@ -268,7 +273,3 @@ TIME_MODEL_UNION = Union[
     SequentialTimeModel,
     ManhattanDistanceTimeModel,
 ]
-    
-
-
-

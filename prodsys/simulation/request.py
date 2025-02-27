@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
 
+
 if TYPE_CHECKING:
     from prodsys.simulation.product import Product, Locatable
-    from prodsys.simulation.process import PROCESS_UNION, TransportProcess, LinkTransportProcess
+    from prodsys.simulation.process import (
+        PROCESS_UNION,
+        TransportProcess,
+        LinkTransportProcess,
+        CapabilityProcess,
+        ProductionProcess,
+    )
     from prodsys.simulation.resources import Resource, TransportResource
     from prodsys.simulation.sink import Sink
     from prodsys.simulation.auxiliary import Auxiliary
-
+    from prodsys.simulation.store import Store
 
 
 class Request:
@@ -20,16 +27,11 @@ class Request:
         product (product.Product): The product.
         resource (resources.Resource): The resource.
     """
-    def __init__(
-        self,
-        process: PROCESS_UNION,
-        product: Product,
-        resource: Resource
-    ):
+
+    def __init__(self, process: PROCESS_UNION, product: Product, resource: Resource):
         self.process = process
         self.product = product
         self.resource = resource
-
 
     def set_process(self, process: PROCESS_UNION):
         """
@@ -41,10 +43,9 @@ class Request:
         self.process = process
         # TODO: maybe do some special handling of compound processes here
 
-
     def get_process(self) -> PROCESS_UNION:
         """
-        Returns the process or the capability process of the request 
+        Returns the process or the capability process of the request
 
         Returns:
             process.PROCESS_UNION: The process.
@@ -70,22 +71,39 @@ class Request:
         return self.resource
 
 
-class SinkRequest(Request):
+class ToTransportRequest(Request):
     """
-    Class to represents requests of a product for a storage in a sink to be executed by a resource.
+    Class to represents requests of a product for a storage in a queue to be executed by a resource.
 
     Args:
         Request (_type_): _description_
     """
-    def __init__(
-        self,
-        product: Product,
-        sink: Sink
-    ):
-        self.resource = sink
+
+    def __init__(self, product: Product, target: Store | Resource | Sink):
+        self.resource = target
         self.product = product
         self.process = None
-    
+
+
+class ReworkRequest(Request):
+    """
+    Class to represents requests of a product for a rework process to be executed by a resource.
+
+    Args:
+        Request (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    def __init__(
+        self, failed_process: ProductionProcess | CapabilityProcess, product: Product
+    ):
+        self.process = failed_process
+        self.product = product
+        self.resource = None
+
+
 class AuxiliaryRequest(Request):
     """
     Represents an auxiliary request in the simulation. The request is associated with an auxiliary which needs to be transported
@@ -100,9 +118,9 @@ class AuxiliaryRequest(Request):
     def __init__(
         self,
         process: TransportProcess,
-        product: Optional[Product]=None,
-        auxiliary: Optional[Auxiliary]=None,
-        resource: Optional[Resource]=None
+        product: Optional[Product] = None,
+        auxiliary: Optional[Auxiliary] = None,
+        resource: Optional[Resource] = None,
     ):
         self.process: TransportProcess = process
         self.product: Optional[Product] = product
@@ -112,6 +130,7 @@ class AuxiliaryRequest(Request):
         # TODO: rework this method. It is only used for interface homogenization -> restructure requests to be more general...
         self.origin: Optional[Locatable] = None
         self.target: Optional[Locatable] = None
+        self.route: Optional[List[Locatable]] = None
 
     def set_route(self, route: List[Locatable]):
         """
@@ -124,6 +143,7 @@ class AuxiliaryRequest(Request):
         # TODO: rework this method. It is only used for interface homogenization -> restructure requests to be more general...
         pass
 
+
 class TransportResquest(Request):
     """
     Class to represents requests of a product for a transport process to be executed by a transport resource. Additionally, it contains the origin and target locations of the transport.
@@ -132,9 +152,10 @@ class TransportResquest(Request):
         process (process.TransportProcess): The transport process.
         product (product.Product): The product.
         resource (resources.TransportResource): The transport resource.
-        origin (product.Location): The origin location, either a resource, source or sink.
-        target (product.Location): The target location, either a resource, source or sink.
+        origin (product.Locatable): The origin locatable, either a resource, node, source, store or sink.
+        target (product.Locatable): The target locatable, either a resource, node, source, store or sink.
     """
+
     def __init__(
         self,
         process: Union[TransportProcess, LinkTransportProcess],
@@ -150,7 +171,6 @@ class TransportResquest(Request):
         self.target: Locatable = target
 
         self.route: Optional[List[Locatable]] = None
-
 
     def set_process(self, process: PROCESS_UNION):
         """
@@ -216,7 +236,7 @@ class TransportResquest(Request):
             product.Locatable: The target location.
         """
         return self.target
-    
+
     def get_route(self) -> List[Locatable]:
         """
         Returns the route of the transport request.

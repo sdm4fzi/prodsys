@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from simpy import events
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 from prodsys.simulation import router, sim, store, time_model
@@ -25,6 +26,7 @@ class Source(BaseModel):
         router (router.Router): The router of the created products.
         output_queues (List[store.Queue], optional): The output queues. Defaults to [].
     """
+
     env: sim.Environment
     data: source_data.SourceData
     product_data: product_data.ProductData
@@ -34,7 +36,7 @@ class Source(BaseModel):
     # TODO: add a release policy...
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
-    model_config=ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         """
@@ -60,7 +62,6 @@ class Source(BaseModel):
         """
         return sum([len(q.items) for q in self.output_queues])
 
-
     def get_input_queue_length(self) -> int:
         """
         Returns total number of items in all input_queues.
@@ -80,20 +81,42 @@ class Source(BaseModel):
         while True:
             inter_arrival_time = self.time_model.get_next_time()
             if inter_arrival_time <= 0:
-                logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "event": f"Inter arrival time is less than or equal to 0. Stopping source."})
+                logger.debug(
+                    {
+                        "ID": self.data.ID,
+                        "sim_time": self.env.now,
+                        "resource": self.data.ID,
+                        "event": f"Inter arrival time is less than or equal to 0. Stopping source.",
+                    }
+                )
                 break
-            yield self.env.timeout(
-                inter_arrival_time
-            )
+            yield self.env.timeout(inter_arrival_time)
             product = self.product_factory.create_product(
                 self.product_data, self.router
             )
-            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Created product"})
+            logger.debug(
+                {
+                    "ID": self.data.ID,
+                    "sim_time": self.env.now,
+                    "resource": self.data.ID,
+                    "product": product.product_data.ID,
+                    "event": f"Created product",
+                }
+            )
             available_events_events = []
             for queue in self.output_queues:
+                queue.reserve()
                 available_events_events.append(queue.put(product.product_data))
             yield events.AllOf(self.env, available_events_events)
-            logger.debug({"ID": self.data.ID, "sim_time": self.env.now, "resource": self.data.ID, "product": product.product_data.ID, "event": f"Put product in output queue"})
+            logger.debug(
+                {
+                    "ID": self.data.ID,
+                    "sim_time": self.env.now,
+                    "resource": self.data.ID,
+                    "product": product.product_data.ID,
+                    "event": f"Put product in output queue",
+                }
+            )
             product.update_location(self)
             product.process = self.env.process(product.process_product())
 
@@ -105,6 +128,8 @@ class Source(BaseModel):
             List[float]: The location. Has to be a list of length 2.
         """
         return self.data.location
-    
+
+
 from prodsys.factories import product_factory
+
 # Source.model_rebuild()

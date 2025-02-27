@@ -1,24 +1,30 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import random
 from typing import List, TYPE_CHECKING, Generator, Optional, Union
 
 import logging
 
 import simpy
-logger = logging.getLogger(__name__)
 
-import numpy as np
+logger = logging.getLogger(__name__)
 
 from simpy import events
 
-from prodsys.simulation import resources
+from prodsys.simulation import resources, store
 from prodsys.simulation import request
+from prodsys.simulation.process import ReworkProcess
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, auxiliary
-    from prodsys.factories import resource_factory, sink_factory, auxiliary_factory
+    from prodsys.simulation import resources, product, sink, auxiliary, process
+    from prodsys.factories import (
+        resource_factory,
+        sink_factory,
+        auxiliary_factory,
+        product_factory,
+    )
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
     from prodsys.simulation.product import Locatable
@@ -42,7 +48,9 @@ def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
         return requests[0].auxiliary.env
 
 
-def get_item_to_transport(request_for_transport: Union[request.Request, request.AuxiliaryRequest]) -> Union[product.Product, auxiliary.Auxiliary]:
+def get_item_to_transport(
+    request_for_transport: Union[request.Request, request.AuxiliaryRequest]
+) -> Union[product.Product, auxiliary.Auxiliary]:
     """
     Returns the item to transport from a request.
 
@@ -54,7 +62,7 @@ def get_item_to_transport(request_for_transport: Union[request.Request, request.
     """
     if isinstance(request_for_transport, request.AuxiliaryRequest):
         return request_for_transport.auxiliary
-    return  request_for_transport.product
+    return request_for_transport.product
 
 
 class Router:
@@ -73,16 +81,22 @@ class Router:
         sink_factory: sink_factory.SinkFactory,
         auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
+        product_factory: Optional[product_factory.ProductFactory] = None,
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
-        self.routing_heuristic: Callable[[List[request.Request]], None] = routing_heuristic
+        self.routing_heuristic: Callable[
+            [List[request.Request]], None
+        ] = routing_heuristic
+        self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         # TODO: add possibility to specify a production and a transport heuristic separately
-    
-    def route_product_to_production_resource(self, product: product.Product) -> Generator[Optional[request.Request]]:
+
+    def route_product_to_production_resource(
+        self, product: product.Product
+    ) -> Generator[Optional[request.Request]]:
         """
-        Routes a product to perform the next process by assigning a production resource, that performs the process, to the product 
+        Routes a product to perform the next process by assigning a production resource, that performs the process, to the product
         and assigning a transport resource to transport the product to the next process.
 
         Args:
@@ -93,20 +107,31 @@ class Router:
         """
         potential_production_requests = self.get_possible_production_requests(product)
         if not potential_production_requests:
-            raise ValueError(f"No possible production resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID}.")
+            raise ValueError(
+                f"No possible production resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID}."
+            )
         potential_transport_requests: List[request.Request] = []
 
-        potential_transport_requests = self.get_possible_transport_requests(potential_production_requests)
+        potential_transport_requests = self.get_possible_transport_requests(
+            potential_production_requests
+        )
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}.")
-        possible_production_requests = self.get_reachable_production_requests(potential_production_requests, potential_transport_requests)
-        
-        env = get_env_from_requests(potential_transport_requests)
-        routed_production_request = yield env.process(self.get_routed_production_request(possible_production_requests))
-        return routed_production_request
-    
+            raise ValueError(
+                f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}."
+            )
+        possible_production_requests = self.get_reachable_production_requests(
+            potential_production_requests, potential_transport_requests
+        )
 
-    def get_input_queue_state_change_events(self, possible_requests: List[request.Request]) -> List[events.Event]:
+        env = get_env_from_requests(potential_transport_requests)
+        routed_production_request = yield env.process(
+            self.get_routed_production_request(possible_production_requests)
+        )
+        return routed_production_request
+
+    def get_input_queue_state_change_events(
+        self, possible_requests: List[request.Request]
+    ) -> List[events.Event]:
         """
         Returns the state change events of the input queues of the resources of the requests.
 
@@ -118,38 +143,72 @@ class Router:
         """
         possible_resources: List[resources.ProductionResource] = []
         for request in possible_requests:
-            if not request.resource in possible_resources and isinstance(request.resource, resources.ProductionResource):
+            if not request.resource in possible_resources and isinstance(
+                request.resource, resources.ProductionResource
+            ):
                 possible_resources.append(request.resource)
         input_queue_get_events = []
         for resource in possible_resources:
             for queue in resource.input_queues:
                 input_queue_get_events.append(queue.state_change)
+        stores: list[store.Store] = []
+        for request in possible_requests:
+            if not isinstance(request.resource, store.Store):
+                continue
+            stores.append(request.resource)
+        for store_instance in stores:
+            input_queue_get_events.append(store_instance.state_change)
         return input_queue_get_events
-    
 
-    def get_routed_production_request(self, possible_production_requests: List[request.Request]) -> Generator[Optional[request.Request]]:
+    def get_routed_production_request(
+        self, possible_production_requests: List[request.Request]
+    ) -> Generator[Optional[request.Request]]:
         env = get_env_from_requests(possible_production_requests)
         while True:
-            production_requests: List[request.Request] = self.get_requests_with_non_blocked_resources(possible_production_requests)
+            production_requests: List[
+                request.Request
+            ] = self.get_requests_with_non_blocked_resources(
+                possible_production_requests
+            )
             if production_requests:
                 break
-            logger.debug({"ID": possible_production_requests[0].product.product_data.ID, "sim_time": env.now, "event": f"Waiting for free resources."})
+            logger.debug(
+                {
+                    "ID": possible_production_requests[0].product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Waiting for free resources.",
+                }
+            )
             yield events.AnyOf(
                 env,
                 self.get_input_queue_state_change_events(possible_production_requests),
             )
-            logger.debug({"ID": possible_production_requests[0].product.product_data.ID, "sim_time": env.now, "event": f"Free resources available."})
+            logger.debug(
+                {
+                    "ID": possible_production_requests[0].product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Free resources available.",
+                }
+            )
 
         self.routing_heuristic(production_requests)
         if not production_requests:
             return
         routed_production_request = production_requests.pop(0)
-        routed_production_request.resource.reserve_input_queues()
-        return routed_production_request 
+        chosen_resource: resources.ProductionResource = (
+            routed_production_request.resource
+        )
+        chosen_resource.reserve_internal_input_queues()
+        return routed_production_request
 
-    def route_transport_resource_for_item(self, routed_production_request: Union[request.Request, request.AuxiliaryRequest]) -> Generator[Optional[request.TransportResquest]]:
+    def route_transport_resource_for_item(
+        self,
+        routed_production_request: Union[
+            request.Request, request.AuxiliaryRequest, request.ToTransportRequest
+        ],
+    ) -> Generator[Optional[request.TransportResquest]]:
         """
-        Routes a product to perform the next process by assigning a production resource, that performs the process, to the product 
+        Routes a product to perform the next process by assigning a production resource, that performs the process, to the product
         and assigning a transport resource to transport the product to the next process.
 
         Args:
@@ -160,32 +219,58 @@ class Router:
             Generator[Optional[request.TransportResquest]]: A generator that yields when the product is routed.
         """
         item_to_transport = get_item_to_transport(routed_production_request)
-        potential_transport_requests: List[request.Request] = self.get_transport_requests_to_target(item_to_transport, routed_production_request.resource, {})
+        potential_transport_requests: List[
+            request.Request
+        ] = self.get_transport_requests_to_target(
+            item_to_transport, routed_production_request.resource, {}
+        )
+
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {item_to_transport.product_data.ID} and process {item_to_transport.next_prodution_process.process_data.ID} to reach any destinations from resource {item_to_transport.current_locatable.data.ID}.")
-        
+            raise ValueError(
+                f"No possible transport resources found for product {item_to_transport.product_data.ID} and process {item_to_transport.next_prodution_process.process_data.ID} to reach any destinations from resource {item_to_transport.current_locatable.data.ID}."
+            )
+
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[request.TransportResquest] = self.get_requests_with_non_blocked_resources(potential_transport_requests)
+            transport_requests: List[
+                request.TransportResquest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_transport_requests
+            )
             if transport_requests:
                 break
-            logger.debug({"ID": item_to_transport.product_data.ID, "sim_time": env.now, "event": f"Waiting for free resources."})
+            logger.debug(
+                {
+                    "ID": item_to_transport.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Waiting for free resources.",
+                }
+            )
             yield events.AnyOf(
                 env,
                 self.get_input_queue_state_change_events(potential_transport_requests),
             )
-            logger.debug({"ID": item_to_transport.product_data.ID, "sim_time": env.now, "event": f"Free resources available."})
+            logger.debug(
+                {
+                    "ID": item_to_transport.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Free resources available.",
+                }
+            )
         if not transport_requests:
-            raise ValueError(f"No transport requests found for routing of product {item_to_transport.product_data.ID}. Error in Event handling of routing to resources.")
+            raise ValueError(
+                f"No transport requests found for routing of product {item_to_transport.product_data.ID}. Error in Event handling of routing to resources."
+            )
         self.routing_heuristic(transport_requests)
         yield env.timeout(0)
         if not transport_requests:
             return
         routed_transport_request = transport_requests.pop(0)
         return routed_transport_request
-    
 
-    def route_product_to_sink(self, product: product.Product) -> Generator[Optional[request.TransportResquest]]:
+    def route_product_to_sink(
+        self, product: product.Product
+    ) -> Generator[Optional[request.TransportResquest]]:
         """
         Routes a product to a sink.
 
@@ -196,31 +281,168 @@ class Router:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
         """
         sink = self.get_sink(product.product_data.product_type)
-        sink_request = request.SinkRequest(product=product, sink=sink)
-        potential_transport_requests = self.get_possible_transport_requests([sink_request])
+        sink_request = request.ToTransportRequest(product=product, target=sink)
+        potential_transport_requests = self.get_possible_transport_requests(
+            [sink_request]
+        )
         if not potential_transport_requests:
-            raise ValueError(f"No possible transport resources found for product {product.product_data.ID} to reach any sinks from resource {product.current_locatable.data.ID}.")
+            raise ValueError(
+                f"No possible transport resources found for product {product.product_data.ID} to reach any sinks from resource {product.current_locatable.data.ID}."
+            )
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[request.TransportResquest] = self.get_requests_with_non_blocked_resources(potential_transport_requests)
+            transport_requests: List[
+                request.TransportResquest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_transport_requests
+            )
             if transport_requests:
                 break
-            logger.debug({"ID": product.product_data.ID, "sim_time": env.now, "event": f"Waiting for free resources."})
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Waiting for free resources.",
+                }
+            )
             yield events.AnyOf(
                 env,
                 self.get_input_queue_state_change_events(potential_transport_requests),
             )
-            logger.debug({"ID": product.product_data.ID, "sim_time": env.now, "event": f"Free resources available."})
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Free resources available.",
+                }
+            )
         if not transport_requests:
-            raise ValueError(f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources.")
+            raise ValueError(
+                f"No transport requests found for routing of product {product.product_data.ID}. Error in Event handling of routing to resources."
+            )
         self.routing_heuristic(transport_requests)
         yield env.timeout(0)
         if not transport_requests:
             return
         routed_transport_request = transport_requests.pop(0)
+        for queue in sink.input_queues:
+            queue.reserve()
         return routed_transport_request
 
-    def get_production_request(self, product: product.Product, resource: resources.Resource) -> request.Request:
+    def route_product_to_storage(
+        self, product: product.Product
+    ) -> Generator[request.TransportResquest]:
+        """
+        Routes a product to the store.
+
+        Args:
+            product (product.Product): The product.
+
+        Returns:
+            Generator[request.TransportResquest]: A generator that yields when the product is routed to the store.
+        """
+        resource = product.current_locatable
+        external_queues = [
+            queue for queue in resource.output_queues if isinstance(queue, store.Store)
+        ]
+        if not external_queues:
+            raise ValueError(
+                f"No external queues found for product {product.product_data.ID} to reach any store from resource {product.current_locatable.data.ID}."
+            )
+
+        potential_to_transport_requests = []
+        for external_queue in external_queues:
+            to_transport_request = request.ToTransportRequest(
+                product=product, target=external_queue
+            )
+            potential_to_transport_requests.append(to_transport_request)
+
+        env = get_env_from_requests(potential_to_transport_requests)
+        while True:
+            to_transport_requests: List[
+                request.ToTransportRequest
+            ] = self.get_requests_with_non_blocked_resources(
+                potential_to_transport_requests
+            )
+            if to_transport_requests:
+                break
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Waiting for free resources for storage.",
+                }
+            )
+            yield events.AnyOf(
+                env,
+                self.get_input_queue_state_change_events(
+                    potential_to_transport_requests
+                ),
+            )
+            logger.debug(
+                {
+                    "ID": product.product_data.ID,
+                    "sim_time": env.now,
+                    "event": f"Free resources available for storage.",
+                }
+            )
+
+        storage_request = random.choice(to_transport_requests)
+        storage_request.resource.reserve()
+        transport_request = yield env.process(
+            self.route_transport_resource_for_item(storage_request)
+        )
+
+        return transport_request
+
+    def route_product_from_storage(
+        self, product: product.Product, resource: resources.ProductionResource
+    ) -> Generator[request.TransportResquest]:
+        """
+        Routes a product from the store.
+
+        Args:
+            product (product.Product): The product.
+            resource (resources.ProductionResource): The production resource.
+
+        Returns:
+            Generator[request.TransportResquest]: A generator that yields when the product is routed from the store.
+        """
+        env = product.env
+        to_transport_request = request.ToTransportRequest(
+            product=product, target=resource
+        )
+        transport_request = yield env.process(
+            self.route_transport_resource_for_item(to_transport_request)
+        )
+        return transport_request
+
+    def check_store_product(self, product: product.Product) -> bool:
+        """
+        Decides whether a product is stored in the store.
+
+        Returns:
+            bool: If the product is stored in the store.
+        """
+        resource = product.current_locatable
+        external_queues = [
+            queue for queue in resource.output_queues if isinstance(queue, store.Store)
+        ]
+        if not external_queues:
+            return False
+        internal_queues = [
+            queue
+            for queue in resource.output_queues
+            if not isinstance(queue, store.Store)
+        ]
+        if all(queue.full for queue in internal_queues):
+            return True
+        # TODO: implement heuristic for storage
+        return random.choice([True, False])
+
+    def get_production_request(
+        self, product: product.Product, resource: resources.Resource
+    ) -> request.Request:
         """
         Returns a request for the next production process of the product object.
 
@@ -232,8 +454,13 @@ class Router:
             product=product,
             resource=resource,
         )
-    
-    def get_transport_request(self, item_to_transport: Union[product.Product, auxiliary.Auxiliary], transport_resource: resources.TransportResource, target: resources.Resource) -> request.TransportResquest:
+
+    def get_transport_request(
+        self,
+        item_to_transport: Union[product.Product, auxiliary.Auxiliary],
+        transport_resource: resources.TransportResource,
+        target: resources.Resource,
+    ) -> request.TransportResquest:
         """
         Returns a request for the next transport process of the product object.
 
@@ -247,9 +474,10 @@ class Router:
             origin=item_to_transport.current_locatable,
             target=target,
         )
-    
 
-    def route_auxiliary_to_product(self, product: product.Product) -> Generator[request.AuxiliaryRequest]:
+    def route_auxiliary_to_product(
+        self, product: product.Product
+    ) -> Generator[request.AuxiliaryRequest]:
         """
         Routes an auxiliary to a product.
 
@@ -259,12 +487,16 @@ class Router:
         Returns:
             Generator: A generator that yields when the auxiliary is routed to the product.
         """
-        auxiliary_request = request.AuxiliaryRequest(product=product, process=product.transport_process)
+        auxiliary_request = request.AuxiliaryRequest(
+            product=product, process=product.transport_process
+        )
         yield product.env.process(self.get_auxiliary(auxiliary_request))
         yield product.env.timeout(0)
         return auxiliary_request
-    
-    def route_auxiliary_to_store(self, auxiliary: auxiliary.Auxiliary) -> Generator[request.TransportResquest]:
+
+    def route_auxiliary_to_store(
+        self, auxiliary: auxiliary.Auxiliary
+    ) -> Generator[request.TransportResquest]:
         """
         Routes an auxiliary to a store.
 
@@ -274,29 +506,46 @@ class Router:
         Returns:
             Generator: A generator that yields when the auxiliary is routed to the store.
         """
-        auxiliary_request = request.AuxiliaryRequest(auxiliary=auxiliary, process=auxiliary.transport_process, resource=auxiliary.storage, product=None)
+        auxiliary_request = request.AuxiliaryRequest(
+            auxiliary=auxiliary,
+            process=auxiliary.transport_process,
+            resource=auxiliary.storage,
+            product=None,
+        )
         # transport_request = self.get_transport_request(auxiliary, auxiliary.transport_process, auxiliary.storage)
         env = get_env_from_requests([auxiliary_request])
-        transport_request: request.TransportResquest = yield env.process(self.route_transport_resource_for_item(auxiliary_request))
+        transport_request: request.TransportResquest = yield env.process(
+            self.route_transport_resource_for_item(auxiliary_request)
+        )
         yield env.timeout(0)
         return transport_request
 
-
     def get_auxiliary(self, processing_request: request.AuxiliaryRequest) -> Generator:
-
         possible_auxiliaries = self.get_possible_auxiliaries(processing_request)
         while True:
             free_possible_auxiliaries = self.get_free_auxiliary(possible_auxiliaries)
             # TODO: maybe make heuristic working for selecting auxiliary...
-            np.random.shuffle(free_possible_auxiliaries)
+            random.shuffle(free_possible_auxiliaries)
             if free_possible_auxiliaries:
                 break
-            logger.info({"ID": processing_request.product.product_data.ID , "sim_time": processing_request.product.env.now, "event": f"Waiting for free auxiliary."})
+            logger.info(
+                {
+                    "ID": processing_request.product.product_data.ID,
+                    "sim_time": processing_request.product.env.now,
+                    "event": f"Waiting for free auxiliary.",
+                }
+            )
             yield events.AnyOf(
                 processing_request.product.env,
                 [auxiliary.got_free for auxiliary in possible_auxiliaries],
             )
-            logger.info({"ID": processing_request.product.product_data.ID, "sim_time": processing_request.product.env.now, "event": f"Free auxiliary available."})
+            logger.info(
+                {
+                    "ID": processing_request.product.product_data.ID,
+                    "sim_time": processing_request.product.env.now,
+                    "event": f"Free auxiliary available.",
+                }
+            )
         routed_auxiliary = free_possible_auxiliaries[0]
         routed_auxiliary.reserve()
         routed_auxiliary.got_free = events.Event(processing_request.product.env)
@@ -304,24 +553,36 @@ class Router:
         processing_request.auxiliary = routed_auxiliary
         processing_request.resource = processing_request.product.current_locatable
 
-    def get_free_auxiliary(self, possible_auxiliaries: List[auxiliary.Auxiliary]) -> List[auxiliary.Auxiliary]:
-
+    def get_free_auxiliary(
+        self, possible_auxiliaries: List[auxiliary.Auxiliary]
+    ) -> List[auxiliary.Auxiliary]:
         free_possible_auxiliaries = []
         for auxiliary in possible_auxiliaries:
             if not auxiliary.reserved and auxiliary.current_product is None:
                 free_possible_auxiliaries.append(auxiliary)
         return free_possible_auxiliaries
-    
-    def get_possible_auxiliaries(self, processing_request: request.AuxiliaryRequest)-> List[auxiliary.Auxiliary]:
+
+    def get_possible_auxiliaries(
+        self, processing_request: request.AuxiliaryRequest
+    ) -> List[auxiliary.Auxiliary]:
         possible_auxiliaries = []
         for auxiliary in self.auxiliary_factory.auxiliaries:
-            if not auxiliary.data.auxiliary_type in processing_request.product.product_data.auxiliaries:
+            if (
+                not auxiliary.data.auxiliary_type
+                in processing_request.product.product_data.auxiliaries
+            ):
                 continue
-            if any(supported_process.matches_request(processing_request) for supported_process in auxiliary.relevant_processes + auxiliary.relevant_transport_processes):
+            if any(
+                supported_process.matches_request(processing_request)
+                for supported_process in auxiliary.relevant_processes
+                + auxiliary.relevant_transport_processes
+            ):
                 possible_auxiliaries.append(auxiliary)
         return possible_auxiliaries
-    
-    def get_possible_production_requests(self, product: product.Product) -> List[request.Request]:
+
+    def get_possible_production_requests(
+        self, product: product.Product
+    ) -> List[request.Request]:
         """
         Returns a list of possible production requests with different resources and processes for the next production process of a product.
 
@@ -339,8 +600,12 @@ class Router:
                     production_request.set_process(process)
                     possible_requests.append(production_request)
         return possible_requests
-    
-    def get_reachable_production_requests(self, production_requests: List[request.Request], transport_requests: List[request.TransportResquest]) -> List[request.Request]:
+
+    def get_reachable_production_requests(
+        self,
+        production_requests: List[request.Request],
+        transport_requests: List[request.TransportResquest],
+    ) -> List[request.Request]:
         """
         Returns a list of production requests that are reachable by the transport requests.
 
@@ -351,10 +616,18 @@ class Router:
         Returns:
             List[request.Request]: A list of production requests that are reachable by the transport requests.
         """
-        possible_production_resource_ids = set([request.target.data.ID for request in transport_requests])
-        return [request for request in production_requests if request.resource.data.ID in possible_production_resource_ids]
-    
-    def get_possible_transport_requests(self, production_requests: List[request.Request]) -> List[request.TransportResquest]:
+        possible_production_resource_ids = set(
+            [request.target.data.ID for request in transport_requests]
+        )
+        return [
+            request
+            for request in production_requests
+            if request.resource.data.ID in possible_production_resource_ids
+        ]
+
+    def get_possible_transport_requests(
+        self, production_requests: List[request.Request]
+    ) -> List[request.TransportResquest]:
         """
         Returns a list of possible transport requests with different resources and processes for the next transport process of a product.
 
@@ -364,23 +637,37 @@ class Router:
         Returns:
             List[request.TransportResquest]: A list of possible transport requests for the next transport process of the product.
         """
-        if any(isinstance(production_request, request.SinkRequest) for production_request in production_requests):
+        if any(
+            isinstance(production_request, request.ToTransportRequest)
+            for production_request in production_requests
+        ):
             transport_targets = [request.resource for request in production_requests]
         else:
-            transport_target_ids = set([request.resource.data.ID for request in production_requests])
-            transport_targets = [resource for resource in self.resource_factory.resources if resource.data.ID in transport_target_ids]
+            transport_target_ids = set(
+                [request.resource.data.ID for request in production_requests]
+            )
+            transport_targets = [
+                resource
+                for resource in self.resource_factory.resources
+                if resource.data.ID in transport_target_ids
+            ]
         product = production_requests[0].product
 
         possible_requests = []
         route_cache = {}
 
         for transport_target in transport_targets:
-            possible_requests += self.get_transport_requests_to_target(product, transport_target, route_cache)
+            possible_requests += self.get_transport_requests_to_target(
+                product, transport_target, route_cache
+            )
         return possible_requests
-    
 
-
-    def get_transport_requests_to_target(self, item_to_transport: Union[product.Product, auxiliary.Auxiliary], target: Locatable, route_cache: dict) -> List[request.TransportResquest]:
+    def get_transport_requests_to_target(
+        self,
+        item_to_transport: Union[product.Product, auxiliary.Auxiliary],
+        target: Locatable,
+        route_cache: dict,
+    ) -> List[request.TransportResquest]:
         """
         Returns a list of transport requests with different resources and processes for the next transport process of a product.
 
@@ -393,17 +680,22 @@ class Router:
         transport_requests = []
         for resource in self.resource_factory.get_transport_resources():
             for process in resource.processes:
-                transport_request = self.get_transport_request(item_to_transport, resource, target)
+                transport_request = self.get_transport_request(
+                    item_to_transport, resource, target
+                )
                 if route_cache.get((target.data.ID, process.process_data.ID)):
-                    transport_request.copy_cached_routes(route_cache[(target.data.ID, process.process_data.ID)])
+                    transport_request.copy_cached_routes(
+                        route_cache[(target.data.ID, process.process_data.ID)]
+                    )
                     transport_request.set_process(process)
                     transport_requests.append(transport_request)
                 elif process.matches_request(transport_request):
                     transport_request.set_process(process)
                     transport_requests.append(transport_request)
-                    route_cache[(target.data.ID, process.process_data.ID)] = transport_request
+                    route_cache[
+                        (target.data.ID, process.process_data.ID)
+                    ] = transport_request
         return transport_requests
-        
 
     def get_requests_with_non_blocked_resources(
         self, requests: List[request.Request]
@@ -421,7 +713,41 @@ class Router:
             if not isinstance(request.resource, resources.ProductionResource):
                 continue
             env = get_env_from_requests([request])
-        return [request for request in requests if isinstance(request.resource, resources.TransportResource) or (isinstance(request.resource, resources.ProductionResource) and not any(q.full for q in request.resource.input_queues))]
+        return [
+            request
+            for request in requests
+            if isinstance(request.resource, resources.TransportResource)
+            or (
+                isinstance(request.resource, resources.ProductionResource)
+                and not any(q.full for q in request.resource.input_queues)
+            )
+            or (isinstance(request.resource, store.Store) and not request.resource.full)
+        ]
+
+    def get_rework_processes(
+        self, product: product.Product, failed_process: process.Process
+    ) -> list[process.ReworkProcess]:
+        """
+        Returns a list of possible rework requests with different resources and processes for the rework process of a product.
+
+        Args:
+            product (product.Product): The product to get the rework request for.
+            failed_process (process.Process): The failed process.
+
+        Returns:
+            list[process.ReworkProcess]: A list of possible rework processes for the product.
+        """
+        possible_rework_processes = []
+        for potential_rework_process in self.resource_factory.process_factory.processes:
+            if isinstance(potential_rework_process, ReworkProcess):
+                rework_request = request.ReworkRequest(
+                    failed_process=failed_process,
+                    product=product,
+                )
+                if not potential_rework_process.matches_request(rework_request):
+                    continue
+                possible_rework_processes.append(potential_rework_process)
+        return possible_rework_processes
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """
@@ -434,7 +760,7 @@ class Router:
             sink.Sink: The sink for the product type.
         """
         possible_sinks = self.sink_factory.get_sinks_with_product_type(_product_type)
-        chosen_sink = np.random.choice(possible_sinks)
+        chosen_sink = random.choice(possible_sinks)
         return chosen_sink  # type: ignore False
 
 
@@ -456,7 +782,7 @@ def random_routing_heuristic(possible_requests: List[request.Request]):
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
     possible_requests.sort(key=lambda x: x.resource.data.ID)
-    np.random.shuffle(possible_requests)
+    random.shuffle(possible_requests)
 
 
 def shortest_queue_routing_heuristic(
@@ -469,12 +795,17 @@ def shortest_queue_routing_heuristic(
     Args:
         possible_resources (List[resources.Resource]): A list of possible resources.
     """
-    if any(not isinstance(request.resource, resources.ProductionResource) for request in possible_requests):
-        np.random.shuffle(possible_requests)
+    if any(
+        not isinstance(request.resource, resources.ProductionResource)
+        for request in possible_requests
+    ):
+        random.shuffle(possible_requests)
         possible_requests.sort(key=lambda x: len(x.resource.get_controller().requests))
         return
-    np.random.shuffle(possible_requests)
-    possible_requests.sort(key=lambda x: sum([len(q.items) for q in x.resource.input_queues]))
+    random.shuffle(possible_requests)
+    possible_requests.sort(
+        key=lambda x: sum([len(q.items) for q in x.resource.input_queues])
+    )
 
 
 def agent_routing_heuristic(
@@ -495,6 +826,7 @@ def agent_routing_heuristic(
         return
     gym_env.set_possible_requests(possible_requests)
     gym_env.interrupt_simulation_event.succeed()
+
 
 ROUTING_HEURISTIC = {
     "shortest_queue": shortest_queue_routing_heuristic,

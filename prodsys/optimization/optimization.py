@@ -1,21 +1,56 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 from prodsys import adapters, runner
-from prodsys.adapters.adapter import assert_no_redudant_locations, assert_required_processes_in_resources_available, get_possible_production_processes_IDs
+from prodsys.adapters.adapter import (
+    assert_no_redudant_locations,
+    assert_required_processes_in_resources_available,
+    get_possible_production_processes_IDs,
+)
 from prodsys.models import performance_indicators
-from prodsys.optimization.util import get_grouped_processes_of_machine, get_num_of_process_modules, get_required_auxiliaries, get_weights
+from prodsys.optimization.optimization_data import OptimizationResults, OptimizationSolutions
+from prodsys.optimization.util import (
+    get_grouped_processes_of_machine,
+    get_num_of_process_modules,
+    get_required_auxiliaries,
+    get_weights,
+)
+from prodsys.simulation import sim
+from prodsys.simulation.runner import Runner
 from prodsys.util.post_processing import PostProcessor
+
+
+def get_process_module_cost(
+    adapter_object: adapters.ProductionSystemAdapter,
+    num_process_modules: Dict[Tuple[str], int],
+    num_process_modules_before: Dict[Tuple[str], int],
+) -> float:
+    num_process_modules = get_num_of_process_modules(adapter_object)
+
+    sum_process_module_cost = 0
+    process_module_cost = adapter_object.scenario_data.info.process_module_cost
+
+    for process_tuple in num_process_modules:
+        process = process_tuple[0]
+        if isinstance(process_module_cost, dict):
+            process_cost = process_module_cost.get(process, 0)
+        else:
+            process_cost = process_module_cost
+        sum_process_module_cost += (
+                num_process_modules[process_tuple]
+                - num_process_modules_before.get(process_tuple, 0)
+            )* process_cost
+    return sum_process_module_cost
 
 
 def get_reconfiguration_cost(
     adapter_object: adapters.ProductionSystemAdapter,
     baseline: adapters.ProductionSystemAdapter = None,
 ) -> float:
-    num_machines = len(adapters.get_machines(adapter_object))
+    num_machines = len(adapters.get_production_resources(adapter_object))
     num_transport_resources = len(adapters.get_transport_resources(adapter_object))
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
-        num_machines_before = 4
-        num_transport_resources_before = 1
+        num_machines_before = 0
+        num_transport_resources_before = 0
         possible_processes = get_possible_production_processes_IDs(adapter_object)
         num_process_modules_before = {}
         for process in possible_processes:
@@ -24,7 +59,7 @@ def get_reconfiguration_cost(
             else:
                 num_process_modules_before[process] = 0
     else:
-        num_machines_before = len(adapters.get_machines(baseline))
+        num_machines_before = len(adapters.get_production_resources(baseline))
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
@@ -33,28 +68,19 @@ def get_reconfiguration_cost(
     else:
         auxiliary_cost = 0
 
-    machine_cost = max(
-        0,
-        (num_machines - num_machines_before)
-        * adapter_object.scenario_data.info.machine_cost,
+    machine_cost = (num_machines - num_machines_before)* adapter_object.scenario_data.info.machine_cost
+    transport_resource_cost = (num_transport_resources - num_transport_resources_before) * adapter_object.scenario_data.info.transport_resource_cost
+    process_module_cost = get_process_module_cost(
+        adapter_object, num_process_modules, num_process_modules_before
     )
-    transport_resource_cost = max(
-        0,
-        (num_transport_resources - num_transport_resources_before)
-        * adapter_object.scenario_data.info.transport_resource_cost,
-    )
-    process_module_cost = 0
-    process_module_costs_dict = adapter_object.scenario_data.info.process_module_costs
-    
-    for process_tuple in num_process_modules:
-        process = process_tuple[0]
-        process_cost = process_module_costs_dict.get(process, 0)
-        process_module_cost += max(
-            0,
-            (num_process_modules[process_tuple] - num_process_modules_before.get(process_tuple, 0))
-            * process_cost,
-        )
-
+    if not adapter_object.scenario_data.info.selling_machines:
+        machine_cost = max(0, machine_cost)
+    if not adapter_object.scenario_data.info.selling_transport_resources:
+        transport_resource_cost = max(0, transport_resource_cost)
+    if not adapter_object.scenario_data.info.selling_process_modules:
+        process_module_cost = max(0, process_module_cost)
+    if not adapter_object.scenario_data.info.selling_auxiliaries:
+        auxiliary_cost = max(0, auxiliary_cost)
     return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
 
 
@@ -63,7 +89,9 @@ def get_auxiliary_cost(
     baseline: adapters.ProductionSystemAdapter,
 ) -> float:
     auxiliary_cost = 0
-    for new_auxiliary, auxiliary_before in zip(adapter_object.auxiliary_data, baseline.auxiliary_data):
+    for new_auxiliary, auxiliary_before in zip(
+        adapter_object.auxiliary_data, baseline.auxiliary_data
+    ):
         for i, storage in enumerate(new_auxiliary.quantity_in_storages):
             storage_before = auxiliary_before.quantity_in_storages[i]
             auxiliary_cost += max(
@@ -76,7 +104,7 @@ def get_auxiliary_cost(
 
 def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
     if (
-        len(adapters.get_machines(configuration))
+        len(adapters.get_production_resources(configuration))
         > configuration.scenario_data.constraints.max_num_machines
     ):
         return False
@@ -112,7 +140,10 @@ def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
     except ValueError as e:
         return False
 
-    positions = [machine.location for machine in adapters.get_machines(configuration)]
+    positions = [
+        machine.input_location
+        for machine in adapters.get_production_resources(configuration)
+    ]
     possible_positions = configuration.scenario_data.options.positions
     if any(position not in possible_positions for position in positions):
         return False
@@ -180,7 +211,6 @@ def assert_required_auxiliaries_available(
     for auxiliary in required_auxiliaries:
         if not sum(auxiliary.quantity_in_storages) > 0:
             raise ValueError(f"Required auxiliary {auxiliary.ID} is not available.")
-        
 
 
 def get_throughput_time(pp: PostProcessor) -> float:
@@ -209,14 +239,29 @@ KPI_function_dict = {
 }
 
 
-def evaluate(
+def evaluate_ea_wrapper(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     number_of_seeds: int,
-    full_save_folder_file_path: str,
     individual,
-) -> List[float]:
+) -> tuple[list[float], dict]:
+    return evaluate(
+        base_scenario,
+        solution_dict,
+        performances,
+        number_of_seeds,
+        individual[0],
+    )
+
+
+def evaluate(
+    base_scenario: adapters.ProductionSystemAdapter,
+    solution_dict: OptimizationSolutions,
+    performances: OptimizationResults,
+    number_of_seeds: int,
+    adapter_object: adapters.ProductionSystemAdapter,
+) -> tuple[list[float], dict]:
     """
     Function that evaluates a configuration.
 
@@ -231,18 +276,17 @@ def evaluate(
         ValueError: If the time range is not defined in the scenario data.
 
     Returns:
-        List[float]: List of the fitness values of the configuration.
+        tuple[list[float], dict]: The fitness values and the event log dict
     """
-
-    adapter_object: adapters.ProductionSystemAdapter = individual[0]
+    sim.VERBOSE = 0
     adapter_object_hash = adapter_object.hash()
-    if adapter_object_hash in solution_dict["hashes"]:
-        evaluated_adapter_generation = solution_dict["hashes"][adapter_object_hash]["generation"]
-        evaluated_adapter_id = solution_dict["hashes"][adapter_object_hash]["ID"]
-        return performances[evaluated_adapter_generation][evaluated_adapter_id]["fitness"]
-
+    if adapter_object_hash in solution_dict.hashes:
+        evaluated_adapter_generation = solution_dict.hashes[adapter_object_hash].generation
+        evaluated_adapter_id = solution_dict.hashes[adapter_object_hash].ID
+        fitness_data = performances[evaluated_adapter_generation][evaluated_adapter_id]
+        return fitness_data.fitness, fitness_data.event_log_dict
     if not check_valid_configuration(adapter_object, base_scenario):
-        return [-100000 / weight for weight in get_weights(base_scenario, "max")]
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")], {}
 
     fitness_values = []
 
@@ -253,8 +297,6 @@ def evaluate(
         adapter_object.seed = seed
         runner_object.initialize_simulation()
         runner_object.run(adapter_object.scenario_data.info.time_range)
-        if full_save_folder_file_path:
-            runner_object.save_results_as_csv(full_save_folder_file_path)
         df = runner_object.event_logger.get_data_as_dataframe()
         p = PostProcessor(df_raw=df)
         fitness = []
@@ -266,4 +308,5 @@ def evaluate(
         fitness_values.append(fitness)
 
     mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
-    return mean_fitness
+    # TODO: allow to return multiple runner objects in the future
+    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()

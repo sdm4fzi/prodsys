@@ -5,19 +5,20 @@ NodeData objects are used in prodsys to represent Locations in the production sy
 from hashlib import md5
 from typing import List
 
-from pydantic import ConfigDict, conlist
+from pydantic import ConfigDict
 
-from prodsys.models.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset, Locatable
 
-class NodeData(CoreAsset):
+
+class NodeData(CoreAsset, Locatable):
     """
-    Represents a node data object of a link.
+    Represents a node data object of a link for a Transport process.
 
     Attributes:
-            location (List[float]): Location of the node. It has to be a list of length 2.
+        ID (str): ID of the node.
+        description (str): Description of the node.
+        location (List[float]): Location of the node. It has to be a list of length 2.
     """
-
-    location: conlist(float, min_length=2, max_length=2) # type: ignore
 
     def hash(self) -> str:
         """
@@ -26,15 +27,16 @@ class NodeData(CoreAsset):
         Returns:
             str: Hash of the node data object.
         """
-        return md5("".join([*map(str, self.location)]).encode("utf-8")).hexdigest()
-    
-    model_config = ConfigDict(json_schema_extra= {
-        "examples": [
-            {
-                "ID": "N1",
-                "description": "Node 1",
-                "location": [0.0, 0.0],
-            }
-        ]
-    })
+        return Locatable.hash(self)
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "N1",
+                    "description": "Node 1",
+                    "location": [0.0, 0.0],
+                }
+            ]
+        }
+    )

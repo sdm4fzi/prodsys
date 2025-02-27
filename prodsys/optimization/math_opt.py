@@ -1,5 +1,9 @@
-from typing import Any, Dict
-
+from typing import Any, Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.optimization.optimizer import Optimizer
+from prodsys.optimization.util import (
+    check_breakdown_states_available, create_default_breakdown_states
+    )
 from uuid import uuid1
 import scipy.stats
 import datetime
@@ -7,6 +11,7 @@ from copy import deepcopy
 import json
 import random
 import logging
+
 logger = logging.getLogger(__name__)
 
 from pydantic import BaseModel, ConfigDict
@@ -17,12 +22,15 @@ from prodsys.models import (
     state_data,
     time_model_data,
 )
-from prodsys.optimization import adapter_manipulation, optimization, util as optimization_util
+from prodsys.optimization import (
+    adapter_manipulation,
+    optimization,
+    util as optimization_util,
+)
 from prodsys.util import util
 
 import gurobipy as gp
 from gurobipy import GRB
-
 
 
 def adjust_number_of_transport_resources(
@@ -65,6 +73,7 @@ class MathOptimizer(BaseModel):
         adapter (adapters.ProductionSystemAdapter): Adapter that contains the configuration of the production system to use for optimization.
         optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
     """
+
     adapter: adapters.ProductionSystemAdapter
     optimization_time_portion: float = 1.0
 
@@ -78,7 +87,7 @@ class MathOptimizer(BaseModel):
 
     processing_times_per_product_and_step: dict = None
 
-    model_config=ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.adapter.scenario_data.info.process_module_cost
@@ -147,7 +156,7 @@ class MathOptimizer(BaseModel):
     def get_opening_cost_of_stations(self):
         opening_cost = {}
         _, stations = self.get_process_modules_and_stations()
-        num_previous_machines = len(adapters.get_machines(self.adapter))
+        num_previous_machines = len(adapters.get_production_resources(self.adapter))
         for counter, station in enumerate(stations):
             if counter < num_previous_machines:
                 opening_cost[station] = 0
@@ -269,13 +278,9 @@ class MathOptimizer(BaseModel):
             machine_breakdown_time = MTTR_machine
 
         if not process_module_breakdown_state:
-            module_breakdown_count = {
-                module: 0 for module in process_modules
-            }
+            module_breakdown_count = {module: 0 for module in process_modules}
 
-            module_breakdown_time = {
-                module: 1 for module in process_modules
-            }
+            module_breakdown_time = {module: 1 for module in process_modules}
         else:
             MTTF_process_module = self.get_expected_time_of_time_model_with_id(
                 process_module_breakdown_state.time_model_id
@@ -442,10 +447,13 @@ class MathOptimizer(BaseModel):
         self.model.write(f"{save_folder}/MILP.lp")
 
     def save_results(
-        self, save_folder: str, adjusted_number_of_transport_resources: int = 1, number_of_seeds: int = 1, full_save: bool = False
+        self,
+        optimizer: "Optimizer",
+        adjusted_number_of_transport_resources: int = 1,
+        number_of_seeds: int = 1,
     ):
         """
-        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run. 
+        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run.
 
         For saving the configuration, some defaults attributes are used for non-found degrees of freedom in the optimization:
 
@@ -505,27 +513,23 @@ class MathOptimizer(BaseModel):
                     # state_ids=states,
                 )
                 new_adapter.resource_data.append(new_resource)
-                optimization_util.add_setup_states_to_machine(new_adapter, new_resource.ID)
+                optimization_util.add_setup_states_to_machine(
+                    new_adapter, new_resource.ID
+                )
             adapter_manipulation.add_default_queues_to_resources(new_adapter)
             optimization_util.clean_out_breakdown_states_of_resources(new_adapter)
             optimization_util.adjust_process_capacities(new_adapter)
 
-            full_save_folder_path = save_folder if full_save else ""
-            simulation_results = optimization.evaluate(
-                self.adapter, solution_dict, performances, number_of_seeds, full_save_folder_path, [new_adapter]
+            fintess_values, event_log_dict = optimization.evaluate(
+                self.adapter,
+                solution_dict,
+                performances,
+                number_of_seeds,
+                new_adapter,
             )
-            optimization_util.document_individual(
-                solution_dict, save_folder, [new_adapter]
+            optimizer.save_optimization_step(
+                fintess_values, new_adapter, event_log_dict
             )
-            performances["0"][new_adapter.ID] = {
-                "agg_fitness": 0.0,
-                "fitness": [float(value) for value in simulation_results],
-                "time_stamp": 0.0,
-                "hash": new_adapter.hash(),
-            }
-        with open(f"{save_folder}/optimization_results.json", "w") as json_file:
-            json.dump(performances, json_file)
-
 
 class MathOptHyperparameters(BaseModel):
     """
@@ -544,114 +548,55 @@ class MathOptHyperparameters(BaseModel):
     adjusted_number_of_transport_resources: int = 1
     number_of_seeds: int = 1
 
-    model_config=ConfigDict(json_schema_extra={
-        "examples": [
-            {
-                "optimization_time_portion": 0.5,
-                "number_of_solutions": 1,
-                "adjusted_number_of_transport_resources": 1,
-                "number_of_seeds": 1,
-            },
-        ]
-    })
-
-
-def run_mathematical_optimization(
-    save_folder: str,
-    base_configuration_file_path: str,
-    scenario_file_path: str,
-    full_save: bool,
-    optimization_time_portion: float,
-    number_of_solutions: int,
-    adjusted_number_of_transport_resources: int,
-    number_of_seeds: int = 1,
-):
-    """
-    Run a mathematical optimization for configuration planning of production systems. 
-
-    Args:
-        save_folder (str): Folder to save the results in.
-        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
-        optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
-        number_of_solutions (int): Number of solutions to find.
-        adjusted_number_of_transport_resources (int): Number of transport resources that are used when saving the model.
-        number_of_seeds (int, optional): Number of seeds for the simulation runs. Defaults to 1.
-    """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
-    adapter = adapters.JsonProductionSystemAdapter()
-    adapter.read_data(base_configuration_file_path, scenario_file_path)
-    if not adapters.check_for_clean_compound_processes(adapter):
-        raise ValueError("Currently, compound processes are not implemented in mathematical optimization.")
-    if not optimization_util.check_breakdown_states_available(adapter):
-        optimization_util.create_default_breakdown_states(adapter)
-    util.prepare_save_folder(save_folder)
-    hypter_parameters = MathOptHyperparameters(
-        optimization_time_portion=optimization_time_portion,
-        number_of_solutions=number_of_solutions,
-        adjusted_number_of_transport_resources=adjusted_number_of_transport_resources,
-        number_of_seeds=number_of_seeds,
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "optimization_time_portion": 0.5,
+                    "number_of_solutions": 1,
+                    "adjusted_number_of_transport_resources": 1,
+                    "number_of_seeds": 1,
+                },
+            ]
+        }
     )
-    mathematical_optimization(
-        adapter,
-        hypter_parameters,
-        save_folder,
-        full_save=full_save,
-    )
-
 
 def mathematical_optimization(
-    base_configuration: adapters.ProductionSystemAdapter,
-    hyper_parameters: MathOptHyperparameters,
-    save_folder: str = "results",
-    full_save: bool = False,
+    optimizer: "Optimizer",
+    #base_configuration: adapters.ProductionSystemAdapter,
+    #hyper_parameters: MathOptHyperparameters,
+    #save_folder: str = "results",
+    #full_save: bool = False,
 ):
     """
     Optimize the configuration of the production system with mathematical optimization.
 
     Args:
+        optimizer (Optimizer): The optimizer object containing the adapter, hyperparameters, and settings for optimization.
         base_configuration (adapters.ProductionSystemAdapter): Base configuration for the optimization.
         hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
         save_folder (str, optional): Folder to save the results in. Defaults to "results".
         full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
     """
-    util.prepare_save_folder(save_folder)
+    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+
+    base_configuration = optimizer.adapter.model_copy(deep=True)
+    if not adapters.check_for_clean_compound_processes(base_configuration):
+        raise ValueError("Compound processes are not supported in the current configuration.")
+    if not check_breakdown_states_available(base_configuration):
+        create_default_breakdown_states(base_configuration)
+
+    util.prepare_save_folder(optimizer.save_folder)
     model = MathOptimizer(
-        adapter=base_configuration, optimization_time_portion=hyper_parameters.optimization_time_portion
+        adapter=optimizer.adapter,
+        optimization_time_portion=optimizer.hyperparameters.optimization_time_portion,
     )
-    model.optimize(n_solutions=hyper_parameters.number_of_solutions)
-    model.save_model(save_folder=save_folder)
+
+    model.optimize(n_solutions=optimizer.hyperparameters.number_of_solutions)
+    model.save_model(save_folder=optimizer.save_folder)
     model.save_results(
-        save_folder=save_folder,
-        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=hyper_parameters.number_of_seeds, full_save=full_save
+        optimizer=optimizer,
+        adjusted_number_of_transport_resources=optimizer.hyperparameters.adjusted_number_of_transport_resources,
+        number_of_seeds=optimizer.hyperparameters.number_of_seeds,
     )
 
-
-def optimize_configuration(
-    base_configuration_file_path: str,
-    scenario_file_path: str,
-    save_folder: str,
-    hyper_parameters: MathOptHyperparameters,
-    full_save: bool = False,
-):
-    """
-    Optimize the configuration of the production system with mathematical optimization.
-
-    Args:
-        base_configuration_file_path (str): File path of the serialized base configuration (`prodsys.adapters.JsonProductionSystemAdapter`)
-        scenario_file_path (str): File path of the serialized scenario (`prodsys.models.scenario_data.ScenarioData`)
-        save_folder (str): Folder to save the results in.
-        hyper_parameters (MathOptHyperparameters): Hyperparameters for configuration optimization with mathematical optimization.
-        full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
-    """
-    run_mathematical_optimization(
-        save_folder=save_folder,
-        base_configuration_file_path=base_configuration_file_path,
-        scenario_file_path=scenario_file_path,
-        full_save=full_save,
-        optimization_time_portion=hyper_parameters.optimization_time_portion,
-        number_of_solutions=hyper_parameters.number_of_solutions,
-        adjusted_number_of_transport_resources=hyper_parameters.adjusted_number_of_transport_resources,
-        number_of_seeds=hyper_parameters.number_of_seeds,
-    )

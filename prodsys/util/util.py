@@ -86,9 +86,8 @@ def read_initial_solutions(
         adapter_objects.append(adapter)
     return adapter_objects
 
-def get_initial_solution_file_pth(
-        folder_path: str
-) -> str:
+
+def get_initial_solution_file_pth(folder_path: str) -> str:
     """
     Chooses an initial solution file path from initial solution folder path.
 
@@ -96,10 +95,15 @@ def get_initial_solution_file_pth(
         folder_path (str): The folder path where the initial solutions are stored.
 
     Returns:
-        str: The file path of the initial solution.    
+        str: The file path of the initial solution.
     """
-    file_paths = [join(folder_path, f) for f in listdir(folder_path) if isfile(join(folder_path, f))]
+    file_paths = [
+        join(folder_path, f)
+        for f in listdir(folder_path)
+        if isfile(join(folder_path, f))
+    ]
     return random.choice(file_paths)
+
 
 def prepare_save_folder(file_paths: str):
     """
@@ -129,6 +133,7 @@ def flatten(xs: Iterable) -> Iterable:
         else:
             yield x
 
+
 def flatten_object(xs: list) -> Generator[Any, Any, list]:
     """
     Flattens a nested list.
@@ -154,10 +159,7 @@ def run_from_ipython() -> bool:
         bool: True if run from ipython notebook, False otherwise.
     """
     try:
-        __IPYTHON__ # type: ignore
+        __IPYTHON__  # type: ignore
         return True
     except NameError:
         return False
-
-
-

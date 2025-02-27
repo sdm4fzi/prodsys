@@ -6,13 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 from prodsys.models.product_data import ProductData
-from prodsys.simulation import proces_models
+from prodsys.simulation import process_models
 from prodsys.simulation import process
 
 if TYPE_CHECKING:
     from prodsys.factories import process_factory
     from prodsys.simulation import sim, router, product
-
 
 
 class ProductFactory:
@@ -62,7 +61,7 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
-        
+
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
@@ -79,10 +78,10 @@ class ProductFactory:
 
     def get_precendece_graph_from_id_adjacency_matrix(
         self, id_adjacency_matrix: Dict[str, List[str]]
-    ) -> proces_models.PrecedenceGraphProcessModel:
-        precedence_graph = proces_models.PrecedenceGraphProcessModel()
+    ) -> process_models.PrecedenceGraphProcessModel:
+        precedence_graph = process_models.PrecedenceGraphProcessModel()
         id_predecessor_adjacency_matrix = (
-            proces_models.get_predecessors_adjacency_matrix(id_adjacency_matrix)
+            process_models.get_predecessors_adjacency_matrix(id_adjacency_matrix)
         )
         for key in id_adjacency_matrix.keys():
             sucessor_ids = id_adjacency_matrix[key]
@@ -101,7 +100,7 @@ class ProductFactory:
 
     def create_process_model(
         self, product_data: ProductData
-    ) -> proces_models.ProcessModel:
+    ) -> process_models.ProcessModel:
         """
         Creates a process model based on the given product data.
 
@@ -120,7 +119,7 @@ class ProductFactory:
             process_list = self.process_factory.get_processes_in_order(
                 product_data.processes
             )
-            return proces_models.ListProcessModel(process_list=process_list)
+            return process_models.ListProcessModel(process_list=process_list)
         elif isinstance(product_data.processes, dict):
             return self.get_precendece_graph_from_id_adjacency_matrix(
                 product_data.processes
@@ -128,7 +127,7 @@ class ProductFactory:
         elif isinstance(product_data.processes, list) and isinstance(
             product_data.processes[0], list
         ):
-            id_adjacency_matrix = proces_models.get_adjacency_matrix_from_edges(
+            id_adjacency_matrix = process_models.get_adjacency_matrix_from_edges(
                 product_data.processes
             )
             return self.get_precendece_graph_from_id_adjacency_matrix(
@@ -169,5 +168,6 @@ class ProductFactory:
         """
         self.finished_products.append(product)
         self.remove_product(product)
+
 
 from prodsys.simulation import product

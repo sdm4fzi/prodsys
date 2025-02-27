@@ -13,8 +13,10 @@ from prodsys.util.util import get_class_from_str
 from prodsys.models.resource_data import (
     RESOURCE_DATA_UNION,
     ProductionResourceData,
+    TransportResourceData,
     ControllerEnum,
-    ResourceControlPolicy, TransportControlPolicy
+    ResourceControlPolicy,
+    TransportControlPolicy,
 )
 from prodsys.factories import process_factory, state_factory, queue_factory
 
@@ -29,6 +31,7 @@ if TYPE_CHECKING:
 CONTROLLER_DICT: Dict = {
     ControllerEnum.PipelineController: control.ProductionController,
     ControllerEnum.TransportController: control.TransportController,
+    ControllerEnum.BatchController: control.BatchController,
 }
 
 CONTROL_POLICY_DICT: Dict = {
@@ -36,9 +39,8 @@ CONTROL_POLICY_DICT: Dict = {
     ResourceControlPolicy.LIFO: control.LIFO_control_policy,
     ResourceControlPolicy.SPT: control.SPT_control_policy,
     TransportControlPolicy.SPT_transport: control.SPT_transport_control_policy,
-    TransportControlPolicy.NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT : control.nearest_origin_and_longest_target_queues_transport_control_policy,
-    TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT : control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
-
+    TransportControlPolicy.NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT: control.nearest_origin_and_longest_target_queues_transport_control_policy,
+    TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT: control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
 }
 
 
@@ -52,6 +54,7 @@ def register_states(
         copy_state.env = _env
         resource.add_state(copy_state)
 
+
 def register_production_states(
     resource: resources.Resource,
     states: List[state.ProductionState],
@@ -64,41 +67,78 @@ def register_production_states(
             resource.add_production_state(copy_state)
 
 
-
 def register_production_states_for_processes(
     resource: resources.Resource,
     state_factory: state_factory.StateFactory,
     _env: sim.Environment,
 ):
     states: List[state.State] = []
-    for process_instance, capacity in zip(resource.processes, resource.data.process_capacities):
-        values = {
+    for process_instance, capacity in zip(
+        resource.processes, resource.data.process_capacities
+    ):
+        process_instance: process.PROCESS_UNION
+        state_data_dict = {
             "new_state": {
                 "ID": process_instance.process_data.ID,
                 "description": process_instance.process_data.description,
                 "time_model_id": process_instance.process_data.time_model_id,
             }
         }
-        existence_condition = any(True for state in state_factory.states if state.state_data.ID == process_instance.process_data.ID)
-        if (isinstance(process_instance, process.ProductionProcess) or isinstance(process_instance, process.CapabilityProcess)) and not existence_condition:
-            state_factory.create_states_from_configuration_data({"ProductionState": values})
-        elif isinstance(process_instance, process.TransportProcess) and not existence_condition:
-            state_factory.create_states_from_configuration_data({"TransportState": values})
+        existence_condition = any(
+            True
+            for state in state_factory.states
+            if state.state_data.ID == process_instance.process_data.ID
+        )
+        if (
+            isinstance(process_instance, process.ProductionProcess)
+            or isinstance(process_instance, process.CapabilityProcess)
+            or isinstance(process_instance, process.ReworkProcess)
+        ) and not existence_condition:
+            state_factory.create_states_from_configuration_data(
+                {"ProductionState": state_data_dict}
+            )
+        elif (
+            isinstance(
+                process_instance,
+                (process.TransportProcess, process.LinkTransportProcess),
+            )
+            and not existence_condition
+        ):
+            if process_instance.process_data.loading_time_model_id:
+                state_data_dict["new_state"][
+                    "loading_time_model_id"
+                ] = process_instance.process_data.loading_time_model_id
+            if process_instance.process_data.unloading_time_model_id:
+                state_data_dict["new_state"][
+                    "unloading_time_model_id"
+                ] = process_instance.process_data.unloading_time_model_id
+            state_factory.create_states_from_configuration_data(
+                {"TransportState": state_data_dict}
+            )
         _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)  # type: ignore
+
 
 def adjust_process_breakdown_states(
     resource: resources.Resource,
     state_factory: state_factory.StateFactory,
     _env: sim.Environment,
-):  
-    process_breakdown_states = [state_instance for state_instance in resource.states if isinstance(state_instance, state.ProcessBreakDownState)]
+):
+    process_breakdown_states = [
+        state_instance
+        for state_instance in resource.states
+        if isinstance(state_instance, state.ProcessBreakDownState)
+    ]
     for process_breakdown_state in process_breakdown_states:
         process_id = process_breakdown_state.state_data.process_id
-        production_states = [state_instance for state_instance in resource.production_states if isinstance(state_instance, state.ProductionState) and state_instance.state_data.ID == process_id]
+        production_states = [
+            state_instance
+            for state_instance in resource.production_states
+            if isinstance(state_instance, state.ProductionState)
+            and state_instance.state_data.ID == process_id
+        ]
         process_breakdown_state.set_production_states(production_states)
-
 
 
 class ResourceFactory(BaseModel):
@@ -111,6 +151,7 @@ class ResourceFactory(BaseModel):
         state_factory (state_factory.StateFactory): Factory that creates state objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
+
     env: sim.Environment
     process_factory: process_factory.ProcessFactory
     state_factory: state_factory.StateFactory
@@ -119,7 +160,11 @@ class ResourceFactory(BaseModel):
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[RESOURCE_UNION] = []
     controllers: List[
-        Union[control.ProductionController, control.TransportController]
+        Union[
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
+        ]
     ] = []
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -152,7 +197,9 @@ class ResourceFactory(BaseModel):
 
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
-        processes = self.process_factory.get_processes_in_order(resource_data.process_ids)
+        processes = self.process_factory.get_processes_in_order(
+            resource_data.process_ids
+        )
 
         values.update({"processes": processes})
 
@@ -163,7 +210,9 @@ class ResourceFactory(BaseModel):
             name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
         )
         controller: Union[
-            control.ProductionController, control.TransportController
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env)
         self.controllers.append(controller)
         values.update({"controller": controller})
@@ -173,6 +222,9 @@ class ResourceFactory(BaseModel):
             values.update(
                 {"input_queues": input_queues, "output_queues": output_queues}
             )
+            if "batch_size" in resource_data:
+                values.update({"batch_size": resource_data.batch_size})
+
         resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
         controller.set_resource(resource_object)
 
@@ -206,10 +258,15 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
-
     def get_controller_of_resource(
         self, _resource: resources.Resource
-    ) -> Optional[Union[control.ProductionController, control.TransportController]]:
+    ) -> Optional[
+        Union[
+            control.ProductionController,
+            control.TransportController,
+            control.BatchController,
+        ]
+    ]:
         """
         Method returns the controller of the given resource.
 
@@ -217,7 +274,7 @@ class ResourceFactory(BaseModel):
             _resource (resources.Resource): Resource object.
 
         Returns:
-            Optional[Union[control.ProductionController, control.TransportController]]: Controller of the given resource.
+            Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]: Controller of the given resource.
         """
         for controller in self.controllers:
             if controller.resource == _resource:
@@ -252,7 +309,7 @@ class ResourceFactory(BaseModel):
             for res in self.resources
             if target_process.process_data.ID in res.data.process_ids
         ]
-    
+
     def get_transport_resources(self) -> List[resources.TransportResource]:
         """
         Method returns a list of transport resource objects.
@@ -261,7 +318,6 @@ class ResourceFactory(BaseModel):
             List[resources.TransportResource]: List of transport resource objects.
         """
         return [r for r in self.resources if isinstance(r, resources.TransportResource)]
-    
 
     def get_production_resources(self) -> List[resources.ProductionResource]:
         """
@@ -270,4 +326,6 @@ class ResourceFactory(BaseModel):
         Returns:
             List[resources.ProductionResource]: List of production resource objects.
         """
-        return [r for r in self.resources if isinstance(r, resources.ProductionResource)]
+        return [
+            r for r in self.resources if isinstance(r, resources.ProductionResource)
+        ]

@@ -52,7 +52,7 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
         resource_id: str,
         observation_space: Optional[spaces.Space] = None,
         action_space: Optional[spaces.Space] = None,
-        render_mode: Optional[str]=None,
+        render_mode: Optional[str] = None,
     ):
         self.adapter = adapter
         self.resource_id = resource_id
@@ -64,7 +64,9 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
 
         self.interrupt_simulation_event: events.Event = None
         self.resource_controller: control.Controller = None
-        self.resource: Union[resources.ProductionResource, resources.TransportResource] = None
+        self.resource: Union[
+            resources.ProductionResource, resources.TransportResource
+        ] = None
         self.observer: observer.ResourceObserver = None
         self.step_count: int = 0
         self.reward = 0
@@ -90,7 +92,9 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
         pass
 
     @abstractmethod
-    def get_reward(self, processed_request: request.Request, invalid_action:bool=False) -> float:
+    def get_reward(
+        self, processed_request: request.Request, invalid_action: bool = False
+    ) -> float:
         """
         Get reward of the environment.
 
@@ -184,14 +188,14 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
             self.render()
 
         return observation, self.reward, terminated, False, info
-    
+
     def render(self):
         """
         Render the environment.
         """
         if self.render_mode == "human":
             pass
-            
+
     def set_observation_space(self, observation_space: spaces.Space):
         """
         Set the observation space of the environment.
@@ -218,7 +222,6 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
             shape (Tuple[int, ...]): The shape of the observation space.
         """
         self.observation_space = spaces.Box(0, 1, shape=shape, dtype=int)
-
 
     def set_binary_box_action_space_from_shape(self, shape: Tuple[int, ...]):
         """
