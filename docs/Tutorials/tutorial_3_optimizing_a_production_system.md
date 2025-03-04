@@ -84,7 +84,7 @@ Instead of calling the optimization algorithms directly, we use the Optimizer cl
 
 ```python
 from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
-from prodsys.optimization.optimizer import Optimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer
 
 hyper_parameters = EvolutionaryAlgorithmHyperparameters(
     seed=0,
@@ -92,12 +92,14 @@ hyper_parameters = EvolutionaryAlgorithmHyperparameters(
     population_size=16,
     mutation_rate=0.2,
     crossover_rate=0.1,
+    number_of_seeds=1,
     number_of_processes=1
 )
 #Create an optimizer instance
-optimizer = Optimizer(
+optimizer = FileSystemSaveOptimizer(
     adapter=production_system,
     hyperparameters=hyper_parameters,
+    save_folder="optimization_results",
 )
 #Run the optimization
 optimizer.optimize()
@@ -109,7 +111,7 @@ All algorithms in `prodsys` can be utilized with the same interface. Also availa
 - `prodsys.optimization.tabu_search`: tabu search for all transformations
 - `prodsys.optimization.math_opt`: mathematical optimization with Gurobi, allows only optimization of the production capacity
 
-We see in the output, that the algorithm is running and that new best solutions with a higher performance are found. We can analyze them now and see, if we can find a better configuration for our production system. Optimization core results of the objective for the individual solutions and the solutions themselves are saved as default in a `results` folder to make sure that interruptions in optimization won't delete all results. We can load them with the following command and search for the best solution:
+We see in the output, that the algorithm is running and that new best solutions with a higher performance are found. We can analyze them now and see, if we can find a better configuration for our production system. Optimization core results of the objective for the individual solutions and the solutions themselves are saved in the specified `optimization_results` folder to make sure that interruptions in optimization won't delete all results. We can load them with the following command and search for the best solution:
 
 ```python
 from prodsys.optimization import optimization_analysis

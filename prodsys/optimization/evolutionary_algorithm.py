@@ -6,15 +6,13 @@ from typing import TYPE_CHECKING
 import warnings
 import logging
 
-from prodsys.optimization.optimization import evaluate, evaluate_ea_wrapper
+from prodsys.optimization.optimization import evaluate_ea_wrapper
 from prodsys.optimization.adapter_manipulation import (
     crossover,
+    get_random_configuration_asserted,
     mutation,
-    random_configuration,
     random_configuration_with_initial_solution,
 )
-from prodsys.optimization.optimization_data import FitnessData
-# from prodsys.optimization.util import document_individual
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +28,7 @@ from prodsys.optimization.util import (
     check_breakdown_states_available,
     create_default_breakdown_states,
 )
-from prodsys.util.util import set_seed, read_initial_solutions, run_from_ipython
-from prodsys import optimization
+from prodsys.util.util import set_seed, run_from_ipython
 
 
 if run_from_ipython():
@@ -106,7 +103,9 @@ def register_functions_in_toolbox(
         )
     else:
         toolbox.register(
-            "random_configuration", random_configuration, base_configuration
+            "random_configuration",
+            get_random_configuration_asserted,
+            base_configuration,
         )
     toolbox.register(
         "individual",
@@ -156,9 +155,7 @@ def evolutionary_algorithm_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     hyper_parameters: EvolutionaryAlgorithmHyperparameters = optimizer.hyperparameters
-
-    if optimizer.save_folder:
-        util.prepare_save_folder(optimizer.save_folder + "/")
+        
     set_seed(hyper_parameters.seed)
 
     start = time.perf_counter()

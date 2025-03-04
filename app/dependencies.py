@@ -94,8 +94,8 @@ def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
     # Get the current progress from the optimizer
     progress = optimizer.get_progress()
 
-    total_steps = progress["total_steps"]
-    completed_steps = progress["completed_steps"]
+    total_steps = progress.total_steps
+    completed_steps = progress.completed_steps
 
     # Calculate the ratio of completed steps
     if total_steps > 0:
