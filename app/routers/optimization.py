@@ -106,7 +106,6 @@ async def optimize(
         )
     save_folder = f"data/{project_id}/{adapter_id}/optimization_results"
 
-    util.prepare_save_folder(save_folder)
     # TODO: maybe allow later also to insert initial solutions to optimization or use existing best solutions to further optimize
 
     prodsys_backend.save_optimizer_hyperparameters(

@@ -149,9 +149,6 @@ def simulated_annealing_optimization(optimizer: "Optimizer"):
 
     hyper_parameters: SimulatedAnnealingHyperparameters = optimizer.hyperparameters
 
-    if optimizer.save_folder:
-        util.prepare_save_folder(optimizer.save_folder + "/")
-
     set_seed(hyper_parameters.seed)
 
     start = time.perf_counter()

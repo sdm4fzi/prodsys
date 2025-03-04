@@ -5,7 +5,7 @@ from prodsys.optimization.adapter_manipulation import add_transformation_operati
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
 )
-from prodsys.optimization.optimizer import FileSystemSaveOptimizer, Optimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
 
 
 def main():
@@ -38,7 +38,13 @@ def main():
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
+        full_save=True,
+        # initial_solutions=[base_configuration]    
     )
+    # optimizer = InMemoryOptimizer(
+    #     adapter=base_configuration,
+    #     hyperparameters=hyper_parameters,
+    # )
 
     optimizer.optimize()
 

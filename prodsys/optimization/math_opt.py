@@ -586,7 +586,6 @@ def mathematical_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
-    util.prepare_save_folder(optimizer.save_folder)
     model = MathOptimizer(
         adapter=optimizer.adapter,
         optimization_time_portion=optimizer.hyperparameters.optimization_time_portion,
