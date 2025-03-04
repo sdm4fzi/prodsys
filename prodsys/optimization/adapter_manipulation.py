@@ -415,6 +415,7 @@ def get_mutation_operations(
     transformations = adapter_object.scenario_data.options.transformations
     for transformation in transformations:
         mutations_operations += TRANSFORMATIONS[transformation]
+    mutations_operations = list(set(mutations_operations))
     return mutations_operations
 
 
@@ -587,48 +588,66 @@ def random_configuration(
         adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
     """
     transformations = baseline.scenario_data.options.transformations
+    adapter_object = baseline.model_copy(deep=True)
+    adapter_object.ID = str(uuid1())
+
+    if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
+        get_random_production_capacity(adapter_object)
+    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
+        get_random_transport_capacity(adapter_object)
+    if scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY in transformations:
+        get_random_auxiliary_capacity(adapter_object)
+    if (
+        scenario_data.ReconfigurationEnum.LAYOUT in transformations
+        and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY
+        not in transformations
+    ):
+        get_random_layout(adapter_object)
+    if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations and (
+        scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
+        or scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY
+        not in transformations
+    ):
+        get_random_control_policies(adapter_object)
+    if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
+        get_random_routing_logic(adapter_object)
+
+    add_default_queues_to_resources(adapter_object)
+    clean_out_breakdown_states_of_resources(adapter_object)
+    adjust_process_capacities(adapter_object)
+    if not check_valid_configuration(adapter_object, baseline):
+        return
+    return adapter_object
+
+
+def get_random_configuration_asserted(
+    baseline: adapters.ProductionSystemAdapter,
+) -> adapters.ProductionSystemAdapter:
+    """
+    Function that creates a random configuration based on a baseline configuration.
+
+    Args:
+        baseline (adapters.ProductionSystemAdapter): Baseline configuration.
+
+    Returns:
+        adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
+    """
+    transformations = baseline.scenario_data.options.transformations
     invalid_configuration_counter = 0
     while True:
-        adapter_object = baseline.model_copy(deep=True)
-        adapter_object.ID = str(uuid1())
-
-        if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
-            get_random_production_capacity(adapter_object)
-        if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
-            get_random_transport_capacity(adapter_object)
-        if scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY in transformations:
-            get_random_auxiliary_capacity(adapter_object)
-        if (
-            scenario_data.ReconfigurationEnum.LAYOUT in transformations
-            and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY
-            not in transformations
-        ):
-            get_random_layout(adapter_object)
-        if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations and (
-            scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
-            or scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY
-            not in transformations
-        ):
-            get_random_control_policies(adapter_object)
-        if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
-            get_random_routing_logic(adapter_object)
-
-        add_default_queues_to_resources(adapter_object)
-        clean_out_breakdown_states_of_resources(adapter_object)
-        adjust_process_capacities(adapter_object)
-        if check_valid_configuration(adapter_object, baseline):
-            break
+        adapter_object = random_configuration(baseline)
+        if adapter_object:
+            return adapter_object
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 1000 == 0:
-            logging.warning(
+            logging.info(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )
-    return adapter_object
 
 
 def random_configuration_with_initial_solution(
     initial_adapters: List[adapters.ProductionSystemAdapter],
-    max_manipulations: int = 1,
+    max_manipulations: int = 3,
     new_solution_probability: float = 0.1,
 ) -> adapters.ProductionSystemAdapter:
     """
@@ -652,30 +671,38 @@ def random_configuration_with_initial_solution(
         baseline = random.choice(initial_adapters)
         # With a given probability, generate a completely new random configuration.
         if random.random() < new_solution_probability:
-            return random_configuration(baseline)
+            adapter_object = random_configuration(baseline)
+            if not adapter_object:
+                invalid_configuration_counter += 1
+                continue
+            return adapter_object
 
         # Otherwise, start with a deep copy of the baseline and apply random manipulations.
         adapter_object = baseline.model_copy(deep=True)
         num_manipulations = (
-            random.randint(1, max_manipulations)
+            random.randint(0, max_manipulations)
         )
 
         mutation_ops = get_mutation_operations(adapter_object)
+        successful_mutations = 0
         for _ in range(num_manipulations):
             mutation_op = random.choice(mutation_ops)
             # Apply the chosen mutation operation.
-            mutation_op(adapter_object)
-            # Update the adapter's ID to mark the change.
-            adapter_object.ID = str(uuid1())
+            if not mutation_op(adapter_object):
+                break
+            successful_mutations += 1
             add_default_queues_to_resources(adapter_object)
             clean_out_breakdown_states_of_resources(adapter_object)
             adjust_process_capacities(adapter_object)
 
+        # Update the adapter's ID to mark the change.
+        adapter_object.ID = str(uuid1())
+
         # Fallback: if the manipulated configuration is not valid, generate a completely new one.
-        if check_valid_configuration(adapter_object, baseline):
+        if successful_mutations == num_manipulations and check_valid_configuration(adapter_object, baseline):
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1 == 0:
+        if invalid_configuration_counter % 1000 == 0:
             logging.warning(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )
@@ -686,6 +713,7 @@ TRANSFORMATIONS = {
     scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY: [add_transport_resource, remove_transport_resource],
     scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY: [add_auxiliary, remove_auxiliary],
     scenario_data.ReconfigurationEnum.LAYOUT: [move_machine],
+    scenario_data.ReconfigurationEnum.SETUP: [move_process_module],
     scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC: [change_control_policy],
     scenario_data.ReconfigurationEnum.ROUTING_LOGIC: [change_routing_policy],
     }

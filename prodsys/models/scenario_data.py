@@ -25,6 +25,7 @@ class ReconfigurationEnum(str, Enum):
     - TransportCapacity: Reconfiguration of transport capacity (number of transport resources and their configuration)
     - AuxiliaryCapacity: Reconfiguration of auxiliary capacity (number of auxiliaries in the system)
     - Layout: Reconfiguration of layout (only position of resources)
+    - Setup: Reconfiguration of setup of the machines considering the process modules
     - SequencingLogic: Reconfiguration of sequencing logic (only the control policy of resources)
     - RoutingLogic: Reconfiguration of routing logic (only the routing heuristic of routers)
     """
@@ -33,6 +34,7 @@ class ReconfigurationEnum(str, Enum):
     TRANSPORT_CAPACITY = "transport_capacity"
     AUXILIARY_CAPACITY = "auxiliary_capacity"
     LAYOUT = "layout"
+    SETUP = "setup"
     SEQUENCING_LOGIC = "sequencing_logic"
     ROUTING_LOGIC = "routing_logic"
 
