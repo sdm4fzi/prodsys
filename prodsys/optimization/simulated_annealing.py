@@ -74,6 +74,7 @@ class ProductionSystemOptimization(Annealer):
             solution_dict=self.solution_dict,
             number_of_seeds=self.number_of_seeds,
             adapter_object=self.state,
+            full_save=self.full_save,
         )
 
         performance = sum(

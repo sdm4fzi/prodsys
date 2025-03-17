@@ -209,6 +209,7 @@ def tabu_search_optimization(
                 solution_dict=solution_dict,
                 number_of_seeds=hyper_parameters.number_of_seeds,
                 adapter_object=state,
+                full_save=optimizer.full_save
             )
 
             performance = sum(

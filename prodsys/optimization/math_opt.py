@@ -526,6 +526,7 @@ class MathOptimizer(BaseModel):
                 performances,
                 number_of_seeds,
                 new_adapter,
+                optimizer.full_save
             )
             optimizer.save_optimization_step(
                 fintess_values, new_adapter, event_log_dict

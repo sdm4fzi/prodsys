@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from prodsys import adapters, runner
 from prodsys.adapters.adapter import (
     assert_no_redudant_locations,
@@ -244,6 +244,7 @@ def evaluate_ea_wrapper(
     solution_dict: Dict[str, Union[list, str]],
     performances: dict,
     number_of_seeds: int,
+    full_save: bool,
     individual,
 ) -> tuple[list[float], dict]:
     return evaluate(
@@ -252,6 +253,7 @@ def evaluate_ea_wrapper(
         performances,
         number_of_seeds,
         individual[0],
+        full_save=full_save,
     )
 
 
@@ -261,7 +263,8 @@ def evaluate(
     performances: OptimizationResults,
     number_of_seeds: int,
     adapter_object: adapters.ProductionSystemAdapter,
-) -> tuple[list[float], dict]:
+    full_save: bool,
+) -> tuple[list[float], Optional[dict]]:
     """
     Function that evaluates a configuration.
 
@@ -309,4 +312,4 @@ def evaluate(
 
     mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
     # TODO: allow to return multiple runner objects in the future
-    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()
+    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()  if full_save else None

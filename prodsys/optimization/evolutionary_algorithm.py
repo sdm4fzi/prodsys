@@ -91,6 +91,7 @@ def register_functions_in_toolbox(
     weights: tuple,
     initial_solutions: list[adapters.JsonProductionSystemAdapter],
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
+    full_save: bool,
 ):
     creator.create("FitnessMax", base.Fitness, weights=weights)  # als Tupel
     creator.create("Individual", list, fitness=creator.FitnessMax)
@@ -124,6 +125,7 @@ def register_functions_in_toolbox(
         solutions_dict,
         performances,
         hyper_parameters.number_of_seeds,
+        full_save
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -167,6 +169,7 @@ def evolutionary_algorithm_optimization(
         weights=optimizer.weights,
         initial_solutions=optimizer.initial_solutions,
         hyper_parameters=hyper_parameters,
+        full_save=optimizer.full_save,
     )
 
     population = toolbox.population(n=hyper_parameters.population_size)
