@@ -7,7 +7,7 @@ license = "MIT"
 readme = ["README.md", "LICENSE"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10, <3.13"
 pydantic = "^2.7.1"
 simpy = "^4.0.1"
 fastapi = "^0.111.0"
