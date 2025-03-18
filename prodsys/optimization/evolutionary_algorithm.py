@@ -87,7 +87,6 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonProductionSystemAdapter,
     solutions_dict: dict,
-    performances: dict,
     weights: tuple,
     initial_solutions: list[adapters.JsonProductionSystemAdapter],
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
@@ -123,7 +122,6 @@ def register_functions_in_toolbox(
         evaluate_ea_wrapper,
         base_configuration,
         solutions_dict,
-        performances,
         hyper_parameters.number_of_seeds,
         full_save
     )
@@ -157,7 +155,7 @@ def evolutionary_algorithm_optimization(
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
     hyper_parameters: EvolutionaryAlgorithmHyperparameters = optimizer.hyperparameters
-        
+
     set_seed(hyper_parameters.seed)
 
     start = time.perf_counter()
@@ -165,7 +163,6 @@ def evolutionary_algorithm_optimization(
     toolbox = register_functions_in_toolbox(
         base_configuration=base_configuration,
         solutions_dict=optimizer.optimization_cache_first_found_hashes,
-        performances=optimizer.performances_cache,
         weights=optimizer.weights,
         initial_solutions=optimizer.initial_solutions,
         hyper_parameters=hyper_parameters,
@@ -181,7 +178,9 @@ def evolutionary_algorithm_optimization(
 
     fitnesses = toolbox.map(toolbox.evaluate, population)
     for ind, (fit, event_log_dict) in zip(population, fitnesses):
-        optimizer.save_optimization_step(fit, ind[0], event_log_dict)
+        fit, event_log_dict = optimizer.save_optimization_step(
+            fit, ind[0], event_log_dict
+        )
         ind.fitness.values = fit
     population = toolbox.select(population, len(population))
 
@@ -204,7 +203,9 @@ def evolutionary_algorithm_optimization(
         fitnesses = toolbox.map(toolbox.evaluate, offspring)
         for ind, fit_response in zip(offspring, fitnesses):
             fit, event_log_dict = fit_response
-            optimizer.save_optimization_step(fit, ind[0], event_log_dict)
+            fit, event_log_dict = optimizer.save_optimization_step(
+                fit, ind[0], event_log_dict
+            )
             ind.fitness.values = fit
 
         population = toolbox.select(

@@ -121,12 +121,20 @@ class Optimizer(ABC):
 
     def save_optimization_step(
         self,
-        fitness_values: list[float],
+        fitness_values: Optional[list[float]],
         configuration: JsonProductionSystemAdapter,
         event_log_dict: Optional[dict] = None,
-    ) -> None:
+    ) -> tuple[list[float], dict]:
         """
         Save an optimization step, caching and persisting the fitness data.
+
+        Args:
+            fitness_values (Optional[list[float]]): The fitness values to save.
+            configuration (JsonProductionSystemAdapter): The configuration to save.
+            event_log_dict (Optional[dict], optional): The event log data. Defaults to None.
+
+        Returns:
+            tuple[list[float], dict]: The fitness values and event log data that were saved.
         """
         self.update_progress()
         fitness_data = self.get_fitness_data_entry(
@@ -137,6 +145,7 @@ class Optimizer(ABC):
         )
         self.cache_fitness_data(fitness_data, current_generation)
         self.save_fitness_data(fitness_data, current_generation)
+        return fitness_data.fitness, fitness_data.event_log_dict
 
     def get_fitness_data_entry(
         self,
@@ -150,6 +159,18 @@ class Optimizer(ABC):
         objective_names = [
             obj.name.value for obj in configuration.scenario_data.objectives
         ]
+        # hash already exists in cache, get data from cache
+        if fitness_values is None and event_log_dict is None:
+            adapter_object_hash = configuration.hash()
+            if not adapter_object_hash in self.optimization_cache_first_found_hashes.hashes:
+                raise ValueError(
+                    f"Adapter hash {adapter_object_hash} not found in optimization cache for configuration {configuration.ID}. Error in saving."
+                    )
+            evaluated_adapter_generation = self.optimization_cache_first_found_hashes.hashes[adapter_object_hash].generation
+            evaluated_adapter_id = self.optimization_cache_first_found_hashes.hashes[adapter_object_hash].ID
+            fitness_data = self.performances_cache[evaluated_adapter_generation][evaluated_adapter_id]
+            event_log_dict = fitness_data.event_log_dict
+            fitness_values = fitness_data.fitness
         agg_fitness = sum(
             value * weight for value, weight in zip(fitness_values, self.weights)
         )
