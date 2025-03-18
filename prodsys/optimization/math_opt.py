@@ -523,7 +523,6 @@ class MathOptimizer(BaseModel):
             fintess_values, event_log_dict = optimization.evaluate(
                 self.adapter,
                 solution_dict,
-                performances,
                 number_of_seeds,
                 new_adapter,
                 optimizer.full_save

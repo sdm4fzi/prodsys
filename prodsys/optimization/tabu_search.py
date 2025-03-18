@@ -205,31 +205,23 @@ def tabu_search_optimization(
         def _score(self, state):
             fitness_values, event_log_dict = evaluate(
                 base_scenario=base_configuration,
-                performances=performances,
                 solution_dict=solution_dict,
                 number_of_seeds=hyper_parameters.number_of_seeds,
                 adapter_object=state,
                 full_save=optimizer.full_save
             )
 
+            fitness_values, event_log_dict = self.optimizer.save_optimization_step(
+                fitness_values=fitness_values,
+                configuration=state,
+                event_log_dict=event_log_dict,
+            )
             performance = sum(
                 [
                     value * weight
                     for value, weight in zip(fitness_values, self.optimizer.weights)
                 ]
             )
-            # counter = len(performances["0"]) - 1
-            # if (
-            #     self.previous_counter is not None
-            #     and counter == self.previous_counter + 1
-            # ):
-            fitness = [float(value) for value in fitness_values]
-            self.optimizer.save_optimization_step(
-                fitness_values=fitness,
-                configuration=state,
-                event_log_dict=event_log_dict,
-            )
-            # self.previous_counter = counter
             return performance
 
         def _neighborhood(self):

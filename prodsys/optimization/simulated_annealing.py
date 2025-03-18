@@ -70,24 +70,22 @@ class ProductionSystemOptimization(Annealer):
     def energy(self):
         fitness_values, event_log_dict = evaluate(
             base_scenario=self.base_configuration,
-            performances=self.performances,
             solution_dict=self.solution_dict,
             number_of_seeds=self.number_of_seeds,
             adapter_object=self.state,
             full_save=self.full_save,
         )
 
-        performance = sum(
-            [value * weight for value, weight in zip(fitness_values, self.weights)]
-        )
         counter = len(self.performances["0"]) - 1
         if self.previous_counter is not None:
-            fitness = [float(value) for value in fitness_values]
-            self.optimizer.save_optimization_step(
-                fitness_values=fitness,
+            fitness_values, event_log_dict = self.optimizer.save_optimization_step(
+                fitness_values=fitness_values,
                 configuration=self.state,
                 event_log_dict=event_log_dict,
             )
+        performance = sum(
+            [value * weight for value, weight in zip(fitness_values, self.weights)]
+        )
         self.previous_counter = counter
         return performance
 

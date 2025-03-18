@@ -242,7 +242,6 @@ KPI_function_dict = {
 def evaluate_ea_wrapper(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: Dict[str, Union[list, str]],
-    performances: dict,
     number_of_seeds: int,
     full_save: bool,
     individual,
@@ -250,7 +249,6 @@ def evaluate_ea_wrapper(
     return evaluate(
         base_scenario,
         solution_dict,
-        performances,
         number_of_seeds,
         individual[0],
         full_save=full_save,
@@ -260,11 +258,10 @@ def evaluate_ea_wrapper(
 def evaluate(
     base_scenario: adapters.ProductionSystemAdapter,
     solution_dict: OptimizationSolutions,
-    performances: OptimizationResults,
     number_of_seeds: int,
     adapter_object: adapters.ProductionSystemAdapter,
     full_save: bool,
-) -> tuple[list[float], Optional[dict]]:
+) -> tuple[Optional[list[float]], Optional[dict]]:
     """
     Function that evaluates a configuration.
 
@@ -284,12 +281,9 @@ def evaluate(
     sim.VERBOSE = 0
     adapter_object_hash = adapter_object.hash()
     if adapter_object_hash in solution_dict.hashes:
-        evaluated_adapter_generation = solution_dict.hashes[adapter_object_hash].generation
-        evaluated_adapter_id = solution_dict.hashes[adapter_object_hash].ID
-        fitness_data = performances[evaluated_adapter_generation][evaluated_adapter_id]
-        return fitness_data.fitness, fitness_data.event_log_dict
+        return None, None # fitness and event log dict is obtained in optimizer from cache
     if not check_valid_configuration(adapter_object, base_scenario):
-        return [-100000 / weight for weight in get_weights(base_scenario, "max")], {}
+        return [-100000 / weight for weight in get_weights(base_scenario, "max")], None
 
     fitness_values = []
 
