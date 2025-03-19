@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import random
-from typing import List, TYPE_CHECKING, Generator, Optional, Union
+from typing import List, TYPE_CHECKING, Generator, Optional, Union, Dict, Set, Tuple
+from dataclasses import dataclass, field
 
 import logging
+import time
 
 import simpy
 
@@ -24,10 +26,12 @@ if TYPE_CHECKING:
         sink_factory,
         auxiliary_factory,
         product_factory,
+        source_factory
     )
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
     from prodsys.simulation.product import Locatable
+    # from prodsys.factories.source_factory import SourceFactory
 
 
 def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
@@ -49,7 +53,7 @@ def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
 
 
 def get_item_to_transport(
-    request_for_transport: Union[request.Request, request.AuxiliaryRequest]
+    request_for_transport: Union[request.Request, request.AuxiliaryRequest],
 ) -> Union[product.Product, auxiliary.Auxiliary]:
     """
     Returns the item to transport from a request.
@@ -63,6 +67,44 @@ def get_item_to_transport(
     if isinstance(request_for_transport, request.AuxiliaryRequest):
         return request_for_transport.auxiliary
     return request_for_transport.product
+
+
+@dataclass(frozen=True)
+class ResourceCompatibilityKey:
+    """Key for the resource compatibility lookup table."""
+
+    product_type: str
+    process_signature: str
+
+    @classmethod
+    def from_request(cls, request: request.Request) -> "ResourceCompatibilityKey":
+        """Create a key from a request."""
+        product_type = request.product.product_data.product_type
+        process_signature = request.process.get_process_signature()
+        return cls(product_type=product_type, process_signature=process_signature)
+
+
+@dataclass(frozen=True)
+class TransportCompatibilityKey:
+    """Key for the transport compatibility lookup table."""
+
+    origin_id: str
+    target_id: str
+    process_signature: str
+
+    @classmethod
+    def from_request(
+        cls, request: request.TransportResquest
+    ) -> "TransportCompatibilityKey":
+        """Create a key from a transport request."""
+        origin_id = request.origin.data.ID
+        target_id = request.target.data.ID
+        process_signature = request.process.get_process_signature()
+        return cls(
+            origin_id=origin_id,
+            target_id=target_id,
+            process_signature=process_signature,
+        )
 
 
 class Router:
@@ -82,15 +124,166 @@ class Router:
         auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
         product_factory: Optional[product_factory.ProductFactory] = None,
+        source_factory: Optional[source_factory.SourceFactory] = None,
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
         self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
-        self.routing_heuristic: Callable[
-            [List[request.Request]], None
-        ] = routing_heuristic
+        self.routing_heuristic: Callable[[List[request.Request]], None] = (
+            routing_heuristic
+        )
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
-        # TODO: add possibility to specify a production and a transport heuristic separately
+        self.source_factory: Optional[source_factory.SourceFactory] = source_factory
+
+        # Precomputed compatibility tables
+        self.production_compatibility: Dict[
+            ResourceCompatibilityKey, List[tuple[resources.ProductionResource, process.PROCESS_UNION]]
+        ] = {}
+        self.transport_compatibility: Dict[
+            TransportCompatibilityKey, List[Tuple[resources.TransportResource, process.PROCESS_UNION]]
+        ] = {}
+        self.rework_compatibility: Dict[
+            Tuple[str, str], List[process.ReworkProcess]
+        ] = {}
+        self.reachability_cache: Dict[Tuple[str, str], bool] = {}
+        self.route_cache: Dict[Tuple[str, str, str], request.TransportResquest] = {}
+
+        # Initialize compatibility tables
+
+    def precompute_compatibility_tables(self):
+        """
+        Precompute compatibility tables for resources and processes.
+        This method runs at initialization time to create lookup tables
+        that will speed up resource selection during simulation.
+        """
+        start_time = time.time()
+        logger.info("Precomputing resource compatibility tables...")
+
+        # Get dummy product for testing
+        dummy_products: dict[str, product.Product] = {}
+        for source in self.source_factory.sources: 
+            product_type = source.product_data.product_type
+            dummy_products[product_type] = self._create_dummy_product(source.product_data)
+
+        # Precompute production resource compatibility
+        for product_type, dummy_product in dummy_products.items():
+            while True:
+                dummy_product.set_next_production_process()
+                if dummy_product.next_prodution_process is None:
+                    break
+                for resource in self.resource_factory.get_production_resources():
+                    requested_process = dummy_product.next_prodution_process
+                    dummy_production_request = request.Request(
+                            process=requested_process, product=dummy_product, resource=resource
+                        )
+                    for offered_process in resource.processes:
+                        # Test if this process matches the request
+                        if offered_process.matches_request(dummy_production_request):
+                            key = ResourceCompatibilityKey(
+                                product_type=product_type,
+                                process_signature=requested_process.get_process_signature(),
+                            )
+                            if key not in self.production_compatibility:
+                                self.production_compatibility[key] = []
+                            self.production_compatibility[key].append((resource, offered_process))
+
+        # Precompute transport resource compatibility and reachability
+        for product_type, dummy_product in dummy_products.items():
+            requested_process = dummy_product.transport_process
+            for transport_resource in self.resource_factory.get_transport_resources():
+                for offered_process in transport_resource.processes:
+                    # For each possible origin-target pair
+                    all_locations = (
+                        self.resource_factory.resources + self.sink_factory.sinks + self.source_factory.sources
+                    )
+                    for origin in all_locations:
+                        for target in all_locations:
+                            # Create a dummy request to test matching
+                            dummy_product.current_locatable = origin
+
+                            dummy_transport_request = request.TransportResquest(
+                                process=requested_process,
+                                product=dummy_product,
+                                resource=transport_resource,
+                                origin=origin,
+                                target=target,
+                            )
+
+                            # Test if this transport process can handle this origin-target pair
+                            if offered_process.matches_request(dummy_transport_request):
+                                key = TransportCompatibilityKey(
+                                    origin_id=origin.data.ID,
+                                    target_id=target.data.ID,
+                                    process_signature=requested_process.get_process_signature(),
+                                )
+                                if key not in self.transport_compatibility:
+                                    self.transport_compatibility[key] = []
+                                self.transport_compatibility[key].append((transport_resource, offered_process))
+
+                                # Cache reachability information
+                                self.reachability_cache[
+                                    (origin.data.ID, target.data.ID)
+                                ] = True
+
+                                # Cache the route
+                                route_key = (
+                                    origin.data.ID,
+                                    target.data.ID,
+                                    offered_process.get_process_signature(),
+                                )
+                                if route_key not in self.route_cache:
+                                    self.route_cache[route_key] = dummy_transport_request
+
+        # Precompute rework process compatibility
+        # for rework_proc in self.resource_factory.process_factory.processes:
+        #     if not isinstance(rework_proc, offered_process.ReworkProcess):
+        #         continue
+
+        #     for prod_proc in self.resource_factory.process_factory.processes:
+        #         if isinstance(prod_proc, offered_process.ReworkProcess):
+        #             continue
+
+        #         # For each product type
+        #         for product_type, dummy_product in dummy_products.items():
+        #             dummy_rework_request = request.ReworkRequest(
+        #                 failed_process=prod_proc, product=dummy_product
+        #             )
+
+        #             if rework_proc.matches_request(dummy_rework_request):
+        #                 key = (product_type, prod_proc.get_process_signature())
+        #                 if key not in self.rework_compatibility:
+        #                     self.rework_compatibility[key] = []
+        #                 self.rework_compatibility[key].append(rework_proc)
+
+        logger.info(
+            f"Precomputation completed in {time.time() - start_time:.2f} seconds"
+        )
+        logger.info(
+            f"Production compatibility table contains {len(self.production_compatibility)} entries"
+        )
+        logger.info(
+            f"Transport compatibility table contains {len(self.transport_compatibility)} entries"
+        )
+        logger.info(
+            f"Reachability cache contains {len(self.reachability_cache)} entries"
+        )
+        logger.info(
+            f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
+        )
+
+    def _create_dummy_product(self, product_data: product_data.ProductData) -> product.Product:
+        """
+        Create a dummy product for compatibility testing.
+
+        Args:
+            product_type: The product type
+
+        Returns:
+            A dummy product instance
+        """
+        return self.product_factory.create_product(
+            product_data=product_data, router=self
+        )
 
     def route_product_to_production_resource(
         self, product: product.Product
@@ -165,10 +358,10 @@ class Router:
     ) -> Generator[Optional[request.Request]]:
         env = get_env_from_requests(possible_production_requests)
         while True:
-            production_requests: List[
-                request.Request
-            ] = self.get_requests_with_non_blocked_resources(
-                possible_production_requests
+            production_requests: List[request.Request] = (
+                self.get_requests_with_non_blocked_resources(
+                    possible_production_requests
+                )
             )
             if production_requests:
                 break
@@ -219,10 +412,10 @@ class Router:
             Generator[Optional[request.TransportResquest]]: A generator that yields when the product is routed.
         """
         item_to_transport = get_item_to_transport(routed_production_request)
-        potential_transport_requests: List[
-            request.Request
-        ] = self.get_transport_requests_to_target(
-            item_to_transport, routed_production_request.resource, {}
+        potential_transport_requests: List[request.Request] = (
+            self.get_transport_requests_to_target(
+                item_to_transport, routed_production_request.resource, {}
+            )
         )
 
         if not potential_transport_requests:
@@ -232,10 +425,10 @@ class Router:
 
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[
-                request.TransportResquest
-            ] = self.get_requests_with_non_blocked_resources(
-                potential_transport_requests
+            transport_requests: List[request.TransportResquest] = (
+                self.get_requests_with_non_blocked_resources(
+                    potential_transport_requests
+                )
             )
             if transport_requests:
                 break
@@ -291,10 +484,10 @@ class Router:
             )
         env = get_env_from_requests(potential_transport_requests)
         while True:
-            transport_requests: List[
-                request.TransportResquest
-            ] = self.get_requests_with_non_blocked_resources(
-                potential_transport_requests
+            transport_requests: List[request.TransportResquest] = (
+                self.get_requests_with_non_blocked_resources(
+                    potential_transport_requests
+                )
             )
             if transport_requests:
                 break
@@ -359,10 +552,10 @@ class Router:
 
         env = get_env_from_requests(potential_to_transport_requests)
         while True:
-            to_transport_requests: List[
-                request.ToTransportRequest
-            ] = self.get_requests_with_non_blocked_resources(
-                potential_to_transport_requests
+            to_transport_requests: List[request.ToTransportRequest] = (
+                self.get_requests_with_non_blocked_resources(
+                    potential_to_transport_requests
+                )
             )
             if to_transport_requests:
                 break
@@ -585,20 +778,24 @@ class Router:
     ) -> List[request.Request]:
         """
         Returns a list of possible production requests with different resources and processes for the next production process of a product.
-
-        Args:
-            product (product.Product): The product to get the request for.
-
-        Returns:
-            List[request.Request]: A list of possible production requests for the next production process of the product.
+        Uses precomputed compatibility tables for improved performance.
         """
         possible_requests = []
-        for resource in self.resource_factory.get_production_resources():
-            for process in resource.processes:
-                production_request = self.get_production_request(product, resource)
-                if process.matches_request(production_request):
-                    production_request.set_process(process)
-                    possible_requests.append(production_request)
+
+        # Create a key for lookup
+        key = ResourceCompatibilityKey(
+            product_type=product.product_data.product_type,
+            process_signature=product.next_prodution_process.get_process_signature(),
+        )
+
+        # Use the precomputed compatibility table
+        compatible_resources_and_processes = self.production_compatibility.get(key, [])
+
+        for resource, process in compatible_resources_and_processes:
+            production_request = self.get_production_request(product, resource)
+            production_request.set_process(process)
+            possible_requests.append(production_request)
+
         return possible_requests
 
     def get_reachable_production_requests(
@@ -669,32 +866,45 @@ class Router:
         route_cache: dict,
     ) -> List[request.TransportResquest]:
         """
-        Returns a list of transport requests with different resources and processes for the next transport process of a product.
-
-        Args:
-            transport_target (resources.Resource): The transport target to get the transport requests for.
-
-        Returns:
-            List[request.TransportResquest]: A list of transport requests for the transport target.
+        Returns a list of possible transport requests for the item to the target.
+        Uses precomputed compatibility tables for improved performance.
         """
         transport_requests = []
-        for resource in self.resource_factory.get_transport_resources():
-            for process in resource.processes:
-                transport_request = self.get_transport_request(
-                    item_to_transport, resource, target
-                )
-                if route_cache.get((target.data.ID, process.process_data.ID)):
-                    transport_request.copy_cached_routes(
-                        route_cache[(target.data.ID, process.process_data.ID)]
-                    )
-                    transport_request.set_process(process)
-                    transport_requests.append(transport_request)
-                elif process.matches_request(transport_request):
-                    transport_request.set_process(process)
-                    transport_requests.append(transport_request)
-                    route_cache[
-                        (target.data.ID, process.process_data.ID)
-                    ] = transport_request
+        origin = item_to_transport.current_locatable
+
+        # Early check if target is reachable from origin
+        if not self.reachability_cache.get((origin.data.ID, target.data.ID), False):
+            return []
+
+        # For each transport process available to the item
+        transport_process = item_to_transport.transport_process
+        process_signature = transport_process.get_process_signature()
+
+        # Look up compatible resources in precomputed table
+        key = TransportCompatibilityKey(
+            origin_id=origin.data.ID,
+            target_id=target.data.ID,
+            process_signature=process_signature,
+        )
+
+        compatible_resources_and_processes = self.transport_compatibility.get(key, [])
+
+        # Get cached route if available
+        route_key = (origin.data.ID, target.data.ID, process_signature)
+        cached_route = self.route_cache.get(route_key)
+
+        for compatible_resource, compatible_process in compatible_resources_and_processes:
+            # Create a transport request
+            transport_request = self.get_transport_request(
+                item_to_transport, compatible_resource, target
+            )
+
+            # Set process and copy route from cache if available
+            transport_request.set_process(compatible_process)
+            if cached_route:
+                transport_request.copy_cached_routes(cached_route)
+            transport_requests.append(transport_request)
+
         return transport_requests
 
     def get_requests_with_non_blocked_resources(
@@ -712,7 +922,6 @@ class Router:
         for request in requests:
             if not isinstance(request.resource, resources.ProductionResource):
                 continue
-            env = get_env_from_requests([request])
         return [
             request
             for request in requests
@@ -737,17 +946,11 @@ class Router:
         Returns:
             list[process.ReworkProcess]: A list of possible rework processes for the product.
         """
-        possible_rework_processes = []
-        for potential_rework_process in self.resource_factory.process_factory.processes:
-            if isinstance(potential_rework_process, ReworkProcess):
-                rework_request = request.ReworkRequest(
-                    failed_process=failed_process,
-                    product=product,
-                )
-                if not potential_rework_process.matches_request(rework_request):
-                    continue
-                possible_rework_processes.append(potential_rework_process)
-        return possible_rework_processes
+        key = (
+            product.product_data.product_type,
+            failed_process.get_process_signature(),
+        )
+        return self.rework_compatibility.get(key, [])
 
     def get_sink(self, _product_type: str) -> sink.Sink:
         """
