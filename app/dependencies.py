@@ -67,11 +67,6 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
     runner_object.run(run_length)
     performance = runner_object.get_performance_data()
 
-    kpi_file_path = f"data/{project_id}/{adapter_id}_kpis.json"
-    kpis = [kpi.model_dump() for kpi in performance.kpis]
-    with open(kpi_file_path, "w") as kpi_file:
-        json.dump(kpis, kpi_file, indent=4)
-
     try:
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
