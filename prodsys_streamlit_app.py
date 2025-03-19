@@ -189,7 +189,6 @@ def main():
     # Create containers for plots
     overview_container = st.container()
     kpi_container = st.container()
-    fitness_evolution_container = st.container()
     objectives_container = st.container()
     data_table_container = st.container()
 
@@ -341,98 +340,7 @@ def main():
                             )
                             st.plotly_chart(fig_avg_gen, use_container_width=True)
 
-                # Fitness evolution plots (existing section)
-                with fitness_evolution_container:
-                    st.header("Fitness Evolution")
-
-                    if st.session_state.show_individual:
-                        fig = px.scatter(
-                            df,
-                            x="time_stamp",
-                            y="agg_fitness",
-                            color="generation",
-                            hover_name="adapter_id",
-                            title="Aggregated Fitness Over Time (All Solutions)",
-                        )
-                        fig.update_layout(
-                            xaxis_title="Time (seconds)", yaxis_title="Fitness"
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        # Plot both time-based and generation-based fitness trends
-                        col1, col2 = st.columns(2)
-
-                        with col1:
-                            # Time-based average fitness
-                            df["time_bucket"] = pd.cut(df["time_stamp"], bins=20)
-                            time_avg = (
-                                df.groupby("time_bucket", observed=False)["agg_fitness"]
-                                .agg(["mean", "max"])
-                                .reset_index()
-                            )
-                            time_avg["time_bucket_mid"] = time_avg["time_bucket"].apply(
-                                lambda x: x.mid
-                            )
-                            time_avg = time_avg.sort_values("time_bucket_mid")
-
-                            fig1 = go.Figure()
-                            fig1.add_trace(
-                                go.Scatter(
-                                    x=time_avg["time_bucket_mid"],
-                                    y=time_avg["mean"],
-                                    mode="lines+markers",
-                                    name="Average Fitness",
-                                )
-                            )
-                            fig1.add_trace(
-                                go.Scatter(
-                                    x=time_avg["time_bucket_mid"],
-                                    y=time_avg["max"],
-                                    mode="lines+markers",
-                                    name="Best Fitness",
-                                )
-                            )
-                            fig1.update_layout(
-                                title="Fitness Over Time",
-                                xaxis_title="Time (seconds)",
-                                yaxis_title="Fitness",
-                            )
-                            st.plotly_chart(fig1, use_container_width=True)
-
-                        with col2:
-                            # Generation-based fitness
-                            gen_stats = (
-                                df.groupby("generation")["agg_fitness"]
-                                .agg(["mean", "max", "min"])
-                                .reset_index()
-                            )
-                            gen_stats = gen_stats.sort_values("generation")
-
-                            fig2 = go.Figure()
-                            fig2.add_trace(
-                                go.Scatter(
-                                    x=gen_stats["generation"],
-                                    y=gen_stats["mean"],
-                                    mode="lines+markers",
-                                    name="Average Fitness",
-                                )
-                            )
-                            fig2.add_trace(
-                                go.Scatter(
-                                    x=gen_stats["generation"],
-                                    y=gen_stats["max"],
-                                    mode="lines+markers",
-                                    name="Best Fitness",
-                                )
-                            )
-                            fig2.update_layout(
-                                title="Fitness By Generation",
-                                xaxis_title="Generation",
-                                yaxis_title="Fitness",
-                            )
-                            st.plotly_chart(fig2, use_container_width=True)
-
-                # Individual objectives
+                # Individual objectives - enhanced with better visualizations
                 with objectives_container:
                     # Get column names that start with 'objective_'
                     objective_cols = [
@@ -459,76 +367,183 @@ def main():
                             )
 
                             if view_by == "Time":
+                                # Create time buckets for aggregation
                                 df["time_bucket"] = pd.cut(df["time_stamp"], bins=20)
-                                objective_avgs = []
-
+                                
+                                # For each objective, create a separate chart
                                 for obj in selected_objectives:
-                                    obj_avg = (
-                                        df.groupby("time_bucket", observed=False)[obj]
-                                        .mean()
-                                        .reset_index()
-                                    )
-                                    obj_avg["objective"] = obj
-                                    obj_avg["time_bucket_mid"] = obj_avg[
-                                        "time_bucket"
-                                    ].apply(lambda x: x.mid)
-                                    objective_avgs.append(
-                                        obj_avg.rename(columns={obj: "value"})
-                                    )
+                                    st.subheader(f"Objective: {obj.replace('objective_', '')}")
+                                    
+                                    # Get aggregated data for this objective
+                                    obj_data = df.groupby("time_bucket", observed=False).agg({
+                                        obj: ["mean", "max", "min"]
+                                    }).reset_index()
+                                    
+                                    obj_data.columns = ["time_bucket", "mean", "max", "min"]
+                                    obj_data["time_bucket_mid"] = obj_data["time_bucket"].apply(lambda x: x.mid)
+                                    obj_data = obj_data.sort_values("time_bucket_mid")
+                                    
+                                    # Create 3 columns for different charts of the same objective
+                                    col1, col2, col3 = st.columns(3)
+                                    
+                                    with col1:
+                                        # Line chart for trend
+                                        fig = go.Figure()
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=obj_data["time_bucket_mid"],
+                                                y=obj_data["mean"],
+                                                mode="lines+markers",
+                                                name="Average",
+                                                line=dict(color="#1f77b4")
+                                            )
+                                        )
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=obj_data["time_bucket_mid"],
+                                                y=obj_data["max"],
+                                                mode="lines+markers",
+                                                name="Best",
+                                                line=dict(color="#ff7f0e")
+                                            )
+                                        )
+                                        fig.update_layout(
+                                            title=f"Trend Over Time",
+                                            xaxis_title="Time (seconds)",
+                                            yaxis_title="Value",
+                                            height=300,
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual y-axis scaling
+                                        fig.update_yaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    with col2:
+                                        # Distribution of values
+                                        specific_data = df[[obj, "time_stamp"]].copy()
+                                        fig = px.histogram(
+                                            specific_data, 
+                                            x=obj,
+                                            title="Value Distribution",
+                                            height=300
+                                        )
+                                        fig.update_layout(
+                                            xaxis_title="Value",
+                                            yaxis_title="Count",
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual x-axis scaling
+                                        fig.update_xaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    with col3:
+                                        # Box plot for statistical view
+                                        fig = go.Figure()
+                                        fig.add_trace(
+                                            go.Box(
+                                                y=df[obj],
+                                                name=obj.replace("objective_", ""),
+                                                boxmean=True
+                                            )
+                                        )
+                                        fig.update_layout(
+                                            title="Statistical Distribution",
+                                            yaxis_title="Value",
+                                            height=300,
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual y-axis scaling
+                                        fig.update_yaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
+                            
+                            else:  # Generation view
+                                # For each objective, create a separate chart
+                                for obj in selected_objectives:
+                                    st.subheader(f"Objective: {obj.replace('objective_', '')}")
+                                    
+                                    # Get aggregated data for this objective
+                                    obj_data = df.groupby("generation").agg({
+                                        obj: ["mean", "max", "min"]
+                                    }).reset_index()
+                                    
+                                    obj_data.columns = ["generation", "mean", "max", "min"]
+                                    obj_data = obj_data.sort_values("generation")
+                                    
+                                    # Create 3 columns for different charts of the same objective
+                                    col1, col2, col3 = st.columns(3)
+                                    
+                                    with col1:
+                                        # Line chart for trend
+                                        fig = go.Figure()
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=obj_data["generation"],
+                                                y=obj_data["mean"],
+                                                mode="lines+markers",
+                                                name="Average",
+                                                line=dict(color="#1f77b4")
+                                            )
+                                        )
+                                        fig.add_trace(
+                                            go.Scatter(
+                                                x=obj_data["generation"],
+                                                y=obj_data["max"],
+                                                mode="lines+markers",
+                                                name="Best",
+                                                line=dict(color="#ff7f0e")
+                                            )
+                                        )
+                                        fig.update_layout(
+                                            title=f"Trend By Generation",
+                                            xaxis_title="Generation",
+                                            yaxis_title="Value",
+                                            height=300,
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual y-axis scaling
+                                        fig.update_yaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    with col2:
+                                        # Box plot by generation
+                                        fig = px.box(
+                                            df, 
+                                            x="generation", 
+                                            y=obj,
+                                            title="Distribution By Generation",
+                                            height=300
+                                        )
+                                        fig.update_layout(
+                                            xaxis_title="Generation",
+                                            yaxis_title="Value",
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual y-axis scaling
+                                        fig.update_yaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    
+                                    with col3:
+                                        # Violin plot for more detailed distribution
+                                        fig = px.violin(
+                                            df, 
+                                            y=obj, 
+                                            box=True,
+                                            title="Overall Distribution",
+                                            height=300
+                                        )
+                                        fig.update_layout(
+                                            yaxis_title="Value",
+                                            margin=dict(l=10, r=10, t=30, b=10)
+                                        )
+                                        # Individual y-axis scaling
+                                        fig.update_yaxes(autorange=True)
+                                        st.plotly_chart(fig, use_container_width=True)
 
-                                if objective_avgs:
-                                    obj_df = pd.concat(objective_avgs)
-                                    obj_df = obj_df.sort_values("time_bucket_mid")
-
-                                    fig = px.line(
-                                        obj_df,
-                                        x="time_bucket_mid",
-                                        y="value",
-                                        color="objective",
-                                        title="Objectives Over Time",
-                                    )
-                                    fig.update_layout(
-                                        xaxis_title="Time (seconds)",
-                                        yaxis_title="Value",
-                                    )
-                                    st.plotly_chart(fig, use_container_width=True)
-                            else:
-                                melted_df = pd.melt(
-                                    df,
-                                    id_vars=["generation", "adapter_id"],
-                                    value_vars=selected_objectives,
-                                    var_name="Objective",
-                                    value_name="Value",
-                                )
-                                melted_df["generation"] = pd.to_numeric(
-                                    melted_df["generation"]
-                                )
-                                melted_df = melted_df.sort_values("generation")
-
-                                fig = px.box(
-                                    melted_df,
-                                    x="generation",
-                                    y="Value",
-                                    color="Objective",
-                                    facet_col="Objective",
-                                    facet_col_wrap=2,
-                                    title="Individual Objectives By Generation",
-                                )
-                                fig.update_layout(xaxis_title="Generation")
-                                st.plotly_chart(fig, use_container_width=True)
-
-                # Raw data table
+                # Raw data table - fix the duplication issue
                 with data_table_container:
+                    # Simplified raw data display without duplicate controls
                     st.header("Raw Data")
-                    show_raw = st.checkbox(
-                        "Show raw data table",
-                        value=st.session_state.show_raw,
-                        key="show_raw",
-                        on_change=lambda: setattr(
-                            st.session_state, "show_raw", st.session_state.show_raw
-                        ),
-                    )
-                    if show_raw:
+                    if st.checkbox("Show raw data table", value=False):
                         st.dataframe(df)
 
             else:
