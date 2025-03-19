@@ -213,6 +213,9 @@ class Runner:
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
 
+            for source in self.source_factory.sources:
+                source.router.precompute_compatibility_tables()
+
     def run(self, time_range: int):
         """
         Runs the simulation for the given time range.

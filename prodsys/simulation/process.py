@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, List, Optional
+from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
 
 from pydantic import BaseModel
 
@@ -48,6 +48,19 @@ class Process(ABC, BaseModel):
             float: Expected time it takes to execute the process.
         """
         pass
+        
+    def get_process_signature(self) -> str:
+        """
+        Returns a unique signature for this process that can be used for lookup tables.
+        
+        Returns:
+            str: A string signature representing the unique properties of this process.
+        """
+        if hasattr(self.process_data, "ID"):
+            return f"{self.__class__.__name__}:{self.process_data.ID}"
+        elif hasattr(self.process_data, "capability"):
+            return f"{self.__class__.__name__}:{self.process_data.capability}"
+        return f"{self.__class__.__name__}:{id(self)}"
 
 
 class ProductionProcess(Process):
