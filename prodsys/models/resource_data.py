@@ -33,9 +33,7 @@ class ControllerEnum(str, Enum):
     - TransportController: Transport controller.
     - BatchController: Batch controller.
     """
-
     PipelineController = "PipelineController"
-    TransportController = "TransportController"
     BatchController = "BatchController"
 
 
@@ -91,12 +89,16 @@ class ResourceData(CoreAsset, Locatable):
 
     capacity: int
 
-    controller: ControllerEnum
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
 
     process_ids: List[str]
     process_capacities: Optional[List[int]]
     state_ids: Optional[List[str]] = []
+
+    controller: ControllerEnum = ControllerEnum.PipelineController
+    input_queues: List[str] = []
+    output_queues: List[str] = []
+    batch_size: Optional[int] = None
 
     @model_validator(mode="before")
     def check_process_capacity(cls, values):
@@ -114,6 +116,30 @@ class ResourceData(CoreAsset, Locatable):
             raise ValueError("process_capacities must be smaller than capacity")
         return values
 
+    @model_validator(mode="before")
+    def validate_batch_size(cls, data: Any):
+        if not isinstance(data, dict):
+            return data
+
+        controller = data.get("controller")
+        batch_size = data.get("batch_size")
+
+        # Only apply batch size validation for production resources
+        if batch_size is not None and controller != ControllerEnum.BatchController:
+            raise ValueError(
+                "Batch size can only be set for resources with a BatchController."
+            )
+        if batch_size is None and controller == ControllerEnum.BatchController:
+            raise ValueError(
+                "Batch size has to be set for resources with a BatchController."
+            )
+        if batch_size is not None and batch_size > data.get("capacity", 0):
+            raise ValueError(
+                "Batch size cannot be greater than the capacity of the resource."
+            )
+
+        return data
+
     def hash(self, adapter: ProductionSystemAdapter) -> str:
         """
         Returns a unique hash of the resource considering the capacity, location (input/output for production resources or location for transport resources),
@@ -130,8 +156,9 @@ class ResourceData(CoreAsset, Locatable):
         """
         state_hashes = []
         process_hashes = []
+        queue_hashes = []
 
-        base_class_hash = Locatable.hash(self)
+        base_class_hash = Locatable.hash(self) + InOutLocatable.hash(self)
 
         for state_id in self.state_ids:
             for state in adapter.state_data:
@@ -153,200 +180,62 @@ class ResourceData(CoreAsset, Locatable):
                     f"Process with ID {process_id} not found for resource {self.ID}."
                 )
 
-        return md5(
-            (
-                "".join(
-                    [
-                        base_class_hash,
-                        str(self.capacity),
-                        self.controller,
-                        *sorted(process_hashes),
-                        *map(str, self.process_capacities),
-                        *sorted(state_hashes),
-                    ]
-                )
-            ).encode("utf-8")
-        ).hexdigest()
+        # For production resources, include queues in the hash
+        if hasattr(self, "input_queues") and hasattr(self, "output_queues"):
+            for queue_id in self.input_queues + self.output_queues:
+                for queue in adapter.queue_data:
+                    if queue.ID == queue_id:
+                        queue_hashes.append(queue.hash())
+                        break
+                else:
+                    raise ValueError(
+                        f"Queue with ID {queue_id} not found for resource {self.ID}."
+                    )
 
+        components = [
+            base_class_hash,
+            str(self.capacity),
+            self.controller.value,
+            *sorted(process_hashes),
+            *map(str, self.process_capacities or []),
+            *sorted(state_hashes),
+        ]
 
-class ProductionResourceData(ResourceData, InOutLocatable):
-    """
-    Class that represents production resource data.
+        if hasattr(self, "input_queues") and hasattr(self, "output_queues"):
+            components.extend(sorted(queue_hashes))
+            if self.batch_size is not None:
+                components.append(str(self.batch_size))
 
-    Args:
-        ID (str): ID of the resource.
-        description (str): Description of the resource.
-        capacity (int): Capacity of the resource.
-        location (List[float]): Location of the resource. Has to be a list of length 2.
-        input_location (Optional[List[float]]): Input location of the resource. Has to be a list of length 2.
-        output_location (Optional[List[float]]): Output location of the resource. Has to be a list of length 2.
-        controller (ControllerEnum): Controller of the resource.
-        control_policy (ResourceControlPolicy): Control policy of the resource.
-        process_ids (List[str]): Process IDs of the resource.
-        process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
-        state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
-        input_queues (Optional[List[str]], optional): Input queues of the resource. Defaults to None.
-        output_queues (Optional[List[str]], optional): Output queues of the resource. Defaults to None.
-
-    Examples:
-        Creation of a production resource with a capacity of 2, a location of [10.0, 10.0], a PipelineController and a FIFO control policy:
-        ```py
-        import prodsys
-        prodsys.resource_data.ProductionResourceData(
-            ID="R1",
-            description="Resource 1",
-            capacity=2,
-            location=[10.0, 10.0],
-            controller=prodsys.resource_data.ControllerEnum.PipelineController,
-            control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
-            process_ids=["P1", "P2"],
-            process_capacities=[2, 1],
-            states=[
-                "Breakdownstate_1",
-                "Setup_State_1",
-            ],
-            input_queues=["IQ1"],
-            output_queues=["OQ1"],
-        )
-        ```
-    """
-
-    controller: Literal[
-        ControllerEnum.PipelineController, ControllerEnum.BatchController
-    ]
-    control_policy: ResourceControlPolicy
-    input_queues: List[str] = []
-    output_queues: List[str] = []
-    batch_size: Optional[int] = None
-
-    @model_validator(mode="before")
-    def validate_batch_size(cls, data: Any):
-        if not isinstance(data, dict):
-            return data
-        if ("batch_size" in data and data["batch_size"] is not None) and data[
-            "controller"
-        ] != ControllerEnum.BatchController:
-            raise ValueError(
-                "Batch size can only be set for resources with a BatchController."
-            )
-        if ("batch_size" not in data or data["batch_size"] is None) and data[
-            "controller"
-        ] == ControllerEnum.BatchController:
-            raise ValueError(
-                "Batch size has to be set for resources with a BatchController."
-            )
-        if ("batch_size" in data and data["batch_size"] is not None) and data[
-            "batch_size"
-        ] > data["capacity"]:
-            raise ValueError(
-                "Batch size cannot be greater than the capacity of the resource."
-            )
-        return data
-
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
-        """
-        Returns a unique hash of the resource considering the capacity, location, controller, processes, process capacities, states, input queues and output queues. Can be used to compare resources for equal functionality.
-
-        Args:
-            adapter (ProductionSystemAdapter): Adapter that contains the process and queue data.
-
-        Raises:
-            ValueError: If a queue, state or process is not found in the adapter.
-
-        Returns:
-            str: Hash of the resource.
-        """
-        base_class_hash = ResourceData.hash(self, adapter) + InOutLocatable.hash(self)
-        queue_hashes = []
-        for queue_id in self.input_queues + self.output_queues:
-            for queue in adapter.queue_data:
-                if queue.ID == queue_id:
-                    queue_hashes.append(queue.hash())
-                    break
-            else:
-                raise ValueError(
-                    f"Queue with ID {queue_id} not found for resource {self.ID}."
-                )
-
-        return md5(
-            ("".join([base_class_hash, *sorted(queue_hashes)])).encode("utf-8")
-        ).hexdigest()
+        return md5(("".join(components)).encode("utf-8")).hexdigest()
 
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
+                # Production resource example
                 {
                     "ID": "R1",
-                    "description": "Resource 1",
+                    "description": "Production Resource",
                     "capacity": 2,
                     "location": [10.0, 10.0],
                     "controller": "PipelineController",
                     "control_policy": "FIFO",
                     "process_ids": ["P1", "P2"],
                     "process_capacities": [2, 1],
-                    "states": [
-                        "Breakdownstate_1",
-                        "Setup_State_1",
-                    ],
+                    "state_ids": ["Breakdownstate_1"],
                     "input_queues": ["IQ1"],
                     "output_queues": ["OQ1"],
-                }
-            ]
-        }
-    )
-
-
-class TransportResourceData(ResourceData):
-    """
-    Class that represents transport resource data.
-
-    Args:
-        ID (str): ID of the resource.
-        description (str): Description of the resource.
-        capacity (int): Capacity of the resource.
-        location (List[float]): Location of the resource. Has to be a list of length 2.
-        controller (Literal[ControllerEnum.TransportController]): Controller of the resource, has to be a TransportController.
-        control_policy (TransportControlPolicy): Control policy of the resource.
-        process_ids (List[str]): Process IDs of the resource.
-        process_capacities (Optional[List[int]], optional): Process capacities of the resource. Defaults to None.
-        state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
-
-    Examples:
-        Creation of a transport resource with a capacity of 1, a location of [15.0, 15.0], a TransportController and a FIFO control policy:
-        ```py
-        import prodsys
-        prodsys.resource_data.TransportResourceData(
-            ID="TR1",
-            description="Transport Resource 1",
-            capacity=1,
-            location=[15.0, 15.0],
-            controller=prodsys.resource_data.ControllerEnum.TransportController,
-            control_policy=prodsys.resource_data.TransportControlPolicy.FIFO,
-            process_ids=["TP1"],
-        )
-        ```
-    """
-
-    controller: Literal[ControllerEnum.TransportController]
-    control_policy: TransportControlPolicy
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
+                },
+                # Transport resource example
                 {
                     "ID": "TR1",
-                    "description": "Transport Resource 1",
+                    "description": "Transport Resource",
                     "capacity": 1,
                     "location": [15.0, 15.0],
                     "controller": "TransportController",
                     "control_policy": "FIFO",
                     "process_ids": ["TP1"],
-                    "process_capacities": None,
-                    "states": ["Breakdownstate_1"],
+                    "state_ids": ["Breakdownstate_1"],
                 },
             ]
         }
     )
-
-
-RESOURCE_DATA_UNION = Union[ProductionResourceData, TransportResourceData]

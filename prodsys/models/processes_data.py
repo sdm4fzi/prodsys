@@ -49,6 +49,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
+    auxiliaries: list[str]
 
     model_config = ConfigDict(
         json_schema_extra={

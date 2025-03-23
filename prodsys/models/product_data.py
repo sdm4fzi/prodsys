@@ -1,6 +1,7 @@
 from __future__ import annotations
 from hashlib import md5
 from typing import Optional, Union, List, Dict, TYPE_CHECKING
+from warnings import deprecated
 from pydantic import ConfigDict, model_validator
 from prodsys.models.core_asset import CoreAsset
 

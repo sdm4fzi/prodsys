@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from hashlib import md5
-from typing import TYPE_CHECKING, Union, List, Dict
+from typing import TYPE_CHECKING, Optional, Union, List, Dict
 
 from pydantic import model_validator, root_validator
 
@@ -85,3 +85,43 @@ class AuxiliaryData(CoreAsset):
                 ]
             ).encode("utf-8")
         ).hexdigest()
+
+
+class ProcessAuxiliaryData(CoreAsset):
+    """
+    Class that represents auxiliary components required to process or transport a product by a resource..
+
+    Args:
+        ID (str): ID of the auxiliary component.
+        description (str): Description of the auxiliary component.
+    """
+    required_process: str
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Function to hash the auxiliary component.
+
+        Returns:
+            str: Hash of the auxiliary component.
+        """
+        
+
+
+class ResourceAuxiliaryData(CoreAsset):
+    """
+    Class that represents auxiliary components required to process or transport a product by a resource..
+
+    Args:
+        ID (str): ID of the auxiliary component.
+        description (str): Description of the auxiliary component.
+    """
+    required_resource: str
+
+    def hash(self, adapter: ProductionSystemAdapter) -> str:
+        """
+        Function to hash the auxiliary component.
+
+        Returns:
+            str: Hash of the auxiliary component.
+        """
+        pass

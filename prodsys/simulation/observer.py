@@ -50,7 +50,7 @@ def observe_input_queue(
             production_process_info = QueueObservation(
                 product=product_data.ID,
                 activity="waiting",
-                process=product.next_prodution_process.process_data.ID,
+                process=product.next_possible_processes.process_data.ID,
                 next_resource=product.current_locatable.data.ID,
                 waiting_since=product.product_info.event_time,
             )
@@ -70,7 +70,7 @@ def observe_output_queue(
             production_process_info = QueueObservation(
                 product=product_data.ID,
                 activity="waiting",
-                process=product.next_prodution_process,
+                process=product.next_possible_processes,
                 next_resource=product.current_locatable,
                 waiting_since=product.product_info.event_time,
             )
