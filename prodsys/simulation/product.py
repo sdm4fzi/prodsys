@@ -164,7 +164,7 @@ class Product(BaseModel):
     ]
     product_router: router.Router
 
-    next_prodution_process: Optional[process.PROCESS_UNION] = Field(
+    next_possible_processes: Optional[list[process.PROCESS_UNION]] = Field(
         default=None, init=False
     )
     processes_needing_rework: List[process.Process] = Field(
@@ -181,6 +181,8 @@ class Product(BaseModel):
     finished_process: events.Event = Field(default=None, init=False)
     product_info: ProductInfo = Field(default_factory=ProductInfo, init=False)
     executed_production_processes: List = Field(default_factory=list, init=False)
+    has_auxiliaries: bool = False
+    auxiliaries: List[auxiliary.Auxiliary] = Field(default_factory=list, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -216,134 +218,122 @@ class Product(BaseModel):
                 "event": f"Start processing of product",
             }
         )
-        self.set_next_production_process()
+        self.set_next_possible_production_processes()
 
-        if self.product_data.auxiliaries:
-            while True:
-                auxiliary_request: request.AuxiliaryRequest = yield self.env.process(
-                    self.product_router.route_auxiliary_to_product(self)
-                )
-                if not auxiliary_request:
-                    yield self.env.timeout(0)
-                    continue
-                break
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "resource": auxiliary_request.resource.data.ID,
-                    "aux": auxiliary_request.auxiliary.product_data.ID,
-                    "process": auxiliary_request.process.process_data.ID,
-                    "event": f"auxiliary request for {auxiliary_request.product.product_data.ID}",
-                }
-            )
-            while True:
-                auxiliary_transport_request: request.TransportResquest = (
-                    yield self.env.process(
-                        self.product_router.route_transport_resource_for_item(
-                            auxiliary_request
-                        )
-                    )
-                )
-                if not auxiliary_transport_request:
-                    yield self.env.timeout(0)
-                    continue
-                break
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "resource": auxiliary_transport_request.resource.data.ID,
-                    "aux": auxiliary_transport_request.product.product_data.ID,
-                    "process": auxiliary_transport_request.process.process_data.ID,
-                    "origin": auxiliary_transport_request.origin.data.ID,
-                    "target": auxiliary_transport_request.target.data.ID,
-                    "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}",
-                }
-            )
+        # router.product_ready.succeed(value=name)
+        # router.product_ready = env.event()
+
+        if self.has_auxiliaries:
             yield self.env.process(
-                auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
+                self.product_router.get_auxiliaries_for_product(self)
             )
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "resource": auxiliary_transport_request.resource.data.ID,
-                    "aux": auxiliary_transport_request.product.product_data.ID,
-                    "process": auxiliary_transport_request.process.process_data.ID,
-                    "origin": auxiliary_transport_request.origin.data.ID,
-                    "target": auxiliary_transport_request.target.data.ID,
-                    "event": f"finished waiting for auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}",
-                }
-            )
+            # while True:
+            #     auxiliary_request: request.AuxiliaryTransportRequest = (
+            #         yield self.env.process(
+            #             self.product_router.route_auxiliary_to_product(self)
+            #         )
+            #     )
+            #     if not auxiliary_request:
+            #         yield self.env.timeout(0)
+            #         continue
+            #     break
+            # while True:
+            #     auxiliary_transport_request: request.TransportResquest = (
+            #         yield self.env.process(
+            #             self.product_router.route_transport_resource_for_item(
+            #                 auxiliary_request
+            #             )
+            #         )
+            #     )
+            #     if not auxiliary_transport_request:
+            #         yield self.env.timeout(0)
+            #         continue
+            #     break
+            # yield self.env.process(
+            #     auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
+            # )
 
-        while self.next_prodution_process:
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "process": self.next_prodution_process.process_data.ID,
-                    "event": f"Start process of product",
-                }
-            )
-            while True:
-                production_request = yield self.env.process(
-                    self.product_router.route_product_to_production_resource(self)
-                )
-                if not production_request:
-                    yield self.env.timeout(0)
-                    continue
-                break
-            while True:
-                transport_request = yield self.env.process(
-                    self.product_router.route_transport_resource_for_item(
-                        production_request
-                    )
-                )
-                if not transport_request:
-                    yield self.env.timeout(0)
-                    continue
-                break
-            yield self.env.process(self.request_process(transport_request))
-            yield self.env.process(self.request_process(production_request))
-            store_product = self.product_router.check_store_product(self)
-            if store_product:
-                logger.debug(
-                    {
-                        "ID": self.product_data.ID,
-                        "sim_time": self.env.now,
-                        "event": f"Store product in storage",
-                    }
-                )
-                while True:
-                    transport_to_storage_request = yield self.env.process(
-                        self.product_router.route_product_to_storage(self)
-                    )
-                    if not transport_to_storage_request:
-                        yield self.env.timeout(0)
-                        continue
-                    break
-                yield self.env.process(
-                    self.request_process(transport_to_storage_request)
-                )
-                logger.debug(
-                    {
-                        "ID": self.product_data.ID,
-                        "sim_time": self.env.now,
-                        "event": f"Product transported to storage",
-                    }
-                )
+        while self.next_possible_processes:
+            self.product_router.request_processing(self)
+            executed_process = yield self.finished_process
+            # TODO: move logging to appropriate functions in controller or so
+            # self.product_info.log_end_process(
+            #     resource=processing_request.resource,
+            #     _product=self,
+            #     event_time=self.env.now,
+            #     state_type=type_,
+            # )
+            self.finished_process = events.Event(self.env)
+            if isinstance(executed_process, process.ReworkProcess):
+                self.register_rework(executed_process)
+            self.update_executed_process(executed_process)
+            self.set_next_possible_production_processes()
+            # logger.debug(
+            #     {
+            #         "ID": self.product_data.ID,
+            #         "sim_time": self.env.now,
+            #         "process": self.next_prodution_process.process_data.ID,
+            #         "event": f"Start process of product",
+            #     }
+            # )
+            # while True:
+            #     production_request = yield self.env.process(
+            #         self.product_router.route_product_to_production_resource(self)
+            #     )
+            #     if not production_request:
+            #         yield self.env.timeout(0)
+            #         continue
+            #     break
+            # while True:
+            #     transport_request = yield self.env.process(
+            #         self.product_router.route_transport_resource_for_item(
+            #             production_request
+            #         )
+            #     )
+            #     if not transport_request:
+            #         yield self.env.timeout(0)
+            #         continue
+            #     break
+            # yield self.env.process(self.request_process(transport_request))
+            # yield self.env.process(self.request_process(production_request))
+            # store_product = self.product_router.check_store_product(self)
+            # if store_product:
+            #     logger.debug(
+            #         {
+            #             "ID": self.product_data.ID,
+            #             "sim_time": self.env.now,
+            #             "event": f"Store product in storage",
+            #         }
+            #     )
+            #     while True:
+            #         transport_to_storage_request = yield self.env.process(
+            #             self.product_router.route_product_to_storage(self)
+            #         )
+            #         if not transport_to_storage_request:
+            #             yield self.env.timeout(0)
+            #             continue
+            #         break
+            #     yield self.env.process(
+            #         self.request_process(transport_to_storage_request)
+            #     )
+            #     logger.debug(
+            #         {
+            #             "ID": self.product_data.ID,
+            #             "sim_time": self.env.now,
+            #             "event": f"Product transported to storage",
+            #         }
+            #     )
 
-            self.set_next_production_process()
-        while True:
-            transport_to_sink_request = yield self.env.process(
-                self.product_router.route_product_to_sink(self)
-            )
-            if not transport_to_sink_request:
-                yield self.env.timeout(0)
-                continue
-            break
-        yield self.env.process(self.request_process(transport_to_sink_request))
+        # while True:
+        #     transport_to_sink_request = yield self.env.process(
+        #         self.product_router.route_product_to_sink(self)
+        #     )
+        #     if not transport_to_sink_request:
+        #         yield self.env.timeout(0)
+        #         continue
+        #     break
+        # yield self.env.process(self.request_process(transport_to_sink_request))
+        yield self.env.process(self.product_router.route_product_to_sink(self))
         self.product_info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
@@ -356,36 +346,37 @@ class Product(BaseModel):
             }
         )
 
-        if self.product_data.auxiliaries:
-            auxiliary_request.auxiliary.update_location(self.current_locatable)
-            while True:
-                auxiliary_transport_request: request.TransportResquest = (
-                    yield self.env.process(
-                        self.product_router.route_auxiliary_to_store(
-                            auxiliary_request.auxiliary
-                        )
-                    )
-                )
-                if not auxiliary_request:
-                    yield self.env.timeout(0)
-                    continue
-                break
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "resource": auxiliary_transport_request.resource.data.ID,
-                    "aux": auxiliary_transport_request.product.product_data.ID,
-                    "process": auxiliary_transport_request.process.process_data.ID,
-                    "origin": auxiliary_transport_request.origin.data.ID,
-                    "target": auxiliary_transport_request.target.data.ID,
-                    "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}",
-                }
-            )
-            yield self.env.process(
-                auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
-            )
-            auxiliary_request.auxiliary.release_auxiliary_from_product()
+        if self.has_auxiliaries:
+            # auxiliary_request.auxiliary.update_location(self.current_locatable)
+            # while True:
+            #     auxiliary_transport_request: request.TransportResquest = (
+            #         yield self.env.process(
+            #             self.product_router.route_auxiliary_to_store(
+            #                 auxiliary_request.auxiliary
+            #             )
+            #         )
+            #     )
+            #     if not auxiliary_request:
+            #         yield self.env.timeout(0)
+            #         continue
+            #     break
+            # logger.debug(
+            #     {
+            #         "ID": self.product_data.ID,
+            #         "sim_time": self.env.now,
+            #         "resource": auxiliary_transport_request.resource.data.ID,
+            #         "aux": auxiliary_transport_request.product.product_data.ID,
+            #         "process": auxiliary_transport_request.process.process_data.ID,
+            #         "origin": auxiliary_transport_request.origin.data.ID,
+            #         "target": auxiliary_transport_request.target.data.ID,
+            #         "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}",
+            #     }
+            # )
+            # yield self.env.process(
+            #     auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
+            # )
+            # auxiliary_request.auxiliary.release_auxiliary_from_product()
+            self.product_router.release_auxiliaries_from_product(self)
 
     def request_process(self, processing_request: request.Request) -> Generator:
         """
@@ -404,24 +395,6 @@ class Product(BaseModel):
             }
         )
         self.env.request_process_of_resource(request=processing_request)
-        yield self.finished_process
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "resource": processing_request.resource.data.ID,
-                "event": f"Finished process {processing_request.process.process_data.ID} for {type_}",
-            }
-        )
-        self.product_info.log_end_process(
-            resource=processing_request.resource,
-            _product=self,
-            event_time=self.env.now,
-            state_type=type_,
-        )
-        self.finished_process = events.Event(self.env)
-        if isinstance(processing_request.process, process.ReworkProcess):
-            self.register_rework(processing_request.process)
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """
@@ -474,58 +447,39 @@ class Product(BaseModel):
                 break
         mapping_to_adjust.pop(index_to_remove)
 
-    def set_next_production_process(self):
+    def update_executed_process(self, executed_process: PROCESS_UNION) -> None:
+        self.process_model.update_marking_from_transition(executed_process)  # type: ignore
+        self.executed_production_processes.append(executed_process.process_data.ID)
+
+    def set_next_possible_production_processes(self):
         """
         Sets the next process of the product object based on the current state of the product and its process model.
         """
         # check if rework is needed due to blocking rework processes. If so, execute these rework processes
         if self.blocking_rework_process_mappings:
-            process_mapping_to_rework = random.choice(
-                self.blocking_rework_process_mappings
-            )
-            next_possible_processes = process_mapping_to_rework[1]
-            self.next_prodution_process = random.choice(next_possible_processes)
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "event": f"Blocking rework as next process with ID {self.next_prodution_process.process_data.ID}",
-                }
-            )
+            next_possible_processes = []
+            for process_mapping in self.blocking_rework_process_mappings:
+                failed_process = process_mapping[0]
+                possible_rework_processes = process_mapping[1]
+                next_possible_processes += possible_rework_processes
+            self.next_possible_processes = next_possible_processes
             return
 
         next_possible_processes = self.process_model.get_next_possible_processes()
 
         # if all normal processes are done, i.e. the product has finished its process sequence, execute rework processes without blocking.
         if not next_possible_processes and self.non_blocking_rework_process_mappings:
-            process_mapping_to_rework = random.choice(
-                self.non_blocking_rework_process_mappings
-            )
-            failed_process = process_mapping_to_rework[0]
-            next_possible_processes = process_mapping_to_rework[1]
-            self.next_prodution_process = random.choice(next_possible_processes)
-            logger.debug(
-                {
-                    "ID": self.product_data.ID,
-                    "sim_time": self.env.now,
-                    "event": f"Non-blocking rework as next process with ID {self.next_prodution_process.process_data.ID}",
-                }
-            )
+            next_possible_processes = []
+            for process_mapping in self.non_blocking_rework_process_mappings:
+                failed_process = process_mapping[0]
+                possible_rework_processes = process_mapping[1]
+                next_possible_processes += possible_rework_processes
+            next_possible_processes = next_possible_processes
+            self.next_possible_processes = next_possible_processes
             return
         # if all normal processes are done and no rework processes are needed, the product has finished its process sequence.
         if not next_possible_processes:
-            self.next_prodution_process = None
+            self.next_possible_processes = None
             return
 
-        self.next_prodution_process = random.choice(next_possible_processes)  # type: ignore
-        self.process_model.update_marking_from_transition(self.next_prodution_process)  # type: ignore
-        self.executed_production_processes.append(
-            self.next_prodution_process.process_data.ID
-        )
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "event": f"Next process {self.next_prodution_process.process_data.ID}",
-            }
-        )
+        self.next_possible_processes = next_possible_processes

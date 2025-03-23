@@ -61,13 +61,13 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
-
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
             product_router=router,
             process_model=process_model,
             transport_process=transport_processes,
+            has_auxiliaries=True if product_data.auxiliaries and product_data is not None else False,
         )
         if self.event_logger:
             self.event_logger.observe_terminal_product_states(product_object)

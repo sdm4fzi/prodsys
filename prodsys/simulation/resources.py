@@ -21,9 +21,7 @@ if TYPE_CHECKING:
     # from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
-    RESOURCE_DATA_UNION,
-    ProductionResourceData,
-    TransportResourceData,
+    ResourceData,
 )
 from prodsys.util import util
 
@@ -47,9 +45,11 @@ class Resource(BaseModel, ABC, resource.Resource):
     """
 
     env: sim.Environment
-    data: RESOURCE_DATA_UNION
+    data: ResourceData
     processes: List[PROCESS_UNION]
     controller: control.Controller
+    can_move: bool = False
+    can_process: bool = False
 
     states: List[state.State] = Field(default_factory=list, init=False)
     production_states: List[state.State] = Field(default_factory=list, init=False)
@@ -60,6 +60,10 @@ class Resource(BaseModel, ABC, resource.Resource):
     active: events.Event = Field(default=None, init=False)
     current_setup: PROCESS_UNION = Field(default=None, init=False)
     reserved_setup: PROCESS_UNION = Field(default=None, init=False)
+
+    input_queues: List[store.Queue] = []
+    output_queues: List[store.Queue] = []
+    batch_size: Optional[int] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
@@ -89,6 +93,44 @@ class Resource(BaseModel, ABC, resource.Resource):
             ]
         )
         return length
+
+    def wait_for_free_process(
+        self, process: PROCESS_UNION
+    ) -> Generator[state.State, None, None]:
+        """
+        Wait for a free process of a resource.
+
+        Args:
+            resource (resources.TransportResource): The resource.
+            process (process.Process): The process.
+
+        Returns:
+            Generator: The generator yields when a process is free.
+
+        Yields:
+            Generator: The generator yields when a process is free.
+        """
+        possible_states = self.get_processes(process)
+        while True:
+            free_state = self.get_free_process(process)
+            if free_state is not None:
+                return free_state
+            logger.debug(
+                {
+                    "ID": "controller",
+                    "sim_time": self.env.now,
+                    "resource": self.data.ID,
+                    "event": f"Waiting for free process",
+                }
+            )
+            yield events.AnyOf(
+                self.env,
+                [
+                    state.process
+                    for state in possible_states
+                    if state.process is not None and state.process.is_alive
+                ],
+            )
 
     def reserve_setup(self, process: PROCESS_UNION) -> None:
         """
@@ -156,7 +198,6 @@ class Resource(BaseModel, ABC, resource.Resource):
         Yields:
             Generator: The type of the yield depends on the resource.
         """
-        # TODO: transport AGV to charging station
         for input_state in self.charging_states:
             if not input_state.requires_charging():
                 continue
@@ -524,36 +565,6 @@ class Resource(BaseModel, ABC, resource.Resource):
             yield self.env.process(self.get_free_of_setups())
             yield self.env.process(util.trivial_process(self.env))
 
-
-class ProductionResource(Resource):
-    """
-    A production resource to perform production processes. Has additionally to a Resource input and output queues and a fixed location.
-
-    Args:
-        env (sim.Environment): The simpy environment.
-        data (ProductionResourceData): The resource data.
-        processes (List[PROCESS_UNION]): The processes.
-        controller (control.ProductionController): The controller.
-        states (List[state.State]): The states of the resource for breakdowns.
-        production_states (List[state.State]): The states of the resource for production.
-        setup_states (List[state.SetupState]): The states of the resource for setups.
-        got_free (events.Event): The event that is triggered when the resource gets free of processes.
-        active (events.Event): The event that is triggered when the resource is active.
-        current_setup (PROCESS_UNION): The current setup.
-        reserved_setup (PROCESS_UNION): The reserved setup.
-        input_queues (List[store.Queue]): The input queues.
-        output_queues (List[store.Queue]): The output queues.
-
-
-    """
-
-    data: ProductionResourceData
-    controller: control.Controller
-
-    input_queues: List[store.Queue] = []
-    output_queues: List[store.Queue] = []
-    batch_size: Optional[int] = None
-
     def get_input_location(self) -> List[float]:
         """
         Returns the input location of the production resource.
@@ -594,29 +605,7 @@ class ProductionResource(Resource):
                 output_queue.reserve()
 
 
-class TransportResource(Resource):
-    """
-    A transport resource to perform transport processes. Can change its and the product's location during transport processes.
-
-    Args:
-        env (sim.Environment): The simpy environment.
-        data (TransportResourceData): The resource data.
-        processes (List[PROCESS_UNION]): The processes.
-        controller (control.TransportController): The controller.
-        states (List[state.State]): The states of the resource for breakdowns.
-        production_states (List[state.State]): The states of the resource for production.
-        setup_states (List[state.SetupState]): The states of the resource for setups.
-        got_free (events.Event): The event that is triggered when the resource gets free of processes.
-        active (events.Event): The event that is triggered when the resource is active.
-        current_setup (PROCESS_UNION): The current setup.
-        reserved_setup (PROCESS_UNION): The reserved setup.
-    """
-
-    data: TransportResourceData
-    controller: control.TransportController
-
-
-RESOURCE_UNION = Union[ProductionResource, TransportResource]
+RESOURCE_UNION = Resource
 """ Union Type for Resources. """
 
 from prodsys.simulation import control, state

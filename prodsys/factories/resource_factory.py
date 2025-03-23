@@ -11,17 +11,15 @@ from prodsys.util.util import get_class_from_str
 
 
 from prodsys.models.resource_data import (
-    RESOURCE_DATA_UNION,
-    ProductionResourceData,
-    TransportResourceData,
     ControllerEnum,
     ResourceControlPolicy,
+    ResourceData,
     TransportControlPolicy,
 )
 from prodsys.factories import process_factory, state_factory, queue_factory
 
 from prodsys.simulation import control, resources
-from prodsys.simulation.resources import RESOURCE_UNION
+from prodsys.simulation.resources import RESOURCE_UNION, Resource
 
 if TYPE_CHECKING:
     from prodsys.simulation import store
@@ -29,8 +27,7 @@ if TYPE_CHECKING:
 
 
 CONTROLLER_DICT: Dict = {
-    ControllerEnum.PipelineController: control.ProductionController,
-    ControllerEnum.TransportController: control.TransportController,
+    ControllerEnum.PipelineController: control.Controller,
     ControllerEnum.BatchController: control.BatchController,
 }
 
@@ -157,12 +154,13 @@ class ResourceFactory(BaseModel):
     state_factory: state_factory.StateFactory
     queue_factory: queue_factory.QueueFactory
 
-    resource_data: List[RESOURCE_DATA_UNION] = []
+    resource_data: List[ResourceData] = []
     resources: List[RESOURCE_UNION] = []
+    resources_can_move: List[resources.Resource] = []
+    resources_can_process: List[resources.Resource] = []
     controllers: List[
         Union[
-            control.ProductionController,
-            control.TransportController,
+            control.ProductionProcessHandler,
             control.BatchController,
         ]
     ] = []
@@ -180,7 +178,7 @@ class ResourceFactory(BaseModel):
             self.add_resource(resource_data.model_copy(deep=True))
 
     def get_queues_for_resource(
-        self, resource_data: ProductionResourceData
+        self, resource_data: ResourceData
     ) -> Tuple[List[store.Queue], List[store.Queue]]:
         input_queues = []
         output_queues = []
@@ -195,13 +193,16 @@ class ResourceFactory(BaseModel):
 
         return input_queues, output_queues
 
-    def add_resource(self, resource_data: RESOURCE_DATA_UNION):
+    def add_resource(self, resource_data: ResourceData):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(
             resource_data.process_ids
         )
-
         values.update({"processes": processes})
+        if any(isinstance(p, process.TransportProcess) for p in processes):
+            values.update({"can_move": True})
+        if any(isinstance(p, process.ProductionProcess) for p in processes ) or any(isinstance(p, process.CapabilityProcess) for p in processes   ):
+            values.update({"can_process": True})
 
         controller_class = get_class_from_str(
             name=resource_data.controller, cls_dict=CONTROLLER_DICT
@@ -210,22 +211,20 @@ class ResourceFactory(BaseModel):
             name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
         )
         controller: Union[
-            control.ProductionController,
-            control.TransportController,
+            control.Controller,
             control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env)
         self.controllers.append(controller)
         values.update({"controller": controller})
 
-        if isinstance(resource_data, ProductionResourceData):
-            input_queues, output_queues = self.get_queues_for_resource(resource_data)
-            values.update(
-                {"input_queues": input_queues, "output_queues": output_queues}
-            )
-            if "batch_size" in resource_data:
-                values.update({"batch_size": resource_data.batch_size})
+        input_queues, output_queues = self.get_queues_for_resource(resource_data)
+        values.update(
+            {"input_queues": input_queues, "output_queues": output_queues}
+        )
+        if "batch_size" in resource_data:
+            values.update({"batch_size": resource_data.batch_size})
 
-        resource_object = TypeAdapter(RESOURCE_UNION).validate_python(values)
+        resource_object = TypeAdapter(Resource).validate_python(values)
         controller.set_resource(resource_object)
 
         states = self.state_factory.get_states(resource_data.state_ids)
@@ -235,6 +234,10 @@ class ResourceFactory(BaseModel):
         )
         adjust_process_breakdown_states(resource_object, self.state_factory, self.env)
         self.resources.append(resource_object)
+        if resource_object.can_move:
+            self.resources_can_move.append(resource_object)
+        if resource_object.can_process:
+            self.resources_can_process.append(resource_object)
 
     def start_resources(self):
         """
@@ -258,12 +261,9 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
-    def get_controller_of_resource(
-        self, _resource: resources.Resource
-    ) -> Optional[
+    def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
         Union[
-            control.ProductionController,
-            control.TransportController,
+            control.Controller,
             control.BatchController,
         ]
     ]:
@@ -310,14 +310,14 @@ class ResourceFactory(BaseModel):
             if target_process.process_data.ID in res.data.process_ids
         ]
 
-    def get_transport_resources(self) -> List[resources.TransportResource]:
+    def get_movable_resources(self) -> List[resources.Resource]:
         """
         Method returns a list of transport resource objects.
 
         Returns:
             List[resources.TransportResource]: List of transport resource objects.
         """
-        return [r for r in self.resources if isinstance(r, resources.TransportResource)]
+        return self.resources_can_move
 
     def get_production_resources(self) -> List[resources.ProductionResource]:
         """
@@ -326,6 +326,4 @@ class ResourceFactory(BaseModel):
         Returns:
             List[resources.ProductionResource]: List of production resource objects.
         """
-        return [
-            r for r in self.resources if isinstance(r, resources.ProductionResource)
-        ]
+        return self.resources_can_process

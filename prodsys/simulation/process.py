@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
+import typing
 
 from pydantic import BaseModel
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation.resources import ProductionResource, TransportResource
+    from prodsys.simulation.resources import Resource
     from prodsys.simulation.source import Source
     from prodsys.simulation.sink import Sink
     from prodsys.simulation.node import Node
@@ -25,6 +26,9 @@ class Process(ABC, BaseModel):
     process_data: processes_data.PROCESS_DATA_UNION
     time_model: Optional[time_model.TimeModel]
     failure_rate: Optional[float] = None
+    auxiliaries: Optional[
+        typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+    ] = None
 
     @abstractmethod
     def matches_request(self, request: request_module.Request) -> bool:
@@ -48,11 +52,11 @@ class Process(ABC, BaseModel):
             float: Expected time it takes to execute the process.
         """
         pass
-        
+
     def get_process_signature(self) -> str:
         """
         Returns a unique signature for this process that can be used for lookup tables.
-        
+
         Returns:
             str: A string signature representing the unique properties of this process.
         """
@@ -304,12 +308,12 @@ class LinkTransportProcess(TransportProcess):
     """
 
     process_data: processes_data.LinkTransportProcessData
-    links: Optional[List[List[Union[Node, Source, Sink, ProductionResource]]]]
+    links: Optional[List[List[Union[Node, Source, Sink, Resource]]]]
 
     def matches_request(
         self,
         request: Union[
-            request_module.TransportResquest, request_module.AuxiliaryRequest
+            request_module.TransportResquest, request_module.AuxiliaryTransportRequest
         ],
     ) -> bool:
         requested_process = request.process
@@ -381,11 +385,12 @@ PROCESS_UNION = Union[
 """
 Union type for all processes.
 """
-from prodsys.simulation.resources import ProductionResource, TransportResource
+from prodsys.simulation.resources import Resource
 from prodsys.simulation.source import Source
 from prodsys.simulation.sink import Sink
 from prodsys.simulation.node import Node
 from prodsys.simulation import request as request_module
+from prodsys.simulation.auxiliary import ProcessAuxiliary, ResourceAuxiliary
 
 # LinkTransportProcess.model_rebuild()
 Process.model_rebuild()

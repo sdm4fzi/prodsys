@@ -237,7 +237,7 @@ class Auxiliary(BaseModel):
             event_time=self.env.now,
         )
 
-    def release_auxiliary_from_product(self):
+    def release(self):
         """
         Releases the auxiliary from the product after storage of the auxiliary.
         """
@@ -303,6 +303,98 @@ class Auxiliary(BaseModel):
             event_time=self.env.now,
             state_type=type_,
         )
+
+
+class ProcessAuxiliary(Auxiliary):
+    """
+    Class that represents that a certain process is required to perform the process this auxiliary is assigned to. 
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+        auxilary_data (auxilary.Auxilary): Auxilary data of the product.
+        required_process (process.ProductionProcess): Required process for the auxiliary.
+    """
+    env: sim.Environment
+    data: auxiliary_data.ProcessAuxiliaryData
+    required_process: process.ProductionProcess
+    router: router.Router
+    required_resource: Optional[resources.Resource] = Field(default=None, init=False)
+
+    def reserve(self):
+        """
+        Reserves the product object.
+        """
+        self.reserved = True
+        self.got_free = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
+
+    def release(self):
+        """
+        Releases the resource from the auxiliary process after executing the process.
+        """
+        self.current_product = None
+        self.reserved = False
+        self.got_free.succeed()
+        self.auxiliary_info.log_end_auxiliary_usage(
+            resource=self.current_locatable,
+            _product=self,
+            event_time=self.env.now,
+        )
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.current_locatable.data.ID,
+                "event": f"Released auxiliary from product",
+            }
+        )
+
+
+class ResourceAuxiliary(Auxiliary):
+    """
+    Class that represents a process auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
+
+    Args:
+        env (sim.Environment): prodsys simulation environment.
+        auxilary_data (auxilary.Auxilary): Auxilary data of the product.
+        required_resource (resources.Resource): Required resource for the auxiliary.
+    """
+
+    env: sim.Environment
+    data: auxiliary_data.ResourceAuxiliaryData
+    required_resource: resources.Resource
+    router: router.Router
+
+
+    def reserve(self):
+        """
+        Reserves the product object.
+        """
+        self.reserved = True
+        self.got_free = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
+
+    def release(self):
+        """
+        Releases the resource from the auxiliary process after executing the process.
+        """
+        self.current_product = None
+        self.reserved = False
+        self.got_free.succeed()
+        self.auxiliary_info.log_end_auxiliary_usage(
+            resource=self.current_locatable,
+            _product=self,
+            event_time=self.env.now,
+        )
+        logger.debug(
+            {
+                "ID": self.data.ID,
+                "sim_time": self.env.now,
+                "resource": self.current_locatable.data.ID,
+                "event": f"Released auxiliary from product",
+            }
+        )
+
 
 
 from prodsys.simulation import product
