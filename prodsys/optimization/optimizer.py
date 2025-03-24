@@ -471,7 +471,8 @@ class FileSystemSaveOptimizer(Optimizer):
         self, configuration_hash: str
     ) -> ProductionSystemAdapter:
         print("##### Loading configuration from disk #####")
-        config = JsonProductionSystemAdapter().read_data(
+        config = JsonProductionSystemAdapter()
+        config.read_data(
             f"{self.save_folder}/hash_{configuration_hash}.json"
         )
         return config

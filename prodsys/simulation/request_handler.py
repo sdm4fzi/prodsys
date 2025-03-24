@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Union, Dict, Set
+from typing import Deque, List, TYPE_CHECKING, Union, Dict, Set
 from dataclasses import dataclass, field
 
 import logging
@@ -26,7 +26,7 @@ ResourceIdentifier = str
 
 
 @dataclass(frozen=True)
-class RequestResourceKey:
+class RequestIdentifier:
     """
     Represents a key for mapping requests to resources.
 
@@ -34,21 +34,13 @@ class RequestResourceKey:
         request_id (str): Unique identifier for the request.
         resource_id (str): Unique identifier for the resource.
     """
-
-    request_id: str
-    resource_id: str
-
-    def __hash__(self) -> int:
-        return hash((self.request_id, self.resource_id))
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, RequestResourceKey):
-            return NotImplemented
-        return (
-            self.request_id == other.request_id
-            and self.resource_id == other.resource_id
-        )
-
+    item: str
+    transport_requests_per_resource: Dict[str, List[request.Request]] = field(
+        default_factory=dict
+    )
+    process_requests_per_resource: Dict[str, List[request.Request]] = field(
+        default_factory=dict
+    )
 
 @dataclass
 class RequestHandler:
@@ -61,9 +53,7 @@ class RequestHandler:
 
     free_resources: list[ResourceIdentifier] = field(default_factory=list)
     # Maps request keys to lists of pending requests
-    pending_requests: Dict[ResourceIdentifier, List[request.Request]] = field(
-        default_factory=dict
-    )
+    pending_requests: Deque[RequestIdentifier] = field(default_factory=lambda: Deque())
     # Maps request keys to allocated requests
     allocated_requests: Dict[str, request.Request] = field(default_factory=dict)
     # Set of completed request keys
@@ -120,7 +110,7 @@ class RequestHandler:
             self.resource_to_requests[resource_id].append(new_request)
 
         # Add to pending requests
-        self.pending_requests[key] = new_requests
+        self.pending_requests.append(new_requests)
 
     def add_transport_request(
         self,
@@ -166,7 +156,7 @@ class RequestHandler:
             self.resource_to_requests[resource_id].append(new_request)
 
         # Add to pending requests
-        self.pending_requests[key] = new_requests
+        self.pending_requests.append(new_requests)
 
     def mark_allocation(self, allocated_request: request.Request) -> None:
         """
@@ -194,10 +184,6 @@ class RequestHandler:
             key = f"transport:{item_id}:{origin_id}:{target_id}"
         else:
             key = f"{item_id}:{process_id}"
-
-        # Move from pending to allocated
-        if key in self.pending_requests:
-            self.pending_requests.pop(key)
 
         # Store the allocated request
         self.allocated_requests[key] = allocated_request
@@ -251,9 +237,11 @@ class RequestHandler:
 
         Returns:
             List[request.Request]: List of free requests ready for allocation.
-        """
-        ### TODO: update this here to return the requests in the correct order
-        pass
+        """        
+        allocation_item = self.pending_requests.popleft()
+        # assert that any of the resources is free, otherwise get next item
+        
+        return allocation_item
 
     def get_requests_for_resource(
         self, resource: resources.Resource
