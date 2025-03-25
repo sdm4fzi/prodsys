@@ -134,7 +134,7 @@ class StateInfo(BaseModel):
             _product (product.Product): The product.
             state_type (StateTypeEnum): The type of the state.
         """
-        self._product_ID = _auxiliary.data.ID
+        self._product_ID = _auxiliary.product_data.ID
         self._state_type = state_type
 
     def log_start_state(
@@ -902,5 +902,6 @@ Union Type of all states.
 
 from prodsys.simulation import resources
 
+State.model_rebuild()
 if TYPE_CHECKING:
     from prodsys.simulation import product

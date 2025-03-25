@@ -9,7 +9,8 @@ from prodsys.factories import (
 )
 from prodsys.models import queue_data, auxiliary_data
 
-from prodsys.simulation import sim, router
+from prodsys.simulation import sim
+from prodsys.simulation import router as router_module
 from prodsys.simulation import auxiliary, logger
 
 
@@ -29,6 +30,7 @@ class AuxiliaryFactory(BaseModel):
     auxiliaries: List[auxiliary.Auxiliary] = []
     event_logger: logger.EventLogger = Field(default=False, init=False)
     auxiliary_counter: int = 0
+    router: router_module.Router = Field(default=False, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -97,11 +99,8 @@ class AuxiliaryFactory(BaseModel):
         values.update({"relevant_transport_processes": relevant_transport_processes})
         storage_from_queue_data = self.queue_factory.get_queue(storage.ID)
         values.update({"storage": storage_from_queue_data})
-        router = self.get_router(
-            source_data.RoutingHeuristic.FIFO
-        )  # Add the routing_heuristic in auxiliary_data, like in source_data
         auxiliary_object = auxiliary.Auxiliary.model_validate(values)
-        auxiliary_object.auxiliary_router = router
+        auxiliary_object.auxiliary_router = self.router
         auxiliary_object.current_locatable = storage_from_queue_data
         auxiliary_object.init_got_free()
 
@@ -132,23 +131,7 @@ class AuxiliaryFactory(BaseModel):
         Raises:
             IndexError: If no auxiliary object with the specified ID is found.
         """
-        return [s for s in self.auxiliaries if s.data.ID == ID].pop()
+        return [s for s in self.auxiliaries if s.product_data.ID == ID].pop()
 
-    def get_router(self, routing_heuristic: str):
-        """
-        Get the router object with the specified routing heuristic.
 
-        Args:
-            routing_heuristic (str): The routing heuristic to use.
-
-        Returns:
-            router.Router: The router object with the specified routing heuristic.
-        """
-        return router.Router(
-            self.resource_factory,
-            self.sink_factory,
-            self,
-            router.ROUTING_HEURISTIC[routing_heuristic],
-        )
-
-AuxiliaryFactory.model_rebuild()
+# AuxiliaryFactory.model_rebuild()

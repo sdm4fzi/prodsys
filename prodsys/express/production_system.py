@@ -32,7 +32,7 @@ def remove_duplicate_items(
             process.PROCESS_UNION,
             time_model.TIME_MODEL_UNION,
         ]
-    ]
+    ],
 ) -> List[
     Union[
         resources.Resource,
@@ -72,7 +72,7 @@ class ProductionSystem(core.ExpressObject):
         sinks (List[sink.Sink]): Sinks of the production system.
     """
 
-    resources: List[Union[resources.ProductionResource, resources.TransportResource]]
+    resources: List[Union[resources.Resource]]
     sources: List[source.Source]
     sinks: List[sink.Sink]
 
@@ -174,12 +174,12 @@ class ProductionSystem(core.ExpressObject):
                 + [
                     r._input_queues
                     for r in self.resources
-                    if isinstance(r, resources.ProductionResource)
+                    if r._input_queues
                 ]
                 + [
                     r._output_queues
                     for r in self.resources
-                    if isinstance(r, resources.ProductionResource)
+                    if r._output_queues
                 ]
                 + [s._input_queues for s in self.sinks]
             )
@@ -187,11 +187,11 @@ class ProductionSystem(core.ExpressObject):
         stores = [
             r.input_stores
             for r in self.resources
-            if isinstance(r, resources.ProductionResource)
+            if r.input_stores
         ] + [
             r.output_stores
             for r in self.resources
-            if isinstance(r, resources.ProductionResource)
+            if r.output_stores
         ]
         stores = list(util.flatten_object(stores))
         queue_data += [store.to_model() for store in stores]

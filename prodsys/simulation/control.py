@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
 from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
@@ -9,28 +9,21 @@ import random
 
 import logging
 
-from app.dao import product_dao
-from prodsys.models import product_data
 
 logger = logging.getLogger(__name__)
 
 from simpy import events
 
 from prodsys.simulation import (
-    node,
-    request,
     route_finder,
     sim,
     state,
     process,
-    router,
     store,
 )
 
 from prodsys.simulation.process import (
     LinkTransportProcess,
-    RequiredCapabilityProcess,
-    ProductionProcess,
     ReworkProcess,
 )
 
@@ -670,7 +663,7 @@ class TransportProcessHandler:
             list[float]: The position of the target, list with 2 floats.
         """
         if not last_transport_step or not isinstance(
-            target, (resources.ProductionResource, store.Store)
+            target, (resources.Resource, store.Store)
         ):
             return target.get_location()
         if empty_transport:
@@ -801,7 +794,7 @@ def SPT_control_policy(requests: List[request_module.Request]) -> None:
 
 
 def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
-    if not isinstance(locatable, (resources.ProductionResource, store.Store)):
+    if not isinstance(locatable, (resources.Resource, store.Store)):
         return locatable.get_location()
     if mode == "target":
         return locatable.get_input_location()
@@ -883,7 +876,7 @@ class BatchController(Controller):
     A batch controller is responsible for controlling the batch processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
 
-    resource: resources.ProductionResource = Field(init=False, default=None)
+    resource: resources.Resource = Field(init=False, default=None)
 
     def get_batch_size(self, resource: resources.Resource) -> int:
         """
@@ -895,7 +888,7 @@ class BatchController(Controller):
         Returns:
             int: The batch size of the resource.
         """
-        if isinstance(resource, resources.ProductionResource):
+        if isinstance(resource, resources.Resource):
             return resource.data.batch_size
         else:
             raise ValueError("Resource is not a ProductionResource")
@@ -1248,6 +1241,6 @@ class BatchController(Controller):
         product.add_needed_rework(process)
 
 
-from prodsys.simulation import resources, state, sink, source, route_finder, sim, store
+from prodsys.simulation import resources, state, route_finder, sim, store
 from prodsys.simulation import request as request_module
 from prodsys.simulation.process import LinkTransportProcess

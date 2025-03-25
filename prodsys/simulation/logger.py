@@ -206,7 +206,7 @@ class EventLogger(Logger):
         Args:
             resource_factory (resource_factory.ResourceFactory): The resource factory.
         """
-        for r in resource_factory.resources:
+        for r in resource_factory.all_resources:
             all_states = (
                 r.states + r.production_states + r.setup_states + r.charging_states
             )

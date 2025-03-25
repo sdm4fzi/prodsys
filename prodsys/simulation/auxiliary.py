@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 from simpy import events
 
 from pydantic import BaseModel
+from prodsys.simulation import router as router_module
 
 if TYPE_CHECKING:
-    from prodsys.simulation import router, product, resources, sink, source
+    from prodsys.simulation import product, resources, sink, source
     from prodsys.factories import auxiliary_factory
 
 from prodsys.models import auxiliary_data
@@ -68,7 +69,7 @@ class AuxiliaryInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.data.ID
+        self.product_ID = _product.product_data.ID
         self.activity = state.StateEnum.created_auxiliary
         self.state_type = state.StateTypeEnum.store
 
@@ -91,7 +92,7 @@ class AuxiliaryInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.data.ID
+        self.product_ID = _product.product_data.ID
         self.activity = state.StateEnum.started_auxiliary_usage
         self.state_type = state.StateTypeEnum.production
 
@@ -112,7 +113,7 @@ class AuxiliaryInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.data.ID
+        self.product_ID = _product.product_data.ID
         self.activity = state.StateEnum.finished_auxiliary_usage
         self.state_type = state.StateTypeEnum.production
 
@@ -135,7 +136,7 @@ class AuxiliaryInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.data.ID
+        self.product_ID = _product.product_data.ID
         self.activity = state.StateEnum.start_state
         self.state_type = state_type
 
@@ -158,7 +159,7 @@ class AuxiliaryInfo(BaseModel):
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.data.ID
+        self.product_ID = _product.product_data.ID
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
@@ -173,7 +174,7 @@ class Auxiliary(BaseModel):
     """
 
     env: sim.Environment
-    data: auxiliary_data.AuxiliaryData
+    product_data: auxiliary_data.AuxiliaryData
     transport_process: process.Process
     storage: store.Store
     relevant_processes: List[
@@ -181,7 +182,7 @@ class Auxiliary(BaseModel):
     ]
     relevant_transport_processes: List[process.TransportProcess]
 
-    auxiliary_router: Optional[router.Router] = Field(default=None, init=False)
+    auxiliary_router: Optional[router_module.Router] = Field(default=None, init=False)
     current_locatable: Union[product.Locatable, store.Store] = Field(
         default=None, init=False
     )
@@ -206,7 +207,7 @@ class Auxiliary(BaseModel):
 
     @property
     def product_data(self):
-        return self.data
+        return self.product_data
 
     def update_location(self, locatable: product.Locatable):
         """
@@ -218,7 +219,7 @@ class Auxiliary(BaseModel):
         self.current_locatable = locatable
         logger.debug(
             {
-                "ID": self.data.ID,
+                "ID": self.product_data.ID,
                 "sim_time": self.env.now,
                 "resource": self.current_locatable.data.ID,
                 "event": f"Updated location to {self.current_locatable.data.ID}",
@@ -251,7 +252,7 @@ class Auxiliary(BaseModel):
         )
         logger.debug(
             {
-                "ID": self.data.ID,
+                "ID": self.product_data.ID,
                 "sim_time": self.env.now,
                 "resource": self.current_locatable.data.ID,
                 "event": f"Released auxiliary from product",
@@ -307,17 +308,18 @@ class Auxiliary(BaseModel):
 
 class ProcessAuxiliary(Auxiliary):
     """
-    Class that represents that a certain process is required to perform the process this auxiliary is assigned to. 
+    Class that represents that a certain process is required to perform the process this auxiliary is assigned to.
 
     Args:
         env (sim.Environment): prodsys simulation environment.
         auxilary_data (auxilary.Auxilary): Auxilary data of the product.
         required_process (process.ProductionProcess): Required process for the auxiliary.
     """
+
     env: sim.Environment
     data: auxiliary_data.ProcessAuxiliaryData
     required_process: process.ProductionProcess
-    router: router.Router
+    router: router_module.Router
     required_resource: Optional[resources.Resource] = Field(default=None, init=False)
 
     def reserve(self):
@@ -363,8 +365,7 @@ class ResourceAuxiliary(Auxiliary):
     env: sim.Environment
     data: auxiliary_data.ResourceAuxiliaryData
     required_resource: resources.Resource
-    router: router.Router
-
+    router: router_module.Router
 
     def reserve(self):
         """
@@ -394,7 +395,6 @@ class ResourceAuxiliary(Auxiliary):
                 "event": f"Released auxiliary from product",
             }
         )
-
 
 
 from prodsys.simulation import product

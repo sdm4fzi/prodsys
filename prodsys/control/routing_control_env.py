@@ -134,7 +134,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             source.router = self.router
 
         self.observers = []
-        for resource in self.runner.resource_factory.resources:
+        for resource in self.runner.resource_factory.all_resources:
             obs = observer.ResourceObserver(
                 resource_factory=self.runner.resource_factory,
                 product_factory=self.runner.product_factory,
@@ -183,7 +183,9 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         """
         resource_index = np.argmax(action)
 
-        self.chosen_resource = self.runner.resource_factory.resources[resource_index]
+        self.chosen_resource = self.runner.resource_factory.all_resources[
+            resource_index
+        ]
         if not self.chosen_resource.data.ID in [
             r.resource.data.ID for r in self.possible_requests
         ]:

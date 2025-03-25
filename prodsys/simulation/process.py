@@ -393,4 +393,4 @@ from prodsys.simulation import request as request_module
 from prodsys.simulation.auxiliary import ProcessAuxiliary, ResourceAuxiliary
 
 # LinkTransportProcess.model_rebuild()
-Process.model_rebuild()
+# Process.model_rebuild()

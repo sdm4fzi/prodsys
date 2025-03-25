@@ -64,9 +64,7 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
 
         self.interrupt_simulation_event: events.Event = None
         self.resource_controller: control.Controller = None
-        self.resource: Union[
-            resources.ProductionResource, resources.TransportResource
-        ] = None
+        self.resource: resources.Resource = None
         self.observer: observer.ResourceObserver = None
         self.step_count: int = 0
         self.reward = 0
