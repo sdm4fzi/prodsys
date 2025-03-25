@@ -19,7 +19,6 @@ from prodsys.models.resource_data import (
 from prodsys.factories import process_factory, state_factory, queue_factory
 
 from prodsys.simulation import control, resources
-from prodsys.simulation.resources import RESOURCE_UNION, Resource
 
 if TYPE_CHECKING:
     from prodsys.simulation import store
@@ -155,7 +154,7 @@ class ResourceFactory(BaseModel):
     queue_factory: queue_factory.QueueFactory
 
     resource_data: List[ResourceData] = []
-    resources: List[RESOURCE_UNION] = []
+    all_resources: List[resources.Resource] = []
     resources_can_move: List[resources.Resource] = []
     resources_can_process: List[resources.Resource] = []
     controllers: List[
@@ -201,7 +200,9 @@ class ResourceFactory(BaseModel):
         values.update({"processes": processes})
         if any(isinstance(p, process.TransportProcess) for p in processes):
             values.update({"can_move": True})
-        if any(isinstance(p, process.ProductionProcess) for p in processes ) or any(isinstance(p, process.CapabilityProcess) for p in processes   ):
+        if any(isinstance(p, process.ProductionProcess) for p in processes) or any(
+            isinstance(p, process.CapabilityProcess) for p in processes
+        ):
             values.update({"can_process": True})
 
         controller_class = get_class_from_str(
@@ -218,13 +219,11 @@ class ResourceFactory(BaseModel):
         values.update({"controller": controller})
 
         input_queues, output_queues = self.get_queues_for_resource(resource_data)
-        values.update(
-            {"input_queues": input_queues, "output_queues": output_queues}
-        )
+        values.update({"input_queues": input_queues, "output_queues": output_queues})
         if "batch_size" in resource_data:
             values.update({"batch_size": resource_data.batch_size})
 
-        resource_object = TypeAdapter(Resource).validate_python(values)
+        resource_object = TypeAdapter(resources.Resource).validate_python(values)
         controller.set_resource(resource_object)
 
         states = self.state_factory.get_states(resource_data.state_ids)
@@ -233,7 +232,7 @@ class ResourceFactory(BaseModel):
             resource_object, self.state_factory, self.env
         )
         adjust_process_breakdown_states(resource_object, self.state_factory, self.env)
-        self.resources.append(resource_object)
+        self.all_resources.append(resource_object)
         if resource_object.can_move:
             self.resources_can_move.append(resource_object)
         if resource_object.can_process:
@@ -243,13 +242,13 @@ class ResourceFactory(BaseModel):
         """
         Method starts the simpy processes of the controllers of the resources to initialize the simulation.
         """
-        for _resource in self.resources:
+        for _resource in self.all_resources:
             _resource.start_states()
 
         for controller in self.controllers:
             self.env.process(controller.control_loop())  # type: ignore
 
-    def get_resource(self, ID: str) -> RESOURCE_UNION:
+    def get_resource(self, ID: str) -> resources.Resource:
         """
         Method returns a resource object with the given ID.
 
@@ -259,7 +258,7 @@ class ResourceFactory(BaseModel):
         Returns:
             resources.RESOURCE_UNION: Resource object with the given ID.
         """
-        return [r for r in self.resources if r.data.ID == ID].pop()
+        return [r for r in self.all_resources if r.data.ID == ID].pop()
 
     def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
         Union[
@@ -290,7 +289,7 @@ class ResourceFactory(BaseModel):
         Returns:
             List[resources.Resource]: List of resource objects with the given IDs.
         """
-        return [r for r in self.resources if r.data.ID in IDs]
+        return [r for r in self.all_resources if r.data.ID in IDs]
 
     def get_resources_with_process(
         self, target_process: process.Process
@@ -306,7 +305,7 @@ class ResourceFactory(BaseModel):
         """
         return [
             res
-            for res in self.resources
+            for res in self.all_resources
             if target_process.process_data.ID in res.data.process_ids
         ]
 
@@ -319,7 +318,7 @@ class ResourceFactory(BaseModel):
         """
         return self.resources_can_move
 
-    def get_production_resources(self) -> List[resources.ProductionResource]:
+    def get_production_resources(self) -> List[resources.Resource]:
         """
         Method returns a list of production resource objects.
 

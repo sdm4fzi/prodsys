@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Optional, Union, List, Tuple, Union
+from typing import TYPE_CHECKING, Optional, List
+
+import simpy
 
 
 if TYPE_CHECKING:
@@ -13,9 +15,9 @@ if TYPE_CHECKING:
         CapabilityProcess,
         ProductionProcess,
     )
-    from prodsys.simulation.resources import Resource
-    from prodsys.simulation.sink import Sink
     from prodsys.simulation.auxiliary import Auxiliary
+
+    from prodsys.simulation.resources import Resource
     from prodsys.simulation.store import Store, Queue
 
 
@@ -56,7 +58,7 @@ class Request:
         request_type: RequestType,
         process: PROCESS_UNION,
         resource: Resource,
-        item: Optional[Locatable] = None,
+        item: Optional[Product | Auxiliary] = None,
         origin_queue: Optional[Queue] = None,
         target_queue: Optional[Store] = None,
         origin: Optional[Locatable] = None,
@@ -70,13 +72,17 @@ class Request:
         self.target = target
         self.origin_queue: Optional[Queue] = origin_queue
         self.target_queue: Optional[Store] = target_queue
-        
+
+        self.transport_to_target: Optional[simpy.Event] = None
+        self.auxiliaries_ready: Optional[simpy.Event] = None
+        self.completed: Optional[simpy.Event] = None
+
         # For compatibility with existing code
         if hasattr(item, 'product_data'):
             self.product = item
         else:
             self.product = None
-            
+
         # For auxiliary requests
         self.auxiliary = None
         if request_type == RequestType.AUXILIARY and item and hasattr(item, 'auxiliary_data'):

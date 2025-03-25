@@ -71,7 +71,7 @@ class TransportControlPolicy(str, Enum):
     )
 
 
-class ResourceData(CoreAsset, Locatable):
+class ResourceData(CoreAsset, InOutLocatable):
     """
     Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.
 

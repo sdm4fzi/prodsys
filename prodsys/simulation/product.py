@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 import logging
 
+from prodsys.models.source_data import RoutingHeuristic
+
 logger = logging.getLogger(__name__)
 
 from simpy import events
@@ -163,10 +165,12 @@ class Product(BaseModel):
         process.LinkTransportProcess,
     ]
     product_router: router.Router
+    routing_heuristic: RoutingHeuristic
 
     next_possible_processes: Optional[list[process.PROCESS_UNION]] = Field(
         default=None, init=False
     )
+    current_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
     processes_needing_rework: List[process.Process] = Field(
         default_factory=list, init=False
     )
@@ -219,43 +223,15 @@ class Product(BaseModel):
             }
         )
         self.set_next_possible_production_processes()
-
-        # router.product_ready.succeed(value=name)
-        # router.product_ready = env.event()
-
         if self.has_auxiliaries:
-            yield self.env.process(
-                self.product_router.get_auxiliaries_for_product(self)
+            auxiliaries_received_event = self.env.process(
+                self.product_router.route_auxiliaries_to_product(self)
             )
-            # while True:
-            #     auxiliary_request: request.AuxiliaryTransportRequest = (
-            #         yield self.env.process(
-            #             self.product_router.route_auxiliary_to_product(self)
-            #         )
-            #     )
-            #     if not auxiliary_request:
-            #         yield self.env.timeout(0)
-            #         continue
-            #     break
-            # while True:
-            #     auxiliary_transport_request: request.TransportResquest = (
-            #         yield self.env.process(
-            #             self.product_router.route_transport_resource_for_item(
-            #                 auxiliary_request
-            #             )
-            #         )
-            #     )
-            #     if not auxiliary_transport_request:
-            #         yield self.env.timeout(0)
-            #         continue
-            #     break
-            # yield self.env.process(
-            #     auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
-            # )
+            yield auxiliaries_received_event
 
         while self.next_possible_processes:
-            self.product_router.request_processing(self)
-            executed_process = yield self.finished_process
+            executed_process_event = self.product_router.request_processing(self)
+            yield executed_process_event
             # TODO: move logging to appropriate functions in controller or so
             # self.product_info.log_end_process(
             #     resource=processing_request.resource,
@@ -264,76 +240,12 @@ class Product(BaseModel):
             #     state_type=type_,
             # )
             self.finished_process = events.Event(self.env)
-            if isinstance(executed_process, process.ReworkProcess):
-                self.register_rework(executed_process)
-            self.update_executed_process(executed_process)
+            if isinstance(self.current_process, process.ReworkProcess):
+                self.register_rework(self.current_process)
+            self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
-            # logger.debug(
-            #     {
-            #         "ID": self.product_data.ID,
-            #         "sim_time": self.env.now,
-            #         "process": self.next_prodution_process.process_data.ID,
-            #         "event": f"Start process of product",
-            #     }
-            # )
-            # while True:
-            #     production_request = yield self.env.process(
-            #         self.product_router.route_product_to_production_resource(self)
-            #     )
-            #     if not production_request:
-            #         yield self.env.timeout(0)
-            #         continue
-            #     break
-            # while True:
-            #     transport_request = yield self.env.process(
-            #         self.product_router.route_transport_resource_for_item(
-            #             production_request
-            #         )
-            #     )
-            #     if not transport_request:
-            #         yield self.env.timeout(0)
-            #         continue
-            #     break
-            # yield self.env.process(self.request_process(transport_request))
-            # yield self.env.process(self.request_process(production_request))
-            # store_product = self.product_router.check_store_product(self)
-            # if store_product:
-            #     logger.debug(
-            #         {
-            #             "ID": self.product_data.ID,
-            #             "sim_time": self.env.now,
-            #             "event": f"Store product in storage",
-            #         }
-            #     )
-            #     while True:
-            #         transport_to_storage_request = yield self.env.process(
-            #             self.product_router.route_product_to_storage(self)
-            #         )
-            #         if not transport_to_storage_request:
-            #             yield self.env.timeout(0)
-            #             continue
-            #         break
-            #     yield self.env.process(
-            #         self.request_process(transport_to_storage_request)
-            #     )
-            #     logger.debug(
-            #         {
-            #             "ID": self.product_data.ID,
-            #             "sim_time": self.env.now,
-            #             "event": f"Product transported to storage",
-            #         }
-            #     )
-
-        # while True:
-        #     transport_to_sink_request = yield self.env.process(
-        #         self.product_router.route_product_to_sink(self)
-        #     )
-        #     if not transport_to_sink_request:
-        #         yield self.env.timeout(0)
-        #         continue
-        #     break
-        # yield self.env.process(self.request_process(transport_to_sink_request))
-        yield self.env.process(self.product_router.route_product_to_sink(self))
+        arrived_at_sink_event = self.product_router.route_product_to_sink(self)
+        yield arrived_at_sink_event
         self.product_info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
@@ -347,54 +259,7 @@ class Product(BaseModel):
         )
 
         if self.has_auxiliaries:
-            # auxiliary_request.auxiliary.update_location(self.current_locatable)
-            # while True:
-            #     auxiliary_transport_request: request.TransportResquest = (
-            #         yield self.env.process(
-            #             self.product_router.route_auxiliary_to_store(
-            #                 auxiliary_request.auxiliary
-            #             )
-            #         )
-            #     )
-            #     if not auxiliary_request:
-            #         yield self.env.timeout(0)
-            #         continue
-            #     break
-            # logger.debug(
-            #     {
-            #         "ID": self.product_data.ID,
-            #         "sim_time": self.env.now,
-            #         "resource": auxiliary_transport_request.resource.data.ID,
-            #         "aux": auxiliary_transport_request.product.product_data.ID,
-            #         "process": auxiliary_transport_request.process.process_data.ID,
-            #         "origin": auxiliary_transport_request.origin.data.ID,
-            #         "target": auxiliary_transport_request.target.data.ID,
-            #         "event": f"starting auxiliary transport request for {auxiliary_transport_request.product.product_data.ID}",
-            #     }
-            # )
-            # yield self.env.process(
-            #     auxiliary_request.auxiliary.request_process(auxiliary_transport_request)
-            # )
-            # auxiliary_request.auxiliary.release_auxiliary_from_product()
             self.product_router.release_auxiliaries_from_product(self)
-
-    def request_process(self, processing_request: request.Request) -> Generator:
-        """
-        Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
-        """
-        if isinstance(processing_request, request.TransportResquest):
-            type_ = StateTypeEnum.transport
-        else:
-            type_ = StateTypeEnum.production
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "resource": processing_request.resource.data.ID,
-                "event": f"Request process {processing_request.process.process_data.ID} for {type_}",
-            }
-        )
-        self.env.request_process_of_resource(request=processing_request)
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """

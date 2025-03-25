@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import field
 from typing import List, TYPE_CHECKING, Optional, List
 
@@ -106,7 +104,7 @@ class StateFactory:
         values.update(self.get_battery_time_model_data(state_data))
         self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
 
-    def create_states(self, adapter: adapter.ProductionSystemAdapter):
+    def create_states(self, adapter: "adapter.ProductionSystemAdapter"):
         """
         Creates state objects based on the given adapter.
 

@@ -49,7 +49,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
-    auxiliaries: list[str]
+    auxiliaries: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
         json_schema_extra={

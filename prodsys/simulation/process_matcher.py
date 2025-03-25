@@ -10,7 +10,8 @@ import time
 logger = logging.getLogger(__name__)
 
 
-from prodsys.simulation import request
+from prodsys.models.source_data import RoutingHeuristic
+from prodsys.simulation import request, process
 
 
 if TYPE_CHECKING:
@@ -76,8 +77,7 @@ class ProcessMatcher:
         product_factory: product_factory.ProductFactory,
         source_factory: source_factory.SourceFactory,
         reachability_cache: Dict[Tuple[str, str], bool],
-        route_cache: Dict[Tuple[str, str, str], request.Request]
-
+        route_cache: Dict[Tuple[str, str, str], request.Request],
     ):
         """
         Initialize the ProcessMatcher with the necessary factories and routing control environment.
@@ -97,11 +97,16 @@ class ProcessMatcher:
         self.route_cache = route_cache
         self.reachability_cache = reachability_cache
 
-
         # Compatibility tables for resources and processes
-        self.production_compatibility: dict[tuple[str, str], list[tuple[resources.Resource, process.ProductionProcess]]] = {}
-        self.transport_compatibility: dict[tuple[str, str], list[tuple[resources.Resource, process.TransportProcess]]] = {}
-        self.rework_compatibility: dict[tuple[str, str], list[process.ReworkProcess]] = {}
+        self.production_compatibility: dict[
+            tuple[str, str], list[tuple[resources.Resource, process.ProductionProcess]]
+        ] = {}
+        self.transport_compatibility: dict[
+            tuple[str, str], list[tuple[resources.Resource, process.TransportProcess]]
+        ] = {}
+        self.rework_compatibility: dict[
+            tuple[str, str], list[process.ReworkProcess]
+        ] = {}
 
         # Precompute compatibility tables at initialization time
         self.precompute_compatibility_tables()
@@ -119,15 +124,32 @@ class ProcessMatcher:
             A dummy product instance
         """
         return self.product_factory.create_product(
-            product_data=product_data, router=self
+            product_data=product_data, routing_heuristic=RoutingHeuristic.FIFO
         )
+    
+
+    def get_all_required_processes(
+        self, product: product.Product
+    ) -> List[process.PROCESS_UNION]:
+        """
+        Get all required processes for a product.
+
+        Args:
+            product (product.Product): The product for which to get required processes.
+
+        Returns:
+            List[process.PROCESS_UNION]: List of required processes.
+        """
+        process_model = product.process_model
+        # FIXME: resolve that also precedence graph models work
+        return process_model.process_list
 
     def precompute_compatibility_tables(self):
         """
-            Precompute compatibility tables for resources and processes.
-            This method runs at initialization time to create lookup tables
-            that will speed up resource selection during simulation.
-            """
+        Precompute compatibility tables for resources and processes.
+        This method runs at initialization time to create lookup tables
+        that will speed up resource selection during simulation.
+        """
         start_time = time.time()
         logger.info("Precomputing resource compatibility tables...")
 
@@ -136,34 +158,35 @@ class ProcessMatcher:
         for source in self.source_factory.sources:
             product_type = source.product_data.product_type
             dummy_products[product_type] = self._create_dummy_product(
-                    source.product_data
-                )
+                source.product_data
+            )
 
         # Precompute production resource compatibility
         for product_type, dummy_product in dummy_products.items():
-            while True:
-                dummy_product.set_next_possible_production_processes()
-                if dummy_product.next_possible_processes is None:
-                    break
+            all_processes_of_product = self.get_all_required_processes(
+                dummy_product
+            )
+            for requested_process in all_processes_of_product:
                 for resource in self.resource_factory.get_production_resources():
-                    requested_process = dummy_product.next_possible_processes
                     dummy_production_request = request.Request(
-                            process=requested_process,
-                            product=dummy_product,
-                            resource=resource,
-                        )
+                        process=requested_process,
+                        item=dummy_product,
+                        resource=resource,
+                        request_type=request.RequestType.PRODUCTION,
+                    )
                     for offered_process in resource.processes:
                         # Test if this process matches the request
                         if offered_process.matches_request(dummy_production_request):
                             key = ResourceCompatibilityKey(
-                                    product_type=product_type,
-                                    process_signature=requested_process.get_process_signature(),
-                                )
+                                product_type=product_type,
+                                process_signature=requested_process.get_process_signature(),
+                            )
                             if key not in self.production_compatibility:
                                 self.production_compatibility[key] = []
                             self.production_compatibility[key].append(
-                                    (resource, offered_process)
-                                )
+                                (resource, offered_process)
+                            )
+                            dummy_product.update_executed_process(offered_process)
 
         # Precompute transport resource compatibility and reachability
         for product_type, dummy_product in dummy_products.items():
@@ -172,52 +195,52 @@ class ProcessMatcher:
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair
                     all_locations = (
-                            self.resource_factory.resources
-                            + self.sink_factory.sinks
-                            + self.source_factory.sources
-                        )
+                        self.resource_factory.all_resources
+                        + self.sink_factory.sinks
+                        + self.source_factory.sources
+                    )
                     for origin in all_locations:
                         for target in all_locations:
                             # Create a dummy request to test matching
                             dummy_product.current_locatable = origin
 
                             dummy_transport_request = request.Request(
-                                    process=requested_process,
-                                    product=dummy_product,
-                                    resource=transport_resource,
-                                    origin=origin,
-                                    target=target,
-                                    request_type=request.RequestType.TRANSPORT
-                                )
+                                process=requested_process,
+                                item=dummy_product,
+                                resource=transport_resource,
+                                origin=origin,
+                                target=target,
+                                request_type=request.RequestType.TRANSPORT,
+                            )
 
                             # Test if this transport process can handle this origin-target pair
                             if offered_process.matches_request(dummy_transport_request):
                                 key = TransportCompatibilityKey(
-                                        origin_id=origin.data.ID,
-                                        target_id=target.data.ID,
-                                        process_signature=requested_process.get_process_signature(),
-                                    )
+                                    origin_id=origin.data.ID,
+                                    target_id=target.data.ID,
+                                    process_signature=requested_process.get_process_signature(),
+                                )
                                 if key not in self.transport_compatibility:
                                     self.transport_compatibility[key] = []
                                 self.transport_compatibility[key].append(
-                                        (transport_resource, offered_process)
-                                    )
+                                    (transport_resource, offered_process)
+                                )
 
                                 # Cache reachability information
                                 self.reachability_cache[
-                                        (origin.data.ID, target.data.ID)
-                                    ] = True
+                                    (origin.data.ID, target.data.ID)
+                                ] = True
 
                                 # Cache the route
                                 route_key = (
-                                        origin.data.ID,
-                                        target.data.ID,
-                                        offered_process.get_process_signature(),
-                                    )
+                                    origin.data.ID,
+                                    target.data.ID,
+                                    offered_process.get_process_signature(),
+                                )
                                 if route_key not in self.route_cache:
                                     self.route_cache[route_key] = (
-                                            dummy_transport_request
-                                        )
+                                        dummy_transport_request
+                                    )
 
         # Precompute rework process compatibility
         # for rework_proc in self.resource_factory.process_factory.processes:
@@ -241,20 +264,20 @@ class ProcessMatcher:
         #                 self.rework_compatibility[key].append(rework_proc)
 
         logger.info(
-                f"Precomputation completed in {time.time() - start_time:.2f} seconds"
-            )
+            f"Precomputation completed in {time.time() - start_time:.2f} seconds"
+        )
         logger.info(
-                f"Production compatibility table contains {len(self.production_compatibility)} entries"
-            )
+            f"Production compatibility table contains {len(self.production_compatibility)} entries"
+        )
         logger.info(
-                f"Transport compatibility table contains {len(self.transport_compatibility)} entries"
-            )
+            f"Transport compatibility table contains {len(self.transport_compatibility)} entries"
+        )
         logger.info(
-                f"Reachability cache contains {len(self.reachability_cache)} entries"
-            )
+            f"Reachability cache contains {len(self.reachability_cache)} entries"
+        )
         logger.info(
-                f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
-            )
+            f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
+        )
 
     def get_compatible(
         self, requested_processes: List[process.PROCESS_UNION], product_type: str

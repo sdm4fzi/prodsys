@@ -45,13 +45,13 @@ def get_production_resources(
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.ProductionResourceData)
+        if isinstance(resource, resource_data_module.ResourceControlPolicy)
     ]
 
 
 def get_transport_resources(
     adapter: ProductionSystemAdapter,
-) -> List[resource_data_module.TransportResourceData]:
+) -> List[resource_data_module.ResourceData]:
     """
     Returns a list of all transport resources in the adapter.
 
@@ -64,7 +64,7 @@ def get_transport_resources(
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.TransportResourceData)
+        if isinstance(resource, resource_data_module.ResourceData)
     ]
 
 
@@ -82,7 +82,7 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
 
 
 def get_default_queues_for_resource(
-    resource: resource_data_module.ProductionResourceData,
+    resource: resource_data_module.ResourceData,
     queue_capacity: Union[float, int] = 0.0,
 ) -> Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]:
     """
@@ -317,7 +317,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     process_data: List[processes_data_module.PROCESS_DATA_UNION] = []
     queue_data: List[queue_data_module.QUEUE_DATA_UNION] = []
     node_data: List[node_data_module.NodeData] = []
-    resource_data: List[resource_data_module.RESOURCE_DATA_UNION] = []
+    resource_data: List[resource_data_module.ResourceData] = []
     product_data: List[product_data_module.ProductData] = []
     sink_data: List[sink_data_module.SinkData] = []
     source_data: List[source_data_module.SourceData] = []
@@ -776,7 +776,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     @field_validator("resource_data")
     def check_resources(
         cls,
-        resources: List[resource_data_module.RESOURCE_DATA_UNION],
+        resources: List[resource_data_module.ResourceData],
         info: ValidationInfo,
     ):
         values = info.data
@@ -793,7 +793,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     raise ValueError(
                         f"The state {state} of resource {resource.ID} is not a valid state of {states}."
                     )
-            if isinstance(resource, resource_data_module.ProductionResourceData):
+            if isinstance(resource, resource_data_module.ResourceData):
                 queues = get_set_of_IDs(values["queue_data"])
                 if resource.input_queues and resource.output_queues:
                     for queue in resource.input_queues + resource.output_queues:
@@ -801,13 +801,13 @@ class ProductionSystemAdapter(ABC, BaseModel):
                             raise ValueError(
                                 f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
                             )
-                else:
-                    input_queues, output_queues = get_default_queues_for_resource(
-                        resource
-                    )
-                    resource.input_queues = list(get_set_of_IDs(input_queues))
-                    resource.output_queues = list(get_set_of_IDs(output_queues))
-                    values["queue_data"] += input_queues + output_queues
+                # else:
+                #     input_queues, output_queues = get_default_queues_for_resource(
+                #         resource
+                #     )
+                #     resource.input_queues = list(get_set_of_IDs(input_queues))
+                #     resource.output_queues = list(get_set_of_IDs(output_queues))
+                #     values["queue_data"] += input_queues + output_queues
 
         return resources
 

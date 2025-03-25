@@ -6,7 +6,8 @@ from typing import Dict, List, TYPE_CHECKING
 from pydantic import BaseModel, ConfigDict, Field
 
 
-from prodsys.simulation import router, sim, source
+from prodsys.simulation import sim, source
+from prodsys.simulation import router as router_module
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import SourceData
 
@@ -59,23 +60,11 @@ class SourceFactory(BaseModel):
                 if product_d.product_type == values.product_type:
                     self.add_source(values, product_d)
 
-    def get_router(self, routing_heuristic: str):
-        return router.Router(
-            self.resource_factory,
-            self.sink_factory,
-            self.auxiliary_factory,
-            router.ROUTING_HEURISTIC[routing_heuristic],
-            self.product_factory,
-            self
-        )
-
     def add_source(
         self,
         source_data: SourceData,
         product_data_of_source: ProductData,
     ):
-        router = self.get_router(source_data.routing_heuristic)
-
         time_model = self.time_model_factory.get_time_model(source_data.time_model_id)
 
         source_object = source.Source(
@@ -84,7 +73,6 @@ class SourceFactory(BaseModel):
             product_data=product_data_of_source,
             product_factory=self.product_factory,
             time_model=time_model,
-            router=router,
         )
         self.add_queues_to_source(source_object, source_data.output_queues)
         self.sources.append(source_object)

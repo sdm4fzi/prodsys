@@ -25,6 +25,7 @@ from prodsys.factories import (
     node_factory,
 )
 
+from prodsys.simulation.router import ROUTING_HEURISTIC, Router
 from prodsys.util.post_processing import PostProcessor
 
 from prodsys.util import kpi_visualization, util
@@ -197,6 +198,14 @@ class Runner:
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
+            router = Router(
+                env=self.env,
+                resource_factory=self.resource_factory,
+                sink_factory=self.sink_factory,
+                auxiliary_factory=self.auxiliary_factory,
+                product_factory=self.product_factory,
+                source_factory=self.source_factory,
+            )
 
             link_transport_process_updater_instance = (
                 link_transport_process_updater.LinkTransportProcessUpdater(
@@ -212,9 +221,7 @@ class Runner:
             self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
-
-            for source in self.source_factory.sources:
-                source.router.precompute_compatibility_tables()
+            self.env.process(router.routing_loop())
 
     def run(self, time_range: int):
         """

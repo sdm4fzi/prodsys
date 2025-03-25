@@ -6,12 +6,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 from prodsys.models.product_data import ProductData
+from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import process_models
 from prodsys.simulation import process
 
 if TYPE_CHECKING:
     from prodsys.factories import process_factory
-    from prodsys.simulation import sim, router, product
+    from prodsys.simulation import sim, product
+    from prodsys.simulation import router as router_module
 
 
 class ProductFactory:
@@ -32,9 +34,10 @@ class ProductFactory:
         self.finished_products = []
         self.event_logger = False
         self.product_counter = 0
+        self.router: router_module.Router = None
 
     def create_product(
-        self, product_data: ProductData, router: router.Router
+        self, product_data: ProductData, routing_heuristic: RoutingHeuristic
     ) -> product.Product:
         """
         Creates a product object based on the given product data and router.
@@ -64,7 +67,8 @@ class ProductFactory:
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
-            product_router=router,
+            product_router=self.router,
+            routing_heuristic=routing_heuristic,
             process_model=process_model,
             transport_process=transport_processes,
             has_auxiliaries=True if product_data.auxiliaries and product_data is not None else False,

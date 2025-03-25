@@ -9,7 +9,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.simulation import router, sim, store, time_model
+from prodsys.simulation import sim, store, time_model
+from prodsys.simulation import router as router_module
 from prodsys.models import source_data, product_data
 
 
@@ -32,7 +33,6 @@ class Source(BaseModel):
     product_data: product_data.ProductData
     product_factory: product_factory.ProductFactory
     time_model: time_model.TimeModel
-    router: router.Router
     # TODO: add a release policy...
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
@@ -92,7 +92,7 @@ class Source(BaseModel):
                 break
             yield self.env.timeout(inter_arrival_time)
             product = self.product_factory.create_product(
-                self.product_data, self.router
+                self.product_data, self.data.routing_heuristic
             )
             logger.debug(
                 {
