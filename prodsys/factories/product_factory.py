@@ -9,11 +9,11 @@ from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import process_models
 from prodsys.simulation import process
+from prodsys.simulation import router as router_module
 
 if TYPE_CHECKING:
     from prodsys.factories import process_factory
     from prodsys.simulation import sim, product
-    from prodsys.simulation import router as router_module
 
 
 class ProductFactory:
@@ -64,14 +64,22 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
+        routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
+            routing_heuristic, None
+        )
+        if routing_heuristic_callable is None:
+            raise ValueError(f"Routing heuristic {routing_heuristic} not found.")
+
         product_object = product.Product(
             env=self.env,
             product_data=product_data,
             product_router=self.router,
-            routing_heuristic=routing_heuristic,
+            routing_heuristic=routing_heuristic_callable,
             process_model=process_model,
             transport_process=transport_processes,
-            has_auxiliaries=True if product_data.auxiliaries and product_data is not None else False,
+            has_auxiliaries=(
+                True if product_data.auxiliaries and product_data is not None else False
+            ),
         )
         if self.event_logger:
             self.event_logger.observe_terminal_product_states(product_object)

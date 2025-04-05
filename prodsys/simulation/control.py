@@ -185,9 +185,9 @@ def get_requets_handler(
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
     if request.request_type == request_module.RequestType.PRODUCTION or request.request_type == request_module.RequestType.REWORK:
-        return ProductionProcessHandler()
+        return ProductionProcessHandler(request.product.env)
     elif request.request_type == request_module.RequestType.TRANSPORT:
-        return TransportProcessHandler()
+        return TransportProcessHandler(request.product.env)
     elif request.request_type == request_module.RequestType.AUXILIARY:
         return AuxiliaryProcessHandler()
     elif request.request_type == request_module.RequestType.MOVE:
@@ -257,8 +257,8 @@ class ProductionProcessHandler:
         process = process_request.get_process()
         product = process_request.get_product()
 
-        # TODO: wait here until all auxiliaries are available
-        auxiliaries = yield self.env.process(product.product_router.get_auxiliaries(process_request))
+        # TODO: wait here until all auxiliaries are available for the process
+        # auxiliaries = yield self.env.process(product.product_router.get_auxiliaries(process_request))
         origin_queue, target_queue = process_request.origin_queue, process_request.target_queue
         logger.debug(
             {
@@ -318,12 +318,11 @@ class ProductionProcessHandler:
             )
             yield events.AllOf(resource.env, product_put_events)
             resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
-            for auxiliary in auxiliaries:
-                auxiliary.release()
-            for next_product in [product]:
-                if not resource.got_free.triggered:
-                    resource.got_free.succeed()
-                next_product.finished_process.succeed()
+            # TODO: add auxiliary logic again
+            # for auxiliary in auxiliaries:
+            #     auxiliary.release()
+            product.product_router.mark_finished_request(process_request)
+            product.finished_process.succeed()
             logger.debug(
                 {
                     "ID": "controller",
@@ -456,8 +455,8 @@ class TransportProcessHandler:
         self._current_locatable = locatable
         self.resource.set_location(location)
 
-    def start_process(
-        self, process_request: request_module.TransportResquest
+    def handle_request(
+        self, process_request: request_module.Request
     ) -> Generator:
         """
         Start the next process.
@@ -486,9 +485,7 @@ class TransportProcessHandler:
         origin = process_request.get_origin()
         target = process_request.get_target()
 
-        origin_queue, target_queue = product.product_router.determine_origin_and_target_queues_for_request(
-            product, process, target, process_request.get_auxiliary_resources()
-        )
+        origin_queue, target_queue = process_request.origin_queue, process_request.target_queue
         route_to_target = process_request.get_route()
         logger.debug(
             {
@@ -502,7 +499,7 @@ class TransportProcessHandler:
         yield self.env.process(resource.setup(process))
         with resource.request() as req:
             yield req
-            if origin.data.ID != self._current_locatable.data.ID:
+            if origin.get_location() != resource.get_location():
                 route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug(
                     {
@@ -513,7 +510,7 @@ class TransportProcessHandler:
                     }
                 )
                 transport_state: state.State = yield self.env.process(
-                    resource.wait_for_free_process(resource, process)
+                    resource.wait_for_free_process(process)
                 )
                 logger.debug(
                     {
@@ -544,7 +541,7 @@ class TransportProcessHandler:
             product.update_location(self.resource)
 
             transport_state: state.State = yield self.env.process(
-                resource.wait_for_free_process(resource, process)
+                resource.wait_for_free_process(process)
             )
             logger.debug(
                 {
@@ -572,8 +569,9 @@ class TransportProcessHandler:
             yield events.AllOf(resource.env, product_put_events)
             product.update_location(target)
 
-            if not resource.got_free.triggered:
-                resource.got_free.succeed()
+            # if not resource.got_free.triggered:
+            #     resource.got_free.succeed()
+            product.product_router.mark_finished_request(process_request)
             logger.debug(
                 {
                     "ID": "controller",
@@ -730,7 +728,7 @@ class TransportProcessHandler:
         self.update_location(target, location=target_location)
 
     def find_route_to_origin(
-        self, process_request: request_module.TransportResquest
+        self, process_request: request_module.Request
     ) -> List[product.Locatable]:
         """
         Find the route to the origin of the transport request.
@@ -1164,6 +1162,7 @@ class BatchController(Controller):
 
             for product in products:
                 for next_product in [product]:
+                    # FIXME: resolve as mark process as finished in router as 
                     if not resource.got_free.triggered:
                         resource.got_free.succeed()
                     next_product.finished_process.succeed()

@@ -1,5 +1,5 @@
 import random
-from typing import Union, Optional, Generator, List
+from typing import Callable, Union, Optional, Generator, List
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -165,7 +165,7 @@ class Product(BaseModel):
         process.LinkTransportProcess,
     ]
     product_router: router.Router
-    routing_heuristic: RoutingHeuristic
+    routing_heuristic: Callable[[list[request.Request]], None]
 
     next_possible_processes: Optional[list[process.PROCESS_UNION]] = Field(
         default=None, init=False
