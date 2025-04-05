@@ -26,7 +26,7 @@ RequestInfoKey = str
 ResourceIdentifier = str
 
 
-@dataclass(frozen=True)
+@dataclass()
 class RequestInfo:
     """
     Represents a key for mapping requests to resources.
@@ -39,7 +39,7 @@ class RequestInfo:
     key: str
     item: Union[product.Product, auxiliary.Auxiliary]
     resource_mappings: dict[
-        ResourceIdentifier, tuple[resources.Resource, list[process.PROCESS_UNION]]
+        ResourceIdentifier, list[process.PROCESS_UNION]
     ]
     request_type: request.RequestType
 
@@ -113,7 +113,7 @@ class RequestHandler:
             request_completion_event=request_completion_event,
         )
         # Add to pending requests
-        self.request_infos[request_info_key, request_info]
+        self.request_infos[request_info_key] = request_info
         self.pending_requests.append(request_info_key)
         return request_info
 
@@ -134,8 +134,8 @@ class RequestHandler:
         """
         origin = item.current_locatable
         request_info_key = get_request_info_key(item)
-        possible_resources_and_processes = self.process_matcher.get_compatible(
-            item.transport_process
+        possible_resources_and_processes = self.process_matcher.get_transport_compatible(
+            origin, target, item.transport_process.get_process_signature()
         )
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
@@ -180,9 +180,9 @@ class RequestHandler:
         """
         request_info_key = get_request_info_key(completed_request.item)
         self.request_infos[request_info_key].request_state = "completed"
-        # FIXME: maybe delete request info
 
     def create_request(
+        self,
         request_info: RequestInfo,
         resource: resources.Resource,
         process: process.PROCESS_UNION,
@@ -217,11 +217,8 @@ class RequestHandler:
         Returns:
             List[request.Request]: List of free requests ready for allocation.
         """
-        free_resources_set = set(resource.data.ID for resource in free_resources)
+        free_resources_set = set((index, resource.data.ID) for index, resource in enumerate(free_resources))
         self.current_request_index = 0
-        if self.current_free_resources != free_resources_set:
-            self.current_free_resources = free_resources_set
-            self.current_request_index = 0
         for request_info_index in range(
             self.current_request_index, len(self.pending_requests)
         ):
@@ -229,14 +226,15 @@ class RequestHandler:
             request_info = self.request_infos[request_info_key]
             possible_resources_and_processes = request_info.resource_mappings
             requests = []
-            for free_resource_id in free_resources_set:
+            for free_resource_index, free_resource_id in free_resources_set:
                 if free_resource_id in possible_resources_and_processes:
                     for process_instance in possible_resources_and_processes[
                         free_resource_id
-                    ][1]:
+                    ]:
+                        free_resource = free_resources[free_resource_index]
                         new_request = self.create_request(
                             request_info,
-                            free_resources[free_resource_id],
+                            free_resource,
                             process_instance,
                         )
                         requests.append(new_request)

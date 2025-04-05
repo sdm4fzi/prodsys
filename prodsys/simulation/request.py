@@ -63,6 +63,7 @@ class Request:
         target_queue: Optional[Store] = None,
         origin: Optional[Locatable] = None,
         target: Optional[Locatable] = None,
+        completed: Optional[simpy.Event] = None,
     ):
         self.request_type = request_type
         self.process = process
@@ -72,10 +73,11 @@ class Request:
         self.target = target
         self.origin_queue: Optional[Queue] = origin_queue
         self.target_queue: Optional[Store] = target_queue
+        self.completed = completed
+
 
         self.transport_to_target: Optional[simpy.Event] = None
         self.auxiliaries_ready: Optional[simpy.Event] = None
-        self.completed: Optional[simpy.Event] = None
 
         # For compatibility with existing code
         if hasattr(item, 'product_data'):
@@ -143,3 +145,43 @@ class Request:
         """
         if hasattr(self, 'route'):
             self.route = route
+
+    def get_route(self) -> List[Locatable]:
+        """
+        Returns the route of the request.
+
+        Returns:
+            List[Locatable]: The route as a list of locations.
+        """
+        if hasattr(self, 'route'):
+            return self.route
+        return []
+
+    def get_origin(self) -> Locatable:
+        """
+        Returns the origin of the request.
+
+        Returns:
+            Locatable: The origin location.
+        """
+        return self.origin
+    
+    def get_target(self) -> Locatable:
+        """
+        Returns the target of the request.
+
+        Returns:
+            Locatable: The target location.
+        """
+        return self.target
+    
+    def get_auxiliaries(self) -> List[Auxiliary]:
+        """
+        Returns the auxiliaries of the request.
+
+        Returns:
+            List[Auxiliary]: The list of auxiliaries.
+        """
+        if hasattr(self, 'auxiliary'):
+            return [self.auxiliary]
+        return []

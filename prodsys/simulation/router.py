@@ -134,9 +134,9 @@ class Router:
         Args:
             resource (resources.Resource): The resource to mark as free.
         """
-        request.resource.got_free.succeed()
-        request.resource.got_free = events.Event(self.env)
-        # TODO: update the free resources in the request handler.
+        if not request.resource.got_free.triggered:
+            request.resource.got_free.succeed()
+            request.resource.got_free = events.Event(self.env)
         self.request_handler.mark_completion(request)
         if request.transport_to_target:
             request.transport_to_target.succeed()
@@ -157,8 +157,19 @@ class Router:
                     for resource in self.resource_factory.all_resources
                 ],
             )
+            if self.got_requested.triggered:
+                self.got_requested = events.Event(self.env)
             while True:
-                free_requests = self.request_handler.get_next_product_to_route()
+                free_resources = [
+                    resource
+                    for resource in self.resource_factory.all_resources
+                    if not resource.full
+                ]
+                if not free_resources:
+                    break
+                free_requests = self.request_handler.get_next_product_to_route(
+                    free_resources
+                )
                 if not free_requests:
                     break
                 request: request.Request = self.route_request(free_requests)
@@ -174,11 +185,9 @@ class Router:
             not executed_request.request_type == request.RequestType.TRANSPORT
             and executed_request.item.current_locatable != executed_request.target
         ):
-            self.request_handler.add_transport_request(
-                executed_request.item, executed_request.target
-            )
-            executed_request.transport_to_target = events.Event(self.env)
-            yield executed_request.transport_to_target
+            transport_process_finished_event = self.request_transport(executed_request.item, executed_request.resource)
+            executed_request.transport_to_target = transport_process_finished_event
+            yield transport_process_finished_event
         executed_request.resource.controller.request(executed_request)
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
@@ -199,7 +208,7 @@ class Router:
         # TODO: make queue decision with heuristic here!
         if routed_request.request_type == request.RequestType.TRANSPORT:
             # reserve input queues
-            origin_queue = routed_request.origin.input_queues[0]
+            origin_queue = routed_request.origin.output_queues[0]
             target_queue = routed_request.target.input_queues[0]
         elif routed_request.request_type == request.RequestType.PRODUCTION:
             # reserve input queues
@@ -283,9 +292,24 @@ class Router:
         process_event = self.request_handler.add_product_requests(
             product
         ).request_completion_event
-        self.got_requested.succeed()
-        self.got_requested = events.Event(self.env)
+        if not self.got_requested.triggered:
+            self.got_requested.succeed()
         return process_event
+
+    def request_transport(self, product: product.Product, target: Locatable) -> events.Event:
+        """
+        Routes a product to perform the next transport by assigning a transport resource to the product.
+
+        Args:
+            product (product.Product): The product.
+
+        Returns:
+            Generator[request.TransportResquest]: A generator that yields when the product is routed.
+        """
+        request_info = self.request_handler.add_transport_request(product, target)
+        if not self.got_requested.triggered:
+            self.got_requested.succeed()
+        return request_info.request_completion_event
 
     def route_product_to_sink(self, product: product.Product) -> events.Event:
         """
