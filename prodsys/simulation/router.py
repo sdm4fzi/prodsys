@@ -596,6 +596,7 @@ class Router:
         for resource in self.resource_factory.get_production_resources():
             for process in resource.processes:
                 production_request = self.get_production_request(product, resource)
+                # FIXME: this produces a lot of compute time -> increase speed here with pre-computation of matching requests
                 if process.matches_request(production_request):
                     production_request.set_process(process)
                     possible_requests.append(production_request)

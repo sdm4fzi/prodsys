@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict
 
 from pydantic import BaseModel, ConfigDict, Field
+import simpy
 
 
 from prodsys.models.product_data import ProductData
@@ -32,6 +33,7 @@ class ProductFactory:
         self.finished_products = []
         self.event_logger = False
         self.product_counter = 0
+        self.finished_product = env.event()
 
     def create_product(
         self, product_data: ProductData, router: router.Router
@@ -168,6 +170,8 @@ class ProductFactory:
         """
         self.finished_products.append(product)
         self.remove_product(product)
+        self.finished_product.succeed(product)
+        self.finished_product = self.env.event()
 
 
 from prodsys.simulation import product

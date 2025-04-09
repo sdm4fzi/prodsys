@@ -34,6 +34,7 @@ class Source(BaseModel):
     time_model: time_model.TimeModel
     router: router.Router
     # TODO: add a release policy...
+    conwip: int = 232
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -91,6 +92,12 @@ class Source(BaseModel):
                 )
                 break
             yield self.env.timeout(inter_arrival_time)
+            # while len(self.product_factory.products) >= self.conwip:
+            #     # print(self.env.now, self.data.ID, "Waiting for conwip, current wip", len(self.product_factory.products))
+            #     yield self.product_factory.finished_product
+            #     # print(self.env.now, self.data.ID, "Finished waiting for conwip", len(self.product_factory.products))
+            if len(self.product_factory.products) >= self.conwip:
+                continue
             product = self.product_factory.create_product(
                 self.product_data, self.router
             )
