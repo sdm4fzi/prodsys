@@ -9,8 +9,9 @@ import logging
 from prodsys.optimization.optimization import evaluate_ea_wrapper
 from prodsys.optimization.adapter_manipulation import (
     crossover,
-    get_random_configuration_asserted,
+    random_configuration_asserted,
     mutation,
+    random_configuration_capacity_based,
     random_configuration_with_initial_solution,
 )
 
@@ -104,7 +105,9 @@ def register_functions_in_toolbox(
     else:
         toolbox.register(
             "random_configuration",
-            get_random_configuration_asserted,
+            # random_configuration_asserted,
+            # TODO: make this configurable
+            random_configuration_capacity_based,
             base_configuration,
         )
     toolbox.register(
@@ -123,7 +126,7 @@ def register_functions_in_toolbox(
         base_configuration,
         solutions_dict,
         hyper_parameters.number_of_seeds,
-        full_save
+        full_save,
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)

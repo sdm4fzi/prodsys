@@ -361,10 +361,10 @@
             "controller": "PipelineController",
             "control_policy": "FIFO",
             "process_ids": [
-                "P2"
+                "P2", "P6"
             ],
             "process_capacities": [
-                1
+                1, 1
             ],
             "state_ids": [
                 "BSM"
