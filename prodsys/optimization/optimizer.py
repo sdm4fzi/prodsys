@@ -53,6 +53,9 @@ class Optimizer(ABC):
     """
     Base Optimizer interface for optimizing the configuration of a production system.
     This class defines the common interface and shared logic for optimization but cannot be used directly.
+
+    Note: Configurations are not stored within the FitnessData.
+    Instead, they are cached separately by their hash in concrete subclasses.
     """
 
     def __init__(
@@ -67,7 +70,7 @@ class Optimizer(ABC):
         self.initial_solutions = initial_solutions
         self.full_save = full_save  # Determines whether event logs are saved
 
-        self.configurations: list[ProductionSystemAdapter] = []
+        # Do not cache configurations here; caching is implemented only in the concrete subclasses.
         self.weights = None
         self.pbar: Any = None
 
@@ -127,23 +130,18 @@ class Optimizer(ABC):
     ) -> tuple[list[float], dict]:
         """
         Save an optimization step, caching and persisting the fitness data.
-
-        Args:
-            fitness_values (Optional[list[float]]): The fitness values to save.
-            configuration (JsonProductionSystemAdapter): The configuration to save.
-            event_log_dict (Optional[dict], optional): The event log data. Defaults to None.
-
-        Returns:
-            tuple[list[float], dict]: The fitness values and event log data that were saved.
+        The configuration is stored separately and associated by its hash.
         """
         self.update_progress()
         fitness_data = self.get_fitness_data_entry(
             configuration, fitness_values, event_log_dict=event_log_dict
         )
+        # Cache the configuration separately (only in subclasses that override cache_configuration)
+        self.save_configuration(configuration)
         current_generation = (
             self.optimization_cache_first_found_hashes.current_generation
         )
-        self.cache_fitness_data(fitness_data, current_generation)
+        self.cache_fitness_data(fitness_data, current_generation, configuration)
         self.save_fitness_data(fitness_data, current_generation)
         return fitness_data.fitness, fitness_data.event_log_dict
 
@@ -155,50 +153,74 @@ class Optimizer(ABC):
     ) -> FitnessData:
         """
         Creates and returns a FitnessData entry for a given configuration.
+        The configuration is not stored in the FitnessData but is cached separately.
         """
         objective_names = [
             obj.name.value for obj in configuration.scenario_data.objectives
         ]
-        # hash already exists in cache, get data from cache
+        # If fitness_values and event_log_dict are both None, try to load from cache.
         if fitness_values is None and event_log_dict is None:
             adapter_object_hash = configuration.hash()
-            if not adapter_object_hash in self.optimization_cache_first_found_hashes.hashes:
+            if (
+                adapter_object_hash
+                not in self.optimization_cache_first_found_hashes.hashes
+            ):
                 raise ValueError(
                     f"Adapter hash {adapter_object_hash} not found in optimization cache for configuration {configuration.ID}. Error in saving."
-                    )
-            evaluated_adapter_generation = self.optimization_cache_first_found_hashes.hashes[adapter_object_hash].generation
-            evaluated_adapter_id = self.optimization_cache_first_found_hashes.hashes[adapter_object_hash].ID
-            fitness_data = self.performances_cache[evaluated_adapter_generation][evaluated_adapter_id]
+                )
+            evaluated_adapter_generation = (
+                self.optimization_cache_first_found_hashes.hashes[
+                    adapter_object_hash
+                ].generation
+            )
+            evaluated_adapter_id = self.optimization_cache_first_found_hashes.hashes[
+                adapter_object_hash
+            ].ID
+            fitness_data = self.performances_cache[evaluated_adapter_generation][
+                evaluated_adapter_id
+            ]
             event_log_dict = fitness_data.event_log_dict
             fitness_values = fitness_data.fitness
+
         agg_fitness = sum(
             value * weight for value, weight in zip(fitness_values, self.weights)
         )
+        config_hash = configuration.hash()
         return FitnessData(
             agg_fitness=agg_fitness,
             fitness=fitness_values,
             time_stamp=time.perf_counter() - self.start_time,
-            hash=configuration.hash(),
-            production_system=configuration,
+            hash=config_hash,
+            production_system=None,  # Do not store the configuration here
             objective_names=objective_names,
             event_log_dict=event_log_dict if self.full_save else None,
         )
 
-    def cache_fitness_data(self, fitness_data: FitnessData, generation: str) -> None:
+    def cache_fitness_data(
+        self,
+        fitness_data: FitnessData,
+        generation: str,
+        configuration: JsonProductionSystemAdapter,
+    ) -> None:
         """
         Caches the fitness data in memory.
         """
         if generation not in self.performances_cache:
             self.performances_cache[generation] = {}
-        configuration = fitness_data.production_system
-        if (
-            configuration.hash()
-            not in self.optimization_cache_first_found_hashes.hashes
-        ):
-            self.optimization_cache_first_found_hashes.hashes[configuration.hash()] = (
+        if fitness_data.hash not in self.optimization_cache_first_found_hashes.hashes:
+            self.optimization_cache_first_found_hashes.hashes[fitness_data.hash] = (
                 SolutionMetadata(generation=generation, ID=configuration.ID)
             )
         self.performances_cache[generation][configuration.ID] = fitness_data
+
+    @abstractmethod
+    def save_configuration(
+        self, configuration: ProductionSystemAdapter
+    ) -> None:
+        """
+        Caches the configuration. Must be implemented by concrete subclasses.
+        """
+        ...
 
     @abstractmethod
     def save_fitness_data(self, fitness_data: FitnessData, generation: str) -> None:
@@ -208,7 +230,7 @@ class Optimizer(ABC):
         ...
 
     def get_optimization_results(
-        self, configuration_data: bool = True, event_log_data: bool = False
+        self, configuration_data: bool = False, event_log_data: bool = False
     ) -> OptimizationResults:
         """
         Retrieves the optimization results. If the cache is non-empty, it is returned.
@@ -219,17 +241,20 @@ class Optimizer(ABC):
          - event_log_data: load the event log details if available. Default is False.
         """
         if self.performances_cache and not event_log_data:
-            if configuration_data and event_log_data == self.full_save:
+            if not configuration_data and event_log_data == self.full_save:
                 return self.performances_cache
             results = {}
-            for generation, fitness_data in self.performances_cache.items():
+            for generation, fitness_data_dict in self.performances_cache.items():
                 results[generation] = {}
-                for adapter_id, fitness_data_entry in fitness_data.items():
-                    copied_fitness_data = fitness_data_entry.model_copy(deep=True)
+                for adapter_id, fitness_data in fitness_data_dict.items():
+                    copied_fitness_data = fitness_data.model_copy(deep=True)
                     if not configuration_data:
                         copied_fitness_data.production_system = None
                     if not event_log_data:
                         copied_fitness_data.event_log_dict = None
+                    copied_fitness_data.production_system = self.get_configuration_by_hash(
+                        fitness_data.hash
+                    )
                     results[generation][adapter_id] = copied_fitness_data
         else:
             results = self.get_optimization_results_from_persistence(
@@ -239,16 +264,36 @@ class Optimizer(ABC):
 
     def get_optimization_result_configuration(
         self, solution_id: str
-    ) -> JsonProductionSystemAdapter:
+    ) -> ProductionSystemAdapter:
         """
         Returns the configuration of the solution identified by solution_id.
+        Retrieval is based on adapter id and generation.
         """
         optimization_results = self.get_optimization_results()
         for generation in optimization_results:
             for adapter_id, fitness_data in optimization_results[generation].items():
                 if adapter_id == solution_id:
-                    return fitness_data.production_system
+                    return self.get_configuration_by_hash(fitness_data.hash)
         raise ValueError(f"Solution {solution_id} not found in optimization results.")
+
+    def get_configuration_by_adapter_id_and_generation(
+        self, generation: str, adapter_id: str
+    ) -> ProductionSystemAdapter:
+        """
+        Returns the configuration for a given generation and adapter id.
+        """
+        fitness_data = self.get_fitness_data(generation, adapter_id)
+        return self.get_configuration_by_hash(fitness_data.hash)
+
+    @abstractmethod
+    def get_configuration_by_hash(
+        self, configuration_hash: str
+    ) -> ProductionSystemAdapter:
+        """
+        Retrieves the configuration based on its hash.
+        Must be implemented by concrete subclasses.
+        """
+        ...
 
     @abstractmethod
     def get_optimization_results_from_persistence(
@@ -301,6 +346,17 @@ class Optimizer(ABC):
     def get_progress(self) -> OptimizationProgress:
         return self.progress
 
+    @abstractmethod
+    def save_configuration(
+        self, configuration_hash: str, configuration: ProductionSystemAdapter
+    ) -> None:
+        """
+        Caches the configuration.
+        The base class does not implement caching.
+        Subclasses with caching enabled should override this method.
+        """
+        ...
+
 
 class InMemoryOptimizer(Optimizer):
     """
@@ -308,9 +364,37 @@ class InMemoryOptimizer(Optimizer):
     No persistence is performed.
     """
 
+    def __init__(
+        self,
+        adapter: ProductionSystemAdapter,
+        hyperparameters: HyperParameters,
+        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        full_save: bool = False,
+    ) -> None:
+        super().__init__(adapter, hyperparameters, initial_solutions, full_save)
+        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
+
+    def save_configuration(
+        self, configuration: ProductionSystemAdapter
+    ) -> None:
+        configuration_hash = configuration.hash()
+        self.configuration_cache[configuration_hash] = configuration
+
     def save_fitness_data(self, fitness_data: FitnessData, generation: str) -> None:
-        # In-memory optimizer only caches data, so no additional action is needed.
-        pass
+        # Here also add the configuration to the cached fitness data
+        configuration = self.configuration_cache.get(fitness_data.hash)
+        if configuration is None:
+            raise ValueError(
+                f"Configuration with hash {fitness_data.hash} not found in cache."
+            )
+        fitness_data.production_system = configuration
+
+    def get_configuration_by_hash(
+        self, configuration_hash: str
+    ) -> ProductionSystemAdapter:
+        if configuration_hash not in self.configuration_cache:
+            raise ValueError("Configuration not found in cache.")
+        return self.configuration_cache[configuration_hash]
 
     def get_optimization_results_from_persistence(
         self, configuration_data: bool = False, event_log_data: bool = False
@@ -322,7 +406,8 @@ class InMemoryOptimizer(Optimizer):
         self, generation: str, adapter_id: str
     ) -> FitnessData:
         raise NotImplementedError(
-            "Method get_fitness_data_from_persistence not implemented in InMemoryOptimizer. Make sure optimization run was conducted and use get_fitness_data instead."
+            "Method get_fitness_data_from_persistence not implemented in InMemoryOptimizer. "
+            "Ensure the optimization run was conducted and use get_fitness_data instead."
         )
 
 
@@ -336,7 +421,6 @@ class FileSystemSaveOptimizer(Optimizer):
         save_folder (str): The folder where data will be saved.
         initial_solutions (Optional[list[ProductionSystemAdapter]], optional): Initial solutions to start the optimization. Defaults to None.
         full_save (bool, optional): Whether to save full event log data. Defaults to False.
-        caching (bool, optional): Whether to cache results in memory. Defaults to True.
     """
 
     def __init__(
@@ -349,7 +433,16 @@ class FileSystemSaveOptimizer(Optimizer):
     ) -> None:
         super().__init__(adapter, hyperparameters, initial_solutions, full_save)
         self.save_folder = save_folder
+        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
         util.prepare_save_folder(self.save_folder + "/")
+
+    def save_configuration(
+        self, configuration: ProductionSystemAdapter
+    ) -> None:
+        configuration_hash = configuration.hash()
+        JsonProductionSystemAdapter.model_validate(configuration).write_data(
+            f"{self.save_folder}/hash_{configuration_hash}.json"
+        )
 
     def save_fitness_data(self, fitness_data: FitnessData, generation: str) -> None:
         """
@@ -361,15 +454,7 @@ class FileSystemSaveOptimizer(Optimizer):
             df.to_json(
                 f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json", indent=4
             )
-            fitness_data.event_log_dict = None # Free up memory
-        JsonProductionSystemAdapter.model_validate(
-            fitness_data.production_system
-        ).write_data(
-            f"{self.save_folder}/generation_{generation}_{fitness_data.production_system.ID}.json"
-        )
-        JsonProductionSystemAdapter.model_validate(
-            fitness_data.production_system
-        ).write_data(f"{self.save_folder}/hash_{fitness_data.hash}.json")
+            fitness_data.event_log_dict = None  # Free up memory
         # Update the aggregated optimization results on disk.
         optimization_results = {}
         for gen in self.performances_cache:
@@ -382,6 +467,15 @@ class FileSystemSaveOptimizer(Optimizer):
         with open(f"{self.save_folder}/optimization_results.json", "w") as json_file:
             json.dump(optimization_results, json_file, indent=4)
 
+    def get_configuration_by_hash(
+        self, configuration_hash: str
+    ) -> ProductionSystemAdapter:
+        config = JsonProductionSystemAdapter()
+        config.read_data(
+            f"{self.save_folder}/hash_{configuration_hash}.json"
+        )
+        return config
+
     def get_fitness_data_from_persistence(
         self, generation: str, adapter_id: str
     ) -> FitnessData:
@@ -392,9 +486,8 @@ class FileSystemSaveOptimizer(Optimizer):
             optimization_results = json.load(json_file)
         fitness_data_dict = optimization_results[generation][adapter_id]
         fitness_data = FitnessData.model_validate(fitness_data_dict)
-        fitness_data.production_system = JsonProductionSystemAdapter().read_data(
-            f"{self.save_folder}/hash_{fitness_data.hash}.json"
-        )
+        # In this design, the configuration is loaded separately.
+        fitness_data.production_system = None
         if self.full_save:
             df = pd.read_json(
                 f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json"
@@ -421,12 +514,10 @@ class FileSystemSaveOptimizer(Optimizer):
                 for adapter_id, fitness_data in optimization_results[
                     generation
                 ].items():
-                    production_system = JsonProductionSystemAdapter()
-                    production_system.read_data(
-                        f"{self.save_folder}/hash_{fitness_data.hash}.json"
-                    )
-                    production_system.ID = adapter_id
-                    fitness_data.production_system = production_system
+                    config = self.get_configuration_by_hash(fitness_data.hash)
+                    config.ID = adapter_id
+                    self.configuration_cache[fitness_data.hash] = config
+                    fitness_data.production_system = config
         if event_log_data and self.full_save:
             for generation in optimization_results:
                 for adapter_id, fitness_data in optimization_results[
