@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
-from sympy import O
 
 
 from prodsys.simulation import router, sim, source
