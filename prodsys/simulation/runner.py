@@ -195,6 +195,7 @@ class Runner:
                 resource_factory=self.resource_factory,
                 auxiliary_factory=self.auxiliary_factory,
                 sink_factory=self.sink_factory,
+                conwip_number=self.adapter.conwip_number,
             )
             self.source_factory.create_sources(self.adapter)
 

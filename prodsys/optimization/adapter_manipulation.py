@@ -15,7 +15,7 @@ from prodsys.adapters.adapter import (
     remove_queues_from_resources,
 )
 from prodsys.models import resource_data, scenario_data
-from prodsys.models.processes_data import TransportProcessData
+from prodsys.models.processes_data import CompoundProcessData, TransportProcessData
 from prodsys.models.state_data import BreakDownStateData
 from prodsys.models.time_model_data import TIME_MODEL_DATA
 from prodsys.optimization.optimization import check_valid_configuration
@@ -954,6 +954,37 @@ def configuration_capacity_based(
         "utilization"
     ] / (1 - df_per_process["down_time"])
 
+    def consider_compound_processes(
+        compound_processes: List[CompoundProcessData],
+        df_per_process: pd.DataFrame,
+    ) -> None:
+        """
+        Combines compound processes into a single process in the dataframe.
+
+        Args:
+            compound_processes (List[CompoundProcessData]): List of compound processes to combine
+            processes_per_id (Dict[str, process.Process]): Mapping of process IDs to process objects
+            df_per_process (pd.DataFrame): Dataframe containing process data
+
+        Returns:
+            None: Modifies the dataframe in place
+        """
+        for compound_process in compound_processes:
+            df_per_process.loc[
+                df_per_process["process_id"].isin(compound_process.process_ids), "process_id"
+            ] = compound_process.ID
+
+    compound_processes = [
+        p for p in baseline.process_data if isinstance(p, CompoundProcessData)
+    ]
+    if compound_processes:
+        consider_compound_processes(compound_processes, df_per_process)
+        df_per_process = (
+            df_per_process.groupby("process_id", as_index=False)
+            .sum(numeric_only=True)
+            .reset_index()
+        )
+
     # Function to combine processes efficiently
     def combine_processes(df: pd.DataFrame, cap_target: float = cap_target):
         """
@@ -1021,7 +1052,6 @@ def configuration_capacity_based(
 
     # Combine processes into resource groups
     import math
-
     combined_processes = combine_processes(df_per_process)
 
     # Create resources based on the combined process groups
@@ -1029,6 +1059,9 @@ def configuration_capacity_based(
     possible_positions = adapter_object.scenario_data.options.positions.copy()
 
     # Create resources for each process group
+    compound_processes_per_id = {
+        p.ID: p for p in compound_processes
+    }
     for group in combined_processes:
         for num in range(int(group["group_total_utilization"] / cap_target) + 1):
             process_data = group["process_ids"]
@@ -1054,10 +1087,18 @@ def configuration_capacity_based(
                 else:
                     position = [random.randint(0, 30), random.randint(0, 30)]
 
+                updated_process_data = []
+                for process_id in process_data:
+                    if process_id in compound_processes_per_id:
+                        compound_process = compound_processes_per_id[process_id]
+                        updated_process_data.extend(compound_process.process_ids)
+                    else:
+                        updated_process_data.append(process_id)
+
                 resource = resource_data.ProductionResourceData(
                     ID=str(uuid1()),
                     description="",
-                    process_ids=process_data,
+                    process_ids=updated_process_data,
                     location=position,
                     capacity=1,
                     controller=resource_data.ControllerEnum.PipelineController,

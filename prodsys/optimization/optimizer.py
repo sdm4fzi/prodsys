@@ -63,11 +63,18 @@ class Optimizer(ABC):
         adapter: ProductionSystemAdapter,
         hyperparameters: HyperParameters,
         initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
         self.adapter = adapter
         self.hyperparameters = hyperparameters
+
+        if initial_solutions and smart_initial_solutions:
+            raise ValueError(
+                "Cannot use both initial_solutions and smart_initial_solutions at the same time."
+            )
         self.initial_solutions = initial_solutions
+        self.smart_initial_solutions = smart_initial_solutions
         self.full_save = full_save  # Determines whether event logs are saved
 
         # Do not cache configurations here; caching is implemented only in the concrete subclasses.
@@ -369,9 +376,10 @@ class InMemoryOptimizer(Optimizer):
         adapter: ProductionSystemAdapter,
         hyperparameters: HyperParameters,
         initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
-        super().__init__(adapter, hyperparameters, initial_solutions, full_save)
+        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save)
         self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
 
     def save_configuration(
@@ -429,9 +437,10 @@ class FileSystemSaveOptimizer(Optimizer):
         hyperparameters: HyperParameters,
         save_folder: str,
         initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
-        super().__init__(adapter, hyperparameters, initial_solutions, full_save)
+        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save)
         self.save_folder = save_folder
         self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
         util.prepare_save_folder(self.save_folder + "/")

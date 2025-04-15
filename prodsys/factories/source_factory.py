@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+from sympy import O
 
 
 from prodsys.simulation import router, sim, source
@@ -41,6 +42,7 @@ class SourceFactory(BaseModel):
     resource_factory: resource_factory.ResourceFactory
     auxiliary_factory: auxiliary_factory.AuxiliaryFactory
     sink_factory: sink_factory.SinkFactory
+    conwip_number: Optional[int] = None
 
     product_data: List[ProductData] = Field(default_factory=list, init=False)
     sources: List[source.Source] = Field(default_factory=list, init=False)
@@ -84,6 +86,7 @@ class SourceFactory(BaseModel):
             product_factory=self.product_factory,
             time_model=time_model,
             router=router,
+            conwip=self.conwip_number,
         )
         self.add_queues_to_source(source_object, source_data.output_queues)
         self.sources.append(source_object)

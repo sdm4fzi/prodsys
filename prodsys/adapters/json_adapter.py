@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from pydantic import TypeAdapter
 from warnings import warn
+from typing_extensions import deprecated
 
 
 from prodsys.adapters import adapter
@@ -16,6 +17,7 @@ from prodsys.models import (
     queue_data,
     resource_data,
     node_data,
+    scenario_data,
     time_model_data,
     state_data,
     processes_data,
@@ -51,6 +53,10 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
 
+    @deprecated(
+        "This function is deprecated and will be removed. Use read_data instead.",
+        category=None,
+    )
     def read_data_old(self, file_path: str, scenario_file_path: Optional[str] = None):
         """
         Reads the data from the given file path and scenario file path.
@@ -108,6 +114,8 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
             self.seed = data["seed"]
         else:
             self.seed = 0
+        if "conwip_number" in data:
+            self.conwip_number = data["conwip_number"]
         self.time_model_data = self.create_objects_from_configuration_data(
             data["time_model_data"], time_model_data.TIME_MODEL_DATA
         )
@@ -140,7 +148,11 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         self.source_data = self.create_objects_from_configuration_data(
             data["source_data"], source_data.SourceData
         )
-        if scenario_file_path:
+        if "scenario_data" in data:
+            self.scenario_data = scenario_data.ScenarioData.model_validate(
+                data["scenario_data"]
+            )
+        elif scenario_file_path:
             self.read_scenario(scenario_file_path)
 
     def create_objects_from_configuration_data_old(
@@ -173,6 +185,10 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
         with open(file_path, "w") as json_file:
             json_file.write(self.model_dump_json(indent=4))
 
+    @deprecated(
+        "This function is deprecated and will be removed. Use read_scenario instead.",
+        category=None,
+    )
     def write_scenario_data(self, file_path: str) -> None:
         """
         Writes the scenario data to the given file path.

@@ -30,8 +30,7 @@ def main():
     base_configuration = JsonProductionSystemAdapter()
 
     base_configuration.read_data(
-        "examples/optimization/optimization_example/base_scenario.json",
-        "examples/optimization/optimization_example/scenario.json",
+        "examples/optimization/optimization_example/base_scenario.json"
     )
 
     optimizer = FileSystemSaveOptimizer(
@@ -39,6 +38,7 @@ def main():
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=True,
+        smart_initial_solutions=True,
         # initial_solutions=[base_configuration]    
     )
     # optimizer = InMemoryOptimizer(

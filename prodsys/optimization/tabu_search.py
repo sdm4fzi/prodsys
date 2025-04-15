@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from prodsys.optimization.optimizer import Optimizer
 
 from prodsys.optimization.optimization import evaluate
-from prodsys.optimization.adapter_manipulation import mutation
+from prodsys.optimization.adapter_manipulation import mutation, random_configuration_capacity_based
 from prodsys.optimization.optimization import check_valid_configuration
 # from prodsys.optimization.util import document_individual
 
@@ -236,10 +236,17 @@ def tabu_search_optimization(
                         neighboarhood.append(configuration)
                         break
             return neighboarhood
+        
+    if optimizer.smart_initial_solutions:
+        optimizer.initial_solutions = [
+            random_configuration_capacity_based(
+                base_configuration
+            )
+        ]
 
     alg = Algorithm(
         optimizer=optimizer,
-        initial_state=optimizer.initial_solutions,
+        initial_state=optimizer.initial_solutions[0],
         tabu_size=hyper_parameters.tabu_size,
         max_steps=hyper_parameters.max_steps,
         max_score=hyper_parameters.max_score,

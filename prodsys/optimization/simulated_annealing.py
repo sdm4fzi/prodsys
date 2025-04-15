@@ -21,6 +21,14 @@ from prodsys.optimization.util import (
     get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states,
+    
+)
+from prodsys.optimization.adapter_manipulation import (
+    crossover,
+    random_configuration_asserted,
+    mutation,
+    random_configuration_capacity_based,
+    random_configuration_with_initial_solution,
 )
 from prodsys.util.util import set_seed
 
@@ -143,8 +151,14 @@ def simulated_annealing_optimization(optimizer: "Optimizer"):
         )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
-    if not optimizer.initial_solutions:
-        optimizer.initial_solutions = base_configuration.model_copy(deep=True)
+    if optimizer.smart_initial_solutions:
+        optimizer.initial_solutions = [
+            random_configuration_capacity_based(
+                base_configuration
+            )
+        ]
+    elif not optimizer.initial_solutions:
+        optimizer.initial_solutions = [base_configuration.model_copy(deep=True)]
 
     hyper_parameters: SimulatedAnnealingHyperparameters = optimizer.hyperparameters
 
@@ -162,7 +176,7 @@ def simulated_annealing_optimization(optimizer: "Optimizer"):
         start=start,
         weights=optimizer.weights,
         number_of_seeds=hyper_parameters.number_of_seeds,
-        initial_solution=optimizer.initial_solutions,
+        initial_solution=optimizer.initial_solutions[0],
         full_save=optimizer.save_folder if optimizer.full_save else "",
     )
 

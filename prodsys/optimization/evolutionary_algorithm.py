@@ -84,12 +84,12 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
         }
     )
 
-
 def register_functions_in_toolbox(
     base_configuration: adapters.JsonProductionSystemAdapter,
     solutions_dict: dict,
     weights: tuple,
     initial_solutions: list[adapters.JsonProductionSystemAdapter],
+    smart_initial_solutions: bool,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
     full_save: bool,
 ):
@@ -102,12 +102,16 @@ def register_functions_in_toolbox(
             random_configuration_with_initial_solution,
             initial_solutions,
         )
+    elif smart_initial_solutions:
+        toolbox.register(
+            "random_configuration",
+            random_configuration_capacity_based,
+            base_configuration,
+        )
     else:
         toolbox.register(
             "random_configuration",
-            # random_configuration_asserted,
-            # TODO: make this configurable
-            random_configuration_capacity_based,
+            random_configuration_asserted,
             base_configuration,
         )
     toolbox.register(
@@ -168,6 +172,7 @@ def evolutionary_algorithm_optimization(
         solutions_dict=optimizer.optimization_cache_first_found_hashes,
         weights=optimizer.weights,
         initial_solutions=optimizer.initial_solutions,
+        smart_initial_solutions=optimizer.smart_initial_solutions,
         hyper_parameters=hyper_parameters,
         full_save=optimizer.full_save,
     )

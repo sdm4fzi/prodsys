@@ -10,6 +10,7 @@ from pydantic import (
     ValidationError,
     ValidationInfo,
 )
+from typing_extensions import deprecated
 
 import logging
 
@@ -323,6 +324,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     source_data: List[source_data_module.SourceData] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
     auxiliary_data: Optional[List[auxiliary_data_module.AuxiliaryData]] = []
+    conwip_number: Optional[int] = None
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
@@ -925,10 +927,16 @@ class ProductionSystemAdapter(ABC, BaseModel):
         """
         pass
 
+    @deprecated(
+            "This method is deprecated and will be removed in future versions. Use read_data instead.",
+            category=None,
+    )
     def read_scenario(self, scenario_file_path: str):
-        self.scenario_data = scenario_data_module.ScenarioData.parse_file(
-            scenario_file_path
-        )
+        with open(scenario_file_path, "r") as f:
+            data = f.read()
+            self.scenario_data = scenario_data_module.ScenarioData.model_validate_json(
+                data
+            )
 
     def validate_proceses_available(self):
         required_processes = set(
