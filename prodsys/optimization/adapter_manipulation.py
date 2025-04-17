@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from calendar import prcal
+import math
+
 from copy import deepcopy
 from dataclasses import dataclass
 import logging
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Callable, List
 
 import pandas as pd
 from prodsys import adapters
@@ -986,7 +987,9 @@ def configuration_capacity_based(
         )
 
     # Function to combine processes efficiently
-    def combine_processes(df: pd.DataFrame, cap_target: float = cap_target):
+    def combine_processes(
+        df: pd.DataFrame, max_process_modules: int, cap_target: float = cap_target
+    ):
         """
         Combines processes from a dataframe into efficient groups based on utilization.
 
@@ -1025,7 +1028,7 @@ def configuration_capacity_based(
                 new_sum = current_sum + util
                 # Check if adding would exceed target capacity
                 open_ratio = new_sum - int(new_sum)
-                if math.floor(new_sum) == current_floor and open_ratio < cap_target:
+                if math.floor(new_sum) == current_floor and open_ratio < cap_target and len(current_group) < max_process_modules:
                     # If within capacity target, add to current group
                     current_group.append(pid)
                     current_sum = new_sum
@@ -1051,8 +1054,7 @@ def configuration_capacity_based(
         return groups
 
     # Combine processes into resource groups
-    import math
-    combined_processes = combine_processes(df_per_process)
+    combined_processes = combine_processes(df_per_process, max_process_modules=adapter_object.scenario_data.constraints.max_num_processes_per_machine)
 
     # Create resources based on the combined process groups
     adapter_object.resource_data = []
