@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, TYPE_CHECKING, Optional
+from typing import Any, Dict, List, TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-from prodsys.simulation import router, sim, source
+from prodsys.simulation import process_matcher, router, sim, source
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import SourceData
 
@@ -45,6 +45,7 @@ class SourceFactory(BaseModel):
 
     product_data: List[ProductData] = Field(default_factory=list, init=False)
     sources: List[source.Source] = Field(default_factory=list, init=False)
+    process_matcher: Any = Field(default=None, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -59,6 +60,17 @@ class SourceFactory(BaseModel):
             for product_d in adapter.product_data:
                 if product_d.product_type == values.product_type:
                     self.add_source(values, product_d)
+        self.process_matcher.precompute_compatibility_tables()
+
+    def get_process_matcher(self) -> process_matcher.ProcessMatcher:
+        if not self.process_matcher:
+            self.process_matcher = process_matcher.ProcessMatcher(
+                self.resource_factory,
+                self.sink_factory,
+                self.product_factory,
+                self
+            )
+        return self.process_matcher
 
     def get_router(self, routing_heuristic: str):
         return router.Router(
@@ -66,6 +78,7 @@ class SourceFactory(BaseModel):
             self.sink_factory,
             self.auxiliary_factory,
             router.ROUTING_HEURISTIC[routing_heuristic],
+            self.get_process_matcher(),
             self.product_factory,
         )
 

@@ -8,6 +8,9 @@ import logging
 
 import simpy
 
+from prodsys.simulation.process_matcher import ProcessMatcher
+from prodsys.simulation.request_handler import RequestHandler
+
 logger = logging.getLogger(__name__)
 
 from simpy import events
@@ -24,6 +27,7 @@ if TYPE_CHECKING:
         sink_factory,
         auxiliary_factory,
         product_factory,
+        source_factory
     )
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
@@ -81,6 +85,7 @@ class Router:
         sink_factory: sink_factory.SinkFactory,
         auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
         routing_heuristic: Callable[[List[request.Request]], None],
+        process_matcher: ProcessMatcher,
         product_factory: Optional[product_factory.ProductFactory] = None,
     ):
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
@@ -91,6 +96,12 @@ class Router:
         ] = routing_heuristic
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         # TODO: add possibility to specify a production and a transport heuristic separately
+        self.process_matcher = process_matcher
+        self.route_cache = self.process_matcher.route_cache
+
+        self.request_handler = RequestHandler(
+            process_matcher=self.process_matcher,
+        )
 
     def route_product_to_production_resource(
         self, product: product.Product
@@ -105,16 +116,20 @@ class Router:
         Returns:
             Generator[Tuple[request.Request, request.TransportResquest]]: A generator that yields when the product is routed.
         """
-        potential_production_requests = self.get_possible_production_requests(product)
+        potential_production_requests = self.request_handler.get_possible_production_requests(product)
         if not potential_production_requests:
             raise ValueError(
                 f"No possible production resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID}."
             )
         potential_transport_requests: List[request.Request] = []
-
-        potential_transport_requests = self.get_possible_transport_requests(
-            potential_production_requests
-        )
+        target_ids = set()
+        for production_request in potential_production_requests:
+            if production_request.resource.data.ID in target_ids:
+                continue
+            target_ids.add(production_request.resource.data.ID)
+            potential_transport_requests += self.request_handler.get_possible_transport_requests(
+                product_instance=product,
+                target=production_request.resource,)
         if not potential_transport_requests:
             raise ValueError(
                 f"No possible transport resources found for product {product.product_data.ID} and process {product.next_prodution_process.process_data.ID} to reach any destinations from resource {product.current_locatable.data.ID}."
@@ -281,9 +296,9 @@ class Router:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
         """
         sink = self.get_sink(product.product_data.product_type)
-        sink_request = request.ToTransportRequest(product=product, target=sink)
-        potential_transport_requests = self.get_possible_transport_requests(
-            [sink_request]
+        potential_transport_requests = self.request_handler.get_possible_transport_requests(
+            product_instance=product,
+            target=sink
         )
         if not potential_transport_requests:
             raise ValueError(
@@ -580,28 +595,6 @@ class Router:
                 possible_auxiliaries.append(auxiliary)
         return possible_auxiliaries
 
-    def get_possible_production_requests(
-        self, product: product.Product
-    ) -> List[request.Request]:
-        """
-        Returns a list of possible production requests with different resources and processes for the next production process of a product.
-
-        Args:
-            product (product.Product): The product to get the request for.
-
-        Returns:
-            List[request.Request]: A list of possible production requests for the next production process of the product.
-        """
-        possible_requests = []
-        for resource in self.resource_factory.get_production_resources():
-            for process in resource.processes:
-                production_request = self.get_production_request(product, resource)
-                # FIXME: this produces a lot of compute time -> increase speed here with pre-computation of matching requests
-                if process.matches_request(production_request):
-                    production_request.set_process(process)
-                    possible_requests.append(production_request)
-        return possible_requests
-
     def get_reachable_production_requests(
         self,
         production_requests: List[request.Request],
@@ -626,42 +619,6 @@ class Router:
             if request.resource.data.ID in possible_production_resource_ids
         ]
 
-    def get_possible_transport_requests(
-        self, production_requests: List[request.Request]
-    ) -> List[request.TransportResquest]:
-        """
-        Returns a list of possible transport requests with different resources and processes for the next transport process of a product.
-
-        Args:
-            production_request (request.Request): The production request to get the transport request for.
-
-        Returns:
-            List[request.TransportResquest]: A list of possible transport requests for the next transport process of the product.
-        """
-        if any(
-            isinstance(production_request, request.ToTransportRequest)
-            for production_request in production_requests
-        ):
-            transport_targets = [request.resource for request in production_requests]
-        else:
-            transport_target_ids = set(
-                [request.resource.data.ID for request in production_requests]
-            )
-            transport_targets = [
-                resource
-                for resource in self.resource_factory.resources
-                if resource.data.ID in transport_target_ids
-            ]
-        product = production_requests[0].product
-
-        possible_requests = []
-        route_cache = {}
-
-        for transport_target in transport_targets:
-            possible_requests += self.get_transport_requests_to_target(
-                product, transport_target, route_cache
-            )
-        return possible_requests
 
     def get_transport_requests_to_target(
         self,
