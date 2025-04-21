@@ -32,12 +32,14 @@ class StateFactory:
         self.env = env
         self.time_model_factory = time_model_factory
         self.state_data: List[state_data.STATE_DATA_UNION] = []
-        self.states: List[state.STATE_UNION] = []
+        self.states: dict[str, state.STATE_UNION] = {}
 
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
             for values in items.values():
                 values.update({"type": cls_name})
+                if values["ID"] in self.states:
+                    continue
                 self.state_data.append(
                     TypeAdapter(state_data.STATE_DATA_UNION).validate_python(values)
                 )
@@ -104,7 +106,7 @@ class StateFactory:
         values.update(self.get_loading_time_models_data(state_data))
         values.update(self.get_repair_time_model_data(state_data))
         values.update(self.get_battery_time_model_data(state_data))
-        self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
+        self.states[state_data.ID] = TypeAdapter(state.STATE_UNION).validate_python(values)
 
     def create_states(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -126,4 +128,4 @@ class StateFactory:
         Returns:
             List[state.STATE_UNION]: List of state objects with the given IDs.
         """
-        return [st for st in self.states if st.state_data.ID in IDs]
+        return [self.states[state_id] for state_id in IDs]

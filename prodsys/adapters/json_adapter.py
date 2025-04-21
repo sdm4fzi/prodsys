@@ -13,6 +13,7 @@ from prodsys.adapters import adapter
 
 from prodsys.models import (
     auxiliary_data,
+    performance_data,
     product_data,
     queue_data,
     resource_data,
@@ -154,6 +155,13 @@ class JsonProductionSystemAdapter(adapter.ProductionSystemAdapter):
             )
         elif scenario_file_path:
             self.read_scenario(scenario_file_path)
+        if "schedule" in data:
+            scheduled_events = []
+            for event in data["schedule"]:
+                scheduled_events.append(
+                    performance_data.Event.model_validate(event)
+                )
+            self.schedule = scheduled_events
 
     def create_objects_from_configuration_data_old(
         self, configuration_data: Dict[str, Any], type

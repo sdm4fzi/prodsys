@@ -16,7 +16,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import queue_data, time_model_data as time_model_data_module
+from prodsys.models import performance_data, queue_data, time_model_data as time_model_data_module
 from prodsys.models import state_data as state_data_module
 from prodsys.models import processes_data as processes_data_module
 from prodsys.models import sink_data as sink_data_module
@@ -306,6 +306,9 @@ class ProductionSystemAdapter(ABC, BaseModel):
         sink_data (List[sink_data_module.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
+        auxiliary_data (Optional[List[auxiliary_data_module.AuxiliaryData]], optional): List of auxiliary data in the production system. Defaults to [].
+        schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
+        conwip_number (Optional[int], optional): Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
@@ -324,6 +327,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
     source_data: List[source_data_module.SourceData] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
     auxiliary_data: Optional[List[auxiliary_data_module.AuxiliaryData]] = []
+    schedule: Optional[List[performance_data.Event]] = None
     conwip_number: Optional[int] = None
 
     valid_configuration: bool = True
@@ -905,6 +909,49 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         f"The queue {q} of source {source.ID} is not a valid queue of {queues}."
                     )
         return sources
+
+
+    @field_validator("schedule")
+    def check_schedule(
+        cls, schedule: Optional[List[performance_data.Event]], info: ValidationInfo
+    ):
+        if schedule is None:
+            return schedule
+        event_resources_ids = set()
+        event_process_ids = set()
+        event_product_ids = set()
+        schedule_to_consider = []
+        for event in schedule:
+            if not isinstance(event, performance_data.Event):
+                raise ValueError(
+                    f"The event {event} is not a valid event of {schedule}."
+                )
+            event_resources_ids.add(event.resource)
+            product_id = "_".join(event.product.split("_")[:-1])
+            event_product_ids.add(product_id)
+            if not event.activity == "start state":
+                continue
+            schedule_to_consider.append(event)
+
+        resources_ids = get_set_of_IDs(info.data["resource_data"])
+        processes_ids = get_set_of_IDs(info.data["process_data"])
+        products_ids = get_set_of_IDs(info.data["product_data"])
+
+        if event_resources_ids - resources_ids != set():
+            raise ValueError(
+                f"The resources {event_resources_ids - resources_ids} of the schedule are not valid resources of {resources_ids}."
+            )
+        if event_process_ids - processes_ids != set():
+            raise ValueError(
+                f"The processes {event_process_ids - processes_ids} of the schedule are not valid processes of {processes_ids}."
+            )
+        
+        if event_product_ids - products_ids != set():
+            raise ValueError(
+                f"The products {event_product_ids - products_ids} of the schedule are not valid products of {products_ids}."
+            )
+
+        return schedule_to_consider
 
     @abstractmethod
     def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):

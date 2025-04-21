@@ -124,9 +124,12 @@ class Runner:
         self.warm_up_cutoff = warm_up_cutoff
         self.cut_off_method = cut_off_method
 
-    def initialize_simulation(self):
+    def initialize_simulation(self, use_schedule: bool = False):
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
+
+        Args:
+            use_schedule (bool, optional): Whether to use the schedule for Simulation. Defaults to False.
         """
         self.adapter.validate_configuration()
         with temp_seed(self.adapter.seed):
@@ -153,6 +156,7 @@ class Runner:
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
                 process_factory=self.process_factory,
+                schedule=self.adapter.schedule if use_schedule else None,
             )
             self.resource_factory.create_resources(self.adapter)
 
@@ -196,6 +200,7 @@ class Runner:
                 auxiliary_factory=self.auxiliary_factory,
                 sink_factory=self.sink_factory,
                 conwip_number=self.adapter.conwip_number,
+                schedule=self.adapter.schedule if use_schedule else None,
             )
             self.source_factory.create_sources(self.adapter)
 

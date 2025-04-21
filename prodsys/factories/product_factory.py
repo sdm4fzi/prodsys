@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 import simpy
@@ -36,7 +36,7 @@ class ProductFactory:
         self.finished_product = env.event()
 
     def create_product(
-        self, product_data: ProductData, router: router.Router
+        self, product_data: ProductData, router: router.Router, product_index: Optional[str] = None
     ) -> product.Product:
         """
         Creates a product object based on the given product data and router.
@@ -44,6 +44,7 @@ class ProductFactory:
         Args:
             product_data (ProductData): Product data that is used to create the product object.
             router (router.Router): Router that is used to route the product object.
+            product_index (Optional[str]): Possibility to overwrite the index of the product, otherwise its automatically set.
 
         Raises:
             ValueError: If the transport process is not found.
@@ -52,8 +53,10 @@ class ProductFactory:
             product.Product: Created product object.
         """
         product_data = product_data.model_copy()
+        if not product_index:
+            product_index = str(self.product_counter)
         product_data.ID = (
-            str(product_data.product_type) + "_" + str(self.product_counter)
+            str(product_data.product_type) + "_" + product_index
         )
         process_model = self.create_process_model(product_data)
         transport_processes = self.process_factory.get_process(

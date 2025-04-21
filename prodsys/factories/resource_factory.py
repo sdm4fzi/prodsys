@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
+from functools import partial
+from typing import Callable, Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
+from prodsys.models import performance_data
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
 from prodsys.util.util import get_class_from_str
@@ -42,6 +44,15 @@ CONTROL_POLICY_DICT: Dict = {
     TransportControlPolicy.NEAREST_ORIGIN_AND_LONGEST_TARGET_QUEUES_TRANSPORT: control.nearest_origin_and_longest_target_queues_transport_control_policy,
     TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT: control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
 }
+
+def get_scheduled_control_policy(schedule: list[performance_data.Event], fallback_policy: Callable) -> Callable:
+    product_sequence_indices = {}
+    for index, event in enumerate(schedule):
+        product_sequence_indices[event.product] = index
+
+    return partial(
+        control.scheduled_control_policy, product_sequence_indices, fallback_policy
+    )
 
 
 def register_states(
@@ -86,7 +97,7 @@ def register_production_states_for_processes(
         }
         existence_condition = any(
             True
-            for state in state_factory.states
+            for state in state_factory.states.values()
             if state.state_data.ID == process_instance.process_data.ID
         )
         if (
@@ -156,6 +167,7 @@ class ResourceFactory(BaseModel):
     process_factory: process_factory.ProcessFactory
     state_factory: state_factory.StateFactory
     queue_factory: queue_factory.QueueFactory
+    schedule: Optional[List[performance_data.Event]] = None
 
     resource_data: List[RESOURCE_DATA_UNION] = []
     resources: List[RESOURCE_UNION] = []
@@ -209,6 +221,14 @@ class ResourceFactory(BaseModel):
         control_policy = get_class_from_str(
             name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
         )
+        if self.schedule:
+            resource_schedule = [
+                event for event in self.schedule if event.resource == resource_data.ID
+            ]
+            if resource_schedule:
+                control_policy = get_scheduled_control_policy(
+                    resource_schedule, control_policy
+                )
         controller: Union[
             control.ProductionController,
             control.TransportController,

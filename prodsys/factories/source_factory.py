@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Dict, List, TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+from prodsys.models import performance_data
 from prodsys.simulation import process_matcher, router, sim, source
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import SourceData
@@ -42,6 +44,7 @@ class SourceFactory(BaseModel):
     auxiliary_factory: auxiliary_factory.AuxiliaryFactory
     sink_factory: sink_factory.SinkFactory
     conwip_number: Optional[int] = None
+    schedule: Optional[List[performance_data.Event]] = None
 
     product_data: List[ProductData] = Field(default_factory=list, init=False)
     sources: List[source.Source] = Field(default_factory=list, init=False)
@@ -72,12 +75,21 @@ class SourceFactory(BaseModel):
             )
         return self.process_matcher
 
-    def get_router(self, routing_heuristic: str):
+    def get_router(self, routing_heuristic: str, schedule: list[performance_data.Event]):
+        if not schedule:
+            routing_heuristic = router.ROUTING_HEURISTIC[routing_heuristic]
+        else:
+            fallback_routing_heuristic = router.ROUTING_HEURISTIC[routing_heuristic]
+            product_process_resource_mappings = {}
+            for event in schedule:
+                product_process_resource_mappings[(event.product, event.state)] = event.resource
+            routing_heuristic = partial(router.scheduled_routing_heuristic, product_process_resource_mappings, fallback_routing_heuristic)
+
         return router.Router(
             self.resource_factory,
             self.sink_factory,
             self.auxiliary_factory,
-            router.ROUTING_HEURISTIC[routing_heuristic],
+            routing_heuristic,
             self.get_process_matcher(),
             self.product_factory,
         )
@@ -87,9 +99,30 @@ class SourceFactory(BaseModel):
         source_data: SourceData,
         product_data_of_source: ProductData,
     ):
-        router = self.get_router(source_data.routing_heuristic)
 
         time_model = self.time_model_factory.get_time_model(source_data.time_model_id)
+
+        if self.schedule: 
+            release_schedule = []
+            product_type_schedule = []
+            considered_product_ids = set()
+            for event in self.schedule:
+                event_product_type = "_".join(event.product.split("_")[:-1])
+                if not source_data.product_type == event_product_type:
+                    continue
+                product_type_schedule.append(event)
+                if event.product in considered_product_ids:
+                    continue
+                considered_product_ids.add(event.product)
+                release_schedule.append(event)
+            # source_schedule = [
+            #     event for event in self.schedule if source_data.product_type == "_".join(event.product.split("_")[:-1])
+            # ]
+        else:
+            release_schedule = None
+            product_type_schedule = None
+
+        router = self.get_router(source_data.routing_heuristic, product_type_schedule)
 
         source_object = source.Source(
             env=self.env,
@@ -99,6 +132,7 @@ class SourceFactory(BaseModel):
             time_model=time_model,
             router=router,
             conwip=self.conwip_number,
+            schedule=release_schedule
         )
         self.add_queues_to_source(source_object, source_data.output_queues)
         self.sources.append(source_object)

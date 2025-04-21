@@ -711,21 +711,22 @@ def plot_WIP(
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
     df = post_processor.df_WIP.copy()
-    fig = px.scatter(df, x="Time", y="WIP")
+    fig = px.line(df, x="Time", y="WIP")
     df["Product_type"] = "Total"
 
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="WIP",
         color="Product_type",
-        trendline="expanding",
-        opacity=0.01,
+        # trendline="expanding",
+        # opacity=0.01,
     )
-    fig.data = [t for t in fig.data if t.mode == "lines"]
+
+    # fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
     fig.update_layout(
         xaxis_title="Time [Minutes]",

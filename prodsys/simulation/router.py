@@ -766,6 +766,32 @@ def shortest_queue_routing_heuristic(
     )
 
 
+def scheduled_routing_heuristic(
+    product_process_resource_mappings: dict[tuple[str, str], str], fallback_policy: Callable, possible_request: List[request.Request] 
+):
+    product_id = possible_request[0].product.product_data.ID
+    process_id = possible_request[0].process.process_data.ID
+    # consider only request with active resources
+    if not (product_id, process_id) in product_process_resource_mappings:
+        fallback_policy(possible_request)
+        return
+    resource_id = product_process_resource_mappings[(product_id, process_id)]
+    free_resources = set()
+    for request in possible_request:
+        if request.resource.data.ID in free_resources:
+            continue
+        if not request.resource.active.triggered:
+            continue
+        free_resources.add(request.resource.data.ID)
+    if not resource_id in free_resources:
+        fallback_policy(possible_request)
+        return
+    if not any(True for request in possible_request if request.resource.data.ID == resource_id):
+        fallback_policy(possible_request)
+        return
+    possible_request.sort(
+        key=lambda x: x.resource.data.ID != resource_id
+    )
 def agent_routing_heuristic(
     gym_env: routing_control_env.AbstractRoutingControlEnv,
     possible_requests: List[request.Request],

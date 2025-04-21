@@ -9,6 +9,8 @@ import random
 
 import logging
 
+from prodsys.models import performance_data
+
 logger = logging.getLogger(__name__)
 
 from simpy import events
@@ -1430,6 +1432,44 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(
             x.target.get_input_queue_length(),
         )
     )
+
+def scheduled_control_policy(
+    product_sequence_indices: dict[str, str], fallback_policy: Callable, requests: List[request_module.Request]
+) -> None:
+    """
+    A control policy that sequences products based on their scheduled index in the sequence. If the request contains any product which is not in the schedule, the fallback policy is also considered if it would be processed next. 
+
+    Args:
+        product_sequence_indices (dict[str, str]): indices in the scheduled sequence of the product ids
+        fallback_policy (Callable): fallback control policy
+        requests (List[request_module.Request]): list of requests to sequence
+    """
+    non_scheduled_products = []
+    request_sequence_indices = {}
+    for request_instance in requests:
+        product_id = request_instance.product.product_data.ID
+        if not product_id in product_sequence_indices:
+            non_scheduled_products.append(request_instance)
+            continue
+        request_priority = product_sequence_indices[product_id]
+        request_sequence_indices[request_priority] = request_instance
+
+    if non_scheduled_products:
+        request_list_copy = requests[::]
+        fallback_policy(request_list_copy)
+        if request_list_copy[0].product.product_data.ID not in product_sequence_indices:
+            fallback_policy(requests)
+            # print(f"{requests[0].resource.env.now} - {requests[0].resource.data.ID} used FALLBACK control policy for product  {requests[0].product.product_data.ID} and process {requests[0].process.process_data.ID}")
+            return
+
+    sorted_indices = sorted(request_sequence_indices.keys())
+    requests.clear()
+    for index in sorted_indices:
+        requests.append(request_sequence_indices[index])
+
+    # print(
+    #     f"{requests[0].resource.env.now} - {requests[0].resource.data.ID} used SCHEDULED control policy for product  {requests[0].product.product_data.ID} and process {requests[0].process.process_data.ID}"
+    # )
 
 
 def agent_control_policy(

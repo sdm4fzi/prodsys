@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Optional, Tuple, Generator
+from typing import List, TYPE_CHECKING, Optional, Set, Tuple, Generator
 
 from pydantic import BaseModel, ConfigDict, Field
 from simpy import events
@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from prodsys.simulation import router, sim, store, time_model
-from prodsys.models import source_data, product_data
+from prodsys.models import performance_data, source_data, product_data
 
 
 class Source(BaseModel):
@@ -35,6 +35,11 @@ class Source(BaseModel):
     router: router.Router
     # TODO: add a release policy...
     conwip: Optional[int] = None
+    schedule: Optional[list[performance_data.Event]] = None
+
+    release_index: int = 0
+    released_product_ids: Set[str] = Field(default_factory=set, init=False)
+
     output_queues: List[store.Queue] = Field(default_factory=list, init=False)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -80,22 +85,37 @@ class Source(BaseModel):
             Generator: Yields when a product is created or when a product is put in an output queue.
         """
         while True:
-            inter_arrival_time = self.time_model.get_next_time()
-            if inter_arrival_time <= 0:
-                logger.debug(
-                    {
-                        "ID": self.data.ID,
-                        "sim_time": self.env.now,
-                        "resource": self.data.ID,
-                        "event": f"Inter arrival time is less than or equal to 0. Stopping source.",
-                    }
-                )
-                break
+            if self.schedule:
+                if self.release_index >= len(self.schedule):
+                    return
+                if self.schedule[self.release_index].product in self.released_product_ids:
+                    self.release_index += 1
+                    continue
+                inter_arrival_time = self.schedule[self.release_index].time - self.env.now
+                if inter_arrival_time <= 0:
+                    inter_arrival_time = 1
+            else:
+                inter_arrival_time = self.time_model.get_next_time()
+                if inter_arrival_time <= 0:
+                    logger.debug(
+                        {
+                            "ID": self.data.ID,
+                            "sim_time": self.env.now,
+                            "resource": self.data.ID,
+                            "event": f"Inter arrival time is less than or equal to 0. Stopping source.",
+                        }
+                    )
+                    break
             yield self.env.timeout(inter_arrival_time)
             if self.conwip is not None and len(self.product_factory.products) >= self.conwip:
                 continue
+            if self.schedule:
+                product_index = self.schedule[self.release_index].product.split("_")[-1]
+                self.released_product_ids.add(self.schedule[self.release_index].product)
+            else:
+                product_index = None
             product = self.product_factory.create_product(
-                self.product_data, self.router
+                self.product_data, self.router, product_index
             )
             logger.debug(
                 {
@@ -111,6 +131,7 @@ class Source(BaseModel):
                 queue.reserve()
                 available_events_events.append(queue.put(product.product_data))
             yield events.AllOf(self.env, available_events_events)
+            self.release_index += 1
             logger.debug(
                 {
                     "ID": self.data.ID,
