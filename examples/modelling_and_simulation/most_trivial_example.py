@@ -2,7 +2,7 @@ import prodsys.express as psx
 import prodsys
 
 print("version used:", prodsys.VERSION)
-prodsys.set_logging("INFO")
+prodsys.set_logging("CRITICAL")
 
 t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
 t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
@@ -35,7 +35,7 @@ machine2 = psx.Resource(
     output_location=[7, 1],
 )
 
-transport = psx.Resource([tp], [0, 0], 1, ID="transport")
+transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
 product1 = psx.Product([p1], tp, "product1")
 product2 = psx.Product([p2], tp, "product2")
@@ -65,10 +65,10 @@ product_example_1 = runner_instance.product_factory.create_product(
     simulation_source.product_data, simulation_source.data.routing_heuristic
 )
 print(product_example_1.product_data.ID)
-system.run(1000)
+system.run(10000)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-# runner_instance.plot_results()
-# runner_instance.save_results_as_csv("examples")
+runner_instance.plot_results()
+runner_instance.save_results_as_csv("examples")

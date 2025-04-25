@@ -61,6 +61,15 @@ def get_request_info_key(item: Union[product.Product, auxiliary.Auxiliary]):
         process_id = ""
     return f"{item_id}:{process_id}"
 
+def get_transport_request_info_key(
+    item: Union[product.Product, auxiliary.Auxiliary],
+    origin: Locatable,
+    target: Locatable,
+):
+    item_id = item.product_data.ID
+    origin_id = origin.data.ID
+    target_id = target.data.ID
+    return f"{item_id}:{origin_id}:{target_id}"
 
 @dataclass
 class RequestHandler:
@@ -133,7 +142,11 @@ class RequestHandler:
                 List of possible transport resources and processes.
         """
         origin = item.current_locatable
-        request_info_key = get_request_info_key(item)
+        request_info_key = get_transport_request_info_key(
+            item,
+            origin,
+            target,
+        )
         possible_resources_and_processes = self.process_matcher.get_transport_compatible(
             origin, target, item.transport_process.get_process_signature()
         )
@@ -168,7 +181,15 @@ class RequestHandler:
         Args:
             allocated_request (request.Request): The request that has been allocated.
         """
-        request_info_key = get_request_info_key(allocated_request.item)
+        if allocated_request.request_type == request.RequestType.TRANSPORT:
+            request_info_key = get_transport_request_info_key(
+                allocated_request.item,
+                allocated_request.origin,
+                allocated_request.target,
+            )
+        else:
+            request_info_key = get_request_info_key(allocated_request.item)
+        allocated_request.product.current_process = allocated_request.process
         self.request_infos[request_info_key].request_state = "routed"
 
     def mark_completion(self, completed_request: request.Request) -> None:
@@ -178,7 +199,14 @@ class RequestHandler:
         Args:
             completed_request (request.Request): The request that has been completed.
         """
-        request_info_key = get_request_info_key(completed_request.item)
+        if completed_request.request_type == request.RequestType.TRANSPORT:
+            request_info_key = get_transport_request_info_key(
+                completed_request.item,
+                completed_request.origin,
+                completed_request.target,
+            )
+        else:
+            request_info_key = get_request_info_key(completed_request.item)
         self.request_infos[request_info_key].request_state = "completed"
 
     def create_request(
@@ -198,6 +226,13 @@ class RequestHandler:
         Returns:
             request.Request: The created request.
         """
+        if request_info.request_type == request.RequestType.TRANSPORT:
+            route = self.process_matcher.get_route(
+                request_info.origin, request_info.target, process
+            )
+        else:
+            route = None
+
         return request.Request(
             item=request_info.item,
             resource=resource,
@@ -206,6 +241,7 @@ class RequestHandler:
             target=request_info.target,
             request_type=request_info.request_type,
             completed=request_info.request_completion_event,
+            route=route,
         )
 
     def get_next_product_to_route(

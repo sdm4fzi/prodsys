@@ -314,7 +314,7 @@ class ResourceFactory(BaseModel):
         Method returns a list of transport resource objects.
 
         Returns:
-            List[resources.TransportResource]: List of transport resource objects.
+            List[resources.ResourceData]: List of transport resource objects.
         """
         return self.resources_can_move
 
@@ -323,6 +323,6 @@ class ResourceFactory(BaseModel):
         Method returns a list of production resource objects.
 
         Returns:
-            List[resources.ProductionResource]: List of production resource objects.
+            List[resources.ResourceData]: List of production resource objects.
         """
         return self.resources_can_process

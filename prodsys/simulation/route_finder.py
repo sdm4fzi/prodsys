@@ -92,9 +92,8 @@ class RouteFinder:
         route = self.convert_node_path_to_locatable_route(
             graph_node_path=graph_node_path, links=process.links
         )
-        from prodsys.simulation.resources import TransportResource
 
-        if isinstance(origin, TransportResource):
+        if origin.can_move:
             route = route[1:]
         return route
 
@@ -118,12 +117,12 @@ class RouteFinder:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
         # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.resources import ProductionResource, TransportResource
         from prodsys.simulation.store import Store
+        from prodsys.simulation.resources import Resource
 
         pathfinder_edges = []
 
-        if isinstance(origin, TransportResource):
+        if origin.can_move:
             # this is necessary since a transport resource can be initialized with a random location, so a link is needed for the first drive
             origin_location = origin.get_location()
             closest_locatable = None
@@ -143,7 +142,7 @@ class RouteFinder:
             link_origin = link[0]
             link_target = link[1]
             if (
-                not isinstance(link_origin, (ProductionResource, Store))
+                not isinstance(link_origin, (Store)) or (isinstance(link_origin, Resource) and not link_origin.can_move) 
                 or not link_origin == origin
             ):
                 origin_location = link_origin.get_location()
@@ -153,7 +152,7 @@ class RouteFinder:
                 origin_location = link_origin.get_output_location()
 
             if (
-                not isinstance(link_target, (ProductionResource, Store))
+                not isinstance(link_target, (Store)) or (isinstance(link_target, Resource) and not link_target.can_move)
                 or not link_target == target
             ):
                 target_location = link_target.get_location()

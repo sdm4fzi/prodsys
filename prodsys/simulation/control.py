@@ -72,8 +72,6 @@ class Controller(ABC, BaseModel):
     running_processes: List[events.Process] = []
     reserved_requests_count: int = 0
 
-    _current_locatable: Optional[Locatable] = None
-
     @field_validator("requested", mode="before")
     def init_requested(cls, v, info: ValidationInfo):
         event = events.Event(info.data["env"])
@@ -153,7 +151,6 @@ class Controller(ABC, BaseModel):
                 continue
             self.control_policy(self.requests)
             # TODO: this is maybe not needed for transport processes?
-            self.reserved_requests_count += 1
             selected_request = self.requests.pop(0)
             process_handler = get_requets_handler(selected_request)
             running_process = self.env.process(
@@ -184,7 +181,10 @@ def get_requets_handler(
     Returns:
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
-    if request.request_type == request_module.RequestType.PRODUCTION or request.request_type == request_module.RequestType.REWORK:
+    if (
+        request.request_type == request_module.RequestType.PRODUCTION
+        or request.request_type == request_module.RequestType.REWORK
+    ):
         return ProductionProcessHandler(request.product.env)
     elif request.request_type == request_module.RequestType.TRANSPORT:
         return TransportProcessHandler(request.product.env)
@@ -259,7 +259,10 @@ class ProductionProcessHandler:
 
         # TODO: wait here until all auxiliaries are available for the process
         # auxiliaries = yield self.env.process(product.product_router.get_auxiliaries(process_request))
-        origin_queue, target_queue = process_request.origin_queue, process_request.target_queue
+        origin_queue, target_queue = (
+            process_request.origin_queue,
+            process_request.target_queue,
+        )
         logger.debug(
             {
                 "ID": "controller",
@@ -294,7 +297,7 @@ class ProductionProcessHandler:
             yield events.AllOf(resource.env, product_retrieval_events)
 
             production_state: state.State = yield self.env.process(
-                resource.wait_for_free_process(resource, process)
+                resource.wait_for_free_process(process)
             )
             logger.debug(
                 {
@@ -452,12 +455,9 @@ class TransportProcessHandler:
             locatable (product.Locatable): The current position.
             to_output (Optional[bool], optional): If the transport resource is moving to the output location. Defaults to None.
         """
-        self._current_locatable = locatable
-        self.resource.set_location(location)
+        self.resource.set_location(locatable)
 
-    def handle_request(
-        self, process_request: request_module.Request
-    ) -> Generator:
+    def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Start the next process.
 
@@ -485,7 +485,10 @@ class TransportProcessHandler:
         origin = process_request.get_origin()
         target = process_request.get_target()
 
-        origin_queue, target_queue = process_request.origin_queue, process_request.target_queue
+        origin_queue, target_queue = (
+            process_request.origin_queue,
+            process_request.target_queue,
+        )
         route_to_target = process_request.get_route()
         logger.debug(
             {
@@ -497,6 +500,8 @@ class TransportProcessHandler:
         )
 
         yield self.env.process(resource.setup(process))
+        if not resource.current_locatable:
+            resource.set_location(origin)
         with resource.request() as req:
             yield req
             if origin.get_location() != resource.get_location():
@@ -529,6 +534,7 @@ class TransportProcessHandler:
             product_retrieval_events = self.get_next_product_for_process(
                 origin_queue, product
             )
+            # FIXME: the product is not correctly retrieved from the queue
             logger.debug(
                 {
                     "ID": "controller",
@@ -694,10 +700,8 @@ class TransportProcessHandler:
             input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
         else:
             input_state.state_info.log_product(product, state.StateTypeEnum.transport)
-        if self._current_locatable.data.ID is self.resource.data.ID:
-            origin = None
-        else:
-            origin = self._current_locatable
+
+        origin = self.resource.current_locatable
         input_state.state_info.log_transport(
             origin,
             target,
@@ -751,15 +755,18 @@ class TransportProcessHandler:
                 )
             return route_to_origin
         else:
-            return [self._current_locatable, process_request.get_origin()]
+            return [self.resource.current_locatable, process_request.get_origin()]
+
 
 class MoveProcessHandler:
     # TODO: implement this class that only performs a move of the transport resource, without adjusting the queues -> TransportProcessHandler can inherit from it
     pass
 
+
 class AuxiliaryProcessHandler:
     # TODO: this function just waits for the auxiliaried process to be over
     pass
+
 
 def FIFO_control_policy(requests: List[request_module.Request]) -> None:
     """
@@ -1162,7 +1169,7 @@ class BatchController(Controller):
 
             for product in products:
                 for next_product in [product]:
-                    # FIXME: resolve as mark process as finished in router as 
+                    # FIXME: resolve as mark process as finished in router as
                     if not resource.got_free.triggered:
                         resource.got_free.succeed()
                     next_product.finished_process.succeed()

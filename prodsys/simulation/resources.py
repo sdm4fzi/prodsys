@@ -9,6 +9,7 @@ import random
 
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
@@ -17,7 +18,6 @@ from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
-
     # from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
@@ -65,6 +65,10 @@ class Resource(BaseModel, ABC, resource.Resource):
     output_queues: List[store.Queue] = []
     batch_size: Optional[int] = None
 
+    current_locatable: Optional[Locatable] = Field(
+        default=None, init=False, repr=False
+    )  # The current locatable of the resource. This is used for transport resources.
+
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
     @property
@@ -101,7 +105,7 @@ class Resource(BaseModel, ABC, resource.Resource):
         Wait for a free process of a resource.
 
         Args:
-            resource (resources.TransportResource): The resource.
+            resource (resources.ResourceData): The resource.
             process (process.Process): The process.
 
         Returns:
@@ -374,14 +378,15 @@ class Resource(BaseModel, ABC, resource.Resource):
         """
         return sum([len(q.items) for q in self.output_queues])
 
-    def set_location(self, new_location: List[float]) -> None:
+    def set_location(self, new_location: Locatable) -> None:
         """
         Sets the location of the resource.
 
         Args:
             new_location (List[float]): The new location of the resource. Has to have length 2.
         """
-        self.data.location = new_location
+        self.data.location = new_location.get_location()
+        self.current_locatable = new_location
 
     def get_states(self) -> List[state.State]:
         """
@@ -610,3 +615,4 @@ RESOURCE_UNION = Resource
 
 from prodsys.simulation import control, state
 from prodsys.simulation.process import PROCESS_UNION
+from prodsys.simulation.product import Locatable

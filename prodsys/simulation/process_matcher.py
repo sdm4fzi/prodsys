@@ -279,6 +279,24 @@ class ProcessMatcher:
             f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
         )
 
+    def get_route(
+        self, origin: Locatable, target: Locatable, process: process.PROCESS_UNION
+    ) -> request.Request:
+        """
+        Returns the route for a given origin, target, and process signature.
+
+        Args:
+            origin (Locatable): The origin location.
+            target (Locatable): The target location.
+            process_signature (str): The process signature.
+
+        Returns:
+            request.Request: The route request.
+        """
+        process_signature = process.get_process_signature()
+        key = (origin.data.ID, target.data.ID, process_signature)
+        return self.route_cache.get(key).route
+
     def get_compatible(
         self, requested_processes: List[process.PROCESS_UNION], product_type: str
     ) -> List[Tuple[resources.Resource, process.PROCESS_UNION]]:
