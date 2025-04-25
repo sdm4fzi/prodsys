@@ -3,9 +3,10 @@ The `time_model` module contains classes to specify time models in the simulatio
 of products, performance of processes and the duration of states.
 
 The following time models are possible:
-- `SequentialTimeModel`: A time model that is based on a sequence of values.
 - `FunctionTimeModel`: A time model that is based on a distribution function which gets sampled.
-- `ManhattanDistanceTimeModel`: A time model that is based on the manhattan distance between two nodes and a constant velocity.
+- `SampleTimeModel`: A time model that samples values from a provided data set by random choice of a sample element.
+- `ScheduledTimeModel`: A time model that is based on a schedule of timely values. Should only be used for arrival time models of sources.
+- `DistanceTimeModel`: A time model that is based on the distance between two nodes and a constant velocity and a distance metric.
 """
 from typing import List, Literal, Optional, Union
 from typing_extensions import deprecated
@@ -17,44 +18,6 @@ from pydantic import Field
 from prodsys.express import core
 
 from prodsys.models import time_model_data
-
-
-@deprecated(
-    "The SequentialTimeModel is deprecated and will be removed in the next version. Please use the SampleTimeModel instead.",
-    category=None,
-)
-@dataclass
-class SequentialTimeModel(core.ExpressObject):
-    """
-    Class that represents a time model that is based on a sequence of values.
-
-    Args:
-        sequence (List[float]): Sequence of time values.
-        ID (str): ID of the time model.
-
-    Examples:
-        Sequential time model with 7 time values:
-        ``` py
-        import prodsys.express as psx
-        psx.SequentialTimeModel(
-            sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-        )
-        ```
-    """
-
-    sequence: List[float]
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
-    def to_model(self) -> time_model_data.SequentialTimeModelData:
-        """
-        Converts the `prodsys.express` object to a data object from `prodsys.models`.
-
-        Returns:
-            time_model_data.SequentialTimeModelData: Data object of the express object.
-        """
-        return time_model_data.SequentialTimeModelData(
-            sequence=self.sequence, ID=self.ID, description=""
-        )
 
 
 @dataclass
@@ -84,7 +47,7 @@ class SampleTimeModel(core.ExpressObject):
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
-            time_model_data.SequentialTimeModelData: Data object of the express object.
+            time_model_data.SampleTimeModelData: Data object of the express object.
         """
         return time_model_data.SampleTimeModelData(
             samples=self.samples, ID=self.ID, description=""
@@ -123,7 +86,7 @@ class ScheduledTimeModel(core.ExpressObject):
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
-            time_model_data.SequentialTimeModelData: Data object of the express object.
+            time_model_data.ScheduledTimeModelData: Data object of the express object.
         """
         return time_model_data.ScheduledTimeModelData(
             schedule=self.schedule,
@@ -222,54 +185,9 @@ class DistanceTimeModel(core.ExpressObject):
         )
 
 
-@deprecated(
-    "The ManhattanDistanceTimeModel is deprecated and will be removed in the next version. Please use the DistanceTimeModel instead.",
-    category=None,
-)
-@dataclass
-class ManhattanDistanceTimeModel(core.ExpressObject):
-    """
-    Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.
-
-    Args:
-        speed (float): Speed of the vehicle in meters per minute.
-        reaction_time (float): Reaction time of the driver in minutes.
-
-    Examples:
-        Manhattan distance time model with a speed of 50 meters per minute and a reaction time of 0.5 minutes:
-        ``` py
-        import prodsys.express as psx
-        psx.ManhattenDistanceTimeModel(
-            speed=50.0,
-            reaction_time=0.5,
-        )
-        ```
-    """
-
-    speed: float
-    reaction_time: float
-    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
-    def to_model(self) -> time_model_data.ManhattanDistanceTimeModelData:
-        """
-        Converts the `prodsys.express` object to a data object from `prodsys.models`.
-
-        Returns:
-            time_model_data.ManhattanDistanceTimeModelData: Data object of the express object.
-        """
-        return time_model_data.ManhattanDistanceTimeModelData(
-            speed=self.speed,
-            reaction_time=self.reaction_time,
-            ID=self.ID,
-            description="",
-        )
-
-
 TIME_MODEL_UNION = Union[
     SampleTimeModel,
     ScheduledTimeModel,
     DistanceTimeModel,
     FunctionTimeModel,
-    SequentialTimeModel,
-    ManhattanDistanceTimeModel,
 ]

@@ -44,7 +44,7 @@ class NodeFactory:
         """
         values = {}
         values.update({"data": node_data})
-        self.nodes.append(TypeAdapter(node.Node).validate_python(values))
+        self.nodes.append(node.Node(**values))
 
     def get_node(self, ID: str) -> node.Node:
         """

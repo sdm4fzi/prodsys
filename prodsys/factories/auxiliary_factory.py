@@ -17,22 +17,38 @@ from prodsys.simulation import auxiliary, logger
 from prodsys.models import source_data
 
 
-class AuxiliaryFactory(BaseModel):
+class AuxiliaryFactory:
     """
     Factory class for creating and managing auxiliary objects in the production system.
     """
+    def __init__(
+        self,
+        env: sim.Environment,
+        process_factory: process_factory.ProcessFactory,
+        queue_factory: queue_factory.QueueFactory,
+        resource_factory: resource_factory.ResourceFactory,
+        sink_factory: sink_factory.SinkFactory,
+    ):
+        """
+        Initialize the AuxiliaryFactory with the given environment and factories.
 
-    env: sim.Environment
-    process_factory: process_factory.ProcessFactory
-    queue_factory: queue_factory.QueueFactory
-    resource_factory: resource_factory.ResourceFactory
-    sink_factory: sink_factory.SinkFactory
-    auxiliaries: List[auxiliary.Auxiliary] = []
-    event_logger: logger.EventLogger = Field(default=False, init=False)
-    auxiliary_counter: int = 0
-    router: router_module.Router = Field(default=False, init=False)
+        Args:
+            env (sim.Environment): The simulation environment.
+            process_factory (process_factory.ProcessFactory): The process factory.
+            queue_factory (queue_factory.QueueFactory): The queue factory.
+            resource_factory (resource_factory.ResourceFactory): The resource factory.
+            sink_factory (sink_factory.SinkFactory): The sink factory.
+        """
+        self.env = env
+        self.process_factory = process_factory
+        self.queue_factory = queue_factory
+        self.resource_factory = resource_factory
+        self.sink_factory = sink_factory
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+        self.auxiliaries: List[auxiliary.Auxiliary] = []
+        self.event_logger: logger.EventLogger = None
+        self.router: router_module.Router = None
+        self.auxiliary_counter = 0
 
     def create_auxiliary(self, adapter: adapter.ProductionSystemAdapter):
         """

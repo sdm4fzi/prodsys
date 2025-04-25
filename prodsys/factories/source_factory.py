@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from prodsys.adapters import adapter
 
 
-class SourceFactory(BaseModel):
+class SourceFactory:
     """
     Factory class that creates and stores `prodsys.simulation` source objects based on the given source data according to `prodsys.models.SourceData`.
 
@@ -34,19 +34,26 @@ class SourceFactory(BaseModel):
         resource_factory (resource_factory.ResourceFactory): Factory that creates resource objects.
         sink_factory (sink_factory.SinkFactory): Factory that creates sink objects.
     """
+    def __init__(
+        self,
+        env: sim.Environment,
+        product_factory: product_factory.ProductFactory,
+        time_model_factory: time_model_factory.TimeModelFactory,
+        queue_factory: queue_factory.QueueFactory,
+        resource_factory: resource_factory.ResourceFactory,
+        auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
+        sink_factory: sink_factory.SinkFactory,
+    ):
+        self.env = env
+        self.product_factory = product_factory
+        self.time_model_factory = time_model_factory
+        self.queue_factory = queue_factory
+        self.resource_factory = resource_factory
+        self.auxiliary_factory = auxiliary_factory
+        self.sink_factory = sink_factory
 
-    env: sim.Environment
-    product_factory: product_factory.ProductFactory
-    time_model_factory: time_model_factory.TimeModelFactory
-    queue_factory: queue_factory.QueueFactory
-    resource_factory: resource_factory.ResourceFactory
-    auxiliary_factory: auxiliary_factory.AuxiliaryFactory
-    sink_factory: sink_factory.SinkFactory
-
-    product_data: List[ProductData] = Field(default_factory=list, init=False)
-    sources: List[source.Source] = Field(default_factory=list, init=False)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+        self.product_data: List[ProductData] = []
+        self.sources: List[source.Source] = []
 
     def create_sources(self, adapter: adapter.ProductionSystemAdapter):
         """

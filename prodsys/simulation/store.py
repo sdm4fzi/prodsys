@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Generator, List, Union
-from pydantic import BaseModel
 
 
 from simpy.resources import store

@@ -46,7 +46,7 @@ class LinkTransportProcessUpdater:
         """
         The method updates the links of the LinkTransportProcess objects in the process factory with the created node, resource, source and sink objects from the respective factories.
         """
-        for process_instance in self.process_factory.processes:
+        for process_instance in self.process_factory.processes.values():
             if isinstance(process_instance, process.LinkTransportProcess):
                 self.update_links(process_instance)
 

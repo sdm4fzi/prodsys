@@ -176,24 +176,24 @@ def check_heterogenous_time_models(
             )
         if len(set(parameters)) == 1:
             return True
-    elif all(
-        isinstance(time_model, time_model_data.SequentialTimeModelData)
-        for time_model in time_models
-    ):
-        sequences = []
-        for time_model in time_models:
-            sequences.append(tuple(time_model.sequence))
-        if len(set(sequences)) == 1:
-            return True
-    elif all(
-        isinstance(time_model, time_model_data.ManhattanDistanceTimeModelData)
-        for time_model in time_models
-    ):
-        parameters = []
-        for time_model in time_models:
-            parameters.append((time_model.speed, time_model.reaction_time))
-        if len(set(parameters)) == 1:
-            return True
+    # elif all(
+    #     isinstance(time_model, time_model_data.SequentialTimeModelData)
+    #     for time_model in time_models
+    # ):
+    #     sequences = []
+    #     for time_model in time_models:
+    #         sequences.append(tuple(time_model.sequence))
+    #     if len(set(sequences)) == 1:
+    #         return True
+    # elif all(
+    #     isinstance(time_model, time_model_data.ManhattanDistanceTimeModelData)
+    #     for time_model in time_models
+    # ):
+    #     parameters = []
+    #     for time_model in time_models:
+    #         parameters.append((time_model.speed, time_model.reaction_time))
+    #     if len(set(parameters)) == 1:
+    #         return True
     return False
 
 

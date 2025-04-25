@@ -1,12 +1,17 @@
 from typing import TYPE_CHECKING, List
 
-from pydantic import BaseModel
-
 from prodsys.models.node_data import NodeData
 
 
-class Node(BaseModel):
-    data: NodeData
+class Node:
+    def __init__(self, data: NodeData):
+        """
+        Initialize the Node with the given data.
+
+        Args:
+            data (NodeData): The data for the node.
+        """
+        self.data = data
 
     def get_location(self) -> List[float]:
         """

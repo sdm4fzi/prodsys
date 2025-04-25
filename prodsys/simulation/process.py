@@ -4,9 +4,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
 import typing
 
-from pydantic import BaseModel
-
-
 if TYPE_CHECKING:
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.source import Source
@@ -18,17 +15,31 @@ from prodsys.simulation import route_finder, time_model
 from prodsys.models import processes_data
 
 
-class Process(ABC, BaseModel):
+class Process(ABC):
     """
     Abstract process base class that defines the interface for all processes.
     """
 
-    process_data: processes_data.PROCESS_DATA_UNION
-    time_model: Optional[time_model.TimeModel]
-    failure_rate: Optional[float] = None
-    auxiliaries: Optional[
-        typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
-    ] = None
+    def __init__(
+        self,
+        process_data: processes_data.PROCESS_DATA_UNION,
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        """
+        Initializes the process with the given process data and time model.
+
+        Args:
+            process_data (processes_data.PROCESS_DATA_UNION): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        self.process_data = process_data
+        self.time_model = time_model
+        self.failure_rate = failure_rate
+        self.auxiliaries = auxiliaries if auxiliaries else []
 
     @abstractmethod
     def matches_request(self, request: request_module.Request) -> bool:
@@ -74,8 +85,24 @@ class ProductionProcess(Process):
         process_data (processes_data.ProductionProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+    def __init__(
+        self,
+        process_data: processes_data.ProductionProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        """
+        Initializes the production process with the given process data and time model.
 
-    process_data: processes_data.ProductionProcessData
+        Args:
+            process_data (processes_data.ProductionProcessData): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
+
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -99,8 +126,23 @@ class CapabilityProcess(Process):
         process_data (processes_data.CapabilityProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+    def __init__(
+        self,
+        process_data: processes_data.CapabilityProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        """
+        Initializes the capability process with the given process data and time model.
 
-    process_data: processes_data.CapabilityProcessData
+        Args:
+            process_data (processes_data.CapabilityProcessData): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -128,10 +170,29 @@ class TransportProcess(Process):
         process_data (processes_data.TransportProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+    def __init__(
+        self,
+        process_data: processes_data.TransportProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        loading_time_model: Optional[time_model.TimeModel] = None,
+        unloading_time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        """
+        Initializes the transport process with the given process data and time model.
 
-    process_data: processes_data.TransportProcessData
+        Args:
+            process_data (processes_data.TransportProcessData): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
+        self.loading_time_model = loading_time_model
+        self.unloading_time_model = unloading_time_model        
 
-    def matches_request(self, request: request_module.TransportResquest) -> bool:
+    def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if not isinstance(requested_process, TransportProcess) and not isinstance(
             requested_process, CompoundProcess
@@ -198,17 +259,36 @@ class CompoundProcess(Process):
         processes (List[Union[ProductionProcess, TransportProcess, CapabilityProcess, RequiredCapabilityProcess]]): The processes.
     """
 
-    process_data: processes_data.CompoundProcessData
-    contained_processes_data: List[
-        Union[
-            processes_data.ProductionProcessData,
-            processes_data.TransportProcessData,
-            processes_data.CapabilityProcessData,
-            processes_data.RequiredCapabilityProcessData,
-            processes_data.LinkTransportProcessData,
-            processes_data.ReworkProcessData,
-        ]
-    ]
+    def __init__(
+        self,
+        process_data: processes_data.CompoundProcessData,
+        contained_processes_data: List[
+            Union[
+                processes_data.ProductionProcessData,
+                processes_data.TransportProcessData,
+                processes_data.CapabilityProcessData,
+                processes_data.RequiredCapabilityProcessData,
+                processes_data.LinkTransportProcessData,
+                processes_data.ReworkProcessData,
+            ]
+        ],
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        """
+        Initializes the compound process with the given process data and time model.
+
+        Args:
+            process_data (processes_data.CompoundProcessData): The process data.
+            contained_processes_data (List[Union[ProductionProcess, TransportProcess, CapabilityProcess, RequiredCapabilityProcess]]): The processes.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
+        self.contained_processes_data = contained_processes_data
+
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -255,8 +335,17 @@ class RequiredCapabilityProcess(Process):
     Args:
         process_data (processes_data.RequiredCapabilityProcessData): The process data.
     """
+    def __init__(
+        self,
+        process_data: processes_data.RequiredCapabilityProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+    ):
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
 
-    process_data: processes_data.RequiredCapabilityProcessData
 
     def matches_request(self, request: request_module.Request) -> bool:
         raise NotImplementedError(
@@ -277,6 +366,21 @@ class ReworkProcess(Process):
     process_data: processes_data.ReworkProcessData
     reworked_process_ids: List[str]
     blocking: bool
+
+    def __init__(
+        self,
+        process_data: processes_data.ReworkProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+        reworked_process_ids: Optional[List[str]] = None,
+        blocking: Optional[bool] = None,
+    ):
+        super().__init__(process_data, time_model, failure_rate, auxiliaries)
+        self.reworked_process_ids = reworked_process_ids or []
+        self.blocking = blocking if blocking is not None else True
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -309,6 +413,35 @@ class LinkTransportProcess(TransportProcess):
 
     process_data: processes_data.LinkTransportProcessData
     links: Optional[List[List[Union[Node, Source, Sink, Resource]]]]
+
+    def __init__(
+        self,
+        process_data: processes_data.LinkTransportProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        loading_time_model: Optional[time_model.TimeModel] = None,
+        unloading_time_model: Optional[time_model.TimeModel] = None,
+        failure_rate: Optional[float] = None,
+        auxiliaries: Optional[
+            typing.List[typing.Union[ProcessAuxiliary, ResourceAuxiliary]]
+        ] = None,
+        links: Optional[List[List[Union[Node, Source, Sink, Resource]]]] = None,
+    ):
+        """
+        Initializes the link transport process with the given process data and time model.
+
+        Args:
+            process_data (processes_data.LinkTransportProcessData): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        super().__init__(
+            process_data,
+            time_model,
+            loading_time_model,
+            unloading_time_model,
+            failure_rate,
+            auxiliaries,
+        )
+        self.links = links if links else []
 
     def matches_request(
         self,

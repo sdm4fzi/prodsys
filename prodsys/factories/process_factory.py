@@ -1,18 +1,28 @@
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, TypeAdapter
 
 from prodsys.factories import time_model_factory
 from prodsys.models import processes_data
+from prodsys.simulation import process
+
 
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
-    from prodsys.simulation import process
 
+PROCESS_MAP = {
+    processes_data.ProcessTypeEnum.ProductionProcesses: process.ProductionProcess,
+    processes_data.ProcessTypeEnum.TransportProcesses: process.TransportProcess,
+    processes_data.ProcessTypeEnum.ReworkProcesses: process.ReworkProcess,
+    processes_data.ProcessTypeEnum.CapabilityProcesses: process.CapabilityProcess,
+    processes_data.ProcessTypeEnum.CompoundProcesses: process.CompoundProcess,
+    processes_data.ProcessTypeEnum.LinkTransportProcesses: process.LinkTransportProcess,
+    processes_data.ProcessTypeEnum.RequiredCapabilityProcesses: process.RequiredCapabilityProcess,
+}
 
-class ProcessFactory(BaseModel):
+class ProcessFactory:
     """
     Factory class that creates and stores `prodsys.simulation` process objects based on the given process data according to `prodsys.models.processes_data.PROCESS_UNION`.
 
@@ -21,8 +31,15 @@ class ProcessFactory(BaseModel):
         processes (List[process.PROCESS_UNION], optional): List of process objects. Defaults to [] and is filled by the `create_processes` method.
     """
 
-    time_model_factory: time_model_factory.TimeModelFactory
-    processes: List[process.PROCESS_UNION] = []
+    def __init__(self, time_model_factory: time_model_factory.TimeModelFactory):    
+        """
+        Initializes the ProcessFactory with the given time model factory.
+
+        Args:
+            time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
+        """
+        self.time_model_factory = time_model_factory
+        self.processes: Dict[str, process.PROCESS_UNION] = {}
 
     def create_processes(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -79,21 +96,16 @@ class ProcessFactory(BaseModel):
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})
-            self.processes.append(
-                TypeAdapter(process.LinkTransportProcess).validate_python(values)
-            )
-        elif isinstance(process_data, processes_data.ReworkProcessData):
+        if isinstance(process_data, processes_data.ReworkProcessData):
             # TODO: think about getting here the processes and not only ids...
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
-            # TODO: fix this in simulation process to use parameter of process data
             values.update({"blocking": process_data.blocking})
-            self.processes.append(
-                TypeAdapter(process.ReworkProcess).validate_python(values)
-            )
-        else:
-            self.processes.append(
-                TypeAdapter(process.PROCESS_UNION).validate_python(values)
-            )
+
+        process_class = PROCESS_MAP.get(process_data.type)
+        if process_class is None:
+            raise ValueError(f"Unknown process type: {process_data.type}")
+        new_process = process_class(**values)
+        self.processes[process_data.ID] = new_process
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """
@@ -107,10 +119,10 @@ class ProcessFactory(BaseModel):
         """
         processes = []
         for ID in IDs:
-            for _process in self.processes:
-                if _process.process_data.ID == ID:
-                    processes.append(_process)
-
+            if ID in self.processes:
+                processes.append(self.processes[ID])
+            else:
+                raise ValueError(f"Process with ID {ID} not found")
         return processes
 
     def get_process(self, ID: str) -> Optional[process.PROCESS_UNION]:
@@ -126,10 +138,10 @@ class ProcessFactory(BaseModel):
         Returns:
             Optional[process.PROCESS_UNION]: Process object based on the given ID.
         """
-        pr = [pr for pr in self.processes if pr.process_data.ID in ID]
-        if not pr:
+        if ID in self.processes:
+            return self.processes[ID]
+        else:
             raise ValueError(f"Process with ID {ID} not found")
-        return pr.pop()
 
 
 from prodsys.simulation import process

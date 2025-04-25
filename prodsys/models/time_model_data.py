@@ -28,67 +28,12 @@ class TimeModelEnum(str, Enum):
     - SampleTimeModel: A time model that samples values from a provided data set by random choice of a sample element.
     - ScheduledTimeModel: A time model that is based on a schedule of timely values. Should only be used for arrival time models of sources.
     - DistanceTimeModel: A time model that is based on the distance between two nodes and a constant velocity and a distance metric.
-    - SequentialTimeModel: A time model that is based on a sequence of values. Deprecated, use SampleTimeModel instead.
-    - ManhattanDistanceTimeModel: A time model that is based on the manhattan distance between two nodes and a constant velocity. Deprecated, use DistanceTimeModel instead.
     """
 
     FunctionTimeModel = "FunctionTimeModel"
     SampleTimeModel = "SampleTimeModel"
     ScheduledTimeModel = "ScheduledTimeModel"
     DistanceTimeModel = "DistanceTimeModel"
-    # TODO: remove in the future
-    SequentialTimeModel = "SequentialTimeModel"
-    ManhattanDistanceTimeModel = "ManhattanDistanceTimeModel"
-
-
-@deprecated(
-    "prodsys SequentialTimeModelData is deprecated and will be removed in the future. "
-    "Use prodsys.models.time_model_data.SampleTimeModel instead.",
-    category=None,
-)
-class SequentialTimeModelData(CoreAsset):
-    """
-    Class that represents a time model that is based on a sequence of values.
-
-    Args:
-        ID (str): ID of the time model.
-        description (str): Description of the time model.
-        sequence (List[float]): Sequence of time values.
-
-    Examples:
-        Sequential time model with 7 time values:
-        ```	py
-        import prodsys
-        prodsys.time_model_data.SequentialTimeModelData(
-            ID="sequence_time_model_1",
-            description="Examplary sequence time model",
-            sequence=[25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-        )
-        ```
-    """
-
-    sequence: List[float]
-
-    def hash(self) -> str:
-        """
-        Returns a unique hash for the time model considering its sequence. Can be used to compare time models for equal functionality.
-
-        Returns:
-            str: Hash of the time model.
-        """
-        return md5(("".join([*map(str, self.sequence)])).encode("utf-8")).hexdigest()
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "ID": "sequence_time_model_1",
-                    "description": "Examplary sequence time model",
-                    "sequence": [25.0, 13.0, 15.0, 16.0, 17.0, 20.0, 21.0],
-                },
-            ]
-        }
-    )
 
 
 class SampleTimeModelData(CoreAsset):
@@ -256,60 +201,6 @@ class FunctionTimeModelData(CoreAsset):
         ).hexdigest()
 
 
-@deprecated(
-    "prodsys ManhattanDistanceTimeModelData is deprecated and will be removed in the future. Use instead the prodsys.models.time_model_data.DistanceTimeModelData.",
-    category=None,
-)
-class ManhattanDistanceTimeModelData(CoreAsset):
-    """
-    Class that represents a time model that is based on the manhattan distance between two nodes and a constant velocity.
-
-    Args:
-        ID (str): ID of the time model.
-        description (str): Description of the time model.
-        speed (float): Speed of the transport.
-        reaction_time (float): Reaction time of the transport.
-
-    Examples:
-        Manhattan time model with speed 180 m/min = 3 m/s and reaction time 0.15 minutes:
-        ``` py
-        import prodsys
-        time_model_data.ManhattanDistanceTimeModelData(
-            ID="manhattan_time_model_1",
-            description="manhattan time model with speed 180 m/min = 3 m/s",
-            speed=180.0,
-            reaction_time=0.15,
-        )
-    """
-
-    speed: float
-    reaction_time: float
-
-    def hash(self) -> str:
-        """
-        Returns a unique hash for the time model considering its speed and reaction time. Can be used to compare time models for equal functionality.
-
-        Returns:
-            str: Hash of the time model.
-        """
-        return md5(
-            ("".join([*map(str, [self.speed, self.reaction_time])])).encode("utf-8")
-        ).hexdigest()
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "examples": [
-                {
-                    "ID": "manhattan_time_model_1",
-                    "description": "manhattan time model with speed 180 m/min = 3 m/s",
-                    "speed": 180.0,
-                    "reaction_time": 0.15,
-                },
-            ]
-        }
-    )
-
-
 class DistanceTimeModelData(CoreAsset):
     """
     Class that represents a time model that is based on the distance between two nodes and a constant velocity.
@@ -372,6 +263,4 @@ TIME_MODEL_DATA = Union[
     SampleTimeModelData,
     ScheduledTimeModelData,
     DistanceTimeModelData,
-    SequentialTimeModelData,
-    ManhattanDistanceTimeModelData,
 ]
