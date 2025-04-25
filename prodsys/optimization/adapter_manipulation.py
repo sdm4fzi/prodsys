@@ -135,7 +135,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
 
     transport_resource_id = f"resource_{uuid1().hex}"
     adapter_object.resource_data.append(
-        resource_data.TransportResourceData(
+        resource_data.ResourceData(
             ID=transport_resource_id,
             description="",
             capacity=1,

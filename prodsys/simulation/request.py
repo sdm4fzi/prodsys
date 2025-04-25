@@ -64,6 +64,7 @@ class Request:
         origin: Optional[Locatable] = None,
         target: Optional[Locatable] = None,
         completed: Optional[simpy.Event] = None,
+        route: Optional[List[Locatable]] = None,
     ):
         self.request_type = request_type
         self.process = process
@@ -75,7 +76,6 @@ class Request:
         self.target_queue: Optional[Store] = target_queue
         self.completed = completed
 
-
         self.transport_to_target: Optional[simpy.Event] = None
         self.auxiliaries_ready: Optional[simpy.Event] = None
 
@@ -84,6 +84,8 @@ class Request:
             self.product = item
         else:
             self.product = None
+
+        self.route: Optional[List[Locatable]] = route
 
         # For auxiliary requests
         self.auxiliary = None
@@ -165,7 +167,7 @@ class Request:
             Locatable: The origin location.
         """
         return self.origin
-    
+
     def get_target(self) -> Locatable:
         """
         Returns the target of the request.
@@ -174,7 +176,7 @@ class Request:
             Locatable: The target location.
         """
         return self.target
-    
+
     def get_auxiliaries(self) -> List[Auxiliary]:
         """
         Returns the auxiliaries of the request.

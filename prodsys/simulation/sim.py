@@ -91,17 +91,15 @@ class Environment(core.Environment):
         """
         super().run(until=until)
 
-    def request_process_of_resource(self, request: request.Request) -> None:
+    def update_progress_bar(self):
         """
-        Requests the process of a resource. Connects requests of products with controllers in the environment.
+        Updates the progress bar.
 
         Args:
-            request (request.Request): The request to process.
+            time (float): The time to update the progress bar to.
         """
         if VERBOSE == 1:
             now = round(self.now)
             if now > self.last_update:
                 self.pbar.update(now - self.last_update)
                 self.last_update = now
-        controller = request.get_resource().get_controller()
-        controller.request(request)

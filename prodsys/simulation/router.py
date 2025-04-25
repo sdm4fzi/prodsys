@@ -136,11 +136,7 @@ class Router:
         """
         if not request.resource.got_free.triggered:
             request.resource.got_free.succeed()
-            request.resource.got_free = events.Event(self.env)
         self.request_handler.mark_completion(request)
-        if request.transport_to_target:
-            request.transport_to_target.succeed()
-            request.transport_to_target = None
         request.completed.succeed()
 
     def routing_loop(self) -> Generator[None, None, None]:
@@ -159,6 +155,9 @@ class Router:
             )
             if self.got_requested.triggered:
                 self.got_requested = events.Event(self.env)
+            for resource in self.resource_factory.all_resources:
+                if resource.got_free.triggered:
+                    resource.got_free = events.Event(self.env)
             while True:
                 free_resources = [
                     resource
@@ -172,6 +171,7 @@ class Router:
                 )
                 if not free_requests:
                     break
+                self.env.update_progress_bar()
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
                 self.env.process(self.execute_routing(request))
@@ -182,7 +182,7 @@ class Router:
         # reserve input queues
         # reserve transport to resource with a transport request
         if (
-            not executed_request.request_type == request.RequestType.TRANSPORT
+            executed_request.request_type != request.RequestType.TRANSPORT
             and executed_request.item.current_locatable != executed_request.target
         ):
             transport_process_finished_event = self.request_transport(executed_request.item, executed_request.resource)
@@ -212,8 +212,8 @@ class Router:
             target_queue = routed_request.target.input_queues[0]
         elif routed_request.request_type == request.RequestType.PRODUCTION:
             # reserve input queues
-            origin_queue = routed_request.item.current_locatable.output_queues[0]
-            target_queue = routed_request.resource.input_queues[0]
+            origin_queue = routed_request.resource.input_queues[0]
+            target_queue = routed_request.resource.output_queues[0]
 
         routed_request.origin_queue = origin_queue
         routed_request.target_queue = target_queue
@@ -326,8 +326,8 @@ class Router:
         )
         chosen_sink = random.choice(possible_sinks)
         request_info = self.request_handler.add_transport_request(product, chosen_sink)
-        self.got_requested.succeed()
-        self.got_requested = events.Event(self.env)
+        if not self.got_requested.triggered:
+            self.got_requested.succeed()
         return request_info.request_completion_event
 
     def route_product_to_storage(self, product: product.Product):
