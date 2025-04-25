@@ -65,7 +65,7 @@ product_example_1 = runner_instance.product_factory.create_product(
     simulation_source.product_data, simulation_source.data.routing_heuristic
 )
 print(product_example_1.product_data.ID)
-system.run(10000)
+system.run(3000)
 
 runner_instance = system.runner
 
