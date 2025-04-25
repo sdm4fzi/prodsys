@@ -28,8 +28,6 @@ from prodsys.express.time_model import (
     ScheduledTimeModel,
     FunctionTimeModel,
     DistanceTimeModel,
-    SequentialTimeModel,
-    ManhattanDistanceTimeModel,
 )
 from prodsys.express.state import (
     SetupState,

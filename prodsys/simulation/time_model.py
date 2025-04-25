@@ -4,23 +4,30 @@ from typing import Callable, Iterator, List, Optional, Tuple, Union
 from typing_extensions import deprecated
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from prodsys.models.time_model_data import (
     FunctionTimeModelData,
     SampleTimeModelData,
     ScheduledTimeModelData,
     DistanceTimeModelData,
-    SequentialTimeModelData,
-    ManhattanDistanceTimeModelData,
+    TIME_MODEL_DATA,
 )
 from prodsys.util.statistical_functions import FUNCTION_DICT, FunctionTimeModelEnum
 
 
-class TimeModel(ABC, BaseModel):
+class TimeModel(ABC):
     """
     Abstract base class for time models.
     """
+
+    def __init__(self, time_model_data: TIME_MODEL_DATA):
+        """
+        Initializes the time model with the given time model data.
+
+        Args:
+            time_model_data (TIME_MODEL_DATA): The time model data object.
+        """
+        self.time_model_data = time_model_data
 
     @abstractmethod
     def get_next_time(
@@ -69,8 +76,19 @@ class FunctionTimeModel(TimeModel):
         distribution_function_object (Callable[[FunctionTimeModelData], List[float]], optional): The distribution function object. Defaults to FUNCTION_DICT[FunctionTimeModelEnum.Constant].
     """
 
-    time_model_data: FunctionTimeModelData
-    statistics_buffer: List[float] = []
+    def __init__(
+        self,
+        time_model_data: FunctionTimeModelData,
+    ):
+        """
+        Initializes the function time model with the given time model data.
+
+        Args:
+            time_model_data (FunctionTimeModelData): The time model data object.
+        """
+        super().__init__(time_model_data)
+        self.statistics_buffer = []
+        self._fill_buffer()
 
     def get_next_time(
         self,
@@ -120,7 +138,14 @@ class SampleTimeModel(TimeModel):
         time_model_data (SampleTimeModelData): The time model data object.
     """
 
-    time_model_data: SampleTimeModelData
+    def __init__(self, time_model_data: SampleTimeModelData):
+        """
+        Initializes the sample time model with the given time model data.
+
+        Args:
+            time_model_data (SampleTimeModelData): The time model data object.
+        """
+        super().__init__(time_model_data)
 
     def get_next_time(
         self,
@@ -151,15 +176,18 @@ class ScheduledTimeModel(TimeModel):
         time_model_data (ScheduledTimeModelData): The time model data object.
     """
 
-    time_model_data: ScheduledTimeModelData
+    def __init__(
+        self,
+        time_model_data: ScheduledTimeModelData,
+    ):
+        """
+        Initializes the scheduled time model with the given time model data.
 
-    _time_value_iterator: Iterator[float] = PrivateAttr()
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        Args:
+            time_model_data (ScheduledTimeModelData): The time model data object.
+        """
+        super().__init__(time_model_data)
         self._time_value_iterator = self._get_time_value_iterator()
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def _get_time_value_iterator(self) -> Iterator[float]:
         """
@@ -228,7 +256,14 @@ class DistanceTimeModel(TimeModel):
         time_model_data (DistanceTimeModelData): The time model data object.
     """
 
-    time_model_data: DistanceTimeModelData
+    def __init__(self, time_model_data: DistanceTimeModelData):
+        """
+        Initializes the distance time model with the given time model data.
+
+        Args:
+            time_model_data (DistanceTimeModelData): The time model data object.
+        """
+        super().__init__(time_model_data)
 
     def calculate_distance(self, origin: List[float], target: List[float]) -> float:
         """
@@ -288,114 +323,10 @@ class DistanceTimeModel(TimeModel):
         return self.get_next_time(origin, target)
 
 
-@deprecated(
-    "SequentialTimeModel is deprecated and will be removed in the next release. Use SampleTimeModel instead.",
-    category=None,
-)
-class SequentialTimeModel(TimeModel):
-    """
-    Class for time models that are based on a sequence of values. A random value from the sequence is returned.
-
-    Args:
-        time_model_data (SequentialTimeModelData): The time model data object.
-    """
-
-    time_model_data: SequentialTimeModelData
-
-    def get_next_time(
-        self,
-        origin: Optional[List[float]] = None,
-        target: Optional[List[float]] = None,
-    ) -> float:
-        """
-        Returns the next time for a time model based on a sample value of the sequence.
-
-        Returns:
-            float: The next time of the time model.
-        """
-        return np.random.choice(self.time_model_data.sequence, 1)[0]
-
-    def get_expected_time(
-        self,
-        origin: Optional[List[float]] = None,
-        target: Optional[List[float]] = None,
-    ) -> float:
-        """
-        Returns the expected time for a time model based on the mean value of the sequence.
-
-        Args:
-            origin (Optional[List[float]], optional): Not used. Defaults to None.
-            target (Optional[List[float]], optional): Not used. Defaults to None.
-
-        Returns:
-            float: The expected time of the time model.
-        """
-        return sum(self.time_model_data.sequence) / len(self.time_model_data.sequence)
-
-
-@deprecated(
-    "ManhattanDistanceTimeModel is deprecated and will be removed in the next release. Use DistanceTimeModel instead.",
-    category=None,
-)
-class ManhattanDistanceTimeModel(TimeModel):
-    """
-    Class for time models that are based on the manhattan distance between two points and time calculation based on reaction time and speed.
-
-    Args:
-        time_model_data (ManhattanDistanceTimeModelData): The time model data object.
-    """
-
-    time_model_data: ManhattanDistanceTimeModelData
-
-    def get_next_time(
-        self,
-        origin: Optional[List[float]] = None,
-        target: Optional[List[float]] = None,
-    ) -> float:
-        """
-        Returns the next time for a time model based on the manhattan distance between two points and time calculation based on reaction time and speed.
-
-        Args:
-            origin (Optional[List[float]], optional): The origin of the product for a transport. Defaults to None.
-            target (Optional[List[float]], optional): The target of the product for a transport. Defaults to None.
-
-        Returns:
-            float: The next time of the time model.
-        """
-        if origin is None or target is None:
-            raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
-        x_distance = abs(origin[0] - target[0])
-        y_distance = abs(origin[1] - target[1])
-        return (
-            x_distance + y_distance
-        ) / self.time_model_data.speed + self.time_model_data.reaction_time
-
-    def get_expected_time(
-        self,
-        origin: Optional[List[float]] = None,
-        target: Optional[List[float]] = None,
-    ) -> float:
-        """
-        Returns the expected time for a time model based on the manhattan distance between two points and time calculation based on reaction time and speed.
-
-        Args:
-            origin (Optional[List[float]], optional): The origin of the product for a transport. Defaults to None.
-            target (Optional[List[float]], optional): The target of the product for a transport. Defaults to None.
-
-        Returns:
-            float: The expected time of the time model.
-        """
-        if origin is None or target is None:
-            raise ("Origin and target must be defined for ManhattanDistanceTimeModel")  # type: ignore
-        return self.get_next_time(origin, target)
-
-
 TIME_MODEL = Union[
     SampleTimeModel,
     ScheduledTimeModel,
     DistanceTimeModel,
-    SequentialTimeModel,
-    ManhattanDistanceTimeModel,
     FunctionTimeModel,
 ]
 """

@@ -10,7 +10,6 @@ from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
 import pandas as pd
-from pydantic import BaseModel
 
 from prodsys.simulation import state
 
@@ -20,10 +19,13 @@ if TYPE_CHECKING:
     from prodsys.factories import resource_factory
 
 
-class Logger(BaseModel, ABC):
+class Logger(ABC):
     """
     Base class for all loggers.
     """
+
+    def __init__(self):
+        pass
 
     @abstractmethod
     def get_data_as_dataframe(self) -> pd.DataFrame:
@@ -178,8 +180,12 @@ class EventLogger(Logger):
     """
     Logger for logging events.
     """
-
-    event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
+    def __init__(self):
+        """
+        Initialize the EventLogger.
+        """
+        super().__init__()
+        self.event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
 
     def get_data_as_dataframe(self) -> pd.DataFrame:
         """
@@ -206,7 +212,7 @@ class EventLogger(Logger):
         Args:
             resource_factory (resource_factory.ResourceFactory): The resource factory.
         """
-        for r in resource_factory.all_resources:
+        for r in resource_factory.all_resources.values():
             all_states = (
                 r.states + r.production_states + r.setup_states + r.charging_states
             )

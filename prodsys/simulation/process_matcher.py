@@ -195,7 +195,7 @@ class ProcessMatcher:
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair
                     all_locations = (
-                        self.resource_factory.all_resources
+                        list(self.resource_factory.all_resources.values())
                         + self.sink_factory.sinks
                         + self.source_factory.sources
                     )

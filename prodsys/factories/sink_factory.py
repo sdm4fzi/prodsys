@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from prodsys.adapters import adapter
 
 
-class SinkFactory(BaseModel):
+class SinkFactory:
     """
     Factory class that creates and stores `prodsys.simulation` sink objects from `prodsys.models` sink objects.
 
@@ -22,14 +22,16 @@ class SinkFactory(BaseModel):
         product_factory (product_factory.ProductFactory): Factory that creates product objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
-
-    env: sim.Environment
-    product_factory: product_factory.ProductFactory
-    queue_factory: queue_factory.QueueFactory
-
-    sinks: List[sink.Sink] = Field(default_factory=list, init=False)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        env: sim.Environment,
+        product_factory: product_factory.ProductFactory,
+        queue_factory: queue_factory.QueueFactory,
+    ):
+        self.env = env
+        self.product_factory = product_factory
+        self.queue_factory = queue_factory
+        self.sinks: List[sink.Sink] = []
 
     def create_sinks(self, adapter: adapter.ProductionSystemAdapter):
         """

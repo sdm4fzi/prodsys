@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from prodsys.models import queue_data
 
 
-class QueueFactory(BaseModel):
+class QueueFactory:
     """
     Factory class that creates and stores `prodsys.simulation` queue objects from `prodsys.models` queue objects.
 
@@ -22,12 +22,15 @@ class QueueFactory(BaseModel):
     Returns:
         _type_: _description_
     """
+    def __init__(self, env: sim.Environment):
+        """
+        Initializes the QueueFactory with the given environment.
 
-    env: sim.Environment
-
-    queues: List[store.Queue] = []
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+        Args:
+            env (sim.Environment): prodsys simulation environment.
+        """
+        self.env = env
+        self.queues = []
 
     def create_queues(self, adapter: adapter.ProductionSystemAdapter):
         """

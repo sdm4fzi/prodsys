@@ -4,7 +4,6 @@ from abc import ABC
 from sys import intern
 from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
 import random
 
 import logging
@@ -26,7 +25,7 @@ from prodsys.models.resource_data import (
 from prodsys.util import util
 
 
-class Resource(BaseModel, ABC, resource.Resource):
+class Resource(resource.Resource):
     """
     Base class for all resources.
 
@@ -44,32 +43,45 @@ class Resource(BaseModel, ABC, resource.Resource):
         reserved_setup (PROCESS_UNION): The reserved setup.
     """
 
-    env: sim.Environment
-    data: ResourceData
-    processes: List[PROCESS_UNION]
-    controller: control.Controller
-    can_move: bool = False
-    can_process: bool = False
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: ResourceData,
+        processes: List[PROCESS_UNION],
+        controller: control.Controller,
+        can_move: bool = False,
+        can_process: bool = False,
+        states: List[state.State] = None,
+        production_states: List[state.State] = None,
+        setup_states: List[state.SetupState] = None,
+        charging_states: List[state.ChargingState] = None,
+        input_queues: List[store.Queue] = None,
+        output_queues: List[store.Queue] = None,
+        batch_size: Optional[int] = None,
+    ):
+        super().__init__(env, capacity=data.capacity)
+        self.env = env
+        self.data = data
+        self.processes = processes
+        self.controller = controller
+        self.states = states if states else []
+        self.production_states = production_states if production_states else []
+        self.setup_states = setup_states if setup_states else []
+        self.charging_states = charging_states if charging_states else []
 
-    states: List[state.State] = Field(default_factory=list, init=False)
-    production_states: List[state.State] = Field(default_factory=list, init=False)
-    setup_states: List[state.SetupState] = Field(default_factory=list, init=False)
-    charging_states: List[state.ChargingState] = Field(default_factory=list, init=False)
+        self.got_free = events.Event(self.env)
+        self.active = events.Event(self.env).succeed()
+        self.current_setup: PROCESS_UNION = None
+        self.reserved_setup: PROCESS_UNION = None
 
-    got_free: events.Event = Field(default=None, init=False)
-    active: events.Event = Field(default=None, init=False)
-    current_setup: PROCESS_UNION = Field(default=None, init=False)
-    reserved_setup: PROCESS_UNION = Field(default=None, init=False)
+        self.can_move = can_move
+        self.can_process = can_process
 
-    input_queues: List[store.Queue] = []
-    output_queues: List[store.Queue] = []
-    batch_size: Optional[int] = None
+        self.input_queues = input_queues if input_queues else []
 
-    current_locatable: Optional[Locatable] = Field(
-        default=None, init=False, repr=False
-    )  # The current locatable of the resource. This is used for transport resources.
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+        self.output_queues = output_queues if output_queues else []
+        self.batch_size = batch_size
+        self.current_locatable = self
 
     @property
     def capacity_current_setup(self) -> int:

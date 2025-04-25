@@ -1,7 +1,6 @@
-from dataclasses import field
-from typing import List, TYPE_CHECKING, Optional, List
+from typing import Dict, List, TYPE_CHECKING, List
 
-from pydantic import ConfigDict, BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from prodsys.simulation import sim
 from prodsys.factories import time_model_factory
@@ -12,6 +11,15 @@ from prodsys.simulation import state
 if TYPE_CHECKING:
     from prodsys.adapters import adapter
 
+
+STATE_MAP = {
+    state_data.StateTypeEnum.SetupState: state.SetupState,
+    state_data.StateTypeEnum.BreakDownState: state.BreakDownState,
+    state_data.StateTypeEnum.TransportState: state.TransportState,
+    state_data.StateTypeEnum.ProductionState: state.ProductionState,
+    state_data.StateTypeEnum.ProcessBreakDownState: state.ProcessBreakDownState,
+    state_data.StateTypeEnum.ChargingState: state.ChargingState,
+}
 
 class StateFactory:
     """
@@ -30,7 +38,7 @@ class StateFactory:
         self.env = env
         self.time_model_factory = time_model_factory
         self.state_data: List[state_data.STATE_DATA_UNION] = []
-        self.states: List[state.STATE_UNION] = []
+        self.states: Dict[str, state.STATE_UNION] = {}
 
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
@@ -102,7 +110,12 @@ class StateFactory:
         values.update(self.get_loading_time_models_data(state_data))
         values.update(self.get_repair_time_model_data(state_data))
         values.update(self.get_battery_time_model_data(state_data))
-        self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
+
+        state_class = STATE_MAP.get(state_data.type)
+        if state_class is None:
+            raise ValueError(f"Unknown state type: {state_data.type}")  
+        new_state = state_class(**values)
+        self.states[state_data.ID] = new_state
 
     def create_states(self, adapter: "adapter.ProductionSystemAdapter"):
         """
@@ -124,4 +137,4 @@ class StateFactory:
         Returns:
             List[state.STATE_UNION]: List of state objects with the given IDs.
         """
-        return [st for st in self.states if st.state_data.ID in IDs]
+        return [self.states[ID] for ID in IDs if ID in self.states]

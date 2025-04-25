@@ -212,7 +212,7 @@ def debug_logging(state_instance: State, msg: str):
     )
 
 
-class State(ABC, BaseModel):
+class State(ABC):
     """
     Abstract class that represents a state of a resource in the simulation. A state has a process that is simulated when the resource starts a state. States can exist in parallel and can interrupt each other.
 
@@ -227,16 +227,19 @@ class State(ABC, BaseModel):
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
     """
 
-    state_data: StateData
-    time_model: time_model.TimeModel
-    env: sim.Environment
-    active: events.Event = Field(default=None, init=False)
-    finished_process: events.Event = Field(default=None, init=False)
-    resource: resources.Resource = Field(init=False, default=None)
-    process: Optional[events.Process] = Field(default=None)
-    state_info: StateInfo = Field(None)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        state_data: StateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+    ):
+        self.state_data = state_data
+        self.time_model = time_model
+        self.env = env
+        self.process: Optional[events.Process] = None
+        self.active = events.Event(self.env)
+        self.finished_process = None
+        self.resource = None
 
     def set_resource(self, resource_model: resources.Resource) -> None:
         """
@@ -249,6 +252,12 @@ class State(ABC, BaseModel):
         self.state_info = StateInfo(
             ID=self.state_data.ID, resource_ID=self.resource.data.ID
         )
+
+    def prepare_for_run(self):
+        self.finished_process = events.Event(self.env)
+
+    def activate_state(self):
+        self.active = events.Event(self.env).succeed()
 
     def deactivate(self):
         """
@@ -285,18 +294,6 @@ class State(ABC, BaseModel):
         """
         pass
 
-    def activate_state(self):
-        """
-        Activates the state and at start of the simulation.
-        """
-        pass
-
-    def prepare_for_run(self):
-        """
-        Prepares the state for running the process of a state.
-        """
-        pass
-
 
 class ProductionState(State):
     """
@@ -316,16 +313,16 @@ class ProductionState(State):
         interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
     """
 
-    state_data: ProductionStateData
-    start: float = 0.0
-    done_in: float = 0.0
-    interrupted: bool = False
-
-    def prepare_for_run(self):
-        self.finished_process = events.Event(self.env)
-
-    def activate_state(self):
-        self.active = events.Event(self.env).succeed()
+    def __init__(
+        self,
+        state_data: ProductionStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.start = 0.0
+        self.done_in = 0.0
+        self.interrupted = False
 
     def process_state(self, time: Optional[float] = None) -> Generator:
         if not time:
@@ -421,21 +418,22 @@ class TransportState(State):
         interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
         loading_time_model (time_model.TimeModel, optional): The time model of the loading time. Defaults to None.
     """
-
-    state_data: TransportStateData
-    loading_time_model: Optional[time_model.TimeModel] = None
-    unloading_time_model: Optional[time_model.TimeModel] = None
-    start: float = 0.0
-    done_in: float = 0.0
-    interrupted: bool = False
-    loading_time: float = 0.0
-    unloading_time: float = 0.0
-
-    def prepare_for_run(self):
-        self.finished_process = events.Event(self.env)
-
-    def activate_state(self):
-        self.active = events.Event(self.env).succeed()
+    def __init__(
+        self,
+        state_data: TransportStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        loading_time_model: Optional[time_model.TimeModel] = None,
+        unloading_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.loading_time_model = loading_time_model
+        self.unloading_time_model = unloading_time_model
+        self.start = 0.0
+        self.done_in = 0.0
+        self.interrupted = False
+        self.loading_time = 0.0
+        self.unloading_time = 0.0
 
     def get_handling_time(self, action: Literal["loading, unloading"]) -> float:
         if action == "loading":
@@ -554,9 +552,16 @@ class BreakDownState(State):
         repair_time_model (time_model.TimeModel, optional): The time model of the repair time. Defaults to None.
     """
 
-    state_data: BreakDownStateData
-    repair_time_model: time_model.TimeModel
-    active_breakdown: bool = False
+    def __init__(
+        self,
+        state_data: BreakDownStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        repair_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.repair_time_model = repair_time_model
+        self.active_breakdown = False
 
     @model_validator(mode="before")
     def post_init(cls, values):
@@ -605,15 +610,17 @@ class ProcessBreakDownState(State):
         production_states (List[State], optional): The production states of the process. Defaults to None.
         repair_time_model (time_model.TimeModel, optional): The time model of the repair time. Defaults to None.
     """
+    def __init__(
+        self,
+        state_data: ProcessBreakDownStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        repair_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.repair_time_model = repair_time_model
+        self.production_states = []
 
-    state_data: ProcessBreakDownStateData
-    production_states: List[State] = None
-    repair_time_model: time_model.TimeModel
-
-    @model_validator(mode="before")
-    def post_init(cls, values):
-        values["active"] = events.Event(values["env"])
-        return values
 
     def set_production_states(self, production_states: List[ProductionState]):
         if any(
@@ -685,16 +692,16 @@ class SetupState(State):
         interrupt_processed (events.Event): Event that indicates if the state is interrupted. Defaults to None.
     """
 
-    state_data: SetupStateData
-    start: float = 0.0
-    done_in: float = 0.0
-    interrupted: bool = False
-
-    def prepare_for_run(self):
-        self.finished_process = events.Event(self.env)
-
-    def activate_state(self):
-        self.active = events.Event(self.env).succeed()
+    def __init__(
+        self,
+        state_data: SetupStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.start = 0.0
+        self.done_in = 0.0
+        self.interrupted = False
 
     def process_state(self) -> Generator:
         self.done_in = self.time_model.get_next_time()
@@ -792,25 +799,27 @@ class ChargingState(State):
         interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
     """
 
-    state_data: ChargingStateData
-    battery_time_model: time_model.TimeModel
-    start: float = 0.0
-    done_in: float = 0.0
-    interrupted: bool = False
+    def __init__(
+        self,
+        state_data: ChargingStateData,
+        time_model: time_model.TimeModel,
+        battery_time_model: time_model.TimeModel,
+        env: sim.Environment,
+    ):
+        super().__init__(state_data, time_model, env)
+        self.battery_time_model = battery_time_model
+        self.battery_usage_time_since_charging = 0.0
 
-    battery_usage_time_since_charging: float = 0.0
+        self.start = 0.0
+        self.done_in = 0.0
+        self.interrupted = False
+
 
     def requires_charging(self) -> bool:
         return (
             self.battery_usage_time_since_charging
             >= (1 - MINIMUM_BATTERY_LEVEL) * self.battery_time_model.get_next_time()
         )
-
-    def prepare_for_run(self):
-        self.finished_process = events.Event(self.env)
-
-    def activate_state(self):
-        self.active = events.Event(self.env).succeed()
 
     def add_battery_usage_time(self, time: float):
         self.battery_usage_time_since_charging += time
@@ -902,6 +911,5 @@ Union Type of all states.
 
 from prodsys.simulation import resources
 
-State.model_rebuild()
 if TYPE_CHECKING:
     from prodsys.simulation import product

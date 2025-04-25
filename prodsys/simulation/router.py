@@ -145,23 +145,24 @@ class Router:
         This method should be called in a separate thread to run the allocation process.
         """
         while True:
+            # TODO: improve that free resources is not calculated every time but kept in a list at router
             yield simpy.AnyOf(
                 self.env,
                 [self.got_requested]
                 + [
                     resource.got_free
-                    for resource in self.resource_factory.all_resources
+                    for resource in self.resource_factory.all_resources.values()
                 ],
             )
             if self.got_requested.triggered:
                 self.got_requested = events.Event(self.env)
-            for resource in self.resource_factory.all_resources:
+            for resource in self.resource_factory.all_resources.values():
                 if resource.got_free.triggered:
                     resource.got_free = events.Event(self.env)
             while True:
                 free_resources = [
                     resource
-                    for resource in self.resource_factory.all_resources
+                    for resource in self.resource_factory.all_resources.values()
                     if not resource.full
                 ]
                 if not free_resources:

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from abc import ABC
 from collections.abc import Callable
-from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
-from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
+from pydantic import ConfigDict, Field, field_validator, ValidationInfo
+from typing import List, Generator, TYPE_CHECKING, Literal, Union
 import numpy as np
 import random
 
@@ -43,7 +42,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.product import Locatable
 
 
-class Controller(ABC, BaseModel):
+class Controller:
     """
     A controller is responsible for controlling the processes of a resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
 
@@ -58,26 +57,23 @@ class Controller(ABC, BaseModel):
         running_processes (List[events.Event]): A list of (simpy) processes that are currently running on the resource.
     """
 
-    control_policy: Callable[
-        [
-            List[request_module.Request],
+    def __init__(
+        self,
+        control_policy: Callable[
+            [
+                List[request_module.Request],
+            ],
+            None,
         ],
-        None,
-    ]
-    env: sim.Environment
-
-    resource: resources.Resource = Field(init=False, default=None)
-    requested: events.Event = Field(init=False, validate_default=True, default=None)
-    requests: List[request_module.Request] = Field(init=False, default_factory=list)
-    running_processes: List[events.Process] = []
-    reserved_requests_count: int = 0
-
-    @field_validator("requested", mode="before")
-    def init_requested(cls, v, info: ValidationInfo):
-        event = events.Event(info.data["env"])
-        return event
-
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
+        env: sim.Environment,
+    ) -> None:
+        self.control_policy = control_policy
+        self.env = env
+        self.requests: List[request_module.Request] = []
+        self.requested: events.Event = events.Event(env)
+        self.resource: resources.Resource = None
+        self.running_processes: List[events.Process] = []
+        self.reserved_requests_count = 0
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
