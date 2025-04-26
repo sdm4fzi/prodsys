@@ -156,15 +156,13 @@ class Router:
             )
             if self.got_requested.triggered:
                 self.got_requested = events.Event(self.env)
+            free_resources = []
             for resource in self.resource_factory.all_resources.values():
                 if resource.got_free.triggered:
                     resource.got_free = events.Event(self.env)
+                # if not all(q.full for q in resource.input_queues):
+                free_resources.append(resource)
             while True:
-                free_resources = [
-                    resource
-                    for resource in self.resource_factory.all_resources.values()
-                    if not resource.full
-                ]
                 if not free_resources:
                     break
                 free_requests = self.request_handler.get_next_product_to_route(
