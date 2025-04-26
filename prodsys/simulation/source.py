@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Tuple, Generator
 
-from pydantic import BaseModel, ConfigDict, Field
 from simpy import events
 
 import logging
@@ -14,7 +13,7 @@ from prodsys.simulation import router as router_module
 from prodsys.models import source_data, product_data
 
 
-class Source(BaseModel):
+class Source:
     """
     Class that represents a source.
 
@@ -27,16 +26,21 @@ class Source(BaseModel):
         router (router.Router): The router of the created products.
         output_queues (List[store.Queue], optional): The output queues. Defaults to [].
     """
-
-    env: sim.Environment
-    data: source_data.SourceData
-    product_data: product_data.ProductData
-    product_factory: product_factory.ProductFactory
-    time_model: time_model.TimeModel
-    # TODO: add a release policy...
-    output_queues: List[store.Queue] = Field(default_factory=list, init=False)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: source_data.SourceData,
+        product_data: product_data.ProductData,
+        product_factory: product_factory.ProductFactory,
+        time_model: time_model.TimeModel,
+    ):
+        self.env = env
+        self.data = data
+        self.product_data = product_data
+        self.product_factory = product_factory
+        self.time_model = time_model
+        self.router: router_module.Router = None
+        self.output_queues: List[store.Queue] = []
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         """

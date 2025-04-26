@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from prodsys.simulation import sim, store
 from prodsys.models import sink_data
 
@@ -11,7 +9,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import product
 
 
-class Sink(BaseModel):
+class Sink:
     """
     Class that represents a sink.
 
@@ -22,12 +20,16 @@ class Sink(BaseModel):
         input_queues (List[store.Queue], optional): The input queues. Defaults to [].
     """
 
-    env: sim.Environment
-    data: sink_data.SinkData
-    product_factory: product_factory.ProductFactory
-    input_queues: List[store.Queue] = Field(default_factory=list, init=False)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: sink_data.SinkData,
+        product_factory: product_factory.ProductFactory,
+    ):
+        self.env = env
+        self.data = data
+        self.product_factory = product_factory
+        self.input_queues: List[store.Queue] = []
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         """
