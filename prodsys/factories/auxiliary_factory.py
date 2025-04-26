@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, Generator, List
-from pydantic import BaseModel, ConfigDict, Field
 from prodsys.adapters import adapter
 from prodsys.factories import (
     process_factory,

@@ -60,15 +60,10 @@ from prodsys import runner
 
 runner_instance = runner.Runner(adapter=model)
 runner_instance.initialize_simulation()
-simulation_source = runner_instance.source_factory.sources[0]
-product_example_1 = runner_instance.product_factory.create_product(
-    simulation_source.product_data, simulation_source.data.routing_heuristic
-)
-print(product_example_1.product_data.ID)
-system.run(100)
+system.run(3000)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-runner_instance.plot_results()
-runner_instance.save_results_as_csv("examples")
+# runner_instance.plot_results()
+# runner_instance.save_results_as_csv("examples")

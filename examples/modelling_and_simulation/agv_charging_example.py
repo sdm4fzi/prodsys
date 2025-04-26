@@ -58,11 +58,6 @@ from prodsys import runner
 
 runner_instance = runner.Runner(adapter=model)
 runner_instance.initialize_simulation()
-simulation_source = runner_instance.source_factory.sources[0]
-product_example_1 = runner_instance.product_factory.create_product(
-    simulation_source.product_data, simulation_source.router
-)
-print(product_example_1.product_data.ID)
 system.run(4000)
 
 runner_instance = system.runner

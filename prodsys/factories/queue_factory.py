@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Optional
 
-from pydantic import BaseModel, ConfigDict
-
 from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:

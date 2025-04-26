@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 from simpy import events
 from simpy import exceptions
-from pydantic import BaseModel, ConfigDict, model_validator, Field
 
 from prodsys.simulation import sim, time_model
 from prodsys.models.state_data import (
@@ -63,7 +62,7 @@ class StateTypeEnum(str, Enum):
     charging = "Charging"
 
 
-class StateInfo(BaseModel):
+class StateInfo:
     """
     Class that represents the current event information of a state while simulating.
 
@@ -78,18 +77,29 @@ class StateInfo(BaseModel):
         _target_ID (str, optional): The ID of the target the state belongs to. Defaults to "".
     """
 
-    ID: str
-    resource_ID: str
-    _event_time: Optional[float] = 0.0
-    _expected_end_time: Optional[float] = 0.0
-    _activity: Optional[StateEnum] = None
-    _state_type: Optional[StateTypeEnum] = None
-    _product_ID: str = ""
-    _target_ID: str = ""
-    _origin_ID: str = ""
-    _empty_transport: Optional[bool] = None
-
-    model_config = ConfigDict(extra="allow")
+    def __init__(
+        self,
+        ID: str,
+        resource_ID: str,
+        _event_time: Optional[float] = 0.0,
+        _expected_end_time: Optional[float] = 0.0,
+        _activity: Optional[StateEnum] = None,
+        _state_type: Optional[StateTypeEnum] = None,
+        _product_ID: str = "",
+        _target_ID: str = "",
+        _origin_ID: str = "",
+        _empty_transport: Optional[bool] = None,
+    ):
+        self.ID = ID
+        self.resource_ID = resource_ID
+        self._event_time = _event_time
+        self._expected_end_time = _expected_end_time
+        self._activity = _activity
+        self._state_type = _state_type
+        self._product_ID = _product_ID
+        self._target_ID = _target_ID
+        self._origin_ID = _origin_ID
+        self._empty_transport = _empty_transport
 
     def log_transport(
         self,
@@ -562,11 +572,7 @@ class BreakDownState(State):
         super().__init__(state_data, time_model, env)
         self.repair_time_model = repair_time_model
         self.active_breakdown = False
-
-    @model_validator(mode="before")
-    def post_init(cls, values):
-        values["active"] = events.Event(values["env"])
-        return values
+        self.active = events.Event(self.env)
 
     def process_state(self) -> Generator:
         while True:

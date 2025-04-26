@@ -3,9 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
 from prodsys.simulation import sim, source
 from prodsys.simulation import router as router_module
 from prodsys.models.product_data import ProductData
@@ -52,8 +49,7 @@ class SourceFactory:
         self.auxiliary_factory = auxiliary_factory
         self.sink_factory = sink_factory
 
-        self.product_data: List[ProductData] = []
-        self.sources: List[source.Source] = []
+        self.sources: Dict[str, source.Source] = {}
 
     def create_sources(self, adapter: adapter.ProductionSystemAdapter):
         """
@@ -82,7 +78,7 @@ class SourceFactory:
             time_model=time_model,
         )
         self.add_queues_to_source(source_object, source_data.output_queues)
-        self.sources.append(source_object)
+        self.sources[source_data.ID] = source_object
 
     def add_queues_to_source(self, source: source.Source, values: List[str]):
         output_queues = self.queue_factory.get_queues(values)
@@ -92,7 +88,7 @@ class SourceFactory:
         """
         Starts the processes of all source objects, i.e. initializes the simulation.
         """
-        for _source in self.sources:
+        for _source in self.sources.values():
             _source.start_source()
 
     def get_source(self, ID: str) -> source.Source:
@@ -105,7 +101,9 @@ class SourceFactory:
         Returns:
             source.Source: Source object with the given ID.
         """
-        return [s for s in self.sources if s.data.ID == ID].pop()
+        if not ID in self.sources:
+            raise ValueError(f"Source with ID {ID} not found.")
+        return self.sources[ID]
 
     def get_sources(self, IDs: List[str]) -> List[source.Source]:
         """
@@ -117,7 +115,13 @@ class SourceFactory:
         Returns:
             List[source.Source]: List of source objects with the given IDs.
         """
-        return [s for s in self.sources if s.data.ID in IDs]
+        sources = []
+        for ID in IDs:
+            if ID in self.sources:
+                sources.append(self.sources[ID])
+            else:
+                raise ValueError(f"Source with ID {ID} not found.")
+        return sources
 
     def get_sources_with_product_type(self, __product_type: str) -> List[source.Source]:
         """
@@ -129,7 +133,7 @@ class SourceFactory:
         Returns:
             List[source.Source]: List of source objects with the given product type.
         """
-        return [s for s in self.sources if __product_type == s.data.product_type]
+        return [s for s in self.sources.values() if __product_type == s.data.product_type]
 
 
 from prodsys.factories import (

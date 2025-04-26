@@ -30,7 +30,7 @@ from prodsys.simulation import (
 )
 
 
-class AuxiliaryInfo(BaseModel):
+class AuxiliaryInfo:
     """
     Class that represents information of the current state of a product.
 
@@ -42,15 +42,16 @@ class AuxiliaryInfo(BaseModel):
         product_ID (str): ID of the product.
         state_type (state.StateTypeEnum): Type of the state.
     """
-
-    resource_ID: str = Field(init=False, default=None)
-    state_ID: str = Field(init=False, default=None)
-    event_time: float = Field(init=False, default=None)
-    activity: state.StateEnum = Field(init=False, default=None)
-    product_ID: str = Field(init=False, default=None)
-    state_type: state.StateTypeEnum = Field(init=False, default=None)
-
-    model_config = ConfigDict(extra="allow")
+    def __init__(self):
+        """
+        Initializes the AuxiliaryInfo class.
+        """
+        self.resource_ID: str = None
+        self.state_ID: str = None
+        self.event_time: float = None
+        self.activity: state.StateEnum = None
+        self.product_ID: str = None
+        self.state_type: state.StateTypeEnum = None
 
     def log_create_auxiliary(
         self,
@@ -164,7 +165,7 @@ class AuxiliaryInfo(BaseModel):
         self.state_type = state_type
 
 
-class Auxiliary(BaseModel):
+class Auxiliary:
     """
     Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
 
@@ -194,20 +195,42 @@ class Auxiliary(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def init_got_free(self):
+    def __init__(
+        self,
+        env: sim.Environment,
+        auxilary_data: auxiliary_data.AuxiliaryData,
+        transport_process: process.Process,
+        storage: store.Store,
+        relevant_processes: List[
+            Union[process.ProductionProcess, process.CapabilityProcess]
+        ],
+        relevant_transport_processes: List[process.TransportProcess],
+    ):
         """
-        Sets the got_free event.
+        Initializes the Auxiliary class.
 
         Args:
-            event (events.Event): The event to set.
+            env (sim.Environment): prodsys simulation environment.
+            auxilary_data (auxilary.Auxilary): Auxilary data of the product.
+            transport_process (process.Process): Transport process of the product.
+            storage (store.Store): Storage of the product.
+            relevant_processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Relevant processes of the product.
+            relevant_transport_processes (List[process.TransportProcess]): Relevant transport processes of the product.
         """
-        self.got_free = events.Event(self.env)
-        self.reserved = False
-        self.finished_process = events.Event(self.env)
+        self.env = env
+        self.product_data = auxilary_data
+        self.transport_process = transport_process
+        self.storage = storage
+        self.relevant_processes = relevant_processes
+        self.relevant_transport_processes = relevant_transport_processes
 
-    @property
-    def product_data(self):
-        return self.product_data
+        self.auxiliary_router = None
+        self.current_locatable = None
+        self.current_product = None
+        self.reserved = False
+        self.got_free = events.Event(self.env)
+        self.finished_process = events.Event(self.env)
+        self.auxiliary_info = AuxiliaryInfo()
 
     def update_location(self, locatable: product.Locatable):
         """
@@ -260,7 +283,7 @@ class Auxiliary(BaseModel):
         )
 
     def request_process(
-        self, processing_request: request.TransportResquest
+        self, processing_request: request.Request
     ) -> Generator:
         """
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
@@ -276,6 +299,7 @@ class Auxiliary(BaseModel):
                 "event": f"Request process {processing_request.process.process_data.ID} for {type_}",
             }
         )
+        # FIXME: this is not working anymore!
         self.env.request_process_of_resource(request=processing_request)
         logger.debug(
             {
