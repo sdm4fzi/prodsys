@@ -1,8 +1,6 @@
 import random
 from typing import Callable, Union, Optional, Generator, List
 
-from pydantic import BaseModel, ConfigDict, Field
-
 import logging
 
 from prodsys.models.source_data import RoutingHeuristic
@@ -30,7 +28,7 @@ from prodsys.simulation.state import StateTypeEnum, StateEnum
 from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
 
 
-class ProductInfo(BaseModel):
+class ProductInfo:
     """
     Class that represents information of the current state of a product.
 
@@ -43,14 +41,21 @@ class ProductInfo(BaseModel):
         state_type (state.StateTypeEnum): Type of the state.
     """
 
-    resource_ID: str = Field(init=False, default=None)
-    state_ID: str = Field(init=False, default=None)
-    event_time: float = Field(init=False, default=None)
-    activity: StateEnum = Field(init=False, default=None)
-    product_ID: str = Field(init=False, default=None)
-    state_type: StateTypeEnum = Field(init=False, default=None)
-
-    model_config = ConfigDict(extra="allow")
+    def __init__(
+        self,
+        resource_ID: str = None,
+        state_ID: str = None,
+        event_time: float = None,
+        activity: StateEnum = None,
+        product_ID: str = None,
+        state_type: StateTypeEnum = None,
+    ):
+        self.resource_ID = resource_ID
+        self.state_ID = state_ID
+        self.event_time = event_time
+        self.activity = activity
+        self.product_ID = product_ID
+        self.state_type = state_type
 
     def log_finish_product(
         self,

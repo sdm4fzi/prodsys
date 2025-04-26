@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Dict, List, TYPE_CHECKING
 
-from pydantic import BaseModel, TypeAdapter
 from prodsys.models.time_model_data import TIME_MODEL_DATA, TimeModelEnum
 from prodsys.simulation.time_model import FunctionTimeModel, SampleTimeModel, ScheduledTimeModel, DistanceTimeModel, TIME_MODEL, TimeModel
 

@@ -129,7 +129,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
             agent_routing_heuristic,
         )
 
-        sources = self.runner.source_factory.sources
+        sources = list(self.runner.source_factory.sources.values())
         for source in sources:
             source.router = self.router
 

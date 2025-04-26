@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
-
-
 from prodsys.models.node_data import NodeData
 from prodsys.simulation import node
 

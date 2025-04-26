@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Dict
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import process_models
@@ -30,7 +27,7 @@ class ProductFactory:
     ):
         self.env = env
         self.process_factory = process_factory
-        self.products = []
+        self.products: Dict[str, product.Product] = {}
         self.finished_products = []
         self.event_logger = False
         self.product_counter = 0
@@ -85,7 +82,7 @@ class ProductFactory:
             self.event_logger.observe_terminal_product_states(product_object)
 
         self.product_counter += 1
-        self.products.append(product_object)
+        self.products[product_data.ID] = product_object
         return product_object
 
     def get_precendece_graph_from_id_adjacency_matrix(
@@ -158,7 +155,9 @@ class ProductFactory:
         Returns:
             product.Product: Product object with the given ID.
         """
-        return [m for m in self.products if m.product_data.ID == ID].pop()
+        if ID in self.products:
+            return self.products[ID]
+        raise ValueError(f"Product with ID {ID} not found.")
 
     def remove_product(self, product: product.Product):
         """
@@ -167,9 +166,10 @@ class ProductFactory:
         Args:
             product (product.Product): Product object that is removed.
         """
-        self.products = [
-            m for m in self.products if m.product_data.ID != product.product_data.ID
-        ]
+        if product.product_data.ID in self.products:
+            del self.products[product.product_data.ID]
+        else:
+            raise ValueError(f"Product with ID {product.product_data.ID} not found.")
 
     def register_finished_product(self, product: product.Product):
         """

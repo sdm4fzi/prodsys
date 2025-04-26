@@ -3,8 +3,6 @@ from __future__ import annotations
 import copy
 from typing import Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
-
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
 from prodsys.util.util import get_class_from_str
@@ -133,7 +131,7 @@ def adjust_process_breakdown_states(
         process_breakdown_state.set_production_states(production_states)
 
 
-class ResourceFactory(BaseModel):
+class ResourceFactory:
     """
     Factory class that creates and stores `prodsys.simulation` resource objects from `prodsys.models` resource objects.
 
@@ -144,23 +142,26 @@ class ResourceFactory(BaseModel):
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
 
-    env: sim.Environment
-    process_factory: process_factory.ProcessFactory
-    state_factory: state_factory.StateFactory
-    queue_factory: queue_factory.QueueFactory
-
-    resource_data: List[ResourceData] = []
-    all_resources: Dict[str, resources.Resource] = {}
-    resources_can_move: Dict[str, resources.Resource] = {}
-    resources_can_process: Dict[str, resources.Resource] = {}
-    controllers: List[
-        Union[
-            control.ProductionProcessHandler,
-            control.BatchController,
-        ]
-    ] = []
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __init__(
+        self,
+        env: sim.Environment,
+        process_factory: process_factory.ProcessFactory,
+        state_factory: state_factory.StateFactory,
+        queue_factory: queue_factory.QueueFactory,
+    ):
+        self.env = env
+        self.process_factory = process_factory
+        self.state_factory = state_factory
+        self.queue_factory = queue_factory
+        self.all_resources: Dict[str, resources.Resource] = {}
+        self.resources_can_move: Dict[str, resources.Resource] = {}
+        self.resources_can_process: Dict[str, resources.Resource] = {}
+        self.controllers: List[
+            Union[
+                control.ProductionProcessHandler,
+                control.BatchController,
+            ]
+        ] = []
 
     def create_resources(self, adapter: adapter.ProductionSystemAdapter):
         """

@@ -155,7 +155,7 @@ class ProcessMatcher:
 
         # Get dummy product for testing
         dummy_products: dict[str, product.Product] = {}
-        for source in self.source_factory.sources:
+        for source in self.source_factory.sources.values():
             product_type = source.product_data.product_type
             dummy_products[product_type] = self._create_dummy_product(
                 source.product_data
@@ -196,8 +196,8 @@ class ProcessMatcher:
                     # For each possible origin-target pair
                     all_locations = (
                         list(self.resource_factory.all_resources.values())
-                        + self.sink_factory.sinks
-                        + self.source_factory.sources
+                        + list(self.sink_factory.sinks.values())
+                        + list(self.source_factory.sources.values())
                     )
                     for origin in all_locations:
                         for target in all_locations:
