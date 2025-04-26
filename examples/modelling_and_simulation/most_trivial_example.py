@@ -60,7 +60,7 @@ from prodsys import runner
 
 runner_instance = runner.Runner(adapter=model)
 runner_instance.initialize_simulation()
-system.run(3000)
+system.run(100)
 
 runner_instance = system.runner
 

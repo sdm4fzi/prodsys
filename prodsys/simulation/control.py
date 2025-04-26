@@ -148,6 +148,7 @@ class Controller:
             self.control_policy(self.requests)
             # TODO: this is maybe not needed for transport processes?
             selected_request = self.requests.pop(0)
+            self.reserved_requests_count += 1
             process_handler = get_requets_handler(selected_request)
             running_process = self.env.process(
                 process_handler.handle_request(selected_request)
@@ -282,6 +283,7 @@ class ProductionProcessHandler:
             product_retrieval_events = self.get_next_product_for_process(
                 origin_queue, product
             )
+            resource.controller.reserved_requests_count -= 1
             logger.debug(
                 {
                     "ID": "controller",
@@ -500,6 +502,7 @@ class TransportProcessHandler:
             resource.set_location(origin)
         with resource.request() as req:
             yield req
+            resource.controller.reserved_requests_count -= 1
             if origin.get_location() != resource.get_location():
                 route_to_origin = self.find_route_to_origin(process_request)
                 logger.debug(
