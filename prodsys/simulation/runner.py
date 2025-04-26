@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import contextlib
 import random
-from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 import numpy as np
 import time
-from functools import cached_property
 
 from prodsys.adapters import adapter
 from prodsys.simulation import sim, logger
@@ -28,7 +26,7 @@ from prodsys.factories import (
 
 
 
-from prodsys.simulation.router import ROUTING_HEURISTIC, Router
+from prodsys.simulation.router import Router
 from prodsys.util.post_processing import PostProcessor
 
 from prodsys.util import kpi_visualization, util

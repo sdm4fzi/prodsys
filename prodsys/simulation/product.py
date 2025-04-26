@@ -144,7 +144,7 @@ class ProductInfo(BaseModel):
 Locatable = Union[resources.Resource, node.Node, source.Source, sink.Sink, store.Store]
 
 
-class Product(BaseModel):
+class Product:
     """
     Class that represents a product in the discrete event simulation. For easier instantion of the class, use the ProductFactory at prodsys.factories.product_factory.
 
@@ -155,40 +155,44 @@ class Product(BaseModel):
         transport_process (process.Process): Transport process that represents the required transport processes.
         product_router (router.Router): Router that is used to route the product object.
     """
+    def __init__(
+        self,
+        env: sim.Environment,
+        product_data: product_data.ProductData,
+        process_model: process_models.ProcessModel,
+        transport_process: Union[
+            process.TransportProcess,
+            process.RequiredCapabilityProcess,
+            process.LinkTransportProcess,
+        ],
+        product_router: router.Router,
+        routing_heuristic: RoutingHeuristic,
+        has_auxiliaries: bool = False,
+    ):
+        self.env = env
+        self.product_data = product_data
+        self.process_model = process_model
+        self.transport_process = transport_process
+        self.product_router = product_router
+        self.routing_heuristic = routing_heuristic
 
-    env: sim.Environment
-    product_data: product_data.ProductData
-    process_model: process_models.ProcessModel
-    transport_process: Union[
-        process.TransportProcess,
-        process.RequiredCapabilityProcess,
-        process.LinkTransportProcess,
-    ]
-    product_router: router.Router
-    routing_heuristic: Callable[[list[request.Request]], None]
+        self.current_locatable: Locatable = None
+        self.current_process: Optional[process.PROCESS_UNION] = None
+        self.next_possible_processes: Optional[list[process.PROCESS_UNION]] = None
+        self.processes_needing_rework: List[process.Process] = []
+        self.blocking_rework_process_mappings: list[
+            list[process.PROCESS_UNION, list[ReworkProcess]]
+        ] = []
+        self.non_blocking_rework_process_mappings: list[
+            list[process.PROCESS_UNION, list[ReworkProcess]]
+        ] = []
+        self.process: events.Process = None
+        self.finished_process: events.Event = None
+        self.product_info: ProductInfo = ProductInfo()
+        self.executed_production_processes: List = []
+        self.has_auxiliaries: bool = has_auxiliaries
+        self.auxiliaries: List[auxiliary.Auxiliary] = []        
 
-    next_possible_processes: Optional[list[process.PROCESS_UNION]] = Field(
-        default=None, init=False
-    )
-    current_process: Optional[process.PROCESS_UNION] = Field(default=None, init=False)
-    processes_needing_rework: List[process.Process] = Field(
-        default_factory=list, init=False
-    )
-    blocking_rework_process_mappings: list[
-        list[process.PROCESS_UNION, list[ReworkProcess]]
-    ] = Field(default_factory=list, init=False)
-    non_blocking_rework_process_mappings: list[
-        list[process.PROCESS_UNION, list[ReworkProcess]]
-    ] = Field(default_factory=list, init=False)
-    process: events.Process = Field(default=None, init=False)
-    current_locatable: Locatable = Field(default=None, init=False)
-    finished_process: events.Event = Field(default=None, init=False)
-    product_info: ProductInfo = Field(default_factory=ProductInfo, init=False)
-    executed_production_processes: List = Field(default_factory=list, init=False)
-    has_auxiliaries: bool = False
-    auxiliaries: List[auxiliary.Auxiliary] = Field(default_factory=list, init=False)
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def update_location(self, locatable: Locatable):
         """

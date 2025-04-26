@@ -49,7 +49,7 @@ class SinkFactory:
             "data": sink_data,
             "product_factory": self.product_factory,
         }
-        sink_object = TypeAdapter(sink.Sink).validate_python(values)
+        sink_object = sink.Sink(**values)
         self.add_queues_to_sink(sink_object)
         self.sinks.append(sink_object)
 
