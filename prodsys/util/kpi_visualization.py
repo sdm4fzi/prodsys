@@ -465,6 +465,11 @@ def plot_time_per_state_of_resources(
             "CR": "grey",
         },
     )
+    fig.update_traces(name="Productive", selector=dict(name="PR"))
+    fig.update_traces(name="Standby", selector=dict(name="SB"))
+    fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
+    fig.update_traces(name="Setup", selector=dict(name="ST"))
+    fig.update_traces(name="Charging", selector=dict(name="CR"))
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))
     fig.write_html(
@@ -496,9 +501,9 @@ def plot_util_WIP_resource(
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_mean_wip_per_station
-    df_time_per_state["mean_wip"] = np.maximum(
+    """df_time_per_state["mean_wip"] = np.maximum(
         np.ceil(df_time_per_state["mean_wip"]), 1
-    )
+    )"""
     fig1 = go.Figure()
     fig1.add_trace(
         go.Bar(
@@ -632,10 +637,9 @@ def plot_WIP_with_range(
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-
+    """if self.warm_up_cutoff: 
+    df = df.loc[df["Time"] >= self.warm_up_cutoff_time]"""
     fig = go.Figure()
-
-    window = 5000
 
     def get_colors() -> List[str]:
         return (
@@ -648,9 +652,9 @@ def plot_WIP_with_range(
 
     for product_type, df_product_type in df.groupby(by="Product_type"):
         df_product_type["WIP_avg"] = (
-            df_product_type["WIP"].rolling(window=window).mean()
+            df_product_type["WIP"].rolling(window=int(post_processor.df_aggregated_output_and_throughput["Output"].mean()) + 5).mean()
         )
-        df_product_type["WIP_std"] = df_product_type["WIP"].rolling(window=window).std()
+        df_product_type["WIP_std"] = df_product_type["WIP"].rolling(window=int(post_processor.df_aggregated_output_and_throughput["Output"].mean()) + 5).std()
         if not colors:
             colors = get_colors()
         color = colors.pop(0)
@@ -680,6 +684,9 @@ def plot_WIP_with_range(
             showlegend=False,
         )
     fig.update_layout(
+        title="Mean WIP and Range per Product Type",
+        showlegend=True,
+        height=800,  # adjust height if needed
         xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )
@@ -722,7 +729,8 @@ def plot_WIP(
         x="Time",
         y="WIP",
         color="Product_type",
-        trendline="expanding",
+        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
+        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
         opacity=0.01,
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
@@ -769,7 +777,8 @@ def plot_auxiliary_WIP(
         x="Time",
         y="auxiliary_WIP",
         color="Auxiliary_type",
-        trendline="expanding",
+        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
+        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
         opacity=0.01,
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
@@ -817,7 +826,8 @@ def plot_WIP_per_resource(
         x="Time",
         y="WIP",
         color="Resource",
-        trendline="expanding",
+        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
+        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
         opacity=0.01,
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]

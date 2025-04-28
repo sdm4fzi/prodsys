@@ -1196,6 +1196,10 @@ class PostProcessor:
         move_in_condition = (df["Empty Transport"] == False) & (
             df["Activity"] == "end state"
         )
+        interrupted_condition = (df["Empty Transport"] == False) & (
+            df["Activity"] == "end interrupt"
+        )
+
 
         df.loc[move_away_condition, "wip_increment"] = -1
         df.loc[move_away_condition, "wip_resource"] = df.loc[
@@ -1204,6 +1208,10 @@ class PostProcessor:
         df.loc[move_in_condition, "wip_increment"] = 1
         df.loc[move_in_condition, "wip_resource"] = df.loc[
             move_in_condition, "Target location"
+        ]
+        df.loc[interrupted_condition, "wip_increment"] = 1
+        df.loc[interrupted_condition, "wip_resource"] = df.loc[
+            interrupted_condition, "Origin location"
         ]
 
         df["wip"] = df.groupby(by="wip_resource")["wip_increment"].cumsum()
@@ -1301,6 +1309,9 @@ class PostProcessor:
         MOVE_IN_CONDITION = (df["Empty Transport"] == False) & (
             df["Activity"] == "end state"
         )
+        INTERRUPTED_CONDITION = (df["Empty Transport"] == False) & (
+            df["Activity"] == "end interrupt"
+        )
 
         df.loc[MOVE_AWAY_CONDITION, "WIP_Increment"] = -1
         df.loc[MOVE_AWAY_CONDITION, "WIP_resource"] = df.loc[
@@ -1310,10 +1321,14 @@ class PostProcessor:
         df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[
             MOVE_IN_CONDITION, "Target location"
         ]
+        df.loc[INTERRUPTED_CONDITION, "WIP_Increment"] = 1
+        df.loc[INTERRUPTED_CONDITION, "WIP_resource"] = df.loc[
+            INTERRUPTED_CONDITION, "Origin location"
+        ]
+
 
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
 
-        # FIXME: remove bug that negative WIP is possible
         df_temp = df[["State", "State Type"]].drop_duplicates()
         exclude_types = [state.StateTypeEnum.sink, state.StateTypeEnum.source]
         exclude_states = df_temp.loc[
