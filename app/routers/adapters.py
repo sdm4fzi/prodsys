@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=Dict[str, JsonProductionSystemAdapter])
+@router.get("/", response_model=List[JsonProductionSystemAdapter])
 async def get_adapters(project_id: str) -> List[JsonProductionSystemAdapter]:
     return prodsys_backend.get_adapters(project_id)
 
