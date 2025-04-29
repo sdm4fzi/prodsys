@@ -501,9 +501,6 @@ def plot_util_WIP_resource(
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_mean_wip_per_station
-    """df_time_per_state["mean_wip"] = np.maximum(
-        np.ceil(df_time_per_state["mean_wip"]), 1
-    )"""
     fig1 = go.Figure()
     fig1.add_trace(
         go.Bar(
@@ -637,8 +634,6 @@ def plot_WIP_with_range(
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-    """if self.warm_up_cutoff: 
-    df = df.loc[df["Time"] >= self.warm_up_cutoff_time]"""
     fig = go.Figure()
 
     def get_colors() -> List[str]:
@@ -840,7 +835,7 @@ def plot_WIP_per_resource(
             xanchor="center",
             x=0.5,
         ),
-        xaxis_title="Resource",
+        xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )
 
