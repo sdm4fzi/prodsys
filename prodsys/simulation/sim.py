@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import random
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Optional
 
 import numpy as np
 from simpy import core
@@ -20,6 +20,7 @@ else:
 
 if TYPE_CHECKING:
     from prodsys.simulation import request
+    from prodsys.simulation.breakdown_handler import BreakdownHandler
 
 
 VERBOSE = 1
@@ -65,6 +66,8 @@ class Environment(core.Environment):
         self.seed: int = seed
         self.pbar: Any = None
         self.last_update = 0
+        self.breakdown_handler: Optional[BreakdownHandler] = None
+
 
     def run(self, time_range: float):
         """

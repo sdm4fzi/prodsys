@@ -211,17 +211,26 @@ class EventLogger(Logger):
                 r.states + r.production_states + r.setup_states + r.charging_states
             )
             for __state in all_states:
-                self.register_patch(
-                    self.event_data,
-                    __state.state_info,
-                    attr=[
-                        "log_start_state",
-                        "log_start_interrupt_state",
-                        "log_end_interrupt_state",
-                        "log_end_state",
-                    ],
-                    post=post_monitor_resource_states,
-                )
+                self.observe_resource_state(__state)
+
+    def observe_resource_state(self, state: state.State):
+        """
+        Create patch to observe the resource state.
+
+        Args:
+            state (state.State): The state.
+        """
+        self.register_patch(
+            self.event_data,
+            state.state_info,
+            attr=[
+                "log_start_state",
+                "log_start_interrupt_state",
+                "log_end_interrupt_state",
+                "log_end_state",
+            ],
+            post=post_monitor_resource_states,
+        )
 
     def observe_terminal_product_states(self, product: product.Product):
         """

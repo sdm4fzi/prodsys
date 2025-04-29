@@ -18,16 +18,24 @@ s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
+breakdown_time_model = psx.FunctionTimeModel("exponential", 100, ID="breakdown_time_model")
+repair_time_model = psx.FunctionTimeModel("exponential", 10, ID="repair_time_model")
+breakdown_state = psx.BreakDownState(
+    breakdown_time_model,
+    repair_time_model,
+    "breakdown_state",
+)
+
 machine = psx.ProductionResource(
     [p1, p2],
     [5, 0],
     2,
-    states=[setup_state_1, setup_state_2],
+    states=[setup_state_1, setup_state_2, breakdown_state],
     ID="machine",
     output_location=[5, 1],
 )
 machine2 = psx.ProductionResource(
-    [p1, p2],
+    [p2],
     [7, 0],
     2,
     states=[setup_state_1, setup_state_2],
@@ -59,16 +67,10 @@ model = system.to_model()
 from prodsys import runner
 
 runner_instance = runner.Runner(adapter=model)
-runner_instance.initialize_simulation()
-simulation_source = runner_instance.source_factory.sources[0]
-product_example_1 = runner_instance.product_factory.create_product(
-    simulation_source.product_data, simulation_source.router
-)
-print(product_example_1.product_data.ID)
-system.run(1000)
+system.run(1000, handle_breakdowns=True)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-# runner_instance.plot_results()
-# runner_instance.save_results_as_csv("examples")
+runner_instance.plot_results()
+runner_instance.save_results_as_csv("examples")

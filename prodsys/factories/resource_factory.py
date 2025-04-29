@@ -45,7 +45,10 @@ CONTROL_POLICY_DICT: Dict = {
     TransportControlPolicy.NEAREST_ORIGIN_AND_SHORTEST_TARGET_INPUT_QUEUES_TRANSPORT: control.nearest_origin_and_shortest_target_input_queues_transport_control_policy,
 }
 
-def get_scheduled_control_policy(schedule: list[performance_data.Event], fallback_policy: Callable) -> Callable:
+
+def get_scheduled_control_policy(
+    schedule: list[performance_data.Event], fallback_policy: Callable
+) -> Callable:
     product_sequence_indices = {}
     for index, event in enumerate(schedule):
         product_sequence_indices[event.product] = index
@@ -73,9 +76,63 @@ def register_production_states(
 ):
     for actual_state, process_capacity in zip(states, resource.data.process_capacities):
         for _ in range(process_capacity):
+            actual_state.env = None
+            active_before = actual_state.active
+            actual_state.active = None
             copy_state = copy.deepcopy(actual_state)
+            actual_state.env = _env
+            copy_state.active = active_before
             copy_state.env = _env
+            copy_state.active = _env.event()
             resource.add_production_state(copy_state)
+
+
+def register_production_state_for_process(
+    resource: resources.Resource,
+    process_instance: process.PROCESS_UNION,
+    state_factory: state_factory.StateFactory,
+    _env: sim.Environment,
+):
+    state_data_dict = {
+        "new_state": {
+            "ID": process_instance.process_data.ID,
+            "description": process_instance.process_data.description,
+            "time_model_id": process_instance.process_data.time_model_id,
+        }
+    }
+    existence_condition = any(
+        True
+        for state in state_factory.states.values()
+        if state.state_data.ID == process_instance.process_data.ID
+    )
+    if (
+        isinstance(process_instance, process.ProductionProcess)
+        or isinstance(process_instance, process.CapabilityProcess)
+        or isinstance(process_instance, process.ReworkProcess)
+    ) and not existence_condition:
+        state_factory.create_states_from_configuration_data(
+            {"ProductionState": state_data_dict}
+        )
+    elif (
+        isinstance(
+            process_instance,
+            (process.TransportProcess, process.LinkTransportProcess),
+        )
+        and not existence_condition
+    ):
+        if process_instance.process_data.loading_time_model_id:
+            state_data_dict["new_state"][
+                "loading_time_model_id"
+            ] = process_instance.process_data.loading_time_model_id
+        if process_instance.process_data.unloading_time_model_id:
+            state_data_dict["new_state"][
+                "unloading_time_model_id"
+            ] = process_instance.process_data.unloading_time_model_id
+        state_factory.create_states_from_configuration_data(
+            {"TransportState": state_data_dict}
+        )
+    _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
+    register_production_states(resource, [_state], _env)  # type: ignore
 
 
 def register_production_states_for_processes(
@@ -87,48 +144,9 @@ def register_production_states_for_processes(
     for process_instance, capacity in zip(
         resource.processes, resource.data.process_capacities
     ):
-        process_instance: process.PROCESS_UNION
-        state_data_dict = {
-            "new_state": {
-                "ID": process_instance.process_data.ID,
-                "description": process_instance.process_data.description,
-                "time_model_id": process_instance.process_data.time_model_id,
-            }
-        }
-        existence_condition = any(
-            True
-            for state in state_factory.states.values()
-            if state.state_data.ID == process_instance.process_data.ID
+        register_production_state_for_process(
+            resource, process_instance, state_factory, _env
         )
-        if (
-            isinstance(process_instance, process.ProductionProcess)
-            or isinstance(process_instance, process.CapabilityProcess)
-            or isinstance(process_instance, process.ReworkProcess)
-        ) and not existence_condition:
-            state_factory.create_states_from_configuration_data(
-                {"ProductionState": state_data_dict}
-            )
-        elif (
-            isinstance(
-                process_instance,
-                (process.TransportProcess, process.LinkTransportProcess),
-            )
-            and not existence_condition
-        ):
-            if process_instance.process_data.loading_time_model_id:
-                state_data_dict["new_state"][
-                    "loading_time_model_id"
-                ] = process_instance.process_data.loading_time_model_id
-            if process_instance.process_data.unloading_time_model_id:
-                state_data_dict["new_state"][
-                    "unloading_time_model_id"
-                ] = process_instance.process_data.unloading_time_model_id
-            state_factory.create_states_from_configuration_data(
-                {"TransportState": state_data_dict}
-            )
-        _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
-        states.append(_state)
-    register_production_states(resource, states, _env)  # type: ignore
 
 
 def adjust_process_breakdown_states(
@@ -207,6 +225,90 @@ class ResourceFactory(BaseModel):
 
         return input_queues, output_queues
 
+    def add_process_to_resource(
+        self, resource: resources.Resource, process_id: str
+    ) -> resources.Resource:
+        """
+        Method patches a resource with a process.
+        Args:
+            resource (resources.Resource): Resource object.
+            process_data (process.PROCESS_DATA_UNION): Process data object.
+        Returns:
+            resources.Resource: Resource object with the process.
+        """
+        resource.data.process_ids.append(process_id)
+        resource.data.process_capacities.append(1)
+        process = self.process_factory.get_process(process_id)
+        resource.processes.append(process)
+        register_production_state_for_process(
+            resource, process, self.state_factory, self.env
+        )
+        # active production states
+        relevant_production_states = [
+            state_instance
+            for state_instance in resource.production_states
+            if state_instance.state_data.ID == process_id
+        ]
+        for relevant_production_state in relevant_production_states:
+            relevant_production_state.activate_state()
+
+        # this might not work since breakdown states are not automatically added
+        process_breakdown_states = [
+            state_instance.model_copy(deep=True)
+            for state_instance in self.state_factory.states.values()
+            if isinstance(state_instance, state.ProcessBreakDownState)
+            and state_instance.state_data.process_id == process_id
+        ]
+        resource.data.state_ids.extend(
+            [
+                state_instance.state_data.ID
+                for state_instance in process_breakdown_states
+            ]
+        )
+        resource.states.extend(process_breakdown_states)
+        adjust_process_breakdown_states(resource, self.state_factory, self.env)
+        return resource
+
+    def remove_process_from_resource(
+        self, resource: resources.Resource, process_id: str
+    ) -> resources.Resource:
+        """
+        Method removes a process from a resource.
+        Args:
+            resource (resources.Resource): Resource object.
+            process_id (str): Process ID.
+        Returns:
+            resources.Resource: Resource object without the process.
+        """
+        process_id_index = resource.data.process_ids.index(process_id)
+        resource.data.process_ids.pop(process_id_index)
+        resource.data.process_capacities.pop(process_id_index)
+        resource.processes.pop(process_id_index)
+        production_states_to_keep = [
+            state
+            for state in resource.production_states
+            if state.state_data.ID != process_id
+        ]
+        resource.production_states = production_states_to_keep
+        process_breakdown_states = [
+            state_instance
+            for state_instance in resource.states
+            if isinstance(state_instance, state.ProductionState)
+            and state_instance.state_data.ID == process_id
+        ]
+        process_breakdown_states_ids = [
+            state_instance.state_data.ID for state_instance in process_breakdown_states
+        ]
+        states_to_keep = [
+            state
+            for state in resource.states
+            if state.state_data.ID not in process_breakdown_states_ids
+        ]
+        resource.states = states_to_keep
+        resource.data.state_ids = [
+            state_instance.state_data.ID for state_instance in resource.states
+        ]
+
     def add_resource(self, resource_data: RESOURCE_DATA_UNION):
         values = {"env": self.env, "data": resource_data}
         processes = self.process_factory.get_processes_in_order(
@@ -278,9 +380,7 @@ class ResourceFactory(BaseModel):
         """
         return [r for r in self.resources if r.data.ID == ID].pop()
 
-    def get_controller_of_resource(
-        self, _resource: resources.Resource
-    ) -> Optional[
+    def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
         Union[
             control.ProductionController,
             control.TransportController,

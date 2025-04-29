@@ -569,6 +569,8 @@ class BreakDownState(State):
             self.active_breakdown = True
             debug_logging(self, f"breakdown occured, start interrupting processes")
             self.resource.interrupt_states()
+            if self.env.breakdown_handler:
+                self.env.breakdown_handler.handle_breakdown(self.resource)
             repair_time = self.repair_time_model.get_next_time()
             debug_logging(
                 self, f"interrupted states, starting breakdown for {repair_time}"
@@ -579,6 +581,8 @@ class BreakDownState(State):
             yield self.env.timeout(repair_time)
             self.active_breakdown = False
             self.resource.activate()
+            if self.env.breakdown_handler:
+                self.env.breakdown_handler.handle_reactivation(self.resource)
             debug_logging(self, f"breakdown finished, reactivating resource")
             self.state_info.log_end_state(self.env.now, StateTypeEnum.breakdown)
 

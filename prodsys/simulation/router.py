@@ -142,6 +142,8 @@ class Router:
         routed_production_request = yield env.process(
             self.get_routed_production_request(possible_production_requests)
         )
+        if routed_production_request.resource.data.ID == "machine2" and routed_production_request.process.process_data.ID == "p1":
+            pass
         return routed_production_request
 
     def get_input_queue_state_change_events(
@@ -618,7 +620,6 @@ class Router:
             for request in production_requests
             if request.resource.data.ID in possible_production_resource_ids
         ]
-
 
     def get_transport_requests_to_target(
         self,

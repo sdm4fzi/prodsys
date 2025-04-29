@@ -25,6 +25,7 @@ from prodsys.factories import (
     node_factory,
 )
 
+from prodsys.simulation.breakdown_handler import BreakdownHandler
 from prodsys.util.post_processing import PostProcessor
 
 from prodsys.util import kpi_visualization, util
@@ -124,7 +125,7 @@ class Runner:
         self.warm_up_cutoff = warm_up_cutoff
         self.cut_off_method = cut_off_method
 
-    def initialize_simulation(self, use_schedule: bool = False):
+    def initialize_simulation(self, use_schedule: bool = False, handle_breakdowns: bool = False):
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
 
@@ -204,6 +205,7 @@ class Runner:
             )
             self.source_factory.create_sources(self.adapter)
 
+
             link_transport_process_updater_instance = (
                 link_transport_process_updater.LinkTransportProcessUpdater(
                     process_factory=self.process_factory,
@@ -214,7 +216,16 @@ class Runner:
                 )
             )
             link_transport_process_updater_instance.update_links_with_objects()
-
+            if handle_breakdowns:
+                breakdown_handler = BreakdownHandler(
+                    adapter=self.adapter,
+                    env=self.env,
+                    resource_factory=self.resource_factory,
+                    process_matcher=self.source_factory.process_matcher,
+                    logger=self.event_logger,
+                )
+                self.env.breakdown_handler = breakdown_handler
+                
             self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()

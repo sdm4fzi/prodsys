@@ -210,7 +210,7 @@ class ProductionSystem(core.ExpressObject):
             auxiliary_data=auxiliary_data,
         )
 
-    def run(self, time_range: float = 2880, seed: int = 0):
+    def run(self, time_range: float = 2880, seed: int = 0, use_schedule: bool = False, handle_breakdowns: bool = False):
         """
         Runs the simulation of the production system.
 
@@ -220,7 +220,7 @@ class ProductionSystem(core.ExpressObject):
         """
         self._runner = runner.Runner(adapter=self.to_model())
         self._runner.adapter.seed = seed
-        self._runner.initialize_simulation()
+        self._runner.initialize_simulation(use_schedule=use_schedule, handle_breakdowns=handle_breakdowns)
         self._runner.run(time_range)
 
     def validate(self):

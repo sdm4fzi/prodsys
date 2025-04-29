@@ -11,7 +11,7 @@ if __name__ == "__main__":
     adapter_object.conwip_number = 30
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
     # runner_object.initialize_simulation(use_schedule=False)
-    runner_object.initialize_simulation(use_schedule=True)
+    runner_object.initialize_simulation(use_schedule=True, handle_breakdowns=True)
     runner_object.run(8640)
     runner_object.save_results_as_csv()
     runner_object.print_results()
