@@ -37,7 +37,6 @@ class Resource(resource.Resource):
         states (List[state.State]): The states of the resource for breakdowns.
         production_states (List[state.State]): The states of the resource for production.
         setup_states (List[state.SetupState]): The states of the resource for setups.
-        got_free (events.Event): The event that is triggered when the resource gets free of processes.
         active (events.Event): The event that is triggered when the resource is active.
         current_setup (PROCESS_UNION): The current setup.
         reserved_setup (PROCESS_UNION): The reserved setup.
@@ -69,7 +68,6 @@ class Resource(resource.Resource):
         self.setup_states = setup_states if setup_states else []
         self.charging_states = charging_states if charging_states else []
 
-        self.got_free = events.Event(self.env)
         self.active = events.Event(self.env).succeed()
         self.current_setup: PROCESS_UNION = None
         self.reserved_setup: PROCESS_UNION = None
@@ -82,6 +80,8 @@ class Resource(resource.Resource):
         self.output_queues = output_queues if output_queues else []
         self.batch_size = batch_size
         self.current_locatable = self
+
+        self.full = False
 
     @property
     def capacity_current_setup(self) -> int:
@@ -126,27 +126,11 @@ class Resource(resource.Resource):
         Yields:
             Generator: The generator yields when a process is free.
         """
-        possible_states = self.get_processes(process)
         while True:
             free_state = self.get_free_process(process)
             if free_state is not None:
                 return free_state
-            logger.debug(
-                {
-                    "ID": "controller",
-                    "sim_time": self.env.now,
-                    "resource": self.data.ID,
-                    "event": f"Waiting for free process",
-                }
-            )
-            yield events.AnyOf(
-                self.env,
-                [
-                    state.process
-                    for state in possible_states
-                    if state.process is not None and state.process.is_alive
-                ],
-            )
+            yield self.controller.state_changed
 
     def reserve_setup(self, process: PROCESS_UNION) -> None:
         """
@@ -173,20 +157,17 @@ class Resource(resource.Resource):
         """
         return self.reserved_setup is not None
 
-    @property
-    def full(self) -> bool:
+    def update_full(self) -> bool:
         """
         Returns if the resource is full.
 
         Returns:
             bool: True if the resource is full or in setup, False otherwise.
         """
-        if self.in_setup:
-            return True
-        return (
+        self.full = (
             self.capacity_current_setup
             - (
-                len(self.controller.running_processes)
+                self.controller.num_running_processes
                 + self.controller.reserved_requests_count
             )
         ) <= 0
@@ -217,7 +198,6 @@ class Resource(resource.Resource):
         for input_state in self.charging_states:
             if not input_state.requires_charging():
                 continue
-            input_state.prepare_for_run()
             yield self.env.process(input_state.process_state())
 
     def consider_battery_usage(self, amount: float) -> None:
@@ -270,7 +250,6 @@ class Resource(resource.Resource):
         """
         resource.Resource.__init__(self, self.env, capacity=self.data.capacity)
         self.active = events.Event(self.env).succeed()
-        self.got_free = events.Event(self.env)
         for actual_state in (
             self.states
             + self.production_states
@@ -340,9 +319,7 @@ class Resource(resource.Resource):
             Optional[state.State]: The state of the resource for the process.
         """
         for actual_state in self.production_states:
-            if actual_state.state_data.ID == process.process_data.ID and (
-                actual_state.process is None or not actual_state.process.is_alive
-            ):
+            if actual_state.state_data.ID == process.process_data.ID and actual_state.process is None and not actual_state.reserved:
                 return actual_state
         return None
 
@@ -420,14 +397,6 @@ class Resource(resource.Resource):
                 if isinstance(state_instance, state.BreakDownState)
             ]
         ):
-            logger.debug(
-                {
-                    "ID": self.data.ID,
-                    "sim_time": self.env.now,
-                    "resource": self.data.ID,
-                    "event": f"Breakdown still active that blocks activation of resource",
-                }
-            )
             return
         self.active.succeed()
 
@@ -435,14 +404,6 @@ class Resource(resource.Resource):
         """
         Interrupts the states of the resource.
         """
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Start interrupting processes of resource",
-            }
-        )
         if self.active.triggered:
             self.active = events.Event(self.env)
         for state_instance in self.setup_states + self.production_states:
@@ -452,14 +413,6 @@ class Resource(resource.Resource):
                 and not state_instance.interrupted
             ):
                 state_instance.interrupt_process()
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Interrupted processes of resource",
-            }
-        )
 
     def get_free_of_setups(self) -> Generator:
         """
@@ -473,23 +426,7 @@ class Resource(resource.Resource):
             for state in self.setup_states
             if (state.process and state.process.is_alive)
         ]
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Start waiting for free of setups",
-            }
-        )
         yield events.AllOf(self.env, running_setups)
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Finished waiting for free of setups",
-            }
-        )
 
     def get_free_of_processes_in_preparation(self) -> Generator:
         """
@@ -503,23 +440,7 @@ class Resource(resource.Resource):
             for state in self.production_states
             if (state.process and state.process.is_alive)
         ]
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Start waiting for free of processes in preparation",
-            }
-        )
         yield events.AllOf(self.env, running_processes)
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.data.ID,
-                "event": f"Finished waiting for free of processes in preparation",
-            }
-        )
 
     def setup(self, _process: PROCESS_UNION) -> Generator:
         """
@@ -553,27 +474,8 @@ class Resource(resource.Resource):
             ):
                 self.reserve_setup(_process)
                 yield self.env.process(self.get_free_of_setups())
-                input_state.prepare_for_run()
                 input_state.process = self.env.process(input_state.process_state())
-                logger.debug(
-                    {
-                        "ID": self.data.ID,
-                        "sim_time": self.env.now,
-                        "resource": self.data.ID,
-                        "process": _process.process_data.ID,
-                        "event": f"Start setup process",
-                    }
-                )
                 yield input_state.process
-                logger.debug(
-                    {
-                        "ID": self.data.ID,
-                        "sim_time": self.env.now,
-                        "resource": self.data.ID,
-                        "process": _process.process_data.ID,
-                        "event": f"Finished setup process",
-                    }
-                )
                 input_state.process = None
                 self.current_setup = _process
                 self.unreserve_setup()

@@ -192,7 +192,6 @@ class Product:
             list[process.PROCESS_UNION, list[ReworkProcess]]
         ] = []
         self.process: events.Process = None
-        self.finished_process: events.Event = None
         self.product_info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
         self.has_auxiliaries: bool = has_auxiliaries
@@ -207,30 +206,14 @@ class Product:
             locatable (Locatable): Locatable objects where product object currently is.
         """
         self.current_locatable = locatable
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "resource": self.current_locatable.data.ID,
-                "event": f"Updated location to {self.current_locatable.data.ID}",
-            }
-        )
 
     def process_product(self):
-        self.finished_process = events.Event(self.env)
         self.product_info.log_create_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
         """
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "event": f"Start processing of product",
-            }
-        )
         self.set_next_possible_production_processes()
         if self.has_auxiliaries:
             auxiliaries_received_event = self.env.process(
@@ -248,7 +231,6 @@ class Product:
             #     event_time=self.env.now,
             #     state_type=type_,
             # )
-            self.finished_process = events.Event(self.env)
             if isinstance(self.current_process, process.ReworkProcess):
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
@@ -259,13 +241,6 @@ class Product:
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         self.current_locatable.register_finished_product(self)
-        logger.debug(
-            {
-                "ID": self.product_data.ID,
-                "sim_time": self.env.now,
-                "event": f"Finished processing of product",
-            }
-        )
 
         if self.has_auxiliaries:
             self.product_router.release_auxiliaries_from_product(self)
