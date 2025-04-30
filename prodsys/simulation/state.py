@@ -204,24 +204,6 @@ class StateInfo:
         self._state_type = state_type
 
 
-def debug_logging(state_instance: State, msg: str):
-    """
-    Logs a debug message for a state.
-
-    Args:
-        state_instance (State): The state.
-        msg (str): The message.
-    """
-    logger.debug(
-        {
-            "ID": state_instance.state_data.ID,
-            "sim_time": state_instance.env.now,
-            "resource": state_instance.resource.data.ID,
-            "event": msg,
-        }
-    )
-
-
 class State(ABC):
     """
     Abstract class that represents a state of a resource in the simulation. A state has a process that is simulated when the resource starts a state. States can exist in parallel and can interrupt each other.
@@ -231,7 +213,6 @@ class State(ABC):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -248,8 +229,8 @@ class State(ABC):
         self.env = env
         self.process: Optional[events.Process] = None
         self.active = events.Event(self.env)
-        self.finished_process = None
         self.resource = None
+        self.reserved = False
 
     def set_resource(self, resource_model: resources.Resource) -> None:
         """
@@ -262,9 +243,6 @@ class State(ABC):
         self.state_info = StateInfo(
             ID=self.state_data.ID, resource_ID=self.resource.data.ID
         )
-
-    def prepare_for_run(self):
-        self.finished_process = events.Event(self.env)
 
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
@@ -314,7 +292,6 @@ class ProductionState(State):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -342,16 +319,8 @@ class ProductionState(State):
         while True:
             try:
                 if self.interrupted:
-                    debug_logging(
-                        self,
-                        f"interrupted while waiting for activation or activation of resource",
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
                     self.interrupted = False
-                debug_logging(
-                    self,
-                    f"wait for activation or activation of resource before process",
-                )
                 yield events.AllOf(self.env, [self.resource.active, self.active])
                 break
             except exceptions.Interrupt:
@@ -366,13 +335,7 @@ class ProductionState(State):
                         self.env.now, StateTypeEnum.production
                     )
                     self.update_done_in()
-                    debug_logging(
-                        self, f"interrupted process that ends in {self.done_in}"
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
-                    debug_logging(
-                        self, f"interrupt over for process that ends in {self.done_in}"
-                    )
                     self.interrupted = False
                     self.state_info.log_end_interrupt_state(
                         self.env.now,
@@ -383,7 +346,6 @@ class ProductionState(State):
                 self.state_info.log_start_state(
                     self.start, self.start + self.done_in, StateTypeEnum.production
                 )
-                debug_logging(self, f"starting process that ends in {self.done_in}")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -392,10 +354,7 @@ class ProductionState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
                     )
-        debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
-        # print(f"product {self.state_data} finished at {self.env.now}")
-        self.finished_process.succeed()
 
     def update_done_in(self):
         if self.start == 0:
@@ -419,7 +378,6 @@ class TransportState(State):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -482,16 +440,8 @@ class TransportState(State):
         while True:
             try:
                 if self.interrupted:
-                    debug_logging(
-                        self,
-                        f"interrupted while waiting for activation or activation of resource",
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
                     self.interrupted = False
-                debug_logging(
-                    self,
-                    f"wait for activation or activation of resource before process",
-                )
                 yield events.AllOf(self.env, [self.resource.active, self.active])
                 break
             except exceptions.Interrupt:
@@ -506,13 +456,7 @@ class TransportState(State):
                         self.env.now, StateTypeEnum.transport
                     )
                     self.update_done_in()
-                    debug_logging(
-                        self, f"interrupted process that ends in {self.done_in}"
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
-                    debug_logging(
-                        self, f"interrupt over for process that ends in {self.done_in}"
-                    )
                     self.interrupted = False
                     self.state_info.log_end_interrupt_state(
                         self.env.now,
@@ -523,7 +467,6 @@ class TransportState(State):
                 self.state_info.log_start_state(
                     self.start, self.start + self.done_in, StateTypeEnum.transport
                 )
-                debug_logging(self, f"starting process that ends in {self.done_in}")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
             except exceptions.Interrupt:
@@ -531,9 +474,7 @@ class TransportState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
                     )
-        debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
-        self.finished_process.succeed()
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
@@ -555,7 +496,6 @@ class BreakDownState(State):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -578,19 +518,14 @@ class BreakDownState(State):
         while True:
             yield self.env.process(self.wait_for_breakdown())
             self.active_breakdown = True
-            debug_logging(self, f"breakdown occured, start interrupting processes")
             self.resource.interrupt_states()
             repair_time = self.repair_time_model.get_next_time()
-            debug_logging(
-                self, f"interrupted states, starting breakdown for {repair_time}"
-            )
             self.state_info.log_start_state(
                 self.env.now, self.env.now + repair_time, StateTypeEnum.breakdown
             )
             yield self.env.timeout(repair_time)
             self.active_breakdown = False
             self.resource.activate()
-            debug_logging(self, f"breakdown finished, reactivating resource")
             self.state_info.log_end_state(self.env.now, StateTypeEnum.breakdown)
 
     def wait_for_breakdown(self):
@@ -609,7 +544,6 @@ class ProcessBreakDownState(State):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -643,13 +577,8 @@ class ProcessBreakDownState(State):
     def process_state(self) -> Generator:
         while True:
             yield self.env.process(self.wait_for_breakdown())
-            debug_logging(self, f"breakdown occured, start interrupting processes")
             yield events.AllOf(
                 self.env, [state.active for state in self.production_states]
-            )
-            debug_logging(
-                self,
-                f"interrupted states, starting breakdown for {self.repair_time_model.get_next_time()}",
             )
             for state in self.production_states + self.resource.setup_states:
                 state.deactivate()
@@ -657,9 +586,6 @@ class ProcessBreakDownState(State):
                 if state.process and state.process.is_alive and not state.interrupted:
                     state.interrupt_process()
             repair_time = self.repair_time_model.get_next_time()
-            debug_logging(
-                self, f"interrupted states, starting breakdown for {repair_time}"
-            )
             self.state_info.log_start_state(
                 self.env.now,
                 self.env.now + repair_time,
@@ -667,7 +593,6 @@ class ProcessBreakDownState(State):
             )
             yield self.env.timeout(repair_time)
             self.state_info.log_end_state(self.env.now, StateTypeEnum.process_breakdown)
-            debug_logging(self, f"breakdown finished, reactivating states")
             for state in self.production_states + self.resource.setup_states:
                 state.activate()
 
@@ -687,7 +612,6 @@ class SetupState(State):
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -714,23 +638,14 @@ class SetupState(State):
         while True:
             try:
                 if self.interrupted:
-                    debug_logging(
-                        self,
-                        f"interrupted while waiting for activation or activation of resource",
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
                     self.interrupted = False
-                debug_logging(
-                    self,
-                    f"wait for activation or activation of resource before process",
-                )
                 yield events.AllOf(self.env, [self.resource.active, self.active])
                 running_processes = [
                     state.process
                     for state in self.resource.production_states
                     if (state.process and state.process.is_alive)
                 ]
-                debug_logging(self, f"waiting for running processes to finish")
                 yield events.AllOf(self.env, running_processes)
                 break
             except exceptions.Interrupt:
@@ -745,14 +660,8 @@ class SetupState(State):
                         self.env.now, StateTypeEnum.setup
                     )
                     self.update_done_in()
-                    debug_logging(
-                        self, f"interrupted process that ends in {self.done_in}"
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
                     self.interrupted = False
-                    debug_logging(
-                        self, f"interrupt over for process that ends in {self.done_in}"
-                    )
                     self.state_info.log_end_interrupt_state(
                         self.env.now, self.env.now + self.done_in, StateTypeEnum.setup
                     )
@@ -760,7 +669,6 @@ class SetupState(State):
                 self.state_info.log_start_state(
                     self.start, self.start + self.done_in, StateTypeEnum.setup
                 )
-                debug_logging(self, f"starting process that ends in {self.done_in}")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0
             except exceptions.Interrupt:
@@ -768,9 +676,7 @@ class SetupState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
                     )
-        debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.setup)
-        self.finished_process.succeed()
 
     def update_done_in(self):
         self.done_in -= self.env.now - self.start  # How much time left?
@@ -796,7 +702,6 @@ class ChargingState(State):
         battery_time_model (time_model.TimeModel): The time model of the battery.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
-        finished_process (events.Event, optional): Event that indicates if the state is finished. Defaults to None.
         resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
         process (Optional[events.Process], optional): The process of the state. Defaults to None.
         state_info (StateInfo, optional): The state information of the state. Defaults to None.
@@ -835,16 +740,8 @@ class ChargingState(State):
         while True:
             try:
                 if self.interrupted:
-                    debug_logging(
-                        self,
-                        f"interrupted while waiting for activation or activation of resource",
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
                     self.interrupted = False
-                debug_logging(
-                    self,
-                    f"wait for activation or activation of resource before process",
-                )
                 yield events.AllOf(self.env, [self.resource.active, self.active])
                 break
             except exceptions.Interrupt:
@@ -859,13 +756,7 @@ class ChargingState(State):
                         self.env.now, StateTypeEnum.production
                     )
                     self.update_done_in()
-                    debug_logging(
-                        self, f"interrupted process that ends in {self.done_in}"
-                    )
                     yield events.AllOf(self.env, [self.active, self.resource.active])
-                    debug_logging(
-                        self, f"interrupt over for process that ends in {self.done_in}"
-                    )
                     self.interrupted = False
                     self.state_info.log_end_interrupt_state(
                         self.env.now,
@@ -876,7 +767,6 @@ class ChargingState(State):
                 self.state_info.log_start_state(
                     self.start, self.start + self.done_in, StateTypeEnum.charging
                 )
-                debug_logging(self, f"starting process that ends in {self.done_in}")
                 yield self.env.timeout(self.done_in)
                 self.done_in = 0  # Set to 0 to exit while loop.
 
@@ -885,10 +775,8 @@ class ChargingState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
                     )
-        debug_logging(self, f"process finished")
         self.state_info.log_end_state(self.env.now, StateTypeEnum.charging)
         self.battery_usage_time_since_charging = 0
-        self.finished_process.succeed()
 
     def update_done_in(self):
         if self.start == 0:

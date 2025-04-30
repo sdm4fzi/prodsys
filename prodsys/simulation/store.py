@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Generator, List, Union
+from typing import Any, Generator, List, Union
 
 
 from simpy.resources import store
@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)
 from prodsys.models import queue_data
 
 from prodsys.simulation import sim
+from simpy import events
 
 
-class Queue(store.FilterStore):
+class Queue:
     """
     Class for storing products in a queue. The queue is a filter store with a limited or unlimited capacity, where product can be put and get from.
 
@@ -31,11 +32,12 @@ class Queue(store.FilterStore):
         self.env: sim.Environment = env
         self.data: queue_data.QueueData = data
         if data.capacity == 0:
-            capacity = float("inf")
+            self.capacity = float("inf")
         else:
-            capacity = data.capacity
+            self.capacity = data.capacity
         self._pending_put: int = 0
-        super().__init__(env, capacity)
+        self.items: dict[str, Any] = {}
+        self.full: bool = False
         self.state_change = self.env.event()
 
     def put(self, item) -> Generator:
@@ -45,13 +47,15 @@ class Queue(store.FilterStore):
         Args:
             item (object): The product to be put into the queue.
         """
-        self.unreserve()
-        return_event = super().put(item)
-        self.state_change.succeed()
-        self.state_change = self.env.event()
-        return return_event
+        while self.full:
+            yield self.state_change
+        self.state_change = events.Event(self.env)
+        if self._pending_put > 0:
+            self._pending_put -= 1
+        self.items[item.ID] = item
+        self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
 
-    def get(self, filter) -> Generator:
+    def get(self, item_id: str) -> Generator:
         """
         Gets a product from the queue.
 
@@ -61,27 +65,20 @@ class Queue(store.FilterStore):
         Returns:
             object: The product that was gotten from the queue.
         """
-        item = super().get(filter=filter)
-        self.state_change.succeed()
-        self.state_change = self.env.event()
-        return item
+        self.items.pop(item_id)
+        self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
+        if not self.state_change.triggered:
+            self.state_change.succeed()
 
-    @property
-    def full(self) -> bool:
-        """
-        Checks if the queue is full.
+    # @property
+    # def full(self) -> bool:
+    #     """
+    #     Checks if the queue is full.
 
-        Returns:
-            bool: True if the queue is full, False otherwise.
-        """
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "event": f"queue has {len(self.items)} items and {self._pending_put} pending puts for capacity {self.capacity}",
-            }
-        )
-        return (self.capacity - self._pending_put - len(self.items)) <= 0
+    #     Returns:
+    #         bool: True if the queue is full, False otherwise.
+    #     """
+    #     return (self.capacity - self._pending_put - self.num_items) <= 0
 
     def reserve(self) -> None:
         """
@@ -91,21 +88,8 @@ class Queue(store.FilterStore):
             RuntimeError: If the queue is full.
         """
         self._pending_put += 1
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "event": f"reserving spot in queue {self.data.ID}, current level: {len(self.items)}, pendings: {self._pending_put}",
-            }
-        )
         if self._pending_put + len(self.items) > self.capacity:
             raise RuntimeError("Queue is full")
-
-    def unreserve(self) -> None:
-        """
-        Unreserves a spot in the queue for a product to be put into after the put is completed.
-        """
-        self._pending_put -= 1
 
 
 class Store(Queue):

@@ -111,6 +111,7 @@ class Router:
         self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
         self.got_requested = events.Event(self.env)
+        self.resource_got_free = events.Event(self.env)
 
         # Initialize the resource process mapper with precomputed compatibility tables
         process_matcher = ProcessMatcher(
@@ -134,37 +135,32 @@ class Router:
         Args:
             resource (resources.Resource): The resource to mark as free.
         """
-        if not request.resource.got_free.triggered:
-            request.resource.got_free.succeed()
         self.request_handler.mark_completion(request)
         request.completed.succeed()
+        if not self.resource_got_free.triggered:
+            self.resource_got_free.succeed()
 
     def routing_loop(self) -> Generator[None, None, None]:
         """
         Main allocation loop for the router.
         This method should be called in a separate thread to run the allocation process.
         """
+        free_resources = list(self.resource_factory.all_resources.values())
         while True:
             # TODO: improve that free resources is not calculated every time but kept in a list at router
-            yield simpy.AnyOf(
-                self.env,
-                [self.got_requested]
-                + [
-                    resource.got_free
-                    for resource in self.resource_factory.all_resources.values()
-                ],
-            )
-            if self.got_requested.triggered:
-                self.got_requested = events.Event(self.env)
-            free_resources = []
-            for resource in self.resource_factory.all_resources.values():
-                if resource.got_free.triggered:
-                    resource.got_free = events.Event(self.env)
-                # if not all(q.full for q in resource.input_queues):
-                free_resources.append(resource)
+            # yield simpy.AnyOf(
+            #     self.env,
+            #     [self.got_requested,
+            #     #  self.resource_got_free -> not really needed, allocation is possible even if no resource is free since queues and requests backlog are used at resources
+            #      ]
+            # )
+            yield self.got_requested
+            self.got_requested = events.Event(self.env)
+            # if self.resource_got_free.triggered:
+            #     self.resource_got_free = events.Event(self.env)
             while True:
-                if not free_resources:
-                    break
+                # if not free_resources:
+                #     break
                 free_requests = self.request_handler.get_next_product_to_route(
                     free_resources
                 )

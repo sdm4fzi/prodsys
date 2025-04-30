@@ -24,12 +24,10 @@ from prodsys.factories import (
 )
 
 
-
-
 from prodsys.simulation.router import Router
 from prodsys.util.post_processing import PostProcessor
 
-from prodsys.util import kpi_visualization, util
+from prodsys.util import util
 from prodsys.models import performance_data
 
 VERBOSE = 1
@@ -254,13 +252,17 @@ class Runner:
         Prints the aggregated simulation results, comprising the average throughput, WIP, throughput time and the time per state of the resources.
         """
         p = self.get_post_processor()
-        kpi_visualization.print_aggregated_data(p)
+        from prodsys.util.kpi_visualization import print_aggregated_data
+
+        print_aggregated_data(p)
 
     def plot_results(self):
         """
         Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.
         """
         p = self.get_post_processor()
+        from prodsys.util import kpi_visualization
+
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
         if self.adapter.auxiliary_data:
@@ -274,6 +276,8 @@ class Runner:
         Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.
         """
         p = self.get_post_processor()
+        from prodsys.util import kpi_visualization
+
         kpi_visualization.plot_boxplot_resource_utilization(p)
         kpi_visualization.plot_line_balance_kpis(p)
         kpi_visualization.plot_production_flow_rate_per_product(p)
