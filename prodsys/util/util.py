@@ -8,6 +8,8 @@ import numpy as np
 from typing import Any, List, Generator
 import warnings
 
+import prodsys.models.production_system_data
+
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from os import listdir
@@ -61,8 +63,8 @@ def trivial_process(env: simpy.Environment) -> Generator:
 
 
 def read_initial_solutions(
-    folder_path: str, base_configuration: adapters.ProductionSystemAdapter
-) -> List[adapters.ProductionSystemAdapter]:
+    folder_path: str, base_configuration: adapters.ProductionSystemData
+) -> List[adapters.ProductionSystemData]:
     """
     Reads all initial solutions from a folder and returns them as a list of adapters.
 
@@ -78,7 +80,7 @@ def read_initial_solutions(
     for counter, file_path in enumerate(file_paths):
         if ".json" not in file_path or file_path == "optimization_results.json":
             continue
-        adapter = adapters.JsonProductionSystemAdapter()
+        adapter = prodsys.models.production_system_data.ProductionSystemData()
         adapter.read_data(join(folder_path, file_path))
         adapter.scenario_data = base_configuration.scenario_data.model_copy()
         if not adapter.ID:

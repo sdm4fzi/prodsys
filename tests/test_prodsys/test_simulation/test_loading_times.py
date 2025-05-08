@@ -1,11 +1,11 @@
 import pytest
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 
 
 @pytest.fixture
-def loading_times_simulation_adapter() -> JsonProductionSystemAdapter:
+def loading_times_simulation_adapter() -> ProductionSystemData:
     t1 = psx.FunctionTimeModel("exponential", 0.8, ID="t1")
     p1 = psx.ProductionProcess(t1, "p1")
 
@@ -13,7 +13,12 @@ def loading_times_simulation_adapter() -> JsonProductionSystemAdapter:
     loading_time_model = psx.FunctionTimeModel("exponential", 0.1, ID="t4")
     unloading_time_model = psx.FunctionTimeModel("exponential", 0.1, ID="t5")
 
-    tp = psx.TransportProcess(movement_time_model, "tp", loading_time_model=loading_time_model, unloading_time_model=unloading_time_model)
+    tp = psx.TransportProcess(
+        movement_time_model,
+        "tp",
+        loading_time_model=loading_time_model,
+        unloading_time_model=unloading_time_model,
+    )
 
     machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
 
@@ -32,17 +37,19 @@ def loading_times_simulation_adapter() -> JsonProductionSystemAdapter:
     return adapter
 
 
-def test_initialize_simulation(loading_times_simulation_adapter: JsonProductionSystemAdapter):
+def test_initialize_simulation(
+    loading_times_simulation_adapter: ProductionSystemData,
+):
     runner_instance = runner.Runner(adapter=loading_times_simulation_adapter)
     runner_instance.initialize_simulation()
 
 
-def test_hashing(loading_times_simulation_adapter: JsonProductionSystemAdapter):
+def test_hashing(loading_times_simulation_adapter: ProductionSystemData):
     hash_str = loading_times_simulation_adapter.hash()
     assert hash_str == "4f565c2d574392e23b9d807cde881ba8"
 
 
-def test_run_simulation(loading_times_simulation_adapter: JsonProductionSystemAdapter):
+def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=loading_times_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)

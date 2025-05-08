@@ -6,11 +6,7 @@ welding_time_model = prodsys.time_model_data.FunctionTimeModelData(
     ID="time model 1",
     description="Time model 1 is create!",
     distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
-    location=25.0,
-    scale=0.0,
-)
-
-transport_time_model = prodsys.time_model_data.DistanceTimeModelData(
+    location=25.0prodsys.adapterscale=0.0adapternsport_time_model = prodsys.time_model_data.DistanceTimeModelData(
     ID="time model 2",
     description="Time model 2 is create!",
     speed=5.0,
@@ -97,7 +93,7 @@ sink = prodsys.sink_data.SinkData(
     product_type="product 1",
 )
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter(
+production_system = adapter.ProductionSystemData(
     time_model_data=[welding_time_model, transport_time_model, arrival_time_model],
     process_data=[welding_process, transport_process],
     resource_data=[machine, transport_resource],

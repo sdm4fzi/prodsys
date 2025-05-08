@@ -7,7 +7,7 @@ from typing import List, Literal
 import numpy as np
 import time
 
-from prodsys.adapters import adapter
+from prodsys.models import production_system_data
 from prodsys.simulation import sim, logger
 from prodsys.factories import (
     link_transport_process_updater,
@@ -34,7 +34,7 @@ VERBOSE = 1
 
 
 def run_simulation(
-    adapter_object: adapter.ProductionSystemAdapter, run_length: int
+    adapter_object: production_system_data.ProductionSystemData, run_length: int
 ) -> Runner:
     """
     Runs the simulation for the given adapter and run length.
@@ -99,7 +99,7 @@ class Runner:
 
     def __init__(
         self,
-        adapter: adapter.ProductionSystemAdapter,
+        adapter: production_system_data.ProductionSystemData,
         warm_up_cutoff: bool = False,
         cut_off_method: Literal[
             "mser5", "threshold_stabilization", "static_ratio"
@@ -265,7 +265,7 @@ class Runner:
 
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
-        if self.adapter.auxiliary_data:
+        if self.adapter.depdendency_data:
             kpi_visualization.plot_auxiliary_WIP(p)
         # kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
@@ -283,7 +283,7 @@ class Runner:
         kpi_visualization.plot_production_flow_rate_per_product(p)
         transport_resource_ids = [
             resource_data.ID
-            for resource_data in adapter.get_transport_resources(self.adapter)
+            for resource_data in production_system_data.get_transport_resources(self.adapter)
         ]
         kpi_visualization.plot_transport_utilization_over_time(
             p, transport_resource_ids

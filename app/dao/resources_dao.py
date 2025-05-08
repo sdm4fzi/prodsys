@@ -2,7 +2,7 @@ from typing import List
 from fastapi import HTTPException
 
 from prodsys.models import resource_data
-from prodsys.adapters import adapter as prodsys_adapter
+from prodsys.models import production_system_data as prodsys_adapter
 from app.dependencies import prodsys_backend
 
 

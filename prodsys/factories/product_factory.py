@@ -69,7 +69,7 @@ class ProductFactory:
 
         product_object = product.Product(
             env=self.env,
-            product_data=product_data,
+            data=product_data,
             product_router=self.router,
             routing_heuristic=routing_heuristic_callable,
             process_model=process_model,
@@ -166,10 +166,10 @@ class ProductFactory:
         Args:
             product (product.Product): Product object that is removed.
         """
-        if product.product_data.ID in self.products:
-            del self.products[product.product_data.ID]
+        if product.data.ID in self.products:
+            del self.products[product.data.ID]
         else:
-            raise ValueError(f"Product with ID {product.product_data.ID} not found.")
+            raise ValueError(f"Product with ID {product.data.ID} not found.")
 
     def register_finished_product(self, product: product.Product):
         """

@@ -22,7 +22,7 @@ class Process(ABC):
 
     def __init__(
         self,
-        process_data: processes_data.PROCESS_DATA_UNION,
+        data: processes_data.PROCESS_DATA_UNION,
         time_model: Optional[time_model.TimeModel] = None,
         failure_rate: Optional[float] = None,
         auxiliaries: Optional[
@@ -36,7 +36,7 @@ class Process(ABC):
             process_data (processes_data.PROCESS_DATA_UNION): The process data.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        self.process_data = process_data
+        self.data = data
         self.time_model = time_model
         self.failure_rate = failure_rate
         self.auxiliaries = auxiliaries if auxiliaries else []
@@ -71,10 +71,10 @@ class Process(ABC):
         Returns:
             str: A string signature representing the unique properties of this process.
         """
-        if hasattr(self.process_data, "ID"):
-            return f"{self.__class__.__name__}:{self.process_data.ID}"
-        elif hasattr(self.process_data, "capability"):
-            return f"{self.__class__.__name__}:{self.process_data.capability}"
+        if hasattr(self.data, "ID"):
+            return f"{self.__class__.__name__}:{self.data.ID}"
+        elif hasattr(self.data, "capability"):
+            return f"{self.__class__.__name__}:{self.data.capability}"
         return f"{self.__class__.__name__}:{id(self)}"
 
 
@@ -85,6 +85,7 @@ class ProductionProcess(Process):
         process_data (processes_data.ProductionProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+
     def __init__(
         self,
         process_data: processes_data.ProductionProcessData,
@@ -103,7 +104,6 @@ class ProductionProcess(Process):
         """
         super().__init__(process_data, time_model, failure_rate, auxiliaries)
 
-
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if not isinstance(requested_process, ProductionProcess) and not isinstance(
@@ -111,8 +111,8 @@ class ProductionProcess(Process):
         ):
             return False
         if isinstance(requested_process, CompoundProcess):
-            return self.process_data.ID in requested_process.process_data.process_ids
-        return requested_process.process_data.ID == self.process_data.ID
+            return self.data.ID in requested_process.data.process_ids
+        return requested_process.data.ID == self.data.ID
 
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
@@ -126,6 +126,7 @@ class CapabilityProcess(Process):
         process_data (processes_data.CapabilityProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+
     def __init__(
         self,
         process_data: processes_data.CapabilityProcessData,
@@ -151,12 +152,12 @@ class CapabilityProcess(Process):
         ):
             return False
         if isinstance(requested_process, CompoundProcess):
-            return self.process_data.capability in [
-                p.process_data.capability
+            return self.data.capability in [
+                p.data.capability
                 for p in requested_process.contained_processes_data
                 if isinstance(p, CapabilityProcess)
             ]
-        return requested_process.process_data.capability == self.process_data.capability
+        return requested_process.data.capability == self.data.capability
 
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
@@ -170,6 +171,7 @@ class TransportProcess(Process):
         process_data (processes_data.TransportProcessData): The process data.
         time_model (time_model.TimeModel): The time model.
     """
+
     def __init__(
         self,
         process_data: processes_data.TransportProcessData,
@@ -190,7 +192,7 @@ class TransportProcess(Process):
         """
         super().__init__(process_data, time_model, failure_rate, auxiliaries)
         self.loading_time_model = loading_time_model
-        self.unloading_time_model = unloading_time_model        
+        self.unloading_time_model = unloading_time_model
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -200,12 +202,12 @@ class TransportProcess(Process):
             return False
         if (
             isinstance(requested_process, TransportProcess)
-            and not requested_process.process_data.ID == self.process_data.ID
+            and not requested_process.data.ID == self.data.ID
         ):
             return False
         if (
             isinstance(requested_process, CompoundProcess)
-            and not self.process_data.ID in requested_process.process_data.process_ids
+            and not self.data.ID in requested_process.data.process_ids
         ):
             return False
         request.set_route(route=[request.origin, request.target])
@@ -289,7 +291,6 @@ class CompoundProcess(Process):
         super().__init__(process_data, time_model, failure_rate, auxiliaries)
         self.contained_processes_data = contained_processes_data
 
-
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
         if (
@@ -300,16 +301,16 @@ class CompoundProcess(Process):
                 and not requested_process.process_data.capability
             )
         ):
-            return requested_process.process_data.ID in self.process_data.process_ids
+            return requested_process.data.ID in self.data.process_ids
         elif is_process_with_capability(requested_process):
-            return requested_process.process_data.capability in [
+            return requested_process.data.capability in [
                 p.process_data.capability
                 for p in self.contained_processes_data
                 if is_available_process_with_capability(p)
             ]
         elif isinstance(requested_process, CompoundProcess):
             return any(
-                p.ID in self.process_data.process_ids
+                p.ID in self.data.process_ids
                 for p in requested_process.contained_processes_data
                 if isinstance(p, ProductionProcess)
             ) or any(
@@ -335,6 +336,7 @@ class RequiredCapabilityProcess(Process):
     Args:
         process_data (processes_data.RequiredCapabilityProcessData): The process data.
     """
+
     def __init__(
         self,
         process_data: processes_data.RequiredCapabilityProcessData,
@@ -345,7 +347,6 @@ class RequiredCapabilityProcess(Process):
         ] = None,
     ):
         super().__init__(process_data, time_model, failure_rate, auxiliaries)
-
 
     def matches_request(self, request: request_module.Request) -> bool:
         raise NotImplementedError(
@@ -396,11 +397,11 @@ class ReworkProcess(Process):
 
         if isinstance(requested_process, CompoundProcess):
             return any(
-                reworked_process_id in requested_process.process_data.process_ids
+                reworked_process_id in requested_process.data.process_ids
                 for reworked_process_id in self.reworked_process_ids
             )
         else:
-            return requested_process.process_data.ID in self.reworked_process_ids
+            return requested_process.data.ID in self.reworked_process_ids
 
     def get_expected_process_time(self) -> float:
         return self.time_model.get_expected_time()
@@ -476,15 +477,11 @@ class LinkTransportProcess(TransportProcess):
                 return False
 
         if is_process_with_capability(requested_process):
-            if (
-                not requested_process.process_data.capability
-                == self.process_data.capability
-            ):
+            if not requested_process.data.capability == self.process_data.capability:
                 return False
             elif (
                 hasattr(request, "auxiliary")
-                and requested_process.process_data.capability
-                == self.process_data.capability
+                and requested_process.data.capability == self.process_data.capability
             ):
                 return True
 
@@ -523,7 +520,7 @@ from prodsys.simulation.source import Source
 from prodsys.simulation.sink import Sink
 from prodsys.simulation.node import Node
 from prodsys.simulation import request as request_module
-from prodsys.simulation.auxiliary import ProcessAuxiliary, ResourceAuxiliary
+from prodsys.simulation.primitive import ProcessAuxiliary, ResourceAuxiliary
 
 # LinkTransportProcess.model_rebuild()
 # Process.model_rebuild()

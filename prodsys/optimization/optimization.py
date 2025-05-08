@@ -1,12 +1,15 @@
 from typing import Dict, List, Optional, Tuple, Union
 from prodsys import adapters, runner
-from prodsys.adapters.adapter import (
+from prodsys.models.production_system_data import (
     assert_no_redudant_locations,
     assert_required_processes_in_resources_available,
     get_possible_production_processes_IDs,
 )
 from prodsys.models import performance_indicators
-from prodsys.optimization.optimization_data import OptimizationResults, OptimizationSolutions
+from prodsys.optimization.optimization_data import (
+    OptimizationResults,
+    OptimizationSolutions,
+)
 from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_num_of_process_modules,
@@ -19,7 +22,7 @@ from prodsys.util.post_processing import PostProcessor
 
 
 def get_process_module_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
     num_process_modules: Dict[Tuple[str], int],
     num_process_modules_before: Dict[Tuple[str], int],
 ) -> float:
@@ -35,15 +38,15 @@ def get_process_module_cost(
         else:
             process_cost = process_module_cost
         sum_process_module_cost += (
-                num_process_modules[process_tuple]
-                - num_process_modules_before.get(process_tuple, 0)
-            )* process_cost
+            num_process_modules[process_tuple]
+            - num_process_modules_before.get(process_tuple, 0)
+        ) * process_cost
     return sum_process_module_cost
 
 
 def get_reconfiguration_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
-    baseline: adapters.ProductionSystemAdapter = None,
+    adapter_object: adapters.ProductionSystemData,
+    baseline: adapters.ProductionSystemData = None,
 ) -> float:
     num_machines = len(adapters.get_production_resources(adapter_object))
     num_transport_resources = len(adapters.get_transport_resources(adapter_object))
@@ -63,13 +66,17 @@ def get_reconfiguration_cost(
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
-    if adapter_object.auxiliary_data:
+    if adapter_object.depdendency_data:
         auxiliary_cost = get_auxiliary_cost(adapter_object, baseline)
     else:
         auxiliary_cost = 0
 
-    machine_cost = (num_machines - num_machines_before)* adapter_object.scenario_data.info.machine_cost
-    transport_resource_cost = (num_transport_resources - num_transport_resources_before) * adapter_object.scenario_data.info.transport_resource_cost
+    machine_cost = (
+        num_machines - num_machines_before
+    ) * adapter_object.scenario_data.info.machine_cost
+    transport_resource_cost = (
+        num_transport_resources - num_transport_resources_before
+    ) * adapter_object.scenario_data.info.transport_resource_cost
     process_module_cost = get_process_module_cost(
         adapter_object, num_process_modules, num_process_modules_before
     )
@@ -85,12 +92,12 @@ def get_reconfiguration_cost(
 
 
 def get_auxiliary_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
-    baseline: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
+    baseline: adapters.ProductionSystemData,
 ) -> float:
     auxiliary_cost = 0
     for new_auxiliary, auxiliary_before in zip(
-        adapter_object.auxiliary_data, baseline.auxiliary_data
+        adapter_object.depdendency_data, baseline.depdendency_data
     ):
         for i, storage in enumerate(new_auxiliary.quantity_in_storages):
             storage_before = auxiliary_before.quantity_in_storages[i]
@@ -102,7 +109,7 @@ def get_auxiliary_cost(
     return auxiliary_cost
 
 
-def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_num_machines(configuration: adapters.ProductionSystemData) -> bool:
     if (
         len(adapters.get_production_resources(configuration))
         > configuration.scenario_data.constraints.max_num_machines
@@ -111,7 +118,7 @@ def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_transport_capacity(configuration: adapters.ProductionSystemData) -> bool:
     if (
         len(adapters.get_transport_resources(configuration))
         > configuration.scenario_data.constraints.max_num_transport_resources
@@ -120,7 +127,7 @@ def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) ->
     return True
 
 
-def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_num_process_modules(configuration: adapters.ProductionSystemData) -> bool:
     for resource in configuration.resource_data:
         if (
             len(
@@ -134,7 +141,7 @@ def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -
     return True
 
 
-def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
     try:
         assert_no_redudant_locations(configuration)
     except ValueError as e:
@@ -151,8 +158,8 @@ def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
 
 
 def valid_reconfiguration_cost(
-    configuration: adapters.ProductionSystemAdapter,
-    base_configuration: adapters.ProductionSystemAdapter,
+    configuration: adapters.ProductionSystemData,
+    base_configuration: adapters.ProductionSystemData,
 ) -> bool:
     reconfiguration_cost = get_reconfiguration_cost(
         adapter_object=configuration,
@@ -169,8 +176,8 @@ def valid_reconfiguration_cost(
 
 
 def check_valid_configuration(
-    configuration: adapters.ProductionSystemAdapter,
-    base_configuration: adapters.ProductionSystemAdapter,
+    configuration: adapters.ProductionSystemData,
+    base_configuration: adapters.ProductionSystemData,
 ) -> bool:
     """
     Function that checks if a configuration is valid.
@@ -205,7 +212,7 @@ def check_valid_configuration(
 
 
 def assert_required_auxiliaries_available(
-    configuration: adapters.ProductionSystemAdapter,
+    configuration: adapters.ProductionSystemData,
 ) -> bool:
     required_auxiliaries = get_required_auxiliaries(configuration)
     for auxiliary in required_auxiliaries:
@@ -240,7 +247,7 @@ KPI_function_dict = {
 
 
 def evaluate_ea_wrapper(
-    base_scenario: adapters.ProductionSystemAdapter,
+    base_scenario: adapters.ProductionSystemData,
     solution_dict: Dict[str, Union[list, str]],
     number_of_seeds: int,
     full_save: bool,
@@ -256,10 +263,10 @@ def evaluate_ea_wrapper(
 
 
 def evaluate(
-    base_scenario: adapters.ProductionSystemAdapter,
+    base_scenario: adapters.ProductionSystemData,
     solution_dict: OptimizationSolutions,
     number_of_seeds: int,
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
     full_save: bool,
 ) -> tuple[Optional[list[float]], Optional[dict]]:
     """
@@ -281,7 +288,10 @@ def evaluate(
     sim.VERBOSE = 0
     adapter_object_hash = adapter_object.hash()
     if adapter_object_hash in solution_dict.hashes:
-        return None, None # fitness and event log dict is obtained in optimizer from cache
+        return (
+            None,
+            None,
+        )  # fitness and event log dict is obtained in optimizer from cache
     if not check_valid_configuration(adapter_object, base_scenario):
         return [-100000 / weight for weight in get_weights(base_scenario, "max")], None
 
@@ -306,4 +316,8 @@ def evaluate(
 
     mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
     # TODO: allow to return multiple runner objects in the future
-    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()  if full_save else None
+    return mean_fitness, (
+        runner_object.event_logger.get_data_as_dataframe().to_dict()
+        if full_save
+        else None
+    )

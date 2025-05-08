@@ -6,6 +6,7 @@ import random
 
 from prodsys.util.util import flatten
 
+
 class ProcessModel(ABC):
     """
     Abstract process model base class that defines the interface for all process models.
@@ -72,6 +73,7 @@ class PrecendeGraphNode:
     Attributes:
         marking (bool): Indicates if the node is marked.
     """
+
     def __init__(
         self,
         process: PROCESS_UNION,
@@ -92,7 +94,6 @@ class PrecendeGraphNode:
         if predecessors is not None:
             self.predecessors = predecessors
         self.marking = False
-
 
     def update_marking(self):
         """
@@ -122,7 +123,7 @@ def get_predecessor_processes(
 
 
 def get_predecessors_adjacency_matrix(
-    adjacency_matrix: Dict[str, List[str]]
+    adjacency_matrix: Dict[str, List[str]],
 ) -> Dict[str, List[str]]:
     """
     Returns the predecessing processes' IDs of all processes in a process model.
@@ -167,6 +168,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
         nodes (List[PrecendeGraphNode]): List of nodes in the precedence graph.
         current_marking (Optional[PrecendeGraphNode]): The current marking, i.e. the node that represents the previously executed process, of the process model.
     """
+
     def __init__(self):
         """
         Initializes the PrecedenceGraphProcessModel with an empty list of nodes and no current marking.
@@ -245,7 +247,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
             successors (List[PROCESS_UNION]): List of successor processes.
             predecessors (List[PROCESS_UNION]): List of predecessor processes.
         """
-        if not process.process_data.ID in self.get_node_process_ids():
+        if not process.data.ID in self.get_node_process_ids():
             node = PrecendeGraphNode(process=process, successors=[], predecessors=[])
             self.nodes.append(node)
         else:
@@ -253,7 +255,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
 
         successor_nodes: List[PrecendeGraphNode] = []
         for successor in successors:
-            if successor.process_data.ID not in self.get_node_process_ids():
+            if successor.data.ID not in self.get_node_process_ids():
                 self.add_node(successor, [], [])
 
             successor_nodes.append(
@@ -263,7 +265,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
 
         predecessor_nodes: List[PrecendeGraphNode] = []
         for predecessor in predecessors:
-            if predecessor.process_data.ID not in self.get_node_process_ids():
+            if predecessor.data.ID not in self.get_node_process_ids():
                 self.add_node(predecessor, [], [])
             predecessor_nodes.append(
                 [node for node in self.nodes if node.process == predecessor].pop()

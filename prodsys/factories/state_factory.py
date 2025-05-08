@@ -9,7 +9,7 @@ from prodsys.simulation import state
 
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 
 STATE_MAP = {
@@ -20,6 +20,7 @@ STATE_MAP = {
     state_data.StateTypeEnum.ProcessBreakDownState: state.ProcessBreakDownState,
     state_data.StateTypeEnum.ChargingState: state.ChargingState,
 }
+
 
 class StateFactory:
     """
@@ -56,16 +57,16 @@ class StateFactory:
             return {}
         loading_time_model_dict = {}
         if transport_state.loading_time_model_id is not None:
-            loading_time_model_dict[
-                "loading_time_model"
-            ] = self.time_model_factory.get_time_model(
-                transport_state.loading_time_model_id
+            loading_time_model_dict["loading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.loading_time_model_id
+                )
             )
         if transport_state.unloading_time_model_id is not None:
-            loading_time_model_dict[
-                "unloading_time_model"
-            ] = self.time_model_factory.get_time_model(
-                transport_state.unloading_time_model_id
+            loading_time_model_dict["unloading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.unloading_time_model_id
+                )
             )
         return loading_time_model_dict
 
@@ -113,11 +114,11 @@ class StateFactory:
 
         state_class = STATE_MAP.get(state_data.type)
         if state_class is None:
-            raise ValueError(f"Unknown state type: {state_data.type}")  
+            raise ValueError(f"Unknown state type: {state_data.type}")
         new_state = state_class(**values)
         self.states[state_data.ID] = new_state
 
-    def create_states(self, adapter: "adapter.ProductionSystemAdapter"):
+    def create_states(self, adapter: "production_system_data.ProductionSystemData"):
         """
         Creates state objects based on the given adapter.
 

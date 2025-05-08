@@ -1,5 +1,5 @@
 import pytest
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 from prodsys.simulation import sim
@@ -7,7 +7,7 @@ from prodsys.simulation import sim
 
 # Define the path to your test configuration file. This should be similar to example_simulation.py.
 @pytest.fixture
-def simulation_adapter() -> JsonProductionSystemAdapter:
+def simulation_adapter() -> ProductionSystemData:
     time_model_agv = psx.DistanceTimeModel(
         speed=90, reaction_time=0.2, ID="time_model_x"
     )
@@ -44,16 +44,27 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     node5 = psx.Node(location=[50, 80], ID="node5")
     node6 = psx.Node(location=[0, 80], ID="node6")
 
-
-
-    rcp01 = psx.RequiredCapabilityProcess(time_model=time_model_agv, capability="euro_palette_transport", ID="rtp01")
-    productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
-    productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="pp02")
-    productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
-    productionprocess04 = psx.ProductionProcess(time_model=time_model_machine4, ID="pp04")
-    productionprocess05 = psx.ProductionProcess(time_model=time_model_machine5, ID="pp05")
-    productionprocess06 = psx.ProductionProcess(time_model=time_model_machine6, ID="pp06")
-
+    rcp01 = psx.RequiredCapabilityProcess(
+        time_model=time_model_agv, capability="euro_palette_transport", ID="rtp01"
+    )
+    productionprocess01 = psx.ProductionProcess(
+        time_model=time_model_machine1, ID="pp01"
+    )
+    productionprocess02 = psx.ProductionProcess(
+        time_model=time_model_machine2, ID="pp02"
+    )
+    productionprocess03 = psx.ProductionProcess(
+        time_model=time_model_machine3, ID="pp03"
+    )
+    productionprocess04 = psx.ProductionProcess(
+        time_model=time_model_machine4, ID="pp04"
+    )
+    productionprocess05 = psx.ProductionProcess(
+        time_model=time_model_machine5, ID="pp05"
+    )
+    productionprocess06 = psx.ProductionProcess(
+        time_model=time_model_machine6, ID="pp06"
+    )
 
     machine01 = psx.ProductionResource(
         ID="resource01",
@@ -100,15 +111,15 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     )
 
     product02 = psx.Product(
-            processes=[
-                    productionprocess01,
-                    productionprocess02,
-                    productionprocess03,
-                    productionprocess04,
-                    productionprocess06,
-            ],
-            transport_process = rcp01,
-            ID="product02",
+        processes=[
+            productionprocess01,
+            productionprocess02,
+            productionprocess03,
+            productionprocess04,
+            productionprocess06,
+        ],
+        transport_process=rcp01,
+        ID="product02",
     )
 
     source01 = psx.Source(
@@ -137,7 +148,12 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
         [node3, machine03],
     ]
 
-    ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, capability="euro_palette_transport", ID="ltp01", links=ltp01_links)
+    ltp01 = psx.LinkTransportProcess(
+        time_model=time_model_agv,
+        capability="euro_palette_transport",
+        ID="ltp01",
+        links=ltp01_links,
+    )
 
     ltp02_links = [
         [node3, machine03],
@@ -151,7 +167,12 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
         [machine06, sink02],
     ]
 
-    ltp02 = psx.LinkTransportProcess(time_model=time_model_agv, capability= "euro_palette_transport", ID="ltp02", links=ltp02_links)
+    ltp02 = psx.LinkTransportProcess(
+        time_model=time_model_agv,
+        capability="euro_palette_transport",
+        ID="ltp02",
+        links=ltp02_links,
+    )
 
     agv01 = psx.TransportResource(
         location=[50, 20],
@@ -212,16 +233,18 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     adapter = productionsystem.to_model()
     return adapter
 
-def test_validate_simulation(simulation_adapter: JsonProductionSystemAdapter):
+
+def test_validate_simulation(simulation_adapter: ProductionSystemData):
     simulation_adapter.validate_configuration()
 
 
-def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
-    runner_instance = runner.Runner(adapter=simulation_adapter)   
+def test_initialize_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
 
-def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
-    runner_instance = runner.Runner(adapter=simulation_adapter)   
+
+def test_run_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(480)
     assert runner_instance.env.now == 480

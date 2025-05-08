@@ -1,5 +1,5 @@
 """
-The `processes_data` module contains the `prodsys.models` classes to represent the processes that can 
+The `processes_data` module contains the `prodsys.models` classes to represent the processes that can
 be performed on products by resources.
 
 The following processes are possible:
@@ -17,7 +17,7 @@ from pydantic import ConfigDict, Field
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class ProcessTypeEnum(str, Enum):
@@ -49,7 +49,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
-    auxiliaries: list[str] = Field(default_factory=list)
+    dependency_ids: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -63,7 +63,7 @@ class ProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the process data considering the time model data. Can be used to compare two process data objects for equal functionality.
 
@@ -126,7 +126,7 @@ class ProductionProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the production process data considering the time model data. Can be used to compare two process data objects for equal functionality.
 
@@ -185,7 +185,7 @@ class CapabilityProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the capability process data considering the capability, time model and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -247,7 +247,7 @@ class TransportProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -353,7 +353,7 @@ class CompoundProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the compound process data considering the proces ids. Can be used to compare two process data objects for equal functionality.
 
@@ -418,7 +418,7 @@ class RequiredCapabilityProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -465,7 +465,7 @@ class LinkTransportProcessData(TransportProcessData):
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 

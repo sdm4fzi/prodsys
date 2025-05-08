@@ -13,8 +13,7 @@ import numpy as np
 from gymnasium import spaces
 
 import prodsys
-from prodsys.control import sequencing_control_env
-from prodsys.simulation import request
+from prodsys.control import sequencing_control_envprodsys.adaptersrodsys.sadaptern import request
 
 
 class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
@@ -95,7 +94,7 @@ class TensorboardCallback(BaseCallback):
 
 if __name__ == "__main__":
     resource_id = "R2"
-    adapter = prodsys.adapters.JsonProductionSystemAdapter()
+    adapter = adapter.ProductionSystemData()
     adapter.read_data(
         "examples/control/control_example_data/control_configuration.json"
     )

@@ -1,12 +1,12 @@
 import pytest
 import prodsys
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 
 
 @pytest.fixture
-def simulation_adapter() -> JsonProductionSystemAdapter:
+def simulation_adapter() -> ProductionSystemData:
     t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
     p1 = psx.ProductionProcess(t1, "p1")
@@ -50,17 +50,17 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     return adapter
 
 
-def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
+def test_initialize_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
-def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
+def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
     assert hash_str == "859e772fb8398b4804e66a92b2df5dd8"
 
 
-def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
+def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(1000)

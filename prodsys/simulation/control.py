@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from simpy import events
 
 from prodsys.simulation import (
+    primitive,
     route_finder,
     sim,
     state,
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
         resources,
         sink,
         source,
-        auxiliary,
         store,
     )
     from prodsys.simulation import request as request_module
@@ -105,20 +105,14 @@ class Controller:
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
-            if (
-                self.resource.full
-                or self.resource.in_setup
-                or not self.requests
-            ):
+            if self.resource.full or self.resource.in_setup or not self.requests:
                 continue
             self.control_policy(self.requests)
             selected_request = self.requests.pop(0)
             self.reserved_requests_count += 1
             self.resource.update_full()
             process_handler = get_requets_handler(selected_request)
-            self.env.process(
-                process_handler.handle_request(selected_request)
-            )
+            self.env.process(process_handler.handle_request(selected_request))
             if not self.resource.full and self.requests:
                 self.state_changed.succeed()
 
@@ -131,7 +125,6 @@ class Controller:
         """
         self.reserved_requests_count -= 1
         self.num_running_processes += 1
-        
 
     def mark_finished_process(self) -> None:
         """
@@ -195,9 +188,11 @@ class ProductionProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        yield from queue.get(product.product_data.ID)
+        yield from queue.get(product.data.ID)
 
-    def put_product_to_output_queue(self, queue: store.Queue, product: product.Product) -> Generator:
+    def put_product_to_output_queue(
+        self, queue: store.Queue, product: product.Product
+    ) -> Generator:
         """
         Place a product to the output queue (put) of the resource.
 
@@ -208,7 +203,7 @@ class ProductionProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        yield from queue.put(product.product_data)
+        yield from queue.put(product.data)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
@@ -238,11 +233,11 @@ class ProductionProcessHandler:
         yield from resource.setup(process)
         with resource.request() as req:
             yield req
-            self.get_next_product_for_process(
-                origin_queue, product
-            )
+            self.get_next_product_for_process(origin_queue, product)
             resource.controller.mark_started_process()
-            production_state: state.State = yield from resource.wait_for_free_process(process)
+            production_state: state.State = yield from resource.wait_for_free_process(
+                process
+            )
             production_state.reserved = True
             yield from self.run_process(production_state, product, process)
             production_state.process = None
@@ -294,7 +289,7 @@ class ProductionProcessHandler:
         """
         if isinstance(process, ReworkProcess):
             return
-        failure_rate = process.process_data.failure_rate
+        failure_rate = process.data.failure_rate
         if not failure_rate or failure_rate == 0:
             return
         rework_needed = np.random.choice(
@@ -331,7 +326,7 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        queue.get(product.product_data.ID)
+        queue.get(product.data.ID)
 
     def put_product_to_input_queue(
         self, queue: store.Queue, product: product.Product
@@ -349,7 +344,7 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        yield from queue.put(product.product_data)
+        yield from queue.put(product.data)
 
     def update_location(
         self, locatable: product.Locatable, location: list[float]
@@ -410,20 +405,20 @@ class TransportProcessHandler:
                 )
                 transport_state.reserved = True
                 yield from self.run_transport(
-                        transport_state, product, route_to_origin, empty_transport=True
-                    )
+                    transport_state, product, route_to_origin, empty_transport=True
+                )
                 transport_state.process = None
 
-            self.get_next_product_for_process(
-                origin_queue, product
-            )
+            self.get_next_product_for_process(origin_queue, product)
             product.update_location(self.resource)
 
-            transport_state: state.State = yield from resource.wait_for_free_process(process)
+            transport_state: state.State = yield from resource.wait_for_free_process(
+                process
+            )
             transport_state.reserved = True
             yield from self.run_transport(
-                    transport_state, product, route_to_target, empty_transport=False
-                )
+                transport_state, product, route_to_target, empty_transport=False
+            )
             transport_state.process = None
 
             yield from self.put_product_to_input_queue(target_queue, product)
@@ -574,7 +569,7 @@ class TransportProcessHandler:
             )
             if not route_to_origin:
                 raise ValueError(
-                    f"Route to origin for transport of {process_request.product.product_data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
+                    f"Route to origin for transport of {process_request.product.data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
                 )
             return route_to_origin
         else:
@@ -745,8 +740,8 @@ class BatchController(Controller):
             for queue in internal_input_queues:
                 while len(events) < batch_size:
                     event = queue.get(
-                        filter=lambda item: item.product_type
-                        == process_request.get_product().product_data.product_type
+                        filter=lambda item: item.type
+                        == process_request.get_product().data.type
                     )
                     if not event:
                         break
@@ -781,7 +776,7 @@ class BatchController(Controller):
                     if not isinstance(queue, store.Store)
                 ]
                 queue_for_product = random.choice(internal_output_queues)
-                events.append(queue_for_product.put(product.product_data))
+                events.append(queue_for_product.put(product.data))
         else:
             raise ValueError("Resource is not a ProductionResource")
 
@@ -960,7 +955,7 @@ class BatchController(Controller):
         """
         if isinstance(process, ReworkProcess):
             return
-        failure_rate = process.process_data.failure_rate
+        failure_rate = process.data.failure_rate
         if not failure_rate or failure_rate == 0:
             return
         rework_needed = np.random.choice(

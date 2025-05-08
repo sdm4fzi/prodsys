@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 from pydantic import Field
 from prodsys.express import core, process
 from prodsys.express.queue import Store
-from prodsys.models import auxiliary_data
+from prodsys.models import dependency_data
 
 
 @dataclass
@@ -32,14 +32,14 @@ class Auxiliary(core.ExpressObject):
     quantity_in_storages: List[int]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    def to_model(self) -> auxiliary_data.AuxiliaryData:
+    def to_model(self) -> dependency_data.AuxiliaryData:
         """
         Converts the Auxiliary object to an AuxiliaryData object.
 
         Returns:
                 auxiliary_data.AuxiliaryData: The converted AuxiliaryData object.
         """
-        return auxiliary_data.AuxiliaryData(
+        return dependency_data.AuxiliaryData(
             ID=self.ID,
             description="",
             transport_process=self.transport_process.ID,

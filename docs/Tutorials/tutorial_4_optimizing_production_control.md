@@ -12,7 +12,7 @@ import prodsys
 from prodsys.simulation import sim
 sim.VERBOSE = 0
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter()
+production_system = prodsys.adapters.ProductionSystemData()
 production_system.read_data('control_configuration.json')
 
 runner = prodsys.runner.Runner(adapter=production_system)

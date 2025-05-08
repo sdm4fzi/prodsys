@@ -1,12 +1,12 @@
 import pytest
 import prodsys
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 
 
 @pytest.fixture
-def storage_simulation_adapter() -> JsonProductionSystemAdapter:
+def storage_simulation_adapter() -> ProductionSystemData:
     t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
     p1 = psx.ProductionProcess(t1, "p1")
@@ -16,7 +16,13 @@ def storage_simulation_adapter() -> JsonProductionSystemAdapter:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    storage = psx.Store(ID="storage", location=[5, 1], input_location=[4,1], output_location=[6, 1], capacity=10)
+    storage = psx.Store(
+        ID="storage",
+        location=[5, 1],
+        input_location=[4, 1],
+        output_location=[6, 1],
+        capacity=10,
+    )
     storage2 = psx.Store(ID="output_storage", location=[9, 1], capacity=5)
 
     machine = psx.ProductionResource(
@@ -54,17 +60,17 @@ def storage_simulation_adapter() -> JsonProductionSystemAdapter:
     return adapter
 
 
-def test_initialize_simulation(storage_simulation_adapter: JsonProductionSystemAdapter):
+def test_initialize_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=storage_simulation_adapter)
     runner_instance.initialize_simulation()
 
 
-def test_hashing(storage_simulation_adapter: JsonProductionSystemAdapter):
+def test_hashing(storage_simulation_adapter: ProductionSystemData):
     hash_str = storage_simulation_adapter.hash()
     assert hash_str == "747f8669f99074930561a959d72a9219"
 
 
-def test_run_simulation(storage_simulation_adapter: JsonProductionSystemAdapter):
+def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)

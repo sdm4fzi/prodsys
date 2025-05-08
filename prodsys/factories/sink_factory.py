@@ -8,7 +8,7 @@ from prodsys.models import sink_data
 
 if TYPE_CHECKING:
     from prodsys.factories import product_factory, queue_factory
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 
 class SinkFactory:
@@ -20,6 +20,7 @@ class SinkFactory:
         product_factory (product_factory.ProductFactory): Factory that creates product objects.
         queue_factory (queue_factory.QueueFactory): Factory that creates queue objects.
     """
+
     def __init__(
         self,
         env: sim.Environment,
@@ -31,7 +32,7 @@ class SinkFactory:
         self.queue_factory = queue_factory
         self.sinks: Dict[str, sink.Sink] = {}
 
-    def create_sinks(self, adapter: adapter.ProductionSystemAdapter):
+    def create_sinks(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates sink objects based on the given adapter.
 

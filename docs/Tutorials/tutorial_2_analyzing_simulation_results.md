@@ -7,7 +7,7 @@ For this example, we will use another production system which we will load from 
 ```python
 import prodsys
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter()
+production_system = prodsys.adapters.ProductionSystemData()
 production_system.read_data('example_configuration.json')
 
 runner = prodsys.runner.Runner(adapter=production_system)

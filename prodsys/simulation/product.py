@@ -12,9 +12,9 @@ from simpy import events
 from prodsys.models import product_data
 
 from prodsys.simulation import (
+    primitive,
     process_models,
     request,
-    auxiliary,
     process,
     router,
     resources,
@@ -74,7 +74,7 @@ class ProductInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = StateEnum.finished_product
         self.state_type = StateTypeEnum.sink
 
@@ -95,7 +95,7 @@ class ProductInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = StateEnum.created_product
         self.state_type = StateTypeEnum.source
 
@@ -118,7 +118,7 @@ class ProductInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = StateEnum.start_state
         self.state_type = state_type
 
@@ -141,7 +141,7 @@ class ProductInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = StateEnum.end_state
         self.state_type = state_type
 
@@ -160,10 +160,12 @@ class Product:
         transport_process (process.Process): Transport process that represents the required transport processes.
         product_router (router.Router): Router that is used to route the product object.
     """
+    # TODO: unify API with Primitive somehow (also for logging)
+
     def __init__(
         self,
         env: sim.Environment,
-        product_data: product_data.ProductData,
+        data: product_data.ProductData,
         process_model: process_models.ProcessModel,
         transport_process: Union[
             process.TransportProcess,
@@ -175,7 +177,7 @@ class Product:
         has_auxiliaries: bool = False,
     ):
         self.env = env
-        self.product_data = product_data
+        self.data = data
         self.process_model = process_model
         self.transport_process = transport_process
         self.product_router = product_router
@@ -195,8 +197,7 @@ class Product:
         self.product_info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
         self.has_auxiliaries: bool = has_auxiliaries
-        self.auxiliaries: List[auxiliary.Auxiliary] = []        
-
+        self.auxiliaries: List[primitive.Primitive] = []
 
     def update_location(self, locatable: Locatable):
         """
@@ -258,7 +259,7 @@ class Product:
         )
         if not possible_rework_processes:
             raise ValueError(
-                f"No rework processes found for process {failed_process.process_data.ID}"
+                f"No rework processes found for process {failed_process.data.ID}"
             )
         if any(rework_process.blocking for rework_process in possible_rework_processes):
             self.blocking_rework_process_mappings.append(
@@ -298,7 +299,7 @@ class Product:
 
     def update_executed_process(self, executed_process: PROCESS_UNION) -> None:
         self.process_model.update_marking_from_transition(executed_process)  # type: ignore
-        self.executed_production_processes.append(executed_process.process_data.ID)
+        self.executed_production_processes.append(executed_process.data.ID)
 
     def set_next_possible_production_processes(self):
         """

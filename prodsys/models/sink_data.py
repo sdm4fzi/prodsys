@@ -6,7 +6,7 @@ from pydantic import ConfigDict
 from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class SinkData(CoreAsset, Locatable):
@@ -51,7 +51,7 @@ class SinkData(CoreAsset, Locatable):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the sink considering its location, product type and input queues.
 
@@ -66,7 +66,7 @@ class SinkData(CoreAsset, Locatable):
         """
         base_class_hash = Locatable.hash(self)
         for product in adapter.product_data:
-            if product.product_type == self.product_type:
+            if product.type == self.product_type:
                 product_hash = product.hash(adapter)
                 break
         else:

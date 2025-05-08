@@ -5,7 +5,7 @@ import prodsys
 from prodsys.optimization.evolutionary_algorithm import run_evolutionary_algorithm
 from prodsys.optimization.math_opt import MathOptimizer
 from prodsys.optimization.simulated_annealing import run_simulated_annealing
-from prodsys.optimization.tabu_search import run_tabu_search
+from prodsys.optimization.tabu_searprodsys.adaptersrt run_tadapterch
 from prodsys.simulation.runner import run_simulation
 from prodsys.util.util import get_initial_solution_file_pth, prepare_save_folder
 
@@ -13,7 +13,7 @@ from prodsys.util.util import get_initial_solution_file_pth, prepare_save_folder
 @hydra.main(version_base=None, config_path="conf", config_name="config")
 def my_app(cfg: DictConfig) -> None:
     if cfg.general.mode == "simulation":
-        adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
+        adapter_object = adapter.ProductionSystemData()
         adapter_object.read_data(cfg.general.configuration_path)
         runner_object = run_simulation(adapter_object, cfg.simulation.simulation_length)
         if cfg.simulation.print_results:
@@ -98,7 +98,7 @@ def my_app(cfg: DictConfig) -> None:
         elif cfg.optimization.algorithm == "mathematical":
             cfg.general.save_folder += "/mathematical"
             prepare_save_folder(cfg.general.save_folder)
-            adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
+            adapter_object = adapter.ProductionSystemData()
             adapter_object.read_data(
                 cfg.general.configuration_path, cfg.general.scenario_path
             )

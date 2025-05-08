@@ -20,14 +20,14 @@ class TimeModel(ABC):
     Abstract base class for time models.
     """
 
-    def __init__(self, time_model_data: TIME_MODEL_DATA):
+    def __init__(self, data: TIME_MODEL_DATA):
         """
         Initializes the time model with the given time model data.
 
         Args:
             time_model_data (TIME_MODEL_DATA): The time model data object.
         """
-        self.time_model_data = time_model_data
+        self.data = data
 
     @abstractmethod
     def get_next_time(
@@ -111,10 +111,8 @@ class FunctionTimeModel(TimeModel):
             return self.get_next_time()
 
     def _fill_buffer(self):
-        distribution_function = FUNCTION_DICT[
-            self.time_model_data.distribution_function
-        ]
-        self.statistics_buffer = distribution_function(self.time_model_data)
+        distribution_function = FUNCTION_DICT[self.data.distribution_function]
+        self.statistics_buffer = distribution_function(self.data)
 
     def get_expected_time(
         self,
@@ -127,7 +125,7 @@ class FunctionTimeModel(TimeModel):
         Returns:
             float: The expected time of the time model.
         """
-        return self.time_model_data.location
+        return self.data.location
 
 
 class SampleTimeModel(TimeModel):
@@ -158,14 +156,14 @@ class SampleTimeModel(TimeModel):
         Returns:
             float: The next time of the time model.
         """
-        return np.random.choice(self.time_model_data.samples, 1)[0]
+        return np.random.choice(self.data.samples, 1)[0]
 
     def get_expected_time(
         self,
         origin: Optional[List[float]] = None,
         target: Optional[List[float]] = None,
     ) -> float:
-        return sum(self.time_model_data.samples) / len(self.time_model_data.samples)
+        return sum(self.data.samples) / len(self.data.samples)
 
 
 class ScheduledTimeModel(TimeModel):
@@ -196,14 +194,14 @@ class ScheduledTimeModel(TimeModel):
         Returns:
             Iterator[float]: The iterator for the time values of the schedule.
         """
-        schedule = self.time_model_data.schedule
-        if self.time_model_data.absolute:
+        schedule = self.data.schedule
+        if self.data.absolute:
             relative_schedule = [schedule[0]] + [
                 schedule[i] - schedule[i - 1] for i in range(1, len(schedule))
             ]
         else:
             relative_schedule = schedule
-        if self.time_model_data.cyclic:
+        if self.data.cyclic:
             return itertools.cycle(relative_schedule)
         return iter(relative_schedule)
 
@@ -238,13 +236,13 @@ class ScheduledTimeModel(TimeModel):
         Returns:
             float: The expected time of the time model.
         """
-        if self.time_model_data.absolute:
-            schedule = self.time_model_data.schedule
+        if self.data.absolute:
+            schedule = self.data.schedule
             relative_schedule = [schedule[0]] + [
                 schedule[i] - schedule[i - 1] for i in range(1, len(schedule))
             ]
         else:
-            relative_schedule = self.time_model_data.schedule
+            relative_schedule = self.data.schedule
         return sum(relative_schedule) / len(relative_schedule)
 
 
@@ -276,12 +274,12 @@ class DistanceTimeModel(TimeModel):
         Returns:
             float: The distance between the two points.
         """
-        if self.time_model_data.metric == "euclidean":
+        if self.data.metric == "euclidean":
             return np.linalg.norm(np.array(origin) - np.array(target))
-        elif self.time_model_data.metric == "manhattan":
+        elif self.data.metric == "manhattan":
             return np.sum(np.abs(np.array(origin) - np.array(target)))
         else:
-            raise ValueError(f"Unknown distance metric: {self.time_model_data.metric}")
+            raise ValueError(f"Unknown distance metric: {self.data.metric}")
 
     def get_next_time(
         self,
@@ -301,9 +299,7 @@ class DistanceTimeModel(TimeModel):
         if origin is None or target is None:
             raise ValueError("Origin and target must be defined for DistanceTimeModel")
         distance = self.calculate_distance(origin, target)
-        return (
-            distance / self.time_model_data.speed + self.time_model_data.reaction_time
-        )
+        return distance / self.data.speed + self.data.reaction_time
 
     def get_expected_time(
         self,

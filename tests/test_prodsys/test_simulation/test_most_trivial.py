@@ -1,10 +1,11 @@
 import pytest
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 
+
 @pytest.fixture
-def simulation_adapter() -> JsonProductionSystemAdapter:
+def simulation_adapter() -> ProductionSystemData:
     t1 = psx.FunctionTimeModel("constant", 0.8, 0, "t1")
 
     p1 = psx.ProductionProcess(t1, "p1")
@@ -13,9 +14,9 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    machine = psx.ProductionResource([p1], [5,0], 1, ID="machine")
+    machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
 
-    transport = psx.TransportResource([tp], [0,0], 1, ID="transport")
+    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1], tp, "product1")
 
@@ -29,15 +30,18 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     adapter = system.to_model()
     return adapter
 
-def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
-    runner_instance = runner.Runner(adapter=simulation_adapter)   
+
+def test_initialize_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
 
-def test_hashing(simulation_adapter: JsonProductionSystemAdapter):
+
+def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
     assert hash_str == "cdab362f24884e747298c2d1080e7057"
 
-def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
+
+def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
@@ -63,7 +67,7 @@ def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
             assert kpi.value > 2.8 and kpi.value < 3.0
 
 
-def test_run_simulation_with_cut_off(simulation_adapter: JsonProductionSystemAdapter):
+def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(
         adapter=simulation_adapter,
         warm_up_cutoff=True,
