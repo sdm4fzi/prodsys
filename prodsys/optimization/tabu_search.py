@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from prodsys.optimization.optimization import evaluate
 from prodsys.optimization.adapter_manipulation import mutation
 from prodsys.optimization.optimization import check_valid_configuration
+
 # from prodsys.optimization.util import document_individual
 
 logger = logging.getLogger(__name__)
@@ -170,7 +171,7 @@ def tabu_search_optimization(
     Args:
         optimizer (Optimizer): The optimizer that contains the adapter, hyperparameters for tabu search, and initial solution (Defaults to None).
     """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    adapters.ProductionSystemData.model_config["validate_assignment"] = False
 
     base_configuration = optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
@@ -208,7 +209,7 @@ def tabu_search_optimization(
                 solution_dict=solution_dict,
                 number_of_seeds=hyper_parameters.number_of_seeds,
                 adapter_object=state,
-                full_save=optimizer.full_save
+                full_save=optimizer.full_save,
             )
 
             fitness_values, event_log_dict = self.optimizer.save_optimization_step(
@@ -243,7 +244,7 @@ def tabu_search_optimization(
         tabu_size=hyper_parameters.tabu_size,
         max_steps=hyper_parameters.max_steps,
         max_score=hyper_parameters.max_score,
-        neighborhood_size=hyper_parameters.neighborhood_size
+        neighborhood_size=hyper_parameters.neighborhood_size,
     )
     best_solution, best_objective_value = alg.run()
     optimizer.update_progress(

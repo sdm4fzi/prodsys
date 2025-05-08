@@ -48,7 +48,7 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
 
     def __init__(
         self,
-        adapter: adapters.ProductionSystemAdapter,
+        adapter: adapters.ProductionSystemData,
         resource_id: str,
         observation_space: Optional[spaces.Space] = None,
         action_space: Optional[spaces.Space] = None,

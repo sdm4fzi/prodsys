@@ -26,6 +26,7 @@ class Source:
         router (router.Router): The router of the created products.
         output_queues (List[store.Queue], optional): The output queues. Defaults to [].
     """
+
     def __init__(
         self,
         env: sim.Environment,
@@ -92,7 +93,7 @@ class Source:
             )
             for queue in self.output_queues:
                 queue.reserve()
-                yield from queue.put(product.product_data)
+                yield from queue.put(product.data)
             product.update_location(self)
             product.process = self.env.process(product.process_product())
 

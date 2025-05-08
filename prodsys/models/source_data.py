@@ -7,7 +7,7 @@ from enum import Enum
 from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class RoutingHeuristic(str, Enum):
@@ -55,7 +55,7 @@ class SourceData(CoreAsset, Locatable):
     routing_heuristic: RoutingHeuristic
     output_queues: List[str] = []
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the source considering its location, product type, time model, routing heuristic and output queues.
 
@@ -70,7 +70,7 @@ class SourceData(CoreAsset, Locatable):
         """
         locatable_hash = Locatable.hash(self)
         for product in adapter.product_data:
-            if product.product_type == self.product_type:
+            if product.type == self.product_type:
                 product_hash = product.hash(adapter)
                 break
         else:

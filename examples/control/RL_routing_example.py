@@ -14,7 +14,7 @@ import prodsys
 from prodsys.control import routing_control_env
 
 
-class ProductionControlEnv(routing_control_env.AbstractRoutingControlEnv):
+clprodsys.adaptersductionCadapterv(routing_control_env.AbstractRoutingControlEnv):
     def get_observation(self) -> np.ndarray:
         """
         Function that utilizes the ResourceObserver of the environment class to get an array of observations concerning the availability of resources.
@@ -71,7 +71,7 @@ class TensorboardCallback(BaseCallback):
 
 
 if __name__ == "__main__":
-    adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
+    adapter_object = adapter.ProductionSystemData()
     adapter_object.read_data(
         "examples/control/control_example_data/control_configuration.json"
     )

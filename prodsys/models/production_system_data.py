@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from hashlib import md5
+import json
 from typing import List, Any, Set, Optional, Tuple, Union
+from warnings import warn
 from pydantic import (
     BaseModel,
     ConfigDict,
+    TypeAdapter,
     field_validator,
     ValidationError,
     ValidationInfo,
@@ -15,7 +18,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import queue_data, time_model_data as time_model_data_module
+from prodsys.models import production_system_data
+from prodsys.models import (
+    dependency_data,
+    node_data,
+    product_data,
+    queue_data,
+    resource_data,
+    sink_data,
+    source_data,
+    time_model_data as time_model_data_module,
+)
 from prodsys.models import state_data as state_data_module
 from prodsys.models import processes_data as processes_data_module
 from prodsys.models import sink_data as sink_data_module
@@ -25,14 +38,14 @@ from prodsys.models import product_data as product_data_module
 from prodsys.models import queue_data as queue_data_module
 from prodsys.models import node_data as node_data_module
 from prodsys.models import scenario_data as scenario_data_module
-from prodsys.models import auxiliary_data as auxiliary_data_module
-
+from prodsys.models import dependency_data as dependency_data_module
+from prodsys.models import primitives_data as primitives_data_module
 from prodsys.util import util
 
 
 def get_production_resources(
-    adapter: ProductionSystemAdapter,
-) -> List[resource_data_module.ProductionResourceData]:
+    adapter: ProductionSystemData,
+) -> List[resource_data_module.ResourceData]:
     """
     Returns a list of all machines in the adapter.
 
@@ -42,6 +55,7 @@ def get_production_resources(
     Returns:
         List[resource_data_module.ProductionResourceData]: List of all machines in the adapter
     """
+    # FIXME: updated bugs here and n validation and so on.
     return [
         resource
         for resource in adapter.resource_data
@@ -50,7 +64,7 @@ def get_production_resources(
 
 
 def get_transport_resources(
-    adapter: ProductionSystemAdapter,
+    adapter: ProductionSystemData,
 ) -> List[resource_data_module.ResourceData]:
     """
     Returns a list of all transport resources in the adapter.
@@ -127,12 +141,12 @@ def remove_queues_from_resources(
 
 
 def remove_unused_queues_from_adapter(
-    adapter: ProductionSystemAdapter,
-) -> ProductionSystemAdapter:
+    adapter: ProductionSystemData,
+) -> ProductionSystemData:
     used_queues_ids = set(
         [
             queue_ID
-            for machine in get_production_resources(adapter)
+            for machine in adapter.resource_data
             for queue_ID in machine.input_queues + machine.output_queues
         ]
         + [
@@ -143,7 +157,7 @@ def remove_unused_queues_from_adapter(
         + [queue_ID for sink in adapter.sink_data for queue_ID in sink.input_queues]
         + [
             queue_ID
-            for auxiliary in adapter.auxiliary_data
+            for auxiliary in adapter.depdendency_data
             for queue_ID in auxiliary.storages
         ]
     )
@@ -157,8 +171,8 @@ def remove_unused_queues_from_adapter(
 
 
 def add_default_queues_to_resources(
-    adapter: ProductionSystemAdapter, queue_capacity=0.0
-) -> ProductionSystemAdapter:
+    adapter: ProductionSystemData, queue_capacity=0.0
+) -> ProductionSystemData:
     """
     Convenience function to add default queues to all machines in the adapter.
 
@@ -169,12 +183,14 @@ def add_default_queues_to_resources(
     Returns:
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
-    for machine in get_production_resources(adapter):
+    for machine in adapter.resource_data:
         remove_queues_from_resource(machine)
         remove_unused_queues_from_adapter(adapter)
         input_queues, output_queues = get_default_queues_for_resource(
             machine, queue_capacity
         )
+        print(machine.ID, [q.ID for q in input_queues])
+        print(machine.ID, [q.ID for q in output_queues])
         adapter.queue_data += input_queues + output_queues
         machine.input_queues = list(get_set_of_IDs(input_queues))
         machine.output_queues = list(get_set_of_IDs(output_queues))
@@ -203,8 +219,8 @@ def get_default_queue_for_source(
 
 
 def add_default_queues_to_sources(
-    adapter: ProductionSystemAdapter, queue_capacity=0.0
-) -> ProductionSystemAdapter:
+    adapter: ProductionSystemData, queue_capacity=0.0
+) -> ProductionSystemData:
     """
     Convenience function to add default queues to all sources in the adapter.
 
@@ -245,8 +261,8 @@ def get_default_queue_for_sink(
 
 
 def add_default_queues_to_sinks(
-    adapter: ProductionSystemAdapter, queue_capacity=0.0
-) -> ProductionSystemAdapter:
+    adapter: ProductionSystemData, queue_capacity=0.0
+) -> ProductionSystemData:
     """
     Convenience function to add default queues to all sinks in the adapter.
 
@@ -266,8 +282,8 @@ def add_default_queues_to_sinks(
 
 
 def add_default_queues_to_adapter(
-    adapter: ProductionSystemAdapter, queue_capacity=0.0
-) -> ProductionSystemAdapter:
+    adapter: ProductionSystemData, queue_capacity=0.0
+) -> ProductionSystemData:
     """
     Convenience function to add default queues to all machines, sources and sinks in the adapter.
 
@@ -284,7 +300,13 @@ def add_default_queues_to_adapter(
     return adapter
 
 
-class ProductionSystemAdapter(ABC, BaseModel):
+def load_json(file_path: str) -> dict:
+    with open(file_path, "r", encoding="utf-8") as json_file:
+        data = json.load(json_file)
+    return data
+
+
+class ProductionSystemData(BaseModel):
     """
     A ProductionSystemAdapter serves as a n abstract base class of a data container to represent a production system. It is based on the `prodsys.models` module, but is also compatible with the `prodsys.express` API.
     It is used as the basis for all simulation and optimization algorithms in prodsys and comes with complete data validation.
@@ -322,7 +344,8 @@ class ProductionSystemAdapter(ABC, BaseModel):
     sink_data: List[sink_data_module.SinkData] = []
     source_data: List[source_data_module.SourceData] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
-    auxiliary_data: Optional[List[auxiliary_data_module.AuxiliaryData]] = []
+    depdendency_data: Optional[List[dependency_data_module.DependencyData]] = []
+    primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
@@ -709,6 +732,30 @@ class ProductionSystemAdapter(ABC, BaseModel):
         },
     )
 
+    @classmethod
+    def read(cls, filepath: str) -> ProductionSystemData:
+        """
+        Reads a JSON file and returns a ProductionSystemData object.
+
+        Args:
+            filepath (str): Path to the JSON file
+
+        Returns:
+            ProductionSystemData: ProductionSystemData object
+        """
+        data = load_json(filepath)
+        return cls.model_validate(data)
+    
+    def write(self, filepath: str):
+        """
+        Writes the ProductionSystemData object to a JSON file.
+
+        Args:
+            filepath (str): Path to the JSON file
+        """
+        with open(filepath, "w", encoding="utf-8") as json_file:
+            json.dump(self.model_dump(), json_file, indent=4)
+
     def hash(self) -> str:
         """
         Generates a hash of the adapter based on the hash of all contained entities. Only information describing the physical structure and functionality of the production system is considered. Can be used to compare two production systems of adapters for functional equality.
@@ -732,7 +779,7 @@ class ProductionSystemAdapter(ABC, BaseModel):
                         *sorted([sink.hash(self) for sink in self.sink_data]),
                         *sorted([source.hash(self) for source in self.source_data]),
                         *sorted(
-                            [auxiliary.hash(self) for auxiliary in self.auxiliary_data]
+                            [auxiliary.hash(self) for auxiliary in self.depdendency_data]
                         ),
                     ]
                 )
@@ -904,27 +951,6 @@ class ProductionSystemAdapter(ABC, BaseModel):
                     )
         return sources
 
-    @abstractmethod
-    def read_data(self, file_path: str, scenario_file_path: Optional[str] = None):
-        """
-        Reads the data from the given file path and scenario file path.
-
-        Args:
-            file_path (str): File path for the production system configuration
-            scenario_file_path (Optional[str], optional): File path for the scenario data. Defaults to None.
-        """
-        pass
-
-    @abstractmethod
-    def write_data(self, file_path: str):
-        """
-        Writes the data to the given file path.
-
-        Args:
-            file_path (str): File path for the production system configuration
-        """
-        pass
-
     def read_scenario(self, scenario_file_path: str):
         self.scenario_data = scenario_data_module.ScenarioData.parse_file(
             scenario_file_path
@@ -963,11 +989,11 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
 
 def get_location_of_locatable(
     locatable: Union[
-        resource_data_module.ProductionResourceData,
+        resource_data_module.ResourceData,
         source_data_module.SourceData,
         sink_data_module.SinkData,
         queue_data.StoreData,
-    ]
+    ],
 ) -> List[List[float]]:
     locations = [locatable.location]
     if (
@@ -983,7 +1009,7 @@ def get_location_of_locatable(
     return locations
 
 
-def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
+def assert_no_redudant_locations(adapter: ProductionSystemData):
     """
     Asserts that no multiple objects are positioned at the same location.
 
@@ -1020,7 +1046,7 @@ def assert_no_redudant_locations(adapter: ProductionSystemAdapter):
             )
 
 
-def assert_all_links_available(adapter: ProductionSystemAdapter):
+def assert_all_links_available(adapter: ProductionSystemData):
     """
     Asserts that all links are valid, so that the start and target of the link are valid locations.
 
@@ -1062,7 +1088,7 @@ def assert_all_links_available(adapter: ProductionSystemAdapter):
 
 
 def check_for_clean_compound_processes(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
 ) -> bool:
     """
     Checks that the compound processes are clean, i.e. that they do not contain compund processes and normal processes at the same time.
@@ -1087,7 +1113,7 @@ def check_for_clean_compound_processes(
 
 
 def get_possible_production_processes_IDs(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
 ) -> Union[List[str], List[Tuple[str, ...]]]:
     """
     Returns all possible production processes IDs that can be used in the production system.
@@ -1131,7 +1157,7 @@ def get_possible_production_processes_IDs(
 
 
 def get_possible_transport_processes_IDs(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
 ) -> List[str]:
     possible_processes = adapter_object.process_data
     return [
@@ -1142,7 +1168,7 @@ def get_possible_transport_processes_IDs(
 
 
 def get_production_processes_from_ids(
-    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemData, process_ids: List[str]
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -1157,7 +1183,7 @@ def get_production_processes_from_ids(
 
 
 def get_transport_processes_from_ids(
-    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemData, process_ids: List[str]
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -1175,7 +1201,7 @@ def get_transport_processes_from_ids(
 
 
 def get_capability_processes_from_ids(
-    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemData, process_ids: List[str]
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -1190,7 +1216,7 @@ def get_capability_processes_from_ids(
 
 
 def get_compound_processes_from_ids(
-    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemData, process_ids: List[str]
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -1203,7 +1229,7 @@ def get_compound_processes_from_ids(
 
 
 def get_required_capability_processes_from_ids(
-    adapter_object: ProductionSystemAdapter, process_ids: List[str]
+    adapter_object: ProductionSystemData, process_ids: List[str]
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
     for process_id in process_ids:
@@ -1216,7 +1242,7 @@ def get_required_capability_processes_from_ids(
 
 
 def get_contained_production_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
     compound_processes: List[processes_data_module.CompoundProcessData],
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
@@ -1232,7 +1258,7 @@ def get_contained_production_processes_from_compound_processes(
 
 
 def get_contained_capability_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
     compound_processes: List[processes_data_module.CompoundProcessData],
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
@@ -1248,7 +1274,7 @@ def get_contained_capability_processes_from_compound_processes(
 
 
 def get_contained_transport_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
     compound_processes: List[processes_data_module.CompoundProcessData],
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
@@ -1264,7 +1290,7 @@ def get_contained_transport_processes_from_compound_processes(
 
 
 def get_contained_required_capability_processes_from_compound_processes(
-    adapter_object: ProductionSystemAdapter,
+    adapter_object: ProductionSystemData,
     compound_processes: List[processes_data_module.CompoundProcessData],
 ) -> List[processes_data_module.PROCESS_DATA_UNION]:
     processes = []
@@ -1356,7 +1382,7 @@ def assert_capability_processes_available(
 
 
 def assert_required_processes_in_resources_available(
-    configuration: ProductionSystemAdapter,
+    configuration: ProductionSystemData,
 ):
     """
     Asserts that all required processes are available in the resources that are requested by the products in the configuration.

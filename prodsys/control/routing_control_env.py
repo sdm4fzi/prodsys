@@ -46,7 +46,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
 
     def __init__(
         self,
-        adapter: adapters.ProductionSystemAdapter,
+        adapter: adapters.ProductionSystemData,
         observation_space: Optional[spaces.Space] = None,
         action_space: Optional[spaces.Space] = None,
         render_mode: Optional[str] = None,

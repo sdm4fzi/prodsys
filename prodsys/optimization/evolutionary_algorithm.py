@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import warnings
 import logging
 
+import prodsys.models.production_system_data
 from prodsys.optimization.optimization import evaluate_ea_wrapper
 from prodsys.optimization.adapter_manipulation import (
     crossover,
@@ -85,10 +86,10 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
 
 
 def register_functions_in_toolbox(
-    base_configuration: adapters.JsonProductionSystemAdapter,
+    base_configuration: prodsys.models.production_system_data.ProductionSystemData,
     solutions_dict: dict,
     weights: tuple,
-    initial_solutions: list[adapters.JsonProductionSystemAdapter],
+    initial_solutions: list[prodsys.models.production_system_data.ProductionSystemData],
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
     full_save: bool,
 ):
@@ -123,7 +124,7 @@ def register_functions_in_toolbox(
         base_configuration,
         solutions_dict,
         hyper_parameters.number_of_seeds,
-        full_save
+        full_save,
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -145,7 +146,7 @@ def evolutionary_algorithm_optimization(
     Args:
         optimizer (Optimizer): The optimizer that contains the adapter, hyperparameters, and initial solutions.
     """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    adapters.ProductionSystemData.model_config["validate_assignment"] = False
 
     base_configuration = optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):

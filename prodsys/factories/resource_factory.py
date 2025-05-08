@@ -20,7 +20,7 @@ from prodsys.simulation import control, resources
 
 if TYPE_CHECKING:
     from prodsys.simulation import store
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 
 CONTROLLER_DICT: Dict = {
@@ -73,12 +73,12 @@ def register_production_states_for_processes(
         process_instance: process.PROCESS_UNION
         state_data_dict = {
             "new_state": {
-                "ID": process_instance.process_data.ID,
-                "description": process_instance.process_data.description,
-                "time_model_id": process_instance.process_data.time_model_id,
+                "ID": process_instance.data.ID,
+                "description": process_instance.data.description,
+                "time_model_id": process_instance.data.time_model_id,
             }
         }
-        existence_condition = process_instance.process_data.ID in state_factory.states
+        existence_condition = process_instance.data.ID in state_factory.states
         if (
             isinstance(process_instance, process.ProductionProcess)
             or isinstance(process_instance, process.CapabilityProcess)
@@ -94,18 +94,18 @@ def register_production_states_for_processes(
             )
             and not existence_condition
         ):
-            if process_instance.process_data.loading_time_model_id:
+            if process_instance.data.loading_time_model_id:
                 state_data_dict["new_state"][
                     "loading_time_model_id"
-                ] = process_instance.process_data.loading_time_model_id
-            if process_instance.process_data.unloading_time_model_id:
+                ] = process_instance.data.loading_time_model_id
+            if process_instance.data.unloading_time_model_id:
                 state_data_dict["new_state"][
                     "unloading_time_model_id"
-                ] = process_instance.process_data.unloading_time_model_id
+                ] = process_instance.data.unloading_time_model_id
             state_factory.create_states_from_configuration_data(
                 {"TransportState": state_data_dict}
             )
-        _state = state_factory.get_states(IDs=[process_instance.process_data.ID]).pop()
+        _state = state_factory.get_states(IDs=[process_instance.data.ID]).pop()
         states.append(_state)
     register_production_states(resource, states, _env)  # type: ignore
 
@@ -121,12 +121,12 @@ def adjust_process_breakdown_states(
         if isinstance(state_instance, state.ProcessBreakDownState)
     ]
     for process_breakdown_state in process_breakdown_states:
-        process_id = process_breakdown_state.state_data.process_id
+        process_id = process_breakdown_state.data.process_id
         production_states = [
             state_instance
             for state_instance in resource.production_states
             if isinstance(state_instance, state.ProductionState)
-            and state_instance.state_data.ID == process_id
+            and state_instance.data.ID == process_id
         ]
         process_breakdown_state.set_production_states(production_states)
 
@@ -163,7 +163,7 @@ class ResourceFactory:
             ]
         ] = []
 
-    def create_resources(self, adapter: adapter.ProductionSystemAdapter):
+    def create_resources(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates resource objects based on the given adapter.
 
@@ -303,7 +303,7 @@ class ResourceFactory:
         return [
             res
             for res in self.all_resources.values()
-            if target_process.process_data.ID in res.data.process_ids
+            if target_process.data.ID in res.data.process_ids
         ]
 
     def get_movable_resources(self) -> List[resources.Resource]:

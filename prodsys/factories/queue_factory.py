@@ -5,7 +5,7 @@ from typing import List, TYPE_CHECKING, Optional
 from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
     from prodsys.models import queue_data
 
 
@@ -20,6 +20,7 @@ class QueueFactory:
     Returns:
         _type_: _description_
     """
+
     def __init__(self, env: sim.Environment):
         """
         Initializes the QueueFactory with the given environment.
@@ -30,7 +31,7 @@ class QueueFactory:
         self.env = env
         self.queues = []
 
-    def create_queues(self, adapter: adapter.ProductionSystemAdapter):
+    def create_queues(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates queue objects based on the given adapter.
 

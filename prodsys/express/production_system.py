@@ -6,7 +6,7 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.util import util
 from prodsys.simulation import runner
-from prodsys.adapters import adapter, json_adapter
+from prodsys.models import production_system_data
 
 from prodsys.express import (
     core,
@@ -79,7 +79,7 @@ class ProductionSystem(core.ExpressObject):
     def __post_init__(self):
         self._runner: Optional[runner.Runner] = None
 
-    def to_model(self) -> adapter.ProductionSystemAdapter:
+    def to_model(self) -> production_system_data.ProductionSystemData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
@@ -171,32 +171,18 @@ class ProductionSystem(core.ExpressObject):
         queue_data = list(
             util.flatten_object(
                 [s._output_queues for s in self.sources]
-                + [
-                    r._input_queues
-                    for r in self.resources
-                    if r._input_queues
-                ]
-                + [
-                    r._output_queues
-                    for r in self.resources
-                    if r._output_queues
-                ]
+                + [r._input_queues for r in self.resources if r._input_queues]
+                + [r._output_queues for r in self.resources if r._output_queues]
                 + [s._input_queues for s in self.sinks]
             )
         )
-        stores = [
-            r.input_stores
-            for r in self.resources
-            if r.input_stores
-        ] + [
-            r.output_stores
-            for r in self.resources
-            if r.output_stores
+        stores = [r.input_stores for r in self.resources if r.input_stores] + [
+            r.output_stores for r in self.resources if r.output_stores
         ]
         stores = list(util.flatten_object(stores))
         queue_data += [store.to_model() for store in stores]
         queue_data = remove_duplicate_items(queue_data)
-        return json_adapter.JsonProductionSystemAdapter(
+        return production_system_data.ProductionSystemData(
             time_model_data=time_model_data,
             process_data=process_data,
             state_data=state_data,
@@ -207,7 +193,7 @@ class ProductionSystem(core.ExpressObject):
             source_data=source_data,
             sink_data=sink_data,
             queue_data=queue_data + auxiliary_storage_data,
-            auxiliary_data=auxiliary_data,
+            depdendency_data=auxiliary_data,
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):

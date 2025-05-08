@@ -3,12 +3,13 @@ from hashlib import md5
 from typing import Optional, Union, List, Dict, TYPE_CHECKING
 from pydantic import ConfigDict, model_validator
 from prodsys.models.core_asset import CoreAsset
+from prodsys.models.primitives_data import PrimitiveData
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
-class ProductData(CoreAsset):
+class ProductData(PrimitiveData):
     """
     Class that represents product data, specifically the required processes and the allows tranport process.
 
@@ -75,12 +76,10 @@ class ProductData(CoreAsset):
         ```
     """
 
-    product_type: str
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
-    transport_process: str
-    auxiliaries: Optional[List[str]] = []
+    dependency_ids: List[str] = []
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the product considering the processes and the transport process. Can be used to compare products for equal functionality.
 

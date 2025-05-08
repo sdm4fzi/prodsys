@@ -22,7 +22,7 @@ from pydantic import (
 from prodsys.models.core_asset import CoreAsset, InOutLocatable, Locatable
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class ControllerEnum(str, Enum):
@@ -33,6 +33,7 @@ class ControllerEnum(str, Enum):
     - TransportController: Transport controller.
     - BatchController: Batch controller.
     """
+
     PipelineController = "PipelineController"
     BatchController = "BatchController"
 
@@ -99,6 +100,7 @@ class ResourceData(CoreAsset, InOutLocatable):
     input_queues: List[str] = []
     output_queues: List[str] = []
     batch_size: Optional[int] = None
+    dependency_ids: List[str] = []
 
     @model_validator(mode="before")
     def check_process_capacity(cls, values):
@@ -112,7 +114,10 @@ class ResourceData(CoreAsset, InOutLocatable):
             raise ValueError(
                 f"process_capacities {values['process_capacities']} must have the same length as processes {values['process_ids']}"
             )
-        if values["process_capacities"] and max(values["process_capacities"]) > values["capacity"]:
+        if (
+            values["process_capacities"]
+            and max(values["process_capacities"]) > values["capacity"]
+        ):
             raise ValueError("process_capacities must be smaller than capacity")
         return values
 
@@ -140,7 +145,7 @@ class ResourceData(CoreAsset, InOutLocatable):
 
         return data
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the resource considering the capacity, location (input/output for production resources or location for transport resources),
         controller, processes, process capacities, and states. Can be used to compare resources for equal functionality.

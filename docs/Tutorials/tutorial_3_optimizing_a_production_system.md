@@ -9,7 +9,7 @@ import prodsys
 from prodsys.simulation import sim
 sim.VERBOSE = 0
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter()
+production_system = prodsys.adapters.ProductionSystemData()
 production_system.read_data('base_configuration.json')
 
 prodsys.adapters.add_default_queues_to_adapter(production_system)
@@ -130,7 +130,7 @@ best_individual_ID = df.sort_values(by=["agg_fitness"], ascending=False).head()[
 best_individual_ID = str(best_individual_ID)
 files = os.listdir("results")
 files = [file for file in files if best_individual_ID in file]
-new_production_system = prodsys.adapters.JsonProductionSystemAdapter()
+new_production_system = prodsys.adapters.ProductionSystemData()
 new_production_system.read_data("results/" + files[0])
 
 runner = prodsys.runner.Runner(adapter=new_production_system)

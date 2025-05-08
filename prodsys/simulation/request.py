@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         CapabilityProcess,
         ProductionProcess,
     )
-    from prodsys.simulation.auxiliary import Auxiliary
+    from prodsys.simulation.primitive import Primitive
 
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.store import Store, Queue
@@ -31,6 +31,7 @@ class RequestType(Enum):
         REWORK: Represents a rework request.
         AUXILIARY_TRANSPORT: Represents an auxiliary transport request.
     """
+
     TRANSPORT = "transport"
     MOVE = "move"
     REWORK = "rework"
@@ -58,7 +59,7 @@ class Request:
         request_type: RequestType,
         process: PROCESS_UNION,
         resource: Resource,
-        item: Optional[Product | Auxiliary] = None,
+        item: Optional[Product | Primitive] = None,
         origin_queue: Optional[Queue] = None,
         target_queue: Optional[Store] = None,
         origin: Optional[Locatable] = None,
@@ -80,7 +81,7 @@ class Request:
         self.auxiliaries_ready: Optional[simpy.Event] = None
 
         # For compatibility with existing code
-        if hasattr(item, 'product_data'):
+        if hasattr(item, "product_data"):
             self.product = item
         else:
             self.product = None
@@ -89,7 +90,11 @@ class Request:
 
         # For auxiliary requests
         self.auxiliary = None
-        if request_type == RequestType.AUXILIARY and item and hasattr(item, 'auxiliary_data'):
+        if (
+            request_type == RequestType.AUXILIARY
+            and item
+            and hasattr(item, "auxiliary_data")
+        ):
             self.auxiliary = item
 
     def set_process(self, process: PROCESS_UNION):
@@ -131,21 +136,21 @@ class Request:
     def copy_cached_routes(self, cached_request: Request) -> None:
         """
         Copies routes from a cached request.
-        
+
         Args:
             cached_request (TransportResquest): The cached request with routes.
         """
-        if hasattr(cached_request, 'route') and hasattr(self, 'route'):
+        if hasattr(cached_request, "route") and hasattr(self, "route"):
             self.route = cached_request.route
 
     def set_route(self, route: List[Locatable]) -> None:
         """
         Sets the route for a transport request.
-        
+
         Args:
             route (List[Locatable]): The route as a list of locations.
         """
-        if hasattr(self, 'route'):
+        if hasattr(self, "route"):
             self.route = route
 
     def get_route(self) -> List[Locatable]:
@@ -155,7 +160,7 @@ class Request:
         Returns:
             List[Locatable]: The route as a list of locations.
         """
-        if hasattr(self, 'route'):
+        if hasattr(self, "route"):
             return self.route
         return []
 
@@ -177,13 +182,13 @@ class Request:
         """
         return self.target
 
-    def get_auxiliaries(self) -> List[Auxiliary]:
+    def get_auxiliaries(self) -> List[Primitive]:
         """
         Returns the auxiliaries of the request.
 
         Returns:
             List[Auxiliary]: The list of auxiliaries.
         """
-        if hasattr(self, 'auxiliary'):
+        if hasattr(self, "auxiliary"):
             return [self.auxiliary]
         return []

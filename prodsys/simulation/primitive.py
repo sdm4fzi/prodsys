@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import product, resources, sink, source
     from prodsys.factories import auxiliary_factory
 
-from prodsys.models import auxiliary_data
+from prodsys.models import dependency_data, primitives_data
 from prodsys.simulation import (
     request,
     process,
@@ -42,6 +42,7 @@ class AuxiliaryInfo:
         product_ID (str): ID of the product.
         state_type (state.StateTypeEnum): Type of the state.
     """
+
     def __init__(self):
         """
         Initializes the AuxiliaryInfo class.
@@ -56,7 +57,7 @@ class AuxiliaryInfo:
     def log_create_auxiliary(
         self,
         resource: Union[resources.Resource, sink.Sink, source.Source, store.Store],
-        _product: Auxiliary,
+        _product: Primitive,
         event_time: float,
     ) -> None:
         """
@@ -70,14 +71,14 @@ class AuxiliaryInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.created_auxiliary
         self.state_type = state.StateTypeEnum.store
 
     def log_start_auxiliary_usage(
         self,
         resource: resources.Resource,
-        _product: Auxiliary,
+        _product: Primitive,
         event_time: float,
     ) -> None:
         """
@@ -93,14 +94,14 @@ class AuxiliaryInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.started_auxiliary_usage
         self.state_type = state.StateTypeEnum.production
 
     def log_end_auxiliary_usage(
         self,
         resource: resources.Resource,
-        _product: Auxiliary,
+        _product: Primitive,
         event_time: float,
     ) -> None:
         """
@@ -114,14 +115,14 @@ class AuxiliaryInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.finished_auxiliary_usage
         self.state_type = state.StateTypeEnum.production
 
     def log_start_process(
         self,
         resource: resources.Resource,
-        _product: Auxiliary,
+        _product: Primitive,
         event_time: float,
         state_type: state.StateTypeEnum,
     ) -> None:
@@ -137,14 +138,14 @@ class AuxiliaryInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.start_state
         self.state_type = state_type
 
     def log_end_process(
         self,
         resource: resources.Resource,
-        _product: Auxiliary,
+        _product: Primitive,
         event_time: float,
         state_type: state.StateTypeEnum,
     ) -> None:
@@ -160,12 +161,12 @@ class AuxiliaryInfo:
         self.resource_ID = resource.data.ID
         self.state_ID = resource.data.ID
         self.event_time = event_time
-        self.product_ID = _product.product_data.ID
+        self.product_ID = _product.data.ID
         self.activity = state.StateEnum.end_state
         self.state_type = state_type
 
 
-class Auxiliary:
+class Primitive:
     """
     Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
 
@@ -175,19 +176,15 @@ class Auxiliary:
     """
 
     env: sim.Environment
-    product_data: auxiliary_data.AuxiliaryData
+    data: primitives_data.PrimitiveData
     transport_process: process.Process
     storage: store.Store
-    relevant_processes: List[
-        Union[process.ProductionProcess, process.CapabilityProcess]
-    ]
-    relevant_transport_processes: List[process.TransportProcess]
 
-    auxiliary_router: Optional[router_module.Router] = Field(default=None, init=False)
+    primitive_router: Optional[router_module.Router] = Field(default=None, init=False)
     current_locatable: Union[product.Locatable, store.Store] = Field(
         default=None, init=False
     )
-    current_product: product.Product = Field(default=None, init=False)
+    current_dependant: product.Product = Field(default=None, init=False)
     reserved: bool = Field(default=False, init=False)
     got_free: events.Event = Field(default=None, init=False)
     finished_process: events.Event = Field(default=None, init=False)
@@ -198,7 +195,7 @@ class Auxiliary:
     def __init__(
         self,
         env: sim.Environment,
-        auxilary_data: auxiliary_data.AuxiliaryData,
+        auxilary_data: dependency_data.AuxiliaryData,
         transport_process: process.Process,
         storage: store.Store,
         relevant_processes: List[
@@ -218,15 +215,15 @@ class Auxiliary:
             relevant_transport_processes (List[process.TransportProcess]): Relevant transport processes of the product.
         """
         self.env = env
-        self.product_data = auxilary_data
+        self.data = auxilary_data
         self.transport_process = transport_process
         self.storage = storage
         self.relevant_processes = relevant_processes
         self.relevant_transport_processes = relevant_transport_processes
 
-        self.auxiliary_router = None
+        self.primitive_router = None
         self.current_locatable = None
-        self.current_product = None
+        self.current_dependant = None
         self.reserved = False
         self.got_free = events.Event(self.env)
         self.finished_process = events.Event(self.env)
@@ -242,7 +239,7 @@ class Auxiliary:
         self.current_locatable = locatable
         logger.debug(
             {
-                "ID": self.product_data.ID,
+                "ID": self.data.ID,
                 "sim_time": self.env.now,
                 "resource": self.current_locatable.data.ID,
                 "event": f"Updated location to {self.current_locatable.data.ID}",
@@ -265,7 +262,7 @@ class Auxiliary:
         """
         Releases the auxiliary from the product after storage of the auxiliary.
         """
-        self.current_product = None
+        self.current_dependant = None
         self.reserved = False
         self.got_free.succeed()
         self.auxiliary_info.log_end_auxiliary_usage(
@@ -275,16 +272,14 @@ class Auxiliary:
         )
         logger.debug(
             {
-                "ID": self.product_data.ID,
+                "ID": self.data.ID,
                 "sim_time": self.env.now,
                 "resource": self.current_locatable.data.ID,
                 "event": f"Released auxiliary from product",
             }
         )
 
-    def request_process(
-        self, processing_request: request.Request
-    ) -> Generator:
+    def request_process(self, processing_request: request.Request) -> Generator:
         """
         Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
         """
@@ -293,17 +288,17 @@ class Auxiliary:
         type_ = state.StateTypeEnum.transport
         logger.debug(
             {
-                "ID": self.product_data.ID,
+                "ID": self.data.ID,
                 "sim_time": self.env.now,
                 "resource": processing_request.resource.data.ID,
-                "event": f"Request process {processing_request.process.process_data.ID} for {type_}",
+                "event": f"Request process {processing_request.process.data.ID} for {type_}",
             }
         )
         # FIXME: this is not working anymore!
         self.env.request_process_of_resource(request=processing_request)
         logger.debug(
             {
-                "ID": self.product_data.ID,
+                "ID": self.data.ID,
                 "sim_time": self.env.now,
                 "resource": processing_request.resource.data.ID,
                 "origin": processing_request.origin.data.ID,
@@ -314,7 +309,7 @@ class Auxiliary:
         yield self.finished_process
         logger.debug(
             {
-                "ID": self.product_data.ID,
+                "ID": self.data.ID,
                 "sim_time": self.env.now,
                 "resource": processing_request.resource.data.ID,
                 "origin": processing_request.origin.data.ID,
@@ -330,7 +325,7 @@ class Auxiliary:
         )
 
 
-class ProcessAuxiliary(Auxiliary):
+class ProcessAuxiliary(Primitive):
     """
     Class that represents that a certain process is required to perform the process this auxiliary is assigned to.
 
@@ -341,7 +336,7 @@ class ProcessAuxiliary(Auxiliary):
     """
 
     env: sim.Environment
-    data: auxiliary_data.ProcessAuxiliaryData
+    data: dependency_data.ProcessAuxiliaryData
     required_process: process.ProductionProcess
     router: router_module.Router
     required_resource: Optional[resources.Resource] = Field(default=None, init=False)
@@ -358,7 +353,7 @@ class ProcessAuxiliary(Auxiliary):
         """
         Releases the resource from the auxiliary process after executing the process.
         """
-        self.current_product = None
+        self.current_dependant = None
         self.reserved = False
         self.got_free.succeed()
         self.auxiliary_info.log_end_auxiliary_usage(
@@ -376,7 +371,7 @@ class ProcessAuxiliary(Auxiliary):
         )
 
 
-class ResourceAuxiliary(Auxiliary):
+class ResourceAuxiliary(Primitive):
     """
     Class that represents a process auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
 
@@ -387,7 +382,7 @@ class ResourceAuxiliary(Auxiliary):
     """
 
     env: sim.Environment
-    data: auxiliary_data.ResourceAuxiliaryData
+    data: dependency_data.ResourceAuxiliaryData
     required_resource: resources.Resource
     router: router_module.Router
 
@@ -403,7 +398,7 @@ class ResourceAuxiliary(Auxiliary):
         """
         Releases the resource from the auxiliary process after executing the process.
         """
-        self.current_product = None
+        self.current_dependant = None
         self.reserved = False
         self.got_free.succeed()
         self.auxiliary_info.log_end_auxiliary_usage(

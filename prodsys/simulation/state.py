@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 from simpy import events
 from simpy import exceptions
 
-from prodsys.simulation import sim, time_model
+from prodsys.simulation import primitive, sim, time_model
 from prodsys.models.state_data import (
     StateData,
     BreakDownStateData,
@@ -23,7 +23,7 @@ from prodsys.models.state_data import (
 )
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, resources, auxiliary
+    from prodsys.simulation import product, resources
 
 
 class StateEnum(str, Enum):
@@ -133,10 +133,10 @@ class StateInfo:
             _product (product.Product): The product.
             state_type (StateTypeEnum): The type of the state.
         """
-        self._product_ID = _product.product_data.ID
+        self._product_ID = _product.data.ID
         self._state_type = state_type
 
-    def log_auxiliary(self, _auxiliary: auxiliary.Auxiliary, state_type: StateTypeEnum):
+    def log_auxiliary(self, _auxiliary: primitive.Primitive, state_type: StateTypeEnum):
         """
         Logs the product of a transport or production state.
 
@@ -144,7 +144,7 @@ class StateInfo:
             _product (product.Product): The product.
             state_type (StateTypeEnum): The type of the state.
         """
-        self._product_ID = _auxiliary.product_data.ID
+        self._product_ID = _auxiliary.data.ID
         self._state_type = state_type
 
     def log_start_state(
@@ -209,7 +209,7 @@ class State(ABC):
     Abstract class that represents a state of a resource in the simulation. A state has a process that is simulated when the resource starts a state. States can exist in parallel and can interrupt each other.
 
     Args:
-        state_data (StateData): The data of the state.
+        data (StateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -220,11 +220,11 @@ class State(ABC):
 
     def __init__(
         self,
-        state_data: StateData,
+        data: StateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
     ):
-        self.state_data = state_data
+        self.data = data
         self.time_model = time_model
         self.env = env
         self.process: Optional[events.Process] = None
@@ -240,9 +240,7 @@ class State(ABC):
             resource_model (resources.Resource): The resource the state belongs to.
         """
         self.resource = resource_model
-        self.state_info = StateInfo(
-            ID=self.state_data.ID, resource_ID=self.resource.data.ID
-        )
+        self.state_info = StateInfo(ID=self.data.ID, resource_ID=self.resource.data.ID)
 
     def activate_state(self):
         self.active = events.Event(self.env).succeed()
@@ -263,7 +261,7 @@ class State(ABC):
         try:
             self.active.succeed()
         except:
-            raise RuntimeError(f"state {self.state_data.ID} is allready succeded!!")
+            raise RuntimeError(f"state {self.data.ID} is allready succeded!!")
 
     @abstractmethod
     def process_state(self) -> Generator:
@@ -288,7 +286,7 @@ class ProductionState(State):
     Represents a production state of a resource in the simulation. A production state has a process that simulates the production process which takes some time. The production state continues the creation process of a product. If a resource has a higher capacity than 1 for a process, multiple production states exist, that can run in parallel.
 
     Args:
-        state_data (ProductionStateData): The data of the state.
+        data (ProductionStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -302,11 +300,11 @@ class ProductionState(State):
 
     def __init__(
         self,
-        state_data: ProductionStateData,
+        data: ProductionStateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.start = 0.0
         self.done_in = 0.0
         self.interrupted = False
@@ -326,7 +324,7 @@ class ProductionState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         while self.done_in:
             try:
@@ -352,7 +350,7 @@ class ProductionState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
 
@@ -374,7 +372,7 @@ class TransportState(State):
     Represents a transport state of a resource in the simulation. A transport state has a process that simulates the transport of a product. The transport state continues the transport process of a product. If a resource has a higher capacity than 1 for a process, multiple transport states exist, that can run in parallel but only with the same target and end location.
 
     Args:
-        state_data (TransportStateData): The data of the state.
+        data (TransportStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -386,15 +384,16 @@ class TransportState(State):
         interrupted (bool, optional): Indicates if the state is interrupted. Defaults to False.
         loading_time_model (time_model.TimeModel, optional): The time model of the loading time. Defaults to None.
     """
+
     def __init__(
         self,
-        state_data: TransportStateData,
+        data: TransportStateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
         loading_time_model: Optional[time_model.TimeModel] = None,
         unloading_time_model: Optional[time_model.TimeModel] = None,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.loading_time_model = loading_time_model
         self.unloading_time_model = unloading_time_model
         self.start = 0.0
@@ -426,9 +425,9 @@ class TransportState(State):
         if (
             initial_transport_step
             and hasattr(self.time_model, "reaction_time")
-            and self.time_model.time_model_data.reaction_time
+            and self.time_model.data.reaction_time
         ):
-            self.done_in += self.time_model.time_model_data.reaction_time
+            self.done_in += self.time_model.data.reaction_time
         if self.loading_time_model and initial_transport_step and not empty_transport:
             self.loading_time = self.get_handling_time("loading")
             self.done_in += self.loading_time
@@ -447,7 +446,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         while self.done_in:
             try:
@@ -472,7 +471,7 @@ class TransportState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         self.state_info.log_end_state(self.env.now, StateTypeEnum.transport)
 
@@ -492,7 +491,7 @@ class BreakDownState(State):
     Represents a breakdown state of a resource in the simulation. A breakdown state has a process that simulates the breakdown of a resource. All other running production, transport or setup states get interrupted.
 
     Args:
-        state_data (BreakDownStateData): The data of the state.
+        data (BreakDownStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -504,12 +503,12 @@ class BreakDownState(State):
 
     def __init__(
         self,
-        state_data: BreakDownStateData,
+        data: BreakDownStateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
         repair_time_model: Optional[time_model.TimeModel] = None,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.repair_time_model = repair_time_model
         self.active_breakdown = False
         self.active = events.Event(self.env)
@@ -540,7 +539,7 @@ class ProcessBreakDownState(State):
     Represents a process breakdown state of a resource in the simulation. A process breakdown state has a process that simulates the breakdown of a process of a resource. Only production states of this type of process get interrupted. Also all setup states get interrupted.
 
     Args:
-        state_data (ProcessBreakDownStateData): The data of the state.
+        data (ProcessBreakDownStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -550,27 +549,27 @@ class ProcessBreakDownState(State):
         production_states (List[State], optional): The production states of the process. Defaults to None.
         repair_time_model (time_model.TimeModel, optional): The time model of the repair time. Defaults to None.
     """
+
     def __init__(
         self,
-        state_data: ProcessBreakDownStateData,
+        data: ProcessBreakDownStateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
         repair_time_model: Optional[time_model.TimeModel] = None,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.repair_time_model = repair_time_model
         self.production_states = []
-
 
     def set_production_states(self, production_states: List[ProductionState]):
         if any(
             [
-                production_state.state_data.ID != self.state_data.process_id
+                production_state.data.ID != self.data.process_id
                 for production_state in production_states
             ]
         ):
             raise ValueError(
-                f"Production states {production_states} do not match process id {self.state_data.process_id}"
+                f"Production states {production_states} do not match process id {self.data.process_id}"
             )
         self.production_states = production_states
 
@@ -608,7 +607,7 @@ class SetupState(State):
     Represents a setup state of a resource in the simulation. A setup state has a process that simulates the setup of a resource. This changes the current setup of the resource and allows it processing of other types of processes with their associated production or transport states.
 
     Args:
-        state_data (SetupStateData): The data of the state.
+        data (SetupStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         env (sim.Environment): The simulation environment.
         active (events.Event, optional): Event that indidcates if the state is active. Defaults to None.
@@ -624,11 +623,11 @@ class SetupState(State):
 
     def __init__(
         self,
-        state_data: SetupStateData,
+        data: SetupStateData,
         time_model: time_model.TimeModel,
         env: sim.Environment,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.start = 0.0
         self.done_in = 0.0
         self.interrupted = False
@@ -651,7 +650,7 @@ class SetupState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         while self.done_in:
             try:
@@ -674,7 +673,7 @@ class SetupState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         self.state_info.log_end_state(self.env.now, StateTypeEnum.setup)
 
@@ -697,7 +696,7 @@ class ChargingState(State):
     Represents a charging state of a resource in the simulation. A charging state has a process that simulates the charging of a resource. This changes the current charge of the resource and allows it processing of other types of processes with their associated production or transport
 
     Args:
-        state_data (ChargingStateData): The data of the state.
+        data (ChargingStateData): The data of the state.
         time_model (time_model.TimeModel): The time model of the state.
         battery_time_model (time_model.TimeModel): The time model of the battery.
         env (sim.Environment): The simulation environment.
@@ -712,19 +711,18 @@ class ChargingState(State):
 
     def __init__(
         self,
-        state_data: ChargingStateData,
+        data: ChargingStateData,
         time_model: time_model.TimeModel,
         battery_time_model: time_model.TimeModel,
         env: sim.Environment,
     ):
-        super().__init__(state_data, time_model, env)
+        super().__init__(data, time_model, env)
         self.battery_time_model = battery_time_model
         self.battery_usage_time_since_charging = 0.0
 
         self.start = 0.0
         self.done_in = 0.0
         self.interrupted = False
-
 
     def requires_charging(self) -> bool:
         return (
@@ -747,7 +745,7 @@ class ChargingState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         while self.done_in:
             try:
@@ -773,7 +771,7 @@ class ChargingState(State):
             except exceptions.Interrupt:
                 if not self.interrupted:
                     raise RuntimeError(
-                        f"Simpy interrupt occured at {self.state_data.ID} although process is not interrupted"
+                        f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
         self.state_info.log_end_state(self.env.now, StateTypeEnum.charging)
         self.battery_usage_time_since_charging = 0

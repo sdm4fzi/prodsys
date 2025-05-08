@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional
 
 import pandas as pd
 from pydantic import TypeAdapter
-from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.optimization.optimization_data import (
     FitnessData,
     OptimizationProgress,
@@ -23,7 +23,7 @@ if util.run_from_ipython():
 else:
     from tqdm import tqdm
 
-from prodsys.adapters import ProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
     evolutionary_algorithm_optimization,
@@ -60,9 +60,9 @@ class Optimizer(ABC):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
         full_save: bool = False,
     ) -> None:
         self.adapter = adapter
@@ -125,7 +125,7 @@ class Optimizer(ABC):
     def save_optimization_step(
         self,
         fitness_values: Optional[list[float]],
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
         event_log_dict: Optional[dict] = None,
     ) -> tuple[list[float], dict]:
         """
@@ -147,7 +147,7 @@ class Optimizer(ABC):
 
     def get_fitness_data_entry(
         self,
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
         fitness_values: list[float],
         event_log_dict: Optional[dict],
     ) -> FitnessData:
@@ -200,7 +200,7 @@ class Optimizer(ABC):
         self,
         fitness_data: FitnessData,
         generation: str,
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
     ) -> None:
         """
         Caches the fitness data in memory.
@@ -214,9 +214,7 @@ class Optimizer(ABC):
         self.performances_cache[generation][configuration.ID] = fitness_data
 
     @abstractmethod
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         """
         Caches the configuration. Must be implemented by concrete subclasses.
         """
@@ -252,8 +250,8 @@ class Optimizer(ABC):
                         copied_fitness_data.production_system = None
                     if not event_log_data:
                         copied_fitness_data.event_log_dict = None
-                    copied_fitness_data.production_system = self.get_configuration_by_hash(
-                        fitness_data.hash
+                    copied_fitness_data.production_system = (
+                        self.get_configuration_by_hash(fitness_data.hash)
                     )
                     results[generation][adapter_id] = copied_fitness_data
         else:
@@ -264,7 +262,7 @@ class Optimizer(ABC):
 
     def get_optimization_result_configuration(
         self, solution_id: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Returns the configuration of the solution identified by solution_id.
         Retrieval is based on adapter id and generation.
@@ -278,7 +276,7 @@ class Optimizer(ABC):
 
     def get_configuration_by_adapter_id_and_generation(
         self, generation: str, adapter_id: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Returns the configuration for a given generation and adapter id.
         """
@@ -288,7 +286,7 @@ class Optimizer(ABC):
     @abstractmethod
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Retrieves the configuration based on its hash.
         Must be implemented by concrete subclasses.
@@ -348,7 +346,7 @@ class Optimizer(ABC):
 
     @abstractmethod
     def save_configuration(
-        self, configuration_hash: str, configuration: ProductionSystemAdapter
+        self, configuration_hash: str, configuration: ProductionSystemData
     ) -> None:
         """
         Caches the configuration.
@@ -366,17 +364,15 @@ class InMemoryOptimizer(Optimizer):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
         full_save: bool = False,
     ) -> None:
         super().__init__(adapter, hyperparameters, initial_solutions, full_save)
-        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
+        self.configuration_cache: dict[str, ProductionSystemData] = {}
 
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         configuration_hash = configuration.hash()
         self.configuration_cache[configuration_hash] = configuration
 
@@ -391,7 +387,7 @@ class InMemoryOptimizer(Optimizer):
 
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         if configuration_hash not in self.configuration_cache:
             raise ValueError("Configuration not found in cache.")
         return self.configuration_cache[configuration_hash]
@@ -425,22 +421,20 @@ class FileSystemSaveOptimizer(Optimizer):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
         save_folder: str,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
         full_save: bool = False,
     ) -> None:
         super().__init__(adapter, hyperparameters, initial_solutions, full_save)
         self.save_folder = save_folder
-        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
+        self.configuration_cache: dict[str, ProductionSystemData] = {}
         util.prepare_save_folder(self.save_folder + "/")
 
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         configuration_hash = configuration.hash()
-        JsonProductionSystemAdapter.model_validate(configuration).write_data(
+        ProductionSystemData.model_validate(configuration).write_data(
             f"{self.save_folder}/hash_{configuration_hash}.json"
         )
 
@@ -469,12 +463,10 @@ class FileSystemSaveOptimizer(Optimizer):
 
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         print("##### Loading configuration from disk #####")
-        config = JsonProductionSystemAdapter()
-        config.read_data(
-            f"{self.save_folder}/hash_{configuration_hash}.json"
-        )
+        config = ProductionSystemData()
+        config.read_data(f"{self.save_folder}/hash_{configuration_hash}.json")
         return config
 
     def get_fitness_data_from_persistence(

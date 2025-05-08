@@ -16,7 +16,7 @@ if TYPE_CHECKING:
         time_model_factory,
         sink_factory,
     )
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 
 class SourceFactory:
@@ -31,6 +31,7 @@ class SourceFactory:
         resource_factory (resource_factory.ResourceFactory): Factory that creates resource objects.
         sink_factory (sink_factory.SinkFactory): Factory that creates sink objects.
     """
+
     def __init__(
         self,
         env: sim.Environment,
@@ -51,7 +52,7 @@ class SourceFactory:
 
         self.sources: Dict[str, source.Source] = {}
 
-    def create_sources(self, adapter: adapter.ProductionSystemAdapter):
+    def create_sources(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates source objects based on the given adapter.
 
@@ -133,7 +134,9 @@ class SourceFactory:
         Returns:
             List[source.Source]: List of source objects with the given product type.
         """
-        return [s for s in self.sources.values() if __product_type == s.data.product_type]
+        return [
+            s for s in self.sources.values() if __product_type == s.data.product_type
+        ]
 
 
 from prodsys.factories import (

@@ -83,7 +83,7 @@ class Product(core.ExpressObject):
             description="",
             processes=[process.ID for process in self.processes],
             transport_process=self.transport_process.ID,
-            auxiliaries=[auxiliary.ID for auxiliary in self.auxiliaries],
+            dependency_ids=[auxiliary.ID for auxiliary in self.auxiliaries],
         )
 
 

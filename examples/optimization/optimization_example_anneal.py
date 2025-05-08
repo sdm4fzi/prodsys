@@ -1,4 +1,4 @@
-from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.models.scenario_data import ReconfigurationEnum
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
 from prodsys.optimization.simulated_annealing import SimulatedAnnealingHyperparameters
@@ -8,6 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def main():
     # Setzen der Hyperparameter entsprechend dem alten Beispiel
     hyper_parameters = SimulatedAnnealingHyperparameters(
@@ -16,23 +17,27 @@ def main():
         Tmin=1,
         steps=25,
         updates=300,
-        number_of_seeds=2
+        number_of_seeds=2,
     )
 
-    def new_transformation(adapter: JsonProductionSystemAdapter) -> bool:
+    def new_transformation(adapter: ProductionSystemData) -> bool:
         print("Transformation function called.")
-    add_transformation_operation(transformation=ReconfigurationEnum.PRODUCTION_CAPACITY, operation=new_transformation)
 
-    base_configuration = JsonProductionSystemAdapter()
+    add_transformation_operation(
+        transformation=ReconfigurationEnum.PRODUCTION_CAPACITY,
+        operation=new_transformation,
+    )
+
+    base_configuration = ProductionSystemData()
     base_configuration.read_data(
         "examples/optimization/optimization_example/base_scenario.json",
-        "examples/optimization/optimization_example/scenario.json"
+        "examples/optimization/optimization_example/scenario.json",
     )
 
     optimizer = FileSystemSaveOptimizer(
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
-        save_folder="data/anneal_results"
+        save_folder="data/anneal_results",
     )
 
     # Ausführung der vollständigen Optimierung

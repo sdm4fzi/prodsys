@@ -12,12 +12,12 @@ from prodsys.simulation.process_matcher import ProcessMatcher
 logger = logging.getLogger(__name__)
 
 
-from prodsys.simulation import resources
+from prodsys.simulation import primitive, resources
 from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, auxiliary, process
+    from prodsys.simulation import resources, product, process
     from prodsys.simulation.product import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
@@ -37,10 +37,8 @@ class RequestInfo:
     """
 
     key: str
-    item: Union[product.Product, auxiliary.Auxiliary]
-    resource_mappings: dict[
-        ResourceIdentifier, list[process.PROCESS_UNION]
-    ]
+    item: Union[product.Product, primitive.Primitive]
+    resource_mappings: dict[ResourceIdentifier, list[process.PROCESS_UNION]]
     request_type: request.RequestType
 
     origin: Optional[Locatable]
@@ -51,25 +49,27 @@ class RequestInfo:
     request_state: Literal["pending", "routed", "completed"]
 
 
-def get_request_info_key(item: Union[product.Product, auxiliary.Auxiliary]):
-    item_id = item.product_data.ID
+def get_request_info_key(item: Union[product.Product, primitive.Primitive]):
+    item_id = item.data.ID
     if hasattr(item, "next_possible_processes"):
         process_id = hash(
-            tuple(process.process_data.ID for process in item.next_possible_processes)
+            tuple(process.data.ID for process in item.next_possible_processes)
         )
     else:
         process_id = ""
     return f"{item_id}:{process_id}"
 
+
 def get_transport_request_info_key(
-    item: Union[product.Product, auxiliary.Auxiliary],
+    item: Union[product.Product, primitive.Primitive],
     origin: Locatable,
     target: Locatable,
 ):
-    item_id = item.product_data.ID
+    item_id = item.data.ID
     origin_id = origin.data.ID
     target_id = target.data.ID
     return f"{item_id}:{origin_id}:{target_id}"
+
 
 @dataclass
 class RequestHandler:
@@ -83,7 +83,7 @@ class RequestHandler:
     pending_requests: list[RequestInfoKey] = field(default_factory=list)
 
     def add_product_requests(
-        self, item: Union[product.Product, auxiliary.Auxiliary]
+        self, item: Union[product.Product, primitive.Primitive]
     ) -> RequestInfo:
         """
         Adds a new request to the pending requests.
@@ -96,7 +96,7 @@ class RequestHandler:
         """
         request_info_key = get_request_info_key(item)
         possible_resources_and_processes = self.process_matcher.get_compatible(
-            item.next_possible_processes, item.product_data.product_type
+            item.next_possible_processes, item.data.type
         )
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
@@ -128,7 +128,7 @@ class RequestHandler:
 
     def add_transport_request(
         self,
-        item: Union[product.Product, auxiliary.Auxiliary],
+        item: Union[product.Product, primitive.Primitive],
         target: Locatable,
     ) -> RequestInfo:
         """
@@ -147,8 +147,10 @@ class RequestHandler:
             origin,
             target,
         )
-        possible_resources_and_processes = self.process_matcher.get_transport_compatible(
-            origin, target, item.transport_process.get_process_signature()
+        possible_resources_and_processes = (
+            self.process_matcher.get_transport_compatible(
+                origin, target, item.transport_process.get_process_signature()
+            )
         )
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
@@ -253,7 +255,9 @@ class RequestHandler:
         Returns:
             List[request.Request]: List of free requests ready for allocation.
         """
-        free_resources_set = set((index, resource.data.ID) for index, resource in enumerate(free_resources))
+        free_resources_set = set(
+            (index, resource.data.ID) for index, resource in enumerate(free_resources)
+        )
         self.current_request_index = 0
         for request_info_index in range(
             self.current_request_index, len(self.pending_requests)

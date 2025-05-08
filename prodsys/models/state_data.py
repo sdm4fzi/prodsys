@@ -1,5 +1,5 @@
 """
-The `state_data` module contains the `prodsys.models` classes to represent the states that resources 
+The `state_data` module contains the `prodsys.models` classes to represent the states that resources
 can be in during a simulation.
 
 The following states are possible:
@@ -8,7 +8,7 @@ The following states are possible:
 - `ProcessBreakDownStateData`: A state that makes a process unavailable for a certain time but other processes can still be performed.
 - `SetupStateData`: A state that represents the time needed to change the process of a resource.
 - `ProductionStateData`: A state that represents the time needed to process a product.
-- `TransportStateData`: A state that represents the time needed to transport a product.	    
+- `TransportStateData`: A state that represents the time needed to transport a product.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from pydantic import ConfigDict
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class StateTypeEnum(str, Enum):
@@ -63,7 +63,7 @@ class StateData(CoreAsset):
         StateTypeEnum.SetupState,
     ]
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the state considering the time model and the type of the state. Can be used to compare states for equal functionality.
 
@@ -128,7 +128,7 @@ class BreakDownStateData(StateData):
     type: Literal[StateTypeEnum.BreakDownState]
     repair_time_model_id: str
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the state considering the time model and the repair time model. Can be used to compare states for equal functionality.
 
@@ -202,7 +202,7 @@ class ProcessBreakDownStateData(StateData):
     repair_time_model_id: str
     process_id: str
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the state considering the time model, process and repair time model. Can be used to compare states for equal functionality.
 
@@ -346,7 +346,7 @@ class SetupStateData(StateData):
     origin_setup: str
     target_setup: str
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the state considering the time model, origin and target setup process. Can be used to compare states for equal functionality.
 
@@ -419,7 +419,7 @@ class ChargingStateData(StateData):
     type: Literal[StateTypeEnum.ChargingState]
     battery_time_model_id: str
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash of the state considering the time model and the repair time model. Can be used to compare states for equal functionality.
 

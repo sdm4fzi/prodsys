@@ -8,7 +8,7 @@ from prodsys.simulation import process
 
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 PROCESS_MAP = {
     processes_data.ProcessTypeEnum.ProductionProcesses: process.ProductionProcess,
@@ -20,6 +20,7 @@ PROCESS_MAP = {
     processes_data.ProcessTypeEnum.RequiredCapabilityProcesses: process.RequiredCapabilityProcess,
 }
 
+
 class ProcessFactory:
     """
     Factory class that creates and stores `prodsys.simulation` process objects based on the given process data according to `prodsys.models.processes_data.PROCESS_UNION`.
@@ -29,7 +30,7 @@ class ProcessFactory:
         processes (List[process.PROCESS_UNION], optional): List of process objects. Defaults to [] and is filled by the `create_processes` method.
     """
 
-    def __init__(self, time_model_factory: time_model_factory.TimeModelFactory):    
+    def __init__(self, time_model_factory: time_model_factory.TimeModelFactory):
         """
         Initializes the ProcessFactory with the given time model factory.
 
@@ -39,7 +40,7 @@ class ProcessFactory:
         self.time_model_factory = time_model_factory
         self.processes: Dict[str, process.PROCESS_UNION] = {}
 
-    def create_processes(self, adapter: adapter.ProductionSystemAdapter):
+    def create_processes(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates process objects based on the given adapter.
 
@@ -52,7 +53,7 @@ class ProcessFactory:
     def add_processes(
         self,
         process_data: processes_data.PROCESS_DATA_UNION,
-        adapter: adapter.ProductionSystemAdapter,
+        adapter: production_system_data.ProductionSystemData,
     ):
         values = {"process_data": process_data}
         if not (

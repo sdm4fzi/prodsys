@@ -3,7 +3,7 @@ from typing import List, Dict
 
 from fastapi import APIRouter
 
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 
 from app.dependencies import prodsys_backend
 
@@ -14,31 +14,31 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=Dict[str, JsonProductionSystemAdapter])
-async def get_adapters(project_id: str) -> List[JsonProductionSystemAdapter]:
+@router.get("/", response_model=Dict[str, ProductionSystemData])
+async def get_adapters(project_id: str) -> List[ProductionSystemData]:
     return prodsys_backend.get_adapters(project_id)
 
 
-@router.post("/", response_model=JsonProductionSystemAdapter)
+@router.post("/", response_model=ProductionSystemData)
 async def create_adapter(
     project_id: str,
-    adapter: JsonProductionSystemAdapter,
-) -> JsonProductionSystemAdapter:
+    adapter: ProductionSystemData,
+) -> ProductionSystemData:
     return prodsys_backend.create_adapter(project_id=project_id, adapter=adapter)
 
 
 @router.get(
     "/{adapter_id}",
-    response_model=JsonProductionSystemAdapter,
+    response_model=ProductionSystemData,
 )
-async def get_adapter(project_id: str, adapter_id: str) -> JsonProductionSystemAdapter:
+async def get_adapter(project_id: str, adapter_id: str) -> ProductionSystemData:
     return prodsys_backend.get_adapter(project_id, adapter_id)
 
 
 @router.put("/{adapter_id}")
 async def update_adapter(
-    project_id: str, adapter_id: str, adapter: JsonProductionSystemAdapter
-) -> JsonProductionSystemAdapter:
+    project_id: str, adapter_id: str, adapter: ProductionSystemData
+) -> ProductionSystemData:
     return prodsys_backend.update_adapter(project_id, adapter_id, adapter)
 
 

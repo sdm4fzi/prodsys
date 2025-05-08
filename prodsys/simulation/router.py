@@ -28,7 +28,7 @@ from simpy import events
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, auxiliary, process
+    from prodsys.simulation import resources, product, sink, process
     from prodsys.factories import (
         resource_factory,
         sink_factory,
@@ -63,7 +63,7 @@ def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
 
 def get_item_to_transport(
     request_for_transport: Union[request.Request, request.AuxiliaryTransportRequest],
-) -> Union[product.Product, auxiliary.Auxiliary]:
+) -> Union[product.Product, primitive.Primitive]:
     """
     Returns the item to transport from a request.
 
@@ -180,7 +180,9 @@ class Router:
             executed_request.request_type != request.RequestType.TRANSPORT
             and executed_request.item.current_locatable != executed_request.target
         ):
-            transport_process_finished_event = self.request_transport(executed_request.item, executed_request.resource)
+            transport_process_finished_event = self.request_transport(
+                executed_request.item, executed_request.resource
+            )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
         executed_request.resource.controller.request(executed_request)
@@ -262,7 +264,7 @@ class Router:
         for auxiliary in product.auxiliaries:
             self.release_auxiliary(auxiliary)
 
-    def release_auxiliary(self, auxiliary: auxiliary.Auxiliary) -> None:
+    def release_auxiliary(self, auxiliary: primitive.Primitive) -> None:
         """
         Releases an auxiliary.
 
@@ -291,7 +293,9 @@ class Router:
             self.got_requested.succeed()
         return process_event
 
-    def request_transport(self, product: product.Product, target: Locatable) -> events.Event:
+    def request_transport(
+        self, product: product.Product, target: Locatable
+    ) -> events.Event:
         """
         Routes a product to perform the next transport by assigning a transport resource to the product.
 
@@ -317,7 +321,7 @@ class Router:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
         """
         possible_sinks = self.sink_factory.get_sinks_with_product_type(
-            product.product_data.product_type
+            product.data.type
         )
         chosen_sink = random.choice(possible_sinks)
         request_info = self.request_handler.add_transport_request(product, chosen_sink)
@@ -407,7 +411,7 @@ class Router:
         # TODO: either make a move request, if the resource is moveable, otherwise make a transport request
 
     def route_auxiliary_to_store(
-        self, auxiliary: auxiliary.Auxiliary
+        self, auxiliary: primitive.Primitive
     ) -> Generator[request.TransportResquest]:
         """
         Routes an auxiliary to a store.
@@ -434,7 +438,7 @@ class Router:
             list[process.ReworkProcess]: A list of possible rework processes for the product.
         """
         key = (
-            product.product_data.product_type,
+            product.data.type,
             failed_process.get_process_signature(),
         )
         return self.rework_compatibility.get(key, [])
@@ -510,4 +514,4 @@ ROUTING_HEURISTIC = {
 A dictionary of available routing heuristics.
 """
 
-from prodsys.simulation import request
+from prodsys.simulation import primitive, request

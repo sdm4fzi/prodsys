@@ -11,11 +11,11 @@ from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
 import pandas as pd
 
-from prodsys.simulation import state
+from prodsys.simulation import primitive, state
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, auxiliary
+    from prodsys.simulation import product
     from prodsys.factories import resource_factory
 
 
@@ -155,7 +155,7 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
 
 
 def post_monitor_auxiliary_info(
-    data: List[dict], auxiliary_info: auxiliary.AuxiliaryInfo
+    data: List[dict], auxiliary_info: primitive.AuxiliaryInfo
 ):
     """
     Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
@@ -180,6 +180,7 @@ class EventLogger(Logger):
     """
     Logger for logging events.
     """
+
     def __init__(self):
         """
         Initialize the EventLogger.
@@ -243,7 +244,7 @@ class EventLogger(Logger):
             post=post_monitor_product_info,
         )
 
-    def observe_terminal_auxiliary_states(self, auxiliary: auxiliary.Auxiliary):
+    def observe_terminal_auxiliary_states(self, auxiliary: primitive.Primitive):
         """
         Create path to observe the terminal auxiliary states.
 

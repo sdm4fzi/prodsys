@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 from prodsys.models.source_data import RoutingHeuristic
-from prodsys.simulation import request, process
+from prodsys.simulation import primitive, request, process
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, auxiliary, process
+    from prodsys.simulation import resources, product, sink, process
     from prodsys.factories import (
         resource_factory,
         sink_factory,
@@ -40,7 +40,7 @@ class ResourceCompatibilityKey:
     @classmethod
     def from_request(cls, request: request.Request) -> "ResourceCompatibilityKey":
         """Create a key from a request."""
-        product_type = request.product.product_data.product_type
+        product_type = request.product.data.type
         process_signature = request.process.get_process_signature()
         return cls(product_type=product_type, process_signature=process_signature)
 
@@ -126,7 +126,6 @@ class ProcessMatcher:
         return self.product_factory.create_product(
             product_data=product_data, routing_heuristic=RoutingHeuristic.FIFO
         )
-    
 
     def get_all_required_processes(
         self, product: product.Product
@@ -156,16 +155,14 @@ class ProcessMatcher:
         # Get dummy product for testing
         dummy_products: dict[str, product.Product] = {}
         for source in self.source_factory.sources.values():
-            product_type = source.product_data.product_type
+            product_type = source.product_data.type
             dummy_products[product_type] = self._create_dummy_product(
                 source.product_data
             )
 
         # Precompute production resource compatibility
         for product_type, dummy_product in dummy_products.items():
-            all_processes_of_product = self.get_all_required_processes(
-                dummy_product
-            )
+            all_processes_of_product = self.get_all_required_processes(dummy_product)
             for requested_process in all_processes_of_product:
                 for resource in self.resource_factory.get_production_resources():
                     dummy_production_request = request.Request(
@@ -325,7 +322,7 @@ class ProcessMatcher:
 
             elif isinstance(requested_process, process.CompoundProcess):
                 # For compound processes, check compatibility for each contained process
-                for process_id in requested_process.process_data.process_ids:
+                for process_id in requested_process.data.process_ids:
                     # Create a process signature for the contained process
                     process_signature = f"ProductionProcess:{process_id}"
                     key = ResourceCompatibilityKey(

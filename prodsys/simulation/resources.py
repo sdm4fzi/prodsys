@@ -17,6 +17,7 @@ from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
+
     # from prodsys.simulation.process import PROCESS_UNION
 
 from prodsys.models.resource_data import (
@@ -95,17 +96,16 @@ class Resource(resource.Resource):
             return self.capacity
         elif (
             self.reserved_setup
-            and self.current_setup.process_data.ID
-            != self.reserved_setup.process_data.ID
+            and self.current_setup.data.ID != self.reserved_setup.data.ID
         ):
-            current_setup_ID = self.reserved_setup.process_data.ID
+            current_setup_ID = self.reserved_setup.data.ID
         elif self.current_setup:
-            current_setup_ID = self.current_setup.process_data.ID
+            current_setup_ID = self.current_setup.data.ID
         length = len(
             [
                 state
                 for state in self.production_states
-                if state.state_data.ID == current_setup_ID
+                if state.data.ID == current_setup_ID
             ]
         )
         return length
@@ -276,11 +276,11 @@ class Resource(resource.Resource):
         possible_states = [
             actual_state
             for actual_state in self.production_states
-            if actual_state.state_data.ID == process.process_data.ID
+            if actual_state.data.ID == process.data.ID
         ]
         if not possible_states:
             raise ValueError(
-                f"Process {process.process_data.ID} not found in resource {self.data.ID}"
+                f"Process {process.data.ID} not found in resource {self.data.ID}"
             )
         return random.choice(possible_states)
 
@@ -300,11 +300,11 @@ class Resource(resource.Resource):
         possible_states = [
             actual_state
             for actual_state in self.production_states
-            if actual_state.state_data.ID == process.process_data.ID
+            if actual_state.data.ID == process.data.ID
         ]
         if not possible_states:
             raise ValueError(
-                f"Process {process.process_data.ID} not found in resource {self.data.ID}"
+                f"Process {process.data.ID} not found in resource {self.data.ID}"
             )
         return possible_states
 
@@ -319,7 +319,11 @@ class Resource(resource.Resource):
             Optional[state.State]: The state of the resource for the process.
         """
         for actual_state in self.production_states:
-            if actual_state.state_data.ID == process.process_data.ID and actual_state.process is None and not actual_state.reserved:
+            if (
+                actual_state.data.ID == process.data.ID
+                and actual_state.process is None
+                and not actual_state.reserved
+            ):
                 return actual_state
         return None
 
@@ -336,7 +340,7 @@ class Resource(resource.Resource):
         return [
             actual_state
             for actual_state in self.production_states
-            if actual_state.state_data.ID == process.process_data.ID
+            if actual_state.data.ID == process.data.ID
             and (actual_state.process is None or not actual_state.process.is_alive)
         ]
 
@@ -461,16 +465,15 @@ class Resource(resource.Resource):
         else:
             setup_to_compare = self.current_setup
 
-        if setup_to_compare.process_data.ID == _process.process_data.ID:
+        if setup_to_compare.data.ID == _process.data.ID:
             yield self.env.process(self.get_free_of_setups())
             yield self.env.process(util.trivial_process(self.env))
             return
 
         for input_state in self.setup_states:
             if (
-                input_state.state_data.target_setup == _process.process_data.ID
-                and input_state.state_data.origin_setup
-                == setup_to_compare.process_data.ID
+                input_state.data.target_setup == _process.data.ID
+                and input_state.data.origin_setup == setup_to_compare.data.ID
             ):
                 self.reserve_setup(_process)
                 yield self.env.process(self.get_free_of_setups())

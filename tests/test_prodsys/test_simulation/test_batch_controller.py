@@ -1,12 +1,12 @@
 import pytest
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 from prodsys.models import resource_data
 
 
 @pytest.fixture
-def batch_simulation_adapter() -> JsonProductionSystemAdapter:
+def batch_simulation_adapter() -> ProductionSystemData:
     t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")
 
     p1 = psx.ProductionProcess(t1, "p1")
@@ -15,7 +15,14 @@ def batch_simulation_adapter() -> JsonProductionSystemAdapter:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    machine = psx.ProductionResource([p1], [5, 0], capacity=2, ID="machine", controller=resource_data.ControllerEnum.BatchController, batch_size=2)
+    machine = psx.ProductionResource(
+        [p1],
+        [5, 0],
+        capacity=2,
+        ID="machine",
+        controller=resource_data.ControllerEnum.BatchController,
+        batch_size=2,
+    )
 
     transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
 
@@ -32,16 +39,17 @@ def batch_simulation_adapter() -> JsonProductionSystemAdapter:
     return adapter
 
 
-def test_initialize_simulation(batch_simulation_adapter: JsonProductionSystemAdapter):
+def test_initialize_simulation(batch_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=batch_simulation_adapter)
     runner_instance.initialize_simulation()
 
-def test_hashing(batch_simulation_adapter: JsonProductionSystemAdapter):
+
+def test_hashing(batch_simulation_adapter: ProductionSystemData):
     hash_str = batch_simulation_adapter.hash()
     assert hash_str == "2859c60df4a5dd05f362af67d1d43293"
 
 
-def test_run_simulation(batch_simulation_adapter: JsonProductionSystemAdapter):
+def test_run_simulation(batch_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(adapter=batch_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)

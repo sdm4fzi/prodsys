@@ -3,10 +3,17 @@ from __future__ import annotations
 from typing import Dict, List, TYPE_CHECKING
 
 from prodsys.models.time_model_data import TIME_MODEL_DATA, TimeModelEnum
-from prodsys.simulation.time_model import FunctionTimeModel, SampleTimeModel, ScheduledTimeModel, DistanceTimeModel, TIME_MODEL, TimeModel
+from prodsys.simulation.time_model import (
+    FunctionTimeModel,
+    SampleTimeModel,
+    ScheduledTimeModel,
+    DistanceTimeModel,
+    TIME_MODEL,
+    TimeModel,
+)
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
 
 TIME_MODEL_MAP = {
     "FunctionTimeModelData": FunctionTimeModel,
@@ -15,6 +22,7 @@ TIME_MODEL_MAP = {
     "DistanceTimeModelData": DistanceTimeModel,
 }
 
+
 class TimeModelFactory:
     """
     Factory class that creates and stores `prodsys.simulation` time model objects based on the given time model data according to `prodsys.models.time_model_data.TIME_MODEL_DATA`.
@@ -22,6 +30,7 @@ class TimeModelFactory:
     Returns:
         _type_: _description_
     """
+
     def __init__(self):
         """
         Initializes the TimeModelFactory with the given adapter.
@@ -48,7 +57,7 @@ class TimeModelFactory:
         else:
             raise ValueError(f"Unknown time model data class: {class_name}")
 
-    def create_time_models(self, adapter: adapter.ProductionSystemAdapter):
+    def create_time_models(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates time model objects based on the given adapter.
 
@@ -57,7 +66,7 @@ class TimeModelFactory:
         """
         for time_model_data in adapter.time_model_data:
             time_model_class = self.get_class(time_model_data)
-            
+
             time_model = time_model_class(time_model_data)
             self.time_models[time_model_data.ID] = time_model
 

@@ -5,7 +5,7 @@ from copy import deepcopy
 import logging
 from typing import Callable, List
 from prodsys import adapters
-from prodsys.adapters.adapter import (
+from prodsys.models.production_system_data import (
     add_default_queues_to_resources,
     get_possible_production_processes_IDs,
     get_possible_transport_processes_IDs,
@@ -33,8 +33,8 @@ def crossover(ind1, ind2):
     ind2[0].ID = str(uuid1())
 
     crossover_type = random.choice(["machine", "partial_machine", "transport_resource"])
-    adapter1: adapters.ProductionSystemAdapter = ind1[0]
-    adapter2: adapters.ProductionSystemAdapter = ind2[0]
+    adapter1: adapters.ProductionSystemData = ind1[0]
+    adapter2: adapters.ProductionSystemData = ind2[0]
     machines_1 = adapters.get_production_resources(adapter1)
     machines_2 = adapters.get_production_resources(adapter2)
     remove_queues_from_resources(machines_1 + machines_2)
@@ -64,7 +64,7 @@ def crossover(ind1, ind2):
     return ind1, ind2
 
 
-def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that adds a random machine to the production system.
 
@@ -116,7 +116,7 @@ def add_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that adds a random transport resource to the production system.
 
@@ -148,7 +148,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
     return True
 
 
-def add_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that adds a random process module to a random machine of the production system.
 
@@ -172,7 +172,7 @@ def add_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool
     return True
 
 
-def remove_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that removes a random machine from the production system.
 
@@ -190,7 +190,7 @@ def remove_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def remove_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that removes a random transport resource from the production system.
 
@@ -208,7 +208,7 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemAdapter) 
     return True
 
 
-def remove_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that removes a random process module from a random machine of the production system.
 
@@ -235,7 +235,7 @@ def remove_process_module(adapter_object: adapters.ProductionSystemAdapter) -> b
     return True
 
 
-def move_process_module(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that moves a random process module from a random machine to another random machine of the production system.
 
@@ -292,7 +292,7 @@ def update_production_resource_location(
     ]
 
 
-def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that moves a random machine to a random position of the production system.
 
@@ -317,7 +317,7 @@ def move_machine(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def add_auxiliary(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def add_auxiliary(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that adds a random auxiliary component to the production system.
 
@@ -341,7 +341,7 @@ def add_auxiliary(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def remove_auxiliary(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def remove_auxiliary(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that removes a random auxiliary component from the production system.
 
@@ -360,7 +360,7 @@ def remove_auxiliary(adapter_object: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def change_control_policy(adapter_object: adapters.ProductionSystemAdapter) -> bool:
+def change_control_policy(adapter_object: adapters.ProductionSystemData) -> bool:
     """
     Function that changes the control policy of a random resource of the production system.
 
@@ -390,7 +390,7 @@ def change_control_policy(adapter_object: adapters.ProductionSystemAdapter) -> b
     return True
 
 
-def change_routing_policy(adapter_object: adapters.ProductionSystemAdapter) -> None:
+def change_routing_policy(adapter_object: adapters.ProductionSystemData) -> None:
     """
     Function that changes the routing policy of a random source of the production system.
 
@@ -409,8 +409,8 @@ def change_routing_policy(adapter_object: adapters.ProductionSystemAdapter) -> N
 
 
 def get_mutation_operations(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> List[Callable[[adapters.ProductionSystemAdapter], bool]]:
+    adapter_object: adapters.ProductionSystemData,
+) -> List[Callable[[adapters.ProductionSystemData], bool]]:
     mutations_operations = []
     transformations = adapter_object.scenario_data.options.transformations
     for transformation in transformations:
@@ -431,7 +431,7 @@ def mutation(individual):
     return (individual,)
 
 
-def arrange_machines(adapter_object: adapters.ProductionSystemAdapter) -> None:
+def arrange_machines(adapter_object: adapters.ProductionSystemData) -> None:
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
@@ -440,8 +440,8 @@ def arrange_machines(adapter_object: adapters.ProductionSystemAdapter) -> None:
 
 
 def get_random_production_capacity(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that adds a random number of machines to the production system.
 
@@ -463,8 +463,8 @@ def get_random_production_capacity(
 
 
 def get_random_transport_capacity(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that adds a random number of transport resources to the production system.
 
@@ -488,8 +488,8 @@ def get_random_transport_capacity(
 
 
 def get_random_auxiliary_capacity(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     required_auxiliaries = get_required_auxiliaries(adapter_object)
     available_storage_capacities = {
         queue.ID: queue.capacity for queue in adapter_object.queue_data
@@ -509,8 +509,8 @@ def get_random_auxiliary_capacity(
 
 
 def get_random_layout(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that randomly arranges the machines of the production system.
 
@@ -529,8 +529,8 @@ def get_random_layout(
 
 
 def get_random_control_policies(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that randomly assigns control policies to the machines and transport resources of the production system.
 
@@ -556,8 +556,8 @@ def get_random_control_policies(
 
 
 def get_random_routing_logic(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that randomly assigns routing logics to the sources of the production system.
 
@@ -576,8 +576,8 @@ def get_random_routing_logic(
 
 
 def random_configuration(
-    baseline: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    baseline: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that creates a random configuration based on a baseline configuration.
 
@@ -599,14 +599,12 @@ def random_configuration(
         get_random_auxiliary_capacity(adapter_object)
     if (
         scenario_data.ReconfigurationEnum.LAYOUT in transformations
-        and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY
-        not in transformations
+        and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
     ):
         get_random_layout(adapter_object)
     if scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC in transformations and (
         scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
-        or scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY
-        not in transformations
+        or scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY not in transformations
     ):
         get_random_control_policies(adapter_object)
     if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
@@ -621,8 +619,8 @@ def random_configuration(
 
 
 def get_random_configuration_asserted(
-    baseline: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    baseline: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that creates a random configuration based on a baseline configuration.
 
@@ -646,10 +644,10 @@ def get_random_configuration_asserted(
 
 
 def random_configuration_with_initial_solution(
-    initial_adapters: List[adapters.ProductionSystemAdapter],
+    initial_adapters: List[adapters.ProductionSystemData],
     max_manipulations: int = 3,
     new_solution_probability: float = 0.1,
-) -> adapters.ProductionSystemAdapter:
+) -> adapters.ProductionSystemData:
     """
     Creates a new configuration based on a list of initial solutions.
     With probability new_solution_probability, a completely new configuration is generated.
@@ -679,9 +677,7 @@ def random_configuration_with_initial_solution(
 
         # Otherwise, start with a deep copy of the baseline and apply random manipulations.
         adapter_object = baseline.model_copy(deep=True)
-        num_manipulations = (
-            random.randint(0, max_manipulations)
-        )
+        num_manipulations = random.randint(0, max_manipulations)
 
         mutation_ops = get_mutation_operations(adapter_object)
         successful_mutations = 0
@@ -699,7 +695,9 @@ def random_configuration_with_initial_solution(
         adapter_object.ID = str(uuid1())
 
         # Fallback: if the manipulated configuration is not valid, generate a completely new one.
-        if successful_mutations == num_manipulations and check_valid_configuration(adapter_object, baseline):
+        if successful_mutations == num_manipulations and check_valid_configuration(
+            adapter_object, baseline
+        ):
             return adapter_object
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 1000 == 0:
@@ -709,19 +707,33 @@ def random_configuration_with_initial_solution(
 
 
 TRANSFORMATIONS = {
-    scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY: [add_machine, remove_machine, move_machine, change_control_policy, add_process_module, remove_process_module, move_process_module],
-    scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY: [add_transport_resource, remove_transport_resource],
-    scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY: [add_auxiliary, remove_auxiliary],
+    scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY: [
+        add_machine,
+        remove_machine,
+        move_machine,
+        change_control_policy,
+        add_process_module,
+        remove_process_module,
+        move_process_module,
+    ],
+    scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY: [
+        add_transport_resource,
+        remove_transport_resource,
+    ],
+    scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY: [
+        add_auxiliary,
+        remove_auxiliary,
+    ],
     scenario_data.ReconfigurationEnum.LAYOUT: [move_machine],
     scenario_data.ReconfigurationEnum.SETUP: [move_process_module],
     scenario_data.ReconfigurationEnum.SEQUENCING_LOGIC: [change_control_policy],
     scenario_data.ReconfigurationEnum.ROUTING_LOGIC: [change_routing_policy],
-    }
+}
 
 
 def add_transformation_operation(
     transformation: scenario_data.ReconfigurationEnum,
-    operation: Callable[[adapters.ProductionSystemAdapter], bool],
+    operation: Callable[[adapters.ProductionSystemData], bool],
 ) -> None:
     """
     Function that adds a transformation operation to the transformation dictionary.

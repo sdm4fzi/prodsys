@@ -1,16 +1,16 @@
 from typing import TYPE_CHECKING, Generator, List
-from prodsys.adapters import adapter
+from prodsys.models import production_system_data
 from prodsys.factories import (
     process_factory,
     queue_factory,
     resource_factory,
     sink_factory,
 )
-from prodsys.models import queue_data, auxiliary_data
+from prodsys.models import dependency_data, queue_data
 
-from prodsys.simulation import sim
+from prodsys.simulation import primitive, sim
 from prodsys.simulation import router as router_module
-from prodsys.simulation import auxiliary, logger
+from prodsys.simulation import logger
 
 
 from prodsys.models import source_data
@@ -20,6 +20,7 @@ class AuxiliaryFactory:
     """
     Factory class for creating and managing auxiliary objects in the production system.
     """
+
     def __init__(
         self,
         env: sim.Environment,
@@ -44,19 +45,19 @@ class AuxiliaryFactory:
         self.resource_factory = resource_factory
         self.sink_factory = sink_factory
 
-        self.auxiliaries: List[auxiliary.Auxiliary] = []
+        self.auxiliaries: List[primitive.Primitive] = []
         self.event_logger: logger.EventLogger = None
         self.router: router_module.Router = None
         self.auxiliary_counter = 0
 
-    def create_auxiliary(self, adapter: adapter.ProductionSystemAdapter):
+    def create_auxiliary(self, adapter: production_system_data.ProductionSystemData):
         """
         Create auxiliary objects based on the provided adapter's auxiliary data.
 
         Args:
             adapter (adapter.ProductionSystemAdapter): The adapter containing auxiliary data.
         """
-        for auxiliary_data in adapter.auxiliary_data:
+        for auxiliary_data in adapter.depdendency_data:
             for i, capacity_auxiliary_in_storage in enumerate(
                 auxiliary_data.quantity_in_storages
             ):
@@ -79,9 +80,9 @@ class AuxiliaryFactory:
 
     def add_auxiliary(
         self,
-        auxiliary_data: auxiliary_data.AuxiliaryData,
+        auxiliary_data: dependency_data.AuxiliaryData,
         storage: queue_data.StoreData,
-    ) -> auxiliary.Auxiliary:
+    ) -> primitive.Primitive:
         """
         Add a new auxiliary object to the factory.
 
@@ -114,7 +115,7 @@ class AuxiliaryFactory:
         values.update({"relevant_transport_processes": relevant_transport_processes})
         storage_from_queue_data = self.queue_factory.get_queue(storage.ID)
         values.update({"storage": storage_from_queue_data})
-        auxiliary_object = auxiliary.Auxiliary.model_validate(values)
+        auxiliary_object = primitive.Primitive.model_validate(values)
         auxiliary_object.auxiliary_router = self.router
         auxiliary_object.current_locatable = storage_from_queue_data
         auxiliary_object.init_got_free()
@@ -131,9 +132,9 @@ class AuxiliaryFactory:
         Place the auxiliary objects in the system.
         """
         for auxiliary in self.auxiliaries:
-            auxiliary.current_locatable.put(auxiliary.product_data)
+            auxiliary.current_locatable.put(auxiliary.data)
 
-    def get_auxiliary(self, ID: str) -> auxiliary.Auxiliary:
+    def get_auxiliary(self, ID: str) -> primitive.Primitive:
         """
         Get the auxiliary object with the specified ID.
 
@@ -146,7 +147,7 @@ class AuxiliaryFactory:
         Raises:
             IndexError: If no auxiliary object with the specified ID is found.
         """
-        return [s for s in self.auxiliaries if s.product_data.ID == ID].pop()
+        return [s for s in self.auxiliaries if s.data.ID == ID].pop()
 
 
 # AuxiliaryFactory.model_rebuild()

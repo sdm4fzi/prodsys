@@ -389,6 +389,20 @@
                 "P1"
             ],
             "transport_process": "TP1"
+        },
+        {
+            "ID": "Product_3",
+            "description": "Product 3",
+            "product_type": "Product_3",
+            "processes": {
+                "P1": [
+                    "P2",
+                    "P3"
+                ],
+                "P2": [],
+                "P3": []
+            },
+            "transport_process": "TP1"
         }
     ],
     "sink_data": [
@@ -412,6 +426,18 @@
                 50.0
             ],
             "product_type": "Product_2",
+            "input_queues": [
+                "SinkQueue"
+            ]
+        },
+        {
+            "ID": "SK3",
+            "description": "Sink 3",
+            "location": [
+                45.0,
+                50.0
+            ],
+            "product_type": "Product_3",
             "input_queues": [
                 "SinkQueue"
             ]
@@ -440,6 +466,20 @@
                 30.0
             ],
             "product_type": "Product_2",
+            "time_model_id": "function_time_model_4",
+            "routing_heuristic": "shortest_queue",
+            "output_queues": [
+                "SourceQueue"
+            ]
+        },
+        {
+            "ID": "S3",
+            "description": "Source 3",
+            "location": [
+                40.0,
+                30.0
+            ],
+            "product_type": "Product_3",
             "time_model_id": "function_time_model_4",
             "routing_heuristic": "shortest_queue",
             "output_queues": [

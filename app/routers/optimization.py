@@ -10,8 +10,8 @@ import json
 import prodsys
 from prodsys.util import util
 from prodsys.optimization import (
-    simulated_annealing,
-    tabu_search,
+    simulated_anprodsys.adapters,
+    taadapterh,
     math_opt,
     optimization_analysis,
 )
@@ -320,10 +320,10 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 @router.get(
     "/{solution_id}",
     tags=["optimization"],
-    response_model=prodsys.adapters.JsonProductionSystemAdapter,
+    response_model=adapter.ProductionSystemData,
 )
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
-) -> prodsys.adapters.JsonProductionSystemAdapter:
+) -> adapter.ProductionSystemData:
     optimizer = get_optimizer(project_id, adapter_id)
     return optimizer.get_optimization_result_configuration(solution_id)

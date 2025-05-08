@@ -6,7 +6,7 @@ from prodsys.models.node_data import NodeData
 from prodsys.simulation import node
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
     from prodsys.simulation import sim
 
 
@@ -22,7 +22,7 @@ class NodeFactory:
         self.env = env
         self.nodes = []
 
-    def create_nodes(self, adapter: adapter.ProductionSystemAdapter):
+    def create_nodes(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates node objects based on the given adapter.
 
