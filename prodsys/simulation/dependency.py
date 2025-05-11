@@ -38,12 +38,18 @@ class DependedEntity(Protocol):
         Binds the depended entity to the dependency.
         """
         pass
+        # When binding the items, they should be transport to the location of destination 
+        # they should go in a status so that they are not used elsewhere, until release is called.
 
     def release(self):
         """
         Releases the product object.
         """
         pass
+        # release should make DependedEntity available for other processes
+        # called by the dependant 
+
+    # TODO: use these function and consider them for state / product_info logging, also add logging to primitives
 
 class Dependency:
     """
