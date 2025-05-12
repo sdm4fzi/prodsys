@@ -10,6 +10,7 @@ import time
 logger = logging.getLogger(__name__)
 
 
+from prodsys.factories import primitive_factory
 from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import primitive, request, process
 
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from prodsys.factories import (
         resource_factory,
         sink_factory,
-        auxiliary_factory,
         product_factory,
         source_factory,
     )
@@ -40,7 +40,7 @@ class ResourceCompatibilityKey:
     @classmethod
     def from_request(cls, request: request.Request) -> "ResourceCompatibilityKey":
         """Create a key from a request."""
-        product_type = request.product.data.type
+        product_type = request.requesting_item.data.type
         process_signature = request.process.get_process_signature()
         return cls(product_type=product_type, process_signature=process_signature)
 
@@ -167,7 +167,7 @@ class ProcessMatcher:
                 for resource in self.resource_factory.get_production_resources():
                     dummy_production_request = request.Request(
                         process=requested_process,
-                        item=dummy_product,
+                        requesting_item=dummy_product,
                         resource=resource,
                         request_type=request.RequestType.PRODUCTION,
                     )
@@ -203,7 +203,7 @@ class ProcessMatcher:
 
                             dummy_transport_request = request.Request(
                                 process=requested_process,
-                                item=dummy_product,
+                                requesting_item=dummy_product,
                                 resource=transport_resource,
                                 origin=origin,
                                 target=target,

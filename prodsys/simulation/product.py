@@ -4,6 +4,7 @@ from typing import Callable, Union, Optional, Generator, List
 import logging
 
 from prodsys.models.source_data import RoutingHeuristic
+from prodsys.simulation.dependency import DependedEntity, Dependency
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,7 @@ class Product:
         transport_process (process.Process): Transport process that represents the required transport processes.
         product_router (router.Router): Router that is used to route the product object.
     """
+
     # TODO: unify API with Primitive somehow (also for logging)
 
     def __init__(
@@ -183,6 +185,9 @@ class Product:
         self.product_router = product_router
         self.routing_heuristic = routing_heuristic
 
+        self.dependencies: List[Dependency] = []
+        self.depended_entities: List[DependedEntity] = []
+
         self.current_locatable: Locatable = None
         self.current_process: Optional[process.PROCESS_UNION] = None
         self.next_possible_processes: Optional[list[process.PROCESS_UNION]] = None
@@ -194,10 +199,8 @@ class Product:
             list[process.PROCESS_UNION, list[ReworkProcess]]
         ] = []
         self.process: events.Process = None
-        self.product_info: ProductInfo = ProductInfo()
+        self.info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
-        self.has_auxiliaries: bool = has_auxiliaries
-        self.auxiliaries: List[primitive.Primitive] = []
 
     def update_location(self, locatable: Locatable):
         """
@@ -209,42 +212,36 @@ class Product:
         self.current_locatable = locatable
 
     def process_product(self):
-        self.product_info.log_create_product(
+        self.info.log_create_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         """
         Processes the product object in a simpy process. The product object is processed after creation until all required production processes are performed and it reaches a sink.
         """
         self.set_next_possible_production_processes()
-        if self.has_auxiliaries:
-            auxiliaries_received_event = self.env.process(
-                self.product_router.route_auxiliaries_to_product(self)
+        if self.dependencies:
+            dependencies_ready_events = (
+                self.product_router.get_dependencies_for_product_processing(self)
             )
-            yield auxiliaries_received_event
+            for dependency in dependencies_ready_events:
+                yield dependency
 
         while self.next_possible_processes:
             executed_process_event = self.product_router.request_processing(self)
             yield executed_process_event
-            # TODO: move logging to appropriate functions in controller or so
-            # self.product_info.log_end_process(
-            #     resource=processing_request.resource,
-            #     _product=self,
-            #     event_time=self.env.now,
-            #     state_type=type_,
-            # )
             if isinstance(self.current_process, process.ReworkProcess):
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
         arrived_at_sink_event = self.product_router.route_product_to_sink(self)
         yield arrived_at_sink_event
-        self.product_info.log_finish_product(
+        self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
         self.current_locatable.register_finished_product(self)
 
-        if self.has_auxiliaries:
-            self.product_router.release_auxiliaries_from_product(self)
+        for dependency in self.depended_entities:
+            dependency.release()
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """

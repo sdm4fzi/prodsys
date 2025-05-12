@@ -52,7 +52,7 @@ def observe_input_queue(
                 activity="waiting",
                 process=product.next_possible_processes.process_data.ID,
                 next_resource=product.current_locatable.data.ID,
-                waiting_since=product.product_info.event_time,
+                waiting_since=product.info.event_time,
             )
             queue_observation.append(production_process_info)
 
@@ -72,7 +72,7 @@ def observe_output_queue(
                 activity="waiting",
                 process=product.next_possible_processes,
                 next_resource=product.current_locatable,
-                waiting_since=product.product_info.event_time,
+                waiting_since=product.info.event_time,
             )
             queue_observation.append(production_process_info)
 

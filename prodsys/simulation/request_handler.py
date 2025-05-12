@@ -108,7 +108,7 @@ class RequestHandler:
         if hasattr(item, "product_data"):
             request_type = request.RequestType.PRODUCTION
         else:
-            request_type = request.RequestType.AUXILIARY
+            request_type = request.RequestType.PRIMITIVE_DEPENDENCY
 
         request_completion_event = simpy.Event(item.env)
         request_info = RequestInfo(
@@ -185,13 +185,13 @@ class RequestHandler:
         """
         if allocated_request.request_type == request.RequestType.TRANSPORT:
             request_info_key = get_transport_request_info_key(
-                allocated_request.item,
+                allocated_request.requesting_item,
                 allocated_request.origin,
                 allocated_request.target,
             )
         else:
-            request_info_key = get_request_info_key(allocated_request.item)
-        allocated_request.product.current_process = allocated_request.process
+            request_info_key = get_request_info_key(allocated_request.requesting_item)
+        allocated_request.requesting_item.current_process = allocated_request.process
         self.request_infos[request_info_key].request_state = "routed"
 
     def mark_completion(self, completed_request: request.Request) -> None:
@@ -203,12 +203,12 @@ class RequestHandler:
         """
         if completed_request.request_type == request.RequestType.TRANSPORT:
             request_info_key = get_transport_request_info_key(
-                completed_request.item,
+                completed_request.requesting_item,
                 completed_request.origin,
                 completed_request.target,
             )
         else:
-            request_info_key = get_request_info_key(completed_request.item)
+            request_info_key = get_request_info_key(completed_request.requesting_item)
         self.request_infos[request_info_key].request_state = "completed"
 
     def create_request(
@@ -236,7 +236,7 @@ class RequestHandler:
             route = None
 
         return request.Request(
-            item=request_info.item,
+            requesting_item=request_info.item,
             resource=resource,
             process=process,
             origin=request_info.origin,

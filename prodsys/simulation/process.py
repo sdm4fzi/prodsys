@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
 import typing
 
+from prodsys.simulation.dependency import Dependency
+
 if TYPE_CHECKING:
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.source import Source
@@ -40,6 +42,8 @@ class Process(ABC):
         self.time_model = time_model
         self.failure_rate = failure_rate
         self.auxiliaries = auxiliaries if auxiliaries else []
+        self.dependencies: List[Dependency] = []
+
 
     @abstractmethod
     def matches_request(self, request: request_module.Request) -> bool:

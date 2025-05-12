@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 from hashlib import md5
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 
 from prodsys.models.core_asset import CoreAsset
@@ -99,3 +99,10 @@ class PrimitiveDependencyData(DependencyData):
         return md5(
             "".join([self.dependency_type, primitive_hash]).encode("utf-8")
         ).hexdigest()
+
+
+DEPENDENCY_TYPES = Union[
+    ProcessDependencyData,
+    ResourceDependencyData,
+    PrimitiveDependencyData,
+]

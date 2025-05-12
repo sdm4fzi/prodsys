@@ -11,7 +11,7 @@ from prodsys.models import production_system_data
 from prodsys.simulation import sim, logger
 from prodsys.factories import (
     link_transport_process_updater,
-    auxiliary_factory,
+    primitive_factory,
     state_factory,
     time_model_factory,
     process_factory,
@@ -112,7 +112,7 @@ class Runner:
         self.state_factory: state_factory.StateFactory = None
         self.process_factory: process_factory.ProcessFactory = None
         self.queue_factory: queue_factory.QueueFactory = None
-        self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = None
+        self.auxiliary_factory: primitive_factory.PrimitiveFactory = None
         self.resource_factory: resource_factory.ResourceFactory = None
         self.node_factory: node_factory.NodeFactory = None
         self.sink_factory: sink_factory.SinkFactory = None
@@ -172,7 +172,7 @@ class Runner:
 
             self.sink_factory.create_sinks(self.adapter)
 
-            self.auxiliary_factory = auxiliary_factory.AuxiliaryFactory(
+            self.auxiliary_factory = primitive_factory.PrimitiveFactory(
                 env=self.env,
                 process_factory=self.process_factory,
                 queue_factory=self.queue_factory,
@@ -185,7 +185,7 @@ class Runner:
 
             self.product_factory.event_logger = self.event_logger
             self.auxiliary_factory.event_logger = self.event_logger
-            self.auxiliary_factory.create_auxiliary(self.adapter)
+            self.auxiliary_factory.create_primitive(self.adapter)
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
@@ -220,7 +220,7 @@ class Runner:
             self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
-            self.env.process(router.routing_loop())
+            self.env.process(router.resource_routing_loop())
 
     def run(self, time_range: int):
         """
@@ -283,7 +283,9 @@ class Runner:
         kpi_visualization.plot_production_flow_rate_per_product(p)
         transport_resource_ids = [
             resource_data.ID
-            for resource_data in production_system_data.get_transport_resources(self.adapter)
+            for resource_data in production_system_data.get_transport_resources(
+                self.adapter
+            )
         ]
         kpi_visualization.plot_transport_utilization_over_time(
             p, transport_resource_ids

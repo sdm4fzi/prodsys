@@ -8,6 +8,8 @@ import random
 
 import logging
 
+from prodsys.simulation.dependency import DependedEntity, Dependency
+
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,9 @@ class Resource(resource.Resource):
         self.production_states = production_states if production_states else []
         self.setup_states = setup_states if setup_states else []
         self.charging_states = charging_states if charging_states else []
+
+        self.dependencies: List[Dependency] = []
+        self.depended_entities: List[DependedEntity] = []
 
         self.active = events.Event(self.env).succeed()
         self.current_setup: PROCESS_UNION = None
