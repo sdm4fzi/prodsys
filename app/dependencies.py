@@ -11,7 +11,6 @@ from app.models.progress_report import ProgressReport
 import prodsys
 import prodsys.simulation
 import prodsys.simulation.sim
-from prodsys.util.post_processing import PostProcessor
 from prodsys.optimization.optimizer import Optimizer
 
 
@@ -119,7 +118,6 @@ def prepare_adapter_from_optimization(
     baseline_adapter_id: str,
     solution_id: str,
 ):
-    prodsys_backend.delete_post_processor(project_id, baseline_adapter_id)
     origin_adapter = prodsys_backend.get_adapter(project_id, baseline_adapter_id)
     adapter_object_optimized.scenario_data = origin_adapter.scenario_data
     adapter_object_optimized.ID = solution_id

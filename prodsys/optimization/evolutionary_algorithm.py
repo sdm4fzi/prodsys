@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 import warnings
 import logging
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from deap import algorithms, base, creator, tools
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from prodsys.simulation import sim
 from prodsys import adapters
@@ -45,6 +45,22 @@ creator.create("FitnessMax", base.Fitness, weights=(1, 1, 1))  # als Tupel
 creator.create("Individual", list, fitness=creator.FitnessMax)
 
 
+def assert_divisible_by_four(n: int) -> int:
+    """
+    Check if a number is divisible by four.
+
+    Args:
+        n (int): The number to check.
+
+    Returns:
+        bool: True if the number is divisible by four, False otherwise.
+    """
+    if not n % 4 == 0:
+        raise ValueError(
+            f"Population size must be divisible by four. Given: {n}"
+        )
+    return n
+
 class EvolutionaryAlgorithmHyperparameters(BaseModel):
     """
     Hyperparameters for configuration optimization using an evolutionary algorithm.
@@ -61,7 +77,7 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
 
     seed: int = Field(0, description="Seed for the random number generator.")
     number_of_generations: int = 10
-    population_size: int = 10
+    population_size: Annotated[int, BeforeValidator(assert_divisible_by_four)] = 8
     mutation_rate: float = 0.1
     crossover_rate: float = 0.1
     number_of_seeds: int = 1

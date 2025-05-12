@@ -107,19 +107,20 @@ def get_pareto_solutions_from_result_files(
         List[str]: List of IDs of the pareto efficient solutions.
     """
     df = transform_optimization_results_to_df(optimization_results, label="optimizer")
-    df = df.drop_duplicates(
-        subset=["agg_fitness", "cost", "throughput", "wip", "optimizer"]
-    )
+    relevant_cols = ["agg_fitness", "cost", "throughput", "wip", "optimizer"]
+    relevant_cols = [col for col in relevant_cols if col in df.columns]
+    df = df.drop_duplicates(subset=relevant_cols)
     # TODO: update here method to not use all kpis but those which are in optimizarion_results[generation][ID].objective_names
-    df["cost"] = df["cost"].astype(float)
+    if "cost" in relevant_cols:
+        df["cost"] = df["cost"].astype(float)
     df["agg_fitness"] = df["agg_fitness"].astype(float)
     # df = df.loc[df["wip"] < 150]
     # df = df.loc[df["throughput"] > 100]
     # # df = df.loc[df["throughput_time"] < 100]
-    columns = ["cost", "throughput", "wip"]
-    # columns = ['throughput_time', 'throughput']
-    df_for_pareto = df[columns].copy()
-    df_for_pareto["throughput"] = -df_for_pareto["throughput"]
+    pareto_columns = [col for col in relevant_cols if col not in ["agg_fitness", "optimizer"]]
+    df_for_pareto = df[pareto_columns].copy()
+    if "throughput" in pareto_columns:
+        df_for_pareto["throughput"] = -df_for_pareto["throughput"]
     is_efficient = is_pareto_efficient(df_for_pareto.values)
     df["is_efficient"] = is_efficient
     return df.loc[df["is_efficient"]]["ID"].to_list()

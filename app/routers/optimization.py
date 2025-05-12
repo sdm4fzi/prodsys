@@ -111,7 +111,7 @@ async def optimize(
     )
     background_tasks.add_task(optimizer.optimize)
 
-    return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
+    return f"Succesfully started optimizing configuration of {adapter_id} in {project_id}."
 
 
 @router.get(
