@@ -39,7 +39,7 @@ class SourceFactory:
         time_model_factory: time_model_factory.TimeModelFactory,
         queue_factory: queue_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
-        auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
+        auxiliary_factory: primitive_factory.PrimitiveFactory,
         sink_factory: sink_factory.SinkFactory,
     ):
         self.env = env
@@ -140,10 +140,10 @@ class SourceFactory:
 
 
 from prodsys.factories import (
+    primitive_factory,
     product_factory,
     resource_factory,
     queue_factory,
     time_model_factory,
-    auxiliary_factory,
     sink_factory,
 )

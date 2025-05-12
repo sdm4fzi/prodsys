@@ -155,7 +155,7 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
 
 
 def post_monitor_auxiliary_info(
-    data: List[dict], auxiliary_info: primitive.AuxiliaryInfo
+    data: List[dict], auxiliary_info: primitive.PrimitiveInfo
 ):
     """
     Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
@@ -239,7 +239,7 @@ class EventLogger(Logger):
         """
         self.register_patch(
             self.event_data,
-            product.product_info,
+            product.info,
             attr=["log_create_product", "log_finish_product"],
             post=post_monitor_product_info,
         )
@@ -253,7 +253,7 @@ class EventLogger(Logger):
         """
         self.register_patch(
             self.event_data,
-            auxiliary.auxiliary_info,
+            auxiliary.primitive_info,
             attr=[
                 "log_create_auxiliary",
                 "log_start_auxiliary_usage",

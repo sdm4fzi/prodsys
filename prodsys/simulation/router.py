@@ -19,6 +19,8 @@ import time
 
 import simpy
 
+from prodsys.factories import primitive_factory
+from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.process_matcher import ProcessMatcher
 from prodsys.simulation.request_handler import RequestHandler
 
@@ -32,7 +34,6 @@ if TYPE_CHECKING:
     from prodsys.factories import (
         resource_factory,
         sink_factory,
-        auxiliary_factory,
         product_factory,
         source_factory,
     )
@@ -55,10 +56,10 @@ def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
     """
     if not requests:
         raise ValueError("No requests found to retrieve an environment from.")
-    if requests[0].product:
-        return requests[0].product.env
+    if requests[0].requesting_item:
+        return requests[0].requesting_item.env
     else:
-        return requests[0].auxiliary.env
+        return requests[0].primitive.env
 
 
 def get_item_to_transport(
@@ -74,8 +75,8 @@ def get_item_to_transport(
         Union[product.Product, auxiliary.Auxiliary]: The item to transport.
     """
     if isinstance(request_for_transport, request.AuxiliaryTransportRequest):
-        return request_for_transport.auxiliary
-    return request_for_transport.product
+        return request_for_transport.primitive
+    return request_for_transport.requesting_item
 
 
 class Router:
@@ -93,14 +94,14 @@ class Router:
         env: simpy.Environment,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
-        auxiliary_factory: auxiliary_factory.AuxiliaryFactory,
+        auxiliary_factory: primitive_factory.PrimitiveFactory,
         product_factory: Optional[product_factory.ProductFactory] = None,
         source_factory: Optional[source_factory.SourceFactory] = None,
     ):
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
-        self.auxiliary_factory: auxiliary_factory.AuxiliaryFactory = auxiliary_factory
+        self.auxiliary_factory: primitive_factory.PrimitiveFactory = auxiliary_factory
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         self.source_factory: Optional[source_factory.SourceFactory] = source_factory
 
@@ -140,7 +141,7 @@ class Router:
         if not self.resource_got_free.triggered:
             self.resource_got_free.succeed()
 
-    def routing_loop(self) -> Generator[None, None, None]:
+    def resource_routing_loop(self) -> Generator[None, None, None]:
         """
         Main allocation loop for the router.
         This method should be called in a separate thread to run the allocation process.
@@ -171,21 +172,45 @@ class Router:
                 self.request_handler.mark_routing(request)
                 self.env.process(self.execute_routing(request))
 
+    def primitive_routing_loop(self) -> Generator[None, None, None]:
+        """
+        Main allocation loop for the router.
+        This method should be called in a separate thread to run the allocation process.
+        """
+        while True:
+            yield self.got_primitive_request
+            self.got_primitive_request = events.Event(self.env)
+            free_requests = self.request_handler.get_next_primitive_to_route()
+            if not free_requests:
+                break
+            self.env.update_progress_bar()
+            request: request.Request = self.route_request(free_requests)
+            self.request_handler.mark_routing(request)
+            self.env.process(self.execute_routing(request))
+
     def execute_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
-        # reserve input queues
-        # reserve transport to resource with a transport request
         if (
             executed_request.request_type != request.RequestType.TRANSPORT
-            and executed_request.item.current_locatable != executed_request.target
+            and executed_request.requesting_item.current_locatable
+            != executed_request.target
         ):
             transport_process_finished_event = self.request_transport(
-                executed_request.item, executed_request.resource
+                executed_request.requesting_item, executed_request.resource
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
         executed_request.resource.controller.request(executed_request)
+        if executed_request.dependencies:
+            yield executed_request.dependencies_requested
+            dependency_ready_events = self.get_dependencies_for_execution(
+                resource=executed_request.resource,
+                process=executed_request.process,
+            )
+            for dependency_ready_event in dependency_ready_events:
+                yield dependency_ready_event
+            executed_request.dependencies_ready.succeed()
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
@@ -198,7 +223,7 @@ class Router:
             request.Request: The allocated request.
         """
         # Determine based on the routing heuristic
-        routing_heuristic = free_requests[0].product.routing_heuristic
+        routing_heuristic = free_requests[0].requesting_item.routing_heuristic
         routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
 
@@ -216,53 +241,57 @@ class Router:
         routed_request.target_queue = target_queue
         return routed_request
 
-    def route_auxiliaries_to_product(
+    def get_dependencies_for_product_processing(
         self, product: product.Product
-    ) -> Generator[None, None, None]:
+    ) -> List[simpy.Event]:
         """
-        Returns a list of auxiliaries for a product.
+        Routes all dependencies for processing to a product. Covers currently only primitive dependencies (workpiece carriers, e.g.)
 
         Args:
             product (product.Product): The product.
 
         Returns:
-            List[auxiliary.Auxiliary]: The list of auxiliaries.
+            Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
-        # TODO: this function allocates all required auxiliaries, transports them to the product and locks them
-        pass
+        dependency_ready_events = []
+        for dependency in product.dependencies:
+            assert (
+                dependency.data.dependency_type == DependencyType.PRIMITIVE
+            ), f"Only primitive dependencies are supported for now. Found {dependency.dependency_type} for {product.data.ID}."
+            dependency_ready = self.request_handler.add_dependency_request(
+                requesting_item=product, dependency=dependency
+            )
+            dependency_ready_events.append(dependency_ready)
+        return dependency_ready_events
 
-    def get_auxiliary_for_process(
-        self, product: product.Product, process: process.Process
-    ) -> Generator[None, None, None]:
+    def get_dependencies_for_execution(
+        self, resource: resources.Resource, process: process.Process
+    ) -> List[simpy.Event]:
         """
-        Returns an auxiliary for a process.
-
-        """
-        # TODO: this function should select auxiliaries for the process and bring them to the location and lock them
-        pass
-
-    def release_auxiliaries_from_process(
-        self, product: product.Product, process: process.Process
-    ) -> None:
-        """
-        Releases all auxiliaries from a process.
-
+        Routes all dependencies for processing to a resource. Covers currently only primitive dependencies (workpiece carriers, e.g.)
         Args:
-            product (product.Product): The product.
-            process (process.Process): The process.
+            resource (resources.Resource): The resource.
+        Returns:
+            Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
-        for auxiliary in process.auxiliaries:
-            self.release_auxiliary(auxiliary)
+        # could be primitives, processes or resources
+        # for primitives, same logic as for products
+        # for processes, find a suiting resource and route it to the resource
+        # for resources, find resource and route it to this resource
 
-    def release_auxiliaries_from_product(self, product: product.Product) -> None:
-        """
-        Releases all auxiliaries from a product.
-
-        Args:
-            product (product.Product): The product.
-        """
-        for auxiliary in product.auxiliaries:
-            self.release_auxiliary(auxiliary)
+        # only one object can be immovable, the other has to be movable -> go always to the immovable one
+        dependency_ready_events = []
+        for dependency in resource.dependencies:
+            dependency_ready = self.request_handler.add_dependency_request(
+                requesting_item=resource, dependency=dependency
+            )
+            dependency_ready_events.append(dependency_ready)
+        for dependency in process.dependencies:
+            dependency_ready = self.request_handler.add_dependency_request(
+                requesting_item=resource, dependency=dependency
+            )
+            dependency_ready_events.append(dependency_ready)
+        return dependency_ready_events
 
     def release_auxiliary(self, auxiliary: primitive.Primitive) -> None:
         """

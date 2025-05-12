@@ -155,11 +155,12 @@ def get_requets_handler(
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK
     ):
-        return ProductionProcessHandler(request.product.env)
+        return ProductionProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.TRANSPORT:
-        return TransportProcessHandler(request.product.env)
-    elif request.request_type == request_module.RequestType.AUXILIARY:
-        return AuxiliaryProcessHandler()
+        return TransportProcessHandler(request.requesting_item.env)
+    elif request.request_type == request_module.RequestType.PROCESS_DEPENDENCY or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+        # TODO: implement this handler that just waits until the release method of the resource and processes is called.
+        return DependencyProcessHandler()
     elif request.request_type == request_module.RequestType.MOVE:
         return MoveProcessHandler()
     else:
@@ -221,7 +222,7 @@ class ProductionProcessHandler:
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
-        product = process_request.get_product()
+        product = process_request.get_item()
 
         # TODO: wait here until all auxiliaries are available for the process
         # auxiliaries = yield from product.product_router.get_auxiliaries(process_request)
@@ -230,6 +231,7 @@ class ProductionProcessHandler:
             process_request.target_queue,
         )
 
+        yield process_request.dependencies_ready
         yield from resource.setup(process)
         with resource.request() as req:
             yield req
@@ -244,11 +246,9 @@ class ProductionProcessHandler:
 
             yield from self.put_product_to_output_queue(target_queue, product)
             resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
-            # TODO: add auxiliary logic again
-            # for auxiliary in auxiliaries:
-            #     auxiliary.release()
             product.product_router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
+            process_request.release_dependencies()
 
     def run_process(
         self,
@@ -266,7 +266,7 @@ class ProductionProcessHandler:
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
         )
-        target_product.product_info.log_start_process(
+        target_product.info.log_start_process(
             self.resource,
             target_product,
             self.env.now,
@@ -277,6 +277,12 @@ class ProductionProcessHandler:
         self.handle_rework_required(target_product, process)
 
         yield input_state.process
+        target_product.info.log_end_process(
+            self.resource,
+            target_product,
+            self.env.now,
+            state.StateTypeEnum.production,
+        )
 
     def handle_rework_required(
         self, product: product.Product, process: process.Process
@@ -382,7 +388,7 @@ class TransportProcessHandler:
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
-        product = process_request.get_product()
+        product = process_request.get_item()
         origin = process_request.get_origin()
         target = process_request.get_target()
 
@@ -392,7 +398,8 @@ class TransportProcessHandler:
         )
         route_to_target = process_request.get_route()
 
-        yield self.env.process(resource.setup(process))
+        yield from process_request.request_dependencies()
+        yield from resource.setup(process)
         if not resource.current_locatable:
             resource.set_location(origin)
         with resource.request() as req:
@@ -426,11 +433,13 @@ class TransportProcessHandler:
 
             product.product_router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
+            for dependency in resource.depended_entities:
+                dependency.release()
 
     def run_transport(
         self,
         transport_state: state.State,
-        product: product.Product,
+        item: Union[product.Product, primitive.Primitive],
         route: List[product.Locatable],
         empty_transport: bool,
     ) -> Generator:
@@ -458,7 +467,7 @@ class TransportProcessHandler:
             transport_state.process = self.env.process(
                 self.run_process(
                     transport_state,
-                    product,
+                    item,
                     target=next_location,
                     empty_transport=empty_transport,
                     initial_transport_step=initial_transport_step,
@@ -497,7 +506,7 @@ class TransportProcessHandler:
     def run_process(
         self,
         input_state: state.TransportState,
-        product: product.Product,
+        item: Union[product.Product, primitive.Primitive],
         target: product.Locatable,
         empty_transport: bool,
         initial_transport_step: bool,
@@ -508,7 +517,7 @@ class TransportProcessHandler:
 
         Args:
             input_state (state.State): The transport state of the process.
-            product (product.Product): The product that is transported.
+            item (Union[product.Product, primitive.Primitive]): The product that is transported.
             target (product.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             initial_transport_step (bool): If this is the initial transport step.
@@ -526,20 +535,12 @@ class TransportProcessHandler:
             state.StateTypeEnum.transport,
             empty_transport=empty_transport,
         )
-        if not hasattr(product, "product_info"):
-            product.auxiliary_info.log_start_process(
-                input_state.resource,
-                product,
-                self.env.now,
-                state.StateTypeEnum.transport,
-            )
-        else:
-            product.product_info.log_start_process(
-                input_state.resource,
-                product,
-                self.env.now,
-                state.StateTypeEnum.transport,
-            )
+        item.info.log_start_process(
+            input_state.resource,
+            product,
+            self.env.now,
+            state.StateTypeEnum.transport,
+        )
         target_location = self.get_target_location(
             target, empty_transport, last_transport_step=last_transport_step
         )
@@ -569,7 +570,7 @@ class TransportProcessHandler:
             )
             if not route_to_origin:
                 raise ValueError(
-                    f"Route to origin for transport of {process_request.product.data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
+                    f"Route to origin for transport of {process_request.requesting_item.data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
                 )
             return route_to_origin
         else:
@@ -581,7 +582,7 @@ class MoveProcessHandler:
     pass
 
 
-class AuxiliaryProcessHandler:
+class DependencyProcessHandler:
     # TODO: this function just waits for the auxiliaried process to be over
     pass
 
@@ -741,7 +742,7 @@ class BatchController(Controller):
                 while len(events) < batch_size:
                     event = queue.get(
                         filter=lambda item: item.type
-                        == process_request.get_product().data.type
+                        == process_request.get_item().data.type
                     )
                     if not event:
                         break
@@ -868,11 +869,12 @@ class BatchController(Controller):
         self.reserved_requests_count -= 1
         resource = process_request.get_resource()
         process = process_request.get_process()
-        product = process_request.get_product()
+        product = process_request.get_item()
         products = []
         production_states = []
 
-        yield self.env.process(resource.setup(process))
+        yield process_request.dependencies_ready
+        yield from resource.setup(process)
         with resource.request() as req:
             yield req
             product_retrieval_events = self.get_next_product_for_process(
@@ -929,7 +931,7 @@ class BatchController(Controller):
 
         for product, input_state in zip(products, input_states):
             input_state.state_info.log_product(product, state.StateTypeEnum.production)
-            product.product_info.log_start_process(
+            product.info.log_start_process(
                 self.resource,
                 product,
                 self.env.now,

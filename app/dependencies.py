@@ -9,13 +9,15 @@ from app.backends.backend import Backend
 from app.backends.in_memory import InMemoryBackend
 from app.models.progress_report import ProgressReport
 import prodsys
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.simulation
 import prodsys.simulation.sim
-from prodsys.prodsys.adaptersst_proceadapterport PostProcessor
 from prodsys.optimization.optimizer import Optimizer
 
 
 import logging
+
+from prodsys.util.post_processing import PostProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +134,7 @@ def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
 
 
 def prepare_adapter_from_optimization(
-    adapter_object_optimized: adapter.ProductionSystemData,
+    adapter_object_optimized: ProductionSystemData,
     project_id: str,
     baseline_adapter_id: str,
     solution_id: str,
@@ -182,7 +184,7 @@ def get_optimization_result_configuration(
     project_id: str, adapter_id: str, solution_id: str
 ):
     # TODO: use backend to save and retrieve data here...
-    adapter_object = adapter.ProductionSystemData()
+    adapter_object = ProductionSystemData()
     files = os.listdir(f"data/{project_id}/{adapter_id}")
     if not any(solution_id in file for file in files):
         raise HTTPException(

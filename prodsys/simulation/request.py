@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Generator, Optional, List, Union
 
+from annotated_types import Ge
 import simpy
+
+from prodsys.simulation.dependency import DependedEntity
+from prodsys.simulation.process import Process
 
 
 if TYPE_CHECKING:
@@ -36,7 +40,9 @@ class RequestType(Enum):
     MOVE = "move"
     REWORK = "rework"
     PRODUCTION = "production"
-    AUXILIARY = "auxiliary"
+    PRIMITIVE_DEPENDENCY = "auxiliary"
+    PROCESS_DEPENDENCY = "process_dependency"
+    RESOURCE_DEPENDENCY = "resource_dependency"
 
 
 class Request:
@@ -45,9 +51,10 @@ class Request:
 
     Args:
         request_type (RequestType): Type of the request.
-        process (process.PROCESS_UNION): The process.
-        resource (resources.Resource): The resource.
-        item (Optional[Locatable]): The item (product or auxiliary) making the request.
+        process (process.PROCESS_UNION): The process that is requested.
+        resource (resources.Resource): The resource that is requested.
+        requesting_item (Optional[Product | Primitive]): The item that is requested.
+        item (Optional[Product | Primitive]): The item that is requested.
         origin_queue (Optional[Queue]): The origin queue.
         target_queue (Optional[Store]): The target queue.
         origin (Optional[Locatable]): The origin location for transport.
@@ -59,6 +66,7 @@ class Request:
         request_type: RequestType,
         process: PROCESS_UNION,
         resource: Resource,
+        requesting_item: Optional[Product | Primitive | Resource | Process] = None,
         item: Optional[Product | Primitive] = None,
         origin_queue: Optional[Queue] = None,
         target_queue: Optional[Store] = None,
@@ -69,6 +77,7 @@ class Request:
     ):
         self.request_type = request_type
         self.process = process
+        self.requesting_item = requesting_item
         self.item = item
         self.resource = resource
         self.origin = origin
@@ -78,24 +87,13 @@ class Request:
         self.completed = completed
 
         self.transport_to_target: Optional[simpy.Event] = None
-        self.auxiliaries_ready: Optional[simpy.Event] = None
 
-        # For compatibility with existing code
-        if hasattr(item, "product_data"):
-            self.product = item
-        else:
-            self.product = None
+        self.dependencies: Optional[List[DependedEntity]] = None
+        self.dependencies_requested: Optional[simpy.Event] = simpy.Event(self.requesting_item.env)
+        self.dependencies_ready: Optional[simpy.Event] = simpy.Event(self.process.env)
 
+        self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route
-
-        # For auxiliary requests
-        self.auxiliary = None
-        if (
-            request_type == RequestType.AUXILIARY
-            and item
-            and hasattr(item, "auxiliary_data")
-        ):
-            self.auxiliary = item
 
     def set_process(self, process: PROCESS_UNION):
         """
@@ -115,14 +113,14 @@ class Request:
         """
         return self.process
 
-    def get_product(self) -> Product:
+    def get_item(self) -> Union[Product, Primitive]:
         """
-        Returns the product of the request.
+        Returns the item of the request.
 
         Returns:
-            product.Product: The product.
+            Union[product.Product, primitive.Primitive]: The item (product or primitive).
         """
-        return self.product
+        return self.requesting_item
 
     def get_resource(self) -> Resource:
         """
@@ -182,13 +180,28 @@ class Request:
         """
         return self.target
 
-    def get_auxiliaries(self) -> List[Primitive]:
+    def request_dependencies(self) -> Generator[None, None, None]:
         """
-        Returns the auxiliaries of the request.
+        Requests the dependencies of the request.
+        """
+        self.dependencies_requested.succeed()
+        yield self.dependencies_ready
 
-        Returns:
-            List[Auxiliary]: The list of auxiliaries.
+    def bind_dependencies(self, dependencies: List[DependedEntity]) -> None:
         """
-        if hasattr(self, "auxiliary"):
-            return [self.auxiliary]
-        return []
+        Binds the dependencies to the request.
+
+        Args:
+            dependencies (List[DependedEntity]): The list of dependencies to bind.
+        """
+        self.dependencies = dependencies
+        for dependency in self.dependencies:
+            dependency.bind(self)
+
+    def release_dependencies(self):
+        """
+        Releases the dependencies of the request.
+        """
+        if self.dependencies:
+            for dependency in self.dependencies:
+                dependency.release()

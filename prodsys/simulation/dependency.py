@@ -18,7 +18,7 @@ from prodsys.simulation import primitive, router as router_module
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources, sink, source
-    from prodsys.factories import auxiliary_factory
+    from prodsys.factories import primitive_factory
 
 from prodsys.models import dependency_data
 from prodsys.simulation import (
