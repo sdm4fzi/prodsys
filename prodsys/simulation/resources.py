@@ -8,6 +8,7 @@ import random
 
 import logging
 
+from prodsys.simulation import product
 from prodsys.simulation.dependency import DependedEntity, Dependency
 
 
@@ -81,6 +82,9 @@ class Resource(resource.Resource):
         self.can_move = can_move
         self.can_process = can_process
 
+        self.bound = False
+        self.current_dependant: Union[product.Product, Resource] = None
+
         self.input_queues = input_queues if input_queues else []
 
         self.output_queues = output_queues if output_queues else []
@@ -88,6 +92,23 @@ class Resource(resource.Resource):
         self.current_locatable = self
 
         self.full = False
+
+    def bind_to_dependant(self, dependant: Resource) -> None:
+        """
+        Binds the resource to a depended entity.
+
+        Args:
+            dependant (DependedEntity): The depended entity.
+        """
+        self.current_dependant = dependant
+        self.bound = True
+
+    def release_from_dependant(self) -> None:
+        """
+        Releases the resource from the depended entity.
+        """
+        self.current_dependant = None
+        self.bound = False
 
     @property
     def capacity_current_setup(self) -> int:

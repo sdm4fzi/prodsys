@@ -82,6 +82,41 @@ class Process(ABC):
         return f"{self.__class__.__name__}:{id(self)}"
 
 
+class DependencyProcess:
+    """
+    Class that represents a dependency process.
+
+    Args:
+        process_data (processes_data.DependencyProcessData): The process data.
+        time_model (time_model.TimeModel): The time model.
+    """
+
+    def __init__(
+        self,
+    ):
+        """
+        Initializes the dependency process with the given process data and time model.
+
+        Args:
+            process_data (processes_data.DependencyProcessData): The process data.
+            time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
+        """
+        self.data = processes_data.ProcessData(
+            ID="DependencyProcess",
+            time_model_id=""
+        )
+
+    def matches_request(self, request: request_module.Request) -> bool:
+        raise NotImplementedError(
+            "DependencyProcess does not match requests but only generates them."
+        )
+    
+    def get_expected_process_time(self) -> float:
+        raise NotImplementedError(
+            "DependencyProcess does not have a process time."
+        )
+
+
 class ProductionProcess(Process):
     """Class that represents a production process.
 

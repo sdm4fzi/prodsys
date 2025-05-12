@@ -7,6 +7,10 @@ import logging
 
 import simpy
 
+from app import dependencies
+from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.dependency import DependedEntity, Dependency
+from prodsys.simulation.process import DependencyProcess
 from prodsys.simulation.process_matcher import ProcessMatcher
 
 logger = logging.getLogger(__name__)
@@ -44,7 +48,10 @@ class RequestInfo:
     origin: Optional[Locatable]
     target: Optional[Locatable]
 
+    dependency: Optional[Dependency] = None
+
     request_completion_event: simpy.Event
+    dependency_release_event: Optional[simpy.Event] = None
 
     request_state: Literal["pending", "routed", "completed"]
 
@@ -70,6 +77,13 @@ def get_transport_request_info_key(
     target_id = target.data.ID
     return f"{item_id}:{origin_id}:{target_id}"
 
+def get_dependency_request_info_key(
+    requesting_item: Union[product.Product, resources.Resource],
+    dependency: Dependency,
+):
+    item_id = requesting_item.data.ID
+    dependency_id = dependency.data.ID
+    return f"{item_id}:{dependency_id}"
 
 @dataclass
 class RequestHandler:
@@ -80,7 +94,8 @@ class RequestHandler:
     process_matcher: ProcessMatcher
 
     request_infos: dict[RequestInfoKey, RequestInfo] = field(default_factory=dict)
-    pending_requests: list[RequestInfoKey] = field(default_factory=list)
+    pending_resource_requests: list[RequestInfoKey] = field(default_factory=list)
+    pending_primitive_requests: list[RequestInfoKey] = field(default_factory=list)
 
     def add_product_requests(
         self, item: Union[product.Product, primitive.Primitive]
@@ -96,8 +111,7 @@ class RequestHandler:
         """
         request_info_key = get_request_info_key(item)
         possible_resources_and_processes = self.process_matcher.get_compatible(
-            item.next_possible_processes, item.data.type
-        )
+            item.next_possible_processes)
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
             resource_id = resource.data.ID
@@ -123,7 +137,7 @@ class RequestHandler:
         )
         # Add to pending requests
         self.request_infos[request_info_key] = request_info
-        self.pending_requests.append(request_info_key)
+        self.pending_resource_requests.append(request_info_key)
         return request_info
 
     def add_transport_request(
@@ -173,8 +187,64 @@ class RequestHandler:
         )
         # Add to pending requests
         self.request_infos[request_info_key] = request_info
-        self.pending_requests.append(request_info_key)
+        self.pending_resource_requests.append(request_info_key)
         return request_info
+
+
+    def add_dependency_request(
+        self,
+        requesting_item: Union[product.Product, resources.Resource],
+        dependency: Dependency,
+        dependency_release_event: Optional[simpy.Event] = None,
+    ) -> RequestInfo:
+        """
+        Adds a new dependency request to the pending requests.
+
+        Args:
+            requesting_item (Union[product.Product, resources.Resource]): The item making the request.
+            dependency (DependedEntity): The dependency to be fulfilled.
+        """
+        if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+            request_type = request.RequestType.PRIMITIVE_DEPENDENCY
+        elif dependency.data.dependency_type == DependencyType.RESOURCE:
+            request_type = request.RequestType.RESOURCE_DEPENDENCY
+            resource_mappings = {
+                dependency.required_resource.data.ID: [DependencyProcess()]
+            }
+        elif dependency.data.dependency_type == DependencyType.PROCESS:
+            request_type = request.RequestType.PROCESS_DEPENDENCY
+            possible_resourcs = self.process_matcher.get_compatible(
+                [dependency.required_process]
+            )
+            resource_mappings = {}
+            for resource, process_instance in possible_resourcs:
+                resource_id = resource.data.ID
+                if resource_id in resource_mappings:
+                    continue
+                resource_mappings[resource_id] = [DependencyProcess()]
+        else:   
+            raise ValueError(f"Unknown dependency type: {dependency.data.dependency_type}")
+        
+        request_completion_event = simpy.Event(requesting_item.env)
+        request_info_key = get_dependency_request_info_key(requesting_item, dependency)
+
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=requesting_item,
+            resource_mappings=resource_mappings,
+            request_type=request_type,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+            dependency=dependency,
+            dependency_release_event=dependency_release_event,
+        )
+        self.request_infos[request_info_key] = request_info
+        if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+            self.pending_primitive_requests.append(request_info_key)
+        else:
+            self.pending_resource_requests.append(request_info_key)
+        return request_info
+
 
     def mark_routing(self, allocated_request: request.Request) -> None:
         """
@@ -189,9 +259,17 @@ class RequestHandler:
                 allocated_request.origin,
                 allocated_request.target,
             )
+            allocated_request.requesting_item.current_process = allocated_request.process
+
+        elif allocated_request.request_type == request.RequestType.PRIMITIVE_DEPENDENCY or allocated_request.request_type == request.RequestType.RESOURCE_DEPENDENCY or allocated_request.request_type == request.RequestType.PROCESS_DEPENDENCY:
+            request_info_key = get_dependency_request_info_key(
+                allocated_request.requesting_item,
+                allocated_request.item,
+            )
         else:
             request_info_key = get_request_info_key(allocated_request.requesting_item)
-        allocated_request.requesting_item.current_process = allocated_request.process
+            allocated_request.requesting_item.current_process = allocated_request.process
+        
         self.request_infos[request_info_key].request_state = "routed"
 
     def mark_completion(self, completed_request: request.Request) -> None:
@@ -211,7 +289,7 @@ class RequestHandler:
             request_info_key = get_request_info_key(completed_request.requesting_item)
         self.request_infos[request_info_key].request_state = "completed"
 
-    def create_request(
+    def create_resource_request(
         self,
         request_info: RequestInfo,
         resource: resources.Resource,
@@ -244,9 +322,15 @@ class RequestHandler:
             request_type=request_info.request_type,
             completed=request_info.request_completion_event,
             route=route,
+            dependencies=request_info.dependency if request_info.request_type not in [
+                request.RequestType.PRIMITIVE_DEPENDENCY,
+                request.RequestType.RESOURCE_DEPENDENCY,
+                request.RequestType.PROCESS_DEPENDENCY,
+            ] else None,
+            dependency_release_event=request_info.dependency_release_event,
         )
 
-    def get_next_product_to_route(
+    def get_next_resource_request_to_route(
         self, free_resources: list[resources.Resource]
     ) -> Optional[List[request.Request]]:
         """
@@ -258,11 +342,11 @@ class RequestHandler:
         free_resources_set = set(
             (index, resource.data.ID) for index, resource in enumerate(free_resources)
         )
-        self.current_request_index = 0
+        self.current_resource_request_index = 0
         for request_info_index in range(
-            self.current_request_index, len(self.pending_requests)
+            self.current_resource_request_index, len(self.pending_resource_requests)
         ):
-            request_info_key = self.pending_requests[request_info_index]
+            request_info_key = self.pending_resource_requests[request_info_index]
             request_info = self.request_infos[request_info_key]
             possible_resources_and_processes = request_info.resource_mappings
             requests = []
@@ -272,7 +356,7 @@ class RequestHandler:
                         free_resource_id
                     ]:
                         free_resource = free_resources[free_resource_index]
-                        new_request = self.create_request(
+                        new_request = self.create_resource_request(
                             request_info,
                             free_resource,
                             process_instance,
@@ -280,5 +364,59 @@ class RequestHandler:
                         requests.append(new_request)
 
             if requests:
-                self.pending_requests.remove(request_info_key)
+                self.pending_resource_requests.remove(request_info_key)
                 return requests
+
+
+
+    def create_primitive_request(
+        self,
+        request_info: RequestInfo,
+        primitive: primitive.Primitive,
+    ) -> request.Request:
+        """
+        Creates a new request for the given primitive and process.
+
+        Args:
+            request_info (RequestInfo): The request information.
+            primitive (primitive.Primitive): The primitive to handle the request.
+            process (process.PROCESS_UNION): The process to be executed.
+
+        Returns:
+            request.Request: The created request.
+        """
+        return request.Request(
+            requesting_item=request_info.item,
+            item=primitive,
+            process=DependencyProcess(),
+            request_type=request_info.request_type,
+            completed=request_info.request_completion_event,
+        )
+            
+
+    def get_next_primitive_request_to_route(self, free_primitives: dict[str, list[primitive.Primitive]]) -> Optional[List[request.Request]]:
+        """
+        Returns a list of all pending requests that can be allocated.
+
+        Returns:
+            List[request.Request]: List of free requests ready for allocation.
+        """
+        if not self.pending_primitive_requests:
+            return None
+        self.current_primitive_request_index = 0
+        for request_info_index in range(
+            self.current_primitive_request_index, len(self.pending_primitive_requests)
+        ):
+            request_info_key = self.pending_primitive_requests[request_info_index]
+            request_info = self.request_infos[request_info_key]
+            possible_primitives = free_primitives.get(request_info.dependency.required_primitive.data.type, [])
+            possible_primitive_requests = []
+            for possible_primitive in possible_primitives:
+                new_request = self.create_primitive_request(
+                    request_info,
+                    possible_primitive,
+                )
+                possible_primitive_requests.append(new_request)
+            if possible_primitive_requests:
+                self.pending_primitive_requests.remove(request_info_key)
+                return possible_primitive_requests

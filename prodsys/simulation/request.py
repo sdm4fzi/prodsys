@@ -52,7 +52,7 @@ class Request:
     Args:
         request_type (RequestType): Type of the request.
         process (process.PROCESS_UNION): The process that is requested.
-        resource (resources.Resource): The resource that is requested.
+        resource (Optional[Resource]): The resource that is requested.
         requesting_item (Optional[Product | Primitive]): The item that is requested.
         item (Optional[Product | Primitive]): The item that is requested.
         origin_queue (Optional[Queue]): The origin queue.
@@ -65,7 +65,7 @@ class Request:
         self,
         request_type: RequestType,
         process: PROCESS_UNION,
-        resource: Resource,
+        resource: Optional[Resource] = None,
         requesting_item: Optional[Product | Primitive | Resource | Process] = None,
         item: Optional[Product | Primitive] = None,
         origin_queue: Optional[Queue] = None,
@@ -74,6 +74,7 @@ class Request:
         target: Optional[Locatable] = None,
         completed: Optional[simpy.Event] = None,
         route: Optional[List[Locatable]] = None,
+        dependency_release_event: Optional[simpy.Event] = None,
     ):
         self.request_type = request_type
         self.process = process
@@ -94,6 +95,7 @@ class Request:
 
         self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route
+        self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
 
     def set_process(self, process: PROCESS_UNION):
         """
