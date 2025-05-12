@@ -7,7 +7,7 @@ from pydantic import TypeAdapter
 from app.models.project import Project
 from prodsys.adapters import JsonProductionSystemAdapter
 from prodsys.models.performance_data import Performance
-from prodsys.optimization.optimizer import HyperParameters
+from prodsys.optimization.optimizer import HyperParameters, Optimizer
 from prodsys.util.post_processing import PostProcessor
 
 
@@ -99,42 +99,43 @@ class InMemoryBackend:
             raise HTTPException(404, f"Performance for adapter {adapter_id} not found in project {project_id}.")
         del project.performances[adapter_id]
 
-    def get_post_processor(self, project_id: str, adapter_id: str) -> PostProcessor:
-        project = self.get_project(project_id)
-        adapter = self.get_adapter(project_id, adapter_id)
-        if not project.post_processor:
-            raise HTTPException(404, f"PostProcessor not found in adapter {adapter_id} of project {project_id}")
-        return project.post_processor
-
-    def create_post_processor(self, project_id: str, adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
-        project = self.get_project(project_id)
-        adapter = self.get_adapter(project_id, adapter_id)
-        if project.post_processor:
-            raise HTTPException(409, f"PostProcessor already exists in project {project_id}. Try updating it with put.")
-        project.post_processor = post_processor
-        return post_processor
-
-    def update_post_processor(self, project_id: str,  adapter_id: str, post_processor: PostProcessor) -> PostProcessor:
-        project = self.get_project(project_id)
-        adapter = self.get_adapter(project_id, adapter_id)
-        if not project.post_processor:
-            raise HTTPException(404, f"PostProcessor not found in project {project_id}. Try creating it with post.")
-        project.post_processor = post_processor
-        return post_processor
-
-    def delete_post_processor(self, project_id: str, adapter_id: str):
-        project = self.get_project(project_id)
-        adapter = self.get_adapter(project_id, adapter_id)
-        if not project.post_processor:
-            raise HTTPException(404, f"PostProcessor not found in project {project_id}.")
-        project.post_processor = None
-
     def save_optimizer_hyperparameters(self, project_id: str, adapter_id: str, optimizer_hyperparameters: Union[HyperParameters]):
-        with open(f"data/{project_id}/{adapter_id}/optimizer_hyperparameters.json", "w") as file:
-            json.dump(optimizer_hyperparameters.model_dump(), file)
+        project = self.get_project(project_id)
+        self.get_adapter(project_id, adapter_id)
+        project.optimizer_hyperparameters[adapter_id] = optimizer_hyperparameters
+        return optimizer_hyperparameters
 
-    def get_last_optimizer_hyperparameters(
+
+    def get_optimizer_hyperparameters(
         self, project_id: str, adapter_id: str
     ) -> HyperParameters:
-        with open(f"data/{project_id}/{adapter_id}/optimizer_hyperparameters.json", "r") as file:
-            return TypeAdapter(Union[HyperParameters]).validate_python(json.load(file))
+        project = self.get_project(project_id)
+        self.get_adapter(project_id, adapter_id)
+        if adapter_id not in project.optimizer_hyperparameters:
+            raise HTTPException(
+                404,
+                f"Optimizer hyperparameters for adapter {adapter_id} not found in project {project_id}.",
+            )
+        return project.optimizer_hyperparameters[adapter_id]
+    
+
+    def save_optimizer(
+        self, project_id: str, adapter_id: str, optimizer: Optimizer
+    ):
+        project = self.get_project(project_id)
+        self.get_adapter(project_id, adapter_id)
+        project.optimizer[adapter_id] = optimizer
+        return optimizer
+    
+
+    def get_optimizer(
+        self, project_id: str, adapter_id: str
+    ) -> Optimizer:
+        project = self.get_project(project_id)
+        self.get_adapter(project_id, adapter_id)
+        if adapter_id not in project.optimizer:
+            raise HTTPException(
+                404,
+                f"Optimizer for adapter {adapter_id} not found in project {project_id}.",
+            )
+        return project.optimizer[adapter_id]

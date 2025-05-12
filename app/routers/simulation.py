@@ -23,8 +23,8 @@ async def simulate(
     background_tasks: BackgroundTasks,
     seed: Optional[int] = 0,
 ):
+    adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     if not run_length:
-        adapter = prodsys_backend.get_adapter(project_id, adapter_id)
         if adapter.scenario_data and adapter.scenario_data.info:
             run_length = adapter.scenario_data.info.time_range
         else:

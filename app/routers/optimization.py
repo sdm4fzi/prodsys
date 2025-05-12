@@ -53,31 +53,18 @@ HYPERPARAMETER_EXAMPLES = [
 ]
 
 # Global instance of the optimizer
-optimizer_cache: Dict[str, Optimizer] = {}
+# optimizer_cache: Dict[str, Optimizer] = {}
 
 
-def get_optimizer(project_id: str, adapter_id: str) -> Optimizer:
-    # TODO: move this function probably to the backend code or to the dependencies!
-    if (project_id, adapter_id) not in optimizer_cache:
-        save_folder = f"data/{project_id}/{adapter_id}/optimization_results/"
-        # maybe move these functions to the backend to save the complete optimizer and make it easily changeable in the future with mongo db or so
-        optimizer = FileSystemSaveOptimizer(
-            adapter=prodsys_backend.get_adapter(project_id, adapter_id),
-            hyperparameters=prodsys_backend.get_last_optimizer_hyperparameters(
-                project_id, adapter_id
-            ),
-            save_folder=save_folder,
-            initial_solutions=None,
-            full_save=True,
-        )
-        optimizer_cache[(project_id, adapter_id)] = optimizer
-    return optimizer_cache[(project_id, adapter_id)]
+# def get_optimizer(project_id: str, adapter_id: str) -> Optimizer:
+#     # TODO: move this function probably to the backend code or to the dependencies!
 
 
-def set_optimizer_in_cache(project_id: str, adapter_id: str, optimizer: Optimizer):
-    optimizer_cache[(project_id, adapter_id)] = (
-        optimizer  # Saves Opti. for specific adapter ID and project_id
-    )
+
+# def set_optimizer_in_cache(project_id: str, adapter_id: str, optimizer: Optimizer):
+#     optimizer_cache[(project_id, adapter_id)] = (
+#         optimizer  # Saves Opti. for specific adapter ID and project_id
+#     )
 
 
 @router.post(
@@ -106,7 +93,7 @@ async def optimize(
         )
     save_folder = f"data/{project_id}/{adapter_id}/optimization_results"
 
-    # TODO: maybe allow later also to insert initial solutions to optimization or use existing best solutions to further optimize
+    # TODO: allow to insert initial solutions to optimization or use existing best solutions to further optimize
 
     prodsys_backend.save_optimizer_hyperparameters(
         project_id, adapter_id, hyper_parameters
@@ -119,9 +106,9 @@ async def optimize(
         full_save=True,
     )
 
-    # name this optimizer cache, maybe delete it, if access is easier with backend usage
-    set_optimizer_in_cache(project_id, adapter_id, optimizer)
-
+    prodsys_backend.save_optimizer(
+        project_id, adapter_id, optimizer
+    )
     background_tasks.add_task(optimizer.optimize)
 
     return f"Succesfully optimized configuration of {adapter_id} in {project_id}."
@@ -133,13 +120,12 @@ async def optimize(
 )
 async def get_optimization_progress(project_id: str, adapter_id: str) -> ProgressReport:
     try:
-        optimizer = get_optimizer(project_id, adapter_id)
+        optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
     except ValueError as e:
         raise HTTPException(
             404,
             f"Optimization progress cannot be found, because optimizer is not available in cache. Start optimization for. {adapter_id} in {project_id} first.",
         )
-    optimizer = get_optimizer(project_id, adapter_id)
     return get_progress_of_optimization(optimizer)
 
 
@@ -148,7 +134,7 @@ async def get_optimization_progress(project_id: str, adapter_id: str) -> Progres
     response_model=Dict[str, Dict[str, List[performance_indicators.KPI_UNION]]],
 )
 def get_optimization_results(project_id: str, adapter_id: str):
-    optimizer = get_optimizer(project_id, adapter_id)
+    optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
 
     response = {"solutions": {}}
     for generation, fitness_entry in optimizer.get_optimization_results().items():
@@ -181,7 +167,7 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
     """
     Returns the best solution ID based on the highest total fitness value from the optimization results.
     """
-    optimizer = get_optimizer(project_id, adapter_id)
+    optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
     if isinstance(
         optimizer.hyperparameters,
         (EvolutionaryAlgorithmHyperparameters, TabuSearchHyperparameters),
@@ -191,7 +177,7 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
         optimizer.hyperparameters,
         SimulatedAnnealingHyperparameters,
         MathOptHyperparameters,
-    ): 
+    ):
         direction = "min"
 
     weights = get_weights(optimizer.adapter, direction)
@@ -251,7 +237,10 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
         wip_value = None
         throughput_value = None
         for kpi in original_kpis.kpis:
-            if kpi.name.value.lower() == "wip" and any(ctx == performance_indicators.KPILevelEnum.ALL_PRODUCTS for ctx in kpi.context):
+            if kpi.name.value.lower() == "wip" and any(
+                ctx == performance_indicators.KPILevelEnum.ALL_PRODUCTS
+                for ctx in kpi.context
+            ):
                 wip_value = kpi.value
             if kpi.name.value.lower() == "output":
                 throughput_value = kpi.value
@@ -284,10 +273,8 @@ def get_best_solution_id(project_id: str, adapter_id: str) -> str:
 def register_adapter_with_evaluation(
     project_id: str, adapter_id: str, solution_id: str
 ):
-    optimizer = get_optimizer(project_id, adapter_id)
-    adapter_object = optimizer.get_optimization_result_configuration(
-        solution_id
-    )
+    optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
+    adapter_object = optimizer.get_optimization_result_configuration(solution_id)
     prepare_adapter_from_optimization(
         adapter_object, project_id, adapter_id, solution_id
     )
@@ -303,8 +290,10 @@ def register_adapter_with_evaluation(
     response_model=str,
 )
 def get_optimization_pareto_front(project_id: str, adapter_id: str):
-    optimizer = get_optimizer(project_id, adapter_id)
-    IDs = optimization_analysis.get_pareto_solutions_from_result_files(optimizer.get_optimization_results())
+    optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
+    IDs = optimization_analysis.get_pareto_solutions_from_result_files(
+        optimizer.get_optimization_results()
+    )
     for solution_id in IDs:
         adapter_object = optimizer.get_optimization_result_configuration(solution_id)
         prepare_adapter_from_optimization(
@@ -325,5 +314,5 @@ def get_optimization_pareto_front(project_id: str, adapter_id: str):
 def get_optimization_solution(
     project_id: str, adapter_id: str, solution_id: str
 ) -> prodsys.adapters.JsonProductionSystemAdapter:
-    optimizer = get_optimizer(project_id, adapter_id)
+    optimizer = prodsys_backend.get_optimizer(project_id, adapter_id)
     return optimizer.get_optimization_result_configuration(solution_id)

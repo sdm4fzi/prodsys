@@ -27,6 +27,11 @@ async def get_project(project_id: str) -> Project:
 async def create_project(
     project: Project,
 ) -> Project:
+    for adapter in project.adapters:
+        if not adapter.ID:
+            raise ValueError(
+                "Adapter ID is required. Please provide a valid ID."
+            )
     return prodsys_backend.create_project(project)
 
 

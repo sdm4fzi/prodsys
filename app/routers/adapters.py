@@ -1,7 +1,7 @@
 from typing import List, Dict
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from prodsys.adapters import JsonProductionSystemAdapter
 
@@ -24,6 +24,11 @@ async def create_adapter(
     project_id: str,
     adapter: JsonProductionSystemAdapter,
 ) -> JsonProductionSystemAdapter:
+    if not adapter.ID:
+        raise HTTPException(
+            status_code=400,
+            detail="Adapter ID is required. Please provide a valid ID.",
+        )
     return prodsys_backend.create_adapter(project_id=project_id, adapter=adapter)
 
 

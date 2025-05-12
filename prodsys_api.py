@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 import hydra
 from omegaconf import DictConfig
 import uvicorn
@@ -46,6 +47,9 @@ app = FastAPI(
         "url": "https://mit-license.org/",
     },
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 
 app.add_middleware(
     CORSMiddleware,

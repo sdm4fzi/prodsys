@@ -346,7 +346,7 @@ class PostProcessor:
                     name=performance_indicators.KPIEnum.DYNAMIC_THROUGHPUT_TIME,
                     context=context,
                     value=values["Throughput_time"],
-                    product=index,
+                    product=values["Product"],
                     product_type=values["Product_type"],
                     start_time=values["Start_time"],
                     end_time=values["End_time"],
@@ -1089,6 +1089,10 @@ class PostProcessor:
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
 
+        df = df.loc[
+            df["WIP_Increment"] != 0
+        ]  # Remove rows where WIP_Increment is 0
+
         df["WIP"] = df["WIP_Increment"].cumsum()
 
         return df
@@ -1339,7 +1343,38 @@ class PostProcessor:
         return df
 
     @cached_property
-    def dynamic_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+    def dynamic_WIP_per_resource_KPIs(self) -> List[performance_indicators.KPI]:
+        """
+        Returns a list of Dynamic WIP KPI values for the WIP over time for each product type.
+
+        Returns:
+            List[performance_indicators.KPI]: List of Dynamic WIP KPI values.
+        """
+        df = self.df_WIP_per_resource.copy()
+        df = df.loc[df["WIP_Increment"] != 0]
+
+        KPIs = []
+        df["next_Time"] = df.groupby(by="Resource")["Time"].shift(-1)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
+        for index, row in df.iterrows():
+            KPIs.append(
+                performance_indicators.DynamicWIP(
+                    name=performance_indicators.KPIEnum.DYNAMIC_WIP,
+                    value=row["WIP"],
+                    context=(
+                        performance_indicators.KPILevelEnum.RESOURCE,
+                        performance_indicators.KPILevelEnum.ALL_PRODUCTS,
+                    ),
+                    product_type="Total",
+                    resource=row["Resource"],
+                    start_time=row["Time"],
+                    end_time=row["next_Time"],
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def dynamic_system_WIP_KPIs(self) -> List[performance_indicators.KPI]:
         """
         Returns a list of Dynamic WIP KPI values for the WIP over time for each product type and the whole system.
 
@@ -1350,10 +1385,10 @@ class PostProcessor:
         df["Product_type"] = "Total"
         df_per_product = self.df_WIP_per_product.copy()
         df = pd.concat([df, df_per_product])
-        df = df.loc[df["WIP_Increment"] != 0]
+        df = df.loc[~df["WIP_Increment"].isnull()]
 
         KPIs = []
-        df["next_Time"] = df["Time"].groupby(by="Product_type").shift(-1)
+        df["next_Time"] = df.groupby(by="Product_type")["Time"].shift(-1)
         df["next_Time"] = df["next_Time"].fillna(df["Time"])
         for index, row in df.iterrows():
             if row["Product_type"] == "Total":

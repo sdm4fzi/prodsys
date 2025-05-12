@@ -5,7 +5,7 @@ import time
 from typing import Any, Callable, Optional
 
 import pandas as pd
-from pydantic import TypeAdapter
+from pydantic import BaseModel, TypeAdapter
 from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
 from prodsys.optimization.optimization_data import (
     FitnessData,
@@ -49,6 +49,17 @@ HyperParameters = (
 )
 
 
+class OptimizerData(BaseModel):
+    """
+    Base class for optimizer data.
+    This class is not intended to be used directly.
+    It serves as a base for other classes that require optimization data.
+    """
+    adapter: ProductionSystemAdapter
+    hyperparameters: HyperParameters
+    initial_solutions: Optional[list[ProductionSystemAdapter]] = None
+    full_save: bool = False  # Determines whether event logs are saved
+
 class Optimizer(ABC):
     """
     Base Optimizer interface for optimizing the configuration of a production system.
@@ -78,6 +89,18 @@ class Optimizer(ABC):
         self.performances_cache: OptimizationResults = get_empty_optimization_results()
         self.progress = OptimizationProgress()
         self.start_time = None
+
+
+    def get_model(self) -> OptimizerData:
+        """
+        Dumps the model data to a dictionary.
+        """
+        return OptimizerData(
+            adapter=self.adapter,
+            hyperparameters=self.hyperparameters,
+            initial_solutions=self.initial_solutions,
+            full_save=self.full_save,
+        )
 
     def get_algorithm_and_steps(self) -> tuple[Callable, int]:
         if isinstance(self.hyperparameters, EvolutionaryAlgorithmHyperparameters):

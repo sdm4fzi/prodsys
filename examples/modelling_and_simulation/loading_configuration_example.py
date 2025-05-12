@@ -11,9 +11,12 @@ if __name__ == "__main__":
 
     runner_object = prodsys.runner.Runner(adapter=adapter_object)
     runner_object.initialize_simulation()
-    runner_object.run(20000)
+    runner_object.run(2000)
     runner_object.print_results()
     runner_object.plot_results()
-    runner_object.plot_results_executive()
+    # runner_object.plot_results_executive()
+    perf = runner_object.get_performance_data(dynamic_data=True, event_log=False)
+    # with open("performance.json", "w") as f:
+    #     f.write(perf.model_dump_json(indent=4))
     # runner_object.save_results_as_csv()
     # runner_object.save_results_as_json()

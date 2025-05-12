@@ -65,23 +65,11 @@ def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: in
     runners[adapter_id] = runner_object
     runner_object.initialize_simulation()
     runner_object.run(run_length)
-    performance = runner_object.get_performance_data()
+    performance = runner_object.get_performance_data(dynamic_data=True)
     try:
         prodsys_backend.create_performance(project_id, adapter_id, performance)
     except:
         prodsys_backend.update_performance(project_id, adapter_id, performance)
-    post_processor = runner_object.get_post_processor()
-    try:
-        prodsys_backend.create_post_processor(project_id, adapter_id, post_processor)
-    except:
-        prodsys_backend.update_post_processor(project_id, adapter_id, post_processor)
-
-
-def get_post_processor(project_id: str, adapter_id: str) -> PostProcessor:
-    try:
-        return prodsys_backend.get_post_processor(project_id, adapter_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 def get_progress_of_optimization(optimizer: Optimizer) -> ProgressReport:
@@ -152,17 +140,7 @@ def prepare_adapter_from_optimization(
         run_length = 2 * 7 * 24 * 60
     runner_object.run(run_length)
 
-    post_processor = runner_object.get_post_processor()
-    try:
-        prodsys_backend.create_post_processor(
-            project_id, baseline_adapter_id, post_processor
-        )
-    except:
-        prodsys_backend.update_post_processor(
-            project_id, baseline_adapter_id, post_processor
-        )
-
-    performance = runner_object.get_performance_data()
+    performance = runner_object.get_performance_data(dynamic_data=True)
     project.performances[adapter_object_optimized.ID] = performance
     try:
         prodsys_backend.create_performance(project_id, baseline_adapter_id, performance)
@@ -170,19 +148,3 @@ def prepare_adapter_from_optimization(
         prodsys_backend.update_performance(project_id, baseline_adapter_id, performance)
 
     prodsys_backend.update_project(project_id, project)
-
-
-def get_optimization_result_configuration(
-    project_id: str, adapter_id: str, solution_id: str
-):
-    # TODO: use backend to save and retrieve data here...
-    adapter_object = prodsys.adapters.JsonProductionSystemAdapter()
-    files = os.listdir(f"data/{project_id}/{adapter_id}")
-    if not any(solution_id in file for file in files):
-        raise HTTPException(
-            404,
-            f"Solution {solution_id} for adapter {adapter_id} in project {project_id} does not exist.",
-        )
-    file_name = next(file for file in files if solution_id in file)
-    adapter_object.read_data(f"data/{project_id}/{adapter_id}/{file_name}")
-    return adapter_object

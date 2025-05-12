@@ -98,7 +98,7 @@ class Performance(BaseModel):
         }
     )
 
-    event_log: List[Event]
+    event_log: Optional[List[Event]]
     kpis: List[KPI_UNION]
 
     def get_kpi_for_context(self, context: Tuple[KPILevelEnum, ...]) -> List[KPI_UNION]:
