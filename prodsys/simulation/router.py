@@ -97,6 +97,7 @@ class Router:
         auxiliary_factory: primitive_factory.PrimitiveFactory,
         product_factory: Optional[product_factory.ProductFactory] = None,
         source_factory: Optional[source_factory.SourceFactory] = None,
+        primitive_factory: Optional[primitive_factory.PrimitiveFactory] = None,
     ):
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
@@ -104,6 +105,14 @@ class Router:
         self.auxiliary_factory: primitive_factory.PrimitiveFactory = auxiliary_factory
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         self.source_factory: Optional[source_factory.SourceFactory] = source_factory
+        self.primitive_factory: Optional[primitive_factory.PrimitiveFactory] = (
+            primitive_factory
+        )
+        self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}
+        for primitive in self.primitive_factory.primitives:
+            if primitive.data.type not in self.free_primitives_by_type:
+                self.free_primitives_by_type[primitive.data.type] = []
+            self.free_primitives_by_type[primitive.data.type].append(primitive)
 
         self.auxiliary_factory.router = self
         self.product_factory.router = self
@@ -162,7 +171,7 @@ class Router:
             while True:
                 # if not free_resources:
                 #     break
-                free_requests = self.request_handler.get_next_product_to_route(
+                free_requests = self.request_handler.get_next_resource_request_to_route(
                     free_resources
                 )
                 if not free_requests:
@@ -170,7 +179,7 @@ class Router:
                 self.env.update_progress_bar()
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
-                self.env.process(self.execute_routing(request))
+                self.env.process(self.execute_resource_routing(request))
 
     def primitive_routing_loop(self) -> Generator[None, None, None]:
         """
@@ -180,21 +189,22 @@ class Router:
         while True:
             yield self.got_primitive_request
             self.got_primitive_request = events.Event(self.env)
-            free_requests = self.request_handler.get_next_primitive_to_route()
-            if not free_requests:
-                break
-            self.env.update_progress_bar()
-            request: request.Request = self.route_request(free_requests)
-            self.request_handler.mark_routing(request)
-            self.env.process(self.execute_routing(request))
+            while True:
+                free_requests = self.request_handler.get_next_primitive_request_to_route(self.free_primitives_by_type)
+                if not free_requests:
+                    break
+                self.env.update_progress_bar()
+                request: request.Request = self.route_request(free_requests)
+                self.request_handler.mark_routing(request)
+                self.env.process(self.execute_primitive_routing(request))
 
-    def execute_routing(
+    def execute_resource_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
         if (
-            executed_request.request_type != request.RequestType.TRANSPORT
+            executed_request.request_type == request.RequestType.PRODUCTION
             and executed_request.requesting_item.current_locatable
-            != executed_request.target
+            != executed_request.resource
         ):
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, executed_request.resource
@@ -207,10 +217,35 @@ class Router:
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
                 process=executed_request.process,
+                dependency_release_event=executed_request.completed
             )
             for dependency_ready_event in dependency_ready_events:
                 yield dependency_ready_event
             executed_request.dependencies_ready.succeed()
+
+    def execute_primitive_routing(
+        self, executed_request: request.Request
+    ) -> Generator[None, None, None]:
+        self.free_primitives_by_type[executed_request.item.data.type].remove(
+            executed_request.item
+        )
+        executed_request.item.bind(executed_request.requesting_item)
+        trans_process_finished_event = self.request_transport(
+            executed_request.item, executed_request.requesting_item.current_locatable
+        )
+        yield trans_process_finished_event
+        executed_request.dependencies_ready.succeed()
+        if executed_request.dependency_release_event: # primitives for resource processes
+            yield executed_request.dependency_release_event
+        else: # primitives for product
+            yield executed_request.item.got_free
+        transport_process_finished_event = self.request_transport(
+            executed_request.item, executed_request.item.storage
+        )
+        yield transport_process_finished_event
+        self.free_primitives_by_type[executed_request.item.data.type].append(
+            executed_request.item
+        )
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
@@ -265,7 +300,7 @@ class Router:
         return dependency_ready_events
 
     def get_dependencies_for_execution(
-        self, resource: resources.Resource, process: process.Process
+        self, resource: resources.Resource, process: process.Process, dependency_release_event: events.Event
     ) -> List[simpy.Event]:
         """
         Routes all dependencies for processing to a resource. Covers currently only primitive dependencies (workpiece carriers, e.g.)
@@ -282,15 +317,15 @@ class Router:
         # only one object can be immovable, the other has to be movable -> go always to the immovable one
         dependency_ready_events = []
         for dependency in resource.dependencies:
-            dependency_ready = self.request_handler.add_dependency_request(
-                requesting_item=resource, dependency=dependency
+            request_info = self.request_handler.add_dependency_request(
+                requesting_item=resource, dependency=dependency, dependency_release_event=dependency_release_event
             )
-            dependency_ready_events.append(dependency_ready)
+            dependency_ready_events.append(request_info.request_completion_event)
         for dependency in process.dependencies:
-            dependency_ready = self.request_handler.add_dependency_request(
+            request_info = self.request_handler.add_dependency_request(
                 requesting_item=resource, dependency=dependency
             )
-            dependency_ready_events.append(dependency_ready)
+            dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
 
     def release_auxiliary(self, auxiliary: primitive.Primitive) -> None:
@@ -408,50 +443,6 @@ class Router:
     #         return True
     #     # TODO: implement heuristic for storage
     #     return random.choice([True, False])
-
-    def route_resource_to_auxiliary_process(
-        resource: resources.Resource, required_process: process.Process
-    ) -> Generator[request.AuxiliaryTransportRequest]:
-        """
-        Routes an auxiliary to a resource.
-
-        Args:
-            resource (resources.Resource): The resource.
-            required_process (process.Process): The required process.
-
-        Returns:
-            Generator: A generator that yields when the auxiliary is routed to the resource.
-        """
-        # TODO: this function should select a resource than perform the required process
-
-    def bring_resource_to_request_location(
-        resource: resources.Resource, request: request.Request
-    ) -> Generator[request.TransportResquest]:
-        """
-        Routes a resource to the location of a request.
-
-        Args:
-            resource (resources.Resource): The resource.
-            request (request.Request): The request.
-
-        Returns:
-            Generator: A generator that yields when the resource is routed to the request location.
-        """
-        # TODO: either make a move request, if the resource is moveable, otherwise make a transport request
-
-    def route_auxiliary_to_store(
-        self, auxiliary: primitive.Primitive
-    ) -> Generator[request.TransportResquest]:
-        """
-        Routes an auxiliary to a store.
-
-        Args:
-            auxiliary (auxiliary.Auxiliary): The auxiliary.
-
-        Returns:
-            Generator: A generator that yields when the auxiliary is routed to the store.
-        """
-        self.request_handler.add_transport_request(auxiliary, auxiliary.storage)
 
     def get_rework_processes(
         self, product: product.Product, failed_process: process.Process

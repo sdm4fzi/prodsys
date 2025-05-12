@@ -105,7 +105,12 @@ class Controller:
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
-            if self.resource.full or self.resource.in_setup or not self.requests:
+            if (
+                self.resource.full
+                or self.resource.in_setup
+                or self.resource.bound
+                or not self.requests
+            ):
                 continue
             self.control_policy(self.requests)
             selected_request = self.requests.pop(0)
@@ -158,11 +163,14 @@ def get_requets_handler(
         return ProductionProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.TRANSPORT:
         return TransportProcessHandler(request.requesting_item.env)
-    elif request.request_type == request_module.RequestType.PROCESS_DEPENDENCY or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+    elif (
+        request.request_type == request_module.RequestType.PROCESS_DEPENDENCY
+        or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY
+    ):
         # TODO: implement this handler that just waits until the release method of the resource and processes is called.
-        return DependencyProcessHandler()
-    elif request.request_type == request_module.RequestType.MOVE:
-        return MoveProcessHandler()
+        return DependencyProcessHandler(request.requesting_item.env)
+    # elif request.request_type == request_module.RequestType.MOVE:
+    #     return MoveProcessHandler()
     else:
         raise ValueError(f"Unknown process type: {type(process)}")
 
@@ -433,8 +441,6 @@ class TransportProcessHandler:
 
             product.product_router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
-            for dependency in resource.depended_entities:
-                dependency.release()
 
     def run_transport(
         self,
@@ -577,14 +583,30 @@ class TransportProcessHandler:
             return [self.resource.current_locatable, process_request.get_origin()]
 
 
-class MoveProcessHandler:
-    # TODO: implement this class that only performs a move of the transport resource, without adjusting the queues -> TransportProcessHandler can inherit from it
-    pass
-
-
 class DependencyProcessHandler:
     # TODO: this function just waits for the auxiliaried process to be over
-    pass
+    def __init__(self, env: sim.Environment) -> None:
+        self.env = env
+        self.resource = None
+
+    def handle_request(self, process_request: request_module.Request) -> Generator:
+        """
+        Start the next process with the following logic:
+
+        1. Wait until the resource is free for the process.
+        2. Wait until the dependencies are fulfilled.
+        3. Run the process and wait until finished.
+
+        Yields:
+            Generator: The generator yields when the process is finished.
+        """
+        requesting_item = process_request.requesting_item
+        self.resource = process_request.get_resource()
+        self.resource.bind_to_dependant(requesting_item)
+        # TODO: move the resource to the location of the requesting item
+        process_request.completed.succeed()
+        yield process_request.dependency_release_event
+        self.resource.release_from_dependant()
 
 
 def FIFO_control_policy(requests: List[request_module.Request]) -> None:

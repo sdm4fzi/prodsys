@@ -198,8 +198,8 @@ class Primitive:
 
         self.router: router_module.Router = None
         self.current_locatable: Optional[product.Locatable] = None
-        self.current_dependant: Union[product.Product, Resource, process.Process] = None
-        self.reserved = False
+        self.current_dependant: Union[product.Product, Resource] = None
+        self.bound = False
         self.got_free = events.Event(self.env)
         self.finished_process = events.Event(self.env)
         self.primitive_info = PrimitiveInfo()
@@ -221,16 +221,21 @@ class Primitive:
             }
         )
 
-    def reserve(self):
+    def bind(self, dependant: Union[product.Product, resources.Resource]) -> None:
         """
         Reserves the product object.
         """
-        self.reserved = True
-        self.got_free = events.Event(self.env)
+        if self.bound:
+            raise Exception(
+                f"Primitive {self.data.ID} is bound reserved. Cannot bind again."
+            )
+        self.bound = True
+        self.current_dependant = dependant
         self.primitive_info.log_bind(
             resource=self.current_locatable,
             _product=self,
             event_time=self.env.now,
+            # TODO: add dependant to log
         )
 
     def release(self):
@@ -238,66 +243,13 @@ class Primitive:
         Releases the auxiliary from the product after storage of the auxiliary.
         """
         self.current_dependant = None
-        self.reserved = False
+        self.bound = False
         self.got_free.succeed()
+        self.got_free = events.Event(self.env)
         self.primitive_info.log_release(
             resource=self.current_locatable,
             _product=self,
             event_time=self.env.now,
         )
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.current_locatable.data.ID,
-                "event": f"Released auxiliary from product",
-            }
-        )
-
-    def request_process(self, processing_request: request.Request) -> Generator:
-        """
-        Requests the next production process of the product object from the next production resource by creating a request event and registering it at the environment.
-        """
-        self.finished_process = events.Event(self.env)
-
-        type_ = state.StateTypeEnum.transport
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": processing_request.resource.data.ID,
-                "event": f"Request process {processing_request.process.data.ID} for {type_}",
-            }
-        )
-        # FIXME: this is not working anymore!
-        self.env.request_process_of_resource(request=processing_request)
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": processing_request.resource.data.ID,
-                "origin": processing_request.origin.data.ID,
-                "target": processing_request.target.data.ID,
-                "event": f"Start waiting for request to be finished",
-            }
-        )
-        yield self.finished_process
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": processing_request.resource.data.ID,
-                "origin": processing_request.origin.data.ID,
-                "target": processing_request.target.data.ID,
-                "event": f"Finished waiting for request to be finished",
-            }
-        )
-        self.primitive_info.log_end_process(
-            resource=processing_request.resource,
-            _product=self,
-            event_time=self.env.now,
-            state_type=type_,
-        )
-
 
 from prodsys.simulation import product

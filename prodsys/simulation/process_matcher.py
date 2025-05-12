@@ -33,8 +33,6 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class ResourceCompatibilityKey:
     """Key for the resource compatibility lookup table."""
-
-    product_type: str
     process_signature: str
 
     @classmethod
@@ -55,7 +53,7 @@ class TransportCompatibilityKey:
 
     @classmethod
     def from_request(
-        cls, request: request.TransportResquest
+        cls, request: request.Request
     ) -> "TransportCompatibilityKey":
         """Create a key from a transport request."""
         origin_id = request.origin.data.ID
@@ -175,7 +173,6 @@ class ProcessMatcher:
                         # Test if this process matches the request
                         if offered_process.matches_request(dummy_production_request):
                             key = ResourceCompatibilityKey(
-                                product_type=product_type,
                                 process_signature=requested_process.get_process_signature(),
                             )
                             if key not in self.production_compatibility:
@@ -295,7 +292,7 @@ class ProcessMatcher:
         return self.route_cache.get(key).route
 
     def get_compatible(
-        self, requested_processes: List[process.PROCESS_UNION], product_type: str
+        self, requested_processes: List[process.PROCESS_UNION]
     ) -> List[Tuple[resources.Resource, process.PROCESS_UNION]]:
         """
         Returns a list of compatible resources and processes for the requested processes.
@@ -315,7 +312,6 @@ class ProcessMatcher:
                 (process.ProductionProcess, process.CapabilityProcess),
             ):
                 key = ResourceCompatibilityKey(
-                    product_type=product_type,
                     process_signature=requested_process.get_process_signature(),
                 )
                 compatible_resources.extend(self.production_compatibility.get(key, []))
@@ -326,7 +322,7 @@ class ProcessMatcher:
                     # Create a process signature for the contained process
                     process_signature = f"ProductionProcess:{process_id}"
                     key = ResourceCompatibilityKey(
-                        product_type=product_type, process_signature=process_signature
+                        process_signature=process_signature
                     )
                     compatible_resources.extend(
                         self.production_compatibility.get(key, [])
@@ -342,7 +338,6 @@ class ProcessMatcher:
                             f"CapabilityProcess:{contained_process.capability}"
                         )
                         key = ResourceCompatibilityKey(
-                            product_type=product_type,
                             process_signature=process_signature,
                         )
                         compatible_resources.extend(
