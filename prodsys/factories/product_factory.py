@@ -51,7 +51,7 @@ class ProductFactory:
         """
         product_data = product_data.model_copy()
         product_data.ID = (
-            str(product_data.product_type) + "_" + str(self.product_counter)
+            str(product_data.type) + "_" + str(self.product_counter)
         )
         process_model = self.create_process_model(product_data)
         transport_processes = self.process_factory.get_process(
@@ -74,9 +74,7 @@ class ProductFactory:
             routing_heuristic=routing_heuristic_callable,
             process_model=process_model,
             transport_process=transport_processes,
-            has_auxiliaries=(
-                True if product_data.auxiliaries and product_data is not None else False
-            ),
+            
         )
         if self.event_logger:
             self.event_logger.observe_terminal_product_states(product_object)

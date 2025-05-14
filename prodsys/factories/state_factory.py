@@ -102,7 +102,7 @@ class StateFactory:
 
     def add_state(self, state_data: state_data.STATE_DATA_UNION):
         values = {
-            "state_data": state_data,
+            "data": state_data,
             "time_model": self.time_model_factory.get_time_model(
                 state_data.time_model_id
             ),

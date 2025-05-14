@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generator, List, Union
+from typing import Any, Generator, List, Literal, Union
 
 
 from simpy.resources import store
@@ -105,11 +105,10 @@ class Store(Queue):
         super().__init__(env, data)
         self.data: queue_data.StoreData = data
 
-    def get_location(self):
-        return self.data.location
-
-    def get_input_location(self):
-        return self.data.input_location
-
-    def get_output_location(self):
-        return self.data.output_location
+    def get_location(self, interaction: Literal["input", "output"] = "input") -> List[float]:
+        if interaction == "input":
+            return self.data.input_location
+        elif interaction == "output":
+            return self.data.output_location
+        else:
+            self.data.location

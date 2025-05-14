@@ -100,7 +100,6 @@ class DependencyFactory:
         """
         for resource in self.resource_factory.all_resources.values():
             dependencies = resource.data.dependency_ids
-            dependencies= []
             for dependency_id in dependencies:
                 dependency = self.get_dependency(dependency_id)
                 resource.dependencies.append(dependency)

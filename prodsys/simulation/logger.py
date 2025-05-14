@@ -154,11 +154,11 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
     data.append(item)
 
 
-def post_monitor_auxiliary_info(
-    data: List[dict], auxiliary_info: primitive.PrimitiveInfo
+def post_monitor_primitive_info(
+    data: List[dict], primitive_info: primitive.PrimitiveInfo
 ):
     """
-    Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
+    Post function for monitoring primitive info. With this post monitor, every primitive creation and finish is logged.
 
     Args:
         data (List[dict]): The data to log to.
@@ -166,12 +166,12 @@ def post_monitor_auxiliary_info(
     """
 
     item = {
-        "Time": auxiliary_info.event_time,
-        "Resource": auxiliary_info.resource_ID,
-        "State": auxiliary_info.state_ID,
-        "State Type": auxiliary_info.state_type,
-        "Activity": auxiliary_info.activity,
-        "Product": auxiliary_info.product_ID,
+        "Time": primitive_info.event_time,
+        "Resource": primitive_info.resource_ID,
+        "State": primitive_info.state_ID,
+        "State Type": primitive_info.state_type,
+        "Activity": primitive_info.activity,
+        "Product": primitive_info.product_ID,
     }
     data.append(item)
 
@@ -244,20 +244,20 @@ class EventLogger(Logger):
             post=post_monitor_product_info,
         )
 
-    def observe_terminal_auxiliary_states(self, auxiliary: primitive.Primitive):
+    def observe_terminal_primitive_states(self, primitive: primitive.Primitive):
         """
-        Create path to observe the terminal auxiliary states.
+        Create path to observe the terminal primitive states.
 
         Args:
-            auxiliary (auxiliary.Auxiliary): The auxiliary.
+            primitive (primitive.Primitive): The primitive.
         """
         self.register_patch(
             self.event_data,
-            auxiliary.primitive_info,
+            primitive.primitive_info,
             attr=[
-                "log_create_auxiliary",
-                "log_start_auxiliary_usage",
-                "log_end_auxiliary_usage",
+                "log_create_primitive",
+                "log_bind",
+                "log_release",
             ],
-            post=post_monitor_auxiliary_info,
+            post=post_monitor_primitive_info,
         )

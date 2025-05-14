@@ -61,7 +61,7 @@ class SourceFactory:
         """
         for values in adapter.source_data:
             for product_d in adapter.product_data:
-                if product_d.product_type == values.product_type:
+                if product_d.type == values.product_type:
                     self.add_source(values, product_d)
 
     def add_source(

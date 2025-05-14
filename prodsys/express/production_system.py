@@ -4,8 +4,8 @@ from typing import List, Optional, Union
 from pydantic import Field, PrivateAttr
 from pydantic.dataclasses import dataclass
 
+from prodsys.express.primitive import Primitive
 from prodsys.util import util
-from prodsys.simulation import runner
 from prodsys.models import production_system_data
 
 from prodsys.express import (
@@ -75,6 +75,7 @@ class ProductionSystem(core.ExpressObject):
     resources: List[Union[resources.Resource]]
     sources: List[source.Source]
     sinks: List[sink.Sink]
+    primitives: List[Primitive] = Field(default_factory=list)
 
     def __post_init__(self):
         self._runner: Optional[runner.Runner] = None
@@ -90,10 +91,13 @@ class ProductionSystem(core.ExpressObject):
             sink.product for sink in self.sinks
         ]
         products = remove_duplicate_items(products)
-        auxiliaries = list(
-            util.flatten_object([product.auxiliaries for product in products])
+        dependencies = list(
+            util.flatten_object([product.dependencies for product in products])
         )
-        auxiliaries = remove_duplicate_items(auxiliaries)
+        dependencies += list(
+            util.flatten_object([resource.dependencies for resource in self.resources])
+        )
+        dependencies = remove_duplicate_items(dependencies)
         processes = list(
             util.flatten_object(
                 [product.processes for product in products]
@@ -102,6 +106,17 @@ class ProductionSystem(core.ExpressObject):
             )
         )
         processes = remove_duplicate_items(processes)
+        dependencies += list(
+            util.flatten_object(
+                [
+                    process_instance.dependencies
+                    for process_instance in processes
+                    if not isinstance(
+                        process_instance, process.RequiredCapabilityProcess
+                    )
+                ]
+            )
+        )
 
         nodes = []
         for process_instance in processes:
@@ -112,13 +127,13 @@ class ProductionSystem(core.ExpressObject):
                     if isinstance(link_element, node.Node):
                         nodes.append(link_element)
         nodes = remove_duplicate_items(nodes)
-        auxiliary_storages = list(
+        primitive_stores = list(
             util.flatten_object(
-                auxiliary_queue
-                for auxiliary_queue in [auxiliary.storages for auxiliary in auxiliaries]
+                primitive_store
+                for primitive_store in [primitive.storages for primitive in self.primitives]
             )
         )
-        auxiliary_storages = remove_duplicate_items(auxiliary_storages)
+        primitive_stores = remove_duplicate_items(primitive_stores)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
         )
@@ -165,8 +180,11 @@ class ProductionSystem(core.ExpressObject):
         resource_data = [resource.to_model() for resource in self.resources]
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
-        auxiliary_data = [auxiliary.to_model() for auxiliary in auxiliaries]
-        auxiliary_storage_data = [storage.to_model() for storage in auxiliary_storages]
+        dependency_data = [dependency.to_model() for dependency in dependencies]
+        primitive_data = [
+            primitive.to_model() for primitive in self.primitives if primitive.storages
+        ]
+        auxiliary_storage_data = [storage.to_model() for storage in primitive_stores]
 
         queue_data = list(
             util.flatten_object(
@@ -193,7 +211,8 @@ class ProductionSystem(core.ExpressObject):
             source_data=source_data,
             sink_data=sink_data,
             queue_data=queue_data + auxiliary_storage_data,
-            depdendency_data=auxiliary_data,
+            depdendency_data=dependency_data,
+            primitive_data=primitive_data,
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):
@@ -234,3 +253,6 @@ class ProductionSystem(core.ExpressObject):
                 "Runner has not been initialized. Please run the simulation first with the run function."
             )
         return self._runner.get_post_processor()
+
+
+from prodsys.simulation import runner

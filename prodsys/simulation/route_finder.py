@@ -147,9 +147,9 @@ class RouteFinder:
             ):
                 origin_location = link_origin.get_location()
             elif empty_transport:
-                origin_location = link_origin.get_input_location()
+                origin_location = link_origin.get_location(interaction="input")
             elif not empty_transport:
-                origin_location = link_origin.get_output_location()
+                origin_location = link_origin.get_location(interaction="output")
 
             if (
                 not isinstance(link_target, (Store)) or (isinstance(link_target, Resource) and not link_target.can_move)
@@ -157,9 +157,9 @@ class RouteFinder:
             ):
                 target_location = link_target.get_location()
             elif empty_transport:
-                target_location = link_target.get_output_location()
+                target_location = link_target.get_location(interaction="output")
             elif not empty_transport:
-                target_location = link_target.get_input_location()
+                target_location = link_target.get_location(interaction="input")
 
             edge = self.get_graph_edge(
                 link_origin,

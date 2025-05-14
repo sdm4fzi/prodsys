@@ -1,7 +1,7 @@
 """
 This module contains the `prodsys.express` API with classes and functions to easily specify all parameters of a production system. This API is completely compatible with `prodsys.models` and every object can be converted to a data object from `prodsys.models` using the `to_model` method.
 
-The express API is more convenient to use than the `prodsys.models` API because the express API nests the objects in a tree structure, which makes it easier to work with when instantiating production system programatically. 
+The express API is more convenient to use than the `prodsys.models` API because the express API nests the objects in a tree structure, which makes it easier to work with when instantiating production system programatically.
 
 However, the express API does not support all features of the `prodsys.models` API and saved data is more complicated to review because of the nesting.
 
@@ -9,7 +9,7 @@ Recommended is to use the API for programmatically specifying a production syste
 
 The following modules are available:
 
-- `prodsys.express.core`: Contains the abstract base class for express objects.	
+- `prodsys.express.core`: Contains the abstract base class for express objects.
 - `prodsys.express.product`: Contains classes to specify products.
 - `prodsys.express.process`: Contains classes to specify processes.
 - `prodsys.express.production_system`: Contains classes to specify a production system.
@@ -48,5 +48,6 @@ from prodsys.express.resources import Resource
 from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
-from prodsys.express.auxiliary import Auxiliary
+from prodsys.express.primitive import Primitive
+from prodsys.express.dependency import ResourceDependency, PrimitiveDependency, ProcessDependency
 from prodsys.express.production_system import ProductionSystem

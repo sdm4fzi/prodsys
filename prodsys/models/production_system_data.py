@@ -10,7 +10,6 @@ from pydantic import (
     ConfigDict,
     TypeAdapter,
     field_validator,
-    ValidationError,
     ValidationInfo,
 )
 
@@ -866,7 +865,7 @@ class ProductionSystemData(BaseModel):
         for product in products:
             all_processes = get_set_of_IDs(values["process_data"])
             if product.transport_process not in all_processes:
-                raise ValidationError(
+                raise ValueError(
                     f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {all_processes}."
                 )
             required_processes = set()

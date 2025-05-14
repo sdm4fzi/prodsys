@@ -2,26 +2,29 @@ from __future__ import annotations
 
 from abc import ABC
 from sys import intern
-from typing import TYPE_CHECKING, List, Generator, Optional, Union
+from typing import TYPE_CHECKING, List, Generator, Literal, Optional, Union
 
 import random
 
 import logging
-
-from prodsys.simulation import product
-from prodsys.simulation.dependency import DependedEntity, Dependency
 
 
 logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
 from simpy import events
-from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
-
+    from prodsys.simulation.dependency import DependedEntity, Dependency
     # from prodsys.simulation.process import PROCESS_UNION
+    from prodsys.simulation import product
+    from prodsys.simulation import sim, store
+
+    from prodsys.simulation import control, state
+    from prodsys.simulation.process import PROCESS_UNION
+    from prodsys.simulation.product import Locatable
+
 
 from prodsys.models.resource_data import (
     ResourceData,
@@ -100,6 +103,7 @@ class Resource(resource.Resource):
         Args:
             dependant (DependedEntity): The depended entity.
         """
+        print(f"{self.env.now}: {self.data.ID} is bound to {dependant.data.ID}")
         self.current_dependant = dependant
         self.bound = True
 
@@ -107,6 +111,7 @@ class Resource(resource.Resource):
         """
         Releases the resource from the depended entity.
         """
+        print(f"{self.env.now}: {self.data.ID} is released from {self.current_dependant.data.ID}")
         self.current_dependant = None
         self.bound = False
 
@@ -370,14 +375,15 @@ class Resource(resource.Resource):
             and (actual_state.process is None or not actual_state.process.is_alive)
         ]
 
-    def get_location(self) -> List[float]:
-        """
-        Returns the location of the transport resource.
-
-        Returns:
-            List[float]: The location of the resource. Has to have length 2.
-        """
-        return self.data.location
+    def get_location(
+        self, interaction: Literal["input", "output"] = "input"
+    ) -> List[float]:
+        if interaction == "input":
+            return self.data.input_location
+        elif interaction == "output":
+            return self.data.output_location
+        else:
+            return self.data.location
 
     def get_input_queue_length(self) -> int:
         """
@@ -513,24 +519,6 @@ class Resource(resource.Resource):
             yield self.env.process(self.get_free_of_setups())
             yield self.env.process(util.trivial_process(self.env))
 
-    def get_input_location(self) -> List[float]:
-        """
-        Returns the input location of the production resource.
-
-        Returns:
-            List[float]: The input location of the resource. Has to have length 2.
-        """
-        return self.data.input_location
-
-    def get_output_location(self) -> List[float]:
-        """
-        Returns the output location of the production resource.
-
-        Returns:
-            List[float]: The output location of the resource. Has to have length 2.
-        """
-        return self.data.output_location
-
     def add_input_queues(self, input_queues: List[store.Queue]):
         self.input_queues.extend(input_queues)
 
@@ -546,7 +534,7 @@ class Resource(resource.Resource):
 
     def adjust_pending_put_of_output_queues(self, batch_size: int = 1):
         internal_queues = [
-            q for q in self.output_queues if not isinstance(q, store.Store)
+            q for q in self.output_queues if not hasattr(q.data, "location")
         ]
         for output_queue in internal_queues:
             for i in range(batch_size):
@@ -556,6 +544,4 @@ class Resource(resource.Resource):
 RESOURCE_UNION = Resource
 """ Union Type for Resources. """
 
-from prodsys.simulation import control, state
-from prodsys.simulation.process import PROCESS_UNION
-from prodsys.simulation.product import Locatable
+from prodsys.simulation import state

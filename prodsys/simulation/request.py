@@ -3,11 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Generator, Optional, List, Union
 
-from annotated_types import Ge
 import simpy
-
-from prodsys.simulation.dependency import DependedEntity
-from prodsys.simulation.process import Process
 
 
 if TYPE_CHECKING:
@@ -23,6 +19,9 @@ if TYPE_CHECKING:
 
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.store import Store, Queue
+    from prodsys.simulation.dependency import DependedEntity
+    from prodsys.simulation.process import Process
+    from prodsys.simulation.dependency import Dependency
 
 
 class RequestType(Enum):
@@ -33,14 +32,14 @@ class RequestType(Enum):
         TRANSPORT: Represents a transport request.
         MOVE: Represents a move request.
         REWORK: Represents a rework request.
-        AUXILIARY_TRANSPORT: Represents an auxiliary transport request.
+        AUXILIARY_TRANSPORT: Represents an primitive transport request.
     """
 
     TRANSPORT = "transport"
     MOVE = "move"
     REWORK = "rework"
     PRODUCTION = "production"
-    PRIMITIVE_DEPENDENCY = "auxiliary"
+    PRIMITIVE_DEPENDENCY = "primitive"
     PROCESS_DEPENDENCY = "process_dependency"
     RESOURCE_DEPENDENCY = "resource_dependency"
 
@@ -74,6 +73,8 @@ class Request:
         target: Optional[Locatable] = None,
         completed: Optional[simpy.Event] = None,
         route: Optional[List[Locatable]] = None,
+        resolved_dependency: Optional[Dependency] = None,
+        required_dependencies: Optional[list[Dependency]] = None,
         dependency_release_event: Optional[simpy.Event] = None,
     ):
         self.request_type = request_type
@@ -89,9 +90,16 @@ class Request:
 
         self.transport_to_target: Optional[simpy.Event] = None
 
-        self.dependencies: Optional[List[DependedEntity]] = None
-        self.dependencies_requested: Optional[simpy.Event] = simpy.Event(self.requesting_item.env)
-        self.dependencies_ready: Optional[simpy.Event] = simpy.Event(self.process.env)
+        self.resolved_dependency: Optional[Dependency] = resolved_dependency
+        self.required_dependencies: Optional[List[DependedEntity]] = (
+            required_dependencies
+        )
+        self.dependencies_requested: Optional[simpy.Event] = simpy.Event(
+            self.requesting_item.env
+        )
+        self.dependencies_ready: Optional[simpy.Event] = simpy.Event(
+            self.requesting_item.env
+        )
 
         self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route
@@ -182,12 +190,12 @@ class Request:
         """
         return self.target
 
-    def request_dependencies(self) -> Generator[None, None, None]:
+    def request_dependencies(self) -> simpy.Event:
         """
         Requests the dependencies of the request.
         """
         self.dependencies_requested.succeed()
-        yield self.dependencies_ready
+        return self.dependencies_ready
 
     def bind_dependencies(self, dependencies: List[DependedEntity]) -> None:
         """
@@ -196,14 +204,14 @@ class Request:
         Args:
             dependencies (List[DependedEntity]): The list of dependencies to bind.
         """
-        self.dependencies = dependencies
-        for dependency in self.dependencies:
+        self.required_dependencies = dependencies
+        for dependency in self.required_dependencies:
             dependency.bind(self)
 
     def release_dependencies(self):
         """
         Releases the dependencies of the request.
         """
-        if self.dependencies:
-            for dependency in self.dependencies:
+        if self.required_dependencies:
+            for dependency in self.required_dependencies:
                 dependency.release()

@@ -11,6 +11,8 @@ from prodsys.express import core
 
 from prodsys.models import sink_data, queue_data
 import prodsys
+import prodsys.models
+import prodsys.models.production_system_data
 
 
 @dataclass
@@ -78,7 +80,7 @@ class Sink(core.ExpressObject):
             location=self.location,
             product_type=self.product.ID,
         )
-        self._input_queues = [prodsys.adapters.get_default_queue_for_sink(sink)]
+        self._input_queues = [prodsys.models.production_system_data.get_default_queue_for_sink(sink)]
         sink.input_queues = [q.ID for q in self._input_queues]
         return sink
 

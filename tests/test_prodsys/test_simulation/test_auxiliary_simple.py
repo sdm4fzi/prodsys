@@ -24,7 +24,7 @@ def simulation_adapter() -> ProductionSystemData:
     storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
     storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
 
-    auxiliary1 = psx.Auxiliary(
+    auxiliary1 = psx.Primitive(
         ID="auxiliary1",
         transport_process=tp,
         storages=[storage1, storage2],
@@ -34,7 +34,7 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     product1 = psx.Product(
-        processes=[p1], transport_process=tp, ID="product1", auxiliaries=[auxiliary1]
+        processes=[p1], transport_process=tp, ID="product1", dependencies=[auxiliary1]
     )
 
     sink1 = psx.Sink(product1, [10, 0], "sink1")
