@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import random
-from typing import Callable, Union, Optional, Generator, List
+from typing import TYPE_CHECKING, Callable, Union, Optional, Generator, List
 
 import logging
 
 from prodsys.models.source_data import RoutingHeuristic
-from prodsys.simulation.dependency import DependedEntity, Dependency
 
 logger = logging.getLogger(__name__)
 
@@ -12,21 +13,28 @@ from simpy import events
 
 from prodsys.models import product_data
 
-from prodsys.simulation import (
-    primitive,
-    process_models,
-    request,
-    process,
-    router,
-    resources,
-    sim,
-    sink,
-    store,
-    source,
-    node,
-)
-from prodsys.simulation.state import StateTypeEnum, StateEnum
-from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
+
+if TYPE_CHECKING:
+    from prodsys.simulation.dependency import DependedEntity, Dependency
+    from prodsys.simulation import (
+        primitive,
+        process_models,
+        request,
+        process,
+        router,
+        resources,
+        sim,
+        sink,
+        store,
+        source,
+        node,
+    )
+    from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
+
+
+    Locatable = Union[
+        resources.Resource, node.Node, source.Source, sink.Sink, store.Store
+    ]
 
 
 class ProductInfo:
@@ -100,54 +108,50 @@ class ProductInfo:
         self.activity = StateEnum.created_product
         self.state_type = StateTypeEnum.source
 
-    def log_start_process(
+    def log_bind(
         self,
         resource: resources.Resource,
         _product: "Product",
         event_time: float,
-        state_type: StateTypeEnum,
     ) -> None:
         """
-        Logs the start of a process.
+        Logs the start of the usage of a product.
 
         Args:
             resource (resources.Resource): Resource that the product is processed at.
             _product (Product): Product that is processed.
             event_time (float): Time of the event.
-            state_type (state.StateTypeEnum): Type of the state.
         """
-        self.resource_ID = resource.data.ID
-        self.state_ID = resource.data.ID
-        self.event_time = event_time
-        self.product_ID = _product.data.ID
-        self.activity = StateEnum.start_state
-        self.state_type = state_type
+        # TODO: implement logging for product dependency usage
+        # self.resource_ID = resource.data.ID
+        # self.state_ID = resource.data.ID
+        # self.event_time = event_time
+        # self.product_ID = _product.data.ID
+        # self.activity = StateEnum.started_product_usage
+        # self.state_type = StateTypeEnum.production
+        pass
 
-    def log_end_process(
+    def log_release(
         self,
         resource: resources.Resource,
         _product: "Product",
         event_time: float,
-        state_type: StateTypeEnum,
-    ) -> None:
+    ) -> None:  
         """
-        Logs the end of a process.
+        Logs the end of the usage of a product.
 
         Args:
             resource (resources.Resource): Resource that the product is processed at.
             _product (Product): Product that is processed.
             event_time (float): Time of the event.
-            state_type (state.StateTypeEnum): Type of the state.
         """
-        self.resource_ID = resource.data.ID
-        self.state_ID = resource.data.ID
-        self.event_time = event_time
-        self.product_ID = _product.data.ID
-        self.activity = StateEnum.end_state
-        self.state_type = state_type
-
-
-Locatable = Union[resources.Resource, node.Node, source.Source, sink.Sink, store.Store]
+        # self.resource_ID = resource.data.ID
+        # self.state_ID = resource.data.ID
+        # self.event_time = event_time
+        # self.product_ID = _product.data.ID
+        # self.activity = StateEnum.finished_product_usage
+        # self.state_type = StateTypeEnum.production
+        pass
 
 
 class Product:
@@ -161,9 +165,6 @@ class Product:
         transport_process (process.Process): Transport process that represents the required transport processes.
         product_router (router.Router): Router that is used to route the product object.
     """
-
-    # TODO: unify API with Primitive somehow (also for logging)
-
     def __init__(
         self,
         env: sim.Environment,
@@ -176,7 +177,6 @@ class Product:
         ],
         product_router: router.Router,
         routing_heuristic: RoutingHeuristic,
-        has_auxiliaries: bool = False,
     ):
         self.env = env
         self.data = data
@@ -229,7 +229,7 @@ class Product:
         while self.next_possible_processes:
             executed_process_event = self.product_router.request_processing(self)
             yield executed_process_event
-            if isinstance(self.current_process, process.ReworkProcess):
+            if hasattr(self.current_process, "reworked_process_ids"):
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
@@ -330,3 +330,5 @@ class Product:
             return
 
         self.next_possible_processes = next_possible_processes
+
+from prodsys.simulation.state import StateTypeEnum, StateEnum

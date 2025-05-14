@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Literal
 
 from prodsys.simulation import sim, store
 from prodsys.models import sink_data
@@ -40,13 +40,11 @@ class Sink:
         """
         self.input_queues.extend(input_queues)
 
-    def get_location(self) -> List[float]:
-        """
-        Returns the location of the sink.
-
-        Returns:
-            List[float]: The location. Has to be a list of length 2.
-        """
+    def get_location(self, interaction: Literal["input"] = "input") -> List[float]:
+        if interaction == "out":
+            raise ValueError(
+                "Sink does not have an output location. Use 'input' instead."
+            )
         return self.data.location
 
     def get_input_queue_length(self) -> int:

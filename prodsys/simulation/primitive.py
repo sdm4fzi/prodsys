@@ -1,35 +1,31 @@
 from __future__ import annotations
 
-from abc import ABC
-from enum import Enum
-from collections.abc import Iterable
-from typing import List, Union, Optional, TYPE_CHECKING, Generator
+from typing import Union, Optional, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field
 
 import logging
 
-from prodsys.simulation.resources import Resource
 
 logger = logging.getLogger(__name__)
 
 from simpy import events
 
-from pydantic import BaseModel
-from prodsys.simulation import router as router_module
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources, sink, source
     from prodsys.factories import primitive_factory
+    from prodsys.simulation.resources import Resource
+    from prodsys.simulation import (
+        request,
+        process,
+        sim,
+        store,
+        state,
+    )
+    from prodsys.simulation import router as router_module
 
-from prodsys.models import dependency_data, primitives_data
-from prodsys.simulation import (
-    request,
-    process,
-    sim,
-    store,
-    state,
-)
+
+from prodsys.models import primitives_data
 
 
 class PrimitiveInfo:
@@ -120,52 +116,6 @@ class PrimitiveInfo:
         self.product_ID = _product.data.ID
         self.activity = state.StateEnum.finished_auxiliary_usage
         self.state_type = state.StateTypeEnum.production
-
-    def log_start_process(
-        self,
-        resource: resources.Resource,
-        _product: Primitive,
-        event_time: float,
-        state_type: state.StateTypeEnum,
-    ) -> None:
-        """
-        Logs the start of a process.
-
-        Args:
-            resource (resources.Resource): Resource that the product is processed at.
-            _product (Product): Product that is processed.
-            event_time (float): Time of the event.
-            state_type (state.StateTypeEnum): Type of the state.
-        """
-        self.resource_ID = resource.data.ID
-        self.state_ID = resource.data.ID
-        self.event_time = event_time
-        self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.start_state
-        self.state_type = state_type
-
-    def log_end_process(
-        self,
-        resource: resources.Resource,
-        _product: Primitive,
-        event_time: float,
-        state_type: state.StateTypeEnum,
-    ) -> None:
-        """
-        Logs the end of a process.
-
-        Args:
-            resource (resources.Resource): Resource that the product is processed at.
-            _product (Product): Product that is processed.
-            event_time (float): Time of the event.
-            state_type (state.StateTypeEnum): Type of the state.
-        """
-        self.resource_ID = resource.data.ID
-        self.state_ID = resource.data.ID
-        self.event_time = event_time
-        self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.end_state
-        self.state_type = state_type
 
 
 class Primitive:

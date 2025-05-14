@@ -94,7 +94,6 @@ class Router:
         env: simpy.Environment,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
-        auxiliary_factory: primitive_factory.PrimitiveFactory,
         product_factory: Optional[product_factory.ProductFactory] = None,
         source_factory: Optional[source_factory.SourceFactory] = None,
         primitive_factory: Optional[primitive_factory.PrimitiveFactory] = None,
@@ -102,7 +101,6 @@ class Router:
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
         self.sink_factory: sink_factory.SinkFactory = sink_factory
-        self.auxiliary_factory: primitive_factory.PrimitiveFactory = auxiliary_factory
         self.product_factory: Optional[product_factory.ProductFactory] = product_factory
         self.source_factory: Optional[source_factory.SourceFactory] = source_factory
         self.primitive_factory: Optional[primitive_factory.PrimitiveFactory] = (
@@ -114,7 +112,6 @@ class Router:
                 self.free_primitives_by_type[primitive.data.type] = []
             self.free_primitives_by_type[primitive.data.type].append(primitive)
 
-        self.auxiliary_factory.router = self
         self.product_factory.router = self
 
         self.reachability_cache: Dict[Tuple[str, str], bool] = {}
@@ -190,7 +187,11 @@ class Router:
             yield self.got_primitive_request
             self.got_primitive_request = events.Event(self.env)
             while True:
-                free_requests = self.request_handler.get_next_primitive_request_to_route(self.free_primitives_by_type)
+                free_requests = (
+                    self.request_handler.get_next_primitive_request_to_route(
+                        self.free_primitives_by_type
+                    )
+                )
                 if not free_requests:
                     break
                 self.env.update_progress_bar()
@@ -212,12 +213,13 @@ class Router:
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
         executed_request.resource.controller.request(executed_request)
-        if executed_request.dependencies:
+        if executed_request.required_dependencies:
+            print("Waiting for dependencies to be routed")
             yield executed_request.dependencies_requested
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
                 process=executed_request.process,
-                dependency_release_event=executed_request.completed
+                dependency_release_event=executed_request.completed,
             )
             for dependency_ready_event in dependency_ready_events:
                 yield dependency_ready_event
@@ -235,9 +237,11 @@ class Router:
         )
         yield trans_process_finished_event
         executed_request.dependencies_ready.succeed()
-        if executed_request.dependency_release_event: # primitives for resource processes
+        if (
+            executed_request.dependency_release_event
+        ):  # primitives for resource processes
             yield executed_request.dependency_release_event
-        else: # primitives for product
+        else:  # primitives for product
             yield executed_request.item.got_free
         transport_process_finished_event = self.request_transport(
             executed_request.item, executed_request.item.storage
@@ -258,7 +262,10 @@ class Router:
             request.Request: The allocated request.
         """
         # Determine based on the routing heuristic
-        routing_heuristic = free_requests[0].requesting_item.routing_heuristic
+        try:
+            routing_heuristic = free_requests[0].requesting_item.routing_heuristic
+        except Exception:
+            routing_heuristic = shortest_queue_routing_heuristic
         routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
 
@@ -271,7 +278,13 @@ class Router:
             # reserve input queues
             origin_queue = routed_request.resource.input_queues[0]
             target_queue = routed_request.resource.output_queues[0]
-
+        elif routed_request.request_type in (
+            request.RequestType.PRIMITIVE_DEPENDENCY,
+            request.RequestType.PROCESS_DEPENDENCY,
+            request.RequestType.RESOURCE_DEPENDENCY,
+        ):
+            origin_queue = None
+            target_queue = None
         routed_request.origin_queue = origin_queue
         routed_request.target_queue = target_queue
         return routed_request
@@ -300,7 +313,10 @@ class Router:
         return dependency_ready_events
 
     def get_dependencies_for_execution(
-        self, resource: resources.Resource, process: process.Process, dependency_release_event: events.Event
+        self,
+        resource: resources.Resource,
+        process: process.Process,
+        dependency_release_event: events.Event,
     ) -> List[simpy.Event]:
         """
         Routes all dependencies for processing to a resource. Covers currently only primitive dependencies (workpiece carriers, e.g.)
@@ -318,7 +334,9 @@ class Router:
         dependency_ready_events = []
         for dependency in resource.dependencies:
             request_info = self.request_handler.add_dependency_request(
-                requesting_item=resource, dependency=dependency, dependency_release_event=dependency_release_event
+                requesting_item=resource,
+                dependency=dependency,
+                dependency_release_event=dependency_release_event,
             )
             dependency_ready_events.append(request_info.request_completion_event)
         for dependency in process.dependencies:
@@ -392,57 +410,6 @@ class Router:
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event
-
-    def route_product_to_storage(self, product: product.Product):
-        """
-        Routes a product to the store.
-
-        Args:
-            product (product.Product): The product.
-
-        Returns:
-            Generator[request.TransportResquest]: A generator that yields when the product is routed to the store.
-        """
-        # TODO: implement function for working with stores
-
-        # resource = product.current_locatable
-        # external_queues = [
-        #     queue for queue in resource.output_queues if isinstance(queue, store.Store)
-        # ]
-        # if not external_queues:
-        #     raise ValueError(
-        #         f"No external queues found for product {product.product_data.ID} to reach any store from resource {product.current_locatable.data.ID}."
-        #     )
-
-        # potential_to_transport_requests = []
-        # for external_queue in external_queues:
-        #     to_transport_request = request.ToTransportRequest(
-        #         product=product, target=external_queue
-        #     )
-        #     potential_to_transport_requests.append(to_transport_request)
-
-    # def check_store_product(self, product: product.Product) -> bool:
-    #     """
-    #     Decides whether a product is stored in the store.
-
-    #     Returns:
-    #         bool: If the product is stored in the store.
-    #     """
-    #     resource = product.current_locatable
-    #     external_queues = [
-    #         queue for queue in resource.output_queues if isinstance(queue, store.Store)
-    #     ]
-    #     if not external_queues:
-    #         return False
-    #     internal_queues = [
-    #         queue
-    #         for queue in resource.output_queues
-    #         if not isinstance(queue, store.Store)
-    #     ]
-    #     if all(queue.full for queue in internal_queues):
-    #         return True
-    #     # TODO: implement heuristic for storage
-    #     return random.choice([True, False])
 
     def get_rework_processes(
         self, product: product.Product, failed_process: process.Process

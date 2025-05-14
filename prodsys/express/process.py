@@ -52,7 +52,7 @@ class DefaultProcess(Process):
 
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(init=False)
-
+    dependencies: Optional[List[Dependency]] = Field(default_factory=list)
 
 @dataclass
 class ProductionProcess(DefaultProcess, core.ExpressObject):
@@ -101,6 +101,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
             description="",
             type=self.type,
             failure_rate=self.failure_rate,
+            dependency_ids=[dependency.ID for dependency in self.dependencies]
         )
 
 
@@ -142,6 +143,7 @@ class CapabilityProcess(Process, core.ExpressObject):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.CapabilityProcesses
     )
+    dependencies: Optional[List[Dependency]] = Field(default_factory=list)
 
     def to_model(self) -> processes_data.CapabilityProcessData:
         """
@@ -157,6 +159,7 @@ class CapabilityProcess(Process, core.ExpressObject):
             description="",
             type=self.type,
             failure_rate=self.failure_rate,
+            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 
@@ -178,6 +181,7 @@ class ReworkProcess(Process, core.ExpressObject):
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.ReworkProcesses
     )
+    dependencies: Optional[List[Dependency]] = Field(default_factory=list)
 
     def to_model(self):
         return processes_data.ReworkProcessData(
@@ -189,6 +193,7 @@ class ReworkProcess(Process, core.ExpressObject):
                 reworked_process.ID for reworked_process in self.reworked_processes
             ],
             blocking=self.blocking,
+            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 
@@ -245,6 +250,7 @@ class TransportProcess(DefaultProcess, core.ExpressObject):
             unloading_time_model_id=(
                 self.unloading_time_model.ID if self.unloading_time_model else None
             ),
+            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 
@@ -337,6 +343,7 @@ class LinkTransportProcess(TransportProcess):
             unloading_time_model_id=(
                 self.unloading_time_model.ID if self.unloading_time_model else None
             ),
+            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 
@@ -380,3 +387,4 @@ PROCESS_UNION = Union[
     LinkTransportProcess,
 ]
 from prodsys.express import resources, sink, source, node
+from prodsys.express.dependency import Dependency

@@ -8,6 +8,9 @@ import random
 
 import logging
 
+from prodsys.models.processes_data import ProcessTypeEnum
+from prodsys.simulation.request import RequestType
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.product import Locatable
+    from prodsys.simulation.dependency import Dependency
 
 
 class Controller:
@@ -238,8 +242,8 @@ class ProductionProcessHandler:
             process_request.origin_queue,
             process_request.target_queue,
         )
-
-        yield process_request.dependencies_ready
+        if process_request.required_dependencies:
+            yield process_request.request_dependencies()
         yield from resource.setup(process)
         with resource.request() as req:
             yield req
@@ -274,23 +278,11 @@ class ProductionProcessHandler:
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
         )
-        target_product.info.log_start_process(
-            self.resource,
-            target_product,
-            self.env.now,
-            state.StateTypeEnum.production,
-        )
         input_state.process = self.env.process(input_state.process_state())
         input_state.reserved = False
         self.handle_rework_required(target_product, process)
 
         yield input_state.process
-        target_product.info.log_end_process(
-            self.resource,
-            target_product,
-            self.env.now,
-            state.StateTypeEnum.production,
-        )
 
     def handle_rework_required(
         self, product: product.Product, process: process.Process
@@ -405,8 +397,8 @@ class TransportProcessHandler:
             process_request.target_queue,
         )
         route_to_target = process_request.get_route()
-
-        yield from process_request.request_dependencies()
+        if process_request.required_dependencies:
+            yield process_request.request_dependencies()
         yield from resource.setup(process)
         if not resource.current_locatable:
             resource.set_location(origin)
@@ -500,14 +492,12 @@ class TransportProcessHandler:
         Returns:
             list[float]: The position of the target, list with 2 floats.
         """
-        if not last_transport_step or not isinstance(
-            target, (resources.Resource, store.Store)
-        ):
+        if not last_transport_step or hasattr(target, "product_factory"):
             return target.get_location()
         if empty_transport:
-            return target.get_output_location()
+            return target.get_location(interaction="output")
         else:
-            return target.get_input_location()
+            return target.get_location(interaction="input")
 
     def run_process(
         self,
@@ -529,10 +519,10 @@ class TransportProcessHandler:
             initial_transport_step (bool): If this is the initial transport step.
             last_transport_step (bool): If this is the last transport step.
         """
-        if not hasattr(product, "product_info"):
-            input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        if not hasattr(item, "product_info"):
+            input_state.state_info.log_auxiliary(item, state.StateTypeEnum.transport)
         else:
-            input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+            input_state.state_info.log_product(item, state.StateTypeEnum.transport)
 
         origin = self.resource.current_locatable
         input_state.state_info.log_transport(
@@ -540,12 +530,6 @@ class TransportProcessHandler:
             target,
             state.StateTypeEnum.transport,
             empty_transport=empty_transport,
-        )
-        item.info.log_start_process(
-            input_state.resource,
-            product,
-            self.env.now,
-            state.StateTypeEnum.transport,
         )
         target_location = self.get_target_location(
             target, empty_transport, last_transport_step=last_transport_step
@@ -584,10 +568,21 @@ class TransportProcessHandler:
 
 
 class DependencyProcessHandler:
-    # TODO: this function just waits for the auxiliaried process to be over
     def __init__(self, env: sim.Environment) -> None:
         self.env = env
         self.resource = None
+
+    def update_location(
+        self, locatable: product.Locatable, location: list[float]
+    ) -> None:
+        """
+        Set the current position of the transport resource.
+
+        Args:
+            locatable (product.Locatable): The current position.
+            to_output (Optional[bool], optional): If the transport resource is moving to the output location. Defaults to None.
+        """
+        self.resource.set_location(locatable)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
@@ -603,10 +598,180 @@ class DependencyProcessHandler:
         requesting_item = process_request.requesting_item
         self.resource = process_request.get_resource()
         self.resource.bind_to_dependant(requesting_item)
-        # TODO: move the resource to the location of the requesting item
+        process = [
+            process
+            for process in self.resource.processes
+            if process.data.type
+            in (
+                ProcessTypeEnum.TransportProcesses,
+                ProcessTypeEnum.LinkTransportProcesses,
+            )
+        ].pop()
+        target = requesting_item
+        if process_request.required_dependencies:
+            yield process_request.request_dependencies()
+        yield from self.resource.setup(process)
+        if not self.resource.current_locatable:
+            self.resource.set_location(target)
+        with self.resource.request() as req:
+            yield req
+            self.resource.controller.mark_started_process()
+            if target.get_location() != self.resource.get_location():
+                move_request = request_module.Request(
+                    request_type=RequestType.TRANSPORT,
+                    process=process,
+                    resource=self.resource,
+                    requesting_item=target,
+                    origin=target,
+                )
+                route_to_origin = self.find_route_to_origin(move_request)
+                transport_state: state.State = yield self.env.process(
+                    self.resource.wait_for_free_process(process)
+                )
+                transport_state.reserved = True
+                yield from self.run_transport(
+                    transport_state, route_to_origin, empty_transport=True, dependency=process_request.resolved_dependency
+                )
+                transport_state.process = None
+
+            # product.product_router.mark_finished_request(process_request)
         process_request.completed.succeed()
         yield process_request.dependency_release_event
         self.resource.release_from_dependant()
+        self.resource.controller.mark_finished_process()
+
+    def run_transport(
+        self,
+        transport_state: state.State,
+        route: List[product.Locatable],
+        empty_transport: bool,
+        dependency: Dependency,
+    ) -> Generator:
+        """
+        Run the transport process and every single transport step in the route of the transport process.
+
+        Args:
+            transport_state (state.State): The transport state of the process.
+            product (product.Product): The product that is transported.
+            route (List[product.Locatable]): The route of the transport with locatable objects.
+            empty_transport (bool): If the transport is empty.
+
+        Yields:
+            Generator: The generator yields when the transport is over.
+        """
+        for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
+            if link_index == 0:
+                initial_transport_step = True
+            else:
+                initial_transport_step = False
+            if link_index == len(route) - 2:
+                last_transport_step = True
+            else:
+                last_transport_step = False
+            transport_state.process = self.env.process(
+                self.run_process(
+                    transport_state,
+                    target=next_location,
+                    dependency=dependency,
+                    empty_transport=empty_transport,
+                    initial_transport_step=initial_transport_step,
+                    last_transport_step=last_transport_step,
+                )
+            )
+            transport_state.reserved = False
+            yield transport_state.process
+
+    def get_target_location(
+        self,
+        target: product.Locatable,
+        empty_transport: bool,
+        last_transport_step: bool,
+    ) -> list[float]:
+        """
+        Get the position of the target where the material exchange is done (either picking up or putting down)
+
+        Args:
+            target (product.Locatable): The target of the transport.
+            empty_transport (bool): If the transport is empty.
+            last_transport_step (bool): If this is the last transport step.
+
+        Returns:
+            list[float]: The position of the target, list with 2 floats.
+        """
+        if not last_transport_step or hasattr(target, "product_factory"):
+            return target.get_location()
+        if empty_transport:
+            return target.get_location(interaction="output")
+        else:
+            return target.get_location(interaction="input")
+
+    def run_process(
+        self,
+        input_state: state.TransportState,
+        target: product.Locatable,
+        empty_transport: bool,
+        initial_transport_step: bool,
+        last_transport_step: bool,
+        dependency: Dependency,
+    ):
+        """
+        Run the process of a product. The process is started and the product is logged.
+
+        Args:
+            input_state (state.State): The transport state of the process.
+            item (Union[product.Product, primitive.Primitive]): The product that is transported.
+            target (product.Locatable): The target of the transport.
+            empty_transport (bool): If the transport is empty.
+            initial_transport_step (bool): If this is the initial transport step.
+            last_transport_step (bool): If this is the last transport step.
+        """
+        # TODO: update logs here to consider dependencies
+        # if not hasattr(product, "product_info"):
+        #     input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        # else:
+        #     input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+
+        origin = self.resource.current_locatable
+        input_state.state_info.log_transport(
+            origin,
+            target,
+            state.StateTypeEnum.transport,
+            empty_transport=empty_transport,
+        )
+        target_location = self.get_target_location(
+            target, empty_transport, last_transport_step=last_transport_step
+        )
+        input_state.process = self.env.process(
+            input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
+        )
+        yield input_state.process
+        self.update_location(target, location=target_location)
+
+    def find_route_to_origin(
+        self, process_request: request_module.Request
+    ) -> List[product.Locatable]:
+        """
+        Find the route to the origin of the transport request.
+
+        Args:
+            process_request (request.TransportResquest): The transport request.
+
+        Returns:
+            List[product.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
+        """
+        if isinstance(process_request.process, LinkTransportProcess):
+            route_to_origin = route_finder.find_route(
+                request=process_request,
+                find_route_to_origin=True,
+                process=process_request.get_process(),
+            )
+            if not route_to_origin:
+                raise ValueError(
+                    f"Route to origin for transport of {process_request.requesting_item.data.ID} could not be found. Router selected a transport resource that can perform the transport but does not reach the origin."
+                )
+            return route_to_origin
+        else:
+            return [self.resource.current_locatable, process_request.get_origin()]
 
 
 def FIFO_control_policy(requests: List[request_module.Request]) -> None:
@@ -643,9 +808,9 @@ def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
     if not isinstance(locatable, (resources.Resource, store.Store)):
         return locatable.get_location()
     if mode == "target":
-        return locatable.get_input_location()
+        return locatable.get_location(interaction="input")
     else:
-        return locatable.get_output_location()
+        return locatable.get_location(interaction="output")
 
 
 def SPT_transport_control_policy(
@@ -953,12 +1118,6 @@ class BatchController(Controller):
 
         for product, input_state in zip(products, input_states):
             input_state.state_info.log_product(product, state.StateTypeEnum.production)
-            product.info.log_start_process(
-                self.resource,
-                product,
-                self.env.now,
-                state.StateTypeEnum.production,
-            )
             input_state.process = self.env.process(
                 input_state.process_state(process_time_for_batch)
             )
@@ -990,6 +1149,9 @@ class BatchController(Controller):
         product.add_needed_rework(process)
 
 
-from prodsys.simulation import resources, state, route_finder, sim, store
+# from prodsys.simulation import resources, state, route_finder, sim, store
+# from prodsys.simulation import request as request_module
+# from prodsys.simulation.process import LinkTransportProcess
+
 from prodsys.simulation import request as request_module
-from prodsys.simulation.process import LinkTransportProcess
+from prodsys.simulation import source, sink

@@ -21,6 +21,8 @@ from prodsys.express import core
 
 from prodsys.models import resource_data, queue_data
 import prodsys
+import prodsys.models
+import prodsys.models.production_system_data
 
 
 @dataclass
@@ -60,6 +62,8 @@ class Resource(core.ExpressObject):
     _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
     _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
 
+    dependencies: Optional[List[dependency.Dependency]] = Field(default_factory=list)
+
     def to_model(self) -> resource_data.ResourceData:
         """
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
@@ -79,11 +83,12 @@ class Resource(core.ExpressObject):
             state_ids=[state.ID for state in self.states],
             controller=self.controller,
             control_policy=self.control_policy,
+            dependency_ids=[dep.ID for dep in self.dependencies],
         )
         (
             self._input_queues,
             self._output_queues,
-        ) = prodsys.adapters.get_default_queues_for_resource(
+        ) = prodsys.models.production_system_data.get_default_queues_for_resource(
             resource, self.internal_queue_size
         )
         resource.input_queues = [q.ID for q in self._input_queues + self.input_stores]
@@ -93,4 +98,4 @@ class Resource(core.ExpressObject):
         return resource
 
 
-from prodsys.express import state, process, queue
+from prodsys.express import state, process, queue, dependency

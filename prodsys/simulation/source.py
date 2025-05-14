@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Tuple, Generator
+from typing import List, TYPE_CHECKING, Literal, Tuple, Generator
 
 from simpy import events
 
@@ -97,13 +97,13 @@ class Source:
             product.update_location(self)
             product.process = self.env.process(product.process_product())
 
-    def get_location(self) -> List[float]:
-        """
-        Returns the location of the source.
-
-        Returns:
-            List[float]: The location. Has to be a list of length 2.
-        """
+    def get_location(
+        self, interaction: Literal["output"] = "output"
+    ) -> List[float]:
+        if interaction == "input":
+            raise ValueError(
+                "Source does not have an input location. Use 'output' instead."
+            )
         return self.data.location
 
 

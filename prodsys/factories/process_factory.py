@@ -55,7 +55,7 @@ class ProcessFactory:
         process_data: processes_data.PROCESS_DATA_UNION,
         adapter: production_system_data.ProductionSystemData,
     ):
-        values = {"process_data": process_data}
+        values = {"data": process_data}
         if not (
             isinstance(process_data, processes_data.CompoundProcessData)
             or isinstance(process_data, processes_data.RequiredCapabilityProcessData)

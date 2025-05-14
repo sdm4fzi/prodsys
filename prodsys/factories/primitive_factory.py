@@ -50,7 +50,7 @@ class PrimitiveFactory:
         self.router: router_module.Router = None
         self.auxiliary_counter = 0
 
-    def create_primitive(self, adapter: production_system_data.ProductionSystemData):
+    def create_primitives(self, adapter: production_system_data.ProductionSystemData):
         """
         Create auxiliary objects based on the provided adapter's auxiliary data.
 
@@ -104,7 +104,7 @@ class PrimitiveFactory:
         auxiliary_object.init_got_free()
 
         if self.event_logger:
-            self.event_logger.observe_terminal_auxiliary_states(auxiliary_object)
+            self.event_logger.observe_terminal_primitive_states(auxiliary_object)
 
         self.auxiliary_counter += 1
         self.primitives.append(auxiliary_object)

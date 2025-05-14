@@ -10,6 +10,7 @@ import time
 from prodsys.models import production_system_data
 from prodsys.simulation import sim, logger
 from prodsys.factories import (
+    dependency_factory,
     link_transport_process_updater,
     primitive_factory,
     state_factory,
@@ -112,11 +113,12 @@ class Runner:
         self.state_factory: state_factory.StateFactory = None
         self.process_factory: process_factory.ProcessFactory = None
         self.queue_factory: queue_factory.QueueFactory = None
-        self.auxiliary_factory: primitive_factory.PrimitiveFactory = None
+        self.dependency_factory: dependency_factory.DependencyFactory = None
         self.resource_factory: resource_factory.ResourceFactory = None
         self.node_factory: node_factory.NodeFactory = None
         self.sink_factory: sink_factory.SinkFactory = None
         self.source_factory: source_factory.SourceFactory = None
+        self.primitive_factory: primitive_factory.PrimitiveFactory = None
         self.product_factory: product_factory.ProductFactory = None
         self.event_logger: logger.Logger = None
         self.time_stamp: str = ""
@@ -172,20 +174,10 @@ class Runner:
 
             self.sink_factory.create_sinks(self.adapter)
 
-            self.auxiliary_factory = primitive_factory.PrimitiveFactory(
-                env=self.env,
-                process_factory=self.process_factory,
-                queue_factory=self.queue_factory,
-                resource_factory=self.resource_factory,
-                sink_factory=self.sink_factory,
-            )
-
             self.event_logger = logger.EventLogger()
             self.event_logger.observe_resource_states(self.resource_factory)
 
             self.product_factory.event_logger = self.event_logger
-            self.auxiliary_factory.event_logger = self.event_logger
-            self.auxiliary_factory.create_primitive(self.adapter)
 
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
@@ -193,18 +185,36 @@ class Runner:
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
-                auxiliary_factory=self.auxiliary_factory,
+                auxiliary_factory=self.dependency_factory,
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
+            self.primitive_factory = primitive_factory.PrimitiveFactory(
+                env=self.env,
+                process_factory=self.process_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                sink_factory=self.sink_factory,
+            )
+            self.primitive_factory.create_primitives(self.adapter)
+
             router = Router(
                 env=self.env,
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
-                auxiliary_factory=self.auxiliary_factory,
                 product_factory=self.product_factory,
                 source_factory=self.source_factory,
+                primitive_factory=self.primitive_factory,
             )
+
+            self.dependency_factory = dependency_factory.DependencyFactory(
+                process_factory=self.process_factory,
+                resource_factory=self.resource_factory,
+                product_factory=self.product_factory,
+                primitive_factory=self.primitive_factory,
+            )
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
+            self.dependency_factory.inject_dependencies()
 
             link_transport_process_updater_instance = (
                 link_transport_process_updater.LinkTransportProcessUpdater(
@@ -216,8 +226,6 @@ class Runner:
                 )
             )
             link_transport_process_updater_instance.update_links_with_objects()
-
-            self.auxiliary_factory.place_auxiliaries_in_queues()
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
             self.env.process(router.resource_routing_loop())

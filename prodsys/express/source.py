@@ -11,6 +11,8 @@ from prodsys.express import core, time_model
 
 from prodsys.models import source_data, queue_data
 import prodsys
+import prodsys.models
+import prodsys.models.production_system_data
 
 
 @dataclass
@@ -91,7 +93,9 @@ class Source(core.ExpressObject):
             time_model_id=self.time_model.ID,
             routing_heuristic=self.routing_heuristic,
         )
-        self._output_queues = [prodsys.adapters.get_default_queue_for_source(source)]
+        self._output_queues = [
+            prodsys.models.production_system_data.get_default_queue_for_source(source)
+        ]
         source.output_queues = [q.ID for q in self._output_queues]
         return source
 

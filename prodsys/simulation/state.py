@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 from simpy import events
 from simpy import exceptions
 
-from prodsys.simulation import primitive, sim, time_model
 from prodsys.models.state_data import (
     StateData,
     BreakDownStateData,
@@ -24,6 +23,7 @@ from prodsys.models.state_data import (
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources
+    from prodsys.simulation import primitive, sim, time_model
 
 
 class StateEnum(str, Enum):

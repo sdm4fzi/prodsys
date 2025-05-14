@@ -1,33 +1,26 @@
 from __future__ import annotations
 
-from abc import ABC
-from enum import Enum
-from collections.abc import Iterable
-from typing import List, Protocol, Union, Optional, TYPE_CHECKING, Generator
-
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Protocol, TYPE_CHECKING
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-from simpy import events
 
-from pydantic import BaseModel
-from prodsys.simulation import primitive, router as router_module
+from prodsys.simulation import primitive
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources, sink, source
     from prodsys.factories import primitive_factory
 
-from prodsys.models import dependency_data
-from prodsys.simulation import (
-    request,
-    process,
-    sim,
-    store,
-    state,
-)
+    from prodsys.models import dependency_data
+    from prodsys.simulation import (
+        request,
+        process,
+        sim,
+        store,
+        state,
+    )
 
 class DependedEntity(Protocol):
     """
@@ -91,4 +84,3 @@ class Dependency:
         self.required_primitive = required_primitive
         self.required_resource = required_resource
 
-from prodsys.simulation import product
