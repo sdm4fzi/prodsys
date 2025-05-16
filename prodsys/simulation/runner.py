@@ -215,6 +215,7 @@ class Runner:
             )
             self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
             self.dependency_factory.inject_dependencies()
+            self.event_logger.observe_resource_dependency_states(self.resource_factory)
 
             link_transport_process_updater_instance = (
                 link_transport_process_updater.LinkTransportProcessUpdater(

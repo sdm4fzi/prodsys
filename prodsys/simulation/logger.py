@@ -5,6 +5,8 @@ import warnings
 from enum import Enum
 from abc import ABC, abstractmethod
 
+from prodsys.simulation.resources import DependencyInfo
+
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
@@ -176,6 +178,29 @@ def post_monitor_primitive_info(
     data.append(item)
 
 
+def post_monitor_resource_dependency(
+    data: List[dict], dependency_info: DependencyInfo
+):
+    """
+    Post function for monitoring resource dependency info. With this post monitor, every resource dependency creation and finish is logged.
+
+    Args:
+        data (List[dict]): The data to log to.
+        product_info (product.ProductInfo): The product info object.
+    """
+
+    item = {
+        "Time": dependency_info.event_time,
+        "Resource": dependency_info.resource_ID,
+        "State": dependency_info.state_ID,
+        "State Type": dependency_info.state_type,
+        "Activity": dependency_info.activity,
+        "Requesting Item": dependency_info.requesting_item_ID,
+        "Dependency": dependency_info.dependency_ID,
+        }
+    data.append(item)
+
+
 class EventLogger(Logger):
     """
     Logger for logging events.
@@ -261,3 +286,20 @@ class EventLogger(Logger):
             ],
             post=post_monitor_primitive_info,
         )
+
+
+    def observe_resource_dependency_states(
+        self, resource_factory: resource_factory.ResourceFactory
+    ):
+        """
+        Create path to observe the resource dependency states.
+        Args:
+            resource_factory (resource_factory.ResourceFactory): The resource factory.
+        """
+        for r in resource_factory.all_resources.values():
+            self.register_patch(
+                self.event_data,
+                r.dependency_info,
+                attr=["log_start_dependency", "log_end_dependency"],
+                post=post_monitor_resource_dependency,
+            )

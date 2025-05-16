@@ -260,7 +260,6 @@ class ProductionProcessHandler:
             resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
             product.product_router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
-            process_request.release_dependencies()
 
     def run_process(
         self,
@@ -636,7 +635,9 @@ class DependencyProcessHandler:
 
             # product.product_router.mark_finished_request(process_request)
         process_request.completed.succeed()
+        self.resource.dependency_info.log_start_dependency(event_time=self.env.now, requesting_item_id=process_request.requesting_item.data.ID, dependency_id=process_request.resolved_dependency.data.ID)
         yield process_request.dependency_release_event
+        self.resource.dependency_info.log_end_dependency(event_time=self.env.now, requesting_item_id=process_request.requesting_item.data.ID, dependency_id=process_request.resolved_dependency.data.ID)
         self.resource.release_from_dependant()
         self.resource.controller.mark_finished_process()
 
@@ -659,6 +660,7 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the transport is over.
         """
+        transport_state.state_info._product_ID = dependency.data.ID
         for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
             if link_index == 0:
                 initial_transport_step = True

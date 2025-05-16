@@ -207,11 +207,3 @@ class Request:
         self.required_dependencies = dependencies
         for dependency in self.required_dependencies:
             dependency.bind(self)
-
-    def release_dependencies(self):
-        """
-        Releases the dependencies of the request.
-        """
-        if self.required_dependencies:
-            for dependency in self.required_dependencies:
-                dependency.release()

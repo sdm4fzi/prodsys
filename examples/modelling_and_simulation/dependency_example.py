@@ -18,39 +18,59 @@ s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
+
+assembly_process = psx.ProductionProcess(
+    psx.FunctionTimeModel("exponential", 0.1, ID="fake_process"), "fake_process"
+)
+
 worker = psx.Resource(
-    [tp],
+    [tp, assembly_process],
     [2, 0],
     1,
     ID="worker",
 )
 
+worker2 = psx.Resource(
+    [tp, assembly_process],
+    [3, 0],
+    1,
+    ID="worker2",
+)
 
+# FIXME: process dependency is buggy
+# worker_dependency = psx.ResourceDependency(
+#     ID="worker_dependency",
+#     required_resource=worker,
+# )
 worker_dependency = psx.ResourceDependency(
     ID="worker_dependency",
     required_resource=worker,
 )
+worker_dependency2 = psx.ResourceDependency(
+    ID="worker_dependency2",
+    required_resource=worker2,
+)
 
 machine = psx.Resource(
     [p1, p2],
-    [5, 0],
+    [5, 5],
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine",
-    output_location=[5, 1],
+    output_location=[5, 6],
     dependencies=[worker_dependency],
 )
 machine2 = psx.Resource(
     [p1, p2],
-    [7, 0],
+    [7, 2],
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
-    output_location=[7, 1],
-    dependencies=[worker_dependency],
+    output_location=[7, 3],
+    dependencies=[worker_dependency2],
 )
 
-transport = psx.Resource([tp], [2, 0], 1, ID="transport")
+transport = psx.Resource([tp], [2, 2], 1, ID="transport")
 
 product1 = psx.Product([p1], tp, "product1")
 product2 = psx.Product([p2], tp, "product2")
@@ -68,9 +88,10 @@ source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
 
 
 system = psx.ProductionSystem(
-    [machine, machine2, transport, worker], [source1, source2], [sink1, sink2]
+    [machine, machine2, transport, worker, worker2], [source1, source2], [sink1, sink2]
 )
 model = system.to_model()
+model.write("examples/dependency_example_model.json")
 from prodsys import runner
 
 runner_instance = runner.Runner(adapter=model)

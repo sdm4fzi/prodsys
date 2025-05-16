@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
 
 
-class DependencyType(Enum):
+class DependencyType(str, Enum):
     """
     Enum class that represents the type of dependency between two components.
 
