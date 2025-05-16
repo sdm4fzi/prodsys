@@ -214,7 +214,6 @@ class Router:
             yield transport_process_finished_event
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
-            print("Waiting for dependencies to be routed")
             yield executed_request.dependencies_requested
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
@@ -224,6 +223,7 @@ class Router:
             for dependency_ready_event in dependency_ready_events:
                 yield dependency_ready_event
             executed_request.dependencies_ready.succeed()
+            yield executed_request.completed
 
     def execute_primitive_routing(
         self, executed_request: request.Request

@@ -60,6 +60,7 @@ class StateTypeEnum(str, Enum):
     sink = "Sink"
     store = "Store"
     charging = "Charging"
+    dependency = "Dependency"
 
 
 class StateInfo:
