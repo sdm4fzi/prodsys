@@ -4,7 +4,7 @@ from typing import List, Optional, TYPE_CHECKING
 from pydantic import ConfigDict, conlist
 from enum import Enum
 
-from prodsys.models.core_asset import CoreAsset, Locatable
+from prodsys.models.core_asset import CoreAsset, Interactable, Locatable
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -20,7 +20,7 @@ class RoutingHeuristic(str, Enum):
     FIFO = "FIFO"
 
 
-class SourceData(CoreAsset, Locatable):
+class SourceData(CoreAsset, Interactable):
     """
     Class that represents a source.
 
@@ -68,7 +68,7 @@ class SourceData(CoreAsset, Locatable):
         Returns:
             str: Hash of the source.
         """
-        locatable_hash = Locatable.hash(self)
+        locatable_hash = Interactable.hash(self)
         for product in adapter.product_data:
             if product.type == self.product_type:
                 product_hash = product.hash(adapter)

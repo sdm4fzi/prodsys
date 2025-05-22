@@ -2,6 +2,8 @@ from hashlib import md5
 from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field, conlist, model_validator
 
+from prodsys.models.positions_data import InteractionPoint, Pose
+
 
 class CoreAsset(BaseModel):
     """
@@ -25,15 +27,17 @@ class CoreAsset(BaseModel):
     )
 
 
-class Locatable(BaseModel):
+# make a validator that assures that location or pose are entered
+
+
+class Locatable(CoreAsset):
     """
     Class that represents a locatable entity, consisting of an ID, a description and a location.
 
     Args:
         location (list[float]): The location of the locatable asset. It has to be a list of length 2.
     """
-
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    pose: Pose
 
     def hash(self) -> str:
         """
@@ -42,10 +46,10 @@ class Locatable(BaseModel):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5((str(self.location)).encode("utf-8")).hexdigest()
+        return md5((self.pose.hash()).encode("utf-8")).hexdigest()
 
 
-class InLocatable(Locatable):
+class Interactable(Locatable):
     """
     Class that represents a locatable entity with an input location. The location parameter is the center point of the asset. It needs to be defined. The input location parameter specifies where products are added to the asset. If not specified, the location is set as input location.
 
@@ -53,16 +57,7 @@ class InLocatable(Locatable):
         location (list[float]): The location of the locatable asset. It has to be a list of length 2.
         input_location (list[float], optional): The input location of the locatable asset. It has to be a list of length 2. Defaults to None.
     """
-
-    input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_locations(cls, data: Any) -> Any:
-        assert "location" in data, "location has to be defined."
-        if not "input_location" in data or not data["input_location"]:
-            data["input_location"] = data["location"]
-        return data
+    interaction_points: list[InteractionPoint]
 
     def hash(self) -> str:
         """
@@ -71,70 +66,8 @@ class InLocatable(Locatable):
         Returns:
             str: Hash of the locatable asset.
         """
-        return md5(
-            (str(self.location) + str(self.input_location)).encode("utf-8")
-        ).hexdigest()
-
-
-class OutLocatable(Locatable):
-    """
-    Class that represents a locatable entity with an output location. The location parameter is the center point of the asset. It needs to be defined. The output location parameter specifies where products are removed from the asset. If not specified, the location is set as output location.
-
-    Args:
-        location (list[float]): The location of the locatable asset. It has to be a list of length 2.
-        output_location (list[float], optional): The output location of the locatable asset. It has to be a list of length 2. Defaults to None.
-    """
-
-    output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_locations(cls, data: Any) -> Any:
-        assert "location" in data, "location has to be defined."
-        if not "output_location" in data or not data["output_location"]:
-            data["output_location"] = data["location"]
-        return data
-
-    def hash(self) -> str:
-        """
-        Returns a unique hash for the locatable asset considering its location and output location.
-
-        Returns:
-            str: Hash of the locatable asset.
-        """
-        return md5(
-            (str(self.location) + str(self.output_location)).encode("utf-8")
-        ).hexdigest()
-
-
-class InOutLocatable(InLocatable, OutLocatable):
-    """
-    Class that represents a locatable entity with an input location and an output location. The location parameter is the center point of the asset. It needs to be defined. The input location parameter specifies where products are added to the asset. If not specified, the location is set as input location. The output location parameter specifies where products are removed from the asset. If not specified, the location is set as output location.
-
-    Args:
-        location (list[float]): The location of the locatable asset. It has to be a list of length 2.
-        input_location (list[float], optional): The input location of the locatable asset. It has to be a list of length 2. Defaults to None.
-        output_location (list[float], optional): The output location of the locatable asset. It has to be a list of length 2. Defaults to None.
-    """
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_locations(cls, data: Any) -> Any:
-        data = InLocatable.check_locations(data)
-        data = OutLocatable.check_locations(data)
-        return data
-
-    def hash(self) -> str:
-        """
-        Returns a unique hash for the locatable asset considering its location, input location and output location.
-
-        Returns:
-            str: Hash of the locatable asset.
-        """
-        return md5(
-            (
-                str(self.location)
-                + str(self.input_location)
-                + str(self.output_location)
-            ).encode("utf-8")
-        ).hexdigest()
+        base_class_hash = Locatable.hash(self)
+        interaction_points_hash = "".join(
+            [interaction_point.hash() for interaction_point in self.interaction_points]
+        )
+        return md5((base_class_hash + interaction_points_hash).encode("utf-8")).hexdigest()

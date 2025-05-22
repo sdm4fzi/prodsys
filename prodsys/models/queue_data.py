@@ -3,7 +3,7 @@ from hashlib import md5
 
 from pydantic import ConfigDict
 
-from prodsys.models.core_asset import CoreAsset, InOutLocatable
+from prodsys.models.core_asset import CoreAsset, Interactable
 
 
 class QueueData(CoreAsset):
@@ -66,7 +66,7 @@ class QueueData(CoreAsset):
     )
 
 
-class StoreData(QueueData, InOutLocatable):
+class StoreData(QueueData, Interactable):
     """
     Class that represents a store which is a queue with a loctation independent of a resource / source / sink.
 
@@ -114,8 +114,8 @@ class StoreData(QueueData, InOutLocatable):
             str: Hash of the queue.
         """
         queue_hash = QueueData.hash(self)
-        location_hash = InOutLocatable.hash(self)
-        return md5((location_hash + queue_hash).encode("utf-8")).hexdigest()
+        position_hash = Interactable.hash(self)
+        return md5((position_hash + queue_hash).encode("utf-8")).hexdigest()
 
     model_config = ConfigDict(
         json_schema_extra={

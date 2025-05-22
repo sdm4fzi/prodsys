@@ -3,13 +3,13 @@ from hashlib import md5
 from typing import List, TYPE_CHECKING
 from pydantic import ConfigDict
 
-from prodsys.models.core_asset import CoreAsset, Locatable
+from prodsys.models.core_asset import CoreAsset, Interactable, Locatable
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
 
 
-class SinkData(CoreAsset, Locatable):
+class SinkData(CoreAsset, Interactable):
     """
     Class that represents a sink.
 
@@ -64,7 +64,7 @@ class SinkData(CoreAsset, Locatable):
         Returns:
             str: Hash of the sink.
         """
-        base_class_hash = Locatable.hash(self)
+        base_class_hash = Interactable.hash(self)
         for product in adapter.product_data:
             if product.type == self.product_type:
                 product_hash = product.hash(adapter)

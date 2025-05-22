@@ -19,7 +19,7 @@ from pydantic import (
     model_validator,
     conlist,
 )
-from prodsys.models.core_asset import CoreAsset, InOutLocatable, Locatable
+from prodsys.models.core_asset import CoreAsset, Interactable, Locatable
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -72,7 +72,7 @@ class TransportControlPolicy(str, Enum):
     )
 
 
-class ResourceData(CoreAsset, InOutLocatable):
+class ResourceData(CoreAsset, Interactable):
     """
     Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.
 
@@ -163,7 +163,7 @@ class ResourceData(CoreAsset, InOutLocatable):
         process_hashes = []
         queue_hashes = []
 
-        base_class_hash = Locatable.hash(self) + InOutLocatable.hash(self)
+        base_class_hash = Interactable.hash(self) + Interactable.hash(self)
 
         for state_id in self.state_ids:
             for state in adapter.state_data:
