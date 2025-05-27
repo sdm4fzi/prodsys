@@ -150,7 +150,7 @@ class Controller:
 
 def get_requets_handler(
     request: request_module.Request,
-) -> Union[ProductionProcessHandler, TransportProcessHandler]:
+) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler]:
     """
     Get the process handler for a given process.
 
