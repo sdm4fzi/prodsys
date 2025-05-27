@@ -1,0 +1,475 @@
+{
+    "ID": "",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "t1",
+            "description": "",
+            "distribution_function": "normal",
+            "location": 1.0,
+            "scale": 0.1,
+            "batch_size": 100
+        },
+        {
+            "ID": "t2",
+            "description": "",
+            "distribution_function": "normal",
+            "location": 2.0,
+            "scale": 0.2,
+            "batch_size": 100
+        },
+        {
+            "ID": "t3",
+            "description": "",
+            "speed": 180.0,
+            "reaction_time": 0.1,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "fake_process",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 0.1,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "s1",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 0.5,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "arrival_model_1",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 1.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "arrival_model_2",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 2.0,
+            "scale": 0.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [
+        {
+            "ID": "S1",
+            "description": "",
+            "time_model_id": "s1",
+            "type": "SetupState",
+            "origin_setup": "p1",
+            "target_setup": "p2"
+        },
+        {
+            "ID": "S2",
+            "description": "",
+            "time_model_id": "s1",
+            "type": "SetupState",
+            "origin_setup": "p2",
+            "target_setup": "p1"
+        }
+    ],
+    "process_data": [
+        {
+            "ID": "p1",
+            "description": "",
+            "time_model_id": "t1",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "p2",
+            "description": "",
+            "time_model_id": "t2",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "tp",
+            "description": "",
+            "time_model_id": "t3",
+            "dependency_ids": [],
+            "type": "TransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null
+        },
+        {
+            "ID": "move",
+            "description": "",
+            "time_model_id": "t3",
+            "dependency_ids": [],
+            "type": "TransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null
+        },
+        {
+            "ID": "fake_process",
+            "description": "",
+            "time_model_id": "fake_process",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        }
+    ],
+    "queue_data": [
+        {
+            "ID": "source_1_default_output_queue",
+            "description": "Default output queue of source_1",
+            "capacity": 0.0
+        },
+        {
+            "ID": "source_2_default_output_queue",
+            "description": "Default output queue of source_2",
+            "capacity": 0.0
+        },
+        {
+            "ID": "machine_default_input_queue",
+            "description": "Default input queue of machine",
+            "capacity": 0
+        },
+        {
+            "ID": "machine2_default_input_queue",
+            "description": "Default input queue of machine2",
+            "capacity": 0
+        },
+        {
+            "ID": "transport_default_input_queue",
+            "description": "Default input queue of transport",
+            "capacity": 0
+        },
+        {
+            "ID": "worker_default_input_queue",
+            "description": "Default input queue of worker",
+            "capacity": 0
+        },
+        {
+            "ID": "worker2_default_input_queue",
+            "description": "Default input queue of worker2",
+            "capacity": 0
+        },
+        {
+            "ID": "machine_default_output_queue",
+            "description": "Default output queue of machine",
+            "capacity": 0
+        },
+        {
+            "ID": "machine2_default_output_queue",
+            "description": "Default output queue of machine2",
+            "capacity": 0
+        },
+        {
+            "ID": "transport_default_output_queue",
+            "description": "Default output queue of transport",
+            "capacity": 0
+        },
+        {
+            "ID": "worker_default_output_queue",
+            "description": "Default output queue of worker",
+            "capacity": 0
+        },
+        {
+            "ID": "worker2_default_output_queue",
+            "description": "Default output queue of worker2",
+            "capacity": 0
+        },
+        {
+            "ID": "sink1_default_input_queue",
+            "description": "Default input queue of sink1",
+            "capacity": 0.0
+        },
+        {
+            "ID": "sink2_default_input_queue",
+            "description": "Default input queue of sink2",
+            "capacity": 0.0
+        }
+    ],
+    "node_data": [],
+    "resource_data": [
+        {
+            "location": [
+                5.0,
+                5.0
+            ],
+            "output_location": [
+                5.0,
+                6.0
+            ],
+            "input_location": [
+                5.0,
+                5.0
+            ],
+            "ID": "machine",
+            "description": "",
+            "capacity": 1,
+            "control_policy": "FIFO",
+            "process_ids": [
+                "p1",
+                "p2"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [
+                "S1",
+                "S2"
+            ],
+            "controller": "PipelineController",
+            "input_queues": [
+                "machine_default_input_queue"
+            ],
+            "output_queues": [
+                "machine_default_output_queue"
+            ],
+            "batch_size": null,
+            "dependency_ids": [
+                "assembly_dependency"
+            ]
+        },
+        {
+            "location": [
+                7.0,
+                2.0
+            ],
+            "output_location": [
+                7.0,
+                3.0
+            ],
+            "input_location": [
+                7.0,
+                2.0
+            ],
+            "ID": "machine2",
+            "description": "",
+            "capacity": 1,
+            "control_policy": "FIFO",
+            "process_ids": [
+                "p1",
+                "p2"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [
+                "S1",
+                "S2"
+            ],
+            "controller": "PipelineController",
+            "input_queues": [
+                "machine2_default_input_queue"
+            ],
+            "output_queues": [
+                "machine2_default_output_queue"
+            ],
+            "batch_size": null,
+            "dependency_ids": [
+                "assembly_dependency"
+            ]
+        },
+        {
+            "location": [
+                2.0,
+                2.0
+            ],
+            "output_location": [
+                2.0,
+                2.0
+            ],
+            "input_location": [
+                2.0,
+                2.0
+            ],
+            "ID": "transport",
+            "description": "",
+            "capacity": 1,
+            "control_policy": "FIFO",
+            "process_ids": [
+                "tp"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "input_queues": [
+                "transport_default_input_queue"
+            ],
+            "output_queues": [
+                "transport_default_output_queue"
+            ],
+            "batch_size": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                2.0,
+                0.0
+            ],
+            "output_location": [
+                2.0,
+                0.0
+            ],
+            "input_location": [
+                2.0,
+                0.0
+            ],
+            "ID": "worker",
+            "description": "",
+            "capacity": 1,
+            "control_policy": "FIFO",
+            "process_ids": [
+                "move",
+                "fake_process"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "input_queues": [
+                "worker_default_input_queue"
+            ],
+            "output_queues": [
+                "worker_default_output_queue"
+            ],
+            "batch_size": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                3.0,
+                0.0
+            ],
+            "output_location": [
+                3.0,
+                0.0
+            ],
+            "input_location": [
+                3.0,
+                0.0
+            ],
+            "ID": "worker2",
+            "description": "",
+            "capacity": 1,
+            "control_policy": "FIFO",
+            "process_ids": [
+                "move",
+                "fake_process"
+            ],
+            "process_capacities": [
+                1,
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "input_queues": [
+                "worker2_default_input_queue"
+            ],
+            "output_queues": [
+                "worker2_default_output_queue"
+            ],
+            "batch_size": null,
+            "dependency_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "product1",
+            "description": "",
+            "type": "product1",
+            "transport_process": "tp",
+            "processes": [
+                "p1"
+            ],
+            "dependency_ids": []
+        },
+        {
+            "ID": "product2",
+            "description": "",
+            "type": "product2",
+            "transport_process": "tp",
+            "processes": [
+                "p2"
+            ],
+            "dependency_ids": []
+        }
+    ],
+    "sink_data": [
+        {
+            "location": [
+                10.0,
+                0.0
+            ],
+            "ID": "sink1",
+            "description": "",
+            "product_type": "product1",
+            "input_queues": [
+                "sink1_default_input_queue"
+            ]
+        },
+        {
+            "location": [
+                10.0,
+                0.0
+            ],
+            "ID": "sink2",
+            "description": "",
+            "product_type": "product2",
+            "input_queues": [
+                "sink2_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "location": [
+                0.0,
+                0.0
+            ],
+            "ID": "source_1",
+            "description": "",
+            "product_type": "product1",
+            "time_model_id": "arrival_model_1",
+            "routing_heuristic": "random",
+            "output_queues": [
+                "source_1_default_output_queue"
+            ]
+        },
+        {
+            "location": [
+                0.0,
+                0.0
+            ],
+            "ID": "source_2",
+            "description": "",
+            "product_type": "product2",
+            "time_model_id": "arrival_model_2",
+            "routing_heuristic": "random",
+            "output_queues": [
+                "source_2_default_output_queue"
+            ]
+        }
+    ],
+    "scenario_data": null,
+    "depdendency_data": [
+        {
+            "ID": "assembly_dependency",
+            "description": "",
+            "dependency_type": "process"
+        }
+    ],
+    "primitive_data": [],
+    "valid_configuration": true,
+    "reconfiguration_cost": 0
+}

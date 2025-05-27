@@ -13,6 +13,7 @@ p2 = psx.ProductionProcess(t2, "p2")
 t3 = psx.DistanceTimeModel(speed=180, reaction_time=0.1, ID="t3")
 
 tp = psx.TransportProcess(t3, "tp")
+move_p = psx.TransportProcess(t3, "move")
 
 s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
@@ -24,50 +25,52 @@ assembly_process = psx.ProductionProcess(
 )
 
 worker = psx.Resource(
-    [tp, assembly_process],
+    [move_p, assembly_process],
     [2, 0],
     1,
     ID="worker",
 )
 
 worker2 = psx.Resource(
-    [tp, assembly_process],
+    [move_p, assembly_process],
     [3, 0],
     1,
     ID="worker2",
 )
 
-# FIXME: process dependency is buggy
+# FIXME: process dependency is buggy for capacity > 2 -> probably a bug in request handler because for one capacity it works
+assembly_dependency = psx.ProcessDependency(
+    ID="assembly_dependency",
+    required_process=assembly_process,
+)
 # worker_dependency = psx.ResourceDependency(
 #     ID="worker_dependency",
 #     required_resource=worker,
 # )
-worker_dependency = psx.ResourceDependency(
-    ID="worker_dependency",
-    required_resource=worker,
-)
-worker_dependency2 = psx.ResourceDependency(
-    ID="worker_dependency2",
-    required_resource=worker2,
-)
+# worker_dependency2 = psx.ResourceDependency(
+#     ID="worker_dependency2",
+#     required_resource=worker2,
+# )
 
 machine = psx.Resource(
     [p1, p2],
     [5, 5],
-    2,
+    1,
     states=[setup_state_1, setup_state_2],
     ID="machine",
     output_location=[5, 6],
-    dependencies=[worker_dependency],
+    # dependencies=[worker_dependency],
+    dependencies=[assembly_dependency],
 )
 machine2 = psx.Resource(
     [p1, p2],
     [7, 2],
-    2,
+    1,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
     output_location=[7, 3],
-    dependencies=[worker_dependency2],
+    # dependencies=[worker_dependency2],
+    dependencies=[assembly_dependency],
 )
 
 transport = psx.Resource([tp], [2, 2], 1, ID="transport")

@@ -236,6 +236,18 @@ class ProcessMatcher:
                                         dummy_transport_request
                                     )
 
+        # Precompute compatibility of resource processes
+        for resource_id, resource in self.resource_factory.all_resources.items():
+            for offered_process in resource.processes:
+                # Create a key for the resource compatibility
+                key = ResourceCompatibilityKey(
+                    process_signature=offered_process.get_process_signature(),
+                )
+                if key not in self.production_compatibility:
+                    self.production_compatibility[key] = []
+                self.production_compatibility[key].append((resource, offered_process))
+
+
         # Precompute rework process compatibility
         # for rework_proc in self.resource_factory.process_factory.processes:
         #     if not isinstance(rework_proc, offered_process.ReworkProcess):
