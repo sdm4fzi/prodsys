@@ -171,10 +171,7 @@ def get_requets_handler(
         request.request_type == request_module.RequestType.PROCESS_DEPENDENCY
         or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY
     ):
-        # TODO: implement this handler that just waits until the release method of the resource and processes is called.
         return DependencyProcessHandler(request.requesting_item.env)
-    # elif request.request_type == request_module.RequestType.MOVE:
-    #     return MoveProcessHandler()
     else:
         raise ValueError(f"Unknown process type: {type(process)}")
 
