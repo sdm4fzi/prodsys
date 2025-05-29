@@ -233,8 +233,6 @@ class ProductionProcessHandler:
         process = process_request.get_process()
         product = process_request.get_item()
 
-        # TODO: wait here until all auxiliaries are available for the process
-        # auxiliaries = yield from product.product_router.get_auxiliaries(process_request)
         origin_queue, target_queue = (
             process_request.origin_queue,
             process_request.target_queue,

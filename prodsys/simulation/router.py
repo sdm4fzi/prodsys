@@ -218,6 +218,7 @@ class Router:
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
                 process=executed_request.process,
+                requesting_item=executed_request.requesting_item,
                 dependency_release_event=executed_request.completed,
             )
             for dependency_ready_event in dependency_ready_events:
@@ -307,7 +308,7 @@ class Router:
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
             ), f"Only primitive dependencies are supported for now. Found {dependency.dependency_type} for {product.data.ID}."
             dependency_ready = self.request_handler.add_dependency_request(
-                requesting_item=product, dependency=dependency
+                requiring_dependency=product, dependency=dependency, requesting_item=product
             )
             dependency_ready_events.append(dependency_ready)
         return dependency_ready_events
@@ -316,6 +317,7 @@ class Router:
         self,
         resource: resources.Resource,
         process: process.Process,
+        requesting_item: Union[product.Product, primitive.Primitive],
         dependency_release_event: events.Event,
     ) -> List[simpy.Event]:
         """
@@ -334,14 +336,17 @@ class Router:
         dependency_ready_events = []
         for dependency in resource.dependencies:
             request_info = self.request_handler.add_dependency_request(
-                requesting_item=resource,
+                requiring_dependency=resource,
+                requesting_item=requesting_item,
                 dependency=dependency,
                 dependency_release_event=dependency_release_event,
             )
             dependency_ready_events.append(request_info.request_completion_event)
         for dependency in process.dependencies:
             request_info = self.request_handler.add_dependency_request(
-                requesting_item=resource, dependency=dependency
+                requiring_dependency=resource,
+                dependency=dependency,
+                requesting_item=requesting_item,
             )
             dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
