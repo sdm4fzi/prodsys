@@ -77,12 +77,18 @@ def get_transport_request_info_key(
 
 
 def get_dependency_request_info_key(
-    requesting_item: Union[product.Product, resources.Resource],
+    dependency_item: Union[product.Product, resources.Resource],
     dependency: Dependency,
+    requesting_item: Union[product.Product, resources.Resource] = None,
 ):
-    item_id = requesting_item.data.ID
+    item_id = dependency_item.data.ID
     dependency_id = dependency.data.ID
-    return f"{item_id}:{dependency_id}"
+    if requesting_item is not None:
+        item_id = requesting_item.data.ID
+    else:
+        item_id = dependency_item.data.ID
+    # FIXME: consider here product or so
+    return f"{item_id}:{dependency_id}:{item_id}"
 
 
 @dataclass
@@ -96,6 +102,9 @@ class RequestHandler:
     request_infos: dict[RequestInfoKey, RequestInfo] = field(default_factory=dict)
     pending_resource_requests: list[RequestInfoKey] = field(default_factory=list)
     pending_primitive_requests: list[RequestInfoKey] = field(default_factory=list)
+
+    pending_requests: dict[str, RequestInfo] = field(default_factory=dict)
+    routed_requests: dict[str, RequestInfo] = field(default_factory=dict)
 
     def add_product_requests(
         self, item: Union[product.Product, primitive.Primitive]
@@ -193,6 +202,7 @@ class RequestHandler:
 
     def add_dependency_request(
         self,
+        requiring_dependency: Union[product.Product, resources.Resource],
         requesting_item: Union[product.Product, resources.Resource],
         dependency: Dependency,
         dependency_release_event: Optional[simpy.Event] = None,
@@ -227,12 +237,14 @@ class RequestHandler:
                 f"Unknown dependency type: {dependency.data.dependency_type}"
             )
 
-        request_completion_event = simpy.Event(requesting_item.env)
-        request_info_key = get_dependency_request_info_key(requesting_item, dependency)
+        request_completion_event = simpy.Event(requiring_dependency.env)
+        request_info_key = get_dependency_request_info_key(
+            requiring_dependency, dependency, requesting_item
+        )
 
         request_info = RequestInfo(
             key=request_info_key,
-            item=requesting_item,
+            item=requiring_dependency,
             resource_mappings=resource_mappings,
             request_type=request_type,
             request_state="pending",
@@ -257,31 +269,41 @@ class RequestHandler:
             allocated_request (request.Request): The request that has been allocated.
         """
         if allocated_request.request_type == request.RequestType.TRANSPORT:
-            request_info_key = get_transport_request_info_key(
-                allocated_request.requesting_item,
-                allocated_request.origin,
-                allocated_request.target,
-            )
+        #     request_info_key = get_transport_request_info_key(
+        #         allocated_request.requesting_item,
+        #         allocated_request.origin,
+        #         allocated_request.target,
+        #     )
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
 
-        elif (
-            allocated_request.request_type == request.RequestType.PRIMITIVE_DEPENDENCY
-            or allocated_request.request_type == request.RequestType.RESOURCE_DEPENDENCY
-            or allocated_request.request_type == request.RequestType.PROCESS_DEPENDENCY
-        ):
-            request_info_key = get_dependency_request_info_key(
-                allocated_request.requesting_item,
-                allocated_request.resolved_dependency,
-            )
-        else:
-            request_info_key = get_request_info_key(allocated_request.requesting_item)
+        # elif (
+        #     allocated_request.request_type == request.RequestType.PRIMITIVE_DEPENDENCY
+        #     or allocated_request.request_type == request.RequestType.RESOURCE_DEPENDENCY
+        #     or allocated_request.request_type == request.RequestType.PROCESS_DEPENDENCY
+        # ):
+        #     request_info_key = get_dependency_request_info_key(
+        #         allocated_request.requesting_item,
+        #         allocated_request.resolved_dependency,
+        #         allocated_request.requesting_item,
+        #     )
+        elif allocated_request.request_type == request.RequestType.PRODUCTION:
+        #     request_info_key = get_request_info_key(allocated_request.requesting_item)
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
 
-        self.request_infos[request_info_key].request_state = "routed"
+        # self.request_infos[request_info_key].request_state = "routed"
+        request_info = self.pending_requests.pop(
+            id(allocated_request.completed), None
+        )
+        if not request_info:
+            raise ValueError(
+                f"Request info not found for completed request {allocated_request.completed}"
+            )
+        request_info.request_state = "routed"
+        self.routed_requests[id(allocated_request.completed)] = request_info
 
     def mark_completion(self, completed_request: request.Request) -> None:
         """
@@ -290,15 +312,23 @@ class RequestHandler:
         Args:
             completed_request (request.Request): The request that has been completed.
         """
-        if completed_request.request_type == request.RequestType.TRANSPORT:
-            request_info_key = get_transport_request_info_key(
-                completed_request.requesting_item,
-                completed_request.origin,
-                completed_request.target,
+        # if completed_request.request_type == request.RequestType.TRANSPORT:
+        #     request_info_key = get_transport_request_info_key(
+        #         completed_request.requesting_item,
+        #         completed_request.origin,
+        #         completed_request.target,
+        #     )
+        # else:
+        #     request_info_key = get_request_info_key(completed_request.requesting_item)
+        # self.request_infos[request_info_key].request_state = "completed"
+        request_info = self.routed_requests.pop(
+            id(completed_request.completed), None
+        )
+        if not request_info:
+            raise ValueError(
+                f"Request info not found for completed request {completed_request.completed}"
             )
-        else:
-            request_info_key = get_request_info_key(completed_request.requesting_item)
-        self.request_infos[request_info_key].request_state = "completed"
+        request_info.request_state = "completed"
 
     def create_resource_request(
         self,
@@ -325,8 +355,7 @@ class RequestHandler:
             route = None
 
         dependencies = resource.dependencies + process.dependencies
-
-        return request.Request(
+        request_instance = request.Request(
             requesting_item=request_info.item,
             resource=resource,
             process=process,
@@ -339,6 +368,7 @@ class RequestHandler:
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,
         )
+        return request_instance
 
     def get_next_resource_request_to_route(
         self, free_resources: list[resources.Resource]
@@ -374,6 +404,7 @@ class RequestHandler:
                         requests.append(new_request)
 
             if requests:
+                self.pending_requests[id(requests[0].completed)] = request_info
                 self.pending_resource_requests.remove(request_info_key)
                 return requests
 
@@ -431,4 +462,6 @@ class RequestHandler:
                 possible_primitive_requests.append(new_request)
             if possible_primitive_requests:
                 self.pending_primitive_requests.remove(request_info_key)
+                # self.request_infos.pop(request_info_key, None)
+                self.pending_requests[id(possible_primitive_requests[0].completed)] = request_info
                 return possible_primitive_requests
