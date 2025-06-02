@@ -30,16 +30,14 @@ def charging_simulation_adapter() -> ProductionSystemData:
         ID="charging_state",
     )
 
-    machine = psx.ProductionResource(
+    machine = psx.Resource(
         [p1, p2], [5, 0], 2, states=[setup_state_1, setup_state_2], ID="machine"
     )
-    machine2 = psx.ProductionResource(
+    machine2 = psx.Resource(
         [p1, p2], [7, 0], 2, states=[setup_state_1, setup_state_2], ID="machine2"
     )
 
-    transport = psx.TransportResource(
-        [tp], [0, 0], 1, states=[charging_state], ID="transport"
-    )
+    transport = psx.Resource([tp], [0, 0], 1, states=[charging_state], ID="transport")
 
     product1 = psx.Product([p1], tp, "product1")
     product2 = psx.Product([p2], tp, "product2")
@@ -63,7 +61,7 @@ def charging_simulation_adapter() -> ProductionSystemData:
 def test_initialize_simulation(
     charging_simulation_adapter: ProductionSystemData,
 ):
-    runner_instance = runner.Runner(adapter=charging_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=charging_simulation_adapter)
     runner_instance.initialize_simulation()
 
 
@@ -73,7 +71,7 @@ def test_hashing(charging_simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(charging_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=charging_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=charging_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(4000)
     runner_instance.print_results()

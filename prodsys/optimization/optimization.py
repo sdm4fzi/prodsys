@@ -298,7 +298,7 @@ def evaluate(
     fitness_values = []
 
     for seed in range(number_of_seeds):
-        runner_object = runner.Runner(adapter=adapter_object)
+        runner_object = runner.Runner(production_system_data=adapter_object)
         if not adapter_object.scenario_data.info.time_range:
             raise ValueError("time_range is not defined in scenario_data")
         adapter_object.seed = seed

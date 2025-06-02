@@ -1,10 +1,10 @@
 """
-In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on products. Transport resources are resources that can transport products from one location to another. Both types of resources are represented by the `ResourceData` class. The `ResourceData` class is an abstract base class and cannot be instantiated. Instead, the `ProductionResourceData` and `TransportResourceData` classes can be used to represent production resources and transport resources, respectively.
+In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on products. Transport resources are resources that can transport products from one location to another. Both types of resources are represented by the `ResourceData` class. The `ResourceData` class is an abstract base class and cannot be instantiated. Instead, the `ResourceData` and `ResourceData` classes can be used to represent production resources and transport resources, respectively.
 
 The following resources are available:
 
-- `ProductionResourceData`: Class that represents a production resource.
-- `TransportResourceData`: Class that represents a transport resource.
+- `ResourceData`: Class that represents a production resource.
+- `ResourceData`: Class that represents a transport resource.
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ class TransportControlPolicy(str, Enum):
 
 class ResourceData(CoreAsset, InOutLocatable):
     """
-    Class that represents resource data. Base class for ProductionResourceData and TransportResourceData.
+    Class that represents resource data. Base class for ResourceData and ResourceData.
 
     Args:
         ID (str): ID of the resource.

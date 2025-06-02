@@ -562,3 +562,5 @@ PROCESS_UNION = Union[
 """
 Union type for all processes.
 """
+
+from prodsys.simulation import route_finder

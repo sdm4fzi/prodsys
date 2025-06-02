@@ -14,9 +14,9 @@ def simulation_adapter() -> ProductionSystemData:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
+    machine = psx.Resource([p1], [5, 0], 1, ID="machine")
 
-    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+    transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1], tp, "product1")
 
@@ -32,7 +32,7 @@ def simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
@@ -42,7 +42,7 @@ def test_hashing(simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000
@@ -69,7 +69,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
 def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(
-        adapter=simulation_adapter,
+        production_system_data=simulation_adapter,
         warm_up_cutoff=True,
         cut_off_method="static_ratio",
     )

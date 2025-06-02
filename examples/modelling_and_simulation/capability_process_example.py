@@ -5,7 +5,7 @@ time_model_agv = psx.DistanceTimeModel(speed=90, reaction_time=0.2, ID="time_mod
 transport_process = psx.TransportProcess(
     time_model=time_model_agv, ID="transport_process"
 )
-agv = psx.TransportResource(ID="agv", processes=[transport_process], location=[5, 5])
+agv = psx.Resource(ID="agv", processes=[transport_process], location=[5, 5])
 
 time_model_turning_fast = psx.FunctionTimeModel(
     distribution_function="constant", location=6, ID="time_model_turning_fast"
@@ -21,10 +21,10 @@ capability_process_turning_slow = psx.CapabilityProcess(
     time_model=time_model_turning_slow, capability="turning", ID="cp_turning_slow"
 )
 
-resource_fast = psx.ProductionResource(
+resource_fast = psx.Resource(
     ID="resource_fast", processes=[capability_process_turning_fast], location=[5, 0]
 )
-resource_slow = psx.ProductionResource(
+resource_slow = psx.Resource(
     ID="resource_slow", processes=[capability_process_turning_slow], location=[5, 10]
 )
 

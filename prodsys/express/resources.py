@@ -1,10 +1,10 @@
 """
-In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on products. Transport resources are resources that can transport products from one location to another. Both types of resources are represented by the `Resource` class. The `Resource` class is an abstract base class and cannot be instantiated. Instead, the `ProductionResource` and `TransportResource` classes can be used to represent production resources and transport resources, respectively.
+In `prodsys` exist two different types of resources: production resources and transport resources. Production resources are resources that can perform processes on products. Transport resources are resources that can transport products from one location to another. Both types of resources are represented by the `Resource` class. The `Resource` class is an abstract base class and cannot be instantiated. Instead, the `Resource` and `Resource` classes can be used to represent production resources and transport resources, respectively.
 
 The following resources are available:
 
-- `ProductionResource`: Class that represents a production resource.
-- `TransportResource`: Class that represents a transport resource.
+- `Resource`: Class that represents a production resource.
+- `Resource`: Class that represents a transport resource.
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ class Resource(core.ExpressObject):
         Converts the `prodsys.express` object to a data object from `prodsys.models`.
 
         Returns:
-            resource_data.ProductionResourceData: Data object of the express object.
+            resource_data.ResourceData: Data object of the express object.
         """
         resource = resource_data.ResourceData(
             ID=self.ID,

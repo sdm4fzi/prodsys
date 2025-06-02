@@ -56,7 +56,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.action_space = action_space
         self.render_mode = render_mode
 
-        self.runner = runner.Runner(adapter=self.adapter)
+        self.runner = runner.Runner(production_system_data=self.adapter)
 
         self.router: router.Router = None
         self.possible_requests: List[request.Request] = []

@@ -30,7 +30,7 @@ class PrimitiveFactory:
         sink_factory: sink_factory.SinkFactory,
     ):
         """
-        Initialize the AuxiliaryFactory with the given environment and factories.
+        Initialize the PrimitiveFactory with the given environment and factories.
 
         Args:
             env (sim.Environment): The simulation environment.
@@ -52,24 +52,24 @@ class PrimitiveFactory:
 
     def create_primitives(self, adapter: production_system_data.ProductionSystemData):
         """
-        Create auxiliary objects based on the provided adapter's auxiliary data.
+        Create primitive objects based on the provided adapter's primitive data.
 
         Args:
-            adapter (adapter.ProductionSystemAdapter): The adapter containing auxiliary data.
+            adapter (adapter.ProductionSystemAdapter): The adapter containing primitive data.
         """
         for primitive_data_instance in adapter.primitive_data:
             # if isinstance(primitive_data_instance, primitives_data.StoredPrimitive):
             #     primitives = self.create_stored_primitives(primitive_data_instance, adapter)
             #     self.primitives.extend(primitives)
-            for storage_id, quantity_in_storage in enumerate(
+            for storage_id, quantity_in_storage in zip(
                 primitive_data_instance.storages,
                 primitive_data_instance.quantity_in_storages,
             ):
                 for _ in range(quantity_in_storage):
-                    auxiliary = self.add_primitive(primitive_data_instance, storage_id)
-                    auxiliary.primitive_info.log_create_primitive(
-                        resource=auxiliary.current_locatable,
-                        _product=auxiliary,
+                    primitive = self.add_primitive(primitive_data_instance, storage_id)
+                    primitive.primitive_info.log_create_primitive(
+                        resource=primitive.current_locatable,
+                        _product=primitive,
                         event_time=self.env.now,
                     )
 
@@ -80,11 +80,11 @@ class PrimitiveFactory:
         Add a new auxiliary object to the factory.
 
         Args:
-                auxiliary_data (auxiliary_data.AuxiliaryData): The auxiliary data for the new object.
+                primitive_data_instance (primitives_data.PrimitiveData): The primitive data for the new object.
                 storage (queue_data.QueueData): The storage data for the new object's current location.
 
         Returns:
-                auxiliary.Auxiliary: The newly created auxiliary object.
+                primitive.Primitive: The newly created primitive object.
         """
         values = {}
         primitive_data_instance = primitive_data_instance.model_copy(deep=True)
@@ -99,9 +99,7 @@ class PrimitiveFactory:
         storage_from_queue_data = self.queue_factory.get_queue(storage_id)
         values.update({"storage": storage_from_queue_data})
         auxiliary_object = primitive.Primitive(**values)
-        auxiliary_object.auxiliary_router = self.router
         auxiliary_object.current_locatable = storage_from_queue_data
-        auxiliary_object.init_got_free()
 
         if self.event_logger:
             self.event_logger.observe_terminal_primitive_states(auxiliary_object)
@@ -117,20 +115,20 @@ class PrimitiveFactory:
         for auxiliary in self.primitives:
             auxiliary.current_locatable.put(auxiliary.data)
 
-    def get_auxiliary(self, ID: str) -> primitive.Primitive:
+    def get_primitive_with_type(self, ID: str) -> primitive.Primitive:
         """
-        Get the auxiliary object with the specified ID.
+        Get the primitive object with the specified ID.
 
         Args:
-            ID (str): The ID of the auxiliary object.
+            ID (str): The ID of the primitive object.
 
         Returns:
-            auxiliary.Auxiliary: The auxiliary object with the specified ID.
+            primitive.Primitive: The primitive object with the specified ID.
 
         Raises:
             IndexError: If no auxiliary object with the specified ID is found.
         """
-        return [s for s in self.primitives if s.data.ID == ID].pop()
+        return [s for s in self.primitives if s.data.type == ID].pop()
 
 
 # AuxiliaryFactory.model_rebuild()

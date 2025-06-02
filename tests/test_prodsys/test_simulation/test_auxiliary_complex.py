@@ -19,12 +19,12 @@ def simulation_adapter() -> ProductionSystemData:
     tp = psx.TransportProcess(t3, "tp")
     tp_aux = psx.TransportProcess(t3, "tp_aux")
 
-    machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
-    machine2 = psx.ProductionResource([p2], [5, 5], 2, ID="machine2")
+    machine = psx.Resource([p1], [5, 0], 1, ID="machine")
+    machine2 = psx.Resource([p2], [5, 5], 2, ID="machine2")
 
-    transport = psx.TransportResource([tp], [3, 0], 1, ID="transport")
-    transport2 = psx.TransportResource([tp], [3, 0], 1, ID="transport2")
-    transport_aux = psx.TransportResource([tp_aux], [4, 0], 1, ID="transport_aux")
+    transport = psx.Resource([tp], [3, 0], 1, ID="transport")
+    transport2 = psx.Resource([tp], [3, 0], 1, ID="transport2")
+    transport_aux = psx.Resource([tp_aux], [4, 0], 1, ID="transport_aux")
 
     storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
     storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
@@ -80,7 +80,7 @@ def simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
@@ -90,7 +90,7 @@ def test_hashing(simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
     assert runner_instance.env.now == 1000

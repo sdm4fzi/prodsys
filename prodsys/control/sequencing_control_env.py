@@ -60,7 +60,7 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
         self.action_space = action_space
         self.render_mode = render_mode
 
-        self.runner = runner.Runner(adapter=self.adapter)
+        self.runner = runner.Runner(production_system_data=self.adapter)
 
         self.interrupt_simulation_event: events.Event = None
         self.resource_controller: control.Controller = None

@@ -59,7 +59,7 @@ def get_modul_counts(adapter: adapters.ProductionSystemData) -> Dict[str, int]:
         if isinstance(process, processes_data.ProductionProcessData):
             modul_count_dict[process.ID] = 0
     for resource in adapter.resource_data:
-        if not isinstance(resource, resource_data.ProductionResourceData):
+        if not isinstance(resource, resource_data.ResourceData):
             continue
         for process in resource.process_ids:
             modul_count_dict[process] += 1
@@ -478,7 +478,7 @@ class MathOptimizer(BaseModel):
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
-                if not isinstance(resource, resource_data.ProductionResourceData)
+                if not isinstance(resource, resource_data.ResourceData)
             ]
             adjust_number_of_transport_resources(
                 new_adapter, adjusted_number_of_transport_resources
@@ -503,7 +503,7 @@ class MathOptimizer(BaseModel):
                     continue
                 location = random.choice(possible_positions)
                 possible_positions.remove(location)
-                new_resource = resource_data.ProductionResourceData(
+                new_resource = resource_data.ResourceData(
                     ID="M" + str(resource_counter),
                     description="",
                     capacity=1,

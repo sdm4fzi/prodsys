@@ -25,7 +25,7 @@ def storage_simulation_adapter() -> ProductionSystemData:
     )
     storage2 = psx.Store(ID="output_storage", location=[9, 1], capacity=5)
 
-    machine = psx.ProductionResource(
+    machine = psx.Resource(
         [p1],
         [5, 0],
         3,
@@ -36,7 +36,7 @@ def storage_simulation_adapter() -> ProductionSystemData:
         output_stores=[storage],
     )
 
-    machine2 = psx.ProductionResource(
+    machine2 = psx.Resource(
         [p2],
         [9, 0],
         3,
@@ -45,7 +45,7 @@ def storage_simulation_adapter() -> ProductionSystemData:
         output_stores=[storage, storage2],
     )
 
-    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+    transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1, p2], tp, "product1")
 
@@ -61,17 +61,17 @@ def storage_simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(storage_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=storage_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
 
 
 def test_hashing(storage_simulation_adapter: ProductionSystemData):
     hash_str = storage_simulation_adapter.hash()
-    assert hash_str == "747f8669f99074930561a959d72a9219"
+    assert hash_str == "02219f0b66c6b4395691b911b8b57127"
 
 
 def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=storage_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000

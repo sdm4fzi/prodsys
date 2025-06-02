@@ -24,16 +24,14 @@ charging_state = psx.ChargingState(
     ID="charging_state",
 )
 
-machine = psx.ProductionResource(
+machine = psx.Resource(
     [p1, p2], [5, 0], 2, states=[setup_state_1, setup_state_2], ID="machine"
 )
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     [p1, p2], [7, 0], 2, states=[setup_state_1, setup_state_2], ID="machine2"
 )
 
-transport = psx.TransportResource(
-    [tp], [0, 0], 1, states=[charging_state], ID="transport"
-)
+transport = psx.Resource([tp], [0, 0], 1, states=[charging_state], ID="transport")
 
 product1 = psx.Product([p1], tp, "product1")
 product2 = psx.Product([p2], tp, "product2")
@@ -56,7 +54,7 @@ system = psx.ProductionSystem(
 model = system.to_model()
 from prodsys import runner
 
-runner_instance = runner.Runner(adapter=model)
+runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
 system.run(4000)
 

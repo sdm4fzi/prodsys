@@ -130,7 +130,9 @@ class ProductionSystem(core.ExpressObject):
         primitive_stores = list(
             util.flatten_object(
                 primitive_store
-                for primitive_store in [primitive.storages for primitive in self.primitives]
+                for primitive_store in [
+                    primitive.storages for primitive in self.primitives
+                ]
             )
         )
         primitive_stores = remove_duplicate_items(primitive_stores)
@@ -223,7 +225,7 @@ class ProductionSystem(core.ExpressObject):
             time_range (float, optional): The time range of the simulation. Defaults to 2880.
             seed (int, optional): The seed of the simulation. Defaults to 0.
         """
-        self._runner = runner.Runner(adapter=self.to_model())
+        self._runner = runner.Runner(production_system_data=self.to_model())
         self._runner.adapter.seed = seed
         self._runner.initialize_simulation()
         self._runner.run(time_range)

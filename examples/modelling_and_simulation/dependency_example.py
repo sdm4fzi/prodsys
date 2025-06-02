@@ -91,13 +91,15 @@ source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
 
 system = psx.ProductionSystem(
     # [machine, machine2, transport, worker, worker2], [source1, source2], [sink1, sink2]
-    [machine, transport, worker, worker2], [source1, source2], [sink1, sink2]
+    [machine, transport, worker, worker2],
+    [source1, source2],
+    [sink1, sink2],
 )
 model = system.to_model()
 model.write("examples/dependency_example_model.json")
 from prodsys import runner
 
-runner_instance = runner.Runner(adapter=model)
+runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
 system.run(1000)
 

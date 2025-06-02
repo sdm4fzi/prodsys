@@ -20,9 +20,9 @@ def loading_times_simulation_adapter() -> ProductionSystemData:
         unloading_time_model=unloading_time_model,
     )
 
-    machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
+    machine = psx.Resource([p1], [5, 0], 1, ID="machine")
 
-    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+    transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1], tp, "product1")
 
@@ -40,7 +40,9 @@ def loading_times_simulation_adapter() -> ProductionSystemData:
 def test_initialize_simulation(
     loading_times_simulation_adapter: ProductionSystemData,
 ):
-    runner_instance = runner.Runner(adapter=loading_times_simulation_adapter)
+    runner_instance = runner.Runner(
+        production_system_data=loading_times_simulation_adapter
+    )
     runner_instance.initialize_simulation()
 
 
@@ -50,7 +52,9 @@ def test_hashing(loading_times_simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=loading_times_simulation_adapter)
+    runner_instance = runner.Runner(
+        production_system_data=loading_times_simulation_adapter
+    )
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000

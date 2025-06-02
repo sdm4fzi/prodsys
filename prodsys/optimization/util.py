@@ -343,7 +343,7 @@ def clean_out_breakdown_states_of_resources(
     adapter_object: adapters.ProductionSystemData,
 ):
     for resource in adapter_object.resource_data:
-        if isinstance(resource, resource_data.ProductionResourceData) and any(
+        if isinstance(resource, resource_data.ResourceData) and any(
             True
             for state in adapter_object.state_data
             if state.ID == BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value
@@ -353,7 +353,7 @@ def clean_out_breakdown_states_of_resources(
             resource.state_ids = get_breakdown_state_ids_of_machine_with_processes(
                 resource.process_ids, adapter_object
             )
-        elif isinstance(resource, resource_data.TransportResourceData) and any(
+        elif isinstance(resource, resource_data.ResourceData) and any(
             True
             for state in adapter_object.state_data
             if state.ID
@@ -421,7 +421,7 @@ def add_setup_states_to_machine(
 
 
 def get_grouped_processes_of_machine(
-    machine: resource_data.ProductionResourceData,
+    machine: resource_data.ResourceData,
     possible_processes: List[Union[str, Tuple[str, ...]]],
 ) -> List[Tuple[str]]:
     grouped_processes = []
