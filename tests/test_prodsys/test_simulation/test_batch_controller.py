@@ -15,7 +15,7 @@ def batch_simulation_adapter() -> ProductionSystemData:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    machine = psx.ProductionResource(
+    machine = psx.Resource(
         [p1],
         [5, 0],
         capacity=2,
@@ -24,7 +24,7 @@ def batch_simulation_adapter() -> ProductionSystemData:
         batch_size=2,
     )
 
-    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+    transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1], tp, "product1")
 
@@ -40,7 +40,7 @@ def batch_simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(batch_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=batch_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=batch_simulation_adapter)
     runner_instance.initialize_simulation()
 
 
@@ -50,7 +50,7 @@ def test_hashing(batch_simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(batch_simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=batch_simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=batch_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000

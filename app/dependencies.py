@@ -63,7 +63,7 @@ def get_progress_of_simulation(project_id: str, adapter_id: str) -> ProgressRepo
 def run_simulation(project_id: str, adapter_id: str, run_length: float, seed: int):
     adapter = prodsys_backend.get_adapter(project_id, adapter_id)
     adapter.seed = seed
-    runner_object = prodsys.runner.Runner(adapter=adapter)
+    runner_object = prodsys.runner.Runner(production_system_data=adapter)
     runners[adapter_id] = runner_object
     runner_object.initialize_simulation()
     runner_object.run(run_length)
@@ -149,7 +149,9 @@ def prepare_adapter_from_optimization(
     project = prodsys_backend.get_project(project_id)
     project.adapters.append(adapter_object_optimized)
 
-    runner_object = prodsys.runner.Runner(adapter=adapter_object_optimized)
+    runner_object = prodsys.runner.Runner(
+        production_system_data=adapter_object_optimized
+    )
     runner_object.initialize_simulation()
     if (
         adapter_object_optimized.scenario_data

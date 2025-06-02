@@ -52,7 +52,7 @@ def get_production_resources(
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
 
     Returns:
-        List[resource_data_module.ProductionResourceData]: List of all machines in the adapter
+        List[resource_data_module.ResourceData]: List of all machines in the adapter
     """
     # FIXME: updated bugs here and n validation and so on.
     return [
@@ -72,7 +72,7 @@ def get_transport_resources(
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
 
     Returns:
-        List[resource_data_module.TransportResourceData]: List of all transport resources in the adapter
+        List[resource_data_module.ResourceData]: List of all transport resources in the adapter
     """
     return [
         resource
@@ -102,7 +102,7 @@ def get_default_queues_for_resource(
     Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
 
     Args:
-        resource (resource_data_module.ProductionResourceData): Resource for which the default queues should be returned
+        resource (resource_data_module.ResourceData): Resource for which the default queues should be returned
         queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
@@ -127,13 +127,13 @@ def get_default_queues_for_resource(
     return input_queues, output_queues
 
 
-def remove_queues_from_resource(machine: resource_data_module.ProductionResourceData):
+def remove_queues_from_resource(machine: resource_data_module.ResourceData):
     machine.input_queues = []
     machine.output_queues = []
 
 
 def remove_queues_from_resources(
-    machines: List[resource_data_module.ProductionResourceData],
+    machines: List[resource_data_module.ResourceData],
 ):
     for machine in machines:
         remove_queues_from_resource(machine)
@@ -280,7 +280,7 @@ def add_default_queues_to_sinks(
     return adapter
 
 
-def add_default_queues_to_adapter(
+def add_default_queues_to_production_system(
     adapter: ProductionSystemData, queue_capacity=0.0
 ) -> ProductionSystemData:
     """
@@ -744,7 +744,7 @@ class ProductionSystemData(BaseModel):
         """
         data = load_json(filepath)
         return cls.model_validate(data)
-    
+
     def write(self, filepath: str):
         """
         Writes the ProductionSystemData object to a JSON file.
@@ -778,7 +778,10 @@ class ProductionSystemData(BaseModel):
                         *sorted([sink.hash(self) for sink in self.sink_data]),
                         *sorted([source.hash(self) for source in self.source_data]),
                         *sorted(
-                            [auxiliary.hash(self) for auxiliary in self.depdendency_data]
+                            [
+                                auxiliary.hash(self)
+                                for auxiliary in self.depdendency_data
+                            ]
                         ),
                     ]
                 )

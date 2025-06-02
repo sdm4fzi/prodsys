@@ -17,40 +17,45 @@ t3 = psx.DistanceTimeModel(60, 0.05, "manhattan", ID="t3")
 tp = psx.TransportProcess(t3, "tp")
 tp_aux = psx.TransportProcess(t3, "tp_aux")
 
-machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
-machine2 = psx.ProductionResource([p2], [5, 5], 2, ID="machine2")
+machine = psx.Resource([p1], [5, 0], 1, ID="machine")
+machine2 = psx.Resource([p2], [5, 5], 2, ID="machine2")
 
-transport = psx.TransportResource([tp], [3, 0], 1, ID="transport")
-transport2 = psx.TransportResource([tp], [3, 0], 1, ID="transport2")
-transport_aux = psx.TransportResource([tp_aux], [4, 0], 1, ID="transport_aux")
+transport = psx.Resource([tp], [3, 0], 1, ID="transport")
+transport2 = psx.Resource([tp], [3, 0], 1, ID="transport2")
+transport_aux = psx.Resource([tp_aux], [4, 0], 1, ID="transport_aux")
 
 storage1 = psx.Store(ID="storage1", location=[5, 2.5], capacity=30)
 storage2 = psx.Store(ID="storage2", location=[10, 2.5], capacity=20)
 
 
-auxiliary1 = psx.Primitive(
-    ID="auxiliary1",
+workpiece_carrier_1 = psx.Primitive(
+    ID="workpiece_carrier_1",
     transport_process=tp_aux,
     storages=[storage1],
     quantity_in_storages=[10],
-    relevant_processes=[],
-    relevant_transport_processes=[tp],
 )
 
-auxiliary2 = psx.Primitive(
-    ID="auxiliary2",
+workpiece_carrier_2 = psx.Primitive(
+    ID="workpiece_carrier_2",
     transport_process=tp_aux,
     storages=[storage2],
     quantity_in_storages=[20],
-    relevant_processes=[],
-    relevant_transport_processes=[tp],
+)
+
+workpiece_carrier_dependency_1 = psx.PrimitiveDependency(
+    ID="workpiece_carrier_dependency_1",
+    required_primitive=workpiece_carrier_1,
+)
+workpiece_carrier_dependency_2 = psx.PrimitiveDependency(
+    ID="workpiece_carrier_dependency_2",
+    required_primitive=workpiece_carrier_2,
 )
 
 product1 = psx.Product(
-    processes=[p1, p2], transport_process=tp, ID="product1", dependencies=[auxiliary1]
+    processes=[p1, p2], transport_process=tp, ID="product1", dependencies=[workpiece_carrier_dependency_1]
 )
 product2 = psx.Product(
-    processes=[p2, p1], transport_process=tp, ID="product2", dependencies=[auxiliary2]
+    processes=[p2, p1], transport_process=tp, ID="product2", dependencies=[workpiece_carrier_dependency_2]
 )
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
@@ -68,6 +73,7 @@ system = psx.ProductionSystem(
     [machine, machine2, transport, transport2, transport_aux],
     [source1, source2],
     [sink1, sink2],
+    [workpiece_carrier_1, workpiece_carrier_2],
 )
 system.validate()
 system.run(time_range=1000)

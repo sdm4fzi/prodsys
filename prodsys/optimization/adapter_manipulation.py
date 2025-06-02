@@ -101,7 +101,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     machine_id = f"resource_{uuid1().hex}"
 
     adapter_object.resource_data.append(
-        resource_data.ProductionResourceData(
+        resource_data.ResourceData(
             ID=machine_id,
             description="",
             capacity=1,
@@ -268,13 +268,13 @@ def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
 
 
 def update_production_resource_location(
-    resource: resource_data.ProductionResourceData, new_location: List[float]
+    resource: resource_data.ResourceData, new_location: List[float]
 ) -> None:
     """
     Function that updates the location of a machine.
 
     Args:
-        resource (resource_data.ProductionResourceData): Machine to update.
+        resource (resource_data.ResourceData): Machine to update.
         location (List[float]): New location of the machine.
     """
     position_delta = [
@@ -373,7 +373,7 @@ def change_control_policy(adapter_object: adapters.ProductionSystemData) -> bool
     if not adapter_object.resource_data:
         return False
     resource = random.choice(adapter_object.resource_data)
-    if isinstance(resource, resource_data.ProductionResourceData):
+    if isinstance(resource, resource_data.ResourceData):
         possible_control_policies = deepcopy(
             adapter_object.scenario_data.options.machine_controllers
         )

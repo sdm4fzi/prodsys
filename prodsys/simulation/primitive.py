@@ -126,7 +126,7 @@ class Primitive:
     def __init__(
         self,
         env: sim.Environment,
-        primitive_data: primitives_data.PrimitiveData,
+        data: primitives_data.PrimitiveData,
         transport_process: process.Process,
         storage: store.Store,
     ):
@@ -142,7 +142,7 @@ class Primitive:
             relevant_transport_processes (List[process.TransportProcess]): Relevant transport processes of the product.
         """
         self.env = env
-        self.data = primitive_data
+        self.data = data
         self.transport_process = transport_process
         self.storage = storage
 
@@ -202,4 +202,4 @@ class Primitive:
             event_time=self.env.now,
         )
 
-from prodsys.simulation import product
+from prodsys.simulation import product, state

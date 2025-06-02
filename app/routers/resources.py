@@ -8,8 +8,12 @@ from prodsys.models import resource_data
 from app.dao import resources_dao
 
 RESOURCE_EXAMPLES = {
-    "Production Resource": resource_data.ProductionResourceData.model_config["json_schema_extra"]["examples"],
-    "Transport Resource": resource_data.TransportResourceData.model_config["json_schema_extra"]["examples"],
+    "Production Resource": resource_data.ProductionResourceData.model_config[
+        "json_schema_extra"
+    ]["examples"],
+    "Transport Resource": resource_data.ResourceData.model_config["json_schema_extra"][
+        "examples"
+    ],
 }
 
 RESOURCE_LIST_EXAMPLE = [item for item in RESOURCE_EXAMPLES.values()]
@@ -17,7 +21,7 @@ PRODUCTION_RESOURCE_LIST_EXAMPLE = [
     resource_data.ProductionResourceData.model_config["json_schema_extra"]["examples"]
 ]
 TRANSPORT_RESOURCE_LIST_EXAMPLE = [
-    resource_data.TransportResourceData.model_config["json_schema_extra"]["examples"]
+    resource_data.ResourceData.model_config["json_schema_extra"]["examples"]
 ]
 
 
@@ -62,7 +66,7 @@ async def get_all_production_resources(project_id: str, adapter_id: str):
 
 @router.get(
     "/transport_resources",
-    response_model=List[resource_data.TransportResourceData],
+    response_model=List[resource_data.ResourceData],
     responses={
         200: {
             "description": "Sucessfully returned transport resources",

@@ -1,5 +1,5 @@
 """
-`process` module contains the `prodsys.express` classes to represent the processes that can 
+`process` module contains the `prodsys.express` classes to represent the processes that can
 be performed on products by resources.
 
 The following processes are possible:
@@ -54,6 +54,7 @@ class DefaultProcess(Process):
     type: processes_data.ProcessTypeEnum = Field(init=False)
     dependencies: Optional[List[Dependency]] = Field(default_factory=list)
 
+
 @dataclass
 class ProductionProcess(DefaultProcess, core.ExpressObject):
     """
@@ -101,7 +102,7 @@ class ProductionProcess(DefaultProcess, core.ExpressObject):
             description="",
             type=self.type,
             failure_rate=self.failure_rate,
-            dependency_ids=[dependency.ID for dependency in self.dependencies]
+            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 
@@ -268,7 +269,7 @@ class LinkTransportProcess(TransportProcess):
             The links associated with the process. Each link is a list of different objects, which can be a
             Resource, NodeData, Source, or Sink. If the links attribute is a list, it represents a list of
             links, where each link is a list of these objects. If the links attribute is a dictionary, it represents a
-            mapping from a key (which can be a ProductionResource, NodeData, Source, or Sink) to a list of these objects.
+            mapping from a key (which can be a Resource, NodeData, Source, or Sink) to a list of these objects.
         capability (Optional[str]): The capability of the process.
     """
 

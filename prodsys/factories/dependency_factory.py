@@ -57,18 +57,19 @@ class DependencyFactory:
             primitive = None
             resource = self.resource_factory.get_resource(dependency_data.required_resource)
         elif dependency_data.dependency_type == DependencyType.PRIMITIVE:
-            if dependency_data.required_primitive in self.product_factory.products:
-                process = None
+            primitive = None
+            try:
                 primitive = self.product_factory.get_product(dependency_data.required_primitive)
-                resource = None
-            elif dependency_data.required_primitive in self.primitive_factory.primitives:
-                process = None
-                primitive = self.primitive_factory.get_primitive(dependency_data.required_primitive)
-                resource = None 
-            else:
-                raise ValueError(f"Invalid primitive type for {dependency_data.required_primitive}")
+            except Exception as e:
+                pass
+            try:
+                primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_primitive)
+            except Exception as e:
+                raise ValueError(f"Primitive with ID {dependency_data.required_primitive} not found.") from e
+            process = None
+            resource = None
         else:
-            raise ValueError(f"Invalid dependency type for {dependency_data.dependency_type}")
+            raise ValueError(f"Invalid dependency type for {dependency_data.dependency_type}: {dependency_data.dependency_type}")
 
         dependency = Dependency(
             env=self.resource_factory.env,

@@ -47,7 +47,7 @@ def run_simulation(
     Returns:
         Runner: The runner object after simulation.
     """
-    runner_object = Runner(adapter=adapter_object)
+    runner_object = Runner(production_system_data=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(run_length)
     return runner_object
@@ -100,14 +100,14 @@ class Runner:
 
     def __init__(
         self,
-        adapter: production_system_data.ProductionSystemData,
+        production_system_data: production_system_data.ProductionSystemData,
         warm_up_cutoff: bool = False,
         cut_off_method: Literal[
             "mser5", "threshold_stabilization", "static_ratio"
         ] = "mser5",
     ):
         """"""
-        self.adapter = adapter
+        self.adapter = production_system_data
         self.env = sim.Environment(seed=self.adapter.seed)
         self.time_model_factory: time_model_factory.TimeModelFactory = None
         self.state_factory: state_factory.StateFactory = None

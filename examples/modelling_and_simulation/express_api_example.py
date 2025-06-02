@@ -18,14 +18,14 @@ breakdown_state = psx.BreakDownState(bm1, bm2)
 process_breakdown_state = psx.ProcessBreakdownState(bm1, bm2, p1)
 setup_state = psx.SetupState(tm1, p1, p2)
 
-r1 = psx.ProductionResource(
+r1 = psx.Resource(
     [p1, p2],
     [10.0, 10.0],
     capacity=1,
     control_policy="LIFO",
     states=[breakdown_state, process_breakdown_state, setup_state],
 )
-r2 = psx.TransportResource([p3], control_policy="FIFO")
+r2 = psx.Resource([p3], control_policy="FIFO")
 
 m1 = psx.Product([p1, p2], p3)
 m2 = psx.Product([p2, p2], p3)

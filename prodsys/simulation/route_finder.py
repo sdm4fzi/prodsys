@@ -223,7 +223,7 @@ class RouteFinder:
             GraphNode: The graph node.
         """
         # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.resources import ProductionResource
+        from prodsys.simulation.resources import Resource
         from prodsys.simulation.store import Store
 
         existing_node = self.get_existing_graph_node_for_locatable(locatable)

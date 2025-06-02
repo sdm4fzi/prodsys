@@ -54,23 +54,23 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     # All resources
-    machine01 = psx.ProductionResource(
+    machine01 = psx.Resource(
         ID="resource01",
         processes=[productionprocess01],
         location=[10, 10],
     )
-    machine02 = psx.ProductionResource(
+    machine02 = psx.Resource(
         ID="resource02",
         processes=[productionprocess02],
         location=[20, 10],
     )
-    machine03 = psx.ProductionResource(
+    machine03 = psx.Resource(
         ID="resource03",
         processes=[productionprocess03],
         location=[10, 20],
     )
 
-    agv01 = psx.TransportResource(
+    agv01 = psx.Resource(
         location=[0, 0],
         ID="agv01",
         processes=[ltp01],
@@ -152,12 +152,12 @@ def simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(480)
     assert runner_instance.env.now == 480

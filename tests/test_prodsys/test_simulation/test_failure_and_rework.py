@@ -29,15 +29,15 @@ def simulation_adapter() -> ProductionSystemData:
         rework_time_model3, [p1], False, "rework_process3"
     )
 
-    machine = psx.ProductionResource([p1], [5, 0], 1, ID="machine")
-    machine2 = psx.ProductionResource([p2], [10, 0], 1, ID="machine2")
-    machine3 = psx.ProductionResource([p3], [5, 5], 1, ID="machine3")
+    machine = psx.Resource([p1], [5, 0], 1, ID="machine")
+    machine2 = psx.Resource([p2], [10, 0], 1, ID="machine2")
+    machine3 = psx.Resource([p3], [5, 5], 1, ID="machine3")
 
-    reworker = psx.ProductionResource(
+    reworker = psx.Resource(
         [rework_process, rework_process2, rework_process3], [8, 0], 1, ID="reworker"
     )
 
-    transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+    transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
     product1 = psx.Product([p1, p2, p3], tp, "product1")
 
@@ -55,7 +55,7 @@ def simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
@@ -65,7 +65,7 @@ def test_hashing(simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000

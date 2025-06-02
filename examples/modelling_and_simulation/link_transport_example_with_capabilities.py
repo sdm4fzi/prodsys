@@ -44,32 +44,32 @@ productionprocess05 = psx.ProductionProcess(time_model=time_model_machine5, ID="
 productionprocess06 = psx.ProductionProcess(time_model=time_model_machine6, ID="pp06")
 
 
-machine01 = psx.ProductionResource(
+machine01 = psx.Resource(
     ID="resource01",
     processes=[productionprocess01],
     location=[0, 0],
 )
-machine02 = psx.ProductionResource(
+machine02 = psx.Resource(
     ID="resource02",
     processes=[productionprocess02],
     location=[50, 0],
 )
-machine03 = psx.ProductionResource(
+machine03 = psx.Resource(
     ID="resource03",
     processes=[productionprocess03],
     location=[100, 0],
 )
-machine04 = psx.ProductionResource(
+machine04 = psx.Resource(
     ID="resource04",
     processes=[productionprocess04],
     location=[100, 100],
 )
-machine05 = psx.ProductionResource(
+machine05 = psx.Resource(
     ID="resource05",
     processes=[productionprocess05],
     location=[50, 100],
 )
-machine06 = psx.ProductionResource(
+machine06 = psx.Resource(
     ID="resource06",
     processes=[productionprocess06],
     location=[0, 100],
@@ -152,37 +152,37 @@ ltp02 = psx.LinkTransportProcess(
     links=ltp02_links,
 )
 
-agv01 = psx.TransportResource(
+agv01 = psx.Resource(
     location=[50, 20],
     ID="agv01",
     processes=[ltp01],
 )
 
-agv02 = psx.TransportResource(
+agv02 = psx.Resource(
     location=[50, 20],
     ID="agv02",
     processes=[ltp01],
 )
 
-agv03 = psx.TransportResource(
+agv03 = psx.Resource(
     location=[50, 20],
     ID="agv03",
     processes=[ltp01],
 )
 
-agv04 = psx.TransportResource(
+agv04 = psx.Resource(
     location=[50, 80],
     ID="agv04",
     processes=[ltp02],
 )
 
-agv05 = psx.TransportResource(
+agv05 = psx.Resource(
     location=[50, 80],
     ID="agv05",
     processes=[ltp02],
 )
 
-agv06 = psx.TransportResource(
+agv06 = psx.Resource(
     location=[50, 80],
     ID="agv06",
     processes=[ltp02],

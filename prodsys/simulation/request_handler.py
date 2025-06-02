@@ -269,11 +269,11 @@ class RequestHandler:
             allocated_request (request.Request): The request that has been allocated.
         """
         if allocated_request.request_type == request.RequestType.TRANSPORT:
-        #     request_info_key = get_transport_request_info_key(
-        #         allocated_request.requesting_item,
-        #         allocated_request.origin,
-        #         allocated_request.target,
-        #     )
+            #     request_info_key = get_transport_request_info_key(
+            #         allocated_request.requesting_item,
+            #         allocated_request.origin,
+            #         allocated_request.target,
+            #     )
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
@@ -289,15 +289,13 @@ class RequestHandler:
         #         allocated_request.requesting_item,
         #     )
         elif allocated_request.request_type == request.RequestType.PRODUCTION:
-        #     request_info_key = get_request_info_key(allocated_request.requesting_item)
+            #     request_info_key = get_request_info_key(allocated_request.requesting_item)
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
 
         # self.request_infos[request_info_key].request_state = "routed"
-        request_info = self.pending_requests.pop(
-            id(allocated_request.completed), None
-        )
+        request_info = self.pending_requests.pop(id(allocated_request.completed), None)
         if not request_info:
             raise ValueError(
                 f"Request info not found for completed request {allocated_request.completed}"
@@ -321,9 +319,7 @@ class RequestHandler:
         # else:
         #     request_info_key = get_request_info_key(completed_request.requesting_item)
         # self.request_infos[request_info_key].request_state = "completed"
-        request_info = self.routed_requests.pop(
-            id(completed_request.completed), None
-        )
+        request_info = self.routed_requests.pop(id(completed_request.completed), None)
         if not request_info:
             raise ValueError(
                 f"Request info not found for completed request {completed_request.completed}"
@@ -451,7 +447,7 @@ class RequestHandler:
             request_info_key = self.pending_primitive_requests[request_info_index]
             request_info = self.request_infos[request_info_key]
             possible_primitives = free_primitives.get(
-                request_info.dependency.required_primitive.data.type, []
+                request_info.dependency.required_primitive_type.data.type, []
             )
             possible_primitive_requests = []
             for possible_primitive in possible_primitives:
@@ -463,5 +459,7 @@ class RequestHandler:
             if possible_primitive_requests:
                 self.pending_primitive_requests.remove(request_info_key)
                 # self.request_infos.pop(request_info_key, None)
-                self.pending_requests[id(possible_primitive_requests[0].completed)] = request_info
+                self.pending_requests[id(possible_primitive_requests[0].completed)] = (
+                    request_info
+                )
                 return possible_primitive_requests

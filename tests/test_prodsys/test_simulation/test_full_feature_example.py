@@ -92,7 +92,7 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     # All resources
-    machine_1 = psx.ProductionResource(
+    machine_1 = psx.Resource(
         [p1, p2, cp1, cp2],
         [5, 0],
         1,
@@ -106,7 +106,7 @@ def simulation_adapter() -> ProductionSystemData:
         ],
         ID="machine_1",
     )
-    machine_2 = psx.ProductionResource(
+    machine_2 = psx.Resource(
         [p1, p2, cp1, cp2],
         [7, 0],
         1,
@@ -121,25 +121,25 @@ def simulation_adapter() -> ProductionSystemData:
         ID="machine_2",
     )
 
-    machine_3 = psx.ProductionResource(
+    machine_3 = psx.Resource(
         [p3, cp3], [5, 2], 2, states=[breakdown_state_1], ID="machine_3"
     )
 
-    machine_4 = psx.ProductionResource(
+    machine_4 = psx.Resource(
         [p4, p5],
         [7, 2],
         2,
         states=[setup_state_3, setup_state_4, breakdown_state_1],
         ID="machine_4",
     )
-    machine_5 = psx.ProductionResource(
+    machine_5 = psx.Resource(
         [p4, p5],
         [5, 4],
         2,
         states=[setup_state_3, setup_state_4, breakdown_state_1],
         ID="machine_5",
     )
-    machine_6 = psx.ProductionResource(
+    machine_6 = psx.Resource(
         [p4, p5],
         [7, 4],
         2,
@@ -147,13 +147,13 @@ def simulation_adapter() -> ProductionSystemData:
         ID="machine_6",
     )
 
-    transport_1 = psx.TransportResource(
+    transport_1 = psx.Resource(
         [tp], [0, 0], 1, states=[breakdown_state_2], ID="transport_1"
     )
-    transport_2 = psx.TransportResource(
+    transport_2 = psx.Resource(
         [tp], [0, 0], 1, states=[breakdown_state_2], ID="transport_2"
     )
-    transport_3 = psx.TransportResource(
+    transport_3 = psx.Resource(
         [tp], [0, 0], 1, states=[breakdown_state_2], ID="transport_3"
     )
 
@@ -193,12 +193,12 @@ def simulation_adapter() -> ProductionSystemData:
 
 
 def test_initialize_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
-    runner_instance = runner.Runner(adapter=simulation_adapter)
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000

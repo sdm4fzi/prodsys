@@ -9,6 +9,8 @@ import random
 import logging
 
 from prodsys.models.processes_data import ProcessTypeEnum
+from prodsys.models.queue_data import StoreData
+from prodsys.models.resource_data import ResourceData
 from prodsys.simulation.request import RequestType
 
 
@@ -321,7 +323,7 @@ class TransportProcessHandler:
 
         Raises:
             ValueError: If the product is not in the queue.
-            ValueError: If the resource is not a  ProductionResource or Source.
+            ValueError: If the resource is not a  Resource
 
         Returns:
             Generator: The generator yields when the product is in the queue.
@@ -339,7 +341,7 @@ class TransportProcessHandler:
             product (product.Product): The product that shall be transported.
 
         Raises:
-            ValueError: If the resource is not a  ProductionResource or Sink.
+            ValueError: If the resource is not a  Resource
 
         Returns:
             Generator: The generator yields when the product is in the queue.
@@ -624,15 +626,26 @@ class DependencyProcessHandler:
                 )
                 transport_state.reserved = True
                 yield from self.run_transport(
-                    transport_state, route_to_origin, empty_transport=True, dependency=process_request.resolved_dependency
+                    transport_state,
+                    route_to_origin,
+                    empty_transport=True,
+                    dependency=process_request.resolved_dependency,
                 )
                 transport_state.process = None
 
             # product.product_router.mark_finished_request(process_request)
         process_request.completed.succeed()
-        self.resource.dependency_info.log_start_dependency(event_time=self.env.now, requesting_item_id=process_request.requesting_item.data.ID, dependency_id=process_request.resolved_dependency.data.ID)
+        self.resource.dependency_info.log_start_dependency(
+            event_time=self.env.now,
+            requesting_item_id=process_request.requesting_item.data.ID,
+            dependency_id=process_request.resolved_dependency.data.ID,
+        )
         yield process_request.dependency_release_event
-        self.resource.dependency_info.log_end_dependency(event_time=self.env.now, requesting_item_id=process_request.requesting_item.data.ID, dependency_id=process_request.resolved_dependency.data.ID)
+        self.resource.dependency_info.log_end_dependency(
+            event_time=self.env.now,
+            requesting_item_id=process_request.requesting_item.data.ID,
+            dependency_id=process_request.resolved_dependency.data.ID,
+        )
         self.resource.release_from_dependant()
         self.resource.controller.mark_finished_process()
 
@@ -802,7 +815,7 @@ def SPT_control_policy(requests: List[request_module.Request]) -> None:
 
 
 def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
-    if not isinstance(locatable, (resources.Resource, store.Store)):
+    if not isinstance(locatable.data, (ResourceData, StoreData)):
         return locatable.get_location()
     if mode == "target":
         return locatable.get_location(interaction="input")
@@ -899,7 +912,7 @@ class BatchController(Controller):
         if isinstance(resource, resources.Resource):
             return resource.data.batch_size
         else:
-            raise ValueError("Resource is not a ProductionResource")
+            raise ValueError("Resource is not a Resource")
 
     def get_next_product_for_process(
         self, resource: resources.Resource, process_request: request_module.Request
@@ -915,7 +928,7 @@ class BatchController(Controller):
             List[events.Event]: The events that are triggered when the products are taken from the queue.
         """
         events = []
-        if isinstance(resource, resources.ProductionResource):
+        if isinstance(resource, resources.Resource):
             batch_size = self.get_batch_size(resource)
             internal_input_queues = [
                 queue
@@ -937,7 +950,7 @@ class BatchController(Controller):
                 )
             return events
         else:
-            raise ValueError("Resource is not a ProductionResource")
+            raise ValueError("Resource is not a Resource")
 
     def put_product_to_output_queue(
         self, resource: resources.Resource, products: List[product.Product]
@@ -953,7 +966,7 @@ class BatchController(Controller):
             List[events.Event]: The events that are triggered when the products are placed in the queue.
         """
         events = []
-        if isinstance(resource, resources.ProductionResource):
+        if isinstance(resource, resources.Resource):
             for product in products:
                 internal_output_queues = [
                     queue
@@ -963,7 +976,7 @@ class BatchController(Controller):
                 queue_for_product = random.choice(internal_output_queues)
                 events.append(queue_for_product.put(product.data))
         else:
-            raise ValueError("Resource is not a ProductionResource")
+            raise ValueError("Resource is not a Resource")
 
         return events
 
