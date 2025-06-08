@@ -105,11 +105,7 @@ class DependencyFactory:
                 dependency = self.get_dependency(dependency_id)
                 resource.dependencies.append(dependency)
 
-        for product in self.product_factory.products.values():
-            dependencies = product.data.dependency_ids
-            for dependency_id in dependencies:
-                dependency = self.get_dependency(dependency_id)
-                product.dependencies.append(dependency)
+        self.product_factory.dependency_factory = self
 
         for process in self.process_factory.processes.values():
             dependencies = process.data.dependency_ids

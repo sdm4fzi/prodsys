@@ -5,7 +5,6 @@ import warnings
 from enum import Enum
 from abc import ABC, abstractmethod
 
-from prodsys.simulation.resources import DependencyInfo
 
 warnings.simplefilter(action="ignore", category=RuntimeWarning)
 from functools import partial, wraps
@@ -19,6 +18,7 @@ from prodsys.simulation import primitive, state
 if TYPE_CHECKING:
     from prodsys.simulation import product
     from prodsys.factories import resource_factory
+    from prodsys.simulation.dependency import DependencyInfo
 
 
 class Logger(ABC):
@@ -156,24 +156,24 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
     data.append(item)
 
 
-def post_monitor_primitive_info(
-    data: List[dict], primitive_info: primitive.PrimitiveInfo
+def post_monitor_primitive_dependency(
+    data: List[dict], dependency_info: DependencyInfo
 ):
     """
-    Post function for monitoring primitive info. With this post monitor, every primitive creation and finish is logged.
-
+    Post function for monitoring primitive dependency info. With this post monitor, every primitive dependency creation and finish is logged.
     Args:
         data (List[dict]): The data to log to.
-        product_info (product.ProductInfo): The product info object.
+        dependency_info (DependencyInfo): The dependency info object.
     """
 
     item = {
-        "Time": primitive_info.event_time,
-        "Resource": primitive_info.resource_ID,
-        "State": primitive_info.state_ID,
-        "State Type": primitive_info.state_type,
-        "Activity": primitive_info.activity,
-        "Product": primitive_info.product_ID,
+        "Time": dependency_info.event_time,
+        "Resource": dependency_info.resource_ID,
+        "State": dependency_info.state_ID,
+        "State Type": dependency_info.state_type,
+        "Activity": dependency_info.activity,
+        "Requesting Item": dependency_info.requesting_item_ID,
+        "Dependency": dependency_info.dependency_ID,
     }
     data.append(item)
 
@@ -278,15 +278,10 @@ class EventLogger(Logger):
         """
         self.register_patch(
             self.event_data,
-            primitive.primitive_info,
-            attr=[
-                "log_create_primitive",
-                "log_bind",
-                "log_release",
-            ],
-            post=post_monitor_primitive_info,
+            primitive.dependency_info,
+            attr=["log_start_dependency", "log_end_dependency"],
+            post=post_monitor_primitive_dependency,
         )
-
 
     def observe_resource_dependency_states(
         self, resource_factory: resource_factory.ResourceFactory

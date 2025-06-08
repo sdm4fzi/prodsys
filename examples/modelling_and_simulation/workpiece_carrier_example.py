@@ -77,6 +77,6 @@ system = psx.ProductionSystem(
 )
 system.validate()
 system.run(time_range=1000)
+system.runner.save_results_as_csv()
 system.runner.print_results()
 system.runner.plot_results()
-# system.runner.save_results_as_csv()

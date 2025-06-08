@@ -5,6 +5,8 @@ from typing import Union, Optional, TYPE_CHECKING
 
 import logging
 
+from prodsys.simulation.dependency import DependencyInfo
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ if TYPE_CHECKING:
         state,
     )
     from prodsys.simulation import router as router_module
+    from prodsys.simulation.dependency import Dependency
 
 
 from prodsys.models import primitives_data
@@ -70,7 +73,7 @@ class PrimitiveInfo:
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.created_auxiliary
+        self.activity = state.StateEnum.created_primitive
         self.state_type = state.StateTypeEnum.store
 
     def log_bind(
@@ -93,8 +96,8 @@ class PrimitiveInfo:
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.started_auxiliary_usage
-        self.state_type = state.StateTypeEnum.production
+        self.activity = state.StateEnum.started_primitive_usage
+        self.state_type = state.StateTypeEnum.dependency
 
     def log_release(
         self,
@@ -114,8 +117,8 @@ class PrimitiveInfo:
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = state.StateEnum.finished_auxiliary_usage
-        self.state_type = state.StateTypeEnum.production
+        self.activity = state.StateEnum.finished_primitive_usage
+        self.state_type = state.StateTypeEnum.dependency
 
 
 class Primitive:
@@ -152,7 +155,8 @@ class Primitive:
         self.bound = False
         self.got_free = events.Event(self.env)
         self.finished_process = events.Event(self.env)
-        self.primitive_info = PrimitiveInfo()
+        # self.primitive_info = PrimitiveInfo()
+        self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
 
     def update_location(self, locatable: product.Locatable):
         """
@@ -171,7 +175,7 @@ class Primitive:
             }
         )
 
-    def bind(self, dependant: Union[product.Product, resources.Resource]) -> None:
+    def bind(self, dependant: Union[product.Product, resources.Resource], dependency: Dependency) -> None:
         """
         Reserves the product object.
         """
@@ -181,25 +185,26 @@ class Primitive:
             )
         self.bound = True
         self.current_dependant = dependant
-        self.primitive_info.log_bind(
-            resource=self.current_locatable,
-            _product=self,
+        dependant.depended_entities.append(self)
+        self.dependency_info.log_start_dependency(
             event_time=self.env.now,
-            # TODO: add dependant to log
+            requesting_item_id=dependant.data.ID if dependant else None,
+            dependency_id=dependency.data.ID,
         )
 
     def release(self):
         """
         Releases the auxiliary from the product after storage of the auxiliary.
         """
+        self.dependency_info.log_end_dependency(
+            event_time=self.env.now,
+            requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
+            dependency_id=self.data.ID,
+        )
         self.current_dependant = None
         self.bound = False
         self.got_free.succeed()
         self.got_free = events.Event(self.env)
-        self.primitive_info.log_release(
-            resource=self.current_locatable,
-            _product=self,
-            event_time=self.env.now,
-        )
+
 
 from prodsys.simulation import product, state

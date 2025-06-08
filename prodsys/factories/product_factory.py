@@ -11,6 +11,8 @@ from prodsys.simulation import router as router_module
 if TYPE_CHECKING:
     from prodsys.factories import process_factory
     from prodsys.simulation import sim, product
+    from prodsys.simulation import logger
+    from prodsys.factories.dependency_factory import DependencyFactory
 
 
 class ProductFactory:
@@ -29,9 +31,10 @@ class ProductFactory:
         self.process_factory = process_factory
         self.products: Dict[str, product.Product] = {}
         self.finished_products = []
-        self.event_logger = False
+        self.event_logger: logger.EventLogger = None
         self.product_counter = 0
         self.router: router_module.Router = None
+        self.dependency_factory: DependencyFactory = None
 
     def create_product(
         self, product_data: ProductData, routing_heuristic: RoutingHeuristic
@@ -66,6 +69,14 @@ class ProductFactory:
         )
         if routing_heuristic_callable is None:
             raise ValueError(f"Routing heuristic {routing_heuristic} not found.")
+        
+        if product_data.dependency_ids:
+            dependencies = []
+            for dependency_id in product_data.dependency_ids:
+                dependency = self.dependency_factory.get_dependency(dependency_id)
+                dependencies.append(dependency)
+        else:
+            dependencies = None
 
         product_object = product.Product(
             env=self.env,
@@ -74,6 +85,7 @@ class ProductFactory:
             routing_heuristic=routing_heuristic_callable,
             process_model=process_model,
             transport_process=transport_processes,
+            dependencies=dependencies,
             
         )
         if self.event_logger:

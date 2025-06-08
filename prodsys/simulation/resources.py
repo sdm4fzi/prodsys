@@ -8,6 +8,8 @@ import random
 
 import logging
 
+from prodsys.simulation.dependency import DependencyInfo
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,72 +32,6 @@ from prodsys.models.resource_data import (
     ResourceData,
 )
 from prodsys.util import util
-
-
-class DependencyInfo:
-    """
-    Class that represents information of the current state of a resource.
-
-    Args:
-        resource_ID (str): ID of the resource that the product is currently at.
-        state_ID (str): ID of the state that the product is currently at.
-        event_time (float): Time of the event.
-        activity (state.StateEnum): Activity of the product.
-        product_ID (str): ID of the product.
-        state_type (state.StateTypeEnum): Type of the state.
-    """
-
-    def __init__(self, resource: Resource):
-        """
-        Initializes the AuxiliaryInfo class.
-        """
-        self.resource_ID: str = resource.data.ID
-        self.state_ID: str = "Dependency"
-        self.event_time: float = None
-        self.activity: state.StateEnum = None
-        # self.state_type: state.StateTypeEnum = state.StateTypeEnum.dependency
-        self.state_type: state.StateTypeEnum = state.StateTypeEnum.production
-        self.requesting_item_ID: str = None
-        self.dependency_ID: str = None
-
-    def log_start_dependency(
-        self,
-        event_time: float,
-        requesting_item_id: str,
-        dependency_id: str,
-    ) -> None:
-        """
-        Logs the start of a dependency.
-
-        Args:
-            event_time (float): Time of the event.
-            activity (state.StateEnum): Activity of the product.
-            requesting_item (str): ID of the product that is requesting the dependency.
-        """
-        self.event_time = event_time
-        self.activity = state.StateEnum.start_state
-        self.requesting_item_ID = requesting_item_id
-        self.dependency_ID = dependency_id
-
-    def log_end_dependency(
-        self,
-        event_time: float,
-        requesting_item_id: str,
-        dependency_id: str,
-    ) -> None:
-        """
-        Logs the end of a dependency.
-
-        Args:
-            event_time (float): Time of the event.
-            activity (state.StateEnum): Activity of the product.
-            requesting_item (str): ID of the product that is requesting the dependency.
-        """
-        self.event_time = event_time
-        self.activity = state.StateEnum.end_state
-        self.requesting_item_ID = requesting_item_id
-        self.dependency_ID = dependency_id
-
 
 class Resource(resource.Resource):
     """
@@ -142,7 +78,7 @@ class Resource(resource.Resource):
 
         self.dependencies: List[Dependency] = []
         self.depended_entities: List[DependedEntity] = []
-        self.dependency_info: DependencyInfo = DependencyInfo(self)
+        self.dependency_info: DependencyInfo = DependencyInfo(resource_id=data.ID)
 
         self.active = events.Event(self.env).succeed()
         self.current_setup: PROCESS_UNION = None

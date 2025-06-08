@@ -1182,7 +1182,9 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         created_condition = df["Activity"] == state.StateEnum.created_product
-        finished_condition = df["Activity"] == state.StateEnum.finished_product
+        finished_condition = (
+            df["Activity"] == state.StateEnum.finished_product_processing
+        )
 
         df["wip_increment"] = 0
         df.loc[created_condition, "wip_increment"] = 1
@@ -1287,7 +1289,9 @@ class PostProcessor:
         valid_resources = df["Resource"].unique()
 
         CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
-        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
+        FINISHED_CONDITION = (
+            df["Activity"] == state.StateEnum.finished_product_processing
+        )
 
         df["WIP_Increment"] = 0
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1

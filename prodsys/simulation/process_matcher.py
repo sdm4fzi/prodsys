@@ -74,6 +74,7 @@ class ProcessMatcher:
         sink_factory: sink_factory.SinkFactory,
         product_factory: product_factory.ProductFactory,
         source_factory: source_factory.SourceFactory,
+        primitive_factory: primitive_factory.PrimitiveFactory,
         reachability_cache: Dict[Tuple[str, str], bool],
         route_cache: Dict[Tuple[str, str, str], request.Request],
     ):
@@ -92,6 +93,7 @@ class ProcessMatcher:
         self.sink_factory = sink_factory
         self.product_factory = product_factory
         self.source_factory = source_factory
+        self.primitive_factory = primitive_factory
         self.route_cache = route_cache
         self.reachability_cache = reachability_cache
 
@@ -183,8 +185,8 @@ class ProcessMatcher:
                             dummy_product.update_executed_process(offered_process)
 
         # Precompute transport resource compatibility and reachability
-        for product_type, dummy_product in dummy_products.items():
-            requested_process = dummy_product.transport_process
+        required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
+        for item, requested_process in required_transport_processes:
             for transport_resource in self.resource_factory.get_movable_resources():
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair
@@ -192,6 +194,7 @@ class ProcessMatcher:
                         list(self.resource_factory.all_resources.values())
                         + list(self.sink_factory.sinks.values())
                         + list(self.source_factory.sources.values())
+                        + [q for q in self.resource_factory.queue_factory.queues if hasattr(q.data, "location") and q.data.location is not None]
                     )
                     for origin in all_locations:
                         for target in all_locations:

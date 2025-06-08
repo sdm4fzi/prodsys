@@ -255,7 +255,7 @@ class ProductionProcessHandler:
 
             yield from self.put_product_to_output_queue(target_queue, product)
             resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
-            product.product_router.mark_finished_request(process_request)
+            product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
     def run_process(
@@ -328,6 +328,7 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
+        print(queue.data.ID)
         queue.get(product.data.ID)
 
     def put_product_to_input_queue(
@@ -426,8 +427,8 @@ class TransportProcessHandler:
 
             yield from self.put_product_to_input_queue(target_queue, product)
             product.update_location(target)
-
-            product.product_router.mark_finished_request(process_request)
+            
+            product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
     def run_transport(
@@ -1082,7 +1083,7 @@ class BatchController(Controller):
             )
 
             for product_data in product_data_list.values():
-                simulation_product = product.product_router.product_factory.get_product(
+                simulation_product = product.router.product_factory.get_product(
                     product_data.ID
                 )
                 products.append(simulation_product)

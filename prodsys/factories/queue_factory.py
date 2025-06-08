@@ -29,7 +29,7 @@ class QueueFactory:
             env (sim.Environment): prodsys simulation environment.
         """
         self.env = env
-        self.queues = []
+        self.queues: list[store.Queue] = []
 
     def create_queues(self, adapter: production_system_data.ProductionSystemData):
         """
