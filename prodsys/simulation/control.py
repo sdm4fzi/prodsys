@@ -328,7 +328,6 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        print(queue.data.ID)
         queue.get(product.data.ID)
 
     def put_product_to_input_queue(
@@ -427,7 +426,7 @@ class TransportProcessHandler:
 
             yield from self.put_product_to_input_queue(target_queue, product)
             product.update_location(target)
-            
+
             product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
