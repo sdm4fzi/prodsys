@@ -83,7 +83,7 @@ class ProductInfo:
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = StateEnum.finished_product_processing
+        self.activity = StateEnum.finished_product
         self.state_type = StateTypeEnum.sink
 
     def log_create_product(

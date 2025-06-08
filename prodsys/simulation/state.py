@@ -37,8 +37,7 @@ class StateEnum(str, Enum):
     end_state = "end state"
 
     created_product = "created product"
-    started_product_processing = "started product processing"
-    finished_product_processing = "finished product processing"
+    finished_product = "finished product"
 
     created_primitive = "created primitive"
     started_primitive_usage = "started primitive usage"
