@@ -198,15 +198,6 @@ class Runner:
             )
             self.primitive_factory.create_primitives(self.adapter)
 
-            router = Router(
-                env=self.env,
-                resource_factory=self.resource_factory,
-                sink_factory=self.sink_factory,
-                product_factory=self.product_factory,
-                source_factory=self.source_factory,
-                primitive_factory=self.primitive_factory,
-            )
-
             self.dependency_factory = dependency_factory.DependencyFactory(
                 process_factory=self.process_factory,
                 resource_factory=self.resource_factory,
@@ -227,9 +218,22 @@ class Runner:
                 )
             )
             link_transport_process_updater_instance.update_links_with_objects()
+
+            router = Router(
+                env=self.env,
+                resource_factory=self.resource_factory,
+                sink_factory=self.sink_factory,
+                product_factory=self.product_factory,
+                source_factory=self.source_factory,
+                primitive_factory=self.primitive_factory,
+            )
+            self.primitive_factory.set_router(router)
+
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
+            self.env.process(self.primitive_factory.place_primitives_in_queues())
             self.env.process(router.resource_routing_loop())
+            self.env.process(router.primitive_routing_loop())
 
     def run(self, time_range: int):
         """

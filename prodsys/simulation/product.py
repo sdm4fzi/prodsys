@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     )
     from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
 
-
     Locatable = Union[
         resources.Resource, node.Node, source.Source, sink.Sink, store.Store
     ]
@@ -84,7 +83,7 @@ class ProductInfo:
         self.state_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
-        self.activity = StateEnum.finished_product
+        self.activity = StateEnum.finished_product_processing
         self.state_type = StateTypeEnum.sink
 
     def log_create_product(
@@ -136,7 +135,7 @@ class ProductInfo:
         resource: resources.Resource,
         _product: "Product",
         event_time: float,
-    ) -> None:  
+    ) -> None:
         """
         Logs the end of the usage of a product.
 
@@ -165,6 +164,7 @@ class Product:
         transport_process (process.Process): Transport process that represents the required transport processes.
         product_router (router.Router): Router that is used to route the product object.
     """
+
     def __init__(
         self,
         env: sim.Environment,
@@ -177,15 +177,16 @@ class Product:
         ],
         product_router: router.Router,
         routing_heuristic: RoutingHeuristic,
+        dependencies: Optional[List[Dependency]] = None,
     ):
         self.env = env
         self.data = data
         self.process_model = process_model
         self.transport_process = transport_process
-        self.product_router = product_router
+        self.router = product_router
         self.routing_heuristic = routing_heuristic
 
-        self.dependencies: List[Dependency] = []
+        self.dependencies: Optional[List[Dependency]] = dependencies
         self.depended_entities: List[DependedEntity] = []
 
         self.current_locatable: Locatable = None
@@ -221,19 +222,19 @@ class Product:
         self.set_next_possible_production_processes()
         if self.dependencies:
             dependencies_ready_events = (
-                self.product_router.get_dependencies_for_product_processing(self)
+                self.router.get_dependencies_for_product_processing(self)
             )
             for dependency in dependencies_ready_events:
                 yield dependency
 
         while self.next_possible_processes:
-            executed_process_event = self.product_router.request_processing(self)
+            executed_process_event = self.router.request_processing(self)
             yield executed_process_event
             if hasattr(self.current_process, "reworked_process_ids"):
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
-        arrived_at_sink_event = self.product_router.route_product_to_sink(self)
+        arrived_at_sink_event = self.router.route_product_to_sink(self)
         yield arrived_at_sink_event
         self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
@@ -251,7 +252,7 @@ class Product:
             failed_process (PROCESS_UNION): Process that needs rework.
         """
         self.processes_needing_rework.append(failed_process)
-        possible_rework_processes = self.product_router.get_rework_processes(
+        possible_rework_processes = self.router.get_rework_processes(
             self, failed_process
         )
         if not possible_rework_processes:
@@ -330,5 +331,6 @@ class Product:
             return
 
         self.next_possible_processes = next_possible_processes
+
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum

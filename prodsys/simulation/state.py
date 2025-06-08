@@ -38,12 +38,11 @@ class StateEnum(str, Enum):
 
     created_product = "created product"
     started_product_processing = "started product processing"
-    # TODO: maybe rename finished_product to finished_product_processing for consistency
-    finished_product = "finished product"
+    finished_product_processing = "finished product processing"
 
-    created_auxiliary = "created auxiliary"
-    started_auxiliary_usage = "started auxiliary usage"
-    finished_auxiliary_usage = "finished auxiliary usage"
+    created_primitive = "created primitive"
+    started_primitive_usage = "started primitive usage"
+    finished_primitive_usage = "finished primitive usage"
 
 
 class StateTypeEnum(str, Enum):
@@ -801,8 +800,6 @@ STATE_UNION = Union[
 """
 Union Type of all states.
 """
-
-from prodsys.simulation import resources
 
 if TYPE_CHECKING:
     from prodsys.simulation import product

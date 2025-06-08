@@ -118,6 +118,7 @@ class Router:
         self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
         self.got_requested = events.Event(self.env)
+        self.got_primitive_request = events.Event(self.env)
         self.resource_got_free = events.Event(self.env)
 
         # Initialize the resource process mapper with precomputed compatibility tables
@@ -126,6 +127,7 @@ class Router:
             self.sink_factory,
             self.product_factory,
             self.source_factory,
+            self.primitive_factory,
             self.reachability_cache,
             self.route_cache,
         )
@@ -232,12 +234,12 @@ class Router:
         self.free_primitives_by_type[executed_request.item.data.type].remove(
             executed_request.item
         )
-        executed_request.item.bind(executed_request.requesting_item)
+        executed_request.item.bind(executed_request.requesting_item, executed_request.resolved_dependency)
         trans_process_finished_event = self.request_transport(
             executed_request.item, executed_request.requesting_item.current_locatable
         )
         yield trans_process_finished_event
-        executed_request.dependencies_ready.succeed()
+        executed_request.completed.succeed()
         if (
             executed_request.dependency_release_event
         ):  # primitives for resource processes
@@ -263,18 +265,22 @@ class Router:
             request.Request: The allocated request.
         """
         # Determine based on the routing heuristic
-        try:
-            routing_heuristic = free_requests[0].requesting_item.routing_heuristic
-        except Exception:
-            routing_heuristic = shortest_queue_routing_heuristic
+        routing_heuristic = lambda x: x[0]
         routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
 
-        # TODO: make queue decision with heuristic here!
         if routed_request.request_type == request.RequestType.TRANSPORT:
-            # reserve input queues
-            origin_queue = routed_request.origin.output_queues[0]
-            target_queue = routed_request.target.input_queues[0]
+            # TODO: add an InteractionManager that handles the points where placing and retrieving is posisble. also add queues with specific purpose and locations.
+            try:
+                origin_queue = routed_request.origin.output_queues[0]
+                target_queue = routed_request.target.input_queues[0]
+            except Exception as e:
+                try:
+                    origin_queue = routed_request.origin
+                    target_queue = routed_request.target.output_queues[0] if hasattr(routed_request.target, "input_queues") else routed_request.target.output_queues[0]
+                except Exception as e:
+                    origin_queue = routed_request.origin.input_queues[0] if hasattr(routed_request.origin, "input_queues") else routed_request.origin.output_queues[0]
+                    target_queue = routed_request.target
         elif routed_request.request_type == request.RequestType.PRODUCTION:
             # reserve input queues
             origin_queue = routed_request.resource.input_queues[0]
@@ -306,11 +312,13 @@ class Router:
         for dependency in product.dependencies:
             assert (
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
-            ), f"Only primitive dependencies are supported for now. Found {dependency.dependency_type} for {product.data.ID}."
-            dependency_ready = self.request_handler.add_dependency_request(
+            ), f"Only primitive dependencies are supported for now. Found {dependency.data.dependency_type} for {product.data.ID}."
+            request_info = self.request_handler.add_dependency_request(
                 requiring_dependency=product, dependency=dependency, requesting_item=product
             )
-            dependency_ready_events.append(dependency_ready)
+            dependency_ready_events.append(request_info.request_completion_event)
+        if not self.got_primitive_request.triggered:
+            self.got_primitive_request.succeed()
         return dependency_ready_events
 
     def get_dependencies_for_execution(

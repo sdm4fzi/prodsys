@@ -67,11 +67,6 @@ class PrimitiveFactory:
             ):
                 for _ in range(quantity_in_storage):
                     primitive = self.add_primitive(primitive_data_instance, storage_id)
-                    primitive.primitive_info.log_create_primitive(
-                        resource=primitive.current_locatable,
-                        _product=primitive,
-                        event_time=self.env.now,
-                    )
 
     def add_primitive(
         self, primitive_data_instance: primitives_data.PrimitiveData, storage_id: str
@@ -107,13 +102,24 @@ class PrimitiveFactory:
         self.auxiliary_counter += 1
         self.primitives.append(auxiliary_object)
         return auxiliary_object
+    
+    def set_router(self, router: router_module.Router) -> None:
+        """
+        Set the router for the factory.
 
-    def place_auxiliaries_in_queues(self):
+        Args:
+            router (router_module.Router): The router to be set.
+        """
+        self.router = router
+        for primitive in self.primitives:
+            primitive.router = self.router
+
+    def place_primitives_in_queues(self) -> Generator:
         """
         Place the auxiliary objects in the system.
         """
-        for auxiliary in self.primitives:
-            auxiliary.current_locatable.put(auxiliary.data)
+        for primitive in self.primitives:
+            yield from primitive.current_locatable.put(primitive.data)
 
     def get_primitive_with_type(self, ID: str) -> primitive.Primitive:
         """
