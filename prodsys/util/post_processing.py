@@ -185,11 +185,11 @@ class PostProcessor:
 
     def get_df_with_product_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
         df = input_df.copy()
-        auxiliary_types = self.get_auxiliary_types()
+        primitive_types = self.get_primitive_types()
         product_types = df.loc[
             (df["Product_type"].notna())
             & (df["Product_type"] != "")
-            & (~df["Product_type"].isin(auxiliary_types))
+            & (~df["Product_type"].isin(primitive_types))
         ]["Product_type"].unique()
         product_types = pd.Series(product_types, name="Product_type")
         df_product_info = pd.merge(df, product_types)
@@ -1093,71 +1093,71 @@ class PostProcessor:
 
         return df
 
-    def get_auxiliary_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        START_USAGE_CONDITION = df["Activity"] == "started auxiliary usage"
-        FINISHED_USAGE_CONDITION = df["Activity"] == "finished auxiliary usage"
+    def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        START_USAGE_CONDITION = df["Activity"] == "started primitive usage"
+        FINISHED_USAGE_CONDITION = df["Activity"] == "finished primitive usage"
 
-        df["Auxiliary_type"] = df["Product"].apply(lambda x: x.split("_")[0])
-        auxiliary_types = self.get_auxiliary_types()
-        df = df.loc[df["Auxiliary_type"].isin(auxiliary_types)]
+        df["Primitive_type"] = df["Product"].apply(lambda x: x.split("_")[0])
+        primitive_types = self.get_primitive_types()
+        df = df.loc[df["Primitive_type"].isin(primitive_types)]
 
-        df["auxiliary_WIP_Increment"] = 0
-        df.loc[START_USAGE_CONDITION, "auxiliary_WIP_Increment"] = 1
-        df.loc[FINISHED_USAGE_CONDITION, "auxiliary_WIP_Increment"] = -1
+        df["primitive_WIP_Increment"] = 0
+        df.loc[START_USAGE_CONDITION, "primitive_WIP_Increment"] = 1
+        df.loc[FINISHED_USAGE_CONDITION, "primitive_WIP_Increment"] = -1
 
-        df["auxiliary_WIP"] = df["auxiliary_WIP_Increment"].cumsum()
+        df["primitive_WIP"] = df["primitive_WIP_Increment"].cumsum()
 
         return df
 
     @cached_property
-    def df_auxiliary_WIP(self) -> pd.DataFrame:
+    def df_primitive_WIP(self) -> pd.DataFrame:
         """
-        Returns a data frame with the WIP over time for each auxiliary.
+        Returns a data frame with the WIP over time for each primitive.
 
         Returns:
-            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+            pd.DataFrame: Data frame with the WIP over time for each primitive.
         """
-        df = self.get_auxiliary_WIP_KPI(self.df_raw)
+        df = self.get_primitive_WIP_KPI(self.df_raw)
         return df
 
     @cached_property
-    def df_auxiliary_WIP_per_auxiliary_type(self) -> pd.DataFrame:
+    def df_primitive_WIP_per_primitive_type(self) -> pd.DataFrame:
         """
-        Returns a data frame with the WIP over time for each auxiliary.
+        Returns a data frame with the WIP over time for each primitive.
 
         Returns:
-            pd.DataFrame: Data frame with the WIP over time for each auxiliary.
+            pd.DataFrame: Data frame with the WIP over time for each primitive.
         """
         df = pd.DataFrame()
-        auxiliary_types = self.get_auxiliary_types()
-        for auxiliary_type in auxiliary_types:
+        primitive_types = self.get_primitive_types()
+        for primitive_type in primitive_types:
             df_temp = self.df_raw.loc[
-                self.df_raw["Product"].str.contains(auxiliary_type)
+                self.df_raw["Product"].str.contains(primitive_type)
             ].copy()
-            df_temp = self.get_auxiliary_WIP_KPI(df_temp)
+            df_temp = self.get_primitive_WIP_KPI(df_temp)
             df = df.combine_first(df_temp)
 
         return df
 
     @cached_property
-    def df_aggregated_auxiliary_WIP(self) -> pd.DataFrame:
+    def df_aggregated_primitive_WIP(self) -> pd.DataFrame:
         """
-        Returns a data frame with the average WIP for each auxiliary.
+        Returns a data frame with the average WIP for each primitive.
 
         Returns:
-            pd.DataFrame: Data frame with the average WIP for each auxiliary.
+            pd.DataFrame: Data frame with the average WIP for each primitive.
         """
-        df = self.df_auxiliary_WIP_per_auxiliary_type.copy()
-        df_total = self.df_auxiliary_WIP.copy()
-        df_total["Auxiliary_type"] = "Total"
+        df = self.df_primitive_WIP_per_primitive_type.copy()
+        df_total = self.df_primitive_WIP.copy()
+        df_total["Primitive_type"] = "Total"
 
         df = pd.concat([df, df_total])
 
         if self.warm_up_cutoff:
             df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
-        group = ["Auxiliary_type"]
-        df = df.groupby(by=group)["auxiliary_WIP"].mean()
+        group = ["Primitive_type"]
+        df = df.groupby(by=group)["primitive_WIP"].mean()
 
         return df
 
@@ -1182,9 +1182,7 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         created_condition = df["Activity"] == state.StateEnum.created_product
-        finished_condition = (
-            df["Activity"] == state.StateEnum.finished_product_processing
-        )
+        finished_condition = df["Activity"] == state.StateEnum.finished_product
 
         df["wip_increment"] = 0
         df.loc[created_condition, "wip_increment"] = 1
@@ -1234,33 +1232,33 @@ class PostProcessor:
 
         return df_mean_wip_per_station
 
-    def get_auxiliary_ids(self) -> pd.DataFrame:
+    def get_primitive_ids(self) -> pd.DataFrame:
         """
-        Returns a data frame with the auxiliary IDs of the resources.
+        Returns a data frame with the primitive IDs of the resources.
 
         Returns:
-            pd.DataFrame: Data frame with the auxiliary IDs of the resources.
+            pd.DataFrame: Data frame with the primitive IDs of the resources.
         """
-        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
-        auxiliary_ids = df["Product"].drop_duplicates().to_list()
-        return auxiliary_ids
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created primitive"]
+        primitive_ids = df["Product"].drop_duplicates().to_list()
+        return primitive_ids
 
-    def get_auxiliary_types(self) -> pd.DataFrame:
+    def get_primitive_types(self) -> pd.DataFrame:
         """
-        Returns a data frame with the auxiliary types of the resources.
+        Returns a data frame with the primitive types of the resources.
 
         Returns:
-            pd.DataFrame: Data frame with the auxiliary types of the resources.
+            pd.DataFrame: Data frame with the primitive types of the resources.
         """
-        df = self.df_raw.loc[self.df_raw["Activity"] == "created auxiliary"]
-        auxiliary_types = (
+        df = self.df_raw.loc[self.df_raw["Activity"] == "created primitive"]
+        primitive_types = (
             df["Product"]
             .drop_duplicates()
             .apply(lambda x: x.split("_")[0])
             .drop_duplicates()
             .to_list()
         )
-        return auxiliary_types
+        return primitive_types
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
@@ -1289,9 +1287,7 @@ class PostProcessor:
         valid_resources = df["Resource"].unique()
 
         CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
-        FINISHED_CONDITION = (
-            df["Activity"] == state.StateEnum.finished_product_processing
-        )
+        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
 
         df["WIP_Increment"] = 0
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
@@ -1392,9 +1388,9 @@ class PostProcessor:
         """
         df = self.df_WIP_per_product.copy()
         df_total_wip = self.df_WIP.copy()
-        auxiliary_types = self.get_auxiliary_types()
+        primitive_types = self.get_primitive_types()
         df_total_wip = df_total_wip.loc[
-            ~df_total_wip["Product_type"].isin(auxiliary_types)
+            ~df_total_wip["Product_type"].isin(primitive_types)
         ]
         df_total_wip["Product_type"] = "Total"
         df = pd.concat([df, df_total_wip])
@@ -1440,14 +1436,14 @@ class PostProcessor:
         return KPIs
 
     @cached_property
-    def auxiliary_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+    def primitive_WIP_KPIs(self) -> List[performance_indicators.KPI]:
         """
-        Returns a list of average WIP KPI values for each auxiliary.
+        Returns a list of average WIP KPI values for each primitive.
 
         Returns:
             List[performance_indicators.KPI]: List of average WIP KPI values.
         """
-        ser = self.df_aggregated_auxiliary_WIP.copy()
+        ser = self.df_aggregated_primitive_WIP.copy()
         KPIs = []
         for index, value in ser.items():
             if index == "Total":
@@ -1462,8 +1458,8 @@ class PostProcessor:
                     performance_indicators.KPILevelEnum.PRODUCT_TYPE,
                 )
             KPIs.append(
-                performance_indicators.AuxiliaryWIP(
-                    name=performance_indicators.KPIEnum.AUXILIARY_WIP,
+                performance_indicators.PrimitiveWIP(
+                    name=performance_indicators.KPIEnum.PRIMITIVE_WIP,
                     value=value,
                     context=context,
                     product_type=index,

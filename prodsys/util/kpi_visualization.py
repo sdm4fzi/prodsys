@@ -757,18 +757,18 @@ def plot_auxiliary_WIP(
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
-    df = post_processor.df_auxiliary_WIP.copy()
-    fig = px.scatter(df, x="Time", y="auxiliary_WIP")
-    df["Auxiliary_type"] = "Total"
+    df = post_processor.df_primitive_WIP.copy()
+    fig = px.scatter(df, x="Time", y="primitive_WIP")
+    df["Primitive_type"] = "Total"
 
-    df_per_product = post_processor.df_auxiliary_WIP_per_auxiliary_type.copy()
+    df_per_product = post_processor.df_primitive_WIP_per_primitive_type.copy()
 
     df = pd.concat([df, df_per_product])
     fig = px.scatter(
         df,
         x="Time",
-        y="auxiliary_WIP",
-        color="Auxiliary_type",
+        y="primitive_WIP",
+        color="Primitive_type",
         trendline="expanding",
         opacity=0.01,
     )
@@ -776,7 +776,7 @@ def plot_auxiliary_WIP(
     fig.update_traces(showlegend=True)
     fig.update_layout(
         xaxis_title="Time [Minutes]",
-        yaxis_title="Auxiliary WIP [Auxiliaries]",
+        yaxis_title="Primitive WIP [Products]",
     )
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
@@ -863,9 +863,9 @@ def print_aggregated_data(post_processor: post_processing.PostProcessor):
     print("------------- WIP -------------\n")
     print(post_processor.df_aggregated_WIP)
 
-    if post_processor.get_auxiliary_types():
+    if post_processor.get_primitive_types():
         print("\n------------- WIP per auxiliary -------------\n")
-        print(post_processor.df_aggregated_auxiliary_WIP)
+        print(post_processor.df_aggregated_primitive_WIP)
 
     print("\n------------- Throughput time -------------\n")
     print(post_processor.df_aggregated_throughput_time)

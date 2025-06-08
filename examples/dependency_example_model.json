@@ -137,11 +137,6 @@
             "capacity": 0
         },
         {
-            "ID": "machine2_default_input_queue",
-            "description": "Default input queue of machine2",
-            "capacity": 0
-        },
-        {
             "ID": "transport_default_input_queue",
             "description": "Default input queue of transport",
             "capacity": 0
@@ -159,11 +154,6 @@
         {
             "ID": "machine_default_output_queue",
             "description": "Default output queue of machine",
-            "capacity": 0
-        },
-        {
-            "ID": "machine2_default_output_queue",
-            "description": "Default output queue of machine2",
             "capacity": 0
         },
         {
@@ -209,15 +199,15 @@
             ],
             "ID": "machine",
             "description": "",
-            "capacity": 1,
+            "capacity": 2,
             "control_policy": "FIFO",
             "process_ids": [
                 "p1",
                 "p2"
             ],
             "process_capacities": [
-                1,
-                1
+                2,
+                2
             ],
             "state_ids": [
                 "S1",
@@ -229,47 +219,6 @@
             ],
             "output_queues": [
                 "machine_default_output_queue"
-            ],
-            "batch_size": null,
-            "dependency_ids": [
-                "assembly_dependency"
-            ]
-        },
-        {
-            "location": [
-                7.0,
-                2.0
-            ],
-            "output_location": [
-                7.0,
-                3.0
-            ],
-            "input_location": [
-                7.0,
-                2.0
-            ],
-            "ID": "machine2",
-            "description": "",
-            "capacity": 1,
-            "control_policy": "FIFO",
-            "process_ids": [
-                "p1",
-                "p2"
-            ],
-            "process_capacities": [
-                1,
-                1
-            ],
-            "state_ids": [
-                "S1",
-                "S2"
-            ],
-            "controller": "PipelineController",
-            "input_queues": [
-                "machine2_default_input_queue"
-            ],
-            "output_queues": [
-                "machine2_default_output_queue"
             ],
             "batch_size": null,
             "dependency_ids": [
