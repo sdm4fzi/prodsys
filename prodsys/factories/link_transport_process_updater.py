@@ -51,7 +51,7 @@ class LinkTransportProcessUpdater:
                 self.update_links(process_instance)
 
     def update_links(self, process_instance: process.LinkTransportProcess):
-        link_id_list = process_instance.process_data.links
+        link_id_list = process_instance.data.links
         links_list = []
 
         for link in link_id_list:
@@ -61,12 +61,12 @@ class LinkTransportProcessUpdater:
             start_obj = self.get_node_resource_source_sink(start)
             if not start_obj:
                 raise ValueError(
-                    f"LinkTransportProcessUpdater: Could not find object with ID {start} for a link in Process {process_instance.process_data.ID}."
+                    f"LinkTransportProcessUpdater: Could not find object with ID {start} for a link in Process {process_instance.data.ID}."
                 )
             end_obj = self.get_node_resource_source_sink(end)
             if not end_obj:
                 raise ValueError(
-                    f"LinkTransportProcessUpdater: Could not find object with ID {end} for a link in Process {process_instance.process_data.ID}."
+                    f"LinkTransportProcessUpdater: Could not find object with ID {end} for a link in Process {process_instance.data.ID}."
                 )
 
             links_list.append([start_obj, end_obj])
@@ -84,15 +84,15 @@ class LinkTransportProcessUpdater:
         try:
             resource = self.resource_factory.get_resource(ID)
             return resource
-        except IndexError:
+        except KeyError:
             pass
         try:
             source = self.source_factory.get_source(ID)
             return source
-        except IndexError:
+        except ValueError:
             pass
         try:
             sink = self.sink_factory.get_sink(ID)
             return sink
-        except IndexError:
+        except KeyError:
             pass
