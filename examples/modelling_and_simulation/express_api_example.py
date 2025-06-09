@@ -25,7 +25,7 @@ r1 = psx.Resource(
     control_policy="LIFO",
     states=[breakdown_state, process_breakdown_state, setup_state],
 )
-r2 = psx.Resource([p3], control_policy="FIFO")
+r2 = psx.Resource([p3], control_policy="FIFO", location=[12.0, 10.0], capacity=1)
 
 m1 = psx.Product([p1, p2], p3)
 m2 = psx.Product([p2, p2], p3)
