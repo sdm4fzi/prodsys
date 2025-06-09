@@ -516,7 +516,7 @@ class TransportProcessHandler:
             last_transport_step (bool): If this is the last transport step.
         """
         if not hasattr(item, "product_info"):
-            input_state.state_info.log_auxiliary(item, state.StateTypeEnum.transport)
+            input_state.state_info.log_primitive(item, state.StateTypeEnum.transport)
         else:
             input_state.state_info.log_product(item, state.StateTypeEnum.transport)
 
@@ -668,7 +668,7 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        transport_state.state_info._product_ID = dependency.data.ID
+        transport_state.state_info._dependency_ID = None
         for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
             if link_index == 0:
                 initial_transport_step = True

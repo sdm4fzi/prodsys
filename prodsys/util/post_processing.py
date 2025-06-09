@@ -136,6 +136,8 @@ class PostProcessor:
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
         df["Product_type"] = df["Product"].str.rsplit("_", n=1).str[0]
+        if not "Primitive" in df.columns:
+            df["Primitive"] = None
         df["Primitive_type"] = df["Primitive"].str.rsplit("_", n=1).str[0]
         df.loc[
             self.get_conditions_for_interface_state(df),
@@ -486,6 +488,10 @@ class PostProcessor:
             | (df["State_sorting_Index"] == 4)
             | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
         )
+        DEPENDENCY_CONDITION = (
+            (df["State_sorting_Index"] == 6)
+            & (df["State Type"] == state.StateTypeEnum.dependency)
+        )
         DOWN_CONDITION = (
             (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
         ) & (df["State Type"] == state.StateTypeEnum.breakdown)
@@ -501,6 +507,7 @@ class PostProcessor:
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
+        df.loc[DEPENDENCY_CONDITION, "Time_type"] = "DP"
 
         return df
 
@@ -1040,7 +1047,6 @@ class PostProcessor:
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
 
         df["WIP"] = df["WIP_Increment"].cumsum()
-
         return df
 
     def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:

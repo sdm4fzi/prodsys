@@ -279,7 +279,7 @@ class Runner:
 
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
-        if self.adapter.depdendency_data:
+        if self.adapter.primitive_data:
             kpi_visualization.plot_primitive_WIP(p)
         kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)

@@ -87,6 +87,7 @@ class StateInfo:
         _product_ID: str = "",
         _target_ID: str = "",
         _origin_ID: str = "",
+        _dependency_ID: str = "",
         _empty_transport: Optional[bool] = None,
     ):
         self.ID = ID
@@ -98,6 +99,7 @@ class StateInfo:
         self._product_ID = _product_ID
         self._target_ID = _target_ID
         self._origin_ID = _origin_ID
+        self._dependency_ID = _dependency_ID
         self._empty_transport = _empty_transport
 
     def log_transport(
@@ -135,7 +137,7 @@ class StateInfo:
         self._product_ID = _product.data.ID
         self._state_type = state_type
 
-    def log_auxiliary(self, _auxiliary: primitive.Primitive, state_type: StateTypeEnum):
+    def log_primitive(self, _auxiliary: primitive.Primitive, state_type: StateTypeEnum):
         """
         Logs the product of a transport or production state.
 

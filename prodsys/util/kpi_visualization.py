@@ -463,6 +463,7 @@ def plot_time_per_state_of_resources(
             "UD": "red",
             "ST": "blue",
             "CR": "grey",
+            "DP": "lightgreen",
         },
     )
     fig.update_traces(name="Productive", selector=dict(name="PR"))
@@ -470,6 +471,7 @@ def plot_time_per_state_of_resources(
     fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
     fig.update_traces(name="Setup", selector=dict(name="ST"))
     fig.update_traces(name="Charging", selector=dict(name="CR"))
+    fig.update_traces(name="Dependency", selector=dict(name="DP"))
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))
     fig.write_html(

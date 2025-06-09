@@ -67,8 +67,8 @@ class DependencyInfo:
         self.event_time: float = None
         self.activity: state.StateEnum = None
         self.primitive_ID: str = primitive_id
-        # self.state_type: state.StateTypeEnum = state.StateTypeEnum.dependency
-        self.state_type: state.StateTypeEnum = state.StateTypeEnum.production
+        self.state_type: state.StateTypeEnum = state.StateTypeEnum.dependency
+        # self.state_type: state.StateTypeEnum = state.StateTypeEnum.production
         self.requesting_item_ID: str = None
         self.dependency_ID: str = None
 

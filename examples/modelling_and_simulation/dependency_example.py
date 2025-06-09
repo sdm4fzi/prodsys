@@ -105,6 +105,7 @@ system.run(1000)
 
 runner_instance = system.runner
 
+runner_instance.save_results_as_csv()
 runner_instance.print_results()
-# runner_instance.plot_results()
-runner_instance.save_results_as_csv("examples")
+runner_instance.plot_results()
+runner_instance.plot_results_executive()
