@@ -168,7 +168,7 @@ def post_monitor_primitive_dependency(
 
     item = {
         "Time": dependency_info.event_time,
-        "Resource": dependency_info.resource_ID,
+        "Primitive": dependency_info.primitive_ID,
         "State": dependency_info.state_ID,
         "State Type": dependency_info.state_type,
         "Activity": dependency_info.activity,

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Generator, List
+from typing import TYPE_CHECKING, Generator, List, Optional
 from prodsys.models import primitives_data, production_system_data
 from prodsys.factories import (
     process_factory,
@@ -28,6 +28,7 @@ class PrimitiveFactory:
         queue_factory: queue_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
+        event_logger: Optional[logger.EventLogger] = None,
     ):
         """
         Initialize the PrimitiveFactory with the given environment and factories.
@@ -46,9 +47,9 @@ class PrimitiveFactory:
         self.sink_factory = sink_factory
 
         self.primitives: List[primitive.Primitive] = []
-        self.event_logger: logger.EventLogger = None
+        self.event_logger: Optional[logger.EventLogger] = event_logger
         self.router: router_module.Router = None
-        self.auxiliary_counter = 0
+        self.primitive_counter = 0
 
     def create_primitives(self, adapter: production_system_data.ProductionSystemData):
         """
@@ -84,7 +85,7 @@ class PrimitiveFactory:
         values = {}
         primitive_data_instance = primitive_data_instance.model_copy(deep=True)
         primitive_data_instance.ID = (
-            str(primitive_data_instance.ID) + "_" + str(self.auxiliary_counter)
+            str(primitive_data_instance.ID) + "_" + str(self.primitive_counter)
         )
         values.update({"env": self.env, "data": primitive_data_instance})
         transport_process = self.process_factory.get_process(
@@ -93,15 +94,15 @@ class PrimitiveFactory:
         values.update({"transport_process": transport_process})
         storage_from_queue_data = self.queue_factory.get_queue(storage_id)
         values.update({"storage": storage_from_queue_data})
-        auxiliary_object = primitive.Primitive(**values)
-        auxiliary_object.current_locatable = storage_from_queue_data
+        primitive_object = primitive.Primitive(**values)
+        primitive_object.current_locatable = storage_from_queue_data
 
         if self.event_logger:
-            self.event_logger.observe_terminal_primitive_states(auxiliary_object)
+            self.event_logger.observe_terminal_primitive_states(primitive_object)
 
-        self.auxiliary_counter += 1
-        self.primitives.append(auxiliary_object)
-        return auxiliary_object
+        self.primitive_counter += 1
+        self.primitives.append(primitive_object)
+        return primitive_object
     
     def set_router(self, router: router_module.Router) -> None:
         """

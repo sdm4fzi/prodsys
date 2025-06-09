@@ -100,6 +100,7 @@ class PostProcessor:
             [
                 state.StateTypeEnum.production,
                 state.StateTypeEnum.transport,
+                state.StateTypeEnum.dependency,
             ]
         )
 
@@ -135,6 +136,7 @@ class PostProcessor:
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
         df["Product_type"] = df["Product"].str.rsplit("_", n=1).str[0]
+        df["Primitive_type"] = df["Primitive"].str.rsplit("_", n=1).str[0]
         df.loc[
             self.get_conditions_for_interface_state(df),
             "State_type",
@@ -194,58 +196,6 @@ class PostProcessor:
         product_types = pd.Series(product_types, name="Product_type")
         df_product_info = pd.merge(df, product_types)
         return df_product_info
-
-    def get_eventlog_for_product(self, product_type: str = "Product_1"):
-        """
-        Returns an event log for a specific product type. It can be further anaylzed with the pm4py library.
-
-        Args:
-            product_type (str, optional): Type of product that should be considered in the event log. Defaults to "Product_1".
-
-        Returns:
-            pm4py.event_log.EventLog: Event log for a specific product type.
-
-        """
-        import pm4py
-
-        df_finished_product = self.df_finished_product.copy()
-        df_for_pm4py = df_finished_product.loc[df_finished_product["Product"].notnull()]
-        df_for_pm4py = df_for_pm4py.rename(
-            columns={"Product_type": "Product:Product_type"}
-        )
-        df_for_pm4py = df_for_pm4py.loc[
-            df_for_pm4py["Product:Product_type"] == product_type
-        ]
-        df_for_pm4py = pm4py.format_dataframe(
-            df_for_pm4py,
-            case_id="Product",
-            activity_key="Combined_activity",
-            timestamp_key="DateTime",
-        )
-        log = pm4py.convert_to_event_log(df_for_pm4py)
-
-        return log
-
-    def save_inductive_petri_net(self):
-        """
-        Saves an inductive petri net for a specific product type, that shows the process model realized in the simulation for finishing the product.
-        """
-        import pm4py
-        from pm4py.visualization.petri_net import visualizer as pn_visualizer
-
-        log = self.get_eventlog_for_product()
-        net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(log)
-        # pm4py.view_petri_net(net, initial_marking, final_marking)
-        parameters = {pn_visualizer.Variants.FREQUENCY.value.Parameters.FORMAT: "png"}
-        gviz = pn_visualizer.apply(
-            net,
-            initial_marking,
-            final_marking,
-            parameters=parameters,
-            variant=pn_visualizer.Variants.FREQUENCY,
-            log=log,
-        )
-        pn_visualizer.save(gviz, "data/inductive_frequency.png")
 
     @cached_property
     def df_throughput(self) -> pd.DataFrame:
@@ -1094,12 +1044,9 @@ class PostProcessor:
         return df
 
     def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        START_USAGE_CONDITION = df["Activity"] == "started primitive usage"
-        FINISHED_USAGE_CONDITION = df["Activity"] == "finished primitive usage"
-
-        df["Primitive_type"] = df["Product"].apply(lambda x: x.split("_")[0])
         primitive_types = self.get_primitive_types()
-        df = df.loc[df["Primitive_type"].isin(primitive_types)]
+        START_USAGE_CONDITION = (df["Activity"] == "start state") & (df["State"] == "Dependency") & (df["Primitive_type"].isin(primitive_types))
+        FINISHED_USAGE_CONDITION = (df["Activity"] == "end state") & (df["State"] == "Dependency") & (df["Primitive_type"].isin(primitive_types))
 
         df["primitive_WIP_Increment"] = 0
         df.loc[START_USAGE_CONDITION, "primitive_WIP_Increment"] = 1
@@ -1117,7 +1064,7 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time for each primitive.
         """
-        df = self.get_primitive_WIP_KPI(self.df_raw)
+        df = self.get_primitive_WIP_KPI(self.df_prepared)
         return df
 
     @cached_property
@@ -1131,8 +1078,8 @@ class PostProcessor:
         df = pd.DataFrame()
         primitive_types = self.get_primitive_types()
         for primitive_type in primitive_types:
-            df_temp = self.df_raw.loc[
-                self.df_raw["Product"].str.contains(primitive_type)
+            df_temp = self.df_prepared.loc[
+                self.df_prepared["Primitive_type"] == primitive_type
             ].copy()
             df_temp = self.get_primitive_WIP_KPI(df_temp)
             df = df.combine_first(df_temp)
@@ -1196,6 +1143,9 @@ class PostProcessor:
         move_in_condition = (df["Empty Transport"] == False) & (
             df["Activity"] == "end state"
         )
+        interrupted_condition = (df["Empty Transport"] == False) & (
+            df["Activity"] == "end interrupt"
+        )
 
         df.loc[move_away_condition, "wip_increment"] = -1
         df.loc[move_away_condition, "wip_resource"] = df.loc[
@@ -1204,6 +1154,10 @@ class PostProcessor:
         df.loc[move_in_condition, "wip_increment"] = 1
         df.loc[move_in_condition, "wip_resource"] = df.loc[
             move_in_condition, "Target location"
+        ]
+        df.loc[interrupted_condition, "wip_increment"] = 1
+        df.loc[interrupted_condition, "wip_resource"] = df.loc[
+            interrupted_condition, "Origin location"
         ]
 
         df["wip"] = df.groupby(by="wip_resource")["wip_increment"].cumsum()
@@ -1232,33 +1186,14 @@ class PostProcessor:
 
         return df_mean_wip_per_station
 
-    def get_primitive_ids(self) -> pd.DataFrame:
+    def get_primitive_types(self) -> List[str]:
         """
-        Returns a data frame with the primitive IDs of the resources.
+        Returns a list of primitive types of the resources.
 
         Returns:
-            pd.DataFrame: Data frame with the primitive IDs of the resources.
+            List[str]: List of primitive types of the resources.
         """
-        df = self.df_raw.loc[self.df_raw["Activity"] == "created primitive"]
-        primitive_ids = df["Product"].drop_duplicates().to_list()
-        return primitive_ids
-
-    def get_primitive_types(self) -> pd.DataFrame:
-        """
-        Returns a data frame with the primitive types of the resources.
-
-        Returns:
-            pd.DataFrame: Data frame with the primitive types of the resources.
-        """
-        df = self.df_raw.loc[self.df_raw["Activity"] == "created primitive"]
-        primitive_types = (
-            df["Product"]
-            .drop_duplicates()
-            .apply(lambda x: x.split("_")[0])
-            .drop_duplicates()
-            .to_list()
-        )
-        return primitive_types
+        return self.df_prepared["Primitive_type"].dropna().unique().tolist()
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
@@ -1301,6 +1236,9 @@ class PostProcessor:
         MOVE_IN_CONDITION = (df["Empty Transport"] == False) & (
             df["Activity"] == "end state"
         )
+        INTERRUPTED_CONDITION = (df["Empty Transport"] == False) & (
+            df["Activity"] == "end interrupt"
+        )
 
         df.loc[MOVE_AWAY_CONDITION, "WIP_Increment"] = -1
         df.loc[MOVE_AWAY_CONDITION, "WIP_resource"] = df.loc[
@@ -1310,10 +1248,13 @@ class PostProcessor:
         df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[
             MOVE_IN_CONDITION, "Target location"
         ]
+        df.loc[INTERRUPTED_CONDITION, "WIP_Increment"] = 1
+        df.loc[INTERRUPTED_CONDITION, "WIP_resource"] = df.loc[
+            INTERRUPTED_CONDITION, "Origin location"
+        ]
 
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
 
-        # FIXME: remove bug that negative WIP is possible
         df_temp = df[["State", "State Type"]].drop_duplicates()
         exclude_types = [state.StateTypeEnum.sink, state.StateTypeEnum.source]
         exclude_states = df_temp.loc[
@@ -1388,6 +1329,7 @@ class PostProcessor:
         """
         df = self.df_WIP_per_product.copy()
         df_total_wip = self.df_WIP.copy()
+        # TODO: probably remove below with primitive type filter, because not needed
         primitive_types = self.get_primitive_types()
         df_total_wip = df_total_wip.loc[
             ~df_total_wip["Product_type"].isin(primitive_types)

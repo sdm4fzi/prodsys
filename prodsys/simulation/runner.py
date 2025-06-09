@@ -195,6 +195,7 @@ class Runner:
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
+                event_logger=self.event_logger,
             )
             self.primitive_factory.create_primitives(self.adapter)
 
@@ -279,8 +280,8 @@ class Runner:
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
         if self.adapter.depdendency_data:
-            kpi_visualization.plot_auxiliary_WIP(p)
-        # kpi_visualization.plot_WIP_per_resource(p)
+            kpi_visualization.plot_primitive_WIP(p)
+        kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
 

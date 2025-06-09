@@ -465,6 +465,11 @@ def plot_time_per_state_of_resources(
             "CR": "grey",
         },
     )
+    fig.update_traces(name="Productive", selector=dict(name="PR"))
+    fig.update_traces(name="Standby", selector=dict(name="SB"))
+    fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
+    fig.update_traces(name="Setup", selector=dict(name="ST"))
+    fig.update_traces(name="Charging", selector=dict(name="CR"))
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))
     fig.write_html(
@@ -496,9 +501,9 @@ def plot_util_WIP_resource(
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
     df_time_per_state = post_processor.df_mean_wip_per_station
-    df_time_per_state["mean_wip"] = np.maximum(
-        np.ceil(df_time_per_state["mean_wip"]), 1
-    )
+    # df_time_per_state["mean_wip"] = np.maximum(
+    #     np.ceil(df_time_per_state["mean_wip"]), 1
+    # )
     fig1 = go.Figure()
     fig1.add_trace(
         go.Bar(
@@ -632,7 +637,6 @@ def plot_WIP_with_range(
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-
     fig = go.Figure()
 
     window = 5000
@@ -680,6 +684,7 @@ def plot_WIP_with_range(
             showlegend=False,
         )
     fig.update_layout(
+        title="Mean WIP and Range per Product Type",
         xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )
@@ -717,13 +722,12 @@ def plot_WIP(
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="WIP",
         color="Product_type",
-        trendline="expanding",
-        opacity=0.01,
+        line_shape="vh"
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -746,7 +750,7 @@ def plot_WIP(
         return image_path
 
 
-def plot_auxiliary_WIP(
+def plot_primitive_WIP(
     post_processor: post_processing.PostProcessor,
     return_html: bool = False,
     return_image: bool = False,
@@ -764,13 +768,12 @@ def plot_auxiliary_WIP(
     df_per_product = post_processor.df_primitive_WIP_per_primitive_type.copy()
 
     df = pd.concat([df, df_per_product])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="primitive_WIP",
         color="Primitive_type",
-        trendline="expanding",
-        opacity=0.01,
+        line_shape="vh",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -812,13 +815,12 @@ def plot_WIP_per_resource(
     df_per_resource["Resource"] = df_per_resource["WIP_resource"]
 
     df = pd.concat([df, df_per_resource])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="WIP",
         color="Resource",
-        trendline="expanding",
-        opacity=0.01,
+        line_shape="vh",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -830,7 +832,7 @@ def plot_WIP_per_resource(
             xanchor="center",
             x=0.5,
         ),
-        xaxis_title="Resource",
+        xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )
 
