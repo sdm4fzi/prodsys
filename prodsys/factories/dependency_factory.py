@@ -80,7 +80,7 @@ class DependencyFactory:
         )
         self.dependencies[dependency_data.ID] = dependency
         return dependency
-    
+
     def get_dependency(self, dependency_id: str) -> Dependency:
         """
         Returns the dependency object with the given ID.
@@ -94,7 +94,7 @@ class DependencyFactory:
         if not dependency_id in self.dependencies:
             raise ValueError(f"Dependency with ID {dependency_id} not found.")
         return self.dependencies[dependency_id]
-    
+
     def inject_dependencies(self):
         """
         Injects dependencies into the product factory, process factory, and resource factory.
@@ -108,12 +108,10 @@ class DependencyFactory:
         self.product_factory.dependency_factory = self
 
         for process in self.process_factory.processes.values():
+            if not hasattr(process.data, "dependency_ids"):
+                process.dependencies = []
+                continue
             dependencies = process.data.dependency_ids
             for dependency_id in dependencies:
                 dependency = self.get_dependency(dependency_id)
                 process.dependencies.append(dependency)
-
-
-    
-
-    
