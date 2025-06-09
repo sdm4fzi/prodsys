@@ -32,7 +32,7 @@ required_capability_process_turning = psx.RequiredCapabilityProcess(
     capability="turning", ID="rcp_turning"
 )
 
-product = psx.Product(
+product_instance = psx.Product(
     processes=[required_capability_process_turning],
     transport_process=transport_process,
     ID="product",
@@ -43,11 +43,11 @@ source = psx.Source(
         distribution_function="constant", location=6, ID="interarrival_time_model"
     ),
     ID="source",
-    product=product,
+    product=product_instance,
     location=[0, 5],
 )
 
-sink = psx.Sink(ID="sink", product=product, location=[10, 5])
+sink = psx.Sink(ID="sink", product=product_instance, location=[10, 5])
 
 system = production_system.ProductionSystem(
     resources=[resource_fast, resource_slow, agv], sources=[source], sinks=[sink]
