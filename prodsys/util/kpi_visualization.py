@@ -387,6 +387,7 @@ def plot_throughput_time_over_time(
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
+    #TODO warmuptime cutoff?
     df_tp = post_processor.df_throughput
 
     fig = px.scatter(
@@ -394,7 +395,7 @@ def plot_throughput_time_over_time(
         x="Start_time",
         y="Throughput_time",
         color="Product_type",
-        trendline="expanding",
+        trendline="expanding", #possible to remove trendline to more accurately see the throughput time over time
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -681,7 +682,6 @@ def plot_WIP_with_range(
     fig.update_layout(
         title="Mean WIP and Range per Product Type",
         showlegend=True,
-        height=800,  # adjust height if needed
         xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )
@@ -719,14 +719,12 @@ def plot_WIP(
     df_per_product = post_processor.df_WIP_per_product.copy()
 
     df = pd.concat([df, df_per_product])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="WIP",
         color="Product_type",
-        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
-        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
-        opacity=0.01,
+        line_shape='vh'
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -767,14 +765,12 @@ def plot_auxiliary_WIP(
     df_per_product = post_processor.df_auxiliary_WIP_per_auxiliary_type.copy()
 
     df = pd.concat([df, df_per_product])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="auxiliary_WIP",
         color="Auxiliary_type",
-        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
-        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
-        opacity=0.01,
+        line_shape='vh'
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -816,14 +812,12 @@ def plot_WIP_per_resource(
     df_per_resource["Resource"] = df_per_resource["WIP_resource"]
 
     df = pd.concat([df, df_per_resource])
-    fig = px.scatter(
+    fig = px.line(
         df,
         x="Time",
         y="WIP",
         color="Resource",
-        trendline="ewm", #Changed the rolling average to more accuratly fit the WIP while mantaining readability
-        trendline_options=dict(halflife=int(np.sqrt(post_processor.df_aggregated_output_and_throughput["Output"].mean()))),
-        opacity=0.01,
+        line_shape='vh'
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
