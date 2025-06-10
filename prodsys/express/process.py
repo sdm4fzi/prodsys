@@ -386,6 +386,7 @@ PROCESS_UNION = Union[
     TransportProcess,
     RequiredCapabilityProcess,
     LinkTransportProcess,
+    ReworkProcess,
 ]
 from prodsys.express import resources, sink, source, node
 from prodsys.express.dependency import Dependency

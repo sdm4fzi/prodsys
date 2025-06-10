@@ -30,6 +30,7 @@ class Sink:
         self.data = data
         self.product_factory = product_factory
         self.input_queues: List[store.Queue] = []
+        self.can_move = False
 
     def add_input_queues(self, input_queues: List[store.Queue]):
         """

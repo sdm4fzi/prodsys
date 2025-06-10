@@ -42,6 +42,8 @@ class Source:
         self.time_model = time_model
         self.router: router_module.Router = None
         self.output_queues: List[store.Queue] = []
+        self.can_move = False
+
 
     def add_output_queues(self, output_queues: List[store.Queue]):
         """
