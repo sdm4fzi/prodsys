@@ -410,6 +410,10 @@ class Resource(resource.Resource):
         Args:
             new_location (List[float]): The new location of the resource. Has to have length 2.
         """
+        if self.data.location == self.data.output_location:
+            self.data.output_location = new_location.get_location()
+        if self.data.location == self.data.input_location:
+            self.data.input_location = new_location.get_location()
         self.data.location = new_location.get_location()
         self.current_locatable = new_location
 
