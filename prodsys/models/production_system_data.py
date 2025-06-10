@@ -779,8 +779,14 @@ class ProductionSystemData(BaseModel):
                         *sorted([source.hash(self) for source in self.source_data]),
                         *sorted(
                             [
-                                auxiliary.hash(self)
-                                for auxiliary in self.depdendency_data
+                                dependency.hash(self)
+                                for dependency in self.depdendency_data
+                            ]
+                        ),
+                        *sorted(
+                            [
+                                primitive.hash(self)
+                                for primitive in self.primitive_data
                             ]
                         ),
                     ]

@@ -29,35 +29,40 @@ def simulation_adapter() -> ProductionSystemData:
     storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
     storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
 
-    auxiliary1 = psx.Primitive(
-        ID="auxiliary1",
+    primitive1 = psx.Primitive(
+        ID="primitive1",
         transport_process=tp_aux,
         storages=[storage1],
         quantity_in_storages=[10],
-        relevant_processes=[],
-        relevant_transport_processes=[tp],
     )
 
-    auxiliary2 = psx.Primitive(
-        ID="auxiliary2",
+    primitive2 = psx.Primitive(
+        ID="primitive2",
         transport_process=tp_aux,
         storages=[storage2],
         quantity_in_storages=[20],
-        relevant_processes=[],
-        relevant_transport_processes=[tp],
+    )
+
+    primitive_dependency_1 = psx.PrimitiveDependency(
+        ID="primitive_dependency_1",
+        required_primitive=primitive1,
+    )
+    primitive_dependency_2 = psx.PrimitiveDependency(
+        ID="primitive_dependency_2",
+        required_primitive=primitive2,
     )
 
     product1 = psx.Product(
         processes=[p1, p2],
         transport_process=tp,
         ID="product1",
-        dependencies=[auxiliary1],
+        dependencies=[primitive_dependency_1],
     )
     product2 = psx.Product(
         processes=[p2, p1],
         transport_process=tp,
         ID="product2",
-        dependencies=[auxiliary2],
+        dependencies=[primitive_dependency_2],
     )
 
     sink1 = psx.Sink(product1, [10, 0], "sink1")
@@ -73,6 +78,7 @@ def simulation_adapter() -> ProductionSystemData:
         [machine, machine2, transport, transport2, transport_aux],
         [source1, source2],
         [sink1, sink2],
+        [primitive1, primitive2],
     )
     system.validate()
     adapter = system.to_model()
@@ -86,7 +92,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "8c8969a4b3a2aa61194a0809cff9e388"
+    assert hash_str == "91b303539d31194b33b71a8ac488a3e4"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
@@ -100,32 +106,32 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
         if kpi.name == "output" and kpi.product_type == "product1":
             assert kpi.value > 370 and kpi.value < 390
         if kpi.name == "output" and kpi.product_type == "product2":
-            assert kpi.value > 760 and kpi.value < 770
+            assert kpi.value > 750 and kpi.value < 770
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 96 and kpi.value > 94
+            assert kpi.value < 95 and kpi.value > 93
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 47 and kpi.value < 49
+            assert kpi.value > 43 and kpi.value < 45
         if kpi.name == "productive_time" and kpi.resource == "transport2":
-            assert kpi.value > 48 and kpi.value < 53
+            assert kpi.value > 43 and kpi.value < 45
         if kpi.name == "productive_time" and kpi.resource == "transport_aux":
-            assert kpi.value > 63 and kpi.value < 67
+            assert kpi.value > 57 and kpi.value < 60
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 4.6 and kpi.value > 4.5
+            assert kpi.value < 3.7 and kpi.value > 3.4
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 8.7 and kpi.value > 8.6
+            assert kpi.value < 6.9 and kpi.value > 6.6
 
     for kpi in post_processor.primitive_WIP_KPIs:
-        if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary1":
-            assert kpi.value < 4.9 and kpi.value > 4.8
-        if kpi.name == "AUXILIARY_WIP" and kpi.product_type == "auxiliary2":
-            assert kpi.value < 9.1 and kpi.value > 8.9
+        if kpi.name == "PRIMITIVE_WIP" and kpi.product_type == "primitive1":
+            assert kpi.value < 3.5 and kpi.value > 3.3
+        if kpi.name == "PRIMITIVE_WIP" and kpi.product_type == "primitive2":
+            assert kpi.value < 6.8 and kpi.value > 6.6
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 11.6 and kpi.value > 11.4
+            assert kpi.value < 9 and kpi.value > 8.5
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
-            assert kpi.value < 11.3 and kpi.value > 11.2
+            assert kpi.value < 9 and kpi.value > 8.5

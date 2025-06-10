@@ -249,20 +249,20 @@ class RouteFinder:
         return np.sqrt((node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2)
 
     def get_route_origin_and_target_locatables(
-        self, request: request.TransportResquest, route_to_origin: bool
+        self, request: request.Request, route_to_origin: bool
     ) -> Tuple[Optional[Locatable], Optional[Locatable]]:
         """
         Gets the origin and target locatable
 
         Args:
-            request (request.TransportResquest): The transportation request.
+            request (request.Request): The transportation request.
             route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
             Tuple[Optional[Locatable], Optional[Locatable]]: A tuple containing the origin and target locatable objects for the transport request.
         """
         if route_to_origin:
-            origin_locatable = request.resource.controller._current_locatable
+            origin_locatable = request.resource.current_locatable
             target_locatable = request.origin
         else:
             origin_locatable = request.origin
@@ -270,13 +270,13 @@ class RouteFinder:
         return origin_locatable, target_locatable
 
     def get_route_origin_and_target(
-        self, request: request.TransportResquest, route_to_origin: bool
+        self, request: request.Request, route_to_origin: bool
     ) -> Tuple[Optional[GraphNode], Optional[GraphNode]]:
         """
         Converts the origin and target of the transport request to graph nodes.
 
         Args:
-            request (TransportResquest): The transportation request.
+            request (Request): The transportation request.
             route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 
         Returns:
