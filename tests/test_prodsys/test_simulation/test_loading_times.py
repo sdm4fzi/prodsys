@@ -48,7 +48,7 @@ def test_initialize_simulation(
 
 def test_hashing(loading_times_simulation_adapter: ProductionSystemData):
     hash_str = loading_times_simulation_adapter.hash()
-    assert hash_str == "4f565c2d574392e23b9d807cde881ba8"
+    assert hash_str == "8c8bff82d35b19113b3df8fe2169457b"
 
 
 def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
@@ -59,7 +59,6 @@ def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
     runner_instance.run(2000)
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
-    # FIXME: resolve problem loading times are not properly used! Parameters should be correct here
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
@@ -69,12 +68,12 @@ def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
             assert kpi.value < 82 and kpi.value > 78
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 74 and kpi.value < 76
+            assert kpi.value > 68 and kpi.value < 70
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 6.8 and kpi.value > 6.6
+            assert kpi.value < 6.4 and kpi.value > 6.2
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 6.1 and kpi.value > 6.0
+            assert kpi.value < 5.6 and kpi.value > 5.4

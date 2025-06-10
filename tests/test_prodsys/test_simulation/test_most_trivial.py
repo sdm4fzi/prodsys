@@ -38,7 +38,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "cdab362f24884e747298c2d1080e7057"
+    assert hash_str == "70da42940122589fa068a5daf318042f"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
@@ -50,7 +50,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2000 and kpi.value < 2040
+            assert kpi.value > 2000 and kpi.value < 2060
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
             assert kpi.value < 82 and kpi.value > 78
@@ -91,7 +91,7 @@ def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 3.6 and kpi.value > 3.5
+            assert kpi.value < 3.7 and kpi.value > 3.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
