@@ -269,8 +269,12 @@ class Router:
             request.Request: The allocated request.
         """
         # Determine based on the routing heuristic
-        routing_heuristic = lambda x: x[0]
-        routing_heuristic(free_requests)
+        try:
+            routing_heuristic = free_requests[0].requesting_item.routing_heuristic
+            routing_heuristic(free_requests)
+        except Exception:
+            routing_heuristic = lambda x: x[0]
+            routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
 
         if routed_request.request_type == request.RequestType.TRANSPORT:
