@@ -39,7 +39,7 @@ workpiece_carrier_2 = psx.Primitive(
     ID="workpiece_carrier_2",
     transport_process=tp_aux,
     storages=[storage2],
-    quantity_in_storages=[20],
+    quantity_in_storages=[5],
 )
 
 workpiece_carrier_dependency_1 = psx.PrimitiveDependency(

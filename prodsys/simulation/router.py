@@ -187,6 +187,8 @@ class Router:
         """
         while True:
             yield self.got_primitive_request
+            if not self.free_primitives_by_type:
+                continue
             self.got_primitive_request = events.Event(self.env)
             while True:
                 free_requests = (
@@ -199,6 +201,9 @@ class Router:
                 self.env.update_progress_bar()
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
+                self.free_primitives_by_type[request.item.data.type].remove(
+                    request.item
+                )
                 self.env.process(self.execute_primitive_routing(request))
 
     def execute_resource_routing(
@@ -231,9 +236,6 @@ class Router:
     def execute_primitive_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
-        self.free_primitives_by_type[executed_request.item.data.type].remove(
-            executed_request.item
-        )
         executed_request.item.bind(executed_request.requesting_item, executed_request.resolved_dependency)
         trans_process_finished_event = self.request_transport(
             executed_request.item, executed_request.requesting_item.current_locatable
@@ -253,6 +255,8 @@ class Router:
         self.free_primitives_by_type[executed_request.item.data.type].append(
             executed_request.item
         )
+        if not self.got_primitive_request.triggered:
+            self.got_primitive_request.succeed()
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
@@ -358,17 +362,6 @@ class Router:
             )
             dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
-
-    def release_auxiliary(self, auxiliary: primitive.Primitive) -> None:
-        """
-        Releases an auxiliary.
-
-        Args:
-            auxiliary (auxiliary.Auxiliary): The auxiliary to release.
-        """
-        auxiliary.got_free.succeed()
-        auxiliary.got_free = events.Event(self.env)
-        self.request_handler.mark_completion(auxiliary)
 
     def request_processing(self, product: product.Product) -> events.Event:
         """
