@@ -219,6 +219,10 @@ class ProcessMatcher:
                                 )
                                 if key not in self.transport_compatibility:
                                     self.transport_compatibility[key] = []
+
+                                if (transport_resource, offered_process) in self.transport_compatibility[key]:
+                                    # Avoid duplicates
+                                    continue
                                 self.transport_compatibility[key].append(
                                     (transport_resource, offered_process)
                                 )
