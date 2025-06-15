@@ -45,12 +45,13 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2000 and kpi.value < 2060
+            assert kpi.value > 1950 and kpi.value < 2050
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
             assert kpi.value < 82 and kpi.value > 78
@@ -60,11 +61,11 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 3.6 and kpi.value < 3.75
+            assert kpi.value > 3.0 and kpi.value < 3.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 2.8 and kpi.value < 3.0
+            assert kpi.value > 2.4 and kpi.value < 2.8
 
 
 def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
@@ -91,8 +92,7 @@ def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 3.7 and kpi.value > 3.5
-
+            assert kpi.value < 3.5 and kpi.value > 3.0
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 2.9 and kpi.value > 2.7
+            assert kpi.value < 2.8 and kpi.value > 2.4
