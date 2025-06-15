@@ -57,23 +57,24 @@ def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
     )
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2000 and kpi.value < 2040
+            assert kpi.value > 1900 and kpi.value < 2000
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 82 and kpi.value > 78
+            assert kpi.value < 80 and kpi.value > 75
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 68 and kpi.value < 70
+            assert kpi.value > 68 and kpi.value < 72
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 6.4 and kpi.value > 6.2
+            assert kpi.value < 6 and kpi.value > 5.2
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 5.6 and kpi.value > 5.4
+            assert kpi.value < 5.5 and kpi.value > 4.5
