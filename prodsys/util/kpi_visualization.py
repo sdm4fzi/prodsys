@@ -868,7 +868,7 @@ def print_aggregated_data(post_processor: post_processing.PostProcessor):
     print(post_processor.df_aggregated_WIP)
 
     if post_processor.get_primitive_types():
-        print("\n------------- WIP per auxiliary -------------\n")
+        print("\n------------- WIP per Primitive -------------\n")
         print(post_processor.df_aggregated_primitive_WIP)
 
     print("\n------------- Throughput time -------------\n")

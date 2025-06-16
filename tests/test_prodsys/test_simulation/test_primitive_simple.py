@@ -97,4 +97,4 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 10 and kpi.value > 9
+            assert kpi.value < 9 and kpi.value > 8

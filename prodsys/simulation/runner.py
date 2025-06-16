@@ -185,7 +185,7 @@ class Runner:
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
-                auxiliary_factory=self.dependency_factory,
+                primitive_factory=self.dependency_factory,
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
