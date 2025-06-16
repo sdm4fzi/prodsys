@@ -20,7 +20,6 @@ def simulation_adapter() -> ProductionSystemData:
     rework_time_model2 = psx.FunctionTimeModel("constant", 5, ID="rework_time_model")
     rework_time_model3 = psx.FunctionTimeModel("constant", 2, ID="rework_time_model")
 
-    # FIXME: rework process is used as normal production process.... -> adjust match process or so
     rework_process = psx.ReworkProcess(rework_time_model, [p1], True, "rework_process")
     rework_process2 = psx.ReworkProcess(
         rework_time_model2, [p2], False, "rework_process2"
