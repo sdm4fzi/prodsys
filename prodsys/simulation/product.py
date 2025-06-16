@@ -253,7 +253,7 @@ class Product:
         """
         self.processes_needing_rework.append(failed_process)
         possible_rework_processes = self.router.get_rework_processes(
-            self, failed_process
+            failed_process
         )
         if not possible_rework_processes:
             raise ValueError(
@@ -296,7 +296,8 @@ class Product:
         mapping_to_adjust.pop(index_to_remove)
 
     def update_executed_process(self, executed_process: PROCESS_UNION) -> None:
-        self.process_model.update_marking_from_transition(executed_process)  # type: ignore
+        if not isinstance(executed_process, process.ReworkProcess):
+            self.process_model.update_marking_from_transition(executed_process)  # type: ignore
         self.executed_production_processes.append(executed_process.data.ID)
 
     def set_next_possible_production_processes(self):
@@ -334,3 +335,4 @@ class Product:
 
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
+from prodsys.simulation import process

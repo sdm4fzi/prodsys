@@ -32,7 +32,6 @@ class Process(ABC):
         self,
         data: processes_data.PROCESS_DATA_UNION,
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -46,7 +45,6 @@ class Process(ABC):
         """
         self.data = data
         self.time_model = time_model
-        self.failure_rate = failure_rate
         self.auxiliaries = dependencies if dependencies else []
         self.dependencies: List[Dependency] = []
 
@@ -137,7 +135,6 @@ class ProductionProcess(Process):
         self,
         data: processes_data.ProductionProcessData,
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -149,7 +146,7 @@ class ProductionProcess(Process):
             data (processes_data.ProductionProcessData): The process data.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -178,7 +175,6 @@ class CapabilityProcess(Process):
         self,
         data: processes_data.CapabilityProcessData,
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -190,7 +186,7 @@ class CapabilityProcess(Process):
             data (processes_data.CapabilityProcessData): The process data.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
@@ -225,7 +221,6 @@ class TransportProcess(Process):
         time_model: Optional[time_model.TimeModel] = None,
         loading_time_model: Optional[time_model.TimeModel] = None,
         unloading_time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -237,7 +232,7 @@ class TransportProcess(Process):
             data (processes_data.TransportProcessData): The process data.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
         self.loading_time_model = loading_time_model
         self.unloading_time_model = unloading_time_model
 
@@ -322,7 +317,6 @@ class CompoundProcess(Process):
             ]
         ],
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -335,7 +329,7 @@ class CompoundProcess(Process):
             contained_processes_data (List[Union[ProductionProcess, TransportProcess, CapabilityProcess, RequiredCapabilityProcess]]): The processes.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
         self.contained_processes_data = contained_processes_data
 
     def matches_request(self, request: request_module.Request) -> bool:
@@ -388,12 +382,11 @@ class RequiredCapabilityProcess(Process):
         self,
         data: processes_data.RequiredCapabilityProcessData,
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
     ):
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
 
     def matches_request(self, request: request_module.Request) -> bool:
         raise NotImplementedError(
@@ -419,14 +412,13 @@ class ReworkProcess(Process):
         self,
         data: processes_data.ReworkProcessData,
         time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
         reworked_process_ids: Optional[List[str]] = None,
         blocking: Optional[bool] = None,
     ):
-        super().__init__(data, time_model, failure_rate, dependencies)
+        super().__init__(data, time_model, dependencies)
         self.reworked_process_ids = reworked_process_ids or []
         self.blocking = blocking if blocking is not None else True
 
@@ -468,7 +460,6 @@ class LinkTransportProcess(TransportProcess):
         time_model: Optional[time_model.TimeModel] = None,
         loading_time_model: Optional[time_model.TimeModel] = None,
         unloading_time_model: Optional[time_model.TimeModel] = None,
-        failure_rate: Optional[float] = None,
         dependencies: Optional[
             typing.List[Dependency]
         ] = None,
@@ -486,16 +477,13 @@ class LinkTransportProcess(TransportProcess):
             time_model,
             loading_time_model,
             unloading_time_model,
-            failure_rate,
             dependencies,
         )
         self.links = links if links else []
 
     def matches_request(
         self,
-        request: Union[
-            request_module.TransportResquest, request_module.AuxiliaryTransportRequest
-        ],
+        request: request_module.Request
     ) -> bool:
         requested_process = request.process
 

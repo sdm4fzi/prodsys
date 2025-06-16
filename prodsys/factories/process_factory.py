@@ -66,9 +66,6 @@ class ProcessFactory:
             values.update({"time_model": time_model})
         else:
             values.update({"time_model": None})
-        if "failure_rate" in process_data:
-            # TODO: fix this in simulation process to use parameter of process data
-            values.update({"failure_rate": process_data.failure_rate})
         if isinstance(process_data, processes_data.TransportProcessData):
             if process_data.loading_time_model_id is not None:
                 values.update(
