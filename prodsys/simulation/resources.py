@@ -19,6 +19,7 @@ from simpy import events
 if TYPE_CHECKING:
     from prodsys.simulation import control, state
     from prodsys.simulation.dependency import DependedEntity, Dependency
+
     # from prodsys.simulation.process import PROCESS_UNION
     from prodsys.simulation import product
     from prodsys.simulation import sim, store
@@ -32,6 +33,7 @@ from prodsys.models.resource_data import (
     ResourceData,
 )
 from prodsys.util import util
+
 
 class Resource(resource.Resource):
     """
@@ -64,7 +66,6 @@ class Resource(resource.Resource):
         charging_states: List[state.ChargingState] = None,
         input_queues: List[store.Queue] = None,
         output_queues: List[store.Queue] = None,
-        batch_size: Optional[int] = None,
     ):
         super().__init__(env, capacity=data.capacity)
         self.env = env
@@ -93,7 +94,7 @@ class Resource(resource.Resource):
         self.input_queues = input_queues if input_queues else []
 
         self.output_queues = output_queues if output_queues else []
-        self.batch_size = batch_size
+        self.batch_size = self.data.batch_size
         self.current_locatable = self
 
         self.full = False
@@ -195,13 +196,19 @@ class Resource(resource.Resource):
         Returns:
             bool: True if the resource is full or in setup, False otherwise.
         """
-        self.full = (
-            self.capacity_current_setup
-            - (
-                self.controller.num_running_processes
-                + self.controller.reserved_requests_count
-            )
-        ) <= 0
+        self.full = self.get_free_capacity() <= 0
+
+    def get_free_capacity(self) -> int:
+        """
+        Returns the free capacity of the resource.
+
+        Returns:
+            int: The free capacity of the resource.
+        """
+        return self.capacity_current_setup - (
+            self.controller.num_running_processes
+            + self.controller.reserved_requests_count
+        )
 
     @property
     def requires_charging(self) -> bool:

@@ -87,7 +87,7 @@ def get_dependency_request_info_key(
         item_id = requesting_item.data.ID
     else:
         item_id = dependency_item.data.ID
-    # FIXME: consider here product or so
+    # FIXME: consider here product or so, double item_id makes no sense
     return f"{item_id}:{dependency_id}:{item_id}"
 
 
@@ -269,33 +269,11 @@ class RequestHandler:
         Args:
             allocated_request (request.Request): The request that has been allocated.
         """
-        if allocated_request.request_type == request.RequestType.TRANSPORT:
-            #     request_info_key = get_transport_request_info_key(
-            #         allocated_request.requesting_item,
-            #         allocated_request.origin,
-            #         allocated_request.target,
-            #     )
+        if allocated_request.request_type == request.RequestType.PRODUCTION:
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
 
-        # elif (
-        #     allocated_request.request_type == request.RequestType.PRIMITIVE_DEPENDENCY
-        #     or allocated_request.request_type == request.RequestType.RESOURCE_DEPENDENCY
-        #     or allocated_request.request_type == request.RequestType.PROCESS_DEPENDENCY
-        # ):
-        #     request_info_key = get_dependency_request_info_key(
-        #         allocated_request.requesting_item,
-        #         allocated_request.resolved_dependency,
-        #         allocated_request.requesting_item,
-        #     )
-        elif allocated_request.request_type == request.RequestType.PRODUCTION:
-            #     request_info_key = get_request_info_key(allocated_request.requesting_item)
-            allocated_request.requesting_item.current_process = (
-                allocated_request.process
-            )
-
-        # self.request_infos[request_info_key].request_state = "routed"
         request_info = self.pending_requests.pop(id(allocated_request.completed), None)
         if not request_info:
             raise ValueError(
@@ -464,3 +442,19 @@ class RequestHandler:
                     request_info
                 )
                 return possible_primitive_requests
+
+    def get_rework_processes(
+        self, failed_process: process.PROCESS_UNION
+    ) -> List[process.PROCESS_UNION]:
+        """
+        Returns a list of rework processes for the given item.
+
+        Args:
+            item (Union[product.Product, primitive.Primitive]): The item to get rework processes for.
+
+        Returns:
+            List[process.PROCESS_UNION]: List of rework processes.
+        """
+        return self.process_matcher.get_rework_compatible(
+            failed_process
+        )

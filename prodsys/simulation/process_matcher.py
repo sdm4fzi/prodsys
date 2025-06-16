@@ -105,7 +105,7 @@ class ProcessMatcher:
             tuple[str, str], list[tuple[resources.Resource, process.TransportProcess]]
         ] = {}
         self.rework_compatibility: dict[
-            tuple[str, str], list[process.ReworkProcess]
+            str, list[process.ReworkProcess]
         ] = {}
 
         # Precompute compatibility tables at initialization time
@@ -256,25 +256,30 @@ class ProcessMatcher:
 
 
         # Precompute rework process compatibility
-        # for rework_proc in self.resource_factory.process_factory.processes:
-        #     if not isinstance(rework_proc, offered_process.ReworkProcess):
-        #         continue
 
-        #     for prod_proc in self.resource_factory.process_factory.processes:
-        #         if isinstance(prod_proc, offered_process.ReworkProcess):
-        #             continue
+        self.rework_compatibility = {}
+        for rework_process in self.resource_factory.process_factory.processes.values():
+            if not isinstance(rework_process, process.ReworkProcess):
+                continue
 
-        #         # For each product type
-        #         for product_type, dummy_product in dummy_products.items():
-        #             dummy_rework_request = request.ReworkRequest(
-        #                 failed_process=prod_proc, product=dummy_product
-        #             )
+            for reworked_process_id in rework_process.reworked_process_ids:
+                reworked_process = self.resource_factory.process_factory.get_process(
+                    reworked_process_id
+                )
+                if not reworked_process:
+                    raise ValueError(
+                        f"Reworked process ID {reworked_process_id} not found in process factory for rework process {rework_process.data.ID}"
+                    )
+                if not reworked_process.data.failure_rate or reworked_process.data.failure_rate == 0:
+                    continue
+                process_signature = reworked_process.get_process_signature()
+                if not process_signature in self.rework_compatibility:
+                    self.rework_compatibility[process_signature] = []
+                self.rework_compatibility[process_signature].append(rework_process)
 
-        #             if rework_proc.matches_request(dummy_rework_request):
-        #                 key = (product_type, prod_proc.get_process_signature())
-        #                 if key not in self.rework_compatibility:
-        #                     self.rework_compatibility[key] = []
-        #                 self.rework_compatibility[key].append(rework_proc)
+        
+
+        print(self.rework_compatibility)
 
         logger.info(
             f"Precomputation completed in {time.time() - start_time:.2f} seconds"
@@ -328,7 +333,7 @@ class ProcessMatcher:
         for requested_process in requested_processes:
             if isinstance(
                 requested_process,
-                (process.ProductionProcess, process.CapabilityProcess),
+                (process.ProductionProcess, process.CapabilityProcess, process.ReworkProcess),
             ):
                 key = ResourceCompatibilityKey(
                     process_signature=requested_process.get_process_signature(),
@@ -385,3 +390,23 @@ class ProcessMatcher:
             process_signature=process_signature,
         )
         return self.transport_compatibility.get(key, [])
+
+    def get_rework_compatible(
+            self, failed_process: process.PROCESS_UNION
+    ) -> List[process.ReworkProcess]: 
+        """
+        Returns a list of compatible rework processes for a failed process.
+
+        Args:
+            failed_process (process.PROCESS_UNION): The process that has failed.
+
+        Returns:
+            List[process.ReworkProcess]: List of compatible rework processes.
+        """
+        process_signature = failed_process.get_process_signature()
+        rework_processes = self.rework_compatibility.get(process_signature, [])
+        if not rework_processes:
+            raise ValueError(
+                f"No compatible rework processes found for failed process {failed_process.data.ID} with signature {process_signature}"
+            )
+        return rework_processes

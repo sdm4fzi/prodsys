@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pydantic import ConfigDict, Field, field_validator, ValidationInfo
-from typing import List, Generator, TYPE_CHECKING, Literal, Union
+from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
 import numpy as np
 import random
 
@@ -107,7 +107,7 @@ class Controller:
         """
         while True:
             if self.resource.requires_charging:
-                # TODO: transport AGV to charging station
+                # TODO: transport AGV to charging station, -> use a ChargingHandler for this!
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
@@ -186,6 +186,16 @@ class ProductionProcessHandler:
     def __init__(self, env: sim.Environment) -> None:
         self.env = env
         self.resource = None
+        self.process_time: Optional[float] = None
+
+    def set_process_time(self, process_time: float) -> None:
+        """
+        Set the process time for the production process.
+
+        Args:
+            process_time (float): The process time for the production process.
+        """
+        self.process_time = process_time
 
     def get_next_product_for_process(
         self, queue: store.Queue, product: product.Product
@@ -274,7 +284,7 @@ class ProductionProcessHandler:
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
         )
-        input_state.process = self.env.process(input_state.process_state())
+        input_state.process = self.env.process(input_state.process_state(time=self.process_time))  # type: ignore False
         input_state.reserved = False
         self.handle_rework_required(target_product, process)
 
@@ -824,13 +834,13 @@ def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
 
 
 def SPT_transport_control_policy(
-    requests: List[request_module.TransportResquest],
+    requests: List[request_module.Request],
 ) -> None:
     """
     Sort the requests according to the SPT principle (shortest process time first).
 
     Args:
-        requests (List[request.TransportResquest]): The list of requests.
+        requests (List[request.Request]): The list of requests.
     """
     requests.sort(
         key=lambda x: x.process.get_expected_process_time(
@@ -840,13 +850,13 @@ def SPT_transport_control_policy(
 
 
 def nearest_origin_and_longest_target_queues_transport_control_policy(
-    requests: List[request_module.TransportResquest],
+    requests: List[request_module.Request],
 ) -> None:
     """
     Sort the requests according to nearest origin without considering the target location.
     Second order sorting by descending length of the target output queues, to prefer targets where a product can be picked up.
     Args:
-        requests (List[request.TransportResquest]): The list of requests.
+        requests (List[request.Request]): The list of requests.
     """
     requests.sort(
         key=lambda x: (
@@ -859,14 +869,14 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(
 
 
 def nearest_origin_and_shortest_target_input_queues_transport_control_policy(
-    requests: List[request_module.TransportResquest],
+    requests: List[request_module.Request],
 ) -> None:
     """
     Sort the requests according to nearest origin without considering the target location.
     Second order sorting by ascending length of the target input queue so that resources with empty input queues get material to process.
 
     Args:
-        requests (List[request.TransportResquest]): The list of requests.
+        requests (List[request.Request]): The list of requests.
     """
     requests.sort(
         key=lambda x: (
@@ -897,119 +907,6 @@ class BatchController(Controller):
     A batch controller is responsible for controlling the batch processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
     """
 
-    resource: resources.Resource = Field(init=False, default=None)
-
-    def get_batch_size(self, resource: resources.Resource) -> int:
-        """
-        Get the batch size for the given resource.
-
-        Args:
-            resource (resources.Resource): The resource to get the batch size for.
-
-        Returns:
-            int: The batch size of the resource.
-        """
-        if isinstance(resource, resources.Resource):
-            return resource.data.batch_size
-        else:
-            raise ValueError("Resource is not a Resource")
-
-    def get_next_product_for_process(
-        self, resource: resources.Resource, process_request: request_module.Request
-    ) -> List[events.Event]:
-        """
-        Get the next batch of products for a process. The products are removed (get) from the input queues of the resource.
-
-        Args:
-            resource (resources.Resource): The resource to take the products from.
-            process_request (request_module.Request): The request that is requesting the products.
-
-        Returns:
-            List[events.Event]: The events that are triggered when the products are taken from the queue.
-        """
-        events = []
-        if isinstance(resource, resources.Resource):
-            batch_size = self.get_batch_size(resource)
-            internal_input_queues = [
-                queue
-                for queue in resource.input_queues
-                if not isinstance(queue, store.Store)
-            ]
-            for queue in internal_input_queues:
-                while len(events) < batch_size:
-                    event = queue.get(
-                        filter=lambda item: item.type
-                        == process_request.get_item().data.type
-                    )
-                    if not event:
-                        break
-                    events.append(event)
-            if not events:
-                raise ValueError(
-                    "No products available in the queue to fulfill the batch size requirement"
-                )
-            return events
-        else:
-            raise ValueError("Resource is not a Resource")
-
-    def put_product_to_output_queue(
-        self, resource: resources.Resource, products: List[product.Product]
-    ) -> List[events.Event]:
-        """
-        Place a batch of products into the output queue of the resource.
-
-        Args:
-            resource (resources.Resource): The resource to place the products to.
-            products (List[product.Product]): The products to be placed.
-
-        Returns:
-            List[events.Event]: The events that are triggered when the products are placed in the queue.
-        """
-        events = []
-        if isinstance(resource, resources.Resource):
-            for product in products:
-                internal_output_queues = [
-                    queue
-                    for queue in resource.output_queues
-                    if not isinstance(queue, store.Store)
-                ]
-                queue_for_product = random.choice(internal_output_queues)
-                events.append(queue_for_product.put(product.data))
-        else:
-            raise ValueError("Resource is not a Resource")
-
-        return events
-
-    def wait_for_free_process(
-        self, resource: resources.Resource, process: process.Process
-    ) -> Generator[List[state.State], None, None]:
-        """
-        Wait for free processes of a resource.
-
-        Args:
-            resource (resources.Resource): The resource.
-            process (process.Process): The process.
-
-        Returns:
-            Generator: The generator yields when processes are free.
-
-        Yields:
-            Generator: The generator yields lists of free states.
-        """
-        possible_states = resource.get_processes(process)
-        while True:
-            free_states = resource.get_free_processes(process)
-            if free_states:
-                return free_states
-            yield events.AnyOf(
-                self.env,
-                [
-                    state.process
-                    for state in possible_states
-                    if state.process is not None and state.process.is_alive
-                ],
-            )
-
     def control_loop(self) -> Generator:
         """
         The control loop is the main process of the controller. It has to run indefinetely.
@@ -1027,141 +924,87 @@ class BatchController(Controller):
             Generator: The generator yields when a request is made or a process is finished.
         """
         while True:
-            batch_size = self.get_batch_size(self.resource)
-            yield events.AnyOf(
-                env=self.env, events=self.running_processes + [self.state_changed]
-            )
-            if self.state_changed.triggered:
-                self.state_changed = events.Event(self.env)
-            for process in self.running_processes:
-                if not process.is_alive:
-                    self.running_processes.remove(process)
-            if self.resource.full or (
-                len(self.requests) < batch_size and len(self.requests) > 0
+            if self.resource.requires_charging:
+                yield self.env.process(self.resource.charge())
+            yield self.state_changed
+            self.state_changed = events.Event(self.env)
+            if (
+                self.resource.full 
+                or self.resource.in_setup
+                or self.resource.bound
+                or not self.requests
             ):
                 continue
+            if self.resource.get_free_capacity() < self.resource.batch_size:
+                continue
             self.control_policy(self.requests)
-            self.reserved_requests_count += 1
-            running_process = self.env.process(self.start_process())
-            self.running_processes.append(running_process)
-            if not self.resource.full:
-                self.state_changed.succeed()
-
-    def start_process(self) -> Generator:
-        """
-        Start the next process with the following logic:
-
-        1. Setup the resource for the process.
-        2. Wait until the resource is free for the process.
-        3. Retrieve the products for the batch from the queue.
-        4. Run the process and wait until finished.
-        5. Place the product in the output queue.
-
-        Yields:
-            Generator: The generator yields when the process is finished.
-        """
-        batch_size = self.get_batch_size(self.resource)
-        yield self.env.timeout(0)
-        process_request = self.requests.pop(0)
-        self.reserved_requests_count -= 1
-        resource = process_request.get_resource()
-        process = process_request.get_process()
-        product = process_request.get_item()
-        products = []
-        production_states = []
-
-        yield process_request.dependencies_ready
-        yield from resource.setup(process)
-        with resource.request() as req:
-            yield req
-            product_retrieval_events = self.get_next_product_for_process(
-                resource, process_request
-            )
-            product_data_list = yield events.AllOf(
-                resource.env, product_retrieval_events
+            selected_request = self.requests.pop(0)
+            batch_requests = self.get_batch_requests(
+                selected_request
             )
 
-            for product_data in product_data_list.values():
-                simulation_product = product.router.product_factory.get_product(
-                    product_data.ID
+            # TODO: add this as an option in the data model, if only full batches should be processed
+            if len(batch_requests) < self.resource.batch_size:
+                self.requests.extend(batch_requests)
+                continue
+
+            self.reserved_requests_count += len(batch_requests)
+            self.resource.update_full()
+
+            process_handlers = [get_requets_handler(request) for request in batch_requests]
+            batch_process_time = self.get_batch_process_time(
+                selected_request
+            )
+            for process_handler, request in zip(process_handlers, batch_requests):
+                process_handler.set_process_time(
+                    batch_process_time
                 )
-                products.append(simulation_product)
-
-            for simulation_product in products:
-                production_states: state.State = yield self.env.process(
-                    self.wait_for_free_process(resource, process)
+                self.env.process(
+                    process_handler.handle_request(request)
                 )
-            yield self.env.process(
-                self.run_process(production_states, products, process)
-            )
-            for state in production_states:
-                state.process = None
 
-            product_put_events = self.put_product_to_output_queue(resource, products)
-            yield events.AllOf(resource.env, product_put_events)
-            resource.adjust_pending_put_of_output_queues(
-                batch_size
-            )  # output queues do not get reserved, so the pending put has to be adjusted manually
-
-            for product in products:
-                for next_product in [product]:
-                    # FIXME: resolve as mark process as finished in router as
-                    if not resource.got_free.triggered:
-                        resource.got_free.succeed()
-
-    def run_process(
-        self,
-        input_states: List[state.State],
-        products: List[product.Product],
-        process: process.Process,
-    ):
+    def get_batch_requests(
+            self, selected_request: request_module.Request
+    ) -> List[request_module.Request]:
         """
-        Run the process of a product. The process is started and the product is logged.
+        Get the batch requests for a given request which have the same process.
 
         Args:
-            input_state (state.State): The production state of the process.
-            target_product (product.Product): The product that is processed.
+            request (request_module.Request): The request to get the batch requests for.
+
+        Returns:
+            List[request_module.Request]: The batch requests for the given request.
         """
-        states = []
-        random_input_state = random.choice(input_states)
-        process_time_for_batch = random_input_state.time_model.get_next_time()
+        batch_requests = [selected_request]
+        for req in list(self.requests):
+            if len(batch_requests) >= self.resource.batch_size:
+                break
 
-        for product, input_state in zip(products, input_states):
-            input_state.state_info.log_product(product, state.StateTypeEnum.production)
-            input_state.process = self.env.process(
-                input_state.process_state(process_time_for_batch)
-            )
-            states.append(input_state.process)
+            if (
+                req.process == selected_request.process
+                and req.get_item().data.type == selected_request.get_item().data.type
+            ):
+                batch_requests.append(req)
+                self.requests.remove(req)
 
-            self.handle_rework_required(product, process)
+        return batch_requests
 
-        yield events.AllOf(self.env, states)
-
-    def handle_rework_required(
-        self, product: product.Product, process: process.Process
-    ):
+    def get_batch_process_time(
+            self, request: request_module.Request
+    ) -> float:
         """
-        Determine if rework is needed based on the process's failure rate.
+        Get the expected process time for a batch of requests.
 
         Args:
-            process (process.Process): The process to check for failure rate.
+            request (request_module.Request): The request to get the process time for.
+
+        Returns:
+            float: The expected process time for the batch.
         """
-        if isinstance(process, ReworkProcess):
-            return
-        failure_rate = process.data.failure_rate
-        if not failure_rate or failure_rate == 0:
-            return
-        rework_needed = np.random.choice(
-            [True, False], p=[failure_rate, 1 - failure_rate]
+        if not request.process:
+            raise ValueError("Request has no process.")
+        return request.process.time_model.get_next_time(
         )
-        if not rework_needed:
-            return
-        product.add_needed_rework(process)
-
-
-# from prodsys.simulation import resources, state, route_finder, sim, store
-# from prodsys.simulation import request as request_module
-# from prodsys.simulation.process import LinkTransportProcess
 
 from prodsys.simulation import request as request_module
 from prodsys.simulation import source, sink

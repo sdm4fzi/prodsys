@@ -422,7 +422,7 @@ class Router:
         return request_info.request_completion_event
 
     def get_rework_processes(
-        self, product: product.Product, failed_process: process.Process
+        self, failed_process: process.Process
     ) -> list[process.ReworkProcess]:
         """
         Returns a list of possible rework requests with different resources and processes for the rework process of a product.
@@ -434,11 +434,9 @@ class Router:
         Returns:
             list[process.ReworkProcess]: A list of possible rework processes for the product.
         """
-        key = (
-            product.data.type,
-            failed_process.get_process_signature(),
+        return self.request_handler.get_rework_processes(
+            failed_process=failed_process
         )
-        return self.rework_compatibility.get(key, [])
 
 
 def FIFO_routing_heuristic(possible_requests: List[request.Request]):
