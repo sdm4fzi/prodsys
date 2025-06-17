@@ -1,14 +1,11 @@
-import json
 from typing import Dict, List, Union
 
 from fastapi import HTTPException
-from pydantic import TypeAdapter
 
 from app.models.project import Project
 from prodsys.adapters import JsonProductionSystemAdapter
 from prodsys.models.performance_data import Performance
 from prodsys.optimization.optimizer import HyperParameters, Optimizer
-from prodsys.util.post_processing import PostProcessor
 
 
 class InMemoryBackend:

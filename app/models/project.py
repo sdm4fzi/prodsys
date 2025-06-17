@@ -1,11 +1,10 @@
 from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from typing import List
 
 import prodsys
 from prodsys.models.performance_data import Performance
-from prodsys.optimization.optimizer import HyperParameters, Optimizer
-from prodsys.util.post_processing import PostProcessor
+from prodsys.optimization.optimizer import HyperParameters
 
 
 class Project(BaseModel):

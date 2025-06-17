@@ -89,14 +89,15 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
                 {
                     "seed": 0,
                     "number_of_generations": 10,
-                    "population_size": 10,
+                    "population_size": 8,
                     "mutation_rate": 0.1,
                     "crossover_rate": 0.1,
                     "number_of_seeds": 1,
                     "number_of_processes": 1,
                 },
             ]
-        }
+        },
+        extra="forbid",
     )
 
 

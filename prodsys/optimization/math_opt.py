@@ -87,7 +87,7 @@ class MathOptimizer(BaseModel):
 
     processing_times_per_product_and_step: dict = None
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     def cost_module(self, x: int, Modul: str) -> int:
         module_cost = self.adapter.scenario_data.info.process_module_cost

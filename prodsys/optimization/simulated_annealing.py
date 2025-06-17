@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from prodsys.util import util
 from pydantic import BaseModel, ConfigDict
 import logging
+import signal
 
 from prodsys.optimization.optimization import evaluate
 from prodsys.optimization.adapter_manipulation import mutation
@@ -28,7 +29,22 @@ if TYPE_CHECKING:
     from prodsys.optimization.optimizer import Optimizer
 
 
-class ProductionSystemOptimization(Annealer):
+class ThreadSafeAnnealer(Annealer):
+    def __init__(self, initial_state, neighbor=None):
+        # save original
+        _orig_signal = signal.signal
+
+        # monkey-patch signal.signal to no-op
+        signal.signal = lambda *args, **kwargs: None
+        try:
+            # this calls Annealer.__init__, which normally registers SIGINT
+            super().__init__(initial_state, neighbor)
+        finally:
+            # restore
+            signal.signal = _orig_signal
+
+
+class ProductionSystemOptimization(ThreadSafeAnnealer):
     def __init__(
         self,
         optimizer: "Optimizer",
@@ -120,7 +136,8 @@ class SimulatedAnnealingHyperparameters(BaseModel):
                     "number_of_seeds": 1,
                 },
             ]
-        }
+        },
+        extra="forbid",
     )
 
 

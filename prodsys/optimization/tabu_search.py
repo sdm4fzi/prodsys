@@ -157,7 +157,8 @@ class TabuSearchHyperparameters(BaseModel):
                     "number_of_seeds": 1,
                 },
             ]
-        }
+        },
+        extra="forbid",
     )
 
 

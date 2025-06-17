@@ -49,23 +49,8 @@ HYPERPARAMETER_EXAMPLES = [
     tabu_search.TabuSearchHyperparameters.model_config["json_schema_extra"]["examples"][
         0
     ],
-    math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
+    # math_opt.MathOptHyperparameters.model_config["json_schema_extra"]["examples"][0],
 ]
-
-# Global instance of the optimizer
-# optimizer_cache: Dict[str, Optimizer] = {}
-
-
-# def get_optimizer(project_id: str, adapter_id: str) -> Optimizer:
-#     # TODO: move this function probably to the backend code or to the dependencies!
-
-
-
-# def set_optimizer_in_cache(project_id: str, adapter_id: str, optimizer: Optimizer):
-#     optimizer_cache[(project_id, adapter_id)] = (
-#         optimizer  # Saves Opti. for specific adapter ID and project_id
-#     )
-
 
 @router.post(
     "/",
@@ -80,7 +65,7 @@ async def optimize(
             EvolutionaryAlgorithmHyperparameters,
             simulated_annealing.SimulatedAnnealingHyperparameters,
             tabu_search.TabuSearchHyperparameters,
-            math_opt.MathOptHyperparameters,
+            # math_opt.MathOptHyperparameters,
         ],
         Body(examples=HYPERPARAMETER_EXAMPLES),
     ],
