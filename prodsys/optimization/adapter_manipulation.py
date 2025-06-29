@@ -133,7 +133,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemAdapter) -> 
     possible_processes = get_possible_transport_processes_IDs(adapter_object)
     transport_process = random.choice(possible_processes)
 
-    transport_resource_id = f"resource_{uuid1().hex}"
+    transport_resource_id = f"transport_resource_{uuid1().hex}"
     adapter_object.resource_data.append(
         resource_data.TransportResourceData(
             ID=transport_resource_id,
