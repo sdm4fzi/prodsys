@@ -8,7 +8,7 @@ import os
 from prodsys.util import kpi_visualization
 from prodsys import runner
 from app.dependencies import prodsys_backend
-
+from prodsys.util.post_processing import PostProcessor
 
 router = APIRouter(
     prefix="/projects/{project_id}/adapters/{adapter_id}/plots",

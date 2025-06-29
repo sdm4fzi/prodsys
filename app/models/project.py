@@ -1,11 +1,11 @@
 from typing import Any, Dict, Optional, Union
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List
 
 import prodsys
 from prodsys.models.performance_data import Performance
 from prodsys.optimization.optimizer import HyperParameters
-
+from prodsys.util.post_processing import PostProcessor
 
 class Project(BaseModel):
     """
@@ -19,6 +19,7 @@ class Project(BaseModel):
     ID: str
     adapters: List[prodsys.adapters.JsonProductionSystemAdapter] = []
     performances: Optional[Dict[str, Performance]] = {}
+    post_processor: Optional[PostProcessor] = Field(default=None, exclude=True)
     optimizer_hyperparameters: Optional[Dict[str, Union[HyperParameters]]] = {}
     optimizer: Optional[Dict[str, Any]] = {}
 
