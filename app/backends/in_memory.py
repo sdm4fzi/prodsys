@@ -120,6 +120,13 @@ class InMemoryBackend:
         project.post_processor = post_processor
         return post_processor
     
+    def delete_post_processor(self, project_id: str, adapter_id: str):
+        project = self.get_project(project_id)
+        adapter = self.get_adapter(project_id, adapter_id)
+        if not project.post_processor:
+            raise HTTPException(404, f"PostProcessor not found in project {project_id}.")
+        project.post_processor = None
+    
     def save_optimizer_hyperparameters(self, project_id: str, adapter_id: str, optimizer_hyperparameters: Union[HyperParameters]):
         project = self.get_project(project_id)
         self.get_adapter(project_id, adapter_id)

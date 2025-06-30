@@ -128,6 +128,7 @@ def prepare_adapter_from_optimization(
     baseline_adapter_id: str,
     solution_id: str,
 ):
+    prodsys_backend.delete_post_processor(project_id, baseline_adapter_id)
     origin_adapter = prodsys_backend.get_adapter(project_id, baseline_adapter_id)
     adapter_object_optimized.scenario_data = origin_adapter.scenario_data
     adapter_object_optimized.ID = solution_id
@@ -147,6 +148,16 @@ def prepare_adapter_from_optimization(
     else:
         run_length = 2 * 7 * 24 * 60
     runner_object.run(run_length)
+
+    post_processor = runner_object.get_post_processor()
+    try:
+        prodsys_backend.create_post_processor(
+            project_id, baseline_adapter_id, post_processor
+        )
+    except:
+        prodsys_backend.update_post_processor(
+            project_id, baseline_adapter_id, post_processor
+        )
 
     performance = runner_object.get_performance_data(dynamic_data=True)
     project.performances[adapter_object_optimized.ID] = performance
