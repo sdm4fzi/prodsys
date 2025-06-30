@@ -539,6 +539,7 @@ def plot_time_per_state_of_resources(
 
 def plot_util_WIP_resource(
     post_processor: post_processing.PostProcessor,
+    resource_to_processes: dict = None,
     normalized: bool = True,
     return_html: bool = False,
     return_image: bool = False,
@@ -554,34 +555,58 @@ def plot_util_WIP_resource(
     df_time_per_state["mean_wip"] = np.maximum(
         np.ceil(df_time_per_state["mean_wip"]), 1
     )
+    
+    df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
+    df_time_per_state2 = df_time_per_state2.loc[df_time_per_state2["Time_type"] == "PR"]
+
+    wip_resources = df_time_per_state["Resource"].tolist()
+    if resource_to_processes is not None:
+        wip_labels = []
+        for res in wip_resources:
+            procs = resource_to_processes.get(res, [])
+            if isinstance(procs, str):
+                procs = [procs]
+            proc_str = ", ".join(procs) if procs else "–"
+            wip_labels.append(f"{res}<br>({proc_str})")
+    else:
+        wip_labels = wip_resources
+
     fig1 = go.Figure()
     fig1.add_trace(
         go.Bar(
             name="mean_wip",
-            x=df_time_per_state["Resource"],
+            x=wip_labels,
             y=df_time_per_state["mean_wip"],
             marker_color="purple",
             yaxis="y2",
         )
     )
 
-    df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
-    df_time_per_state2 = df_time_per_state2.loc[df_time_per_state2["Time_type"] == "PR"]
-
-    resources = df_time_per_state2["Resource"].unique()
+    util_resources = df_time_per_state2["Resource"].unique()
+    if resource_to_processes is not None:
+        util_labels = []
+        for res in util_resources:
+            procs = resource_to_processes.get(res, [])
+            if isinstance(procs, str):
+                procs = [procs]
+            proc_str = ", ".join(procs) if procs else "–"
+            util_labels.append(f"{res}<br>({proc_str})")
+    else:
+        util_labels = util_resources
+        
     fig2 = go.Figure()
-    for resource in resources:
+    for i, resource in enumerate(util_resources):
         df_resource = df_time_per_state2.loc[df_time_per_state2["Resource"] == resource]
         fig2.add_trace(
             go.Box(
                 y=df_resource["percentage"],
-                name=f"{resource}",
+                name=util_labels[i],
                 boxmean=True,  # mean and standard deviation
             )
         )
 
-    fig2.update_xaxes(categoryorder="array", categoryarray=resources)
-    fig1.update_xaxes(categoryorder="array", categoryarray=resources)
+    fig2.update_xaxes(categoryorder="array", categoryarray=wip_labels)
+    fig1.update_xaxes(categoryorder="array", categoryarray=util_labels)
 
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1)
     for trace in fig1.data:
@@ -590,7 +615,7 @@ def plot_util_WIP_resource(
         fig.add_trace(trace, row=1, col=1)
 
     fig.update_layout(
-        title="Mean WIP and Utilization per Station",
+        title="Mean WIP and Utilization per Resource",
         showlegend=False,
         height=800,  # adjust height if needed
     )

@@ -109,7 +109,12 @@ async def get_util_WIP_resource(
 ):
     try:
         post_processor = prodsys_backend.get_post_processor(project_id, adapter_id)
-        html_content = kpi_visualization.plot_util_WIP_resource(post_processor, normalized=normalized, return_html=True)
+        adapter = prodsys_backend.get_adapter(project_id, adapter_id)
+
+        resource_to_processes = {}
+        for resource in adapter.resource_data:
+            resource_to_processes[resource.ID] = resource.process_ids
+        html_content = kpi_visualization.plot_util_WIP_resource(post_processor, resource_to_processes=resource_to_processes, normalized=normalized, return_html=True)
         return HTMLResponse(content=html_content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
