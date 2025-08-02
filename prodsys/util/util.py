@@ -16,7 +16,6 @@ from os import listdir
 from os.path import isfile, join
 
 import simpy
-from prodsys import adapters
 
 
 def get_class_from_str(name: str, cls_dict: dict):

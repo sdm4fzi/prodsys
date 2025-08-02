@@ -17,7 +17,7 @@ from prodsys.models import (
     production_system_data
 )
 from prodsys.models.production_system_data import ProductionSystemData
-from prodsys import adapters
+
 from prodsys.util import post_processing  # , optimization_util
 from prodsys.simulation import runner
 
