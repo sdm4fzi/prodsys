@@ -8,6 +8,7 @@ import random
 
 import logging
 
+from prodsys.models import port_data
 from prodsys.simulation.dependency import DependencyInfo
 
 
@@ -64,8 +65,7 @@ class Resource(resource.Resource):
         production_states: List[state.State] = None,
         setup_states: List[state.SetupState] = None,
         charging_states: List[state.ChargingState] = None,
-        input_queues: List[store.Queue] = None,
-        output_queues: List[store.Queue] = None,
+        ports: List[store.Queue] = None,
     ):
         super().__init__(env, capacity=data.capacity)
         self.env = env
@@ -91,9 +91,7 @@ class Resource(resource.Resource):
         self.bound = False
         self.current_dependant: Union[product.Product, Resource] = None
 
-        self.input_queues = input_queues if input_queues else []
-
-        self.output_queues = output_queues if output_queues else []
+        self.ports = ports if ports else []
         self.batch_size = self.data.batch_size
         self.current_locatable = self
 
@@ -383,14 +381,9 @@ class Resource(resource.Resource):
         ]
 
     def get_location(
-        self, interaction: Literal["input", "output"] = "input"
+        self
     ) -> List[float]:
-        if interaction == "input":
-            return self.data.input_location
-        elif interaction == "output":
-            return self.data.output_location
-        else:
-            return self.data.location
+        return self.data.location
 
     def get_input_queue_length(self) -> int:
         """
@@ -399,7 +392,7 @@ class Resource(resource.Resource):
         Returns:
             int: Sum of items in the resources input-queues.
         """
-        return sum([len(q.items) for q in self.input_queues])
+        return sum([len(q.items) for q in self.ports if q.data.interface_type in [port_data.PortInterfaceType.INPUT, port_data.PortInterfaceType.INPUT_OUTPUT]])
 
     def get_output_queue_length(self) -> int:
         """
@@ -408,7 +401,7 @@ class Resource(resource.Resource):
         Returns:
             int: Sum of items in the resources output-queues.
         """
-        return sum([len(q.items) for q in self.output_queues])
+        return sum([len(q.items) for q in self.ports if q.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]])
 
     def set_location(self, new_location: Locatable) -> None:
         """
@@ -417,10 +410,6 @@ class Resource(resource.Resource):
         Args:
             new_location (List[float]): The new location of the resource. Has to have length 2.
         """
-        if self.data.location == self.data.output_location:
-            self.data.output_location = new_location.get_location()
-        if self.data.location == self.data.input_location:
-            self.data.input_location = new_location.get_location()
         self.data.location = new_location.get_location()
         self.current_locatable = new_location
 
@@ -530,26 +519,11 @@ class Resource(resource.Resource):
             yield self.env.process(self.get_free_of_setups())
             yield self.env.process(util.trivial_process(self.env))
 
-    def add_input_queues(self, input_queues: List[store.Queue]):
-        self.input_queues.extend(input_queues)
+    def add_ports(self, ports: List[store.Queue]):
+        self.ports.extend(ports)
 
-    def add_output_queues(self, output_queues: List[store.Queue]):
-        self.output_queues.extend(output_queues)
-
-    def reserve_internal_input_queues(self):
-        internal_queues = [
-            q for q in self.input_queues if not isinstance(q, store.Store)
-        ]
-        for internal_queue in internal_queues:
-            internal_queue.reserve()
-
-    def adjust_pending_put_of_output_queues(self, batch_size: int = 1):
-        internal_queues = [
-            q for q in self.output_queues if not hasattr(q.data, "location")
-        ]
-        for output_queue in internal_queues:
-            for i in range(batch_size):
-                output_queue.reserve()
+    def adjust_pending_put_of_output_queues(self, target_queue: store.Queue, batch_size: int = 1):
+        target_queue.reserve()
 
 
 RESOURCE_UNION = Resource

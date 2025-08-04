@@ -9,9 +9,10 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.express import core
 
-from prodsys.models import sink_data, queue_data
+from prodsys.models import port_data, sink_data
 import prodsys
 import prodsys.models
+from prodsys.models.core_asset import Location2D
 import prodsys.models.production_system_data
 
 
@@ -62,10 +63,10 @@ class Sink(core.ExpressObject):
     """
 
     product: product.Product
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    location: Location2D
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
 
     def to_model(self) -> sink_data.SinkData:
         """
@@ -80,8 +81,10 @@ class Sink(core.ExpressObject):
             location=self.location,
             product_type=self.product.ID,
         )
-        self._input_queues = [prodsys.models.production_system_data.get_default_queue_for_sink(sink)]
-        sink.input_queues = [q.ID for q in self._input_queues]
+        self.ports = [
+            prodsys.models.production_system_data.get_default_queue_for_sink(sink)
+        ]
+        sink.ports = [q.ID for q in self.ports]
         return sink
 
 

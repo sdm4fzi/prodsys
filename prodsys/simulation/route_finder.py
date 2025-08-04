@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 def find_route(
-    request: request.TransportResquest,
+    request: request.Request,
     process: process.LinkTransportProcess,
     find_route_to_origin: bool = False,
 ) -> List[Locatable]:
@@ -22,7 +22,7 @@ def find_route(
     Finds the route for a transportation request.
 
     Args:
-        request (request.TransportResquest): The transportation request.
+        request (request.Request): The transportation request.
         process (process.LinkTransportProcess): The process to find the route for.
         find_route_to_origin (bool, optional): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False). Defaults to False. This also indicates whether material is transported or not.
 
@@ -53,7 +53,7 @@ class RouteFinder:
 
     def find_route(
         self,
-        request: request.TransportResquest,
+        request: request.Request,
         process: process.LinkTransportProcess,
         find_route_to_origin: bool = False,
     ) -> List[Locatable]:
@@ -61,7 +61,7 @@ class RouteFinder:
         The general function which includes all sub functions to find the shortest route for a TransportRequest.
 
         Args:
-            request (TransportResquest): The transportation request.
+            request (Request): The transportation request.
             process (LinkTransportProcess): The process to find the route for.
             find_route_to_origin (bool): Indicates whether to find the route from current resource location to origin (True) or from origin to target of request (False).
 

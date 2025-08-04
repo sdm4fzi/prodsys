@@ -21,6 +21,7 @@ import simpy
 
 from prodsys.factories import primitive_factory
 from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
 from prodsys.simulation.request_handler import RequestHandler
 
@@ -134,6 +135,7 @@ class Router:
 
         # Initialize the request handler
         self.request_handler = RequestHandler(process_matcher)
+        self.interaction_handler = InteractionHandler()
 
         # Initialize compatibility tables
 
@@ -156,20 +158,9 @@ class Router:
         """
         free_resources = list(self.resource_factory.all_resources.values())
         while True:
-            # TODO: improve that free resources is not calculated every time but kept in a list at router
-            # yield simpy.AnyOf(
-            #     self.env,
-            #     [self.got_requested,
-            #     #  self.resource_got_free -> not really needed, allocation is possible even if no resource is free since queues and requests backlog are used at resources
-            #      ]
-            # )
             yield self.got_requested
             self.got_requested = events.Event(self.env)
-            # if self.resource_got_free.triggered:
-            #     self.resource_got_free = events.Event(self.env)
             while True:
-                # if not free_resources:
-                #     break
                 free_requests = self.request_handler.get_next_resource_request_to_route(
                     free_resources
                 )
@@ -214,11 +205,25 @@ class Router:
             and executed_request.requesting_item.current_locatable
             != executed_request.resource
         ):
+            # FIXME: fix here that the transport to the origin_queue has to be made -> change logic here
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, executed_request.resource
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
+
+        origin_queue, target_queue = self.interaction_handler.get_interaction_ports(
+            executed_request
+        )
+        if executed_request.request_type == request.RequestType.TRANSPORT:
+            route = self.request_handler.process_matcher.get_route(
+                origin_queue, target_queue, executed_request.process
+            )
+            executed_request.route = route
+
+        executed_request.origin_queue = origin_queue
+        executed_request.target_queue = target_queue
+
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
             yield executed_request.dependencies_requested
@@ -236,7 +241,9 @@ class Router:
     def execute_primitive_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
-        executed_request.item.bind(executed_request.requesting_item, executed_request.resolved_dependency)
+        executed_request.item.bind(
+            executed_request.requesting_item, executed_request.resolved_dependency
+        )
         trans_process_finished_event = self.request_transport(
             executed_request.item, executed_request.requesting_item.current_locatable
         )
@@ -268,7 +275,6 @@ class Router:
         Returns:
             request.Request: The allocated request.
         """
-        # Determine based on the routing heuristic
         try:
             routing_heuristic = free_requests[0].requesting_item.routing_heuristic
             routing_heuristic(free_requests)
@@ -277,31 +283,17 @@ class Router:
             routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
 
-        if routed_request.request_type == request.RequestType.TRANSPORT:
-            # TODO: add an InteractionManager that handles the points where placing and retrieving is posisble. also add queues with specific purpose and locations.
-            try:
-                origin_queue = routed_request.origin.output_queues[0]
-                target_queue = routed_request.target.input_queues[0]
-            except Exception as e:
-                try:
-                    origin_queue = routed_request.origin
-                    target_queue = routed_request.target.output_queues[0] if hasattr(routed_request.target, "input_queues") else routed_request.target.output_queues[0]
-                except Exception as e:
-                    origin_queue = routed_request.origin.input_queues[0] if hasattr(routed_request.origin, "input_queues") else routed_request.origin.output_queues[0]
-                    target_queue = routed_request.target
-        elif routed_request.request_type == request.RequestType.PRODUCTION:
-            # reserve input queues
-            origin_queue = routed_request.resource.input_queues[0]
-            target_queue = routed_request.resource.output_queues[0]
-        elif routed_request.request_type in (
-            request.RequestType.PRIMITIVE_DEPENDENCY,
-            request.RequestType.PROCESS_DEPENDENCY,
-            request.RequestType.RESOURCE_DEPENDENCY,
-        ):
-            origin_queue = None
-            target_queue = None
-        routed_request.origin_queue = origin_queue
-        routed_request.target_queue = target_queue
+        # origin_queue, target_queue = self.interaction_handler.get_interaction_ports(
+        #     routed_request
+        # )
+        # if routed_request.request_type == request.RequestType.TRANSPORT:
+        #     route = self.request_handler.process_matcher.get_route(
+        #         origin_queue, target_queue, routed_request.process
+        #     )
+        #     routed_request.route = route
+
+        # routed_request.origin_queue = origin_queue
+        # routed_request.target_queue = target_queue
         return routed_request
 
     def get_dependencies_for_product_processing(
@@ -322,7 +314,9 @@ class Router:
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
             ), f"Only primitive dependencies are supported for now. Found {dependency.data.dependency_type} for {product.data.ID}."
             request_info = self.request_handler.add_dependency_request(
-                requiring_dependency=product, dependency=dependency, requesting_item=product
+                requiring_dependency=product,
+                dependency=dependency,
+                requesting_item=product,
             )
             dependency_ready_events.append(request_info.request_completion_event)
         if not self.got_primitive_request.triggered:
@@ -434,9 +428,7 @@ class Router:
         Returns:
             list[process.ReworkProcess]: A list of possible rework processes for the product.
         """
-        return self.request_handler.get_rework_processes(
-            failed_process=failed_process
-        )
+        return self.request_handler.get_rework_processes(failed_process=failed_process)
 
 
 def FIFO_routing_heuristic(possible_requests: List[request.Request]):
@@ -475,9 +467,7 @@ def shortest_queue_routing_heuristic(
         possible_requests.sort(key=lambda x: len(x.resource.get_controller().requests))
         return
     random.shuffle(possible_requests)
-    possible_requests.sort(
-        key=lambda x: sum([len(q.items) for q in x.resource.input_queues])
-    )
+    possible_requests.sort(key=lambda x: sum([len(q.items) for q in x.resource.ports]))
 
 
 def agent_routing_heuristic(

@@ -322,13 +322,6 @@ class RequestHandler:
         Returns:
             request.Request: The created request.
         """
-        if request_info.request_type == request.RequestType.TRANSPORT:
-            route = self.process_matcher.get_route(
-                request_info.origin, request_info.target, process
-            )
-        else:
-            route = None
-
         dependencies = resource.dependencies + process.dependencies
         request_instance = request.Request(
             requesting_item=request_info.item,
@@ -338,7 +331,6 @@ class RequestHandler:
             target=request_info.target,
             request_type=request_info.request_type,
             completed=request_info.request_completion_event,
-            route=route,
             resolved_dependency=request_info.dependency,
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,

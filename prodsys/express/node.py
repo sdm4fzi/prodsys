@@ -13,6 +13,7 @@ from pydantic.dataclasses import dataclass
 from prodsys.express import core
 
 from prodsys.models import node_data
+from prodsys.models.core_asset import Location2D
 
 
 @dataclass
@@ -24,7 +25,7 @@ class Node(core.ExpressObject):
             location (List[float]): Location of the node. It has to be a list of length 2.
     """
 
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    location: Location2D
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     model_config = ConfigDict(

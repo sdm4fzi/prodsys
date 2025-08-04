@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Generator, List, Optional
-from prodsys.models import primitives_data, production_system_data
+from prodsys.models import port_data, primitives_data, production_system_data
 from prodsys.factories import (
     process_factory,
     queue_factory,
     resource_factory,
     sink_factory,
 )
-from prodsys.models import dependency_data, queue_data
+from prodsys.models import dependency_data
 
 from prodsys.simulation import primitive, sim
 from prodsys.simulation import router as router_module

@@ -190,17 +190,11 @@ class ProductionSystem(core.ExpressObject):
 
         queue_data = list(
             util.flatten_object(
-                [s._output_queues for s in self.sources]
-                + [r._input_queues for r in self.resources if r._input_queues]
-                + [r._output_queues for r in self.resources if r._output_queues]
-                + [s._input_queues for s in self.sinks]
+                [s.ports for s in self.sources]
+                + [r.ports for r in self.resources if r.ports]
+                + [s.ports for s in self.sinks]
             )
         )
-        stores = [r.input_stores for r in self.resources if r.input_stores] + [
-            r.output_stores for r in self.resources if r.output_stores
-        ]
-        stores = list(util.flatten_object(stores))
-        queue_data += [store.to_model() for store in stores]
         queue_data = remove_duplicate_items(queue_data)
         return production_system_data.ProductionSystemData(
             time_model_data=time_model_data,
@@ -212,7 +206,7 @@ class ProductionSystem(core.ExpressObject):
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,
-            queue_data=queue_data + auxiliary_storage_data,
+            port_data=queue_data + auxiliary_storage_data,
             depdendency_data=dependency_data,
             primitive_data=primitive_data,
         )

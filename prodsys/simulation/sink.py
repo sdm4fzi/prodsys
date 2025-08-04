@@ -29,19 +29,20 @@ class Sink:
         self.env = env
         self.data = data
         self.product_factory = product_factory
-        self.input_queues: List[store.Queue] = []
+        self.ports: List[store.Queue] = []
         self.can_move = False
 
-    def add_input_queues(self, input_queues: List[store.Queue]):
+    def add_ports(self, ports: List[store.Queue]):
         """
         Adds input queues to the sink.
 
         Args:
-            input_queues (List[store.Queue]): The input queues.
+            ports (List[store.Queue]): The input ports.
         """
-        self.input_queues.extend(input_queues)
+        self.ports.extend(ports)
 
     def get_location(self, interaction: Literal["input"] = "input") -> List[float]:
+        # FIXME: updat this location here!
         if interaction == "out":
             raise ValueError(
                 "Sink does not have an output location. Use 'input' instead."

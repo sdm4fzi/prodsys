@@ -9,9 +9,10 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.express import core, time_model
 
-from prodsys.models import source_data, queue_data
+from prodsys.models import port_data, source_data
 import prodsys
 import prodsys.models
+from prodsys.models.core_asset import Location2D
 import prodsys.models.production_system_data
 
 
@@ -70,13 +71,13 @@ class Source(core.ExpressObject):
 
     product: product.Product
     time_model: time_model.TIME_MODEL_UNION
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    location: Location2D
     routing_heuristic: source_data.RoutingHeuristic = (
         source_data.RoutingHeuristic.random
     )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
 
     def to_model(self) -> source_data.SourceData:
         """
@@ -93,10 +94,10 @@ class Source(core.ExpressObject):
             time_model_id=self.time_model.ID,
             routing_heuristic=self.routing_heuristic,
         )
-        self._output_queues = [
+        self.ports = [
             prodsys.models.production_system_data.get_default_queue_for_source(source)
         ]
-        source.output_queues = [q.ID for q in self._output_queues]
+        source.ports = [q.ID for q in self.ports]
         return source
 
 

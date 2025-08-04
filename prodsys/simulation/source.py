@@ -41,18 +41,17 @@ class Source:
         self.product_factory = product_factory
         self.time_model = time_model
         self.router: router_module.Router = None
-        self.output_queues: List[store.Queue] = []
+        self.ports: List[store.Queue] = []
         self.can_move = False
 
-
-    def add_output_queues(self, output_queues: List[store.Queue]):
+    def add_ports(self, ports: List[store.Queue]):
         """
         Adds output queues to the source.
 
         Args:
-            output_queues (List[store.Queue]): The output queues.
+            ports (List[store.Queue]): The source ports.
         """
-        self.output_queues.extend(output_queues)
+        self.ports.extend(ports)
 
     def start_source(self):
         """
@@ -67,7 +66,7 @@ class Source:
         Returns:
             int: Sum of items in the source output-queues.
         """
-        return sum([len(q.items) for q in self.output_queues])
+        return sum([len(q.items) for q in self.ports])
 
     def get_input_queue_length(self) -> int:
         """
@@ -93,15 +92,13 @@ class Source:
             product = self.product_factory.create_product(
                 self.product_data, self.data.routing_heuristic
             )
-            for queue in self.output_queues:
+            for queue in self.ports:
                 queue.reserve()
                 yield from queue.put(product.data)
             product.update_location(self)
             product.process = self.env.process(product.process_product())
 
-    def get_location(
-        self, interaction: Literal["output"] = "output"
-    ) -> List[float]:
+    def get_location(self, interaction: Literal["output"] = "output") -> List[float]:
         if interaction == "input":
             raise ValueError(
                 "Source does not have an input location. Use 'output' instead."
