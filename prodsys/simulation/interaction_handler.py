@@ -6,7 +6,7 @@ from prodsys.models import port_data
 
 if TYPE_CHECKING:
     from prodsys.simulation import request
-    from prodsys.simulation import store
+    from prodsys.simulation import port
 
 
 class InteractionHandler:
@@ -19,12 +19,12 @@ class InteractionHandler:
         self.port_selection_heuristic = random_port_selection_heuristic
 
         # TODO: precompute later the input and output ports of the resources, sinks and sources to be faster (use resource_factory, sink_factory, source_factory from router during init of InteractionHandler)
-        self.input_ports_per_resource: dict[str, list[store.Queue]] = {}
-        self.output_ports_per_resource: dict[str, list[store.Queue]] = {}
+        self.input_ports_per_resource: dict[str, list[port.Queue]] = {}
+        self.output_ports_per_resource: dict[str, list[port.Queue]] = {}
 
     def get_interaction_ports(
         self, routed_request: request.Request
-    ) -> tuple[store.Queue, store.Queue]:
+    ) -> tuple[port.Queue, port.Queue]:
         """
         Returns the interaction ports for the given request.
 
@@ -49,7 +49,7 @@ class InteractionHandler:
 
     def handle_transport_interaction(
         self, routed_request: request.Request
-    ) -> tuple[store.Queue, store.Queue]:
+    ) -> tuple[port.Queue, port.Queue]:
         """
         Handles the interaction for transport requests.
 
@@ -87,7 +87,7 @@ class InteractionHandler:
 
     def handle_production_interaction(
         self, routed_request: request.Request
-    ) -> tuple[store.Queue, store.Queue]:
+    ) -> tuple[port.Queue, port.Queue]:
         """
         Handles the interaction for production requests which input and output ports should be used at the resource.
 
@@ -120,8 +120,8 @@ class InteractionHandler:
         return (origin_port, target_port)
 
     def get_origin_port(
-        self, possible_ports: list[store.Queue], routed_request: request.Request
-    ) -> store.Queue:
+        self, possible_ports: list[port.Queue], routed_request: request.Request
+    ) -> port.Queue:
         """
         Gets the most suitable origin port from the list of possible ports.
 
@@ -142,15 +142,15 @@ class InteractionHandler:
         if (
             origin_port.data.port_type == port_data.PortType.STORE
         ):  # Ports can have multiple input / output locations -> select the most suitable one
-            origin_port: store.Store
+            origin_port: port.Store
             origin_port = self.port_selection_heuristic(
                 origin_port.store_ports, routed_request
             )
         return origin_port
 
     def get_target_port(
-        self, possible_ports: list[store.Queue], routed_request: request.Request
-    ) -> store.Queue:
+        self, possible_ports: list[port.Queue], routed_request: request.Request
+    ) -> port.Queue:
         """
         Gets the most suitable target port from the list of possible ports.
 
@@ -168,14 +168,14 @@ class InteractionHandler:
                 f"No suitable port found for item ID {routed_request.requesting_item.ID} in possible ports."
             )
         if target_port.data.port_type == port_data.PortType.STORE:
-            target_port: store.Store
+            target_port: port.Store
             target_port = self.port_selection_heuristic(
                 target_port.store_ports, routed_request
             )
         return target_port
 
 
-def get_port_with_item(ports: list[store.Queue], item_id: str) -> store.Queue:
+def get_port_with_item(ports: list[port.Queue], item_id: str) -> port.Queue:
     """
     Returns the port that contains the item with the given ID.
 
@@ -193,8 +193,8 @@ def get_port_with_item(ports: list[store.Queue], item_id: str) -> store.Queue:
 
 
 def random_port_selection_heuristic(
-    possible_ports: list[store.Queue], routed_request: request.Request
-) -> store.Queue:
+    possible_ports: list[port.Queue], routed_request: request.Request
+) -> port.Queue:
     """
     Randomly selects a port from the given list of possible ports.
 

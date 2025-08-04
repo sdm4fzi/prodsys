@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Generator, List, Optional
 from prodsys.models import port_data, primitives_data, production_system_data
 from prodsys.factories import (
+    port_factory,
     process_factory,
-    queue_factory,
     resource_factory,
     sink_factory,
 )
@@ -25,7 +25,7 @@ class PrimitiveFactory:
         self,
         env: sim.Environment,
         process_factory: process_factory.ProcessFactory,
-        queue_factory: queue_factory.QueueFactory,
+        queue_factory: port_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
         event_logger: Optional[logger.EventLogger] = None,

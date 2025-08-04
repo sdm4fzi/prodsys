@@ -4,7 +4,7 @@ from typing import List, TYPE_CHECKING, Optional
 
 from prodsys.models import port_data
 
-from prodsys.simulation import sim, store
+from prodsys.simulation import port, sim
 
 if TYPE_CHECKING:
     from prodsys.models import production_system_data
@@ -30,7 +30,7 @@ class QueueFactory:
             env (sim.Environment): prodsys simulation environment.
         """
         self.env = env
-        self.queues: list[store.Queue] = []
+        self.queues: list[port.Queue] = []
 
     def create_queues(self, adapter: production_system_data.ProductionSystemData):
         """
@@ -46,24 +46,24 @@ class QueueFactory:
         values = {}
         values.update({"env": self.env, "data": data})
         if data.port_type == port_data.PortType.STORE:
-            q = store.Store(**values)
+            q = port.Store(**values)
             if data.port_locations is not None:
                 q.store_ports = [
-                    store.StorePort(
+                    port.StorePort(
                         store=q, 
                         location=loc
                         )
                     for loc in data.port_locations
                 ]
             else:
-                q.store_ports = [store.StorePort(store=q, location=data.location)]
+                q.store_ports = [port.StorePort(store=q, location=data.location)]
         elif data.port_type == port_data.PortType.QUEUE:
-            q = store.Queue(**values)
+            q = port.Queue(**values)
         else:
             raise ValueError(f"Unknown port type: {data.port_type}")
         self.queues.append(q)
 
-    def get_queue(self, ID: str) -> store.Queue:
+    def get_queue(self, ID: str) -> port.Queue:
         """
         Metthod returns a queue object with the given ID.
 
@@ -74,7 +74,7 @@ class QueueFactory:
         """
         return [q for q in self.queues if q.data.ID == ID].pop()
 
-    def get_queues(self, IDs: List[str]) -> List[store.Queue]:
+    def get_queues(self, IDs: List[str]) -> List[port.Queue]:
         """
         Method returns a list of queue objects with the given IDs.
 

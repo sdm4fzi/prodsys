@@ -3,7 +3,7 @@ from pydantic.dataclasses import dataclass
 from typing import List, Optional, Union
 from pydantic import Field
 from prodsys.express import core, process
-from prodsys.express.queue import Store
+from prodsys.express.port import Store
 from prodsys.models import dependency_data, primitives_data
 
 

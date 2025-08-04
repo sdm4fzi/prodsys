@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 from simpy import events
 
 from prodsys.simulation import (
+    port,
     primitive,
     route_finder,
     sim,
     state,
     process,
-    store,
 )
 
 from prodsys.simulation.process import (
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
         resources,
         sink,
         source,
-        store,
     )
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
@@ -198,7 +197,7 @@ class ProductionProcessHandler:
         self.process_time = process_time
 
     def get_next_product_for_process(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
@@ -213,7 +212,7 @@ class ProductionProcessHandler:
         yield from queue.get(product.data.ID)
 
     def put_product_to_output_queue(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Place a product to the output queue (put) of the resource.
@@ -322,7 +321,7 @@ class TransportProcessHandler:
         self.resource = None
 
     def get_next_product_for_process(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Get the next product for a process from the output queue of a resource.
@@ -341,7 +340,7 @@ class TransportProcessHandler:
         queue.get(product.data.ID)
 
     def put_product_to_input_queue(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Put a product to the input queue of a resource.

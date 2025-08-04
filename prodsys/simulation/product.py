@@ -25,14 +25,13 @@ if TYPE_CHECKING:
         resources,
         sim,
         sink,
-        store,
         source,
         node,
     )
     from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
 
     Locatable = Union[
-        resources.Resource, node.Node, source.Source, sink.Sink, store.Store
+        resources.Resource, node.Node, source.Source, sink.Sink, port.Store
     ]
 
 
@@ -335,4 +334,4 @@ class Product:
 
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
-from prodsys.simulation import process
+from prodsys.simulation import port, process

@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-from prodsys.simulation import primitive
+from prodsys.simulation import port, primitive
 
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources, sink, source
@@ -18,7 +18,6 @@ if TYPE_CHECKING:
         request,
         process,
         sim,
-        store,
         state,
     )
 

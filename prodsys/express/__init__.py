@@ -21,7 +21,7 @@ The following modules are available:
 
 """
 
-from prodsys.express.queue import Queue, Store
+from prodsys.express.port import Queue, Store
 from prodsys.express.core import ExpressObject
 from prodsys.express.time_model import (
     SampleTimeModel,

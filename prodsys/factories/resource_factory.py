@@ -14,12 +14,12 @@ from prodsys.models.resource_data import (
     ResourceData,
     TransportControlPolicy,
 )
-from prodsys.factories import process_factory, state_factory, queue_factory
+from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
 
 if TYPE_CHECKING:
-    from prodsys.simulation import store
+    from prodsys.simulation import port
     from prodsys.models import production_system_data
 
 
@@ -147,7 +147,7 @@ class ResourceFactory:
         env: sim.Environment,
         process_factory: process_factory.ProcessFactory,
         state_factory: state_factory.StateFactory,
-        queue_factory: queue_factory.QueueFactory,
+        queue_factory: port_factory.QueueFactory,
     ):
         self.env = env
         self.process_factory = process_factory
@@ -175,7 +175,7 @@ class ResourceFactory:
 
     def get_ports_for_resource(
         self, resource_data: ResourceData
-    ) -> List[store.Queue]:
+    ) -> List[port.Queue]:
         ports = []
         output_queues = []
         if resource_data.ports:
