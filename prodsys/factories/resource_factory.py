@@ -173,21 +173,17 @@ class ResourceFactory:
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data.model_copy(deep=True))
 
-    def get_queues_for_resource(
+    def get_ports_for_resource(
         self, resource_data: ResourceData
-    ) -> Tuple[List[store.Queue], List[store.Queue]]:
-        input_queues = []
+    ) -> List[store.Queue]:
+        ports = []
         output_queues = []
-        if resource_data.input_queues:
-            input_queues = self.queue_factory.get_queues(resource_data.input_queues)
+        if resource_data.ports:
+            ports = self.queue_factory.get_queues(resource_data.ports)
         else:
-            raise ValueError("No input queues for resource" + resource_data.ID)
-        if resource_data.output_queues:
-            output_queues = self.queue_factory.get_queues(resource_data.output_queues)
-        else:
-            raise ValueError("No output queues for resource" + resource_data.ID)
+            raise ValueError("Ports not found for resource" + resource_data.ID)
 
-        return input_queues, output_queues
+        return ports
 
     def add_resource(self, resource_data: ResourceData):
         values = {"env": self.env, "data": resource_data}
@@ -195,8 +191,13 @@ class ResourceFactory:
             resource_data.process_ids
         )
         values.update({"processes": processes})
-        if any(isinstance(p, process.TransportProcess) for p in processes):
-            values.update({"can_move": True})
+        if resource_data.can_move is None:
+            if any(isinstance(p, process.TransportProcess) for p in processes):
+                values.update({"can_move": True})
+            else:
+                values.update({"can_move": False})
+        else:
+            values.update({"can_move": resource_data.can_move})
         if any(isinstance(p, process.ProductionProcess) for p in processes) or any(
             isinstance(p, process.CapabilityProcess) for p in processes
         ):
@@ -215,8 +216,8 @@ class ResourceFactory:
         self.controllers.append(controller)
         values.update({"controller": controller})
 
-        input_queues, output_queues = self.get_queues_for_resource(resource_data)
-        values.update({"input_queues": input_queues, "output_queues": output_queues})
+        ports = self.get_ports_for_resource(resource_data)
+        values.update({"ports": ports})
         if "batch_size" in resource_data:
             values.update({"batch_size": resource_data.batch_size})
 

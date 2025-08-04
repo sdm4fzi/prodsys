@@ -19,7 +19,7 @@ from pydantic import (
     model_validator,
     conlist,
 )
-from prodsys.models.core_asset import CoreAsset, InOutLocatable, Locatable
+from prodsys.models.core_asset import CoreAsset, Locatable
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -72,7 +72,7 @@ class TransportControlPolicy(str, Enum):
     )
 
 
-class ResourceData(CoreAsset, InOutLocatable):
+class ResourceData(CoreAsset, Locatable):
     """
     Class that represents resource data. Base class for ResourceData and ResourceData.
 
@@ -84,21 +84,24 @@ class ResourceData(CoreAsset, InOutLocatable):
         controller (ControllerEnum): Controller of the resource.
         control_policy (Union[ResourceControlPolicy, TransportControlPolicy]): Control policy of the resource.
         process_ids (List[str]): Process IDs of the resource.
-        process_capacities (Optional[List[int]], optional): Process capacities of the resource (in sequence of the capacity of the resource). Defaults to None.
+        process_capacities (Optional[List[int]], optional): Process capacities of the resource (in sequence of the capacity of the resource). Must have the same length as process_ids. Defaults to None.
         state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
+        ports (Optional[List[str]], optional): List of port IDs that are used by the resource for input and output of products and primitives. Ports can be Queues, Stores or other Port Interfaces. If not specfied, default Queues with infinite capacity are created at simulation start.
+        can_move (Optional[bool], optional): Whether the resource can move. Defaults to None (if None, the can_move attribute is inferred from the processes).
+        batch_size (Optional[int], optional): Batch size of the resource. Defaults to None.
+        dependency_ids (List[str]): List of dependency IDs that are required by the resource.
     """
 
-    capacity: int
+    process_ids: List[str]
 
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
-
-    process_ids: List[str]
-    process_capacities: Optional[List[int]]
+    capacity: int = 1
+    process_capacities: Optional[List[int]] = None
     state_ids: Optional[List[str]] = []
-
     controller: ControllerEnum = ControllerEnum.PipelineController
-    input_queues: List[str] = []
-    output_queues: List[str] = []
+    ports: Optional[List[str]] = None
+    can_move: Optional[bool] = None
+
     batch_size: Optional[int] = None
     dependency_ids: List[str] = []
 
@@ -118,7 +121,9 @@ class ResourceData(CoreAsset, InOutLocatable):
             values["process_capacities"]
             and max(values["process_capacities"]) > values["capacity"]
         ):
-            raise ValueError("process_capacities must be smaller than capacity")
+            raise ValueError(
+                f"process_capacities {values['process_capacities']} values must be smaller than capacity of resource {values['capacity']}."
+            )
         return values
 
     @model_validator(mode="before")
@@ -145,13 +150,13 @@ class ResourceData(CoreAsset, InOutLocatable):
 
         return data
 
-    def hash(self, adapter: ProductionSystemData) -> str:
+    def hash(self, production_system: ProductionSystemData) -> str:
         """
         Returns a unique hash of the resource considering the capacity, location (input/output for production resources or location for transport resources),
         controller, processes, process capacities, and states. Can be used to compare resources for equal functionality.
 
         Args:
-            adapter (ProductionSystemAdapter): Adapter that contains the process and state data.
+            production_system (ProductionSystemData): Adapter that contains the process and state data.
 
         Raises:
             ValueError: If a state or process is not found in the adapter.
@@ -161,14 +166,14 @@ class ResourceData(CoreAsset, InOutLocatable):
         """
         state_hashes = []
         process_hashes = []
-        queue_hashes = []
+        port_hashes = []
 
-        base_class_hash = Locatable.hash(self) + InOutLocatable.hash(self)
+        base_class_hash = Locatable.hash(self)
 
         for state_id in self.state_ids:
-            for state in adapter.state_data:
+            for state in production_system.state_data:
                 if state.ID == state_id:
-                    state_hashes.append(state.hash(adapter))
+                    state_hashes.append(state.hash(production_system))
                     break
             else:
                 raise ValueError(
@@ -176,9 +181,9 @@ class ResourceData(CoreAsset, InOutLocatable):
                 )
 
         for process_id in self.process_ids:
-            for process in adapter.process_data:
+            for process in production_system.process_data:
                 if process.ID == process_id:
-                    process_hashes.append(process.hash(adapter))
+                    process_hashes.append(process.hash(production_system))
                     break
             else:
                 raise ValueError(
@@ -186,15 +191,15 @@ class ResourceData(CoreAsset, InOutLocatable):
                 )
 
         # For production resources, include queues in the hash
-        if hasattr(self, "input_queues") and hasattr(self, "output_queues"):
-            for queue_id in self.input_queues + self.output_queues:
-                for queue in adapter.queue_data:
-                    if queue.ID == queue_id:
-                        queue_hashes.append(queue.hash())
+        if self.ports:
+            for port_id in self.ports:
+                for port in production_system.port_data:
+                    if port.ID == port_id:
+                        port_hashes.append(port.hash())
                         break
                 else:
                     raise ValueError(
-                        f"Queue with ID {queue_id} not found for resource {self.ID}."
+                        f"Port with ID {port_id} not found for resource {self.ID}."
                     )
 
         components = [
@@ -206,10 +211,12 @@ class ResourceData(CoreAsset, InOutLocatable):
             *sorted(state_hashes),
         ]
 
-        if hasattr(self, "input_queues") and hasattr(self, "output_queues"):
-            components.extend(sorted(queue_hashes))
-            if self.batch_size is not None:
-                components.append(str(self.batch_size))
+        if self.ports:
+            components.extend(sorted(port_hashes))
+        if self.batch_size is not None:
+            components.append(str(self.batch_size))
+        if self.can_move is not None:
+            components.append(str(self.can_move))
 
         return md5(("".join(components)).encode("utf-8")).hexdigest()
 
@@ -227,8 +234,8 @@ class ResourceData(CoreAsset, InOutLocatable):
                     "process_ids": ["P1", "P2"],
                     "process_capacities": [2, 1],
                     "state_ids": ["Breakdownstate_1"],
-                    "input_queues": ["IQ1"],
-                    "output_queues": ["OQ1"],
+                    "ports": ["IQ1", "OQ1"],
+                    "can_move": False,
                 },
                 # Transport resource example
                 {
@@ -240,6 +247,7 @@ class ResourceData(CoreAsset, InOutLocatable):
                     "control_policy": "FIFO",
                     "process_ids": ["TP1"],
                     "state_ids": ["Breakdownstate_1"],
+                    "can_move": True,
                 },
             ]
         }

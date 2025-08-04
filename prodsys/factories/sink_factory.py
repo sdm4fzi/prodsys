@@ -53,8 +53,8 @@ class SinkFactory:
         self.sinks[sink_data.ID] = sink_object
 
     def add_queues_to_sink(self, _sink: sink.Sink):
-        input_queues = self.queue_factory.get_queues(_sink.data.input_queues)
-        _sink.add_input_queues(input_queues)
+        ports = self.queue_factory.get_queues(_sink.data.ports)
+        _sink.add_ports(ports)
 
     def get_sink(self, ID: str) -> sink.Sink:
         """

@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import queue_data
+from prodsys.models import port_data
 
 from prodsys.simulation import sim
 from simpy import events
@@ -28,9 +28,9 @@ class Queue:
 
     """
 
-    def __init__(self, env: sim.Environment, data: queue_data.QueueData):
+    def __init__(self, env: sim.Environment, data: port_data.QueueData):
         self.env: sim.Environment = env
-        self.data: queue_data.QueueData = data
+        self.data: port_data.QueueData = data
         if data.capacity == 0:
             self.capacity = float("inf")
         else:
@@ -91,6 +91,11 @@ class Queue:
         if self._pending_put + len(self.items) > self.capacity:
             raise RuntimeError("Queue is full")
 
+    def get_location(
+        self
+    ) -> List[float]:
+        return self.data.location
+
 
 class Store(Queue):
     """
@@ -101,14 +106,61 @@ class Store(Queue):
         data (data.StoreData): The store data object.
     """
 
-    def __init__(self, env: sim.Environment, data: queue_data.StoreData):
+    def __init__(self, env: sim.Environment, data: port_data.StoreData):
         super().__init__(env, data)
-        self.data: queue_data.StoreData = data
+        self.data: port_data.StoreData = data
+        self.store_ports: List[StorePort] = []
 
-    def get_location(self, interaction: Literal["input", "output"] = "input") -> List[float]:
-        if interaction == "input":
-            return self.data.input_location
-        elif interaction == "output":
-            return self.data.output_location
-        else:
-            self.data.location
+
+class StorePort(Queue):
+    """
+    A store port is a port that is used to store products in a store. It has a location, an input location, and an output location. The input location is the location where products are stored, and the output location is the location where products are retrieved.
+
+    Args:
+        env (simpy.Environment): The simulation environment.
+        data (data.StorePortData): The store port data object.
+    """
+
+    def __init__(self, env: sim.Environment, store: Store, location: List[float]):
+        super().__init__(env, store.data)
+        self.store = store
+        self.location = location
+
+    def get(self, item_id: str) -> Generator:
+        """
+        Gets a product from the store port.
+
+        Args:
+            item_id (str): The ID of the product to get.
+
+        Yields:
+            Generator: A generator that yields the product.
+        """
+        yield self.store.get(item_id)
+
+    def put(self, item) -> Generator:
+        """
+        Puts a product into the store port.
+
+        Args:
+            item (object): The product to be put into the store port.
+        """
+        yield self.store.put(item)
+
+    def get_location(self) -> List[float]:
+        """
+        Returns the location of the store port.
+
+        Returns:
+            List[float]: The location of the store port.
+        """
+        return self.location
+    
+    def reserve(self) -> None:
+        """
+        Reserves a spot in the queue for a product to be put into.
+
+        Raises:
+            RuntimeError: If the queue is full.
+        """
+        self.store.reserve()

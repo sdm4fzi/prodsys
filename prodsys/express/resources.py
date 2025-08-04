@@ -19,9 +19,10 @@ from pydantic.dataclasses import dataclass
 
 from prodsys.express import core
 
-from prodsys.models import resource_data, queue_data
+from prodsys.models import port_data, resource_data
 import prodsys
 import prodsys.models
+from prodsys.models.core_asset import Location2D
 import prodsys.models.production_system_data
 
 
@@ -41,7 +42,7 @@ class Resource(core.ExpressObject):
     """
 
     processes: List[process.PROCESS_UNION]
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    location: Location2D
     capacity: int = 1
     states: Optional[List[state.STATE_UNION]] = Field(default_factory=list)
     controller: resource_data.ControllerEnum = (
@@ -52,15 +53,9 @@ class Resource(core.ExpressObject):
     ] = resource_data.ResourceControlPolicy.FIFO
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
-    output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
-
     batch_size: Optional[int] = None
-    input_stores: Optional[list[queue.Store]] = Field(default_factory=list)
-    output_stores: Optional[list[queue.Store]] = Field(default_factory=list)
     internal_queue_size: Optional[int] = 0
-    _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
-    _output_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
 
     dependencies: Optional[List[dependency.Dependency]] = Field(default_factory=list)
 
@@ -76,8 +71,6 @@ class Resource(core.ExpressObject):
             description="",
             process_ids=[process.ID for process in self.processes],
             location=self.location,
-            input_location=self.input_location,
-            output_location=self.output_location,
             capacity=self.capacity,
             batch_size=self.batch_size,
             state_ids=[state.ID for state in self.states],
@@ -85,16 +78,12 @@ class Resource(core.ExpressObject):
             control_policy=self.control_policy,
             dependency_ids=[dep.ID for dep in self.dependencies],
         )
-        (
-            self._input_queues,
-            self._output_queues,
-        ) = prodsys.models.production_system_data.get_default_queues_for_resource(
-            resource, self.internal_queue_size
-        )
-        resource.input_queues = [q.ID for q in self._input_queues + self.input_stores]
-        resource.output_queues = [
-            q.ID for q in self._output_queues + self.output_stores
+        self.ports = [
+            prodsys.models.production_system_data.get_default_queue_for_resource(
+                resource, self.internal_queue_size
+            )
         ]
+        resource.ports = [port.ID for port in self.ports]
         return resource
 
 

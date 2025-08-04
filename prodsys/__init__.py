@@ -5,9 +5,9 @@ import toml
 from prodsys.conf.logging_config import set_logging
 from prodsys.models import (
     dependency_data,
+    port_data,
     processes_data,
     product_data,
-    queue_data,
     resource_data,
     scenario_data,
     sink_data,

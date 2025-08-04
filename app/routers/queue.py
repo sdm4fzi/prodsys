@@ -6,11 +6,11 @@ from fastapi import APIRouter, Body
 
 from app.dao import queue_dao
 from prodsys.models import (
-    queue_data,
+    port_data,
 )
 
 QUEUE_LIST_EXAMPLE = [
-    item for item in queue_data.QueueData.model_config["json_schema_extra"]["examples"]
+    item for item in port_data.QueueData.model_config["json_schema_extra"]["examples"]
 ]
 
 router = APIRouter(
@@ -22,7 +22,7 @@ router = APIRouter(
 
 @router.get(
     "/",
-    response_model=List[queue_data.QueueData],
+    response_model=List[port_data.QueueData],
     responses={
         200: {
             "description": "Sucessfully returned queues",
@@ -37,26 +37,26 @@ async def get_queues(project_id: str, adapter_id: str):
 
 @router.post(
     "/",
-    response_model=queue_data.QueueData,
+    response_model=port_data.QueueData,
 )
 async def create_queue(
     project_id: str,
     adapter_id: str,
     queue: Annotated[
-        queue_data.QueueData,
-        Body(examples=queue_data.QueueData.model_config["json_schema_extra"]["examples"]),
+        port_data.QueueData,
+        Body(examples=port_data.QueueData.model_config["json_schema_extra"]["examples"]),
     ],
-) -> queue_data.QueueData:
+) -> port_data.QueueData:
     return queue_dao.add(project_id, adapter_id, queue)
 
 
 @router.get(
     "/{queue_id}",
-    response_model=queue_data.QueueData,
+    response_model=port_data.QueueData,
     responses={
         200: {
             "description": "Sucessfully returned queue",
-            "content": {"application/json": queue_data.QueueData.model_config["json_schema_extra"]["examples"]},
+            "content": {"application/json": port_data.QueueData.model_config["json_schema_extra"]["examples"]},
         },
         404: {"description": "Queue not found"},
     },
@@ -67,14 +67,14 @@ async def get_queue(project_id: str, adapter_id: str, queue_id: str):
 
 @router.put(
     "/{queue_id}",
-    response_model=queue_data.QueueData,
+    response_model=port_data.QueueData,
 )
 async def update_queue(
     project_id: str,
     adapter_id: str,
     queue_id: str,
-    queue: Annotated[queue_data.QueueData, Body(examples=QUEUE_LIST_EXAMPLE)],
-) -> queue_data.QueueData:
+    queue: Annotated[port_data.QueueData, Body(examples=QUEUE_LIST_EXAMPLE)],
+) -> port_data.QueueData:
     return queue_dao.update(project_id, adapter_id, queue_id, queue)
 
 

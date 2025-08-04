@@ -9,7 +9,7 @@ import random
 import logging
 
 from prodsys.models.processes_data import ProcessTypeEnum
-from prodsys.models.queue_data import StoreData
+from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
 from prodsys.simulation.request import RequestType
 
@@ -264,7 +264,7 @@ class ProductionProcessHandler:
             production_state.process = None
 
             yield from self.put_product_to_output_queue(target_queue, product)
-            resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
+            resource.adjust_pending_put_of_output_queues(target_queue)  # output queues do not get reserved, so the pending put has to be adjusted manually
             product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
@@ -411,7 +411,8 @@ class TransportProcessHandler:
         with resource.request() as req:
             yield req
             resource.controller.mark_started_process()
-            if origin.get_location() != resource.get_location():
+            if origin_queue.get_location() != resource.get_location():
+                # FIXME: move to origin_queue and not to origin
                 route_to_origin = self.find_route_to_origin(process_request)
                 transport_state: state.State = yield self.env.process(
                     resource.wait_for_free_process(process)
@@ -498,13 +499,8 @@ class TransportProcessHandler:
         Returns:
             list[float]: The position of the target, list with 2 floats.
         """
-        if not last_transport_step or hasattr(target, "product_factory"):
-            return target.get_location()
-        if empty_transport:
-            return target.get_location(interaction="output")
-        else:
-            return target.get_location(interaction="input")
-
+        return target.get_location()
+    
     def run_process(
         self,
         input_state: state.TransportState,
@@ -570,7 +566,7 @@ class TransportProcessHandler:
                 )
             return route_to_origin
         else:
-            return [self.resource.current_locatable, process_request.get_origin()]
+            return [self.resource.current_locatable, process_request.origin_queue]
 
 
 class DependencyProcessHandler:

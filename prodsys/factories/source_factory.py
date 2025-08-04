@@ -78,12 +78,12 @@ class SourceFactory:
             product_factory=self.product_factory,
             time_model=time_model,
         )
-        self.add_queues_to_source(source_object, source_data.output_queues)
+        self.add_ports_to_source(source_object, source_data.ports)
         self.sources[source_data.ID] = source_object
 
-    def add_queues_to_source(self, source: source.Source, values: List[str]):
-        output_queues = self.queue_factory.get_queues(values)
-        source.add_output_queues(output_queues)
+    def add_ports_to_source(self, source: source.Source, values: List[str]):
+        ports = self.queue_factory.get_queues(values)
+        source.add_ports(ports)
 
     def start_sources(self):
         """

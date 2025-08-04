@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Optional
 
+from prodsys.models import port_data
+
 from prodsys.simulation import sim, store
 
 if TYPE_CHECKING:
     from prodsys.models import production_system_data
-    from prodsys.models import queue_data
 
 
 class QueueFactory:
@@ -38,16 +39,28 @@ class QueueFactory:
         Args:
             adapter (adapter.ProductionSystemAdapter): _description_
         """
-        for data in adapter.queue_data:
+        for data in adapter.port_data:
             self.add_queue(data)
 
-    def add_queue(self, data: queue_data.QueueData):
+    def add_queue(self, data: port_data.QueueData | port_data.StoreData):
         values = {}
         values.update({"env": self.env, "data": data})
-        if hasattr(data, "location"):
+        if data.port_type == port_data.PortType.STORE:
             q = store.Store(**values)
-        else:
+            if data.port_locations is not None:
+                q.store_ports = [
+                    store.StorePort(
+                        store=q, 
+                        location=loc
+                        )
+                    for loc in data.port_locations
+                ]
+            else:
+                q.store_ports = [store.StorePort(store=q, location=data.location)]
+        elif data.port_type == port_data.PortType.QUEUE:
             q = store.Queue(**values)
+        else:
+            raise ValueError(f"Unknown port type: {data.port_type}")
         self.queues.append(q)
 
     def get_queue(self, ID: str) -> store.Queue:

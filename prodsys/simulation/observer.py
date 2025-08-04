@@ -43,7 +43,7 @@ def observe_input_queue(
     resource: resources.Resource, product_factory: product_factory.ProductFactory
 ) -> List[QueueObservation]:
     queue_observation = []
-    for queue in resource.input_queues:
+    for queue in resource.ports:
         for product_data in queue.items:
             product = product_factory.get_product(product_data.ID)
 

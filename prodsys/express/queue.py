@@ -1,6 +1,6 @@
 from typing import Optional, Union
 from prodsys.express import core
-from prodsys.models import queue_data
+from prodsys.models import port_data
 
 
 from pydantic import Field, conlist
@@ -8,6 +8,8 @@ from pydantic.dataclasses import dataclass
 
 
 from uuid import uuid1
+
+from prodsys.models.core_asset import Location2D
 
 
 @dataclass
@@ -24,18 +26,22 @@ class Queue(core.ExpressObject):
 
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     capacity: Union[int, float] = 0
+    location: Optional[Location2D] = None
+    interface_type: port_data.PortInterfaceType = port_data.PortInterfaceType.INPUT_OUTPUT
 
-    def to_model(self) -> queue_data.QueueData:
+    def to_model(self) -> port_data.QueueData:
         """
         Converts the storage object to a `StorageData` model.
 
         Returns:
                 StorageData: The converted storage data.
         """
-        return queue_data.QueueData(
+        return port_data.QueueData(
             ID=self.ID,
             description="",
             capacity=self.capacity,
+            location=self.location,
+            interface_type=self.interface_type,
         )
 
 
@@ -48,30 +54,27 @@ class Store(Queue):
 
     Attributes:
             location (List[float]): The location coordinates of the storage.
-            input_location (Optional[List[float]]): The input location coordinates of the storage.
-            output_location (Optional[List[float]]): The output location coordinates of the storage.
+            port_locations (Optional[list[Location2D]]): The locations of the store ports. If not provided, the store has only one port at the location.
             ID (Optional[str]): The unique identifier of the storage.
             capacity (Union[int, float]): The capacity of the storage.
     """
-
-    location: list[float] = Field(..., min_length=2, max_length=2)
-    input_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
-    output_location: Optional[list[float]] = Field(None, min_length=2, max_length=2)
+    port_locations: Optional[list[Location2D]] = Field(
+        default=None,
+    )    
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    capacity: Union[int, float] = 0
 
-    def to_model(self) -> queue_data.StoreData:
+    def to_model(self) -> port_data.StoreData:
         """
         Converts the storage object to a `StorageData` model.
 
         Returns:
                 StorageData: The converted storage data.
         """
-        return queue_data.StoreData(
+        return port_data.StoreData(
             ID=self.ID,
             description="",
             capacity=self.capacity,
             location=self.location,
-            input_location=self.input_location,
-            output_location=self.output_location,
+            port_locations=self.port_locations,
+            interface_type=self.interface_type,
         )
