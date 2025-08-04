@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING, Literal
 
-from prodsys.simulation import sim, store
+from prodsys.simulation import port, sim
 from prodsys.models import sink_data
 
 if TYPE_CHECKING:
@@ -29,10 +29,10 @@ class Sink:
         self.env = env
         self.data = data
         self.product_factory = product_factory
-        self.ports: List[store.Queue] = []
+        self.ports: List[port.Queue] = []
         self.can_move = False
 
-    def add_ports(self, ports: List[store.Queue]):
+    def add_ports(self, ports: List[port.Queue]):
         """
         Adds input queues to the sink.
 

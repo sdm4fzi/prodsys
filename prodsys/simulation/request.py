@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.primitive import Primitive
 
     from prodsys.simulation.resources import Resource
-    from prodsys.simulation.store import Store, Queue
+    from prodsys.simulation.port import Store, Queue
     from prodsys.simulation.dependency import DependedEntity
     from prodsys.simulation.process import Process
     from prodsys.simulation.dependency import Dependency

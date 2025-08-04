@@ -17,7 +17,7 @@ from abc import ABC
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.express import core
+from prodsys.express import core, port
 
 from prodsys.models import port_data, resource_data
 import prodsys
@@ -87,4 +87,4 @@ class Resource(core.ExpressObject):
         return resource
 
 
-from prodsys.express import state, process, queue, dependency
+from prodsys.express import state, process, dependency

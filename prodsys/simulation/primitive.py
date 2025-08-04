@@ -21,7 +21,6 @@ if TYPE_CHECKING:
         request,
         process,
         sim,
-        store,
         state,
     )
     from prodsys.simulation import router as router_module
@@ -40,7 +39,7 @@ class Primitive:
         env: sim.Environment,
         data: primitives_data.PrimitiveData,
         transport_process: process.Process,
-        storage: store.Store,
+        storage: port.Store,
     ):
         """
         Initializes the Auxiliary class.
@@ -116,4 +115,4 @@ class Primitive:
         self.got_free = events.Event(self.env)
 
 
-from prodsys.simulation import product, state
+from prodsys.simulation import port, product, state

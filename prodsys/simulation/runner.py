@@ -12,11 +12,11 @@ from prodsys.simulation import sim, logger
 from prodsys.factories import (
     dependency_factory,
     link_transport_process_updater,
+    port_factory,
     primitive_factory,
     state_factory,
     time_model_factory,
     process_factory,
-    queue_factory,
     resource_factory,
     product_factory,
     sink_factory,
@@ -112,7 +112,7 @@ class Runner:
         self.time_model_factory: time_model_factory.TimeModelFactory = None
         self.state_factory: state_factory.StateFactory = None
         self.process_factory: process_factory.ProcessFactory = None
-        self.queue_factory: queue_factory.QueueFactory = None
+        self.queue_factory: port_factory.QueueFactory = None
         self.dependency_factory: dependency_factory.DependencyFactory = None
         self.resource_factory: resource_factory.ResourceFactory = None
         self.node_factory: node_factory.NodeFactory = None
@@ -147,7 +147,7 @@ class Runner:
             )
             self.process_factory.create_processes(self.adapter)
 
-            self.queue_factory = queue_factory.QueueFactory(env=self.env)
+            self.queue_factory = port_factory.QueueFactory(env=self.env)
             self.queue_factory.create_queues(self.adapter)
 
             self.resource_factory = resource_factory.ResourceFactory(

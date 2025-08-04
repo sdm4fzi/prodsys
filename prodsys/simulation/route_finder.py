@@ -117,7 +117,7 @@ class RouteFinder:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
         # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.store import Store
+        from prodsys.simulation.port import Store
         from prodsys.simulation.resources import Resource
 
         pathfinder_edges = []
@@ -224,7 +224,7 @@ class RouteFinder:
         """
         # TODO: make the imports at top or bottom of file
         from prodsys.simulation.resources import Resource
-        from prodsys.simulation.store import Store
+        from prodsys.simulation.port import Store
 
         existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:

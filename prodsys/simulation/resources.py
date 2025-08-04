@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     # from prodsys.simulation.process import PROCESS_UNION
     from prodsys.simulation import product
-    from prodsys.simulation import sim, store
+    from prodsys.simulation import sim
 
     from prodsys.simulation import control, state
     from prodsys.simulation.process import PROCESS_UNION
@@ -65,7 +65,7 @@ class Resource(resource.Resource):
         production_states: List[state.State] = None,
         setup_states: List[state.SetupState] = None,
         charging_states: List[state.ChargingState] = None,
-        ports: List[store.Queue] = None,
+        ports: List[port.Queue] = None,
     ):
         super().__init__(env, capacity=data.capacity)
         self.env = env
@@ -519,14 +519,14 @@ class Resource(resource.Resource):
             yield self.env.process(self.get_free_of_setups())
             yield self.env.process(util.trivial_process(self.env))
 
-    def add_ports(self, ports: List[store.Queue]):
+    def add_ports(self, ports: List[port.Queue]):
         self.ports.extend(ports)
 
-    def adjust_pending_put_of_output_queues(self, target_queue: store.Queue, batch_size: int = 1):
+    def adjust_pending_put_of_output_queues(self, target_queue: port.Queue, batch_size: int = 1):
         target_queue.reserve()
 
 
 RESOURCE_UNION = Resource
 """ Union Type for Resources. """
 
-from prodsys.simulation import state
+from prodsys.simulation import port, state

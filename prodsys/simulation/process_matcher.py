@@ -279,8 +279,6 @@ class ProcessMatcher:
 
         
 
-        print(self.rework_compatibility)
-
         logger.info(
             f"Precomputation completed in {time.time() - start_time:.2f} seconds"
         )

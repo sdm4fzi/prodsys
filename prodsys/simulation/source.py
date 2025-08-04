@@ -8,7 +8,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.simulation import sim, store, time_model
+from prodsys.simulation import port, sim, time_model
 from prodsys.simulation import router as router_module
 from prodsys.models import source_data, product_data
 
@@ -41,10 +41,10 @@ class Source:
         self.product_factory = product_factory
         self.time_model = time_model
         self.router: router_module.Router = None
-        self.ports: List[store.Queue] = []
+        self.ports: List[port.Queue] = []
         self.can_move = False
 
-    def add_ports(self, ports: List[store.Queue]):
+    def add_ports(self, ports: List[port.Queue]):
         """
         Adds output queues to the source.
 
