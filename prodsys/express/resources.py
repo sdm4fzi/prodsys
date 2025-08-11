@@ -78,11 +78,12 @@ class Resource(core.ExpressObject):
             control_policy=self.control_policy,
             dependency_ids=[dep.ID for dep in self.dependencies],
         )
-        self.ports = [
-            prodsys.models.production_system_data.get_default_queue_for_resource(
-                resource, self.internal_queue_size
-            )
-        ]
+        if not self.ports:
+            self.ports = [
+                prodsys.models.production_system_data.get_default_queue_for_resource(
+                    resource, self.internal_queue_size
+                )
+            ]
         resource.ports = [port.ID for port in self.ports]
         return resource
 
