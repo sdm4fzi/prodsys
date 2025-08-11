@@ -31,7 +31,10 @@ class QueueData(CoreAsset):
         description (str): Description of the queue.
         capacity (Union[int, float]): Capacity of the queue. If 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.
         location (List[float]): Location of the queue. It has to be a list of length 2. If not provided, the position is inferred from the parent resource. Defaults to None.
-    
+        interface_type (PortInterfaceType): Type of the interface. Defaults to PortInterfaceType.INPUT_OUTPUT.
+        port_type (PortType): Type of the port. Defaults to PortType.QUEUE.
+        dependency_ids (List[str]): List of dependency IDs that are required by the queue.
+
     Examples:
         A finite queue with ID "Q1", description "Queue 1" and capacity 10:
         ``` py
@@ -58,6 +61,8 @@ class QueueData(CoreAsset):
     )
     interface_type: PortInterfaceType = PortInterfaceType.INPUT_OUTPUT
     port_type: PortType = Field(default=PortType.QUEUE, init=False, frozen=True)
+    dependency_ids: list[str] = []
+
 
     def hash(self) -> str:
         """
@@ -67,6 +72,7 @@ class QueueData(CoreAsset):
         Returns:
             str: Hash of the queue.
         """
+        # TODO: consider dependencies
         return md5((str(self.capacity)).encode("utf-8")).hexdigest()
 
     model_config = ConfigDict(
