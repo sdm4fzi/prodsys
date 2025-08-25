@@ -12,7 +12,6 @@ from prodsys.models.source_data import SourceData
 if TYPE_CHECKING:
     from prodsys.factories import (
         resource_factory,
-        queue_factory,
         time_model_factory,
         sink_factory,
     )
@@ -37,7 +36,7 @@ class SourceFactory:
         env: sim.Environment,
         product_factory: product_factory.ProductFactory,
         time_model_factory: time_model_factory.TimeModelFactory,
-        queue_factory: queue_factory.QueueFactory,
+        queue_factory: port_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
         primitive_factory: primitive_factory.PrimitiveFactory,
         sink_factory: sink_factory.SinkFactory,
@@ -78,12 +77,12 @@ class SourceFactory:
             product_factory=self.product_factory,
             time_model=time_model,
         )
-        self.add_queues_to_source(source_object, source_data.output_queues)
+        self.add_ports_to_source(source_object, source_data.ports)
         self.sources[source_data.ID] = source_object
 
-    def add_queues_to_source(self, source: source.Source, values: List[str]):
-        output_queues = self.queue_factory.get_queues(values)
-        source.add_output_queues(output_queues)
+    def add_ports_to_source(self, source: source.Source, values: List[str]):
+        ports = self.queue_factory.get_queues(values)
+        source.add_ports(ports)
 
     def start_sources(self):
         """
@@ -140,10 +139,10 @@ class SourceFactory:
 
 
 from prodsys.factories import (
+    port_factory,
     primitive_factory,
     product_factory,
     resource_factory,
-    queue_factory,
     time_model_factory,
     sink_factory,
 )

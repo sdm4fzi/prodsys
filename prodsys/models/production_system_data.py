@@ -17,12 +17,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import production_system_data
+from prodsys.models import port_data, production_system_data
 from prodsys.models import (
     dependency_data,
     node_data,
     product_data,
-    queue_data,
     resource_data,
     sink_data,
     source_data,
@@ -34,7 +33,7 @@ from prodsys.models import sink_data as sink_data_module
 from prodsys.models import source_data as source_data_module
 from prodsys.models import resource_data as resource_data_module
 from prodsys.models import product_data as product_data_module
-from prodsys.models import queue_data as queue_data_module
+from prodsys.models import port_data as queue_data_module
 from prodsys.models import node_data as node_data_module
 from prodsys.models import scenario_data as scenario_data_module
 from prodsys.models import dependency_data as dependency_data_module
@@ -94,10 +93,10 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
     return set([obj.ID for obj in list_of_objects])
 
 
-def get_default_queues_for_resource(
+def get_default_queue_for_resource(
     resource: resource_data_module.ResourceData,
     queue_capacity: Union[float, int] = 0.0,
-) -> Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]:
+) -> queue_data_module.QueueData:
     """
     Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
 
@@ -106,30 +105,18 @@ def get_default_queues_for_resource(
         queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        Tuple[List[queue_data_module.QueueData], List[queue_data_module.QueueData]]: Tuple of two lists of default queues for the given resource
+        queue_data_module.QueueData: Default queue for the given resource
     """
-    input_queues = [
-        queue_data_module.QueueData(
+    queue = queue_data_module.QueueData(
             ID=resource.ID + "_default_input_queue",
             description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
-            location=resource.input_location or resource.location,
+            location=resource.location,
         )
-    ]
-    output_queues = [
-        queue_data_module.QueueData(
-            ID=resource.ID + "_default_output_queue",
-            description="Default output queue of " + resource.ID,
-            capacity=queue_capacity,
-            location=resource.output_location or resource.location,
-        )
-    ]
-    return input_queues, output_queues
-
+    return queue
 
 def remove_queues_from_resource(machine: resource_data_module.ResourceData):
-    machine.input_queues = []
-    machine.output_queues = []
+    machine.ports = []
 
 
 def remove_queues_from_resources(
@@ -143,29 +130,21 @@ def remove_unused_queues_from_adapter(
     adapter: ProductionSystemData,
 ) -> ProductionSystemData:
     used_queues_ids = set(
-        [
-            queue_ID
-            for machine in adapter.resource_data
-            for queue_ID in machine.input_queues + machine.output_queues
-        ]
+        [queue_ID for machine in adapter.resource_data for queue_ID in machine.ports]
+        + [queue_ID for source in adapter.source_data for queue_ID in source.ports]
+        + [queue_ID for sink in adapter.sink_data for queue_ID in sink.ports]
         + [
             queue_ID
-            for source in adapter.source_data
-            for queue_ID in source.output_queues
-        ]
-        + [queue_ID for sink in adapter.sink_data for queue_ID in sink.input_queues]
-        + [
-            queue_ID
-            for auxiliary in adapter.depdendency_data
-            for queue_ID in auxiliary.storages
+            for primitive in adapter.primitive_data
+            for queue_ID in primitive.storages
         ]
     )
     queues_to_remove = []
-    for queue in adapter.queue_data:
+    for queue in adapter.port_data:
         if queue.ID not in used_queues_ids:
             queues_to_remove.append(queue)
     for queue in queues_to_remove:
-        adapter.queue_data.remove(queue)
+        adapter.port_data.remove(queue)
     return adapter
 
 
@@ -185,14 +164,11 @@ def add_default_queues_to_resources(
     for machine in adapter.resource_data:
         remove_queues_from_resource(machine)
         remove_unused_queues_from_adapter(adapter)
-        input_queues, output_queues = get_default_queues_for_resource(
+        port = get_default_queue_for_resource(
             machine, queue_capacity
         )
-        print(machine.ID, [q.ID for q in input_queues])
-        print(machine.ID, [q.ID for q in output_queues])
-        adapter.queue_data += input_queues + output_queues
-        machine.input_queues = list(get_set_of_IDs(input_queues))
-        machine.output_queues = list(get_set_of_IDs(output_queues))
+        adapter.port_data.append(port)
+        machine.ports = [port.ID]
     return adapter
 
 
@@ -231,10 +207,10 @@ def add_default_queues_to_sources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sources
     """
     for source in adapter.source_data:
-        if not source.output_queues:
+        if not source.ports:
             output_queues = [get_default_queue_for_source(source, queue_capacity)]
-            source.output_queues = list(get_set_of_IDs(output_queues))
-            adapter.queue_data += output_queues
+            source.ports = list(get_set_of_IDs(output_queues))
+            adapter.port_data += output_queues
     return adapter
 
 
@@ -273,10 +249,10 @@ def add_default_queues_to_sinks(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sinks
     """
     for sink in adapter.sink_data:
-        if not sink.input_queues:
+        if not sink.ports:
             input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
-            sink.input_queues = list(get_set_of_IDs(input_queues))
-            adapter.queue_data += input_queues
+            sink.ports = list(get_set_of_IDs(input_queues))
+            adapter.port_data += input_queues
     return adapter
 
 
@@ -319,7 +295,7 @@ class ProductionSystemData(BaseModel):
         time_model_data (List[time_model_data_module.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
         state_data (List[state_data_module.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
         process_data (List[processes_data_module.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
-        queue_data (List[queue_data_module.QueueData], optional): List of queues used by the resources, sources and sinks in the production system. Defaults to [].
+        port_data (List[queue_data_module.QueueData], optional): List of ports used by the resources, sources and sinks in the production system. Defaults to [].
         node_data (List[resource_data_module.NodeData], optional): List of nodes in the production system. Defaults to [].
         resource_data (List[resource_data_module.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
         product_data (List[product_data_module.ProductData], optional): List of products in the production system. Defaults to []
@@ -336,7 +312,7 @@ class ProductionSystemData(BaseModel):
     time_model_data: List[time_model_data_module.TIME_MODEL_DATA] = []
     state_data: List[state_data_module.STATE_DATA_UNION] = []
     process_data: List[processes_data_module.PROCESS_DATA_UNION] = []
-    queue_data: List[queue_data_module.QUEUE_DATA_UNION] = []
+    port_data: List[queue_data_module.QUEUE_DATA_UNION] = []
     node_data: List[node_data_module.NodeData] = []
     resource_data: List[resource_data_module.ResourceData] = []
     product_data: List[product_data_module.ProductData] = []
@@ -353,6 +329,7 @@ class ProductionSystemData(BaseModel):
         validate_assignment=True,
         json_schema_extra={
             "examples": [
+                # TODO: update data here
                 {
                     "ID": "Example Adapter",
                     "valid_configuration": True,
@@ -511,7 +488,7 @@ class ProductionSystemData(BaseModel):
                             "type": "TransportProcesses",
                         },
                     ],
-                    "queue_data": [
+                    "port_data": [
                         {
                             "ID": "IQ1",
                             "description": "Input-queue 1 for R1",
@@ -772,7 +749,7 @@ class ProductionSystemData(BaseModel):
                         *sorted([state.hash(self) for state in self.state_data]),
                         *sorted([process.hash(self) for process in self.process_data]),
                         *sorted([res.hash(self) for res in self.resource_data]),
-                        *sorted([queue.hash() for queue in self.queue_data]),
+                        *sorted([queue.hash() for queue in self.port_data]),
                         *sorted([node.hash() for node in self.node_data]),
                         *sorted([product.hash(self) for product in self.product_data]),
                         *sorted([sink.hash(self) for sink in self.sink_data]),
@@ -784,10 +761,7 @@ class ProductionSystemData(BaseModel):
                             ]
                         ),
                         *sorted(
-                            [
-                                primitive.hash(self)
-                                for primitive in self.primitive_data
-                            ]
+                            [primitive.hash(self) for primitive in self.primitive_data]
                         ),
                     ]
                 )
@@ -848,22 +822,29 @@ class ProductionSystemData(BaseModel):
                     raise ValueError(
                         f"The state {state} of resource {resource.ID} is not a valid state of {states}."
                     )
-            if isinstance(resource, resource_data_module.ResourceData):
-                queues = get_set_of_IDs(values["queue_data"])
-                if resource.input_queues and resource.output_queues:
-                    for queue in resource.input_queues + resource.output_queues:
-                        if queue not in queues:
-                            raise ValueError(
-                                f"The queue {queue} of resource {resource.ID} is not a valid queue of {queues}."
-                            )
-                # else:
-                #     input_queues, output_queues = get_default_queues_for_resource(
-                #         resource
-                #     )
-                #     resource.input_queues = list(get_set_of_IDs(input_queues))
-                #     resource.output_queues = list(get_set_of_IDs(output_queues))
-                #     values["queue_data"] += input_queues + output_queues
-
+            port_data = get_set_of_IDs(values["port_data"])
+            if resource.ports:
+                for port in resource.ports:
+                    if port not in port_data:
+                        raise ValueError(
+                            f"The port {port} of resource {resource.ID} is not a valid port of {port_data}."
+                        )
+                resource_ports: list[port_data.QueueData] = [port for port in values["port_data"] if port.ID in resource.ports]
+                if not any(
+                    port.interface_type
+                    in [
+                        queue_data_module.PortInterfaceType.OUTPUT,
+                        queue_data_module.PortInterfaceType.INPUT_OUTPUT,
+                    ]
+                    for port in resource_ports
+                ):
+                    raise ValueError(
+                        f"The resource {resource.ID} has no output port. Resources must have at least one output port."
+                    )
+                if not any(port.interface_type in [queue_data_module.PortInterfaceType.INPUT, queue_data_module.PortInterfaceType.INPUT_OUTPUT] for port in resource_ports):
+                    raise ValueError(
+                        f"The resource {resource.ID} has no input port. Resources must have at least one input port."
+                    )
         return resources
 
     @field_validator("product_data")
@@ -907,24 +888,29 @@ class ProductionSystemData(BaseModel):
                 raise ValueError(
                     f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
                 )
-            if not sink.input_queues:
+            if not sink.ports:
                 input_queue = get_default_queue_for_sink(sink)
-                sink.input_queues = list(get_set_of_IDs([input_queue]))
-                values["queue_data"] += [input_queue]
+                sink.ports = list(get_set_of_IDs([input_queue]))
+                values["port_data"] += [input_queue]
                 continue
-            queues = get_set_of_IDs(values["queue_data"])
-            for q in sink.input_queues:
-                if q not in queues:
+            ports = get_set_of_IDs(values["port_data"])
+            for p in sink.ports:
+                if p not in ports:
                     raise ValueError(
-                        f"The queue {q} of sink {sink.ID} is not a valid queue of {queues}."
+                        f"The port {p} of sink {sink.ID} is not a valid port of {ports}."
                     )
-                for queue in values["queue_data"]:
-                    if queue.ID == q:
-                        if queue.capacity != 0:
+                for port in values["port_data"]:
+                    if port.ID == p:
+                        if port.capacity != 0:
                             logger.warning(
-                                f"The capacity of the queue {queue.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
+                                f"The capacity of the port {port.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
                             )
-                            queue.capacity = 0
+                            port.capacity = 0
+            sink_ports : list[queue_data_module.QueueData] = [port for port in values["port_data"] if port.ID in sink.ports]
+            if not any(port.interface_type in [queue_data_module.PortInterfaceType.INPUT, queue_data_module.PortInterfaceType.INPUT_OUTPUT] for port in sink_ports):
+                raise ValueError(
+                    f"The sink {sink.ID} has no input port. Sinks must have at least one input port."
+                )
         return sinks
 
     @field_validator("source_data")
@@ -946,17 +932,29 @@ class ProductionSystemData(BaseModel):
                 raise ValueError(
                     f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
                 )
-            if not source.output_queues:
+            if not source.ports:
                 output_queue = get_default_queue_for_source(source)
-                source.output_queues = list(get_set_of_IDs([output_queue]))
-                values["queue_data"] += [output_queue]
+                source.ports = list(get_set_of_IDs([output_queue]))
+                values["port_data"] += [output_queue]
                 continue
-            queues = get_set_of_IDs(values["queue_data"])
-            for q in source.output_queues:
+            queues = get_set_of_IDs(values["port_data"])
+            for q in source.ports:
                 if q not in queues:
                     raise ValueError(
                         f"The queue {q} of source {source.ID} is not a valid queue of {queues}."
                     )
+            source_ports: list[queue_data_module.QueueData] = [port for port in values["port_data"] if port.ID in source.ports]
+            if not any(
+                port.interface_type
+                in [
+                    queue_data_module.PortInterfaceType.OUTPUT,
+                    queue_data_module.PortInterfaceType.INPUT_OUTPUT,
+                ]
+                for port in source_ports
+            ):
+                raise ValueError(
+                    f"The source {source.ID} has no output port. Sources must have at least one output port."
+                )
         return sources
 
     def read_scenario(self, scenario_file_path: str):
@@ -1000,7 +998,7 @@ def get_location_of_locatable(
         resource_data_module.ResourceData,
         source_data_module.SourceData,
         sink_data_module.SinkData,
-        queue_data.StoreData,
+        port_data.StoreData,
     ],
 ) -> List[List[float]]:
     locations = [locatable.location]
@@ -1041,8 +1039,8 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
         [sink.location for sink in adapter.sink_data]
     )
     store_locations = []
-    for store in adapter.queue_data:
-        if not isinstance(store, queue_data.StoreData):
+    for store in adapter.port_data:
+        if not isinstance(store, port_data.StoreData):
             continue
         store_locations += get_location_of_locatable(store)
 

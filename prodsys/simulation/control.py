@@ -9,7 +9,7 @@ import random
 import logging
 
 from prodsys.models.processes_data import ProcessTypeEnum
-from prodsys.models.queue_data import StoreData
+from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
 from prodsys.simulation.request import RequestType
 
@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 from simpy import events
 
 from prodsys.simulation import (
+    port,
     primitive,
     route_finder,
     sim,
     state,
     process,
-    store,
 )
 
 from prodsys.simulation.process import (
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
         resources,
         sink,
         source,
-        store,
     )
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
@@ -198,7 +197,7 @@ class ProductionProcessHandler:
         self.process_time = process_time
 
     def get_next_product_for_process(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
@@ -213,7 +212,7 @@ class ProductionProcessHandler:
         yield from queue.get(product.data.ID)
 
     def put_product_to_output_queue(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Place a product to the output queue (put) of the resource.
@@ -264,7 +263,7 @@ class ProductionProcessHandler:
             production_state.process = None
 
             yield from self.put_product_to_output_queue(target_queue, product)
-            resource.adjust_pending_put_of_output_queues()  # output queues do not get reserved, so the pending put has to be adjusted manually
+            resource.adjust_pending_put_of_output_queues(target_queue)  # output queues do not get reserved, so the pending put has to be adjusted manually
             product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
@@ -322,7 +321,7 @@ class TransportProcessHandler:
         self.resource = None
 
     def get_next_product_for_process(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Get the next product for a process from the output queue of a resource.
@@ -341,7 +340,7 @@ class TransportProcessHandler:
         queue.get(product.data.ID)
 
     def put_product_to_input_queue(
-        self, queue: store.Queue, product: product.Product
+        self, queue: port.Queue, product: product.Product
     ) -> Generator:
         """
         Put a product to the input queue of a resource.
@@ -411,7 +410,8 @@ class TransportProcessHandler:
         with resource.request() as req:
             yield req
             resource.controller.mark_started_process()
-            if origin.get_location() != resource.get_location():
+            if origin_queue.get_location() != resource.get_location():
+                # FIXME: move to origin_queue and not to origin
                 route_to_origin = self.find_route_to_origin(process_request)
                 transport_state: state.State = yield self.env.process(
                     resource.wait_for_free_process(process)
@@ -498,13 +498,8 @@ class TransportProcessHandler:
         Returns:
             list[float]: The position of the target, list with 2 floats.
         """
-        if not last_transport_step or hasattr(target, "product_factory"):
-            return target.get_location()
-        if empty_transport:
-            return target.get_location(interaction="output")
-        else:
-            return target.get_location(interaction="input")
-
+        return target.get_location()
+    
     def run_process(
         self,
         input_state: state.TransportState,
@@ -570,7 +565,7 @@ class TransportProcessHandler:
                 )
             return route_to_origin
         else:
-            return [self.resource.current_locatable, process_request.get_origin()]
+            return [self.resource.current_locatable, process_request.origin_queue]
 
 
 class DependencyProcessHandler:

@@ -18,7 +18,7 @@ class SinkData(CoreAsset, Locatable):
         description (str): Description of the sink.
         location (List[float]): Location of the sink. It has to be a list of length 2.
         product_type (str): Product type of the sink.
-        input_queues (Optional[List[str]], optional): List of input queues of the sink. Defaults to None.
+        ports (Optional[List[str]], optional): List of ports of the sink. Defaults to None.
 
     Examples:
         A sink with ID "SK1":
@@ -35,7 +35,7 @@ class SinkData(CoreAsset, Locatable):
     """
 
     product_type: str
-    input_queues: List[str] = []
+    ports: List[str] = []
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -43,9 +43,9 @@ class SinkData(CoreAsset, Locatable):
                 {
                     "ID": "SK1",
                     "description": "Sink 1",
-                    "input_location": [50.0, 50.0],
+                    "location": [50.0, 50.0],
                     "product_type": "Product_1",
-                    "input_queues": ["SinkQueue"],
+                    "ports": ["SinkQueue"],
                 }
             ]
         }
@@ -74,19 +74,19 @@ class SinkData(CoreAsset, Locatable):
                 f"Product with ID {self.product_type} not found for sink {self.ID}."
             )
 
-        input_queue_hashes = []
-        for queue_id in self.input_queues:
-            for queue in adapter.queue_data:
-                if queue.ID == queue_id:
-                    input_queue_hashes.append(queue.hash())
+        port_hashes = []
+        for port_id in self.ports:
+            for port in adapter.port_data:
+                if port.ID == port_id:
+                    port_hashes.append(port.hash())
                     break
             else:
                 raise ValueError(
-                    f"Queue with ID {queue_id} not found for sink {self.ID}."
+                    f"Queue with ID {port_id} not found for sink {self.ID}."
                 )
 
         return md5(
-            "".join(
-                [base_class_hash, product_hash, *sorted(input_queue_hashes)]
-            ).encode("utf-8")
+            "".join([base_class_hash, product_hash, *sorted(port_hashes)]).encode(
+                "utf-8"
+            )
         ).hexdigest()

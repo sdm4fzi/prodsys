@@ -332,7 +332,7 @@ def add_auxiliary(adapter_object: adapters.ProductionSystemData) -> bool:
     storage_index = random.choice(range(len(auxiliary.storages)))
     queue = [
         queue
-        for queue in adapter_object.queue_data
+        for queue in adapter_object.port_data
         if queue.ID == auxiliary.storages[storage_index]
     ][0]
     if queue.capacity == auxiliary.quantity_in_storages[storage_index]:
@@ -492,7 +492,7 @@ def get_random_auxiliary_capacity(
 ) -> adapters.ProductionSystemData:
     required_auxiliaries = get_required_auxiliaries(adapter_object)
     available_storage_capacities = {
-        queue.ID: queue.capacity for queue in adapter_object.queue_data
+        queue.ID: queue.capacity for queue in adapter_object.port_data
     }
     for auxiliary in required_auxiliaries:
         for storage_index, storage in enumerate(auxiliary.storages):

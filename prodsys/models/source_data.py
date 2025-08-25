@@ -32,7 +32,7 @@ class SourceData(CoreAsset, Locatable):
         time_model_id (str): Time model ID of the source.
         router (RouterType): Router of the source.
         routing_heuristic (RoutingHeuristic): Routing heuristic of the source.
-        output_queues (Optional[List[str]], optional): List of output queues of the source. Defaults to None.
+        ports (Optional[List[str]], optional): List of ports of the source. Defaults to None.
 
     Examples:
         A source with ID "S1":
@@ -46,14 +46,14 @@ class SourceData(CoreAsset, Locatable):
             time_model_id="function_time_model_4",
             router="SimpleRouter",
             routing_heuristic="shortest_queue",
-            output_queues=["SourceQueue"],
+            ports=["SourceQueue"],
         )
     """
 
     product_type: str
     time_model_id: str
     routing_heuristic: RoutingHeuristic
-    output_queues: List[str] = []
+    ports: List[str] = []
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -63,7 +63,7 @@ class SourceData(CoreAsset, Locatable):
             adapter (ProductionSystemAdapter): Adapter of the production system.
 
         Raises:
-            ValueError: If the product, time model or output queue is not found in the adapter.
+            ValueError: If the product, time model or port is not found in the adapter.
 
         Returns:
             str: Hash of the source.
@@ -88,7 +88,7 @@ class SourceData(CoreAsset, Locatable):
             )
 
         output_queue_hashes = []
-        for output_queue in self.output_queues:
+        for output_queue in self.ports:
             for queue in adapter.queue_data:
                 if queue.ID == output_queue:
                     output_queue_hashes.append(queue.hash())
@@ -118,12 +118,12 @@ class SourceData(CoreAsset, Locatable):
                 {
                     "ID": "S1",
                     "description": "Source 1",
-                    "output_location": [0.0, 0.0],
+                    "location": [0.0, 0.0],
                     "product_type": "Product_1",
                     "time_model_id": "function_time_model_4",
                     "router": "SimpleRouter",
                     "routing_heuristic": "shortest_queue",
-                    "output_queues": ["SourceQueue"],
+                    "ports": ["SourceQueue"],
                 }
             ]
         }

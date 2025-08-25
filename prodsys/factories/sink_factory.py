@@ -7,7 +7,7 @@ from prodsys.simulation import sim, sink
 from prodsys.models import sink_data
 
 if TYPE_CHECKING:
-    from prodsys.factories import product_factory, queue_factory
+    from prodsys.factories import product_factory
     from prodsys.models import production_system_data
 
 
@@ -25,7 +25,7 @@ class SinkFactory:
         self,
         env: sim.Environment,
         product_factory: product_factory.ProductFactory,
-        queue_factory: queue_factory.QueueFactory,
+        queue_factory: port_factory.QueueFactory,
     ):
         self.env = env
         self.product_factory = product_factory
@@ -53,8 +53,8 @@ class SinkFactory:
         self.sinks[sink_data.ID] = sink_object
 
     def add_queues_to_sink(self, _sink: sink.Sink):
-        input_queues = self.queue_factory.get_queues(_sink.data.input_queues)
-        _sink.add_input_queues(input_queues)
+        ports = self.queue_factory.get_queues(_sink.data.ports)
+        _sink.add_ports(ports)
 
     def get_sink(self, ID: str) -> sink.Sink:
         """
@@ -98,4 +98,4 @@ class SinkFactory:
         return [s for s in self.sinks.values() if __product_type == s.data.product_type]
 
 
-from prodsys.factories import product_factory, queue_factory
+from prodsys.factories import port_factory, product_factory

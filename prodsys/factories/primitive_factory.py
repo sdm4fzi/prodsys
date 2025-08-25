@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Generator, List, Optional
-from prodsys.models import primitives_data, production_system_data
+from prodsys.models import port_data, primitives_data, production_system_data
 from prodsys.factories import (
+    port_factory,
     process_factory,
-    queue_factory,
     resource_factory,
     sink_factory,
 )
-from prodsys.models import dependency_data, queue_data
+from prodsys.models import dependency_data
 
 from prodsys.simulation import primitive, sim
 from prodsys.simulation import router as router_module
@@ -25,7 +25,7 @@ class PrimitiveFactory:
         self,
         env: sim.Environment,
         process_factory: process_factory.ProcessFactory,
-        queue_factory: queue_factory.QueueFactory,
+        queue_factory: port_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
         sink_factory: sink_factory.SinkFactory,
         event_logger: Optional[logger.EventLogger] = None,

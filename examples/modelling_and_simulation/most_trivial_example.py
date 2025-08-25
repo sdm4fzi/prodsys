@@ -24,7 +24,6 @@ machine = psx.Resource(
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine",
-    output_location=[5, 1],
 )
 machine2 = psx.Resource(
     [p1, p2],
@@ -32,7 +31,6 @@ machine2 = psx.Resource(
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
-    output_location=[7, 1],
 )
 
 transport = psx.Resource([tp], [2, 0], 1, ID="transport")
