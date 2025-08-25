@@ -380,10 +380,15 @@ class Resource(resource.Resource):
             and (actual_state.process is None or not actual_state.process.is_alive)
         ]
 
+#TODO: see backup version below: does it have to differantiate between stores and queues? what if multiple ports with different locations are targeted? think about it
     def get_location(
-        self
-    ) -> List[float]:
-        return self.data.location
+            self,  interaction=None
+        ) :
+            
+            return self.data.location  # Standardposition        
+
+            #return self.data.location
+
 
     def get_input_queue_length(self) -> int:
         """
@@ -530,3 +535,32 @@ RESOURCE_UNION = Resource
 """ Union Type for Resources. """
 
 from prodsys.simulation import port, state
+
+
+"""
+    def get_location(
+        self,  interaction=None
+    ) :
+        index = 0
+        if interaction == "input":
+            help_list = list(self.ports) 
+            for port in help_list:
+                if port.data.interface_type.__str__.__eq__("output"):
+                    help_list.pop(index)
+                    
+                index +=1
+            return help_list  # Position für Eingangsinteraktionen
+        elif interaction == "output":
+            help_list = list(self.ports) 
+            for port in help_list:
+                if port.data.interface_type.__str__.__eq__("input"):
+                    help_list.pop(index)
+                    
+                index +=1
+
+            return  help_list  # Position für Ausgangsinteraktionen
+        else:
+            return self.data.location  # Standardposition        
+
+        #return self.data.location
+"""
