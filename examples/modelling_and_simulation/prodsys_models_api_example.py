@@ -49,6 +49,7 @@ machine = prodsys.resource_data.ResourceData(
     controller=prodsys.resource_data.ControllerEnum.PipelineController,
     control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
     process_ids=[welding_process.ID],
+    is_dedicated=True,
 )
 
 # create a transport resource
