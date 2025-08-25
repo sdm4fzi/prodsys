@@ -44,12 +44,14 @@ class QueueFactory:
     def add_queue(self, data: queue_data.QueueData):
         values = {}
         values.update({"env": self.env, "data": data})
+        #if hasattr(data, "product"):
+         #   q = store.Queue_per_product(**values)
         if hasattr(data, "location"):
             q = store.Store(**values)
         else:
             q = store.Queue(**values)
         self.queues.append(q)
-
+#TODO: Queue_per_product existiert noch nicht
     def get_queue(self, ID: str) -> store.Queue:
         """
         Metthod returns a queue object with the given ID.
