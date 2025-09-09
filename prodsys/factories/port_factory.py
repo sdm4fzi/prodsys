@@ -58,7 +58,9 @@ class QueueFactory:
             else:
                 q.store_ports = [port.StorePort(store=q, location=data.location)]
         elif data.port_type == port_data.PortType.QUEUE:
-            q = port.Queue(**values)
+            q = port.Queue(**values)#
+        elif data.port_type == port_data.PortType.QUEUE_PER_PRODUCT:
+            q = port.Queue_per_product(**values)
         else:
             raise ValueError(f"Unknown port type: {data.port_type}")
         self.queues.append(q)

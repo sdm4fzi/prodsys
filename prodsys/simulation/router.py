@@ -205,7 +205,7 @@ class Router:
             and executed_request.requesting_item.current_locatable
             != executed_request.resource
         ):
-            # FIXME: fix here that the transport to the origin_queue has to be made -> change logic here
+                        
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, executed_request.resource
             )

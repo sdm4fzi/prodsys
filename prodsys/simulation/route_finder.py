@@ -144,7 +144,7 @@ class RouteFinder:
             if (
                 not isinstance(link_origin, (Store)) or (isinstance(link_origin, Resource) and not link_origin.can_move) 
                 or not link_origin == origin
-            ):
+            ):#TODO: letzteren beiden überflüssig
                 origin_location = link_origin.get_location()
             elif empty_transport:
                 origin_location = link_origin.get_location(interaction="input")

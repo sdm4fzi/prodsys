@@ -164,3 +164,11 @@ class StorePort(Queue):
             RuntimeError: If the queue is full.
         """
         self.store.reserve()
+        
+class Queue_per_product(Queue):
+    def __init__(self, env: sim.Environment, data: port_data.Queue_Per_Product_Data):
+        super().__init__(env, data)
+        self.data: port_data.Queue_Per_Product_Data = data
+    
+    def get_product(self):
+        return self.data.product

@@ -104,6 +104,7 @@ class ResourceData(CoreAsset, Locatable):
 
     batch_size: Optional[int] = None
     dependency_ids: List[str] = []
+    is_dedicated: Optional[bool] = False
 
     @model_validator(mode="before")
     def check_process_capacity(cls, values):

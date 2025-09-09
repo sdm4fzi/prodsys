@@ -20,6 +20,7 @@ class PortType(Enum):
     """
     QUEUE = "queue"
     STORE = "store"
+    QUEUE_PER_PRODUCT = "queue_per_product"
 
 
 class QueueData(CoreAsset):
@@ -169,6 +170,16 @@ class StoreData(QueueData):
             ]
         }
     )
+class Queue_Per_Product_Data(QueueData):
+    product: str
+    
+
+#TODO: hash, jsonschema, location
 
 
-QUEUE_DATA_UNION = Union[QueueData, StoreData]
+
+QUEUE_DATA_UNION = Union[QueueData, StoreData, Queue_Per_Product_Data]
+
+
+
+

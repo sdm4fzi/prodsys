@@ -91,7 +91,36 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
         Set[str]: Set of all IDs of the objects in the list
     """
     return set([obj.ID for obj in list_of_objects])
+def get_default_dedicated_queue_for_resource(
+    adapter: production_system_data.ProductionSystemData,
+    resource: resource_data_module.ResourceData,
+    queue_capacity: Union[float, int] = 0.0,
+) -> List[queue_data_module.Queue_Per_Product_Data]:
+    """
+    Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
 
+    Args:
+        resource (resource_data_module.ResourceData): Resource for which the default queues should be returned
+        queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        queue_data_module.QueueData: Default queue for the given resource
+    """
+   
+    queues = []
+    
+    for product in  adapter.product_data:
+        
+        queue = queue_data_module.Queue_Per_Product_Data(
+            ID=f"{resource.ID}_default_dedicated_input_queue_{product.ID}",
+            description=f"Default dedicated input queue for {resource.ID} and product {product.ID}",
+            capacity=queue_capacity,
+            location=resource.location,
+            product=product.ID   ,  
+        )
+        queues.append(queue)
+
+    return queues
 
 def get_default_queue_for_resource(
     resource: resource_data_module.ResourceData,
@@ -106,12 +135,12 @@ def get_default_queue_for_resource(
 
     Returns:
         queue_data_module.QueueData: Default queue for the given resource
-    """
+    """  
     queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_input_queue",
-            description="Default input queue of " + resource.ID,
-            capacity=queue_capacity,
-            location=resource.location,
+        ID=resource.ID + "_default_input_queue",
+        description="Default input queue of " + resource.ID,
+        capacity=queue_capacity,
+        location=resource.location,
         )
     return queue
 
@@ -161,14 +190,24 @@ def add_default_queues_to_resources(
     Returns:
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
+    
     for machine in adapter.resource_data:
         remove_queues_from_resource(machine)
-        remove_unused_queues_from_adapter(adapter)
-        port = get_default_queue_for_resource(
-            machine, queue_capacity
-        )
-        adapter.port_data.append(port)
-        machine.ports = [port.ID]
+        #remove_unused_queues_from_adapter(adapter)
+        if machine.is_dedicated:
+            ports = get_default_dedicated_queue_for_resource(adapter,machine,queue_capacity)
+            for p in ports:
+                adapter.port_data.append(p)
+                machine.ports.append(p.ID)
+       
+
+        else:    
+            port = get_default_queue_for_resource(
+                machine, queue_capacity
+            )
+            adapter.port_data.append(port)
+            machine.ports = [port.ID]
+        
     return adapter
 
 

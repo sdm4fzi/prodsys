@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from prodsys.models import port_data
-
+from prodsys.simulation.port import Queue_per_product
 if TYPE_CHECKING:
     from prodsys.simulation import request
     from prodsys.simulation import port
-
+    
 
 class InteractionHandler:
 
@@ -59,6 +59,7 @@ class InteractionHandler:
         Returns:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
+       
         origin_output_ports = [
             q
             for q in routed_request.origin.ports
@@ -68,7 +69,10 @@ class InteractionHandler:
                 port_data.PortInterfaceType.INPUT_OUTPUT,
             ]
         ]
-        origin_port = self.get_origin_port(origin_output_ports, routed_request)
+        if isinstance(origin_output_ports[0].data, port_data.Queue_Per_Product_Data):#TODO falls nicht geht, einfach attr product benutzen
+            origin_port = self.get_dedicated_origin_port(origin_output_ports, routed_request)
+        else:        
+            origin_port = self.get_origin_port(origin_output_ports, routed_request)
 
         target_input_ports = [
             q
@@ -79,9 +83,11 @@ class InteractionHandler:
                 port_data.PortInterfaceType.INPUT_OUTPUT,
             ]
         ]
-        # select target port that can accept the item
-
-        target_port = self.get_target_port(target_input_ports, routed_request)
+            # select target port that can accept the item
+        if isinstance(target_input_ports[0].data, port_data.Queue_Per_Product_Data):
+            target_port = self.get_dedicated_target_port(target_input_ports, routed_request)
+        else:        
+            target_port = self.get_target_port(target_input_ports, routed_request)
 
         return (origin_port, target_port)
 
@@ -97,6 +103,8 @@ class InteractionHandler:
         Returns:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
+        #INFO express API works with INPUT_OUTPUT Queues
+       
         origin_input_ports = [
             q
             for q in routed_request.resource.ports
@@ -104,9 +112,13 @@ class InteractionHandler:
             in [
                 port_data.PortInterfaceType.INPUT,
                 port_data.PortInterfaceType.INPUT_OUTPUT,
+                ]
             ]
-        ]
-        origin_port = self.get_origin_port(origin_input_ports, routed_request)
+
+        if isinstance(origin_input_ports[0].data, port_data.Queue_Per_Product_Data):
+            origin_port = self.get_dedicated_origin_port(origin_input_ports, routed_request)
+        else:        
+            origin_port = self.get_origin_port(origin_input_ports, routed_request)
         target_output_ports = [
             q
             for q in routed_request.resource.ports
@@ -114,9 +126,13 @@ class InteractionHandler:
             in [
                 port_data.PortInterfaceType.OUTPUT,
                 port_data.PortInterfaceType.INPUT_OUTPUT,
+                ]
             ]
-        ]
-        target_port = self.get_target_port(target_output_ports, routed_request)
+        if isinstance(target_output_ports[0].data, port_data.Queue_Per_Product_Data):
+            target_port = self.get_dedicated_target_port(target_output_ports, routed_request)
+        else:        
+            target_port = self.get_target_port(target_output_ports, routed_request)
+        
         return (origin_port, target_port)
 
     def get_origin_port(
@@ -130,8 +146,7 @@ class InteractionHandler:
             routed_request (request.Request): The routed request.
 
         Returns:
-            store.Queue: The selected origin port.
-        """
+            store.Queue: The selected origin port."""
         origin_port = get_port_with_item(
             possible_ports, routed_request.requesting_item.data.ID
         )
@@ -147,7 +162,26 @@ class InteractionHandler:
                 origin_port.store_ports, routed_request
             )
         return origin_port
+    def get_dedicated_origin_port(self,possible_ports: list[port.Queue_per_product],routed_request: request.Request
+    ) -> port.Queue_per_product:
+        print("origin_port aufgerufen")
+        for input_queue in possible_ports:
+              
+            if input_queue.data.product == routed_request.requesting_item.data.type:
+                origin_queue = input_queue
+        return origin_queue
 
+    def get_dedicated_target_port(self,possible_ports: list[port.Queue_per_product],routed_request: request.Request
+    ) -> port.Queue_per_product:
+        #TODO output_queue name is misleading: change
+        
+        for output_queue in possible_ports:
+            
+                if output_queue.data.product == routed_request.requesting_item.data.type:
+                    
+                    target_queue = output_queue 
+        return target_queue
+        
     def get_target_port(
         self, possible_ports: list[port.Queue], routed_request: request.Request
     ) -> port.Queue:
