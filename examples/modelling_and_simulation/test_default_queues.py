@@ -226,38 +226,3 @@ runner.print_results()
 
 
 
-
-
-'''
-#TODO Am ENde counter schreiben, wieviele sachen in einer Queue sind
-#FACT Warum kommt der Production Prozess bevor dahin transportiert wurde? ich glaube, weil der Transportprozess erst angefragt wird, nachdem der Prozess die Produktionsressource angefragt hat
-#FIXME Wahre üproblem: Es wird irgendwann nur noch geputtet und nichts mehr getgettet. Problem liegt vielleicht bei den Transportressourcen, dass die irgendwann geblockt ist
-#FIXME: Debugging: 1. capas von prodressourcequeues erhöhen und gucken, ob öfter gegettett wird -> Deadlock vom Forklift
-#FIXME bleiebt Forklift am Ende bei sink stehen? weil es wird einmal finished good registered??
-#FIXME die Freigabe der Transportresssource nachdem sie in die sink gegangen ist. diese erfolgt vieleleciht nicht?
-#FIXME läuft der Transportprozess, wenn ich ihn printe im Router ab oder nur die request? Also nicht der Transportprozess an sich
-#FIXME Queue der Source läuft voll -> es wird wirklich nichts rausgeholt
-#FIXME Chatgpt Debugging verwenden
-#FIXME AGV von Jonas gucken, wie die Queues von Transportressource definiert sind
-#FIXME Wird von AGVS
-#FIXME COnveer probieren
-#FIXME ALles auf einem FLeck (queues auf sinkqueue plazieren ) -> muss an Transport liegen
-#FIXME automazische queuezuweisung bei AGVs gucken
-#FIXME Eventlog ausgeben lassen!
-#FIXME Moriz fragen, wo er diesen Eventlog her hat
-#Fact die Source ruft auch die put-Funktion auf 
-#FIXME SOLUTION: Transportressource bleibt voll einfach vor Ressourcequeue stehen, weil diese voll ist!!!
-#FIXME Was mich noch wundert ist, dass egal welche Zeiten ich eingebe, Zuerst Produkt 1_2 gegettet wird, obwohl der Produktiionsprozess direkt fertig ist ? -> nochmal mit höherer Sourcezeit probieren. 
-
-#FIXME REASON: log confirms it: transporteinheit bleibt vor Ressource stehen ( wahsctheinlich weil kapa voll ist)
-#FIXME WEnn ich capa erhöhe von REssource inputqueue: wirft Error: Queue voll!! Selbst wenn ich alle inputqueues hochsetze. Erst wenn outputqueues auch angepasst werden, geht es wieder waeiter
-#FIXME Wenn outputqueue hochgesetzt wird, inputqueues aber nicht, wirft es auch keinen Fehler 
-#FIXME: ! 1. gucken ob input und outputqueue richtig capamäßig hochgesetzt wird. 2. capa index nachgucken welcher vermittelt, wann die queue voll ist: Wird wahrscheinich nicht upgedatet!!!!!
-''''''
-hier ist NICHT das Problem:! Wahscheinlich unabhängig voneinander, beim produzieren wird immer was in die SOurce gelegt mit put
-hier wird geputtet in
-ID='Produkt1_Inputqueue' description='productarriba' capacity=2 product='product 1'
-0
-hier wird geputtet in
-ID='Sourcequeue' description='asdasas23adda' capacity=500
-1'''
