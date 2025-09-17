@@ -12,6 +12,7 @@ from prodsys.models.resource_data import (
     ControllerEnum,
     ResourceControlPolicy,
     ResourceData,
+    SystemResourceData,
     TransportControlPolicy,
 )
 from prodsys.factories import port_factory, process_factory, state_factory
@@ -221,7 +222,22 @@ class ResourceFactory:
         if "batch_size" in resource_data:
             values.update({"batch_size": resource_data.batch_size})
 
-        resource_object = resources.Resource(**values)
+        # Create appropriate resource type based on data type
+        if isinstance(resource_data, SystemResourceData):
+            # Get subresources for SystemResource
+            subresources = [self.all_resources[sub_id] for sub_id in resource_data.subresource_ids if sub_id in self.all_resources]
+            system_ports = []
+            if resource_data.system_ports:
+                system_ports = [self.queue_factory.queues[port_id] for port_id in resource_data.system_ports if port_id in self.queue_factory.queues]
+            
+            values.update({
+                "subresources": subresources,
+                "system_ports": system_ports,
+                "internal_routing_matrix": resource_data.internal_routing_matrix or {}
+            })
+            resource_object = resources.SystemResource(**values)
+        else:
+            resource_object = resources.Resource(**values)
         controller.set_resource(resource_object)
 
         states = self.state_factory.get_states(resource_data.state_ids)

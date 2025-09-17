@@ -1,7 +1,9 @@
 from __future__ import annotations
 from hashlib import md5
+
 from typing import Optional, Union, List, Dict, TYPE_CHECKING
-from pydantic import ConfigDict, model_validator
+from typing_extensions import deprecated
+from pydantic import ConfigDict, model_validator, field_validator
 from prodsys.models.core_asset import CoreAsset
 from prodsys.models.primitives_data import PrimitiveData
 
@@ -76,8 +78,19 @@ class ProductData(PrimitiveData):
         ```
     """
 
-    processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
+    processes: Union[Dict[str, List[str]]]
     dependency_ids: List[str] = []
+
+    @field_validator("processes", mode="before")
+    def check_processes(cls, v):
+        if isinstance(v, list):
+            # create adjacency matrix for old API support
+            v = {process_id: [] for process_id in v}
+            for counter, node_id in enumerate(v):
+                if counter == len(v) - 1:
+                    break
+                v[node_id].append(v[counter + 1])
+        return v
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -95,21 +108,18 @@ class ProductData(PrimitiveData):
         processes_hashes = []
         transport_process_hash = ""
 
-        if not isinstance(self.processes, list) or isinstance(self.processes[0], list):
-            # TODO: Implement hash for adjacency matrix and edges process models
-            raise NotImplementedError(
-                "Only list of processes is supported for hashing. Complex process models are not supported yet."
-            )
-
-        for process_id in self.processes:
-            for process in adapter.process_data:
-                if process.ID == process_id:
-                    processes_hashes.append(process.hash(adapter))
-                    break
-            else:
+        for process_id, successors in self.processes.items():
+            process = next((process for process in adapter.process_data if process.ID == process_id), None)
+            if process is None:
                 raise ValueError(
-                    f"Process with ID {self.processes} not found for product {self.ID}."
+                    f"Process with ID {process_id} not found for product {self.ID}."
                 )
+            processes_hashes.append(process.hash(adapter))
+            for successor in successors:
+                for process in adapter.process_data:
+                    if process.ID == successor:
+                        processes_hashes.append(process.hash(adapter))
+                        break
 
         # TODO: add hashing for auxiliaries!
 

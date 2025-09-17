@@ -44,7 +44,7 @@ clprodsys.adaptersductionCadapterv(routing_control_env.AbstractRoutingControlEnv
         if self.step_count % 10 == 0:
             queue_capacity = sum(
                 queue.capacity
-                for queue in self.adapter.queue_data
+                for queue in self.adapter.port_data
                 if queue.ID != "SinkQueue"
             )
             resource_capacity = sum(

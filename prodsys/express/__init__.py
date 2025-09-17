@@ -43,9 +43,22 @@ from prodsys.express.process import (
     TransportProcess,
     LinkTransportProcess,
     ReworkProcess,
+    ProcessModel,
+    SequentialProcess,
+    LoadingProcess,
 )
-from prodsys.express.resources import Resource
-from prodsys.express.product import Product
+from prodsys.express.resources import Resource, SystemResource
+from prodsys.express.product import Product, create_product
+
+# Monkey-patch Product class to use the factory function for backward compatibility
+_original_product = Product
+
+def _patched_product(*args, **kwargs):
+    """Patched Product class that handles backward compatibility."""
+    return create_product(*args, **kwargs)
+
+# Replace the Product class with our patched version
+Product = _patched_product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
 from prodsys.express.primitive import Primitive

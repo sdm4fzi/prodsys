@@ -9,7 +9,7 @@ The following resources are available:
 
 from __future__ import annotations
 from hashlib import md5
-from typing import Any, Literal, Union, List, Optional, TYPE_CHECKING
+from typing import Any, Literal, Union, List, Optional, TYPE_CHECKING, Dict
 from enum import Enum
 
 from pydantic import (
@@ -109,7 +109,7 @@ class ResourceData(CoreAsset, Locatable):
     def check_process_capacity(cls, values):
         if not isinstance(values, dict):
             return values
-        if not "process_capacities" in values or values["process_capacities"] is None:
+        if "process_capacities" not in values or values["process_capacities"] is None:
             values["process_capacities"] = [
                 values["capacity"] for _ in values["process_ids"]
             ]
@@ -252,3 +252,105 @@ class ResourceData(CoreAsset, Locatable):
             ]
         }
     )
+
+
+class SystemResourceData(ResourceData):
+    """
+    Class that represents system resource data. A system resource is a resource with subresources that can be used interchangeably.
+
+    Args:
+        ID (str): ID of the system resource.
+        description (str): Description of the system resource.
+        capacity (int): Capacity of the system resource.
+        location (List[float]): Location of the system resource.
+        controller (ControllerEnum): Controller of the system resource.
+        control_policy (Union[ResourceControlPolicy, TransportControlPolicy]): Control policy of the system resource.
+        process_ids (List[str]): Process IDs of the system resource.
+        subresource_ids (List[str]): List of subresource IDs that are part of this system.
+        system_ports (Optional[List[str]], optional): List of system port IDs for external communication. Defaults to None.
+        internal_routing_matrix (Optional[Dict[str, List[str]]], optional): Internal routing matrix for routing within the system. Defaults to None.
+        process_capacities (Optional[List[int]], optional): Process capacities of the system resource. Defaults to None.
+        state_ids (Optional[List[str]], optional): State IDs of the system resource. Defaults to [].
+        ports (Optional[List[str]], optional): List of port IDs that are used by the system resource. Defaults to None.
+        can_move (Optional[bool], optional): Whether the system resource can move. Defaults to None.
+        batch_size (Optional[int], optional): Batch size of the system resource. Defaults to None.
+        dependency_ids (List[str]): List of dependency IDs that are required by the system resource.
+    """
+
+    subresource_ids: List[str]
+    system_ports: Optional[List[str]] = None
+    internal_routing_matrix: Optional[Dict[str, List[str]]] = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "SR1",
+                    "description": "System Resource 1",
+                    "capacity": 1,
+                    "location": [20.0, 20.0],
+                    "controller": "PipelineController",
+                    "control_policy": "FIFO",
+                    "process_ids": ["P1", "P2"],
+                    "subresource_ids": ["R1", "R2", "R3"],
+                    "system_ports": ["SP1", "SP2"],
+                    "internal_routing_matrix": {"SP1": ["R1"], "R1": ["R2"], "R2": ["R3"], "R3": ["SP2"]},
+                    "process_capacities": [1, 1],
+                    "state_ids": [],
+                    "ports": ["IQ1", "OQ1"],
+                    "can_move": False,
+                }
+            ]
+        }
+    )
+
+    def hash(self, production_system: ProductionSystemData) -> str:
+        """
+        Returns a unique hash of the system resource considering the subresources and internal routing.
+
+        Args:
+            production_system (ProductionSystemData): Adapter that contains the resource data.
+
+        Returns:
+            str: Hash of the system resource.
+        """
+        base_hash = super().hash(production_system)
+        
+        # Add subresource hashes
+        subresource_hashes = []
+        for subresource_id in self.subresource_ids:
+            for resource in production_system.resource_data:
+                if resource.ID == subresource_id:
+                    subresource_hashes.append(resource.hash(production_system))
+                    break
+            else:
+                raise ValueError(
+                    f"Subresource with ID {subresource_id} not found for system resource {self.ID}."
+                )
+        
+        # Add system port hashes
+        system_port_hashes = []
+        if self.system_ports:
+            for port_id in self.system_ports:
+                for port in production_system.port_data:
+                    if port.ID == port_id:
+                        system_port_hashes.append(port.hash())
+                        break
+                else:
+                    raise ValueError(
+                        f"System port with ID {port_id} not found for system resource {self.ID}."
+                    )
+        
+        # Add internal routing matrix hash
+        routing_hash = ""
+        if self.internal_routing_matrix:
+            routing_hash = "".join([f"{k}:{','.join(sorted(v))}" for k, v in sorted(self.internal_routing_matrix.items())])
+        
+        components = [
+            base_hash,
+            *sorted(subresource_hashes),
+            *sorted(system_port_hashes),
+            routing_hash,
+        ]
+        
+        return md5("".join(components).encode("utf-8")).hexdigest()

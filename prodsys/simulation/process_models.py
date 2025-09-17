@@ -191,6 +191,15 @@ class PrecedenceGraphProcessModel(ProcessModel):
             ]
         return str(adjacency_matrix)
 
+    def clear(self):
+        """
+        Clears the marking of all nodes in the process model.
+        """
+        for node in self.nodes:
+            node.marking = False
+        self.current_marking = None
+        self.set_initial_marking()
+
     def set_initial_marking(self):
         """
         Sets the initial marking of the process model. The initial marking is a node that has no predecessing nodes.

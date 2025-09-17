@@ -11,7 +11,6 @@ The following time models are possible:
 
 from hashlib import md5
 from typing import List, Literal, Union
-from typing_extensions import deprecated
 from enum import Enum
 
 from pydantic import ConfigDict, Field

@@ -42,6 +42,7 @@ class RequestType(Enum):
     PRIMITIVE_DEPENDENCY = "primitive"
     PROCESS_DEPENDENCY = "process_dependency"
     RESOURCE_DEPENDENCY = "resource_dependency"
+    PROCESS_MODEL = "process_model"
 
 
 class Request:

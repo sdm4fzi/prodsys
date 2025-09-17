@@ -793,6 +793,8 @@ class ProductionSystemData(BaseModel):
                 process, processes_data_module.CompoundProcessData
             ) or isinstance(
                 process, processes_data_module.RequiredCapabilityProcessData
+            ) or isinstance(
+                process, processes_data_module.ProcessModelData
             ):
                 continue
             time_models = get_set_of_IDs(values["time_model_data"])

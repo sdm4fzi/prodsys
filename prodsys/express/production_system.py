@@ -100,7 +100,7 @@ class ProductionSystem(core.ExpressObject):
         dependencies = remove_duplicate_items(dependencies)
         processes = list(
             util.flatten_object(
-                [product.processes for product in products]
+                [product.process for product in products]
                 + [product.transport_process for product in products]
                 + [resource.processes for resource in self.resources]
             )
@@ -145,7 +145,7 @@ class ProductionSystem(core.ExpressObject):
             [
                 process_instance.time_model
                 for process_instance in processes
-                if not isinstance(process_instance, process.RequiredCapabilityProcess)
+                if not isinstance(process_instance, (process.RequiredCapabilityProcess, process.ProcessModel))
             ]
             + [state_instance.time_model for state_instance in states]
             + [source.time_model for source in self.sources]
