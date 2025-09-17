@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 from prodsys.models.resource_data import (
     ResourceData,
+    SystemResourceData,
 )
 from prodsys.util import util
 
@@ -526,7 +527,165 @@ class Resource(resource.Resource):
         target_queue.reserve()
 
 
-RESOURCE_UNION = Resource
+class SystemResource(Resource):
+    """
+    Class that represents a system resource. A system resource is a resource with subresources that can be used interchangeably.
+
+    Args:
+        env (sim.Environment): The simpy environment.
+        data (SystemResourceData): The system resource data.
+        processes (List[PROCESS_UNION]): The processes.
+        controller (control.Controller): The controller.
+        subresources (List[Resource]): The subresources of this system.
+        system_ports (List[port.Queue]): The system ports for external communication.
+        internal_routing_matrix (Dict[str, List[str]]): Internal routing matrix for routing within the system.
+        can_move (bool): Whether the resource can move.
+        can_process (bool): Whether the resource can process.
+        states (List[state.State]): The states of the resource for breakdowns.
+        production_states (List[state.State]): The states of the resource for production.
+        setup_states (List[state.SetupState]): The states of the resource for setups.
+        charging_states (List[state.ChargingState]): The states of the resource for charging.
+        ports (List[port.Queue]): The ports of the resource.
+    """
+
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: SystemResourceData,
+        processes: List[PROCESS_UNION],
+        controller: control.Controller,
+        subresources: List[Resource] = None,
+        system_ports: List[port.Queue] = None,
+        internal_routing_matrix: Dict[str, List[str]] = None,
+        can_move: bool = False,
+        can_process: bool = False,
+        states: List[state.State] = None,
+        production_states: List[state.State] = None,
+        setup_states: List[state.SetupState] = None,
+        charging_states: List[state.ChargingState] = None,
+        ports: List[port.Queue] = None,
+    ):
+        super().__init__(
+            env, data, processes, controller, can_move, can_process,
+            states, production_states, setup_states, charging_states, ports
+        )
+        self.subresources = subresources or []
+        self.system_ports = system_ports or []
+        self.internal_routing_matrix = internal_routing_matrix or {}
+        
+        # Create mapping for quick lookup
+        self.subresource_map = {resource.data.ID: resource for resource in self.subresources}
+        self.system_port_map = {port.data.ID: port for port in self.system_ports}
+
+    def get_available_subresources(self, process_id: str) -> List[Resource]:
+        """
+        Get subresources that can handle the given process.
+
+        Args:
+            process_id (str): The process ID to check.
+
+        Returns:
+            List[Resource]: List of available subresources that can handle the process.
+        """
+        available_resources = []
+        for subresource in self.subresources:
+            if any(process.data.ID == process_id for process in subresource.processes):
+                if not subresource.full and not subresource.bound:
+                    available_resources.append(subresource)
+        return available_resources
+
+    def find_internal_route(self, origin: str, target: str) -> List[str]:
+        """
+        Find a route within the system from origin to target.
+
+        Args:
+            origin (str): Origin resource/port ID.
+            target (str): Target resource/port ID.
+
+        Returns:
+            List[str]: List of resource/port IDs representing the route.
+        """
+        if origin == target:
+            return [origin]
+        
+        # Simple BFS to find shortest path
+        queue = [(origin, [origin])]
+        visited = {origin}
+        
+        while queue:
+            current, path = queue.pop(0)
+            
+            if current in self.internal_routing_matrix:
+                for neighbor in self.internal_routing_matrix[current]:
+                    if neighbor == target:
+                        return path + [neighbor]
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append((neighbor, path + [neighbor]))
+        
+        return []  # No route found
+
+    def get_system_port(self, port_id: str) -> Optional[port.Queue]:
+        """
+        Get a system port by ID.
+
+        Args:
+            port_id (str): The port ID.
+
+        Returns:
+            Optional[port.Queue]: The system port if found, None otherwise.
+        """
+        return self.system_port_map.get(port_id)
+
+    def get_subresource(self, resource_id: str) -> Optional[Resource]:
+        """
+        Get a subresource by ID.
+
+        Args:
+            resource_id (str): The resource ID.
+
+        Returns:
+            Optional[Resource]: The subresource if found, None otherwise.
+        """
+        return self.subresource_map.get(resource_id)
+
+    def can_handle_process(self, process_id: str) -> bool:
+        """
+        Check if this system resource can handle the given process.
+
+        Args:
+            process_id (str): The process ID to check.
+
+        Returns:
+            bool: True if the system can handle the process.
+        """
+        # Check if any subresource can handle the process
+        return any(
+            any(process.data.ID == process_id for process in subresource.processes)
+            for subresource in self.subresources
+        )
+
+    def route_to_subresource(self, process_id: str, product: product.Product) -> Optional[Resource]:
+        """
+        Route a product to an appropriate subresource for the given process.
+
+        Args:
+            process_id (str): The process ID.
+            product (product.Product): The product to route.
+
+        Returns:
+            Optional[Resource]: The subresource to route to, or None if no suitable resource found.
+        """
+        available_resources = self.get_available_subresources(process_id)
+        if not available_resources:
+            return None
+        
+        # For now, use the first available resource
+        # In a more sophisticated implementation, this could use routing heuristics
+        return available_resources[0]
+
+
+RESOURCE_UNION = Union[Resource, SystemResource]
 """ Union Type for Resources. """
 
 from prodsys.simulation import port, state

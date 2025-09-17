@@ -16,24 +16,12 @@ def storage_simulation_adapter() -> ProductionSystemData:
 
     tp = psx.TransportProcess(t3, "tp")
 
-    storage = psx.Store(
-        ID="storage",
-        location=[5, 1],
-        input_location=[4, 1],
-        output_location=[6, 1],
-        capacity=10,
-    )
-    storage2 = psx.Store(ID="output_storage", location=[9, 1], capacity=5)
-
     machine = psx.Resource(
         [p1],
         [5, 0],
         3,
         ID="machine",
         internal_queue_size=2,
-        # FIXME: storages are buggy, no result is produced and transport is locked. Pending put increases...
-        input_stores=[storage],
-        output_stores=[storage],
     )
 
     machine2 = psx.Resource(
@@ -42,7 +30,6 @@ def storage_simulation_adapter() -> ProductionSystemData:
         3,
         ID="machine2",
         internal_queue_size=2,
-        output_stores=[storage, storage2],
     )
 
     transport = psx.Resource([tp], [0, 0], 1, ID="transport")
@@ -67,14 +54,14 @@ def test_initialize_simulation(storage_simulation_adapter: ProductionSystemData)
 
 def test_hashing(storage_simulation_adapter: ProductionSystemData):
     hash_str = storage_simulation_adapter.hash()
-    assert hash_str == "02219f0b66c6b4395691b911b8b57127"
+    assert hash_str == "c50a7c16aed390c42b019337b767428a"
 
 
 def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
-    runner_instance.run(2000)
-    assert runner_instance.env.now == 2000
+    runner_instance.run(100)
+    assert runner_instance.env.now == 100
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":

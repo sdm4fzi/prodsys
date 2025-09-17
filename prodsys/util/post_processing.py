@@ -266,6 +266,9 @@ class PostProcessor:
             product_types_max_start_time[product_type] = df_product_type[
                 "Start_time"
             ].max()
+        if not product_types_min_start_time:
+            logger.info("No products finished during simulation, cannot perform warm up cutoff.")
+            return df
         cut_off_time = min(product_types_min_start_time.values())
         for (
             product_type,

@@ -30,10 +30,6 @@ if TYPE_CHECKING:
     )
     from prodsys.simulation.process import PROCESS_UNION, ReworkProcess
 
-    Locatable = Union[
-        resources.Resource, node.Node, source.Source, sink.Sink, port.Store
-    ]
-
 
 class ProductInfo:
     """
@@ -335,3 +331,9 @@ class Product:
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
 from prodsys.simulation import port, process
+
+
+# Locatable = Union[
+#         resources.Resource, node.Node, source.Source, sink.Sink, port.Store
+#     ]
+Locatable=None

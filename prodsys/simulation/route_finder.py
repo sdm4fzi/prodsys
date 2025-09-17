@@ -122,7 +122,7 @@ class RouteFinder:
 
         pathfinder_edges = []
 
-        if origin.can_move:
+        if hasattr(origin, 'can_move') and origin.can_move:
             # this is necessary since a transport resource can be initialized with a random location, so a link is needed for the first drive
             origin_location = origin.get_location()
             closest_locatable = None
@@ -142,7 +142,7 @@ class RouteFinder:
             link_origin = link[0]
             link_target = link[1]
             if (
-                not isinstance(link_origin, (Store)) or (isinstance(link_origin, Resource) and not link_origin.can_move) 
+                not isinstance(link_origin, (Store)) or (isinstance(link_origin, Resource) and not (hasattr(link_origin, 'can_move') and link_origin.can_move)) 
                 or not link_origin == origin
             ):
                 origin_location = link_origin.get_location()
@@ -152,7 +152,7 @@ class RouteFinder:
                 origin_location = link_origin.get_location(interaction="output")
 
             if (
-                not isinstance(link_target, (Store)) or (isinstance(link_target, Resource) and not link_target.can_move)
+                not isinstance(link_target, (Store)) or (isinstance(link_target, Resource) and not (hasattr(link_target, 'can_move') and link_target.can_move))
                 or not link_target == target
             ):
                 target_location = link_target.get_location()

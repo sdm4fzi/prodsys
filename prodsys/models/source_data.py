@@ -89,7 +89,7 @@ class SourceData(CoreAsset, Locatable):
 
         output_queue_hashes = []
         for output_queue in self.ports:
-            for queue in adapter.queue_data:
+            for queue in adapter.port_data:
                 if queue.ID == output_queue:
                     output_queue_hashes.append(queue.hash())
                     break

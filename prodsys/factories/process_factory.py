@@ -18,6 +18,8 @@ PROCESS_MAP = {
     processes_data.ProcessTypeEnum.CompoundProcesses: process.CompoundProcess,
     processes_data.ProcessTypeEnum.LinkTransportProcesses: process.LinkTransportProcess,
     processes_data.ProcessTypeEnum.RequiredCapabilityProcesses: process.RequiredCapabilityProcess,
+    processes_data.ProcessTypeEnum.ProcessModels: process.ProcessModelProcess,
+    processes_data.ProcessTypeEnum.LoadingProcesses: process.LoadingProcess,
 }
 
 
@@ -59,6 +61,7 @@ class ProcessFactory:
         if not (
             isinstance(process_data, processes_data.CompoundProcessData)
             or isinstance(process_data, processes_data.RequiredCapabilityProcessData)
+            or isinstance(process_data, processes_data.ProcessModelData)
         ):
             time_model = self.time_model_factory.get_time_model(
                 process_data.time_model_id
@@ -96,6 +99,9 @@ class ProcessFactory:
             # TODO: think about getting here the processes and not only ids...
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
             values.update({"blocking": process_data.blocking})
+        if isinstance(process_data, (processes_data.ProcessModelData)):
+            contained_processes = [self.processes[process_id] for process_id in process_data.adjacency_matrix.keys()]
+            values.update({"contained_processes": contained_processes})
 
         process_class = PROCESS_MAP.get(process_data.type)
         if process_class is None:

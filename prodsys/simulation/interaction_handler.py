@@ -59,9 +59,17 @@ class InteractionHandler:
         Returns:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
+        # Get origin ports - handle Store objects that have store_ports instead of ports
+        if hasattr(routed_request.origin, 'ports'):
+            origin_ports = routed_request.origin.ports
+        elif hasattr(routed_request.origin, 'store_ports'):
+            origin_ports = routed_request.origin.store_ports
+        else:
+            origin_ports = []
+            
         origin_output_ports = [
             q
-            for q in routed_request.origin.ports
+            for q in origin_ports
             if q.data.interface_type
             in [
                 port_data.PortInterfaceType.OUTPUT,
@@ -70,9 +78,17 @@ class InteractionHandler:
         ]
         origin_port = self.get_origin_port(origin_output_ports, routed_request)
 
+        # Get target ports - handle Store objects that have store_ports instead of ports
+        if hasattr(routed_request.target, 'ports'):
+            target_ports = routed_request.target.ports
+        elif hasattr(routed_request.target, 'store_ports'):
+            target_ports = routed_request.target.store_ports
+        else:
+            target_ports = []
+            
         target_input_ports = [
             q
-            for q in routed_request.target.ports
+            for q in target_ports
             if q.data.interface_type
             in [
                 port_data.PortInterfaceType.INPUT,
@@ -132,20 +148,35 @@ class InteractionHandler:
         Returns:
             store.Queue: The selected origin port.
         """
-        origin_port = get_port_with_item(
-            possible_ports, routed_request.requesting_item.data.ID
-        )
+        # For primitives, use port selection heuristic instead of looking for specific item
+        if hasattr(routed_request.requesting_item, 'data') and hasattr(routed_request.requesting_item.data, 'type'):
+            # This is likely a primitive, use heuristic selection
+            origin_port = self.port_selection_heuristic(possible_ports, routed_request)
+        else:
+            # For products, try to find the port with the specific item
+            origin_port = get_port_with_item(
+                possible_ports, routed_request.requesting_item.data.ID
+            )
+            if origin_port is None:
+                raise ValueError(
+                    f"No port found with item ID {routed_request.requesting_item.data.ID} in possible ports."
+                )
+        
         if origin_port is None:
             raise ValueError(
-                f"No port found with item ID {routed_request.requesting_item.data.ID} in possible ports."
+                f"No suitable port found for item ID {routed_request.requesting_item.data.ID} in possible ports."
             )
+            
         if (
             origin_port.data.port_type == port_data.PortType.STORE
         ):  # Ports can have multiple input / output locations -> select the most suitable one
-            origin_port: port.Store
-            origin_port = self.port_selection_heuristic(
-                origin_port.store_ports, routed_request
-            )
+            if hasattr(origin_port, 'store_ports'):
+                # This is a Store object with store_ports
+                origin_port: port.Store
+                origin_port = self.port_selection_heuristic(
+                    origin_port.store_ports, routed_request
+                )
+            # If it's a StorePort, we don't need to do anything else
         return origin_port
 
     def get_target_port(
@@ -168,10 +199,13 @@ class InteractionHandler:
                 f"No suitable port found for item ID {routed_request.requesting_item.ID} in possible ports."
             )
         if target_port.data.port_type == port_data.PortType.STORE:
-            target_port: port.Store
-            target_port = self.port_selection_heuristic(
-                target_port.store_ports, routed_request
-            )
+            if hasattr(target_port, 'store_ports'):
+                # This is a Store object with store_ports
+                target_port: port.Store
+                target_port = self.port_selection_heuristic(
+                    target_port.store_ports, routed_request
+                )
+            # If it's a StorePort, we don't need to do anything else
         return target_port
 
 

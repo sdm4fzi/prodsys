@@ -99,7 +99,7 @@ if __name__ == "__main__":
         "examples/control/control_example_data/control_configuration.json"
     )
     resource_data = [r for r in adapter.resource_data if r.ID == resource_id][0]
-    queue = [q for q in adapter.queue_data if q.ID == resource_data.input_queues[0]][0]
+    queue = [q for q in adapter.port_data if q.ID == resource_data.input_queues[0]][0]
     shape = (queue.capacity + resource_data.capacity, len(resource_data.process_ids))
     observation_space = spaces.Box(0, 1, shape=shape, dtype=int)
     action_space = spaces.Box(0, 1, shape=(queue.capacity,), dtype=float)

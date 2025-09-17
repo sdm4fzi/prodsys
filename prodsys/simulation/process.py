@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.sink import Sink
     from prodsys.simulation.node import Node
     from prodsys.simulation import request as request_module
-
+    
 
 from prodsys.models import processes_data
 
@@ -538,6 +538,97 @@ class LinkTransportProcess(TransportProcess):
         return self.time_model.get_expected_time(*args)
 
 
+class ProcessModelProcess(Process):
+    """
+    Class that represents a process model process.
+
+    Args:
+        data (processes_data.ProcessModelData): The process data.
+        time_model (time_model.TimeModel): The time model.
+        contained_processes (List[PROCESS_UNION]): The processes contained in this process model.
+    """
+
+    def __init__(
+        self,
+        data: processes_data.ProcessModelData,
+        time_model: Optional[time_model.TimeModel] = None,
+        dependencies: Optional[
+            typing.List[Dependency]
+        ] = None,
+        contained_processes: Optional[List[PROCESS_UNION]] = None,
+        adjacency_matrix: Optional[Dict[str, List[str]]] = None,
+    ):
+        super().__init__(data, time_model, dependencies)
+        self.contained_processes = contained_processes or []
+        self.processes_per_id = {process.data.ID: process for process in contained_processes}
+        self.adjacency_matrix = adjacency_matrix
+        self.precedence_graph = PrecedenceGraphProcessModel()
+        self.build_precedence_graph()
+
+
+    def build_precedence_graph(self):
+        successors_per_id = {process_id: [] for process_id in self.adjacency_matrix.keys()}
+        predecessors_per_id = {process_id: [] for process_id in self.adjacency_matrix.keys()}
+        for process_id, successors in self.adjacency_matrix.items():
+            for successor in successors:
+                successors_per_id[process_id].append(self.processes_per_id[successor])
+                predecessors_per_id[successor].append(self.processes_per_id[process_id])
+        for process_id, successors in successors_per_id.items():
+            self.precedence_graph.add_node(self.processes_per_id[process_id], successors, predecessors_per_id[process_id])
+
+    def matches_request(self, request: request_module.Request) -> bool:
+        requested_process = request.process
+        # TODO: add here cases, when the request requires a process that is contained in the process model or matches any of them maybe
+        if not isinstance(requested_process, ProcessModelProcess) and not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
+        if isinstance(requested_process, CompoundProcess):
+            return any(
+                p.data.ID in self.data.process_ids
+                for p in requested_process.contained_processes_data
+            )
+        return requested_process.data.ID == self.data.ID
+
+    def get_expected_process_time(self) -> float:
+        # For process models, we might need to calculate based on contained processes
+        # For now, return the time model's expected time
+        return self.time_model.get_expected_time() if self.time_model else 0.0
+
+
+class LoadingProcess(Process):
+    """
+    Class that represents a loading process.
+
+    Args:
+        data (processes_data.LoadingProcessData): The process data.
+        time_model (time_model.TimeModel): The time model.
+    """
+
+    def __init__(
+        self,
+        data: processes_data.LoadingProcessData,
+        time_model: Optional[time_model.TimeModel] = None,
+        dependencies: Optional[
+            typing.List[Dependency]
+        ] = None,
+    ):
+        super().__init__(data, time_model, dependencies)
+
+    def matches_request(self, request: request_module.Request) -> bool:
+        requested_process = request.process
+        if not isinstance(requested_process, LoadingProcess) and not isinstance(
+            requested_process, CompoundProcess
+        ):
+            return False
+        if isinstance(requested_process, CompoundProcess):
+            return requested_process.data.ID in self.data.process_ids
+        return requested_process.data.ID == self.data.ID
+
+    def get_expected_process_time(self) -> float:
+        return self.time_model.get_expected_time()
+
+
 PROCESS_UNION = Union[
     CompoundProcess,
     RequiredCapabilityProcess,
@@ -546,9 +637,12 @@ PROCESS_UNION = Union[
     CapabilityProcess,
     LinkTransportProcess,
     ReworkProcess,
+    ProcessModelProcess,
+    LoadingProcess,
 ]
 """
 Union type for all processes.
 """
 
 from prodsys.simulation import route_finder
+from prodsys.simulation.process_models import PrecedenceGraphProcessModel

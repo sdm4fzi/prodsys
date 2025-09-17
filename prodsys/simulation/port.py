@@ -54,17 +54,24 @@ class Queue:
             self._pending_put -= 1
         self.items[item.ID] = item
         self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
+        # Trigger the state change event to notify waiting get operations
+        if not self.state_change.triggered:
+            self.state_change.succeed()
 
     def get(self, item_id: str) -> Generator:
         """
         Gets a product from the queue.
 
         Args:
-            filter (Callable): The filter function to filter the items in the queue.
+            item_id (str): The ID of the item to get.
 
-        Returns:
-            object: The product that was gotten from the queue.
+        Yields:
+            Generator: A generator that yields when the item is retrieved.
         """
+        # Wait for the item to be available if not present
+        while item_id not in self.items:
+            yield self.state_change
+        
         self.items.pop(item_id)
         self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
         if not self.state_change.triggered:
@@ -136,7 +143,7 @@ class StorePort(Queue):
         Yields:
             Generator: A generator that yields the product.
         """
-        yield self.store.get(item_id)
+        yield from self.store.get(item_id)
 
     def put(self, item) -> Generator:
         """
@@ -145,7 +152,7 @@ class StorePort(Queue):
         Args:
             item (object): The product to be put into the store port.
         """
-        yield self.store.put(item)
+        yield from self.store.put(item)
 
     def get_location(self) -> List[float]:
         """

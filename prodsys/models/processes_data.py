@@ -11,7 +11,7 @@ The following processes are possible:
 from __future__ import annotations
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, List, TYPE_CHECKING, Optional
+from typing import Literal, Union, List, TYPE_CHECKING, Optional, Dict
 from pydantic import ConfigDict, Field
 
 from prodsys.models.core_asset import CoreAsset
@@ -36,6 +36,9 @@ class ProcessTypeEnum(str, Enum):
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
     ReworkProcesses = "ReworkProcesses"
+    ProcessModels = "ProcessModels"
+    SequentialProcesses = "SequentialProcesses"
+    LoadingProcesses = "LoadingProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -498,6 +501,99 @@ class LinkTransportProcessData(TransportProcessData):
     )
 
 
+class ProcessModelData(CoreAsset):
+    """
+    Class that represents process model data. A process model can model sequences of processes as a directed acyclic graph (DAG).
+
+    Args:
+        ID (str): ID of the process model.
+        description (str): Description of the process model.
+        type (Literal[ProcessTypeEnum.ProcessModels]): Type of the process.
+        process_ids (List[str]): List of process IDs that are part of this process model.
+        adjacency_matrix (Dict[str, List[str]]): Adjacency matrix representing the DAG structure.
+        can_contain_other_models (bool): Whether this process model can contain other process models.
+    """
+
+    type: Literal[ProcessTypeEnum.ProcessModels]
+    adjacency_matrix: Dict[str, List[str]]
+    can_contain_other_models: bool = False
+    dependency_ids: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "PM1",
+                    "description": "Process Model 1",
+                    "type": "ProcessModels",
+                    "adjacency_matrix": {"P1": ["P2"], "P2": ["P3"], "P3": []},
+                    "can_contain_other_models": False,
+                    "dependency_ids": ["P1", "P2"],
+                }
+            ]
+        }
+    )
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the process model data considering the process IDs and adjacency matrix.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the process data.
+
+        Returns:
+            str: hash of the process model data.
+        """
+        adjacency_hash = "".join([f"{k}:{','.join(sorted(v))}" for k, v in sorted(self.adjacency_matrix.items())])
+        return md5((adjacency_hash).encode("utf-8")).hexdigest()
+
+class LoadingProcessData(ProcessData):
+    """
+    Class that represents loading process data. Loading processes can be chained in sequential processes or be mandatory dependencies.
+
+    Args:
+        ID (str): ID of the loading process.
+        description (str): Description of the loading process.
+        time_model_id (str): ID of the time model of the loading process.
+        type (Literal[ProcessTypeEnum.LoadingProcesses]): Type of the process.
+        dependency_type (Literal["before", "after", "parallel"]): Type of dependency relationship.
+        can_be_chained (bool): Whether this loading process can be chained with others.
+    """
+
+    type: Literal[ProcessTypeEnum.LoadingProcesses]
+    dependency_type: Literal["before", "after", "parallel"]
+    can_be_chained: bool = True
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "LP1",
+                    "description": "Loading Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "LoadingProcesses",
+                    "dependency_type": "before",
+                    "can_be_chained": True,
+                }
+            ]
+        }
+    )
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the loading process data considering the dependency type and chaining capability.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the loading process data.
+        """
+        base_class_hash = super().hash(adapter)
+        dependency_info = f"{self.dependency_type}_{self.can_be_chained}"
+        return md5((base_class_hash + dependency_info).encode("utf-8")).hexdigest()
+
+
 PROCESS_DATA_UNION = Union[
     CompoundProcessData,
     RequiredCapabilityProcessData,
@@ -506,4 +602,6 @@ PROCESS_DATA_UNION = Union[
     CapabilityProcessData,
     LinkTransportProcessData,
     ReworkProcessData,
+    ProcessModelData,
+    LoadingProcessData,
 ]

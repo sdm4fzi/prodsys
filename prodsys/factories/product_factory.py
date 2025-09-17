@@ -132,28 +132,9 @@ class ProductFactory:
         Returns:
             proces_models.ProcessModel: Created process model.
         """
-        if isinstance(product_data.processes, list) and isinstance(
-            product_data.processes[0], str
-        ):
-            process_list = self.process_factory.get_processes_in_order(
-                product_data.processes
-            )
-            return process_models.ListProcessModel(process_list=process_list)
-        elif isinstance(product_data.processes, dict):
-            return self.get_precendece_graph_from_id_adjacency_matrix(
-                product_data.processes
-            )
-        elif isinstance(product_data.processes, list) and isinstance(
-            product_data.processes[0], list
-        ):
-            id_adjacency_matrix = process_models.get_adjacency_matrix_from_edges(
-                product_data.processes
-            )
-            return self.get_precendece_graph_from_id_adjacency_matrix(
-                id_adjacency_matrix
-            )
-        else:
-            raise ValueError("Process model not recognized.")
+        return self.get_precendece_graph_from_id_adjacency_matrix(
+            product_data.processes
+        )
 
     def get_product(self, ID: str) -> product.Product:
         """
