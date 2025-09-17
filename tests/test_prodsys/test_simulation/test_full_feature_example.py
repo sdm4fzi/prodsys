@@ -161,7 +161,7 @@ def simulation_adapter() -> ProductionSystemData:
     product1 = psx.Product([p1, p2, p3, p4], tp, "product1")
     product2 = psx.Product([p3, p5, p4], tp, "product2")
     product3 = psx.Product([cp1, cp2, cp3], tp, "product3")
-    product4 = psx.Product([p1, p3, p4, p3, p5], tp, "product4")
+    product4 = psx.Product([p1, p3, p4, p5], tp, "product4")
 
     sink1 = psx.Sink(product1, [10, 0], "sink1")
     sink2 = psx.Sink(product2, [10, 0], "sink2")

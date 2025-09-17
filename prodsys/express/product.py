@@ -80,8 +80,11 @@ class Product(core.ExpressObject):
             # Extract process IDs
             process_ids = [p.ID for p in v]
             
-            # Create SequentialProcess
+            # Create SequentialProcess with a dummy time model
+            from prodsys.express import time_model
+            dummy_time_model = time_model.FunctionTimeModel("constant", 0.0, ID="dummy_time_model")
             sequential_process = process.SequentialProcess(
+                time_model=dummy_time_model,
                 process_ids=process_ids,
                 ID="sequential_process"
             )

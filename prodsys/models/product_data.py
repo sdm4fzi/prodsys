@@ -108,18 +108,15 @@ class ProductData(PrimitiveData):
         processes_hashes = []
         transport_process_hash = ""
 
-        for process_id, successors in self.processes.items():
+        # Hash all unique processes in the adjacency matrix
+        unique_process_ids = set(self.processes.keys())
+        for process_id in unique_process_ids:
             process = next((process for process in adapter.process_data if process.ID == process_id), None)
             if process is None:
                 raise ValueError(
                     f"Process with ID {process_id} not found for product {self.ID}."
                 )
             processes_hashes.append(process.hash(adapter))
-            for successor in successors:
-                for process in adapter.process_data:
-                    if process.ID == successor:
-                        processes_hashes.append(process.hash(adapter))
-                        break
 
         # TODO: add hashing for auxiliaries!
 

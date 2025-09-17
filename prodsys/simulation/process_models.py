@@ -177,6 +177,16 @@ class PrecedenceGraphProcessModel(ProcessModel):
         self.nodes = []
         self.current_marking = None
 
+    @property
+    def process_list(self) -> List[PROCESS_UNION]:
+        """
+        Returns a list of all processes in the precedence graph.
+        
+        Returns:
+            List[PROCESS_UNION]: List of all processes in the precedence graph.
+        """
+        return [node.process for node in self.nodes]
+
     def __str__(self) -> str:
         """
         Returns a string representation of the adjacency matrix of the process model.
@@ -186,8 +196,8 @@ class PrecedenceGraphProcessModel(ProcessModel):
         """
         adjacency_matrix = {}
         for node in self.nodes:
-            adjacency_matrix[node.process.process_data.ID] = [
-                successor.process.process_data.ID for successor in node.successors
+            adjacency_matrix[node.process.data.ID] = [
+                successor.process.data.ID for successor in node.successors
             ]
         return str(adjacency_matrix)
 
@@ -240,7 +250,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
         Returns:
             List[str]: List of process IDs of all nodes in the process model.
         """
-        return [node.process.process_data.ID for node in self.nodes]
+        return [node.process.data.ID for node in self.nodes]
 
     def add_node(
         self,

@@ -50,6 +50,9 @@ class ProcessFactory:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the process data.
         """
         for process_data in adapter.process_data:
+            # Skip ProcessModelData as it's not a real process but a process model
+            if isinstance(process_data, processes_data.ProcessModelData):
+                continue
             self.add_processes(process_data, adapter)
 
     def add_processes(
@@ -100,8 +103,12 @@ class ProcessFactory:
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
             values.update({"blocking": process_data.blocking})
         if isinstance(process_data, (processes_data.ProcessModelData)):
-            contained_processes = [self.processes[process_id] for process_id in process_data.adjacency_matrix.keys()]
-            values.update({"contained_processes": contained_processes})
+            # For ProcessModelData, we don't need contained_processes at creation time
+            # as the processes are referenced by ID in the adjacency matrix
+            values.update({
+                "contained_processes": [],
+                "adjacency_matrix": process_data.adjacency_matrix
+            })
 
         process_class = PROCESS_MAP.get(process_data.type)
         if process_class is None:
