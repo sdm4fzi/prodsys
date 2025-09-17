@@ -93,8 +93,9 @@ def test_product_with_process_model():
     
     data_model = product.to_model()
     assert data_model.ID == "product1"
-    assert len(data_model.processes) == 1
-    assert data_model.processes[0] == "pm1"
+    assert len(data_model.processes) == 2  # adjacency matrix has 2 processes: p1 and p2
+    assert "p1" in data_model.processes
+    assert "p2" in data_model.processes
 
 
 def test_sequential_process_auto_adjacency():

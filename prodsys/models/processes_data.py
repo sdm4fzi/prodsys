@@ -519,6 +519,11 @@ class ProcessModelData(CoreAsset):
     can_contain_other_models: bool = False
     dependency_ids: list[str] = Field(default_factory=list)
 
+    @property
+    def process_ids(self) -> List[str]:
+        """Returns the list of process IDs from the adjacency matrix keys."""
+        return list(self.adjacency_matrix.keys())
+
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
