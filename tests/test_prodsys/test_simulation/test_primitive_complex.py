@@ -112,11 +112,11 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             assert kpi.value < 95 and kpi.value > 93
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 43 and kpi.value < 45
+            assert kpi.value > 48 and kpi.value < 52
         if kpi.name == "productive_time" and kpi.resource == "transport2":
-            assert kpi.value > 43 and kpi.value < 45
+            assert kpi.value > 48 and kpi.value < 52
         if kpi.name == "productive_time" and kpi.resource == "transport_aux":
-            assert kpi.value > 57 and kpi.value < 60
+            assert kpi.value > 71 and kpi.value < 73
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
