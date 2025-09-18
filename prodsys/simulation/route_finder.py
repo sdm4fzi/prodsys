@@ -93,7 +93,7 @@ class RouteFinder:
             graph_node_path=graph_node_path, links=process.links
         )
 
-        if origin.can_move:
+        if hasattr(origin, 'can_move') and origin.can_move:
             route = route[1:]
         return route
 
@@ -306,11 +306,23 @@ class RouteFinder:
         Returns:
             The path as a list of graph nodes.
         """
-        finder = DijkstraFinder()
-        path, _ = finder.find_path(origin, target, graph)
-        if path is None:
+        # Early termination if origin and target are the same
+        if origin.node_id == target.node_id:
+            return [origin]
+            
+        # Limit the number of nodes to prevent excessive computation
+        if len(graph.nodes) > 100:  # Arbitrary limit to prevent infinite loops
             return []
-        return path
+            
+        finder = DijkstraFinder()
+        try:
+            path, _ = finder.find_path(origin, target, graph)
+            if path is None:
+                return []
+            return path
+        except Exception:
+            # If pathfinding fails, return empty path
+            return []
 
     def convert_node_path_to_locatable_route(
         self, graph_node_path: List[GraphNode], links: List[List[Locatable]]

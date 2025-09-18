@@ -12,18 +12,17 @@ logger = logging.getLogger(__name__)
 
 from prodsys.factories import primitive_factory
 from prodsys.models.source_data import RoutingHeuristic
-from prodsys.simulation import primitive, request, process
+from prodsys.simulation import request, process
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, process
+    from prodsys.simulation import resources, product, process
     from prodsys.factories import (
         resource_factory,
         sink_factory,
         product_factory,
         source_factory,
     )
-    from prodsys.control import routing_control_env
     from prodsys.models import product_data
     from prodsys.simulation.product import Locatable
 
@@ -38,9 +37,8 @@ class ResourceCompatibilityKey:
     @classmethod
     def from_request(cls, request: request.Request) -> "ResourceCompatibilityKey":
         """Create a key from a request."""
-        product_type = request.requesting_item.data.type
         process_signature = request.process.get_process_signature()
-        return cls(product_type=product_type, process_signature=process_signature)
+        return cls(process_signature=process_signature)
 
 
 @dataclass(frozen=True)
@@ -127,6 +125,51 @@ class ProcessMatcher:
             product_data=product_data, routing_heuristic=RoutingHeuristic.FIFO
         )
 
+    def _create_dummy_products(self) -> dict[str, product.Product]:
+        """
+        Create dummy products for compatibility testing.
+        
+        Returns:
+            dict[str, product.Product]: Dictionary mapping product types to dummy products.
+        """
+        dummy_products: dict[str, product.Product] = {}
+        for source in self.source_factory.sources.values():
+            product_type = source.product_data.type
+            dummy_products[product_type] = self._create_dummy_product(
+                source.product_data
+            )
+        return dummy_products
+
+    def _precompute_production_compatibility(self, dummy_products: dict[str, product.Product]):
+        """
+        Precompute production resource compatibility.
+        
+        Args:
+            dummy_products: Dictionary of dummy products for testing.
+        """
+        for product_type, dummy_product in dummy_products.items():
+            all_processes_of_product = self.get_all_required_processes(dummy_product)
+            for requested_process in all_processes_of_product:
+                for resource in self.resource_factory.get_production_resources():
+                    dummy_production_request = request.Request(
+                        process=requested_process,
+                        requesting_item=dummy_product,
+                        resource=resource,
+                        request_type=request.RequestType.PRODUCTION,
+                    )
+                    for offered_process in resource.processes:
+                        # Test if this process matches the request
+                        if offered_process.matches_request(dummy_production_request):
+                            key = ResourceCompatibilityKey(
+                                process_signature=requested_process.get_process_signature(),
+                            )
+                            if key not in self.production_compatibility:
+                                self.production_compatibility[key] = []
+                            self.production_compatibility[key].append(
+                                (resource, offered_process)
+                            )
+                            dummy_product.update_executed_process(offered_process)
+
     def get_all_required_processes(
         self, product: product.Product
     ) -> List[process.PROCESS_UNION]:
@@ -152,96 +195,13 @@ class ProcessMatcher:
         start_time = time.time()
         logger.info("Precomputing resource compatibility tables...")
 
-        # Get dummy product for testing
-        dummy_products: dict[str, product.Product] = {}
-        for source in self.source_factory.sources.values():
-            product_type = source.product_data.type
-            dummy_products[product_type] = self._create_dummy_product(
-                source.product_data
-            )
+        # Get dummy products for testing
+        dummy_products = self._create_dummy_products()
 
-        # Precompute production resource compatibility
-        for product_type, dummy_product in dummy_products.items():
-            all_processes_of_product = self.get_all_required_processes(dummy_product)
-            for requested_process in all_processes_of_product:
-                for resource in self.resource_factory.get_production_resources():
-                    dummy_production_request = request.Request(
-                        process=requested_process,
-                        requesting_item=dummy_product,
-                        resource=resource,
-                        request_type=request.RequestType.PRODUCTION,
-                    )
-                    for offered_process in resource.processes:
-                        # Test if this process matches the request
-                        if offered_process.matches_request(dummy_production_request):
-                            key = ResourceCompatibilityKey(
-                                process_signature=requested_process.get_process_signature(),
-                            )
-                            if key not in self.production_compatibility:
-                                self.production_compatibility[key] = []
-                            self.production_compatibility[key].append(
-                                (resource, offered_process)
-                            )
-                            dummy_product.update_executed_process(offered_process)
-
-        # Precompute transport resource compatibility and reachability
-        required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
-        for item, requested_process in required_transport_processes:
-            for transport_resource in self.resource_factory.get_movable_resources():
-                for offered_process in transport_resource.processes:
-                    # For each possible origin-target pair
-                    all_locations = (
-                        list(self.resource_factory.all_resources.values())
-                        + list(self.sink_factory.sinks.values())
-                        + list(self.source_factory.sources.values())
-                        + [q for q in self.resource_factory.queue_factory.queues if hasattr(q.data, "location") and q.data.location is not None]
-                    )
-                    for origin in all_locations:
-                        for target in all_locations:
-                            # Create a dummy request to test matching
-                            dummy_product.current_locatable = origin
-
-                            dummy_transport_request = request.Request(
-                                process=requested_process,
-                                requesting_item=dummy_product,
-                                resource=transport_resource,
-                                origin=origin,
-                                target=target,
-                                request_type=request.RequestType.TRANSPORT,
-                            )
-
-                            # Test if this transport process can handle this origin-target pair
-                            if offered_process.matches_request(dummy_transport_request):
-                                key = TransportCompatibilityKey(
-                                    origin_id=origin.data.ID,
-                                    target_id=target.data.ID,
-                                    process_signature=requested_process.get_process_signature(),
-                                )
-                                if key not in self.transport_compatibility:
-                                    self.transport_compatibility[key] = []
-
-                                if (transport_resource, offered_process) in self.transport_compatibility[key]:
-                                    # Avoid duplicates
-                                    continue
-                                self.transport_compatibility[key].append(
-                                    (transport_resource, offered_process)
-                                )
-
-                                # Cache reachability information
-                                self.reachability_cache[
-                                    (origin.data.ID, target.data.ID)
-                                ] = True
-
-                                # Cache the route
-                                route_key = (
-                                    origin.data.ID,
-                                    target.data.ID,
-                                    offered_process.get_process_signature(),
-                                )
-                                if route_key not in self.route_cache:
-                                    self.route_cache[route_key] = (
-                                        dummy_transport_request
-                                    )
+        # Precompute different types of compatibility
+        self._precompute_production_compatibility(dummy_products)
+        self._precompute_transport_compatibility(dummy_products)
+        self._precompute_rework_compatibility()
 
         # Precompute compatibility of resource processes
         for resource_id, resource in self.resource_factory.all_resources.items():
@@ -253,29 +213,6 @@ class ProcessMatcher:
                 if key not in self.production_compatibility:
                     self.production_compatibility[key] = []
                 self.production_compatibility[key].append((resource, offered_process))
-
-
-        # Precompute rework process compatibility
-
-        self.rework_compatibility = {}
-        for rework_process in self.resource_factory.process_factory.processes.values():
-            if not isinstance(rework_process, process.ReworkProcess):
-                continue
-
-            for reworked_process_id in rework_process.reworked_process_ids:
-                reworked_process = self.resource_factory.process_factory.get_process(
-                    reworked_process_id
-                )
-                if not reworked_process:
-                    raise ValueError(
-                        f"Reworked process ID {reworked_process_id} not found in process factory for rework process {rework_process.data.ID}"
-                    )
-                if not reworked_process.data.failure_rate or reworked_process.data.failure_rate == 0:
-                    continue
-                process_signature = reworked_process.get_process_signature()
-                if not process_signature in self.rework_compatibility:
-                    self.rework_compatibility[process_signature] = []
-                self.rework_compatibility[process_signature].append(rework_process)
 
         
 
@@ -295,23 +232,64 @@ class ProcessMatcher:
             f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
         )
 
+    def _get_parent_from_queue(self, locatable: Locatable) -> Locatable:
+        """
+        Get the parent object from a queue object.
+        
+        Args:
+            locatable (Locatable): The queue or parent object.
+            
+        Returns:
+            Locatable: The parent object (source/resource/sink) or the original object if it's not a queue.
+        """
+        # If it's a queue, try to find its parent
+        if hasattr(locatable, 'data') and hasattr(locatable.data, 'ID'):
+            queue_id = locatable.data.ID
+            
+            # Check if this is a queue by looking for the pattern "_default_input_queue" or "_default_output_queue"
+            if "_default_input_queue" in queue_id or "_default_output_queue" in queue_id:
+                # Extract the parent ID by removing the queue suffix
+                if "_default_input_queue" in queue_id:
+                    parent_id = queue_id.replace("_default_input_queue", "")
+                else:
+                    parent_id = queue_id.replace("_default_output_queue", "")
+                
+                # Look up the parent in all locations
+                all_locations = self._get_all_locations()
+                for loc in all_locations:
+                    if hasattr(loc, 'data') and hasattr(loc.data, 'ID') and loc.data.ID == parent_id:
+                        return loc
+                        
+        # If not a queue or parent not found, return the original object
+        return locatable
+
     def get_route(
         self, origin: Locatable, target: Locatable, process: process.PROCESS_UNION
-    ) -> request.Request:
+    ) -> List[Locatable]:
         """
         Returns the route for a given origin, target, and process signature.
+        Handles mapping between queue objects and their parent objects.
 
         Args:
-            origin (Locatable): The origin location.
-            target (Locatable): The target location.
+            origin (Locatable): The origin location (could be a queue or parent object).
+            target (Locatable): The target location (could be a queue or parent object).
             process_signature (str): The process signature.
 
         Returns:
-            request.Request: The route request.
+            List[Locatable]: The route as a list of locations.
         """
+        # Map queue objects back to their parent objects for route lookup
+        parent_origin = self._get_parent_from_queue(origin)
+        parent_target = self._get_parent_from_queue(target)
+        
         process_signature = process.get_process_signature()
-        key = (origin.data.ID, target.data.ID, process_signature)
-        return self.route_cache.get(key).route
+        key = (parent_origin.data.ID, parent_target.data.ID, process_signature)
+        cached_request = self.route_cache.get(key)
+        if cached_request is None:
+            raise ValueError(f"No route found for {parent_origin.data.ID} -> {parent_target.data.ID} with process {process_signature}")
+        
+        # Return the route from the cached request
+        return cached_request.get_route()
 
     def get_compatible(
         self, requested_processes: List[process.PROCESS_UNION]
@@ -404,7 +382,368 @@ class ProcessMatcher:
         process_signature = failed_process.get_process_signature()
         rework_processes = self.rework_compatibility.get(process_signature, [])
         if not rework_processes:
+            # Get the process ID for error message
+            process_id = getattr(failed_process.data, 'ID', 'unknown') if hasattr(failed_process, 'data') else 'unknown'
             raise ValueError(
-                f"No compatible rework processes found for failed process {failed_process.data.ID} with signature {process_signature}"
+                f"No compatible rework processes found for failed process {process_id} with signature {process_signature}"
             )
         return rework_processes
+
+    def _get_all_locations(self) -> List[Locatable]:
+        """
+        Get all locations in the system (resources, sources, sinks, nodes, queues with locations).
+        
+        Returns:
+            List[Locatable]: List of all locations in the system.
+        """
+        all_locations = (
+            list(self.resource_factory.all_resources.values())
+            + list(self.sink_factory.sinks.values())
+            + list(self.source_factory.sources.values())
+            + [q for q in self.resource_factory.queue_factory.queues 
+               if hasattr(q.data, "location") and q.data.location is not None]
+        )
+        
+        # Add nodes from link transport processes
+        nodes_from_links = set()
+        for resource in self.resource_factory.all_resources.values():
+            for process in resource.processes:
+                if hasattr(process, 'links') and process.links:
+                    for link in process.links:
+                        for locatable in link:
+                            if hasattr(locatable, 'data') and hasattr(locatable.data, 'ID'):
+                                # Check if this is a node by checking the type name
+                                if (type(locatable).__name__ == 'Node' and 
+                                    locatable not in all_locations):
+                                    nodes_from_links.add(locatable)
+        
+        all_locations.extend(list(nodes_from_links))
+        return all_locations
+
+    def _get_all_queues(self) -> List:
+        """
+        Get all queues in the system.
+        
+        Returns:
+            List: List of all queues in the system.
+        """
+        return list(self.resource_factory.queue_factory.queues)
+
+    def _create_queue_to_parent_mapping(self, all_queues: List) -> Dict[str, Locatable]:
+        """
+        Create a mapping from queue IDs to their parent objects.
+        
+        Args:
+            all_queues: List of all queues in the system.
+            
+        Returns:
+            Dict[str, Locatable]: Mapping from queue ID to parent object.
+        """
+        queue_to_parent = {}
+        for queue in all_queues:
+            queue_id = queue.data.ID
+            # Find the parent resource for this queue
+            for resource in self.resource_factory.all_resources.values():
+                if hasattr(resource, 'queues') and queue in resource.queues:
+                    queue_to_parent[queue_id] = resource
+                    break
+        return queue_to_parent
+
+    def _add_to_transport_compatibility(
+        self, 
+        key: TransportCompatibilityKey, 
+        resource: resources.Resource, 
+        process: process.PROCESS_UNION
+    ):
+        """
+        Add a resource-process pair to the transport compatibility table.
+        
+        Args:
+            key: The compatibility key.
+            resource: The transport resource.
+            process: The transport process.
+        """
+        if key not in self.transport_compatibility:
+            self.transport_compatibility[key] = []
+        
+        if (resource, process) not in self.transport_compatibility[key]:
+            self.transport_compatibility[key].append((resource, process))
+
+    def _handle_required_capability_process(
+        self,
+        transport_request: request.Request,
+        requested_process: process.RequiredCapabilityProcess,
+        resource: resources.Resource,
+        offered_process: process.RequiredCapabilityProcess,
+        origin: Locatable,
+        target: Locatable
+    ):
+        """
+        Handle compatibility checking for required capability processes.
+        
+        Args:
+            transport_request: The transport request.
+            requested_process: The requested capability process.
+            resource: The transport resource.
+            offered_process: The offered capability process.
+            origin: The origin location.
+            target: The target location.
+        """
+        # Check if capabilities match
+        if (hasattr(requested_process.data, 'capability') and 
+            hasattr(offered_process.data, 'capability') and
+            requested_process.data.capability == offered_process.data.capability):
+            
+            key = TransportCompatibilityKey(
+                origin_id=origin.data.ID,
+                target_id=target.data.ID,
+                process_signature=requested_process.get_process_signature(),
+            )
+            self._add_to_transport_compatibility(key, resource, offered_process)
+            
+            # Cache reachability
+            self.reachability_cache[(origin.data.ID, target.data.ID)] = True
+
+    def _handle_link_transport_process(
+        self,
+        transport_request: request.Request,
+        requested_process: process.LinkTransportProcess,
+        resource: resources.Resource,
+        offered_process: process.LinkTransportProcess,
+        origin: Locatable,
+        target: Locatable
+    ):
+        """
+        Handle compatibility checking for link transport processes.
+        
+        Args:
+            transport_request: The transport request.
+            requested_process: The requested link transport process.
+            resource: The transport resource.
+            offered_process: The offered link transport process.
+            origin: The origin location.
+            target: The target location.
+        """
+        try:
+            from prodsys.simulation.route_finder import find_route
+            
+            # Create a proper request object for the route finder
+            route_request = request.Request(
+                process=offered_process,
+                requesting_item=transport_request.requesting_item,
+                resource=resource,
+                origin=origin,
+                target=target,
+                request_type=request.RequestType.TRANSPORT,
+            )
+            
+            # Use the route finder to check if a valid route exists
+            # The route finder will handle the link connectivity checking internally
+            route = find_route(route_request, offered_process)
+            
+            if route:
+                key = TransportCompatibilityKey(
+                    origin_id=origin.data.ID,
+                    target_id=target.data.ID,
+                    process_signature=requested_process.get_process_signature(),
+                )
+                self._add_to_transport_compatibility(key, resource, offered_process)
+                
+                # Cache reachability
+                self.reachability_cache[(origin.data.ID, target.data.ID)] = True
+                
+                # Cache the route
+                self._cache_route(route_request, origin, target, offered_process, route)
+        except ImportError:
+            # If route finder is not available, skip this process
+            pass
+
+
+    def _cache_route(
+        self,
+        request: request.Request,
+        origin: Locatable,
+        target: Locatable,
+        process: process.PROCESS_UNION,
+        route: List
+    ):
+        """
+        Cache a route for future use.
+        
+        Args:
+            request: The transport request.
+            origin: The origin location.
+            target: The target location.
+            process: The transport process.
+            route: The route to cache.
+        """
+        route_key = (
+            origin.data.ID,
+            target.data.ID,
+            process.get_process_signature(),
+        )
+        if route_key not in self.route_cache:
+            self.route_cache[route_key] = request
+
+    def _precompute_transport_compatibility(self, dummy_products: dict[str, product.Product]):
+        """
+        Precompute transport resource compatibility.
+        
+        Args:
+            dummy_products: Dictionary of dummy products for testing.
+        """
+        # Get all locations including queues
+        all_locations = self._get_all_locations()
+        all_queues = self._get_all_queues()
+        queue_to_parent = self._create_queue_to_parent_mapping(all_queues)
+        
+        # Get all transport processes from products and primitives
+        required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
+        
+        for item, requested_process in required_transport_processes:
+            for transport_resource in self.resource_factory.get_movable_resources():
+                for offered_process in transport_resource.processes:
+                    # For each possible origin-target pair (including queues)
+                    all_origin_targets = all_locations + all_queues
+                    for origin in all_origin_targets:
+                        for target in all_origin_targets:
+                            # Create a dummy request to test matching
+                            item.current_locatable = origin
+
+                            dummy_transport_request = request.Request(
+                                process=requested_process,
+                                requesting_item=item,
+                                resource=transport_resource,
+                                origin=origin,
+                                target=target,
+                                request_type=request.RequestType.TRANSPORT,
+                            )
+
+                            # Test if this transport process can handle this origin-target pair
+                            if offered_process.matches_request(dummy_transport_request):
+                                # Handle different types of transport processes
+                                if isinstance(offered_process, process.RequiredCapabilityProcess):
+                                    self._handle_required_capability_process(
+                                        dummy_transport_request, requested_process, 
+                                        transport_resource, offered_process, origin, target
+                                    )
+                                elif isinstance(offered_process, process.LinkTransportProcess):
+                                    self._handle_link_transport_process(
+                                        dummy_transport_request, requested_process,
+                                        transport_resource, offered_process, origin, target
+                                    )
+                                else:
+                                    # Regular transport process
+                                    key = TransportCompatibilityKey(
+                                        origin_id=origin.data.ID,
+                                        target_id=target.data.ID,
+                                        process_signature=requested_process.get_process_signature(),
+                                    )
+                                    self._add_to_transport_compatibility(key, transport_resource, offered_process)
+                                    
+                                    # Cache reachability information
+                                    self.reachability_cache[(origin.data.ID, target.data.ID)] = True
+                                    
+                                    # Cache the route
+                                    self._cache_route(dummy_transport_request, origin, target, offered_process, [])
+                    
+                    # Also handle queue-to-queue routes by mapping to parent resources
+                    for origin_queue in all_queues:
+                        for target_queue in all_queues:
+                            if origin_queue in queue_to_parent and target_queue in queue_to_parent:
+                                origin_parent = queue_to_parent[origin_queue]
+                                target_parent = queue_to_parent[target_queue]
+                                
+                                # Create a dummy request using parent resources
+                                item.current_locatable = origin_parent
+
+                                dummy_transport_request = request.Request(
+                                    process=requested_process,
+                                    requesting_item=item,
+                                    resource=transport_resource,
+                                    origin=origin_parent,
+                                    target=target_parent,
+                                    request_type=request.RequestType.TRANSPORT,
+                                )
+
+                                # Test if this transport process can handle this parent-to-parent pair
+                                if offered_process.matches_request(dummy_transport_request):
+                                    # Handle different types of transport processes
+                                    if isinstance(offered_process, process.RequiredCapabilityProcess):
+                                        self._handle_required_capability_process(
+                                            dummy_transport_request, requested_process, 
+                                            transport_resource, offered_process, origin_parent, target_parent
+                                        )
+                                        # Also cache the queue-to-queue route
+                                        queue_key = TransportCompatibilityKey(
+                                            origin_id=origin_queue.data.ID,
+                                            target_id=target_queue.data.ID,
+                                            process_signature=requested_process.get_process_signature(),
+                                        )
+                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
+                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
+                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
+                                        
+                                    elif isinstance(offered_process, process.LinkTransportProcess):
+                                        self._handle_link_transport_process(
+                                            dummy_transport_request, requested_process,
+                                            transport_resource, offered_process, origin_parent, target_parent
+                                        )
+                                        # Also cache the queue-to-queue route
+                                        queue_key = TransportCompatibilityKey(
+                                            origin_id=origin_queue.data.ID,
+                                            target_id=target_queue.data.ID,
+                                            process_signature=requested_process.get_process_signature(),
+                                        )
+                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
+                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
+                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
+                                        
+                                    else:
+                                        # Regular transport process
+                                        key = TransportCompatibilityKey(
+                                            origin_id=origin_parent.data.ID,
+                                            target_id=target_parent.data.ID,
+                                            process_signature=requested_process.get_process_signature(),
+                                        )
+                                        self._add_to_transport_compatibility(key, transport_resource, offered_process)
+                                        
+                                        # Also cache the queue-to-queue route
+                                        queue_key = TransportCompatibilityKey(
+                                            origin_id=origin_queue.data.ID,
+                                            target_id=target_queue.data.ID,
+                                            process_signature=requested_process.get_process_signature(),
+                                        )
+                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
+                                        
+                                        # Cache reachability information
+                                        self.reachability_cache[(origin_parent.data.ID, target_parent.data.ID)] = True
+                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
+                                        
+                                        # Cache the routes
+                                        self._cache_route(dummy_transport_request, origin_parent, target_parent, offered_process, [])
+                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
+
+    def _precompute_rework_compatibility(self):
+        """
+        Precompute rework process compatibility.
+        """
+        self.rework_compatibility = {}
+        for rework_process in self.resource_factory.process_factory.processes.values():
+            if not isinstance(rework_process, process.ReworkProcess):
+                continue
+
+            for reworked_process_id in rework_process.reworked_process_ids:
+                reworked_process = self.resource_factory.process_factory.get_process(
+                    reworked_process_id
+                )
+                if not reworked_process:
+                    raise ValueError(
+                        f"Reworked process ID {reworked_process_id} not found in process factory for rework process {rework_process.data.ID}"
+                    )
+                if not reworked_process.data.failure_rate or reworked_process.data.failure_rate == 0:
+                    continue
+                process_signature = reworked_process.get_process_signature()
+                if process_signature not in self.rework_compatibility:
+                    self.rework_compatibility[process_signature] = []
+                self.rework_compatibility[process_signature].append(rework_process)

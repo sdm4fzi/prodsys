@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from prodsys.models import port_data
+from prodsys.simulation import request
 
 if TYPE_CHECKING:
-    from prodsys.simulation import request
     from prodsys.simulation import port
 
 
@@ -60,23 +60,29 @@ class InteractionHandler:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
         # Get origin ports - handle Store objects that have store_ports instead of ports
+        # For Node objects, we need to handle them specially since they don't have ports
         if hasattr(routed_request.origin, 'ports'):
             origin_ports = routed_request.origin.ports
         elif hasattr(routed_request.origin, 'store_ports'):
             origin_ports = routed_request.origin.store_ports
         else:
-            origin_ports = []
+            # For Node objects or other locations without ports, return None to indicate direct location access
+            origin_ports = None
             
-        origin_output_ports = [
-            q
-            for q in origin_ports
-            if q.data.interface_type
-            in [
-                port_data.PortInterfaceType.OUTPUT,
-                port_data.PortInterfaceType.INPUT_OUTPUT,
+        if origin_ports is None:
+            # For Node objects or other locations without ports, use the location directly
+            origin_port = routed_request.origin
+        else:
+            origin_output_ports = [
+                q
+                for q in origin_ports
+                if q.data.interface_type
+                in [
+                    port_data.PortInterfaceType.OUTPUT,
+                    port_data.PortInterfaceType.INPUT_OUTPUT,
+                ]
             ]
-        ]
-        origin_port = self.get_origin_port(origin_output_ports, routed_request)
+            origin_port = self.get_origin_port(origin_output_ports, routed_request)
 
         # Get target ports - handle Store objects that have store_ports instead of ports
         if hasattr(routed_request.target, 'ports'):
@@ -84,20 +90,24 @@ class InteractionHandler:
         elif hasattr(routed_request.target, 'store_ports'):
             target_ports = routed_request.target.store_ports
         else:
-            target_ports = []
+            # For Node objects or other locations without ports, return None to indicate direct location access
+            target_ports = None
             
-        target_input_ports = [
-            q
-            for q in target_ports
-            if q.data.interface_type
-            in [
-                port_data.PortInterfaceType.INPUT,
-                port_data.PortInterfaceType.INPUT_OUTPUT,
+        if target_ports is None:
+            # For Node objects or other locations without ports, use the location directly
+            target_port = routed_request.target
+        else:
+            target_input_ports = [
+                q
+                for q in target_ports
+                if q.data.interface_type
+                in [
+                    port_data.PortInterfaceType.INPUT,
+                    port_data.PortInterfaceType.INPUT_OUTPUT,
+                ]
             ]
-        ]
-        # select target port that can accept the item
-
-        target_port = self.get_target_port(target_input_ports, routed_request)
+            # select target port that can accept the item
+            target_port = self.get_target_port(target_input_ports, routed_request)
 
         return (origin_port, target_port)
 
@@ -241,5 +251,3 @@ def random_port_selection_heuristic(
     import random
 
     return random.choice(possible_ports)
-
-from prodsys.simulation import request
