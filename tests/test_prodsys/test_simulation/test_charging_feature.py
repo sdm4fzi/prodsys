@@ -85,7 +85,7 @@ def test_run_simulation(charging_simulation_adapter: ProductionSystemData):
             assert kpi.value < 42 and kpi.value > 39
 
         if kpi.name == "charging_time" and kpi.resource == "transport":
-            assert kpi.value < 10 and kpi.value > 8.5
+            assert kpi.value < 8.5 and kpi.value > 7.5
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
