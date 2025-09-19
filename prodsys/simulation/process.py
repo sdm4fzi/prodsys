@@ -514,25 +514,24 @@ class LinkTransportProcess(TransportProcess):
         if is_process_with_capability(requested_process):
             if not requested_process.data.capability == self.data.capability:
                 return False
-            elif (
-                hasattr(request, "auxiliary")
-                and requested_process.data.capability == self.data.capability
-            ):
+            else:
+                # Check if a valid route exists for this transport request
+                route = route_finder.find_route(request=request, process=self)
+                if not route:
+                    return False
                 return True
 
         if isinstance(requested_process, LinkTransportProcess):
             if not requested_process.data.ID == self.data.ID:
                 return False
-            elif (
-                hasattr(request, "auxiliary")
-                and requested_process.data.ID == self.data.ID
-            ):
+            else:
+                # Check if a valid route exists for this transport request
+                route = route_finder.find_route(request=request, process=self)
+                if not route:
+                    return False
                 return True
 
-        route = route_finder.find_route(request=request, process=self)
-        if not route:
-            return False
-        return True
+        return False
 
     def get_expected_process_time(self, *args) -> float:
         return self.time_model.get_expected_time(*args)

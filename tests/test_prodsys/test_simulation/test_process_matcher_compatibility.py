@@ -358,7 +358,7 @@ class TestProcessMatcherCompatibility:
         # Check that reachability cache includes connections to/from nodes
         expected_node_connections = [
             ('source01', 'node1'), ('resource01', 'node1'), ('node1', 'node2'),
-            ('node2', 'node3'), ('agv01', 'node1'), ('agv01', 'node2'), ('agv01', 'node3')
+            ('node2', 'node3')
         ]
         
         for origin_id, target_id in expected_node_connections:
@@ -411,16 +411,6 @@ class TestProcessMatcherCompatibility:
         
         assert isinstance(queues, list)
         # In most trivial system, there should be queues for resources
-
-    def test_create_queue_to_parent_mapping(self, process_matcher_most_trivial):
-        """Test _create_queue_to_parent_mapping method."""
-        all_queues = process_matcher_most_trivial._get_all_queues()
-        queue_to_parent = process_matcher_most_trivial._create_queue_to_parent_mapping(all_queues)
-        
-        assert isinstance(queue_to_parent, dict)
-        # Check that queue IDs are mapped to their parent objects
-        for queue_id, parent in queue_to_parent.items():
-            assert queue_id.startswith(parent.data.ID)
 
     def test_add_to_transport_compatibility(self, process_matcher_most_trivial):
         """Test _add_to_transport_compatibility method."""

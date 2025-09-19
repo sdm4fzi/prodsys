@@ -397,7 +397,7 @@ class ProcessMatcher:
             List[Locatable]: List of all locations in the system.
         """
         all_locations = (
-            list(self.resource_factory.all_resources.values())
+            list(self.resource_factory.get_production_resources())
             + list(self.sink_factory.sinks.values())
             + list(self.source_factory.sources.values())
             + [q for q in self.resource_factory.queue_factory.queues 
@@ -429,7 +429,7 @@ class ProcessMatcher:
         """
         return list(self.resource_factory.queue_factory.queues)
 
-    def _create_queue_to_parent_mapping(self, all_queues: List) -> Dict[str, Locatable]:
+    def _create_queue_to_parent_mapping(self, all_queues: List, all_locations: list) -> Dict[str, Locatable]:
         """
         Create a mapping from queue IDs to their parent objects.
         
@@ -442,9 +442,8 @@ class ProcessMatcher:
         queue_to_parent = {}
         for queue in all_queues:
             queue_id = queue.data.ID
-            # Find the parent resource for this queue
-            for resource in self.resource_factory.all_resources.values():
-                if hasattr(resource, 'queues') and queue in resource.queues:
+            for resource in all_locations:
+                if queue_id in resource.data.ports:
                     queue_to_parent[queue_id] = resource
                     break
         return queue_to_parent
@@ -594,19 +593,15 @@ class ProcessMatcher:
         """
         # Get all locations including queues
         all_locations = self._get_all_locations()
-        all_queues = self._get_all_queues()
-        queue_to_parent = self._create_queue_to_parent_mapping(all_queues)
         
         # Get all transport processes from products and primitives
         required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
-        
         for item, requested_process in required_transport_processes:
             for transport_resource in self.resource_factory.get_movable_resources():
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair (including queues)
-                    all_origin_targets = all_locations + all_queues
-                    for origin in all_origin_targets:
-                        for target in all_origin_targets:
+                    for origin in all_locations:
+                        for target in all_locations:
                             # Create a dummy request to test matching
                             item.current_locatable = origin
 
@@ -618,111 +613,34 @@ class ProcessMatcher:
                                 target=target,
                                 request_type=request.RequestType.TRANSPORT,
                             )
-
-                            # Test if this transport process can handle this origin-target pair
-                            if offered_process.matches_request(dummy_transport_request):
-                                # Handle different types of transport processes
-                                if isinstance(offered_process, process.RequiredCapabilityProcess):
-                                    self._handle_required_capability_process(
-                                        dummy_transport_request, requested_process, 
-                                        transport_resource, offered_process, origin, target
-                                    )
-                                elif isinstance(offered_process, process.LinkTransportProcess):
-                                    self._handle_link_transport_process(
-                                        dummy_transport_request, requested_process,
-                                        transport_resource, offered_process, origin, target
-                                    )
-                                else:
-                                    # Regular transport process
-                                    key = TransportCompatibilityKey(
-                                        origin_id=origin.data.ID,
-                                        target_id=target.data.ID,
-                                        process_signature=requested_process.get_process_signature(),
-                                    )
-                                    self._add_to_transport_compatibility(key, transport_resource, offered_process)
-                                    
-                                    # Cache reachability information
-                                    self.reachability_cache[(origin.data.ID, target.data.ID)] = True
-                                    
-                                    # Cache the route
-                                    self._cache_route(dummy_transport_request, origin, target, offered_process, [])
-                    
-                    # Also handle queue-to-queue routes by mapping to parent resources
-                    for origin_queue in all_queues:
-                        for target_queue in all_queues:
-                            if origin_queue in queue_to_parent and target_queue in queue_to_parent:
-                                origin_parent = queue_to_parent[origin_queue]
-                                target_parent = queue_to_parent[target_queue]
-                                
-                                # Create a dummy request using parent resources
-                                item.current_locatable = origin_parent
-
-                                dummy_transport_request = request.Request(
-                                    process=requested_process,
-                                    requesting_item=item,
-                                    resource=transport_resource,
-                                    origin=origin_parent,
-                                    target=target_parent,
-                                    request_type=request.RequestType.TRANSPORT,
+                            if not offered_process.matches_request(dummy_transport_request):
+                                continue
+                            # Handle different types of transport processes
+                            # TODO: remove special handling for required capabilitiy process
+                            if isinstance(offered_process, process.RequiredCapabilityProcess):
+                                self._handle_required_capability_process(
+                                    dummy_transport_request, requested_process, 
+                                    transport_resource, offered_process, origin, target
                                 )
-
-                                # Test if this transport process can handle this parent-to-parent pair
-                                if offered_process.matches_request(dummy_transport_request):
-                                    # Handle different types of transport processes
-                                    if isinstance(offered_process, process.RequiredCapabilityProcess):
-                                        self._handle_required_capability_process(
-                                            dummy_transport_request, requested_process, 
-                                            transport_resource, offered_process, origin_parent, target_parent
-                                        )
-                                        # Also cache the queue-to-queue route
-                                        queue_key = TransportCompatibilityKey(
-                                            origin_id=origin_queue.data.ID,
-                                            target_id=target_queue.data.ID,
-                                            process_signature=requested_process.get_process_signature(),
-                                        )
-                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
-                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
-                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
-                                        
-                                    elif isinstance(offered_process, process.LinkTransportProcess):
-                                        self._handle_link_transport_process(
-                                            dummy_transport_request, requested_process,
-                                            transport_resource, offered_process, origin_parent, target_parent
-                                        )
-                                        # Also cache the queue-to-queue route
-                                        queue_key = TransportCompatibilityKey(
-                                            origin_id=origin_queue.data.ID,
-                                            target_id=target_queue.data.ID,
-                                            process_signature=requested_process.get_process_signature(),
-                                        )
-                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
-                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
-                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
-                                        
-                                    else:
-                                        # Regular transport process
-                                        key = TransportCompatibilityKey(
-                                            origin_id=origin_parent.data.ID,
-                                            target_id=target_parent.data.ID,
-                                            process_signature=requested_process.get_process_signature(),
-                                        )
-                                        self._add_to_transport_compatibility(key, transport_resource, offered_process)
-                                        
-                                        # Also cache the queue-to-queue route
-                                        queue_key = TransportCompatibilityKey(
-                                            origin_id=origin_queue.data.ID,
-                                            target_id=target_queue.data.ID,
-                                            process_signature=requested_process.get_process_signature(),
-                                        )
-                                        self._add_to_transport_compatibility(queue_key, transport_resource, offered_process)
-                                        
-                                        # Cache reachability information
-                                        self.reachability_cache[(origin_parent.data.ID, target_parent.data.ID)] = True
-                                        self.reachability_cache[(origin_queue.data.ID, target_queue.data.ID)] = True
-                                        
-                                        # Cache the routes
-                                        self._cache_route(dummy_transport_request, origin_parent, target_parent, offered_process, [])
-                                        self._cache_route(dummy_transport_request, origin_queue, target_queue, offered_process, [])
+                            elif isinstance(offered_process, process.LinkTransportProcess):
+                                self._handle_link_transport_process(
+                                    dummy_transport_request, requested_process,
+                                    transport_resource, offered_process, origin, target
+                                )
+                            else:
+                                # Regular transport process
+                                key = TransportCompatibilityKey(
+                                    origin_id=origin.data.ID,
+                                    target_id=target.data.ID,
+                                    process_signature=requested_process.get_process_signature(),
+                                )
+                                self._add_to_transport_compatibility(key, transport_resource, offered_process)
+                                
+                                # Cache reachability information
+                                self.reachability_cache[(origin.data.ID, target.data.ID)] = True
+                                
+                                # Cache the route
+                                self._cache_route(dummy_transport_request, origin, target, offered_process, [])
 
     def _precompute_rework_compatibility(self):
         """

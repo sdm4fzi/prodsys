@@ -21,7 +21,7 @@ def storage_simulation_adapter() -> ProductionSystemData:
         [5, 0],
         3,
         ID="machine",
-        internal_queue_size=2,
+        internal_queue_size=20,
     )
 
     machine2 = psx.Resource(
@@ -29,8 +29,9 @@ def storage_simulation_adapter() -> ProductionSystemData:
         [9, 0],
         3,
         ID="machine2",
-        internal_queue_size=2,
+        internal_queue_size=20,
     )
+    # TODO: add storages here! Currently, this is not testing storages!
 
     transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
@@ -60,8 +61,8 @@ def test_hashing(storage_simulation_adapter: ProductionSystemData):
 def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
-    runner_instance.run(100)
-    assert runner_instance.env.now == 100
+    runner_instance.run(2000)
+    assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":

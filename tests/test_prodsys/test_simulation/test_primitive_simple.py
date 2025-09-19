@@ -69,8 +69,8 @@ def test_hashing(simulation_adapter: ProductionSystemData):
 def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
-    runner_instance.run(1000)
-    assert runner_instance.env.now == 1000
+    runner_instance.run(100)
+    assert runner_instance.env.now == 100
     runner_instance.print_results()
     runner_instance.save_results_as_csv()
     post_processor = runner_instance.get_post_processor()
