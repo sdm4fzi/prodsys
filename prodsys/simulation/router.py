@@ -21,9 +21,10 @@ import simpy
 
 from prodsys.factories import primitive_factory
 from prodsys.models.dependency_data import DependencyType
+from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
-from prodsys.simulation.request_handler import RequestHandler
+from prodsys.simulation.request_handler import RequestHandler, RequestInfo
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ from simpy import events
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, process
+    from prodsys.simulation import resources, product, sink, process, port
     from prodsys.factories import (
         resource_factory,
         sink_factory,
@@ -98,6 +99,7 @@ class Router:
         product_factory: Optional[product_factory.ProductFactory] = None,
         source_factory: Optional[source_factory.SourceFactory] = None,
         primitive_factory: Optional[primitive_factory.PrimitiveFactory] = None,
+        production_system_data: Optional[production_system_data.ProductionSystemData] = None,
     ):
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
@@ -107,6 +109,7 @@ class Router:
         self.primitive_factory: Optional[primitive_factory.PrimitiveFactory] = (
             primitive_factory
         )
+        self.production_system_data: Optional[production_system_data.ProductionSystemData] = production_system_data
         self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}
         for primitive in self.primitive_factory.primitives:
             if primitive.data.type not in self.free_primitives_by_type:
@@ -248,6 +251,7 @@ class Router:
             executed_request.item, executed_request.requesting_item.current_locatable
         )
         yield trans_process_finished_event
+        # retrieve item here from queue and make sure its position is updated!
         executed_request.completed.succeed()
         if (
             executed_request.dependency_release_event
@@ -255,8 +259,10 @@ class Router:
             yield executed_request.dependency_release_event
         else:  # primitives for product
             yield executed_request.item.got_free
+        # Find an appropriate storage for the primitive
+        target_storage = self._find_available_storage_for_primitive(executed_request.item)
         transport_process_finished_event = self.request_transport(
-            executed_request.item, executed_request.item.storage
+            executed_request.item, target_storage
         )
         yield transport_process_finished_event
         self.free_primitives_by_type[executed_request.item.data.type].append(
@@ -264,6 +270,54 @@ class Router:
         )
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
+
+    def _find_available_storage_for_primitive(self, primitive: primitive.Primitive) -> port.Store:
+        """
+        Find an available storage for a primitive. For primitives with multiple storages,
+        this method finds the first available storage that can accept the primitive.
+        
+        Args:
+            primitive (primitive.Primitive): The primitive to find storage for.
+            
+        Returns:
+            port.Store: An available storage for the primitive.
+        """
+        # Get the primitive data to find all possible storages
+        primitive_data = None
+        # Find the original primitive data that defines the storages
+        if self.production_system_data:
+            for orig_p_data in self.production_system_data.primitive_data:
+                if orig_p_data.type == primitive.data.type:
+                    primitive_data = orig_p_data
+                    break
+        
+        if not primitive_data or not hasattr(primitive_data, 'storages'):
+            # Fallback to the primitive's home storage if we can't find the data
+            return primitive.storage
+        
+        # Get all possible storages for this primitive type
+        possible_storages = []
+        for storage_id in primitive_data.storages:
+            storage = self.primitive_factory.queue_factory.get_queue(storage_id)
+            if hasattr(storage, 'data') and storage.data.port_type == port_data.PortType.STORE:
+                possible_storages.append(storage)
+        
+        if not possible_storages:
+            # Fallback to the primitive's home storage
+            return primitive.storage
+        
+        # Try to find a storage with available capacity
+        for storage in possible_storages:
+            if hasattr(storage, 'capacity') and len(storage.items) < storage.capacity:
+                return storage
+        
+        # If no storage has capacity, try to find the one with most space
+        if possible_storages:
+            best_storage = min(possible_storages, key=lambda s: len(s.items) if hasattr(s, 'items') else 0)
+            return best_storage
+        
+        # Fallback to the first storage if none found
+        return possible_storages[0] if possible_storages else primitive.storage
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
@@ -298,7 +352,7 @@ class Router:
 
     def get_dependencies_for_product_processing(
         self, product: product.Product
-    ) -> List[simpy.Event]:
+    ) -> List[RequestInfo]:
         """
         Routes all dependencies for processing to a product. Covers currently only primitive dependencies (workpiece carriers, e.g.)
 
@@ -308,7 +362,7 @@ class Router:
         Returns:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
-        dependency_ready_events = []
+        request_infos = []
         for dependency in product.dependencies:
             assert (
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
@@ -318,10 +372,10 @@ class Router:
                 dependency=dependency,
                 requesting_item=product,
             )
-            dependency_ready_events.append(request_info.request_completion_event)
+            request_infos.append(request_info)
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
-        return dependency_ready_events
+        return request_infos
 
     def get_dependencies_for_execution(
         self,

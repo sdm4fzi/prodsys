@@ -227,6 +227,7 @@ class Runner:
                 product_factory=self.product_factory,
                 source_factory=self.source_factory,
                 primitive_factory=self.primitive_factory,
+                production_system_data=self.adapter,
             )
             self.primitive_factory.set_router(router)
 
