@@ -396,6 +396,7 @@ class ProcessMatcher:
         Returns:
             List[Locatable]: List of all locations in the system.
         """
+        # FIXME: storages are not considered here -> important for primitives in storages
         all_locations = (
             list(self.resource_factory.get_production_resources())
             + list(self.sink_factory.sinks.values())

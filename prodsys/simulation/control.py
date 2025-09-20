@@ -435,7 +435,7 @@ class TransportProcessHandler:
                 transport_state, product, route_to_target, empty_transport=False
             )
             transport_state.process = None
-
+            # FIXME: Primitives should not be places in product queues...
             yield from self.put_product_to_input_queue(target_queue, product)
             product.update_location(target)
 
@@ -853,6 +853,7 @@ class ProcessModelHandler:
 
                 # For now, execute the first available process
                 # In a more sophisticated implementation, this could use scheduling algorithms
+                # TODO: make this smarter with a control policy
                 chosen_process = next_processes[0]
 
                 # Find the matching actual process in the resource
