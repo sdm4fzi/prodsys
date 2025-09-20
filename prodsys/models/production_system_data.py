@@ -730,7 +730,7 @@ class ProductionSystemData(BaseModel):
             filepath (str): Path to the JSON file
         """
         with open(filepath, "w", encoding="utf-8") as json_file:
-            json.dump(self.model_dump(), json_file, indent=4)
+            json_file.write(self.model_dump_json(indent=4))
 
     def hash(self) -> str:
         """
