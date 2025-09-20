@@ -485,7 +485,6 @@ class SequentialProcess(ProcessModel):
             v["adjacency_matrix"] = adjacency_matrix
         else:
             adjacency_matrix = v["adjacency_matrix"]
-        print(adjacency_matrix)
         for process_id, successors in adjacency_matrix.items():
             if len(successors) > 1:
                 raise ValueError(f"Process {process_id} has multiple successors: {successors}")
