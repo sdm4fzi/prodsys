@@ -242,3 +242,6 @@ def test_data_model_conversion():
     sr_data = sr.to_model()
     assert sr_data.ID == "sr1"
     assert sr_data.subresource_ids == ["r1"]
+
+
+# TODO: run also simulations!
