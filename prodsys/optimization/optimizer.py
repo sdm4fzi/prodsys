@@ -464,7 +464,6 @@ class FileSystemSaveOptimizer(Optimizer):
     def get_configuration_by_hash(
         self, configuration_hash: str
     ) -> ProductionSystemData:
-        print("##### Loading configuration from disk #####")
         config = ProductionSystemData()
         config.read_data(f"{self.save_folder}/hash_{configuration_hash}.json")
         return config
