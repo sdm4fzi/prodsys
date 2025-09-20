@@ -16,7 +16,10 @@ from os import listdir
 from os.path import isfile, join
 
 import simpy
-from prodsys import adapters
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 def get_class_from_str(name: str, cls_dict: dict):
@@ -63,17 +66,17 @@ def trivial_process(env: simpy.Environment) -> Generator:
 
 
 def read_initial_solutions(
-    folder_path: str, base_configuration: adapters.ProductionSystemData
-) -> List[adapters.ProductionSystemData]:
+    folder_path: str, base_configuration: "ProductionSystemData"
+) -> List["ProductionSystemData"]:
     """
     Reads all initial solutions from a folder and returns them as a list of adapters.
 
     Args:
         folder_path (str): The folder path where the initial solutions are stored.
-        base_configuration (adapters.ProductionSystemAdapter): The base configuration for optimization containing the scenario data.
+        base_configuration (ProductionSystemData): The base configuration for optimization containing the scenario data.
 
     Returns:
-        List[adapters.ProductionSystemAdapter]: List of adapters of the initial solutions.
+        List[ProductionSystemData]: List of adapters of the initial solutions.
     """
     file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
     adapter_objects = []
