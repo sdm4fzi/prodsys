@@ -216,11 +216,20 @@ class Product:
         """
         self.set_next_possible_production_processes()
         if self.dependencies:
-            dependencies_ready_events = (
+            dep_request_infos = (
                 self.router.get_dependencies_for_product_processing(self)
             )
-            for dependency in dependencies_ready_events:
-                yield dependency
+            for dependency in dep_request_infos:
+                yield dependency.request_completion_event
+            for dependenant_item in self.depended_entities:
+                for ports in dependenant_item.current_locatable.ports:
+                    # TODO: use here interaction handler to select ports
+                    if dependenant_item.data.ID in ports.items:
+                        yield from ports.get(dependenant_item.data.ID)
+                        break
+                else:
+                    raise ValueError(f"Primitive {dependenant_item.data.ID} not found in {dependenant_item.current_locatable.data.ID} ports")
+                dependenant_item.current_locatable = self
 
         while self.next_possible_processes:
             executed_process_event = self.router.request_processing(self)
@@ -237,6 +246,9 @@ class Product:
         self.current_locatable.register_finished_product(self)
 
         for dependency in self.depended_entities:
+            # TODO: use here interaction handler to select ports
+            yield from self.current_locatable.ports[0].put(dependency.data)
+            dependency.current_locatable = self.current_locatable
             dependency.release()
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:

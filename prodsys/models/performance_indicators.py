@@ -13,7 +13,7 @@ class KPIEnum(str, Enum):
     THROUGHPUT = "throughput"
     COST = "cost"
     WIP = "WIP"
-    PRIMITIVE_WIP = "auxiliary_WIP"
+    PRIMITIVE_WIP = "primitive_WIP"
 
     TRHOUGHPUT_TIME = "throughput_time"
     PROCESSING_TIME = "processing_time"

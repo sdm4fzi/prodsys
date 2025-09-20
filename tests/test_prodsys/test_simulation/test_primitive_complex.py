@@ -116,22 +116,22 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
         if kpi.name == "productive_time" and kpi.resource == "transport2":
             assert kpi.value > 48 and kpi.value < 52
         if kpi.name == "productive_time" and kpi.resource == "transport_aux":
-            assert kpi.value > 71 and kpi.value < 73
+            assert kpi.value > 63 and kpi.value < 67
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
             assert kpi.value < 3.7 and kpi.value > 3.4
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 6.9 and kpi.value > 6.6
+            assert kpi.value < 6.9 and kpi.value > 6.3
 
     for kpi in post_processor.primitive_WIP_KPIs:
-        if kpi.name == "PRIMITIVE_WIP" and kpi.product_type == "primitive1":
-            assert kpi.value < 3.5 and kpi.value > 3.3
-        if kpi.name == "PRIMITIVE_WIP" and kpi.product_type == "primitive2":
-            assert kpi.value < 6.8 and kpi.value > 6.6
+        if kpi.name == "primitive_WIP" and kpi.product_type == "primitive1":
+            assert kpi.value < 3.5 and kpi.value > 3.1
+        if kpi.name == "primitive_WIP" and kpi.product_type == "primitive2":
+            assert kpi.value < 6.8 and kpi.value > 6.2
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 9 and kpi.value > 8.5
+            assert kpi.value < 9 and kpi.value > 8.1
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
-            assert kpi.value < 9 and kpi.value > 8.5
+            assert kpi.value < 9 and kpi.value > 8.1

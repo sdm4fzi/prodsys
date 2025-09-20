@@ -74,14 +74,6 @@ class Primitive:
             locatable (Locatable): Location of the product object.
         """
         self.current_locatable = locatable
-        logger.debug(
-            {
-                "ID": self.data.ID,
-                "sim_time": self.env.now,
-                "resource": self.current_locatable.data.ID,
-                "event": f"Updated location to {self.current_locatable.data.ID}",
-            }
-        )
 
     def bind(self, dependant: Union[product.Product, resources.Resource], dependency: Dependency) -> None:
         """

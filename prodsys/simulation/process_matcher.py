@@ -598,6 +598,7 @@ class ProcessMatcher:
         # Get all transport processes from products and primitives
         required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
         for item, requested_process in required_transport_processes:
+            original_locatable = item.current_locatable
             for transport_resource in self.resource_factory.get_movable_resources():
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair (including queues)
@@ -642,6 +643,7 @@ class ProcessMatcher:
                                 
                                 # Cache the route
                                 self._cache_route(dummy_transport_request, origin, target, offered_process, [])
+            item.current_locatable = original_locatable
 
     def _precompute_rework_compatibility(self):
         """
