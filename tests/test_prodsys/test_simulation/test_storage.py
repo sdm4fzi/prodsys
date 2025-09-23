@@ -32,6 +32,12 @@ def storage_simulation_adapter() -> ProductionSystemData:
         internal_queue_size=20,
     )
     # TODO: add storages here! Currently, this is not testing storages!
+    storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
+    storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
+    machine.set_default_ports()
+    machine2.set_default_ports()
+    machine.ports += [storage1, storage2]
+    machine2.ports += [storage2]
 
     transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
@@ -62,6 +68,8 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
+    runner_instance.save_results_as_csv()
+    runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
