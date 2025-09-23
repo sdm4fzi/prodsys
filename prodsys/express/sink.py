@@ -7,7 +7,7 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.express import core
+from prodsys.express import core, port
 
 from prodsys.models import port_data, sink_data
 import prodsys
@@ -66,7 +66,7 @@ class Sink(core.ExpressObject):
     location: Location2D
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port.Queue] = Field(default_factory=list, init=False)
 
     def to_model(self) -> sink_data.SinkData:
         """
@@ -81,9 +81,11 @@ class Sink(core.ExpressObject):
             location=self.location,
             product_type=self.product.ID,
         )
-        self.ports = [
-            prodsys.models.production_system_data.get_default_queue_for_sink(sink)
-        ]
+        if not self.ports:
+            port_data = [
+                prodsys.models.production_system_data.get_default_queue_for_sink(sink)
+            ]
+            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         sink.ports = [q.ID for q in self.ports]
         return sink
 

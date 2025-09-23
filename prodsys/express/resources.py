@@ -55,9 +55,12 @@ class Resource(core.ExpressObject):
 
     batch_size: Optional[int] = None
     internal_queue_size: Optional[int] = 0
-    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port.Queue] = Field(default_factory=list, init=False)
 
     dependencies: Optional[List[dependency.Dependency]] = Field(default_factory=list)
+
+    def set_default_ports(self):
+        self.to_model()
 
     def to_model(self) -> resource_data.ResourceData:
         """
@@ -79,11 +82,12 @@ class Resource(core.ExpressObject):
             dependency_ids=[dep.ID for dep in self.dependencies],
         )
         if not self.ports:
-            self.ports = [
+            port_data = [
                 prodsys.models.production_system_data.get_default_queue_for_resource(
                     resource, self.internal_queue_size
                 )
             ]
+            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         return resource
 
@@ -146,11 +150,12 @@ class SystemResource(Resource):
             internal_routing_matrix=self.internal_routing_matrix,
         )
         if not self.ports:
-            self.ports = [
+            port_data = [
                 prodsys.models.production_system_data.get_default_queue_for_resource(
                     resource, self.internal_queue_size
                 )
             ]
+            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         return resource
 

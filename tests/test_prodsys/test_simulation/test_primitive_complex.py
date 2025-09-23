@@ -92,7 +92,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "b787e71c98ed370f4aae33a3aad21b1f"
+    assert hash_str == "a3779f03f0f5f7bc2a251b0ed6a2de85"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

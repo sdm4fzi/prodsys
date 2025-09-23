@@ -186,16 +186,17 @@ class ProductionSystem(core.ExpressObject):
         primitive_data = [
             primitive.to_model() for primitive in self.primitives if primitive.storages
         ]
-        auxiliary_storage_data = [storage.to_model() for storage in primitive_stores]
+        primitive_storage_data = [storage.to_model() for storage in primitive_stores]
 
-        queue_data = list(
+        ports = list(
             util.flatten_object(
                 [s.ports for s in self.sources]
                 + [r.ports for r in self.resources if r.ports]
                 + [s.ports for s in self.sinks]
             )
         )
-        queue_data = remove_duplicate_items(queue_data)
+        port_data = [q.to_model() for q in ports]
+        port_data = remove_duplicate_items(port_data)
         return production_system_data.ProductionSystemData(
             time_model_data=time_model_data,
             process_data=process_data,
@@ -206,7 +207,7 @@ class ProductionSystem(core.ExpressObject):
             resource_data=resource_data,
             source_data=source_data,
             sink_data=sink_data,
-            port_data=queue_data + auxiliary_storage_data,
+            port_data=port_data + primitive_storage_data,
             depdendency_data=dependency_data,
             primitive_data=primitive_data,
         )

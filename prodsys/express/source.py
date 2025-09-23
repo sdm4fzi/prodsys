@@ -7,7 +7,7 @@ from uuid import uuid1
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.express import core, time_model
+from prodsys.express import core, time_model, port
 
 from prodsys.models import port_data, source_data
 import prodsys
@@ -77,7 +77,7 @@ class Source(core.ExpressObject):
     )
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    ports: List[port_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port.Queue] = Field(default_factory=list, init=False)
 
     def to_model(self) -> source_data.SourceData:
         """
@@ -94,9 +94,11 @@ class Source(core.ExpressObject):
             time_model_id=self.time_model.ID,
             routing_heuristic=self.routing_heuristic,
         )
-        self.ports = [
-            prodsys.models.production_system_data.get_default_queue_for_source(source)
-        ]
+        if not self.ports:
+            port_data = [
+                prodsys.models.production_system_data.get_default_queue_for_source(source)
+            ]
+            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         source.ports = [q.ID for q in self.ports]
         return source
 
