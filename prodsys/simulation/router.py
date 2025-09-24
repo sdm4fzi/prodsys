@@ -209,8 +209,13 @@ class Router:
             != executed_request.resource
         ):
             # FIXME: fix here that the transport to the origin_queue has to be made -> change logic here
+            # 0. Make sure that stores can be added to production system without correspondence to a resource, source or sink. 
+            # 1. Transport Places Product in Input Queue -> transport target queue should be an internal queue
+            # 2. Resource gets Product from Input Queue -> processes and places in internal queue (target queue of production process)
+            # 3. If also external queue for resource processing is specified -> make transport from this location to external output queue -> here target queue is already set for transport request, making finiding target queue not necessary. 
+            
             transport_process_finished_event = self.request_transport(
-                executed_request.requesting_item, executed_request.resource
+                executed_request.requesting_item, executed_request.resource, 
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
