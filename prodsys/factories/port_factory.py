@@ -48,15 +48,16 @@ class QueueFactory:
         if data.port_type == port_data.PortType.STORE:
             q = port.Store(**values)
             if data.port_locations is not None:
-                q.store_ports = [
+                q.ports = [
                     port.StorePort(
                         store=q, 
-                        location=loc
+                        location=loc,
+                        env= self.env
                         )
                     for loc in data.port_locations
                 ]
             else:
-                q.store_ports = [port.StorePort(store=q, location=data.location)]
+                q.ports = [port.StorePort(store=q, location=data.location, env= self.env)]
         elif data.port_type == port_data.PortType.QUEUE:
             q = port.Queue(**values)#
         elif data.port_type == port_data.PortType.QUEUE_PER_PRODUCT:

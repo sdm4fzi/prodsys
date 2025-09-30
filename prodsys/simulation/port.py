@@ -47,6 +47,7 @@ class Queue:
         Args:
             item (object): The product to be put into the queue.
         """
+        
         while self.full:
             yield self.state_change
         self.state_change = events.Event(self.env)
@@ -109,8 +110,7 @@ class Store(Queue):
     def __init__(self, env: sim.Environment, data: port_data.StoreData):
         super().__init__(env, data)
         self.data: port_data.StoreData = data
-        self.store_ports: List[StorePort] = []
-
+        self.ports: List[StorePort] = []
 
 class StorePort(Queue):
     """
@@ -124,7 +124,8 @@ class StorePort(Queue):
     def __init__(self, env: sim.Environment, store: Store, location: List[float]):
         super().__init__(env, store.data)
         self.store = store
-        self.location = location
+        self.location = location   
+        
 
     def get(self, item_id: str) -> Generator:
         """
@@ -136,7 +137,10 @@ class StorePort(Queue):
         Yields:
             Generator: A generator that yields the product.
         """
-        yield self.store.get(item_id)
+        self.store.items.pop(item_id)
+        self.store.full = (self.store.capacity - self.store._pending_put - len(self.store.items)) <= 0
+        if not self.store.state_change.triggered:
+            self.store.state_change.succeed()
 
     def put(self, item) -> Generator:
         """
@@ -145,7 +149,14 @@ class StorePort(Queue):
         Args:
             item (object): The product to be put into the store port.
         """
-        yield self.store.put(item)
+        #FIXME: QUICKFIX: StorePorts und Store in control etc.. angepasst. Intendierte Logik von StorePorts nicht gewährleistet
+        while self.store.full:
+            yield self.store.state_change
+        self.store.state_change = events.Event(self.store.env)
+        if self.store._pending_put > 0:
+            self.store._pending_put -= 1
+        self.store.items[item.ID] = item
+        self.store.full = (self.store.capacity - self.store._pending_put - len(self.store.items)) <= 0
 
     def get_location(self) -> List[float]:
         """

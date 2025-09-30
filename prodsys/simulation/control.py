@@ -12,6 +12,8 @@ from prodsys.models.processes_data import ProcessTypeEnum
 from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
 from prodsys.simulation.request import RequestType
+from prodsys.simulation.request import Request
+from prodsys.simulation.process import AssemblyProcess
 
 
 logger = logging.getLogger(__name__)
@@ -151,7 +153,7 @@ class Controller:
 
 def get_requets_handler(
     request: request_module.Request,
-) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler]:
+) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, AssemblyProcessHandler]:
     """
     Get the process handler for a given process.
 
@@ -161,6 +163,7 @@ def get_requets_handler(
     Returns:
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
+    #TODO: passenden Requesthandöler für AssemblyProcess auswählen 
     if (
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK
@@ -198,6 +201,7 @@ class ProductionProcessHandler:
 
     def get_next_product_for_process(
         self, queue: port.Queue, product: product.Product
+        
     ) -> Generator:
         """
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
@@ -209,6 +213,7 @@ class ProductionProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
+      
         yield from queue.get(product.data.ID)
 
     def put_product_to_output_queue(
@@ -280,6 +285,7 @@ class ProductionProcessHandler:
             input_state (state.State): The production state of the process.
             target_product (product.Product): The product that is processed.
         """
+        
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
         )
@@ -321,7 +327,7 @@ class TransportProcessHandler:
         self.resource = None
 
     def get_next_product_for_process(
-        self, queue: port.Queue, product: product.Product
+        self, queue: port.Queue, product: primitive.Primitive
     ) -> Generator:
         """
         Get the next product for a process from the output queue of a resource.
@@ -338,9 +344,9 @@ class TransportProcessHandler:
             Generator: The generator yields when the product is in the queue.
         """
         queue.get(product.data.ID)
-
+        
     def put_product_to_input_queue(
-        self, queue: port.Queue, product: product.Product
+        self, queue: port.Queue, product: primitive.Primitive
     ) -> Generator:
         """
         Put a product to the input queue of a resource.
@@ -596,6 +602,9 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the process is finished.
         """
+        #INFO: DepenedencyHandler wird nur für ProcessDependencies erstellt/aufgerufen
+        #TODO: alleinstelligen AssemblyProcessHandler
+        
         requesting_item = process_request.requesting_item
         self.resource = process_request.get_resource()
         self.resource.bind_to_dependant(requesting_item)
@@ -610,7 +619,7 @@ class DependencyProcessHandler:
         ].pop()
         target = requesting_item
         if process_request.required_dependencies:
-            yield process_request.request_dependencies()
+            yield process_request.request_dependencies()        
         yield from self.resource.setup(process)
         if not self.resource.current_locatable:
             self.resource.set_location(target)
@@ -787,6 +796,122 @@ class DependencyProcessHandler:
             return route_to_origin
         else:
             return [self.resource.current_locatable, process_request.get_origin()]
+class AssemblyProcessHandler(DependencyProcessHandler):
+    
+
+    def handle_request(self, process_request: request_module.Request) -> Generator:
+        """
+        Start the next process with the following logic:
+
+        1. Wait until the resource is free for the process.
+        2. Wait until the dependencies are fulfilled.
+        3. Run the process and wait until finished.
+
+        Yields:
+            Generator: The generator yields when the process is finished.
+        """
+        requesting_item = process_request.requesting_item
+        self.resource = process_request.get_resource()
+        self.resource.bind_to_dependant(requesting_item)
+        process = [
+            process
+            for process in self.resource.processes
+            if process.data.type
+            in (
+                ProcessTypeEnum.TransportProcesses,
+                ProcessTypeEnum.LinkTransportProcesses,
+            )
+        ].pop()
+        target = requesting_item
+        if process_request.required_dependencies:
+            yield process_request.request_dependencies()
+        
+        yield from self.resource.setup(process)
+        if not self.resource.current_locatable:
+            self.resource.set_location(target)
+        with self.resource.request() as req:
+            yield req
+            self.resource.controller.mark_started_process()
+            if target.get_location() != self.resource.get_location():
+                move_request = request_module.Request(
+                    request_type=RequestType.TRANSPORT,
+                    process=process,
+                    resource=self.resource,
+                    requesting_item=target,
+                    origin=target,
+                )
+                route_to_origin = self.find_route_to_origin(move_request)
+                transport_state: state.State = yield self.env.process(
+                    self.resource.wait_for_free_process(process)
+                )
+                transport_state.reserved = True
+                yield from self.run_transport(
+                    transport_state,
+                    route_to_origin,
+                    empty_transport=True,
+                    dependency=process_request.resolved_dependency,
+                )
+                transport_state.process = None
+
+            # product.product_router.mark_finished_request(process_request)
+        process_request.completed.succeed()
+        self.resource.dependency_info.log_start_dependency(
+            event_time=self.env.now,
+            requesting_item_id=process_request.requesting_item.data.ID,
+            dependency_id=process_request.resolved_dependency.data.ID,
+        )
+        yield process_request.dependency_release_event
+        self.resource.dependency_info.log_end_dependency(
+            event_time=self.env.now,
+            requesting_item_id=process_request.requesting_item.data.ID,
+            dependency_id=process_request.resolved_dependency.data.ID,
+        )
+        self.resource.release_from_dependant()
+        self.resource.controller.mark_finished_process()
+
+    
+
+    def run_process(
+        self,
+        input_state: state.TransportState,
+        target: product.Locatable,
+        empty_transport: bool,
+        initial_transport_step: bool,
+        last_transport_step: bool,
+        dependency: Dependency,
+    ):
+        """
+        Run the process of a product. The process is started and the product is logged.
+
+        Args:
+            input_state (state.State): The transport state of the process.
+            item (Union[product.Product, primitive.Primitive]): The product that is transported.
+            target (product.Locatable): The target of the transport.
+            empty_transport (bool): If the transport is empty.
+            initial_transport_step (bool): If this is the initial transport step.
+            last_transport_step (bool): If this is the last transport step.
+        """
+        # TODO: update logs here to consider dependencies
+        # if not hasattr(product, "product_info"):
+        #     input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        # else:
+        #     input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+
+        origin = self.resource.current_locatable
+        input_state.state_info.log_transport(
+            origin,
+            target,
+            state.StateTypeEnum.transport,
+            empty_transport=empty_transport,
+        )
+        target_location = self.get_target_location(
+            target, empty_transport, last_transport_step=last_transport_step
+        )
+        input_state.process = self.env.process(
+            input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
+        )
+        yield input_state.process
+        self.update_location(target, location=target_location)
 
 
 def FIFO_control_policy(requests: List[request_module.Request]) -> None:

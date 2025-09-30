@@ -11,8 +11,9 @@ from prodsys.models import dependency_data
 from prodsys.simulation import primitive, sim
 from prodsys.simulation import router as router_module
 from prodsys.simulation import logger
-
-
+from prodsys.models.source_data import RoutingHeuristic
+from prodsys.models.product_data import ProductData
+from prodsys.models.processes_data import ProcessData
 from prodsys.models import source_data
 
 
@@ -67,7 +68,7 @@ class PrimitiveFactory:
                 primitive_data_instance.quantity_in_storages,
             ):
                 for _ in range(quantity_in_storage):
-                    primitive = self.add_primitive(primitive_data_instance, storage_id)
+                    primitive = self.add_primitive(primitive_data_instance, storage_id)  #was passiert hier, warum ? 
 
     def add_primitive(
         self, primitive_data_instance: primitives_data.PrimitiveData, storage_id: str
@@ -120,8 +121,43 @@ class PrimitiveFactory:
         Place the auxiliary objects in the system.
         """
         for primitive in self.primitives:
-            yield from primitive.current_locatable.put(primitive.data)
+            yield from primitive.current_locatable.put(primitive.data)#INFO: gespeicherte DATA Objekte
+ 
+    def get_finished_product_with_type(self, ID: str) -> primitive.product:
+        """
+        Get the primitive object with the specified ID.
 
+        Args:
+            ID (str): The ID of the primitive object.
+
+        Returns:
+            primitive.Primitive: The primitive object with the specified ID.
+
+        Raises:
+            IndexError: If no auxiliary object with the specified ID is found.
+        """
+        
+        """ try: 
+            help =  self.sink_factory.product_factory.finished_products[0] 
+        
+        
+        
+        except Exception as e:
+            productdata = ProductData(
+            ID="product 1",
+            description="Product 1 data description",
+            type="product 1",
+            processes=["production_process"],
+            transport_process="NormalTransport",
+            )
+            product = self.sink_factory.product_factory.create_product(productdata, RoutingHeuristic.random)
+            
+            return product """
+        #TODO: finished product Logik implementieren
+        return [s for s in self.primitives if s.data.type == ID].pop()
+
+        
+        
     def get_primitive_with_type(self, ID: str) -> primitive.Primitive:
         """
         Get the primitive object with the specified ID.
@@ -136,6 +172,5 @@ class PrimitiveFactory:
             IndexError: If no auxiliary object with the specified ID is found.
         """
         return [s for s in self.primitives if s.data.type == ID].pop()
-
 
 # AuxiliaryFactory.model_rebuild()
