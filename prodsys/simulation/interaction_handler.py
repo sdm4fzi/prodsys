@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
+#import prodsys
 from prodsys.models import port_data
 from prodsys.simulation.port import Queue_per_product
 if TYPE_CHECKING:
     from prodsys.simulation import request
     from prodsys.simulation import port
+    from prodsys.simulation.port import StorePort
+    
     
 
 class InteractionHandler:
@@ -38,6 +40,7 @@ class InteractionHandler:
             request.RequestType.PRIMITIVE_DEPENDENCY,
             request.RequestType.PROCESS_DEPENDENCY,
             request.RequestType.RESOURCE_DEPENDENCY,
+            request.RequestType.PRIMITIVE_FINISHED_DEPENDENCY,
         ):
             return None, None
         elif routed_request.request_type == request.RequestType.TRANSPORT:
@@ -59,7 +62,6 @@ class InteractionHandler:
         Returns:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
-       
         origin_output_ports = [
             q
             for q in routed_request.origin.ports
@@ -69,7 +71,7 @@ class InteractionHandler:
                 port_data.PortInterfaceType.INPUT_OUTPUT,
             ]
         ]
-        if isinstance(origin_output_ports[0].data, port_data.Queue_Per_Product_Data):#TODO falls nicht geht, einfach attr product benutzen
+        if isinstance(origin_output_ports[0].data, port_data.Queue_Per_Product_Data):
             origin_port = self.get_dedicated_origin_port(origin_output_ports, routed_request)
         else:        
             origin_port = self.get_origin_port(origin_output_ports, routed_request)
@@ -154,17 +156,11 @@ class InteractionHandler:
             raise ValueError(
                 f"No port found with item ID {routed_request.requesting_item.data.ID} in possible ports."
             )
-        if (
-            origin_port.data.port_type == port_data.PortType.STORE
-        ):  # Ports can have multiple input / output locations -> select the most suitable one
-            origin_port: port.Store
-            origin_port = self.port_selection_heuristic(
-                origin_port.store_ports, routed_request
-            )
+        #FIXME: quick fix, gelöscht
         return origin_port
     def get_dedicated_origin_port(self,possible_ports: list[port.Queue_per_product],routed_request: request.Request
     ) -> port.Queue_per_product:
-        print("origin_port aufgerufen")
+        
         for input_queue in possible_ports:
               
             if input_queue.data.product == routed_request.requesting_item.data.type:
@@ -201,11 +197,7 @@ class InteractionHandler:
             raise ValueError(
                 f"No suitable port found for item ID {routed_request.requesting_item.ID} in possible ports."
             )
-        if target_port.data.port_type == port_data.PortType.STORE:
-            target_port: port.Store
-            target_port = self.port_selection_heuristic(
-                target_port.store_ports, routed_request
-            )
+        #FIXME: quick fix, gelöscht
         return target_port
 
 
@@ -220,9 +212,15 @@ def get_port_with_item(ports: list[port.Queue], item_id: str) -> port.Queue:
     Returns:
         store.Queue: The port that contains the item, or None if not found.
     """
+    
     for port in ports:
-        if item_id in port.items:
-            return port
+        if hasattr(port, "store" ):
+            print(port.store.items)
+            if item_id in port.store.items:
+                return port
+        else:
+            if item_id in port.items:
+                return port
     return None
 
 
