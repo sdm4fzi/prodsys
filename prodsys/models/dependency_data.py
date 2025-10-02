@@ -111,7 +111,6 @@ class LotDependencyData(DependencyData):
     Class that defines that processes need to be performed with a carrier, specifying also how many (max / min) products should be placed on this carrier
     """
     # TODO: Implement this class to be usable in the simulation! Also think about merging / splitting and how controllers perform processes on a carrier level or individual level...
-    required_primitive: str
     min_lot_size: int = 1
     max_lot_size: int = 1
     dependency_type: DependencyType = DependencyType.LOT
