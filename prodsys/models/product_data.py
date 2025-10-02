@@ -1,10 +1,8 @@
 from __future__ import annotations
 from hashlib import md5
 
-from typing import Optional, Union, List, Dict, TYPE_CHECKING
-from typing_extensions import deprecated
+from typing import Union, List, Dict, TYPE_CHECKING
 from pydantic import ConfigDict, model_validator, field_validator
-from prodsys.models.core_asset import CoreAsset
 from prodsys.models.primitives_data import PrimitiveData
 
 if TYPE_CHECKING:
@@ -109,7 +107,7 @@ class ProductData(PrimitiveData):
         transport_process_hash = ""
 
         # Hash all unique processes in the adjacency matrix
-        unique_process_ids = set(self.processes.keys())
+        unique_process_ids = sorted(set(self.processes.keys()))
         for process_id in unique_process_ids:
             process = next((process for process in adapter.process_data if process.ID == process_id), None)
             if process is None:
@@ -134,7 +132,7 @@ class ProductData(PrimitiveData):
         ).hexdigest()
 
     @model_validator(mode="before")
-    def check_processes(cls, values):
+    def check_product_type(cls, values):
         if "product_type" in values and values["product_type"]:
             values["ID"] = values["product_type"]
         else:
