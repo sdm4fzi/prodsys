@@ -92,10 +92,11 @@ class Source:
             product = self.product_factory.create_product(
                 self.product_data, self.data.routing_heuristic
             )
+            # TODO: this logic should be moved to the interaction handler!
             for queue in self.ports:
                 yield from queue.reserve()
                 yield from queue.put(product.data)
-            product.update_location(self)
+                product.update_location(queue)
             product.process = self.env.process(product.process_product())
 
     def get_location(self, interaction: Literal["output"] = "output") -> List[float]:

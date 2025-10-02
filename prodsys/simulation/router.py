@@ -480,7 +480,7 @@ class Router:
         chosen_sink = random.choice(possible_sinks)
         # TODO: move retrieving chosen sink ports to interactin handler!
         target_port = chosen_sink.ports[0]
-        request_info = self.request_handler.add_transport_request(product, chosen_sink)
+        request_info = self.request_handler.add_transport_request(product, target_port)
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event, chosen_sink

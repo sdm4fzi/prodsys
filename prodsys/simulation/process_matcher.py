@@ -278,15 +278,12 @@ class ProcessMatcher:
         Returns:
             List[Locatable]: The route as a list of locations.
         """
-        # Map queue objects back to their parent objects for route lookup
-        parent_origin = self._get_parent_from_queue(origin)
-        parent_target = self._get_parent_from_queue(target)
         
         process_signature = process.get_process_signature()
-        key = (parent_origin.data.ID, parent_target.data.ID, process_signature)
+        key = (origin.data.ID, target.data.ID, process_signature)
         cached_request = self.route_cache.get(key)
         if cached_request is None:
-            raise ValueError(f"No route found for {parent_origin.data.ID} -> {parent_target.data.ID} with process {process_signature}")
+            raise ValueError(f"No route found for {origin.data.ID} -> {target.data.ID} with process {process_signature}")
         
         # Return the route from the cached request
         return cached_request.get_route()

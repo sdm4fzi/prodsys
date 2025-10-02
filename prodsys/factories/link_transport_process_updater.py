@@ -9,11 +9,12 @@ from prodsys.factories import (
     sink_factory,
     resource_factory,
     node_factory,
+    port_factory,
 )
 from prodsys.simulation import process
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, sink, source, node
+    from prodsys.simulation import resources, sink, source, node, port
 
 
 class LinkTransportProcessUpdater:
@@ -35,12 +36,14 @@ class LinkTransportProcessUpdater:
         sink_factory: sink_factory.SinkFactory,
         resource_factory: resource_factory.ResourceFactory,
         node_factory: node_factory.NodeFactory,
+        queue_factory: port_factory.QueueFactory,
     ):
         self.process_factory = process_factory
         self.source_factory = source_factory
         self.sink_factory = sink_factory
         self.resource_factory = resource_factory
         self.node_factory = node_factory
+        self.queue_factory = queue_factory
 
     def update_links_with_objects(self):
         """
@@ -63,15 +66,34 @@ class LinkTransportProcessUpdater:
                 raise ValueError(
                     f"LinkTransportProcessUpdater: Could not find object with ID {start} for a link in Process {process_instance.data.ID}."
                 )
+            if hasattr(start_obj, "ports"):
+                # create links from possible starts
+                possible_starts = self.get_possible_ports(start_obj)
+            else:
+                possible_starts = [start_obj]
             end_obj = self.get_node_resource_source_sink(end)
             if not end_obj:
                 raise ValueError(
                     f"LinkTransportProcessUpdater: Could not find object with ID {end} for a link in Process {process_instance.data.ID}."
                 )
 
-            links_list.append([start_obj, end_obj])
+            if hasattr(end_obj, "ports"):
+                # create links from possible ends
+                possible_ends = self.get_possible_ports(end_obj)
+            else:
+                possible_ends = [end_obj]
+
+            for start in possible_starts:
+                for end in possible_ends:
+                    links_list.append([start, end])
 
         process_instance.links = links_list
+
+    def get_possible_ports(self, obj: Union[resources.Resource, source.Source, sink.Sink]) -> list[port.Queue]:
+        ports = []
+        for port in obj.ports:
+            ports.append(port)
+        return ports
 
     def get_node_resource_source_sink(
         self, ID: str
@@ -94,5 +116,10 @@ class LinkTransportProcessUpdater:
         try:
             sink = self.sink_factory.get_sink(ID)
             return sink
+        except KeyError:
+            pass
+        try:
+            port = self.queue_factory.get_port(ID)
+            return port
         except KeyError:
             pass
