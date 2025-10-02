@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 #import prodsys
 from prodsys.models import port_data
 from prodsys.simulation.port import Queue_per_product
+from prodsys.simulation.port import Queue
 if TYPE_CHECKING:
     from prodsys.simulation import request
     from prodsys.simulation import port
@@ -62,15 +63,19 @@ class InteractionHandler:
         Returns:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
-        origin_output_ports = [
-            q
-            for q in routed_request.origin.ports
-            if q.data.interface_type
-            in [
-                port_data.PortInterfaceType.OUTPUT,
-                port_data.PortInterfaceType.INPUT_OUTPUT,
+        #FIXME: QUCIKFIX: Request geht von Queue aus, bei anderen von resource, source etc....
+        if(isinstance(routed_request.origin, Queue) ):
+            origin_output_ports = [routed_request.origin]
+        else:            
+            origin_output_ports = [
+                q
+                for q in routed_request.origin.ports
+                if q.data.interface_type
+                in [
+                    port_data.PortInterfaceType.OUTPUT,
+                    port_data.PortInterfaceType.INPUT_OUTPUT,
+                ]
             ]
-        ]
         if isinstance(origin_output_ports[0].data, port_data.Queue_Per_Product_Data):
             origin_port = self.get_dedicated_origin_port(origin_output_ports, routed_request)
         else:        

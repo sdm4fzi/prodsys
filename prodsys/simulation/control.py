@@ -13,7 +13,6 @@ from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
 from prodsys.simulation.request import RequestType
 from prodsys.simulation.request import Request
-from prodsys.simulation.process import AssemblyProcess
 
 
 logger = logging.getLogger(__name__)
@@ -163,7 +162,6 @@ def get_requets_handler(
     Returns:
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
-    #TODO: passenden Requesthandöler für AssemblyProcess auswählen 
     if (
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK

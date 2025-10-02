@@ -205,6 +205,7 @@ class Router:
             and executed_request.requesting_item.current_locatable
             != executed_request.resource
         ):
+            #obiges Interpretation: Falls produziert werden soll aber nch nicht bei ressource ist: 
                         
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, executed_request.resource
@@ -215,6 +216,7 @@ class Router:
         origin_queue, target_queue = self.interaction_handler.get_interaction_ports(
             executed_request
         )
+        
         if executed_request.request_type == request.RequestType.TRANSPORT:
             route = self.request_handler.process_matcher.get_route(
                 origin_queue, target_queue, executed_request.process
@@ -222,11 +224,11 @@ class Router:
             executed_request.route = route
 
         executed_request.origin_queue = origin_queue
-        executed_request.target_queue = target_queue
-
+        executed_request.target_queue = target_queue#TODO: Konsistenzprüfung Portzuweisung ded. Queues
+        
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
-            yield executed_request.dependencies_requested
+            yield executed_request.dependencies_requested 
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
                 process=executed_request.process,
@@ -241,6 +243,7 @@ class Router:
     def execute_primitive_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
+        
         executed_request.item.bind(
             executed_request.requesting_item, executed_request.resolved_dependency
         )
@@ -308,8 +311,10 @@ class Router:
         Returns:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
+        
         dependency_ready_events = []
         for dependency in product.dependencies:
+            
             assert (
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
             ), f"Only primitive dependencies are supported for now. Found {dependency.data.dependency_type} for {product.data.ID}."
@@ -318,6 +323,7 @@ class Router:
                 dependency=dependency,
                 requesting_item=product,
             )
+            
             dependency_ready_events.append(request_info.request_completion_event)
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
@@ -345,13 +351,14 @@ class Router:
         # only one object can be immovable, the other has to be movable -> go always to the immovable one
         dependency_ready_events = []
         for dependency in resource.dependencies:
+            
             request_info = self.request_handler.add_dependency_request(
                 requiring_dependency=resource,
                 requesting_item=requesting_item,
                 dependency=dependency,
                 dependency_release_event=dependency_release_event,
             )
-            dependency_ready_events.append(request_info.request_completion_event)
+            dependency_ready_events.append(request_info.request_completion_event)  
         for dependency in process.dependencies:
             request_info = self.request_handler.add_dependency_request(
                 requiring_dependency=resource,
@@ -359,6 +366,9 @@ class Router:
                 requesting_item=requesting_item,
             )
             dependency_ready_events.append(request_info.request_completion_event)
+        #FIXME: gilt momentan nur für Primitive Dependencies für Processes
+        if not self.got_primitive_request.triggered:
+            self.got_primitive_request.succeed()
         return dependency_ready_events
 
     def request_processing(self, product: product.Product) -> events.Event:

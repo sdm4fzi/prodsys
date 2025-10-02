@@ -39,7 +39,7 @@ class Primitive:
         env: sim.Environment,
         data: primitives_data.PrimitiveData,
         transport_process: process.Process,
-        storage: port.Store,
+        storage: Union[port.Store, port.Queue, port.Queue_per_product],
     ):
         """
         Initializes the Auxiliary class.
