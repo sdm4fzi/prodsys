@@ -216,6 +216,7 @@ class Runner:
                     sink_factory=self.sink_factory,
                     resource_factory=self.resource_factory,
                     node_factory=self.node_factory,
+                    queue_factory=self.queue_factory,
                 )
             )
             link_transport_process_updater_instance.update_links_with_objects()
