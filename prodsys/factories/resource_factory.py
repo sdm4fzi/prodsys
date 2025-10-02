@@ -178,13 +178,20 @@ class ResourceFactory:
         self, resource_data: ResourceData
     ) -> List[port.Queue]:
         ports = []
-        output_queues = []
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
         else:
             raise ValueError("Ports not found for resource" + resource_data.ID)
 
         return ports
+
+    def get_buffers_for_resource(
+        self, resource_data: ResourceData
+    ) -> List[port.Queue]:
+        if not resource_data.buffers:
+            return []
+        buffers = self.queue_factory.get_queues(resource_data.buffers)
+        return buffers
 
     def add_resource(self, resource_data: ResourceData):
         values = {"env": self.env, "data": resource_data}
@@ -219,6 +226,8 @@ class ResourceFactory:
 
         ports = self.get_ports_for_resource(resource_data)
         values.update({"ports": ports})
+        buffers = self.get_buffers_for_resource(resource_data)
+        values.update({"buffers": buffers})
         if "batch_size" in resource_data:
             values.update({"batch_size": resource_data.batch_size})
 
@@ -226,14 +235,8 @@ class ResourceFactory:
         if isinstance(resource_data, SystemResourceData):
             # Get subresources for SystemResource
             subresources = [self.all_resources[sub_id] for sub_id in resource_data.subresource_ids if sub_id in self.all_resources]
-            system_ports = []
-            if resource_data.system_ports:
-                system_ports = [self.queue_factory.queues[port_id] for port_id in resource_data.system_ports if port_id in self.queue_factory.queues]
-            
             values.update({
                 "subresources": subresources,
-                "system_ports": system_ports,
-                "internal_routing_matrix": resource_data.internal_routing_matrix or {}
             })
             resource_object = resources.SystemResource(**values)
         else:

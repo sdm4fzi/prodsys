@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from enum import Enum
 from hashlib import md5
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 
-from prodsys.models.core_asset import CoreAsset
+from prodsys.models.core_asset import CoreAsset, Location2D
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -23,6 +23,7 @@ class DependencyType(str, Enum):
     PROCESS = "process"
     RESOURCE = "resource"
     PRIMITIVE = "primitive"
+    LOT = "lot"
 
 class DependencyData(CoreAsset):
     dependency_type: DependencyType
@@ -31,6 +32,8 @@ class DependencyData(CoreAsset):
 class ProcessDependencyData(DependencyData):
     required_process: str
     dependency_type: DependencyType = DependencyType.PROCESS
+    interaction_point: Optional[Location2D] = None
+    position_type: Literal["relative", "absolute"] = "absolute"
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -51,6 +54,8 @@ class ProcessDependencyData(DependencyData):
 class ResourceDependencyData(DependencyData):
     required_resource: str
     dependency_type: DependencyType = DependencyType.RESOURCE
+    interaction_point: Optional[Location2D] = None
+    position_type: Literal["relative", "absolute"] = "absolute"
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -99,6 +104,20 @@ class PrimitiveDependencyData(DependencyData):
         return md5(
             "".join([self.dependency_type, primitive_hash]).encode("utf-8")
         ).hexdigest()
+
+
+class LotDependencyData(DependencyData):
+    """
+    Class that defines that processes need to be performed with a carrier, specifying also how many (max / min) products should be placed on this carrier
+    """
+    # TODO: Implement this class to be usable in the simulation! Also think about merging / splitting and how controllers perform processes on a carrier level or individual level...
+    required_primitive: str
+    min_lot_size: int = 1
+    max_lot_size: int = 1
+    dependency_type: DependencyType = DependencyType.LOT
+    dependency_ids: list[str] = []
+
+    # TODO: add hash function
 
 
 DEPENDENCY_TYPES = Union[

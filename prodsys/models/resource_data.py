@@ -100,6 +100,7 @@ class ResourceData(CoreAsset, Locatable):
     state_ids: Optional[List[str]] = []
     controller: ControllerEnum = ControllerEnum.PipelineController
     ports: Optional[List[str]] = None
+    buffers: Optional[List[str]] = None
     can_move: Optional[bool] = None
 
     batch_size: Optional[int] = None
@@ -235,6 +236,7 @@ class ResourceData(CoreAsset, Locatable):
                     "process_capacities": [2, 1],
                     "state_ids": ["Breakdownstate_1"],
                     "ports": ["IQ1", "OQ1"],
+                    "buffers": ["SQ1"],
                     "can_move": False,
                 },
                 # Transport resource example
@@ -276,10 +278,7 @@ class SystemResourceData(ResourceData):
         batch_size (Optional[int], optional): Batch size of the system resource. Defaults to None.
         dependency_ids (List[str]): List of dependency IDs that are required by the system resource.
     """
-
     subresource_ids: List[str]
-    system_ports: Optional[List[str]] = None
-    internal_routing_matrix: Optional[Dict[str, List[str]]] = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -293,11 +292,10 @@ class SystemResourceData(ResourceData):
                     "control_policy": "FIFO",
                     "process_ids": ["P1", "P2"],
                     "subresource_ids": ["R1", "R2", "R3"],
-                    "system_ports": ["SP1", "SP2"],
-                    "internal_routing_matrix": {"SP1": ["R1"], "R1": ["R2"], "R2": ["R3"], "R3": ["SP2"]},
                     "process_capacities": [1, 1],
                     "state_ids": [],
                     "ports": ["IQ1", "OQ1"],
+                    "buffers": [], 
                     "can_move": False,
                 }
             ]

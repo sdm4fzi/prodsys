@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pydantic.type_adapter import P
+
 from prodsys.models import port_data
 from prodsys.simulation import request
 
@@ -21,6 +23,28 @@ class InteractionHandler:
         # TODO: precompute later the input and output ports of the resources, sinks and sources to be faster (use resource_factory, sink_factory, source_factory from router during init of InteractionHandler)
         self.input_ports_per_resource: dict[str, list[port.Queue]] = {}
         self.output_ports_per_resource: dict[str, list[port.Queue]] = {}
+
+    def get_interaction_buffer(
+        self, routed_request: request.Request
+    ) -> port.Queue:
+        if routed_request.request_type in (
+            request.RequestType.PRIMITIVE_DEPENDENCY,
+            request.RequestType.PROCESS_DEPENDENCY,
+            request.RequestType.RESOURCE_DEPENDENCY,
+        ):
+            return None
+        elif routed_request.request_type == request.RequestType.TRANSPORT:
+            return None
+        elif routed_request.request_type == request.RequestType.PRODUCTION:
+            return self.handle_production_buffer(routed_request)
+        else:
+            raise ValueError(f"Unknown request type: {routed_request.request_type}")
+
+    def handle_production_buffer(self, routed_request: request.Request) -> port.Queue:
+        if not routed_request.resource.buffers:
+            return None
+        queue = self.port_selection_heuristic(routed_request.resource.buffers, routed_request)
+        return queue
 
     def get_interaction_ports(
         self, routed_request: request.Request

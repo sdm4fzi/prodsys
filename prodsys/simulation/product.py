@@ -222,13 +222,8 @@ class Product:
             for dependency in dep_request_infos:
                 yield dependency.request_completion_event
             for dependenant_item in self.depended_entities:
-                for ports in dependenant_item.current_locatable.ports:
-                    # TODO: use here interaction handler to select ports
-                    if dependenant_item.data.ID in ports.items:
-                        yield from ports.get(dependenant_item.data.ID)
-                        break
-                else:
-                    raise ValueError(f"Primitive {dependenant_item.data.ID} not found in {dependenant_item.current_locatable.data.ID} ports")
+                # TODO: make this assigning of dependencies to product and placing them in queues / removing in extra class that handles this
+                yield from dependenant_item.current_locatable.get(dependenant_item.data.ID)
                 dependenant_item.current_locatable = self
 
         while self.next_possible_processes:
@@ -238,16 +233,16 @@ class Product:
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
-        arrived_at_sink_event = self.router.route_product_to_sink(self)
+        arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
         yield arrived_at_sink_event
         self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
-        self.current_locatable.register_finished_product(self)
+        sink.register_finished_product(self)
 
         for dependency in self.depended_entities:
             # TODO: use here interaction handler to select ports
-            yield from self.current_locatable.ports[0].put(dependency.data)
+            yield from self.current_locatable.put(dependency.data)
             dependency.current_locatable = self.current_locatable
             dependency.release()
 

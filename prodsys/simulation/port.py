@@ -14,95 +14,90 @@ from prodsys.simulation import sim
 from simpy import events
 
 
+
 class Queue:
     """
-    Class for storing products in a queue. The queue is a filter store with a limited or unlimited capacity, where product can be put and get from.
-
-    Args:
-        env (simpy.Environment): The simulation environment.
-        data (data.QueueData): The queue data object.
-
-    Attributes:
-        capacity (int, optional): The capacity of the queue. If 0 in the data, the capacity is set to infinity.
-        _pending_put (int): The number of products that are reserved for being put into the queue. Avoids bottleneck in the simulation.
-
+    Bounded (or unbounded) queue keyed by item.ID with explicit reservation.
+    Uses two condition events:
+      - on_item: fired when a new item arrives (unblocks getters)
+      - on_space: fired when space frees up (unblocks putters/reservers)
     """
 
-    def __init__(self, env: sim.Environment, data: port_data.QueueData):
+    def __init__(self, env: sim.Environment, data):
         self.env: sim.Environment = env
-        self.data: port_data.QueueData = data
-        if data.capacity == 0:
-            self.capacity = float("inf")
-        else:
-            self.capacity = data.capacity
-        self._pending_put: int = 0
+        self.data = data
+        self.capacity: float = float("inf") if getattr(data, "capacity", 0) == 0 else int(data.capacity)
+        self._pending_put: int = 0                  # reserved slots not yet filled
         self.items: dict[str, Any] = {}
-        self.full: bool = False
-        self.state_change = self.env.event()
+        # Separate condition events
+        self.on_item: events.Event = self.env.event()
+        self.on_space: events.Event = self.env.event()
+
+    # ---- helpers ------------------------------------------------------------
+    def _is_full(self) -> bool:
+        if self.capacity == float("inf"):
+            return False
+        return (self.capacity - self._pending_put - len(self.items)) <= 0
+
+    def _notify(self, which: str) -> None:
+        """Succeed current event (if not already), then replace it with a fresh one.
+        This avoids lost wakeups while also ensuring future waiters have a new event."""
+        ev: events.Event = getattr(self, which)
+        if not ev.triggered:
+            ev.succeed()
+        setattr(self, which, self.env.event())
+
+    # ---- API ----------------------------------------------------------------
+    def reserve(self) -> Generator:
+        """
+        Reserve a slot for a future put. Waits until space is available.
+        Usage: yield queue.reserve()
+        """
+        while self._is_full():
+            # capture current event ref so we don't get swapped underneath
+            ev = self.on_space
+            yield ev
+        self._pending_put += 1
 
     def put(self, item) -> Generator:
         """
-        Puts a product into the queue.
-
-        Args:
-            item (object): The product to be put into the queue.
+        Put an item; if no prior reserve(), it will implicitly wait for space.
+        If caller already reserved, this will consume that reservation.
         """
-        while self.full:
-            yield self.state_change
-        self.state_change = events.Event(self.env)
-        if self._pending_put > 0:
+        # If caller did not reserve, wait for space now
+        if self._pending_put == 0:
+            while self._is_full():
+                ev = self.on_space
+                yield ev
+        else:
+            # consume reservation
             self._pending_put -= 1
+
+        # Insert item
         self.items[item.ID] = item
-        self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
-        # Trigger the state change event to notify waiting get operations
-        if not self.state_change.triggered:
-            self.state_change.succeed()
+
+        # Notify getters that an item is available
+        self._notify("on_item")
 
     def get(self, item_id: str) -> Generator:
         """
-        Gets a product from the queue.
-
-        Args:
-            item_id (str): The ID of the item to get.
-
-        Yields:
-            Generator: A generator that yields when the item is retrieved.
+        Get the specific item by ID; waits until it exists.
+        Returns the item.
         """
-        # Wait for the item to be available if not present
         while item_id not in self.items:
-            yield self.state_change
-        
-        self.items.pop(item_id)
-        self.full = (self.capacity - self._pending_put - len(self.items)) <= 0
-        if not self.state_change.triggered:
-            self.state_change.succeed()
+            ev = self.on_item
+            yield ev
 
-    # @property
-    # def full(self) -> bool:
-    #     """
-    #     Checks if the queue is full.
+        item = self.items.pop(item_id)
 
-    #     Returns:
-    #         bool: True if the queue is full, False otherwise.
-    #     """
-    #     return (self.capacity - self._pending_put - self.num_items) <= 0
+        # Space has freed up (unless unbounded)
+        if self.capacity != float("inf"):
+            self._notify("on_space")
 
-    def reserve(self) -> None:
-        """
-        Reserves a spot in the queue for a product to be put into.
+        return item
 
-        Raises:
-            RuntimeError: If the queue is full.
-        """
-        self._pending_put += 1
-        if self._pending_put + len(self.items) > self.capacity:
-            raise RuntimeError("Queue is full")
-
-    def get_location(
-        self
-    ) -> List[float]:
+    def get_location(self) -> List[float]:
         return self.data.location
-
 
 class Store(Queue):
     """
@@ -163,11 +158,11 @@ class StorePort(Queue):
         """
         return self.location
     
-    def reserve(self) -> None:
+    def reserve(self) -> Generator:
         """
         Reserves a spot in the queue for a product to be put into.
 
         Raises:
             RuntimeError: If the queue is full.
         """
-        self.store.reserve()
+        yield from self.store.reserve()

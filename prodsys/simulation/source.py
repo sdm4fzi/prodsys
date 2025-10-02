@@ -93,7 +93,7 @@ class Source:
                 self.product_data, self.data.routing_heuristic
             )
             for queue in self.ports:
-                queue.reserve()
+                yield from queue.reserve()
                 yield from queue.put(product.data)
             product.update_location(self)
             product.process = self.env.process(product.process_product())
