@@ -67,6 +67,7 @@ class Resource(resource.Resource):
         setup_states: List[state.SetupState] = None,
         charging_states: List[state.ChargingState] = None,
         ports: List[port.Queue] = None,
+        buffers: List[port.Queue] = None
     ):
         super().__init__(env, capacity=data.capacity)
         self.env = env
@@ -93,6 +94,7 @@ class Resource(resource.Resource):
         self.current_dependant: Union[product.Product, Resource] = None
 
         self.ports = ports if ports else []
+        self.buffers = buffers if buffers else []
         self.batch_size = self.data.batch_size
         self.current_locatable = self
 
@@ -523,9 +525,6 @@ class Resource(resource.Resource):
     def add_ports(self, ports: List[port.Queue]):
         self.ports.extend(ports)
 
-    def adjust_pending_put_of_output_queues(self, target_queue: port.Queue, batch_size: int = 1):
-        target_queue.reserve()
-
 
 class SystemResource(Resource):
     """
@@ -555,8 +554,6 @@ class SystemResource(Resource):
         processes: List[PROCESS_UNION],
         controller: control.Controller,
         subresources: List[Resource] = None,
-        system_ports: List[port.Queue] = None,
-        internal_routing_matrix: Dict[str, List[str]] = None,
         can_move: bool = False,
         can_process: bool = False,
         states: List[state.State] = None,
@@ -570,8 +567,6 @@ class SystemResource(Resource):
             states, production_states, setup_states, charging_states, ports
         )
         self.subresources = subresources or []
-        self.system_ports = system_ports or []
-        self.internal_routing_matrix = internal_routing_matrix or {}
         
         # Create mapping for quick lookup
         self.subresource_map = {resource.data.ID: resource for resource in self.subresources}

@@ -265,7 +265,11 @@ class ProductionProcessHandler:
             production_state.process = None
 
             yield from self.put_product_to_output_queue(target_queue, product)
-            resource.adjust_pending_put_of_output_queues(target_queue)  # output queues do not get reserved, so the pending put has to be adjusted manually
+            product.update_location(target_queue)
+            
+            buffer_placement_event = product.router.request_buffering(process_request)
+            if buffer_placement_event:
+                yield buffer_placement_event
             product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
 
@@ -413,7 +417,7 @@ class TransportProcessHandler:
             yield req
             resource.controller.mark_started_process()
             if origin_queue.get_location() != resource.get_location():
-                # FIXME: move to origin_queue and not to origin
+                # FIXME: move to origin_queue and not to origin for link transport process route finder...
                 route_to_origin = self.find_route_to_origin(process_request)
                 transport_state: state.State = yield self.env.process(
                     resource.wait_for_free_process(process)
@@ -437,7 +441,7 @@ class TransportProcessHandler:
             transport_state.process = None
             # FIXME: Primitives should not be places in product queues...
             yield from self.put_product_to_input_queue(target_queue, product)
-            product.update_location(target)
+            product.update_location(target_queue)
 
             product.router.mark_finished_request(process_request)
             self.resource.controller.mark_finished_process()
@@ -893,6 +897,7 @@ class ProcessModelHandler:
         Yields:
             Generator: The generator yields when the individual process is finished.
         """
+        # TODO: use here the router of the system or the product to route the item for processing.
         origin_queue, target_queue = (
             process_request.origin_queue,
             process_request.target_queue,

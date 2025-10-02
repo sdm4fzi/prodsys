@@ -192,6 +192,7 @@ class ProductionSystem(core.ExpressObject):
             util.flatten_object(
                 [s.ports for s in self.sources]
                 + [r.ports for r in self.resources if r.ports]
+                + [r.buffers for r in self.resources if r.buffers]
                 + [s.ports for s in self.sinks]
             )
         )

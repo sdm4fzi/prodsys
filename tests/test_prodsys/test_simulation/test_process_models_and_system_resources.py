@@ -59,17 +59,12 @@ def test_system_resource_creation():
         processes=[p1],
         location=[10, 10],
         subresource_ids=["r1", "r2"],
-        system_ports=["sp1", "sp2"],
-        internal_routing_matrix={"sp1": ["r1"], "r1": ["r2"], "r2": ["sp2"]},
         ID="sr1"
     )
     
     data_model = system_resource.to_model()
     assert data_model.ID == "sr1"
     assert data_model.subresource_ids == ["r1", "r2"]
-    assert data_model.system_ports == ["sp1", "sp2"]
-    assert data_model.internal_routing_matrix == {"sp1": ["r1"], "r1": ["r2"], "r2": ["sp2"]}
-
 
 def test_product_with_process_model():
     """Test that products can use process models."""
@@ -195,8 +190,6 @@ def test_system_resource_without_ports():
     data_model = system_resource.to_model()
     assert data_model.ID == "sr1"
     assert data_model.subresource_ids == ["r1", "r2"]
-    assert data_model.system_ports is None
-    assert data_model.internal_routing_matrix is None
 
 
 def test_data_model_conversion():

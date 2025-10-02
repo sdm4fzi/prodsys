@@ -96,7 +96,7 @@ system = psx.ProductionSystem(
     [sink1, sink2],
 )
 model = system.to_model()
-model.write("examples/dependency_example_model.json")
+model.rite("examples/dependency_example_model.json")
 from prodsys import runner
 
 runner_instance = runner.Runner(production_system_data=model)

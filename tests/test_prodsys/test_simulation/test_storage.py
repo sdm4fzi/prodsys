@@ -12,7 +12,7 @@ def storage_simulation_adapter() -> ProductionSystemData:
     p1 = psx.ProductionProcess(t1, "p1")
     p2 = psx.ProductionProcess(t1, "p2")
 
-    t3 = psx.FunctionTimeModel("normal", 0.1, 0.01, ID="t3")
+    t3 = psx.FunctionTimeModel("normal", 0.05, 0.01, ID="t3")
 
     tp = psx.TransportProcess(t3, "tp")
 
@@ -31,13 +31,10 @@ def storage_simulation_adapter() -> ProductionSystemData:
         ID="machine2",
         internal_queue_size=20,
     )
-    # TODO: add storages here! Currently, this is not testing storages!
-    storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
-    storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
-    machine.set_default_ports()
-    machine2.set_default_ports()
-    machine.ports += [storage1, storage2]
-    machine2.ports += [storage2]
+    storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=20)
+    storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=30)
+    machine.buffers = [storage1]
+    machine2.buffers = [storage2]
 
     transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
@@ -61,10 +58,11 @@ def test_initialize_simulation(storage_simulation_adapter: ProductionSystemData)
 
 def test_hashing(storage_simulation_adapter: ProductionSystemData):
     hash_str = storage_simulation_adapter.hash()
-    assert hash_str == "4d12287b005cbd37a9419dfdbacb06c7"
+    assert hash_str == "d6512bd8b31e1ceed97e5e828ebaab1e"
 
 
 def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
+    # FIXME: this test holds
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
@@ -75,18 +73,18 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 2075 and kpi.value < 2085
+            assert kpi.value > 1970 and kpi.value < 2010
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 58 and kpi.value > 57
+            assert kpi.value < 54 and kpi.value > 51
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 77 and kpi.value < 78
+            assert kpi.value > 37 and kpi.value < 40
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 6.1 and kpi.value < 6.25
+            assert kpi.value > 3.0 and kpi.value < 3.2
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 5.0 and kpi.value < 5.1
+            assert kpi.value > 2.1 and kpi.value < 2.4

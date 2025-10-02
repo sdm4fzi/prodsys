@@ -56,6 +56,7 @@ class Resource(core.ExpressObject):
     batch_size: Optional[int] = None
     internal_queue_size: Optional[int] = 0
     ports: List[port.Queue] = Field(default_factory=list, init=False)
+    buffers: List[port.Queue] = Field(default_factory=list, init=False)
 
     dependencies: Optional[List[dependency.Dependency]] = Field(default_factory=list)
 
@@ -89,6 +90,7 @@ class Resource(core.ExpressObject):
             ]
             self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
+        resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource
 
 
@@ -122,10 +124,7 @@ class SystemResource(Resource):
         )
         ```
     """
-
     subresource_ids: "List[str]" = Field(default_factory=list)
-    system_ports: "Optional[List[str]]" = None
-    internal_routing_matrix: "Optional[Dict[str, List[str]]]" = None
 
     def to_model(self) -> resource_data.SystemResourceData:
         """
@@ -146,8 +145,6 @@ class SystemResource(Resource):
             control_policy=self.control_policy,
             dependency_ids=[dep.ID for dep in self.dependencies],
             subresource_ids=self.subresource_ids,
-            system_ports=self.system_ports,
-            internal_routing_matrix=self.internal_routing_matrix,
         )
         if not self.ports:
             port_data = [
@@ -157,6 +154,7 @@ class SystemResource(Resource):
             ]
             self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
+        resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource
 
 

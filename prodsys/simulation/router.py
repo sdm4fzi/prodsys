@@ -4,18 +4,14 @@ import random
 from typing import (
     List,
     TYPE_CHECKING,
-    Callable,
     Generator,
     Optional,
     Union,
     Dict,
-    Set,
     Tuple,
 )
-from dataclasses import dataclass, field
 
 import logging
-import time
 
 import simpy
 
@@ -203,34 +199,30 @@ class Router:
     def execute_resource_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
+        origin_port, target_port = self.interaction_handler.get_interaction_ports(
+            executed_request
+        )
+        yield from target_port.reserve()
         if (
             executed_request.request_type == request.RequestType.PRODUCTION
             and executed_request.requesting_item.current_locatable
-            != executed_request.resource
+            != origin_port
         ):
-            # FIXME: fix here that the transport to the origin_queue has to be made -> change logic here
-            # 0. Make sure that stores can be added to production system without correspondence to a resource, source or sink. 
-            # 1. Transport Places Product in Input Queue -> transport target queue should be an internal queue
-            # 2. Resource gets Product from Input Queue -> processes and places in internal queue (target queue of production process)
-            # 3. If also external queue for resource processing is specified -> make transport from this location to external output queue -> here target queue is already set for transport request, making finiding target queue not necessary. 
-            
             transport_process_finished_event = self.request_transport(
-                executed_request.requesting_item, executed_request.resource, 
+                executed_request.requesting_item, origin_port
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
 
-        origin_queue, target_queue = self.interaction_handler.get_interaction_ports(
-            executed_request
-        )
+        
         if executed_request.request_type == request.RequestType.TRANSPORT:
             route = self.request_handler.process_matcher.get_route(
-                origin_queue, target_queue, executed_request.process
+                origin_port, target_port, executed_request.process
             )
             executed_request.route = route
 
-        executed_request.origin_queue = origin_queue
-        executed_request.target_queue = target_queue
+        executed_request.origin_queue = origin_port
+        executed_request.target_queue = target_port
 
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
@@ -246,12 +238,27 @@ class Router:
             executed_request.dependencies_ready.succeed()
             yield executed_request.completed
 
+    def request_buffering(self, executed_request: request.Request) -> Optional[events.Event]:
+        # FIXME: problem is that the product asks for next process when executed_request.completed, so next process origin is not the buffer but the port
+        # Solution: move requesting storage to product! However, it is required to know resource with buffers...
+
+        buffer = self.interaction_handler.get_interaction_buffer(executed_request)
+        if not buffer:
+            return None
+        transport_process_finished_event = self.request_transport(
+            executed_request.requesting_item, buffer
+        )
+        executed_request.transport_to_target = transport_process_finished_event
+        return transport_process_finished_event
+
     def execute_primitive_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
         executed_request.item.bind(
             executed_request.requesting_item, executed_request.resolved_dependency
         )
+
+        # TODO: add here with interaction handler searching for interaction points
         trans_process_finished_event = self.request_transport(
             executed_request.item, executed_request.requesting_item.current_locatable
         )
@@ -287,6 +294,7 @@ class Router:
         Returns:
             port.Store: An available storage for the primitive.
         """
+        # TODO: this logic should be moved to the interaction handler!
         # Get the primitive data to find all possible storages
         primitive_data = None
         # Find the original primitive data that defines the storages
@@ -313,8 +321,9 @@ class Router:
         
         # Try to find a storage with available capacity
         for storage in possible_storages:
-            if hasattr(storage, 'capacity') and len(storage.items) < storage.capacity:
-                return storage
+            if storage._is_full():
+                continue
+            return storage
         
         # If no storage has capacity, try to find the one with most space
         if possible_storages:
@@ -455,7 +464,7 @@ class Router:
             self.got_requested.succeed()
         return request_info.request_completion_event
 
-    def route_product_to_sink(self, product: product.Product) -> events.Event:
+    def route_product_to_sink(self, product: product.Product) -> tuple[events.Event, sink.Sink]:
         """
         Routes a product to a sink.
 
@@ -469,10 +478,12 @@ class Router:
             product.data.type
         )
         chosen_sink = random.choice(possible_sinks)
+        # TODO: move retrieving chosen sink ports to interactin handler!
+        target_port = chosen_sink.ports[0]
         request_info = self.request_handler.add_transport_request(product, chosen_sink)
         if not self.got_requested.triggered:
             self.got_requested.succeed()
-        return request_info.request_completion_event
+        return request_info.request_completion_event, chosen_sink
 
     def get_rework_processes(
         self, failed_process: process.Process
