@@ -41,7 +41,6 @@ class InteractionHandler:
             request.RequestType.PRIMITIVE_DEPENDENCY,
             request.RequestType.PROCESS_DEPENDENCY,
             request.RequestType.RESOURCE_DEPENDENCY,
-            request.RequestType.PRIMITIVE_FINISHED_DEPENDENCY,
         ):
             return None, None
         elif routed_request.request_type == request.RequestType.TRANSPORT:
