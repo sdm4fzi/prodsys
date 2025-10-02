@@ -329,6 +329,15 @@ class ReworkProcessData(ProcessData):
         }
     )
 
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the rework process data considering the reworked process ids and type of the process. Can be used to compare two process data objects for equal functionality.
+        """
+        base_class_hash = super().hash(adapter)
+        reworked_process_ids_hash = "".join(sorted(self.reworked_process_ids))
+        blocking_hash = str(self.blocking)
+        return md5((base_class_hash + reworked_process_ids_hash + blocking_hash).encode("utf-8")).hexdigest()   
+
 
 class CompoundProcessData(CoreAsset):
     """

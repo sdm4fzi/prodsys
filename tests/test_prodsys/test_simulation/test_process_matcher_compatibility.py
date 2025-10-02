@@ -355,12 +355,8 @@ class TestProcessMatcherCompatibility:
         assert 'node2' in location_ids, "node2 should be included in all_locations"
         assert 'node3' in location_ids, "node3 should be included in all_locations"
         
-        # Check that reachability cache includes connections to/from nodes
         expected_node_connections = [
-            ('source01', 'node1'), ('resource01', 'node1'), ('node1', 'node2'),
-            ('node2', 'node3')
-        ]
-        
+            ('source01_default_output_queue', 'source01_default_output_queue'), ('source01_default_output_queue', 'resource01_default_input_queue'), ('source01_default_output_queue', 'node3'), ('source01_default_output_queue', 'node1'), ('source01_default_output_queue', 'node2'), ('resource01_default_input_queue', 'source01_default_output_queue'), ('resource01_default_input_queue', 'resource01_default_input_queue'), ('resource01_default_input_queue', 'node3'), ('resource01_default_input_queue', 'node1'), ('resource01_default_input_queue', 'node2'), ('node3', 'source01_default_output_queue'), ('node3', 'resource01_default_input_queue'), ('node3', 'node3'), ('node3', 'node1'), ('node3', 'node2'), ('node1', 'source01_default_output_queue'), ('node1', 'resource01_default_input_queue'), ('node1', 'node3'), ('node1', 'node1'), ('node1', 'node2'), ('node2', 'source01_default_output_queue'), ('node2', 'resource01_default_input_queue'), ('node2', 'node3'), ('node2', 'node1'), ('node2', 'node2')]
         for origin_id, target_id in expected_node_connections:
             cache_key = (origin_id, target_id)
             assert cache_key in process_matcher_link_transport_with_capabilities.reachability_cache, \
