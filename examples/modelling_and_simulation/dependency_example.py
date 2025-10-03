@@ -21,7 +21,7 @@ setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
 
 assembly_process = psx.ProductionProcess(
-    psx.FunctionTimeModel("exponential", 0.1, ID="fake_process"), "fake_process"
+    psx.FunctionTimeModel("exponential", 0.1, ID="assembly_time"), "assembly_process"
 )
 
 worker = psx.Resource(
@@ -36,6 +36,13 @@ worker2 = psx.Resource(
     [3, 0],
     1,
     ID="worker2",
+)
+
+worker3 = psx.Resource(
+    [move_p, assembly_process],
+    [4, 0],
+    1,
+    ID="worker3",
 )
 
 interaction_node_assembly = psx.Node(location=[5, 6], ID="interaction_node_assembly")
@@ -63,7 +70,7 @@ machine = psx.Resource(
 machine2 = psx.Resource(
     [p1, p2],
     [7, 2],
-    2,
+    3,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
     dependencies=[resource_2_dependency],
@@ -78,8 +85,8 @@ sink1 = psx.Sink(product1, [10, 0], "sink1")
 sink2 = psx.Sink(product2, [10, 0], "sink2")
 
 
-arrival_model_1 = psx.FunctionTimeModel("exponential", 1, ID="arrival_model_1")
-arrival_model_2 = psx.FunctionTimeModel("exponential", 2, ID="arrival_model_2")
+arrival_model_1 = psx.FunctionTimeModel("exponential", 2, ID="arrival_model_1")
+arrival_model_2 = psx.FunctionTimeModel("exponential", 4, ID="arrival_model_2")
 
 
 source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
@@ -87,7 +94,7 @@ source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
 
 
 system = psx.ProductionSystem(
-    [machine, machine2, transport, worker, worker2],
+    [machine, machine2, transport, worker, worker2, worker3],
     [source1, source2],
     [sink1, sink2],
 )
@@ -104,4 +111,3 @@ runner_instance = system.runner
 runner_instance.save_results_as_csv()
 runner_instance.print_results()
 runner_instance.plot_results()
-runner_instance.plot_results_executive()

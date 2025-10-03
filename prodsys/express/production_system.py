@@ -120,6 +120,8 @@ class ProductionSystem(core.ExpressObject):
 
         nodes = []
         for process_instance in processes:
+            if isinstance(process_instance, process.RequiredCapabilityProcess):
+                continue
             for dependency in process_instance.dependencies:
                 if dependency.interaction_node:
                     nodes.append(dependency.interaction_node)

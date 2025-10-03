@@ -110,7 +110,7 @@ class Logger(ABC):
             filepath (str): The path to the json file.
         """
         df = self.get_data_as_dataframe()
-        df.to_json(filepath)
+        df.to_json(filepath, orient="records")
 
 
 def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
