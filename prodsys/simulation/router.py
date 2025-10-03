@@ -342,24 +342,15 @@ class Router:
             request.Request: The allocated request.
         """
         try:
-            routing_heuristic = free_requests[0].requesting_item.routing_heuristic
+            if free_requests[0].request_type in (request.RequestType.PROCESS_DEPENDENCY, request.RequestType.RESOURCE_DEPENDENCY):
+                routing_heuristic = random_routing_heuristic
+            else:
+                routing_heuristic = free_requests[0].requesting_item.routing_heuristic
             routing_heuristic(free_requests)
         except Exception:
             routing_heuristic = lambda x: x[0]
             routing_heuristic(free_requests)
         routed_request = free_requests.pop(0)
-
-        # origin_queue, target_queue = self.interaction_handler.get_interaction_ports(
-        #     routed_request
-        # )
-        # if routed_request.request_type == request.RequestType.TRANSPORT:
-        #     route = self.request_handler.process_matcher.get_route(
-        #         origin_queue, target_queue, routed_request.process
-        #     )
-        #     routed_request.route = route
-
-        # routed_request.origin_queue = origin_queue
-        # routed_request.target_queue = target_queue
         return routed_request
 
     def get_dependencies_for_product_processing(

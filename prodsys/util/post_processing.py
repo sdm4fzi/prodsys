@@ -1029,6 +1029,10 @@ class PostProcessor:
                 performance_indicators.ChargingTime,
                 performance_indicators.KPIEnum.CHARGING_TIME,
             ),
+            "DP": (
+                performance_indicators.DependencyTime,
+                performance_indicators.KPIEnum.DEPENDENCY_TIME,
+            ),
         }
         for index, values in df.iterrows():
             KPIs.append(
