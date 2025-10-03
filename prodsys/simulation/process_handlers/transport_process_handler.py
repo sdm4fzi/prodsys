@@ -126,7 +126,6 @@ class TransportProcessHandler:
             yield req
             resource.controller.mark_started_process()
             if origin_queue.get_location() != resource.get_location():
-                # FIXME: move to origin_queue and not to origin for link transport process route finder...
                 route_to_origin = self.find_route_to_origin(process_request)
                 transport_state: state.State = yield self.env.process(
                     resource.wait_for_free_process(process)
@@ -136,7 +135,7 @@ class TransportProcessHandler:
                     transport_state, product, route_to_origin, empty_transport=True
                 )
                 transport_state.process = None
-
+            # TODO: add here the handling of the LOT DEPENDENCIES, to retrieve all needed products -> if not feasible, move request back to controller...
             yield from self.get_next_product_for_process(origin_queue, product)
             product.update_location(self.resource)
 
@@ -148,7 +147,6 @@ class TransportProcessHandler:
                 transport_state, product, route_to_target, empty_transport=False
             )
             transport_state.process = None
-            # FIXME: Primitives should not be places in product queues...
             yield from self.put_product_to_input_queue(target_queue, product)
             product.update_location(target_queue)
 

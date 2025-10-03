@@ -37,13 +37,8 @@ class DependencyFactory:
             list[Dependency]: List of created dependency objects.
         """
         dependencies = []
-        lot_dependencies = []
         for dependency_data in dependency_data_list:
-            if dependency_data.dependency_type == DependencyType.LOT:
-                lot_dependencies.append(dependency_data) #  postpone creation of lot dependencies until after all other dependencies are created
             dependencies.append(self.create_dependency(dependency_data))
-        for lot_dependency in lot_dependencies:
-            self.create_lot_dependency(lot_dependency)
         return dependencies
 
     def create_dependency(self, dependency_data: DEPENDENCY_TYPES) -> Dependency:
@@ -56,7 +51,7 @@ class DependencyFactory:
         Returns:
             Dependency: Created dependency object.
         """
-        process, primitive, resource, node, dependencies = None, None, None, None, []
+        process, primitive, resource, node = None, None, None, None
         if dependency_data.dependency_type == DependencyType.PROCESS:
             process = self.process_factory.get_process(dependency_data.required_process)
             node = self.node_factory.get_node(dependency_data.interaction_node)
@@ -73,8 +68,7 @@ class DependencyFactory:
             except Exception as e:
                 raise ValueError(f"Primitive with ID {dependency_data.required_primitive} not found.") from e   
         elif dependency_data.dependency_type == DependencyType.LOT:
-            for dependency_id in dependency_data.dependency_ids:
-                dependencies.append(self.get_dependency(dependency_id))
+            pass
         else:
             raise ValueError(f"Invalid dependency type for {dependency_data.dependency_type}: {dependency_data.dependency_type}")
 
@@ -85,7 +79,6 @@ class DependencyFactory:
             required_primitive=primitive,
             required_resource=resource,
             interaction_node=node,
-            dependencies=dependencies
         )
         self.dependencies[dependency_data.ID] = dependency
         return dependency

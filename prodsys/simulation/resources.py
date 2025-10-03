@@ -95,7 +95,6 @@ class Resource(resource.Resource):
 
         self.ports = ports if ports else []
         self.buffers = buffers if buffers else []
-        self.batch_size = self.data.batch_size
         self.current_locatable = self
 
         self.full = False

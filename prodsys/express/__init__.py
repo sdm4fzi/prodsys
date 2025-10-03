@@ -62,5 +62,5 @@ Product = _patched_product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
 from prodsys.express.primitive import Primitive
-from prodsys.express.dependency import ResourceDependency, PrimitiveDependency, ProcessDependency
+from prodsys.express.dependency import ResourceDependency, PrimitiveDependency, ProcessDependency, LotDependency
 from prodsys.express.production_system import ProductionSystem

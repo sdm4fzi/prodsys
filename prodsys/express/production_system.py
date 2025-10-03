@@ -102,6 +102,7 @@ class ProductionSystem(core.ExpressObject):
             util.flatten_object(
                 [product.process for product in products]
                 + [product.transport_process for product in products]
+                + [primitive.transport_process for primitive in self.primitives]
                 + [resource.processes for resource in self.resources]
             )
         )
@@ -123,6 +124,8 @@ class ProductionSystem(core.ExpressObject):
             if isinstance(process_instance, process.RequiredCapabilityProcess):
                 continue
             for dependency in process_instance.dependencies:
+                if not hasattr(dependency, "interaction_node"):
+                    continue
                 if dependency.interaction_node:
                     nodes.append(dependency.interaction_node)
             if not isinstance(process_instance, process.LinkTransportProcess):
@@ -133,6 +136,8 @@ class ProductionSystem(core.ExpressObject):
                         nodes.append(link_element)
         for resource_instance in self.resources:
             for dependency in resource_instance.dependencies:
+                if not hasattr(dependency, "interaction_node"):
+                    continue
                 if dependency.interaction_node:
                     nodes.append(dependency.interaction_node)
         nodes = remove_duplicate_items(nodes)

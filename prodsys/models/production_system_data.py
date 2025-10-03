@@ -319,7 +319,7 @@ class ProductionSystemData(BaseModel):
     sink_data: List[sink_data_module.SinkData] = []
     source_data: List[source_data_module.SourceData] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
-    depdendency_data: Optional[List[dependency_data_module.DependencyData]] = []
+    depdendency_data: Optional[List[dependency_data_module.DEPENDENCY_TYPES]] = []
     primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
 
     valid_configuration: bool = True

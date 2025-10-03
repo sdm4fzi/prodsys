@@ -113,7 +113,6 @@ class LotDependencyData(DependencyData):
     min_lot_size: int = 1
     max_lot_size: int = 1
     dependency_type: DependencyType = DependencyType.LOT
-    dependency_ids: list[str] = []
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """

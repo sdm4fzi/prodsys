@@ -103,7 +103,6 @@ class ResourceData(CoreAsset, Locatable):
     buffers: Optional[List[str]] = None
     can_move: Optional[bool] = None
 
-    batch_size: Optional[int] = None
     dependency_ids: List[str] = []
 
     @model_validator(mode="before")
@@ -126,30 +125,6 @@ class ResourceData(CoreAsset, Locatable):
                 f"process_capacities {values['process_capacities']} values must be smaller than capacity of resource {values['capacity']}."
             )
         return values
-
-    @model_validator(mode="before")
-    def validate_batch_size(cls, data: Any):
-        if not isinstance(data, dict):
-            return data
-
-        controller = data.get("controller")
-        batch_size = data.get("batch_size")
-
-        # Only apply batch size validation for production resources
-        if batch_size is not None and controller != ControllerEnum.BatchController:
-            raise ValueError(
-                "Batch size can only be set for resources with a BatchController."
-            )
-        if batch_size is None and controller == ControllerEnum.BatchController:
-            raise ValueError(
-                "Batch size has to be set for resources with a BatchController."
-            )
-        if batch_size is not None and batch_size > data.get("capacity", 0):
-            raise ValueError(
-                "Batch size cannot be greater than the capacity of the resource."
-            )
-
-        return data
 
     def hash(self, production_system: ProductionSystemData) -> str:
         """

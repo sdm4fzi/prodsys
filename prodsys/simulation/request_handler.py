@@ -176,6 +176,8 @@ class RequestHandler:
                 origin, target, item.transport_process.get_process_signature()
             )
         )
+        if not possible_resources_and_processes:
+            raise ValueError(f"No resource available for transport of item {item.data.ID} with process {item.data.transport_process}")
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
             resource_id = resource.data.ID
@@ -217,6 +219,7 @@ class RequestHandler:
         if dependency.data.dependency_type == DependencyType.PRIMITIVE:
             request_type = request.RequestType.PRIMITIVE_DEPENDENCY
             resource_mappings = {}
+            requiring_dependency = requesting_item
         elif dependency.data.dependency_type == DependencyType.RESOURCE:
             request_type = request.RequestType.RESOURCE_DEPENDENCY
             resource_mappings = {
@@ -233,6 +236,8 @@ class RequestHandler:
                 if resource_id in resource_mappings:
                     continue
                 resource_mappings[resource_id] = [DependencyProcess()]
+        elif dependency.data.dependency_type == DependencyType.LOT:
+            return
         else:
             raise ValueError(
                 f"Unknown dependency type: {dependency.data.dependency_type}"
@@ -398,6 +403,7 @@ class RequestHandler:
             request_type=request_info.request_type,
             completed=request_info.request_completion_event,
             resolved_dependency=request_info.dependency,
+            dependency_release_event=request_info.dependency_release_event,
         )
 
     def get_next_primitive_request_to_route(

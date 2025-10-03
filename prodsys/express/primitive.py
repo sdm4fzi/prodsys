@@ -3,7 +3,7 @@ from pydantic.dataclasses import dataclass
 from typing import List, Optional, Union
 from pydantic import Field
 from prodsys.express import core, process
-from prodsys.express.port import Store
+from prodsys.express.port import Queue
 from prodsys.models import dependency_data, primitives_data
 
 
@@ -21,7 +21,7 @@ class Primitive(core.ExpressObject):
     """
 
     transport_process: process.TransportProcess
-    storages: List[Store]
+    storages: List[Queue]
     quantity_in_storages: List[int]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
