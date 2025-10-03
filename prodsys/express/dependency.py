@@ -68,7 +68,6 @@ class LotDependency(Dependency):
     min_lot_size: int
     max_lot_size: int
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-    dependencies: Optional[List[Dependency]] = Field(default_factory=list)
 
     def to_model(self):
         return LotDependencyData(
@@ -76,7 +75,6 @@ class LotDependency(Dependency):
             description="",
             min_lot_size=self.min_lot_size,
             max_lot_size=self.max_lot_size,
-            dependency_ids=[dependency.ID for dependency in self.dependencies],
         )
 
 from prodsys.express.primitive import Primitive

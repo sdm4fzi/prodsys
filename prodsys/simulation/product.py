@@ -216,7 +216,7 @@ class Product:
         """
         self.set_next_possible_production_processes()
         if self.dependencies:
-            dep_request_infos = (
+            dep_request_infos, dependency_release_event = (
                 self.router.get_dependencies_for_product_processing(self)
             )
             for dependency in dep_request_infos:
@@ -244,7 +244,8 @@ class Product:
             # TODO: use here interaction handler to select ports
             yield from self.current_locatable.put(dependency.data)
             dependency.current_locatable = self.current_locatable
-            dependency.release()
+        if self.dependencies:
+            dependency_release_event.succeed()
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """

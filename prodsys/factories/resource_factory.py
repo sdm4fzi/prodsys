@@ -228,8 +228,6 @@ class ResourceFactory:
         values.update({"ports": ports})
         buffers = self.get_buffers_for_resource(resource_data)
         values.update({"buffers": buffers})
-        if "batch_size" in resource_data:
-            values.update({"batch_size": resource_data.batch_size})
 
         # Create appropriate resource type based on data type
         if isinstance(resource_data, SystemResourceData):

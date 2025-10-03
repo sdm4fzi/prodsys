@@ -261,20 +261,27 @@ class Router:
             executed_request.item, executed_request.requesting_item.current_locatable
         )
         yield trans_process_finished_event
-        # retrieve item here from queue and make sure its position is updated!
+        # retrieve from queue after transport for binding
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} retrieving from queue after transport for binding")
+        yield from executed_request.item.current_locatable.get(executed_request.item.data.ID)
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} retrieved from queue after transport for binding")
+
         executed_request.completed.succeed()
-        if (
-            executed_request.dependency_release_event
-        ):  # primitives for resource processes
-            yield executed_request.dependency_release_event
-        else:  # primitives for product
-            yield executed_request.item.got_free
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} for resource process used")
+        yield executed_request.dependency_release_event
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} for resource process released")
         # Find an appropriate storage for the primitive
+        # place in storage after binding
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} placing in storage after binding")
+        yield from executed_request.item.current_locatable.reserve()
+        yield from executed_request.item.current_locatable.put(executed_request.item.data)
+        print(f"{self.env.now} primitive {executed_request.item.data.ID} placed in storage after binding")
         target_storage = self._find_available_storage_for_primitive(executed_request.item)
         transport_process_finished_event = self.request_transport(
             executed_request.item, target_storage
         )
         yield transport_process_finished_event
+        executed_request.item.release()
         self.free_primitives_by_type[executed_request.item.data.type].append(
             executed_request.item
         )
@@ -365,7 +372,9 @@ class Router:
         Returns:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
+        # TODO: this function needs to be removed after changing from product to process model processing
         request_infos = []
+        dependency_release_event = events.Event(self.env)
         for dependency in product.dependencies:
             assert (
                 dependency.data.dependency_type == DependencyType.PRIMITIVE
@@ -374,11 +383,12 @@ class Router:
                 requiring_dependency=product,
                 dependency=dependency,
                 requesting_item=product,
+                dependency_release_event=dependency_release_event,
             )
             request_infos.append(request_info)
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
-        return request_infos
+        return request_infos, dependency_release_event
 
     def get_dependencies_for_execution(
         self,
@@ -394,27 +404,19 @@ class Router:
         Returns:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
-        # could be primitives, processes or resources
-        # for primitives, same logic as for products
-        # for processes, find a suiting resource and route it to the resource
-        # for resources, find resource and route it to this resource
-
-        # only one object can be immovable, the other has to be movable -> go always to the immovable one
         dependency_ready_events = []
-        for dependency in resource.dependencies:
+        for dependency in resource.dependencies + process.dependencies:
             request_info = self.request_handler.add_dependency_request(
                 requiring_dependency=resource,
                 requesting_item=requesting_item,
                 dependency=dependency,
                 dependency_release_event=dependency_release_event,
             )
-            dependency_ready_events.append(request_info.request_completion_event)
-        for dependency in process.dependencies:
-            request_info = self.request_handler.add_dependency_request(
-                requiring_dependency=resource,
-                dependency=dependency,
-                requesting_item=requesting_item,
-            )
+            if not request_info:
+                continue
+            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+                if not self.got_primitive_request.triggered:
+                    self.got_primitive_request.succeed()
             dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
 

@@ -53,7 +53,6 @@ class Resource(core.ExpressObject):
     ] = resource_data.ResourceControlPolicy.FIFO
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    batch_size: Optional[int] = None
     internal_queue_size: Optional[int] = 0
     ports: List[port.Queue] = Field(default_factory=list, init=False)
     buffers: List[port.Queue] = Field(default_factory=list, init=False)
@@ -76,7 +75,6 @@ class Resource(core.ExpressObject):
             process_ids=[process.ID for process in self.processes],
             location=self.location,
             capacity=self.capacity,
-            batch_size=self.batch_size,
             state_ids=[state.ID for state in self.states],
             controller=self.controller,
             control_policy=self.control_policy,

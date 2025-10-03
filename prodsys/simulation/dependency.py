@@ -130,11 +130,10 @@ class Dependency:
         self,
         env: sim.Environment,
         data: dependency_data.DependencyData,
-        required_process: process.Process,
-        required_primitive: primitive.Primitive,
-        required_resource: resources.Resource,
-        interaction_node: node.Node,
-        dependencies: list[Dependency],
+        required_process: Optional[process.Process],
+        required_primitive: [primitive.Primitive],
+        required_resource: [resources.Resource],
+        interaction_node: [node.Node],
     ):
         """
         Initializes the Auxiliary class.
@@ -153,7 +152,6 @@ class Dependency:
         self.required_primitive = required_primitive
         self.required_resource = required_resource
         self.interaction_node = interaction_node
-        self.dependencies = dependencies
 
 
 from prodsys.simulation import state
