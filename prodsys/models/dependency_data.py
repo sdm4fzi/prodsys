@@ -32,7 +32,7 @@ class DependencyData(CoreAsset):
 class ProcessDependencyData(DependencyData):
     required_process: str
     dependency_type: DependencyType = DependencyType.PROCESS
-    interaction_point: Optional[Location2D] = None
+    interaction_node: Optional[str] = None
     position_type: Literal["relative", "absolute"] = "absolute"
 
     def hash(self, adapter: ProductionSystemData) -> str:
@@ -54,7 +54,7 @@ class ProcessDependencyData(DependencyData):
 class ResourceDependencyData(DependencyData):
     required_resource: str
     dependency_type: DependencyType = DependencyType.RESOURCE
-    interaction_point: Optional[Location2D] = None
+    interaction_node: Optional[str] = None
     position_type: Literal["relative", "absolute"] = "absolute"
 
     def hash(self, adapter: ProductionSystemData) -> str:
@@ -110,17 +110,26 @@ class LotDependencyData(DependencyData):
     """
     Class that defines that processes need to be performed with a carrier, specifying also how many (max / min) products should be placed on this carrier
     """
-    # TODO: Implement this class to be usable in the simulation! Also think about merging / splitting and how controllers perform processes on a carrier level or individual level...
     min_lot_size: int = 1
     max_lot_size: int = 1
     dependency_type: DependencyType = DependencyType.LOT
     dependency_ids: list[str] = []
 
-    # TODO: add hash function
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Function to hash the lot dependency.
+
+        Returns:
+            str: Hash of the lot dependency.
+        """
+        return md5(
+            "".join([self.dependency_type, self.min_lot_size, self.max_lot_size]).encode("utf-8")
+        ).hexdigest()
 
 
 DEPENDENCY_TYPES = Union[
     ProcessDependencyData,
     ResourceDependencyData,
     PrimitiveDependencyData,
+    LotDependencyData,
 ]

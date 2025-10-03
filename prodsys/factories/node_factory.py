@@ -40,7 +40,7 @@ class NodeFactory:
             node_data (NodeData): Node data that is used to create the node object.
         """
         values = {}
-        values.update({"data": node_data})
+        values.update({"data": node_data, "env": self.env})
         self.nodes.append(node.Node(**values))
 
     def get_node(self, ID: str) -> node.Node:
