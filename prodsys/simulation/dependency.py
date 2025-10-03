@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         process,
         sim,
         state,
+        node,
     )
 
 class DependedEntity(Protocol):
@@ -132,6 +133,8 @@ class Dependency:
         required_process: process.Process,
         required_primitive: primitive.Primitive,
         required_resource: resources.Resource,
+        interaction_node: node.Node,
+        dependencies: list[Dependency],
     ):
         """
         Initializes the Auxiliary class.
@@ -149,6 +152,8 @@ class Dependency:
         self.required_process = required_process
         self.required_primitive = required_primitive
         self.required_resource = required_resource
+        self.interaction_node = interaction_node
+        self.dependencies = dependencies
 
 
 from prodsys.simulation import state

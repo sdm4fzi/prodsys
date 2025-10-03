@@ -202,7 +202,8 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-        yield from target_port.reserve()
+        if target_port:
+            yield from target_port.reserve()
         if (
             executed_request.request_type == request.RequestType.PRODUCTION
             and executed_request.requesting_item.current_locatable
@@ -239,9 +240,6 @@ class Router:
             yield executed_request.completed
 
     def request_buffering(self, executed_request: request.Request) -> Optional[events.Event]:
-        # FIXME: problem is that the product asks for next process when executed_request.completed, so next process origin is not the buffer but the port
-        # Solution: move requesting storage to product! However, it is required to know resource with buffers...
-
         buffer = self.interaction_handler.get_interaction_buffer(executed_request)
         if not buffer:
             return None

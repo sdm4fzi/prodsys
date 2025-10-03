@@ -120,12 +120,19 @@ class ProductionSystem(core.ExpressObject):
 
         nodes = []
         for process_instance in processes:
+            for dependency in process_instance.dependencies:
+                if dependency.interaction_node:
+                    nodes.append(dependency.interaction_node)
             if not isinstance(process_instance, process.LinkTransportProcess):
                 continue
             for link in process_instance.links:
                 for link_element in link:
                     if isinstance(link_element, node.Node):
                         nodes.append(link_element)
+        for resource_instance in self.resources:
+            for dependency in resource_instance.dependencies:
+                if dependency.interaction_node:
+                    nodes.append(dependency.interaction_node)
         nodes = remove_duplicate_items(nodes)
         primitive_stores = list(
             util.flatten_object(

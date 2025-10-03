@@ -69,7 +69,10 @@ class DependencyProcessHandler:
                 ProcessTypeEnum.LinkTransportProcesses,
             )
         ].pop()
-        target = requesting_item
+        if process_request.resolved_dependency.interaction_node:
+            target = process_request.resolved_dependency.interaction_node
+        else:
+            target = requesting_item
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
         yield from self.resource.setup(process)
@@ -174,12 +177,7 @@ class DependencyProcessHandler:
         Returns:
             list[float]: The position of the target, list with 2 floats.
         """
-        if not last_transport_step or hasattr(target, "product_factory"):
-            return target.get_location()
-        if empty_transport:
-            return target.get_location(interaction="output")
-        else:
-            return target.get_location(interaction="input")
+        return target.get_location()
 
     def run_process(
         self,
@@ -249,3 +247,5 @@ class DependencyProcessHandler:
         else:
             return [self.resource.current_locatable, process_request.get_origin()]
 
+
+from prodsys.simulation import request as request_module
