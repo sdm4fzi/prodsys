@@ -214,7 +214,6 @@ class Router:
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
-
         
         if executed_request.request_type == request.RequestType.TRANSPORT:
             route = self.request_handler.process_matcher.get_route(
@@ -255,27 +254,21 @@ class Router:
         executed_request.item.bind(
             executed_request.requesting_item, executed_request.resolved_dependency
         )
-
         # TODO: add here with interaction handler searching for interaction points
         trans_process_finished_event = self.request_transport(
             executed_request.item, executed_request.requesting_item.current_locatable
         )
         yield trans_process_finished_event
         # retrieve from queue after transport for binding
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} retrieving from queue after transport for binding")
         yield from executed_request.item.current_locatable.get(executed_request.item.data.ID)
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} retrieved from queue after transport for binding")
 
         executed_request.completed.succeed()
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} for resource process used")
         yield executed_request.dependency_release_event
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} for resource process released")
         # Find an appropriate storage for the primitive
         # place in storage after binding
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} placing in storage after binding")
-        yield from executed_request.item.current_locatable.reserve()
-        yield from executed_request.item.current_locatable.put(executed_request.item.data)
-        print(f"{self.env.now} primitive {executed_request.item.data.ID} placed in storage after binding")
+        yield from executed_request.requesting_item.current_locatable.reserve()
+        yield from executed_request.requesting_item.current_locatable.put(executed_request.item.data)
+        executed_request.item.current_locatable = executed_request.requesting_item.current_locatable
         target_storage = self._find_available_storage_for_primitive(executed_request.item)
         transport_process_finished_event = self.request_transport(
             executed_request.item, target_storage

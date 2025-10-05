@@ -120,6 +120,7 @@ class PrimitiveFactory:
         Place the auxiliary objects in the system.
         """
         for primitive in self.primitives:
+            yield from primitive.current_locatable.reserve()
             yield from primitive.current_locatable.put(primitive.data)
 
     def get_primitive_with_type(self, ID: str) -> primitive.Primitive:

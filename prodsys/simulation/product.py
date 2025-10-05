@@ -240,12 +240,13 @@ class Product:
         )
         sink.register_finished_product(self)
 
-        for dependency in self.depended_entities:
-            # TODO: use here interaction handler to select ports
-            yield from self.current_locatable.put(dependency.data)
-            dependency.current_locatable = self.current_locatable
-        if self.dependencies:
-            dependency_release_event.succeed()
+        # for dependency in self.depended_entities:
+        #     # FIXME: this code needs to be used in the process model to release the dependencies -> similar to other process dependencies
+        #     yield from self.current_locatable.reserve()
+        #     yield from self.current_locatable.put(dependency.data)
+        #     dependency.current_locatable = self.current_locatable
+        # if self.dependencies:
+        #     dependency_release_event.succeed()
 
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """
