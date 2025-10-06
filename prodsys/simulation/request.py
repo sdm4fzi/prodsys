@@ -101,6 +101,7 @@ class Request:
         self.dependencies_ready: Optional[simpy.Event] = simpy.Event(
             self.requesting_item.env
         )
+        self.lot_process_time: Optional[float] = None
 
         self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route

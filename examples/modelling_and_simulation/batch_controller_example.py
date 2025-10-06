@@ -2,7 +2,7 @@ import prodsys.express as psx
 from prodsys.simulation import runner
 
 
-t1 = psx.FunctionTimeModel("exponential", 1.8, 0, "t1")
+t1 = psx.FunctionTimeModel("constant", 1.8, 0, "t1")
 
 p1 = psx.ProductionProcess(t1, "p1")
 
@@ -31,20 +31,21 @@ work_piece_carrier_dependency = psx.PrimitiveDependency(
 
 lot_dependency_without_carrier = psx.LotDependency(
     min_lot_size=2,
-    max_lot_size=2,
+    max_lot_size=3,
     ID="lot_dependency",
 )
 
 machine = psx.Resource(
     [p1],
     [5, 0],
-    capacity=2,
+    capacity=5,
     ID="machine",
     dependencies=[lot_dependency_without_carrier],
 )
 
 
-tp = psx.TransportProcess(t3, "tp", dependencies=[lot_dependency_with_carrier, work_piece_carrier_dependency])
+# tp = psx.TransportProcess(t3, "tp", dependencies=[lot_dependency_with_carrier, work_piece_carrier_dependency])
+tp = psx.TransportProcess(t3, "tp", dependencies=[work_piece_carrier_dependency])
 
 transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 carrier_transport = psx.Resource([carrier_tp], [0, 0], 1, ID="carrier_transport")

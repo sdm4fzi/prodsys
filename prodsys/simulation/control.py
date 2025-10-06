@@ -103,31 +103,45 @@ class Controller:
                 continue
             self.control_policy(self.requests)
             selected_request = self.requests.pop(0)
-            self.reserved_requests_count += 1
+            lot_requests = self.get_lot_for_request(selected_request)
+            if not lot_requests:
+                continue
+            self.reserved_requests_count += len(lot_requests)
             self.resource.update_full()
             process_handler = get_requets_handler(selected_request)
-            self.env.process(process_handler.handle_request(selected_request))
+            self.env.process(process_handler.handle_request(lot_requests))
             if not self.resource.full and self.requests:
                 self.state_changed.succeed()
 
-    def mark_started_process(self) -> None:
+
+    def get_lot_for_request(self, process_request: request_module.Request) -> list[request_module.Request]:
+        lot_handler = process_request.item.router.lot_handler
+        if process_request.request_type == request_module.RequestType.PRODUCTION:
+            print(f"Production request: {process_request.item.data.ID}")
+        if not lot_handler.is_lot_feasible(process_request):
+            self.requests.insert(0, process_request)
+            return []
+        lot_requests = lot_handler.get_requests_of_lot(process_request)
+        return lot_requests
+
+    def mark_started_process(self, num_processes: int = 1) -> None:
         """
         Mark the process as started.
 
         Args:
-            process_request (Request): The request that is being processed.
+            num_processes (int): The number of processes that are being started.
         """
-        self.reserved_requests_count -= 1
-        self.num_running_processes += 1
+        self.reserved_requests_count -= num_processes
+        self.num_running_processes += num_processes
 
-    def mark_finished_process(self) -> None:
+    def mark_finished_process(self, num_processes: int = 1) -> None:
         """
         Mark the process as finished.
 
         Args:
             process_request (Request): The request that is being processed.
         """
-        self.num_running_processes -= 1
+        self.num_running_processes -= num_processes
         self.resource.update_full()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
@@ -314,7 +328,7 @@ class BatchController(Controller):
                 selected_request
             )
 
-            # TODO: add this as an option in the data model, if only full batches should be processed
+            # TODO: Adjust BatchController to start all processes at once and stop otherwise!
             if len(batch_requests) < self.resource.batch_size:
                 self.requests.extend(batch_requests)
                 continue
@@ -376,5 +390,8 @@ class BatchController(Controller):
             raise ValueError("Request has no process.")
         return request.process.time_model.get_next_time(
         )
+
+
+# TODO: add a Controller which starts processes with delays...
 
 from prodsys.simulation import request as request_module
