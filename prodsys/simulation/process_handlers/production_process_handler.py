@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Generator, TYPE_CHECKING, Optional
+from typing import Generator, TYPE_CHECKING
 import numpy as np
 
 import logging
 
 from prodsys.simulation import (
-    port,
     sim,
     state,
     process,
@@ -28,6 +27,24 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def get_process_time_for_lots(
+        request: request_module.Request
+) -> float:
+    """
+    Get the expected process time for a batch of requests.
+
+    Args:
+        request (request_module.Request): The request to get the process time for.
+
+    Returns:
+        float: The expected process time for the batch.
+    """
+    if not request.process:
+        raise ValueError("Request has no process.")
+    return request.process.time_model.get_next_time(
+    )
+
+
 class ProductionProcessHandler:
     """
     A production controller is responsible for controlling the processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
@@ -36,19 +53,9 @@ class ProductionProcessHandler:
     def __init__(self, env: sim.Environment) -> None:
         self.env = env
         self.resource = None
-        self.process_time: Optional[float] = None
 
-    def set_process_time(self, process_time: float) -> None:
-        """
-        Set the process time for the production process.
-
-        Args:
-            process_time (float): The process time for the production process.
-        """
-        self.process_time = process_time
-
-    def get_next_product_for_process(
-        self, queue: port.Queue, product: product.Product
+    def get_products_of_lot(
+        self, lot_requests: list[request_module.Request]
     ) -> Generator:
         """
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
@@ -60,10 +67,11 @@ class ProductionProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        yield from queue.get(product.data.ID)
+        for lot_request in lot_requests:
+            yield from lot_request.origin_queue.get(lot_request.item.data.ID)
 
-    def put_product_to_output_queue(
-        self, queue: port.Queue, product: product.Product
+    def put_products_of_lot(
+        self, lot_requests: list[request_module.Request]
     ) -> Generator:
         """
         Place a product to the output queue (put) of the resource.
@@ -75,9 +83,10 @@ class ProductionProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        yield from queue.put(product.data)
+        for lot_request in lot_requests:
+            yield from lot_request.target_queue.put(lot_request.item.data)
 
-    def handle_request(self, process_request: request_module.Request) -> Generator:
+    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
         """
         Start the next process with the following logic:
 
@@ -90,43 +99,61 @@ class ProductionProcessHandler:
         Yields:
             Generator: The generator yields when the process is finished.
         """
+        process_request = lot_requests[0]
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
-        product = process_request.get_item()
 
-        origin_queue, target_queue = (
-            process_request.origin_queue,
-            process_request.target_queue,
-        )
+        # Take only dependencies of the main request of the lot
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
         yield from resource.setup(process)
-        with resource.request() as req:
-            yield req
-            self.get_next_product_for_process(origin_queue, product)
-            resource.controller.mark_started_process()
+        resource_requests = []
+        for lot_request in lot_requests:
+            resource_request = resource.request()
+            yield resource_request
+            resource_requests.append(resource_request)
+        yield from self.get_products_of_lot(lot_requests)
+
+        process_time = get_process_time_for_lots(process_request)
+        resource.controller.mark_started_process(len(lot_requests))
+        process_state_events = []
+        for lot_request in lot_requests:
+            lot_request.item.update_location(lot_request.resource)
             production_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
             production_state.reserved = True
-            yield from self.run_process(production_state, product, process)
+            process_event = self.run_process(production_state, lot_request.item, process, process_time)
+            process_state_events.append((process_event, production_state))
+        for process_event, production_state in process_state_events:
+            yield from process_event
             production_state.process = None
 
-            yield from self.put_product_to_output_queue(target_queue, product)
-            product.update_location(target_queue)
-            
-            buffer_placement_event = product.router.request_buffering(process_request)
+        yield from self.put_products_of_lot(lot_requests)
+        for lot_request in lot_requests:
+            lot_request.item.update_location(lot_request.target_queue)
+        
+        buffer_placement_events = []
+        for lot_request in lot_requests:
+            buffer_placement_event = lot_request.item.router.request_buffering(lot_request)
             if buffer_placement_event:
-                yield buffer_placement_event
-            product.router.mark_finished_request(process_request)
-            self.resource.controller.mark_finished_process()
+                buffer_placement_events.append(buffer_placement_event)
+        for buffer_placement_event in buffer_placement_events:
+            yield from buffer_placement_event
+
+        for lot_request in lot_requests:
+            lot_request.item.router.mark_finished_request(lot_request)
+        self.resource.controller.mark_finished_process(len(lot_requests))
+        for resource_request in resource_requests:
+            resource.release(resource_request)
 
     def run_process(
         self,
         input_state: state.State,
         target_product: product.Product,
         process: process.Process,
+        process_time: float,
     ):
         """
         Run the process of a product. The process is started and the product is logged.
@@ -138,7 +165,7 @@ class ProductionProcessHandler:
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production
         )
-        input_state.process = self.env.process(input_state.process_state(time=self.process_time))  # type: ignore False
+        input_state.process = self.env.process(input_state.process_state(time=process_time))  # type: ignore False
         input_state.reserved = False
         self.handle_rework_required(target_product, process)
 

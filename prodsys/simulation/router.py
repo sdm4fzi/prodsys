@@ -21,6 +21,7 @@ from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
 from prodsys.simulation.request_handler import RequestHandler, RequestInfo
+from prodsys.simulation.lot_handler import LotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,7 @@ class Router:
         # Initialize the request handler
         self.request_handler = RequestHandler(process_matcher)
         self.interaction_handler = InteractionHandler()
+        self.lot_handler = LotHandler()
 
         # Initialize compatibility tables
 

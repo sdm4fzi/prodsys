@@ -5,7 +5,6 @@ from typing import List, Generator, TYPE_CHECKING, Union
 import logging
 
 from prodsys.simulation import (
-    port,
     primitive,
     route_finder,
     sim,
@@ -35,8 +34,8 @@ class TransportProcessHandler:
         self.env = env
         self.resource = None
 
-    def get_next_product_for_process(
-        self, queue: port.Queue, product: product.Product
+    def get_products_of_lot(
+        self, lot_requests: list[request_module.Request]
     ) -> Generator:
         """
         Get the next product for a process from the output queue of a resource.
@@ -52,10 +51,15 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        yield from queue.get(product.data.ID)
-
-    def put_product_to_input_queue(
-        self, queue: port.Queue, product: product.Product
+        first_origin_queue = lot_requests[0].origin_queue
+        for lot_request in lot_requests:
+            if lot_request.origin_queue != first_origin_queue:
+                raise ValueError(f"Origin queue of lot requests is not the same. {lot_request.origin_queue} != {first_origin_queue}")
+        for lot_request in lot_requests:
+            yield from lot_request.origin_queue.get(lot_request.item.data.ID)
+        
+    def put_products_of_lot(
+        self, lot_requests: list[request_module.Request]
     ) -> Generator:
         """
         Put a product to the input queue of a resource.
@@ -70,7 +74,12 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        yield from queue.put(product.data)
+        first_target_queue = lot_requests[0].target_queue
+        for lot_request in lot_requests:
+            if lot_request.target_queue != first_target_queue:
+                raise ValueError(f"Target queue of lot requests is not the same. {lot_request.target_queue} != {first_target_queue}")
+        for lot_request in lot_requests:
+            yield from lot_request.target_queue.put(lot_request.item.data)
 
     def update_location(
         self, locatable: product.Locatable, location: list[float]
@@ -84,7 +93,7 @@ class TransportProcessHandler:
         """
         self.resource.set_location(locatable)
 
-    def handle_request(self, process_request: request_module.Request) -> Generator:
+    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
         """
         Start the next process.
 
@@ -105,53 +114,67 @@ class TransportProcessHandler:
         Yields:
             Generator: The generator yields when the transport is over.
         """
+        process_request = lot_requests[0]
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
-        product = process_request.get_item()
         origin = process_request.get_origin()
-        target = process_request.get_target()
+        origin_queue = process_request.origin_queue
 
-        origin_queue, target_queue = (
-            process_request.origin_queue,
-            process_request.target_queue,
-        )
+        # Take only route and dependencies of the main request of the lot
         route_to_target = process_request.get_route()
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
         yield from resource.setup(process)
         if not resource.current_locatable:
             resource.set_location(origin)
-        with resource.request() as req:
-            yield req
-            resource.controller.mark_started_process()
-            if origin_queue.get_location() != resource.get_location():
-                route_to_origin = self.find_route_to_origin(process_request)
-                transport_state: state.State = yield self.env.process(
-                    resource.wait_for_free_process(process)
-                )
+        resource_requests = []
+        for lot_request in lot_requests:
+            resource_request = resource.request()
+            yield resource_request
+            resource_requests.append(resource_request)
+        resource.controller.mark_started_process(len(lot_requests))
+        if origin_queue.get_location() != resource.get_location():
+            route_to_origin = self.find_route_to_origin(process_request)
+            transport_state_events = []
+            for lot_request in lot_requests:
+                transport_state: state.State = yield from resource.wait_for_free_process(process)
                 transport_state.reserved = True
-                yield from self.run_transport(
-                    transport_state, product, route_to_origin, empty_transport=True
+                transport_event = self.run_transport(
+                    transport_state, lot_request.item, route_to_origin, empty_transport=True
                 )
+                transport_state_events.append((transport_event, transport_state))
+            for transport_event, transport_state in transport_state_events:
+                yield from transport_event
                 transport_state.process = None
-            # TODO: add here the handling of the LOT DEPENDENCIES, to retrieve all needed products -> if not feasible, move request back to controller...
-            yield from self.get_next_product_for_process(origin_queue, product)
-            product.update_location(self.resource)
+        yield from self.get_products_of_lot(lot_requests)
+        for lot_request in lot_requests:
+            lot_request.item.update_location(self.resource)
 
+        transport_state_events = []
+        for lot_request in lot_requests:
             transport_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
             transport_state.reserved = True
-            yield from self.run_transport(
-                transport_state, product, route_to_target, empty_transport=False
+            transport_event = self.run_transport(
+                transport_state, lot_request.item, route_to_target, empty_transport=False
             )
+            transport_state_events.append((transport_event, transport_state))
+        for transport_event, transport_state in transport_state_events:
+            yield from transport_event
             transport_state.process = None
-            yield from self.put_product_to_input_queue(target_queue, product)
-            product.update_location(target_queue)
 
-            product.router.mark_finished_request(process_request)
-            self.resource.controller.mark_finished_process()
+
+        yield from self.put_products_of_lot(lot_requests)
+        for lot_request in lot_requests:
+            lot_request.item.update_location(lot_request.target_queue)
+
+        for lot_request in lot_requests:
+            lot_request.item.router.mark_finished_request(lot_request)
+        self.resource.controller.mark_finished_process(len(lot_requests))
+        for resource_request in resource_requests:
+            resource.release(resource_request)
 
     def run_transport(
         self,

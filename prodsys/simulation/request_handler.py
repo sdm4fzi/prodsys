@@ -330,6 +330,7 @@ class RequestHandler:
         dependencies = resource.dependencies + process.dependencies
         request_instance = request.Request(
             requesting_item=request_info.item,
+            item=request_info.item,
             resource=resource,
             process=process,
             origin=request_info.origin,

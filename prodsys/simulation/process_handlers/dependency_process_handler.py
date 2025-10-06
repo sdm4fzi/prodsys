@@ -46,7 +46,7 @@ class DependencyProcessHandler:
         """
         self.resource.set_location(locatable)
 
-    def handle_request(self, process_request: request_module.Request) -> Generator:
+    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
         """
         Start the next process with the following logic:
 
@@ -57,6 +57,7 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the process is finished.
         """
+        process_request = lot_requests[0]
         requesting_item = process_request.requesting_item
         self.resource = process_request.get_resource()
         self.resource.bind_to_dependant(requesting_item)
