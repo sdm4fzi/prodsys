@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import (
         product,
         state,
+        resources,
     )
     from prodsys.simulation import request as request_module
 
@@ -33,6 +34,7 @@ class TransportProcessHandler:
     def __init__(self, env: sim.Environment) -> None:
         self.env = env
         self.resource = None
+        self.blocked_capacity = 0
 
     def get_products_of_lot(
         self, lot_requests: list[request_module.Request]
@@ -93,6 +95,15 @@ class TransportProcessHandler:
         """
         self.resource.set_location(locatable)
 
+    def block_other_transports(self, transport_resource: resources.Resource):
+        free_capacity = transport_resource.get_free_capacity()
+        transport_resource.controller.reserved_requests_count += free_capacity
+        self.blocked_capacity += free_capacity
+
+    def unblock_other_transports(self, transport_resource: resources.Resource):
+        transport_resource.controller.reserved_requests_count -= self.blocked_capacity
+        self.blocked_capacity = 0
+
     def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
         """
         Start the next process.
@@ -120,7 +131,7 @@ class TransportProcessHandler:
         process = process_request.get_process()
         origin = process_request.get_origin()
         origin_queue = process_request.origin_queue
-
+        self.block_other_transports(resource)
         # Take only route and dependencies of the main request of the lot
         route_to_target = process_request.get_route()
         if process_request.required_dependencies:
@@ -140,12 +151,12 @@ class TransportProcessHandler:
             for lot_request in lot_requests:
                 transport_state: state.State = yield from resource.wait_for_free_process(process)
                 transport_state.reserved = True
-                transport_event = self.run_transport(
+                transport_event = self.env.process(self.run_transport(
                     transport_state, lot_request.item, route_to_origin, empty_transport=True
-                )
+                ))
                 transport_state_events.append((transport_event, transport_state))
             for transport_event, transport_state in transport_state_events:
-                yield from transport_event
+                yield transport_event
                 transport_state.process = None
         yield from self.get_products_of_lot(lot_requests)
         for lot_request in lot_requests:
@@ -157,12 +168,12 @@ class TransportProcessHandler:
                 process
             )
             transport_state.reserved = True
-            transport_event = self.run_transport(
+            transport_event = self.env.process(self.run_transport(
                 transport_state, lot_request.item, route_to_target, empty_transport=False
-            )
+            ))
             transport_state_events.append((transport_event, transport_state))
         for transport_event, transport_state in transport_state_events:
-            yield from transport_event
+            yield transport_event
             transport_state.process = None
 
 
@@ -175,6 +186,7 @@ class TransportProcessHandler:
         self.resource.controller.mark_finished_process(len(lot_requests))
         for resource_request in resource_requests:
             resource.release(resource_request)
+        self.unblock_other_transports(resource)
 
     def run_transport(
         self,

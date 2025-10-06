@@ -9,12 +9,20 @@ class LotHandler:
                 return dependency.data
         return None
 
+    def _request_matches(self, process_request: request.Request, potential_lot_request: request.Request) -> bool:
+        if process_request.request_type == request.RequestType.PRODUCTION:
+            return process_request.process == potential_lot_request.process
+        elif process_request.request_type == request.RequestType.TRANSPORT:
+            return process_request.process == potential_lot_request.process and process_request.origin_queue == potential_lot_request.origin_queue and process_request.target_queue == potential_lot_request.target_queue
+        else:
+            return False
+
     def _get_possible_requests_for_lot(self, process_request: request.Request) -> list[request.Request]:
         possible_requests_for_lot = []
         for open_request in process_request.resource.controller.requests:
             if open_request is process_request:
                 continue
-            if open_request.process == process_request.process:
+            if self._request_matches(process_request, open_request):
                 possible_requests_for_lot.append(open_request)
         return possible_requests_for_lot
     
