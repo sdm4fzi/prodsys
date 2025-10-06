@@ -116,8 +116,6 @@ class Controller:
 
     def get_lot_for_request(self, process_request: request_module.Request) -> list[request_module.Request]:
         lot_handler = process_request.item.router.lot_handler
-        if process_request.request_type == request_module.RequestType.PRODUCTION:
-            print(f"Production request: {process_request.item.data.ID}")
         if not lot_handler.is_lot_feasible(process_request):
             self.requests.insert(0, process_request)
             return []

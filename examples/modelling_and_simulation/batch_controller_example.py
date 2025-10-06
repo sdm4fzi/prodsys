@@ -6,7 +6,7 @@ t1 = psx.FunctionTimeModel("constant", 1.8, 0, "t1")
 
 p1 = psx.ProductionProcess(t1, "p1")
 
-t3 = psx.DistanceTimeModel(speed=300, reaction_time=0.01, ID="t3")
+t3 = psx.DistanceTimeModel(speed=50, reaction_time=0.01, ID="t3")
 
 carrier_tp = psx.TransportProcess(t3, "carrier_tp")
 
@@ -44,10 +44,10 @@ machine = psx.Resource(
 )
 
 
-# tp = psx.TransportProcess(t3, "tp", dependencies=[lot_dependency_with_carrier, work_piece_carrier_dependency])
-tp = psx.TransportProcess(t3, "tp", dependencies=[work_piece_carrier_dependency])
+tp = psx.TransportProcess(t3, "tp", dependencies=[lot_dependency_with_carrier, work_piece_carrier_dependency])
+# tp = psx.TransportProcess(t3, "tp", dependencies=[work_piece_carrier_dependency])
 
-transport = psx.Resource([tp], [0, 0], 1, ID="transport")
+transport = psx.Resource([tp], [0, 0], 4, ID="transport")
 carrier_transport = psx.Resource([carrier_tp], [0, 0], 1, ID="carrier_transport")
 
 product1 = psx.Product([p1], tp, "product1")

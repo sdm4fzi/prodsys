@@ -124,10 +124,10 @@ class ProductionProcessHandler:
                 process
             )
             production_state.reserved = True
-            process_event = self.run_process(production_state, lot_request.item, process, process_time)
+            process_event = self.env.process(self.run_process(production_state, lot_request.item, process, process_time))
             process_state_events.append((process_event, production_state))
         for process_event, production_state in process_state_events:
-            yield from process_event
+            yield process_event
             production_state.process = None
 
         yield from self.put_products_of_lot(lot_requests)
@@ -154,7 +154,7 @@ class ProductionProcessHandler:
         target_product: product.Product,
         process: process.Process,
         process_time: float,
-    ):
+    ) -> Generator:
         """
         Run the process of a product. The process is started and the product is logged.
 
