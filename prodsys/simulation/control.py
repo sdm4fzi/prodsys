@@ -428,11 +428,14 @@ class DisassemblyProcessHandler:
         product_liste: List[Product] = []
         for dis_product_data in disassembly_list:
             
+            if(dis_product_data.type.__eq__(product.data.type) ):
+                product_liste.append(product)
+                continue
             #TODO: auch zulassen, dass keien Routingheuristic gewählt wurde (z.b dass die routingheuristic von dem mutterprodukt vorher vererbt wird!)
-            product = product.router.product_factory.create_product(
+            new_product = product.router.product_factory.create_product(
             dis_product_data  , dis_product_data.routing_heuristic
             )
-            product_liste.append(product)
+            product_liste.append(new_product)
             #TODO: auch für dedizierte Queues durchlassen
             
         filtered_ports = [
@@ -442,9 +445,12 @@ class DisassemblyProcessHandler:
         ]       #TODO: bei mehreren Output-Queues muss dieser Abschnitt angepasst werden, da ansonsten in mehrere Queues die Items gelegt werden
         for queue in filtered_ports:
             for prod in product_liste:
+                
                 queue.reserve()
                 yield from queue.put(prod.data)
                 prod.update_location(resource) #warum nicht Location der Queue?
+                if(prod == product):
+                    continue
                 prod.process = self.env.process(prod.process_product())
 
     def run_process(
