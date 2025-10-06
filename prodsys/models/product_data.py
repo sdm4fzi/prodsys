@@ -4,6 +4,7 @@ from typing import Optional, Union, List, Dict, TYPE_CHECKING
 from pydantic import ConfigDict, model_validator
 from prodsys.models.core_asset import CoreAsset
 from prodsys.models.primitives_data import PrimitiveData
+from prodsys.models.source_data import RoutingHeuristic
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -78,6 +79,7 @@ class ProductData(PrimitiveData):
 
     processes: Union[List[str], List[List[str]], Dict[str, List[str]]]
     dependency_ids: List[str] = []
+    routing_heuristic: Optional[RoutingHeuristic] 
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """

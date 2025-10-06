@@ -13,9 +13,9 @@ from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, List, TYPE_CHECKING, Optional
 from pydantic import ConfigDict, Field
-
+from typing import Dict
 from prodsys.models.core_asset import CoreAsset
-
+from prodsys.models.product_data import ProductData
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
 
@@ -36,7 +36,7 @@ class ProcessTypeEnum(str, Enum):
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
     ReworkProcesses = "ReworkProcesses"
-
+    
 
 class ProcessData(CoreAsset):
     """
@@ -112,7 +112,7 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-
+    product_disassembly_dict : Optional[Dict[str, List[ProductData]]] = Field(default_factory=dict)
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -125,22 +125,26 @@ class ProductionProcessData(ProcessData):
             ]
         }
     )
+class DisassemblyProcessData(ProductionProcessData):
+    
 
-    def hash(self, adapter: ProductionSystemData) -> str:
-        """
-        Returns a unique hash for the production process data considering the time model data. Can be used to compare two process data objects for equal functionality.
-
-        Args:
-            adapter (ProductionSystemAdapter): Adapter to access the time model data.
-
-        Returns:
-            str: hash of the production process data.
-        """
-        base_class_hash = super().hash(adapter)
-        failure_rate_hash = str(self.failure_rate)
-        return md5((base_class_hash + failure_rate_hash).encode("utf-8")).hexdigest()
-
-
+    type: Literal[ProcessTypeEnum.ProductionProcesses]
+    failure_rate: Optional[float] = 0.0
+    product_disassembly_dict : Dict[str, List[ProductData]] = Field(default_factory=dict)
+    
+    #TODO: json_schema_extra anpassen
+    model_config = ConfigDict(
+        json_schema_extra={
+                "examples": [
+                    {
+                        "ID": "P1",
+                        "description": "Process 1",
+                        "time_model_id": "function_time_model_1",
+                        "type": "ProductionProcesses",
+                    }
+                ]
+            }
+        )
 class CapabilityProcessData(ProcessData):
     """
     Class that represents capability process data. Capability processes are not compared by their IDs but their Capabilities.

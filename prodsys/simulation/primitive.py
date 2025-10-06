@@ -87,6 +87,7 @@ class Primitive:
         """
         Reserves the product object.
         """
+        #Info: Technisch: Binding an Resource bei Assembly
         if self.bound:
             raise Exception(
                 f"Primitive {self.data.ID} is bound reserved. Cannot bind again."
