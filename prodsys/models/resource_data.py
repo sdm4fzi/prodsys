@@ -88,7 +88,6 @@ class ResourceData(CoreAsset, Locatable):
         state_ids (Optional[List[str]], optional): State IDs of the resource. Defaults to [].
         ports (Optional[List[str]], optional): List of port IDs that are used by the resource for input and output of products and primitives. Ports can be Queues, Stores or other Port Interfaces. If not specfied, default Queues with infinite capacity are created at simulation start.
         can_move (Optional[bool], optional): Whether the resource can move. Defaults to None (if None, the can_move attribute is inferred from the processes).
-        batch_size (Optional[int], optional): Batch size of the resource. Defaults to None.
         dependency_ids (List[str]): List of dependency IDs that are required by the resource.
     """
 
@@ -189,8 +188,6 @@ class ResourceData(CoreAsset, Locatable):
 
         if self.ports:
             components.extend(sorted(port_hashes))
-        if self.batch_size is not None:
-            components.append(str(self.batch_size))
         if self.can_move is not None:
             components.append(str(self.can_move))
 
@@ -250,7 +247,6 @@ class SystemResourceData(ResourceData):
         state_ids (Optional[List[str]], optional): State IDs of the system resource. Defaults to [].
         ports (Optional[List[str]], optional): List of port IDs that are used by the system resource. Defaults to None.
         can_move (Optional[bool], optional): Whether the system resource can move. Defaults to None.
-        batch_size (Optional[int], optional): Batch size of the system resource. Defaults to None.
         dependency_ids (List[str]): List of dependency IDs that are required by the system resource.
     """
     subresource_ids: List[str]

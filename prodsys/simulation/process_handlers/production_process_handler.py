@@ -140,7 +140,7 @@ class ProductionProcessHandler:
             if buffer_placement_event:
                 buffer_placement_events.append(buffer_placement_event)
         for buffer_placement_event in buffer_placement_events:
-            yield from buffer_placement_event
+            yield buffer_placement_event
 
         for lot_request in lot_requests:
             lot_request.item.router.mark_finished_request(lot_request)

@@ -115,6 +115,8 @@ class Controller:
 
 
     def get_lot_for_request(self, process_request: request_module.Request) -> list[request_module.Request]:
+        if process_request.request_type not in [request_module.RequestType.PRODUCTION, request_module.RequestType.TRANSPORT]:
+            return [process_request]
         lot_handler = process_request.item.router.lot_handler
         if not lot_handler.is_lot_feasible(process_request):
             self.requests.insert(0, process_request)

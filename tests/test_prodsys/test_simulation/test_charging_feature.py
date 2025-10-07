@@ -79,18 +79,18 @@ def test_run_simulation(charging_simulation_adapter: ProductionSystemData):
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
-            assert kpi.value > 1960 and kpi.value < 2000
+            assert kpi.value > 2100 and kpi.value < 2140
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
             assert kpi.value < 42 and kpi.value > 39
 
         if kpi.name == "charging_time" and kpi.resource == "transport":
-            assert kpi.value < 8.5 and kpi.value > 7.5
+            assert kpi.value < 11 and kpi.value > 10
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 8 and kpi.value > 7
+            assert kpi.value < 8.5 and kpi.value > 7.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 12 and kpi.value > 11
+            assert kpi.value < 12.5 and kpi.value > 11.5
