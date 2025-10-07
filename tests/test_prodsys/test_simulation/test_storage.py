@@ -73,17 +73,17 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
             assert kpi.product_type == "product1"
-            assert kpi.value > 1970 and kpi.value < 2010
+            assert kpi.value > 2020 and kpi.value < 2060
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
             assert kpi.value < 54 and kpi.value > 51
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 37 and kpi.value < 40
+            assert kpi.value > 40 and kpi.value < 43
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 3.0 and kpi.value < 3.2
+            assert kpi.value > 3.2 and kpi.value < 3.4
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":

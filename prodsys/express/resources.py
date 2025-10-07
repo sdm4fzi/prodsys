@@ -137,7 +137,6 @@ class SystemResource(Resource):
             process_ids=[process.ID for process in self.processes],
             location=self.location,
             capacity=self.capacity,
-            batch_size=self.batch_size,
             state_ids=[state.ID for state in self.states],
             controller=self.controller,
             control_policy=self.control_policy,

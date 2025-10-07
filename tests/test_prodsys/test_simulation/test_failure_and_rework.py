@@ -67,6 +67,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
@@ -78,15 +79,15 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             assert kpi.value < 80 and kpi.value > 75
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 70 and kpi.value < 75
+            assert kpi.value > 73 and kpi.value < 77
 
         if kpi.name == "productive_time" and kpi.resource == "reworker":
             assert kpi.value > 14 and kpi.value < 15
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 12 and kpi.value > 11
+            assert kpi.value < 16 and kpi.value > 14
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 12 and kpi.value > 11
+            assert kpi.value < 16 and kpi.value > 14
