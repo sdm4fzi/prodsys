@@ -4,10 +4,15 @@ from __future__ import annotations
 from typing import Generator, TYPE_CHECKING, Optional
 
 import logging
+import numpy as np
 
 from prodsys.simulation import (
     sim,
     process,
+)
+
+from prodsys.simulation.process import (
+    ReworkProcess,
 )
 
 if TYPE_CHECKING:
@@ -15,6 +20,8 @@ if TYPE_CHECKING:
         process,
     )
     from prodsys.simulation import request as request_module
+    from prodsys.simulation.resources import SystemResource
+    from prodsys.simulation.router import Router
 
 logger = logging.getLogger(__name__)
 
@@ -58,17 +65,14 @@ class ProcessModelHandler:
         Yields:
             Generator: The generator yields when the process model is finished.
         """
-        resource = process_request.get_resource()
+        resource: SystemResource = process_request.get_resource()
         self.resource = resource
         proc = process_request.get_process()
         self.process_model = proc.precedence_graph
         entity = process_request.get_entity()
         target_queue = process_request.target_queue
 
-        if hasattr(resource.data, "subresource_ids"):
-            router = resource.router
-        else:
-            router = entity.router
+        router = resource.router
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
@@ -81,8 +85,10 @@ class ProcessModelHandler:
         while self.next_possible_processes:
             executed_process_event = router.request_process_step(entity, self.next_possible_processes)
             yield executed_process_event
-            if hasattr(entity.current_process, "reworked_process_ids"):
-                self.add_needed_rework(entity.current_process)
+            if self.is_rework_required(entity.current_process):
+                self.add_needed_rework(entity.current_process, router)
+            if isinstance(entity.current_process, ReworkProcess):
+                self.register_rework(entity.current_process)
             self.update_executed_process(entity.current_process)
             self.set_next_possible_production_processes()
         arrived_at_queue = router.request_transport(entity, target_queue)
@@ -90,15 +96,41 @@ class ProcessModelHandler:
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
 
-    def add_needed_rework(self, failed_process: process.PROCESS_UNION) -> None:
+    def is_rework_required(self, executed_process: process.PROCESS_UNION) -> bool:
+        """
+        Determine if rework is needed based on the process's failure rate.
+
+        Args:
+            executed_process (process.PROCESS_UNION): The process to check for failure rate.
+        
+        Returns:
+            bool: True if rework is required, False otherwise.
+        """
+        if isinstance(executed_process, ReworkProcess):
+            return False
+        
+        if not hasattr(executed_process.data, 'failure_rate'):
+            return False
+            
+        failure_rate = executed_process.data.failure_rate
+        if not failure_rate or failure_rate == 0:
+            return False
+        
+        rework_needed = np.random.choice(
+            [True, False], p=[failure_rate, 1 - failure_rate]
+        )
+        return rework_needed
+
+    def add_needed_rework(self, failed_process: process.PROCESS_UNION, router: Router) -> None:
         """
         Adds a process to the list of processes that need rework.
 
         Args:
+            entity: The entity (product) that needs rework.
             failed_process (PROCESS_UNION): Process that needs rework.
         """
         self.processes_needing_rework.append(failed_process)
-        possible_rework_processes = self.router.get_rework_processes(
+        possible_rework_processes = router.get_rework_processes(
             failed_process
         )
         if not possible_rework_processes:
@@ -117,7 +149,11 @@ class ProcessModelHandler:
     def register_rework(self, rework_process: process.ReworkProcess) -> None:
         """
         Register a rework process that has been executed.
+        
+        Args:
+            rework_process (process.ReworkProcess): The rework process that has been executed.
         """
+        reworked_process = None
         for process_rework_mapping in (
             self.blocking_rework_process_mappings
             + self.non_blocking_rework_process_mappings
@@ -126,7 +162,13 @@ class ProcessModelHandler:
                 continue
             reworked_process = process_rework_mapping[0]
             break
-        self.processes_needing_rework.remove(reworked_process)
+        
+        if reworked_process is None:
+            raise ValueError(f"Rework process {rework_process.data.ID} not found in rework mappings")
+            
+        if reworked_process in self.processes_needing_rework:
+            self.processes_needing_rework.remove(reworked_process)
+        
         in_blocking_list = any(
             reworked_process == process_rework_mapping[0]
             for process_rework_mapping in self.blocking_rework_process_mappings
@@ -135,10 +177,15 @@ class ProcessModelHandler:
             mapping_to_adjust = self.blocking_rework_process_mappings
         else:
             mapping_to_adjust = self.non_blocking_rework_process_mappings
+        
+        index_to_remove = None
         for index, process_rework_mapping in enumerate(mapping_to_adjust):
             if reworked_process == process_rework_mapping[0]:
                 index_to_remove = index
                 break
+        
+        if index_to_remove is None:
+            raise ValueError(f"Rework process {rework_process.data.ID} not found in rework mappings")
         mapping_to_adjust.pop(index_to_remove)
 
     def update_executed_process(self, executed_process: process.PROCESS_UNION) -> None:
