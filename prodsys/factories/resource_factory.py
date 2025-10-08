@@ -154,7 +154,9 @@ class ResourceFactory:
         self.process_factory = process_factory
         self.state_factory = state_factory
         self.queue_factory = queue_factory
+        self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
+        self.system_resources: Dict[str, resources.SystemResource] = {}
         self.resources_can_move: Dict[str, resources.Resource] = {}
         self.resources_can_process: Dict[str, resources.Resource] = {}
         self.controllers: List[
@@ -173,6 +175,58 @@ class ResourceFactory:
         """
         for resource_data in adapter.resource_data:
             self.add_resource(resource_data.model_copy(deep=True))
+        self.create_global_system_resource()
+
+    def is_resource_a_subresource(self, resource: resources.Resource) -> bool:
+        """
+        Checks if the resource is a subresource.
+        """
+        if any(resource.data.ID in system_resource.data.subresource_ids for system_resource in self.system_resources.values()):
+            return True
+        return False
+
+    def create_global_system_resource(self):
+        """
+        Creates the global system resource.
+        """
+        # TODO: resolve later that users can specify a system resource, so this function is only needed if no global system resource is specified!
+        all_resources = [resource for resource in self.all_resources.values() if not self.is_resource_a_subresource(resource)]
+
+        resource_data = SystemResourceData(
+            ID="GlobalSystemResource",
+            description="Global System Resource",
+            capacity=0,
+            process_ids=[],
+            location=[0, 0],
+            control_policy=ResourceControlPolicy.FIFO,
+            controller=ControllerEnum.PipelineController,
+            subresource_ids=[resource.data.ID for resource in all_resources],
+        )
+        controller_class = get_class_from_str(
+            name=resource_data.controller, cls_dict=CONTROLLER_DICT
+        )
+        control_policy = get_class_from_str(
+            name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
+        )
+        controller: Union[
+            control.Controller,
+            control.BatchController,
+        ] = controller_class(control_policy=control_policy, env=self.env)
+        self.global_system_resource = resources.SystemResource(
+            env=self.env,
+            data=resource_data,
+            processes=[],
+            controller=controller,
+            subresources=[resource for resource in all_resources],
+        )
+        controller.set_resource(self.global_system_resource)
+
+        states = self.state_factory.get_states(resource_data.state_ids)
+        register_states(self.global_system_resource, states, self.env)
+        register_production_states_for_processes(
+            self.global_system_resource, self.state_factory, self.env
+        )
+        adjust_process_breakdown_states(self.global_system_resource, self.state_factory, self.env)
 
     def get_ports_for_resource(
         self, resource_data: ResourceData
@@ -237,6 +291,7 @@ class ResourceFactory:
                 "subresources": subresources,
             })
             resource_object = resources.SystemResource(**values)
+            self.system_resources[resource_object.data.ID] = resource_object
         else:
             resource_object = resources.Resource(**values)
         controller.set_resource(resource_object)
@@ -262,6 +317,10 @@ class ResourceFactory:
 
         for controller in self.controllers:
             self.env.process(controller.control_loop())  # type: ignore
+
+
+        self.global_system_resource.start_states()
+        self.env.process(self.global_system_resource.controller.control_loop())  # type: ignore
 
     def get_resource(self, ID: str) -> resources.Resource:
         """

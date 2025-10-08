@@ -520,12 +520,9 @@ class ProcessModelData(CoreAsset):
         type (Literal[ProcessTypeEnum.ProcessModels]): Type of the process.
         process_ids (List[str]): List of process IDs that are part of this process model.
         adjacency_matrix (Dict[str, List[str]]): Adjacency matrix representing the DAG structure.
-        can_contain_other_models (bool): Whether this process model can contain other process models.
     """
-
     type: Literal[ProcessTypeEnum.ProcessModels]
     adjacency_matrix: Dict[str, List[str]]
-    can_contain_other_models: bool = False
     dependency_ids: list[str] = Field(default_factory=list)
 
     @property
@@ -541,7 +538,6 @@ class ProcessModelData(CoreAsset):
                     "description": "Process Model 1",
                     "type": "ProcessModels",
                     "adjacency_matrix": {"P1": ["P2"], "P2": ["P3"], "P3": []},
-                    "can_contain_other_models": False,
                     "dependency_ids": ["P1", "P2"],
                 }
             ]

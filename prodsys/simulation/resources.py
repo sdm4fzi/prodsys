@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
-from sys import intern
-from typing import TYPE_CHECKING, List, Generator, Literal, Optional, Union
+from typing import TYPE_CHECKING, List, Generator, Optional, Union
 
 import random
 
@@ -12,7 +10,6 @@ from prodsys.models import port_data
 from prodsys.simulation.dependency import DependencyInfo
 
 
-logger = logging.getLogger(__name__)
 
 from simpy.resources import resource
 from simpy import events
@@ -22,12 +19,11 @@ if TYPE_CHECKING:
     from prodsys.simulation.dependency import DependedEntity, Dependency
 
     # from prodsys.simulation.process import PROCESS_UNION
-    from prodsys.simulation import product
     from prodsys.simulation import sim
 
-    from prodsys.simulation import control, state
     from prodsys.simulation.process import PROCESS_UNION
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation.locatable import Locatable
+    from prodsys.simulation import router
 
 
 from prodsys.models.resource_data import (
@@ -35,6 +31,8 @@ from prodsys.models.resource_data import (
     SystemResourceData,
 )
 from prodsys.util import util
+
+logger = logging.getLogger(__name__)
 
 
 class Resource(resource.Resource):
@@ -91,7 +89,7 @@ class Resource(resource.Resource):
         self.can_process = can_process
 
         self.bound = False
-        self.current_dependant: Union[product.Product, Resource] = None
+        self.current_dependant: Union[Resource] = None
 
         self.ports = ports if ports else []
         self.buffers = buffers if buffers else []
@@ -189,7 +187,7 @@ class Resource(resource.Resource):
         """
         return self.reserved_setup is not None
 
-    def update_full(self) -> bool:
+    def update_full(self) -> None:
         """
         Returns if the resource is full.
 
@@ -552,7 +550,7 @@ class SystemResource(Resource):
         data: SystemResourceData,
         processes: List[PROCESS_UNION],
         controller: control.Controller,
-        subresources: List[Resource] = None,
+        subresources: List[Resource],
         can_move: bool = False,
         can_process: bool = False,
         states: List[state.State] = None,
@@ -561,63 +559,53 @@ class SystemResource(Resource):
         charging_states: List[state.ChargingState] = None,
         ports: List[port.Queue] = None,
     ):
+        # Store original capacity for systems with capacity 0
+        self._actual_capacity = data.capacity
+        
+        # Just to avoid an instantiation error for simpy resources, which does not allow capacity to be 0
+        if data.capacity == 0:
+            data.capacity = 1
+            
         super().__init__(
             env, data, processes, controller, can_move, can_process,
             states, production_states, setup_states, charging_states, ports
         )
-        self.subresources = subresources or []
-        
+
+        self.subresources = subresources
+        self.router: router.Router = None        
         # Create mapping for quick lookup
         self.subresource_map = {resource.data.ID: resource for resource in self.subresources}
-        self.system_port_map = {port.data.ID: port for port in self.system_ports}
+        self.system_port_map = {port.data.ID: port for port in self.ports}
 
-    def get_available_subresources(self, process_id: str) -> List[Resource]:
+    def set_router(self, router: router.Router) -> None:
         """
-        Get subresources that can handle the given process.
+        Sets the router of the system resource.
+        """
+        self.router = router
 
-        Args:
-            process_id (str): The process ID to check.
+    def update_full(self) -> None:
+        """
+        Returns if the resource is full.
 
         Returns:
-            List[Resource]: List of available subresources that can handle the process.
+            bool: True if the resource is full or in setup, False otherwise.
         """
-        available_resources = []
-        for subresource in self.subresources:
-            if any(process.data.ID == process_id for process in subresource.processes):
-                if not subresource.full and not subresource.bound:
-                    available_resources.append(subresource)
-        return available_resources
+        if self._actual_capacity == 0:
+            self.full = False
+            return
+        self.full = self.get_free_capacity() <= 0
 
-    def find_internal_route(self, origin: str, target: str) -> List[str]:
+    def get_free_capacity(self) -> int:
         """
-        Find a route within the system from origin to target.
-
-        Args:
-            origin (str): Origin resource/port ID.
-            target (str): Target resource/port ID.
+        Returns the free capacity of the resource.
 
         Returns:
-            List[str]: List of resource/port IDs representing the route.
+            int: The free capacity of the resource.
         """
-        if origin == target:
-            return [origin]
-        
-        # Simple BFS to find shortest path
-        queue = [(origin, [origin])]
-        visited = {origin}
-        
-        while queue:
-            current, path = queue.pop(0)
-            
-            if current in self.internal_routing_matrix:
-                for neighbor in self.internal_routing_matrix[current]:
-                    if neighbor == target:
-                        return path + [neighbor]
-                    if neighbor not in visited:
-                        visited.add(neighbor)
-                        queue.append((neighbor, path + [neighbor]))
-        
-        return []  # No route found
+        return self._actual_capacity - (
+            self.controller.num_running_processes
+            + self.controller.reserved_requests_count
+        )
 
     def get_system_port(self, port_id: str) -> Optional[port.Queue]:
         """
@@ -658,25 +646,6 @@ class SystemResource(Resource):
             any(process.data.ID == process_id for process in subresource.processes)
             for subresource in self.subresources
         )
-
-    def route_to_subresource(self, process_id: str, product: product.Product) -> Optional[Resource]:
-        """
-        Route a product to an appropriate subresource for the given process.
-
-        Args:
-            process_id (str): The process ID.
-            product (product.Product): The product to route.
-
-        Returns:
-            Optional[Resource]: The subresource to route to, or None if no suitable resource found.
-        """
-        available_resources = self.get_available_subresources(process_id)
-        if not available_resources:
-            return None
-        
-        # For now, use the first available resource
-        # In a more sophisticated implementation, this could use routing heuristics
-        return available_resources[0]
 
 
 RESOURCE_UNION = Union[Resource, SystemResource]

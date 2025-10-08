@@ -24,6 +24,7 @@ from prodsys.models.state_data import (
 if TYPE_CHECKING:
     from prodsys.simulation import product, resources
     from prodsys.simulation import primitive, sim, time_model
+    from prodsys.simulation.locatable import Locatable
 
 
 class StateEnum(str, Enum):
@@ -104,8 +105,8 @@ class StateInfo:
 
     def log_transport(
         self,
-        origin: Optional[product.Locatable],
-        target: product.Locatable,
+        origin: Optional[Locatable],
+        target: Locatable,
         state_type: StateTypeEnum,
         empty_transport: bool,
     ):
@@ -113,8 +114,8 @@ class StateInfo:
         Logs the target location of a transport state.
 
         Args:
-            origin (Optional[product.Locatable]): The origin location, either a resource, source, node or a sink.
-            target (product.Locatable): The target location, either a resource, source, node or a sink.
+            origin (Optional[Locatable]): The origin location, either a resource, source, node or a sink.
+            target (Locatable): The target location, either a resource, source, node or a sink.
             state_type (StateTypeEnum): The type of the state.
             empty_transport (bool): Indicates if the transport is empty.
         """

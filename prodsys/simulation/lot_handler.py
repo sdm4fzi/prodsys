@@ -1,5 +1,6 @@
 from prodsys.simulation import request
 from prodsys.models.dependency_data import DependencyType, LotDependencyData
+from prodsys.simulation.entities.lot import Lot
 
 class LotHandler:
 
@@ -8,6 +9,13 @@ class LotHandler:
             if dependency.data.dependency_type == DependencyType.LOT:
                 return dependency.data
         return None
+
+    def lot_required(self, process_request: request.Request) -> bool:
+        if process_request.request_type not in [request.RequestType.PRODUCTION, request.RequestType.TRANSPORT]:
+            return False
+        if not self._get_lot_dependency(process_request):
+            return False
+        return True
 
     def _request_matches(self, process_request: request.Request, potential_lot_request: request.Request) -> bool:
         if process_request.request_type == request.RequestType.PRODUCTION:
@@ -50,7 +58,7 @@ class LotHandler:
             num_requests_to_fill_lot = max_requests_to_fill_lot
         return possible_requests_for_lot[:num_requests_to_fill_lot]
 
-    def get_requests_of_lot(self, process_request: request.Request) -> list[request.Request]:
+    def get_lot_request(self, process_request: request.Request) -> request.Request:
         lot_dependency = self._get_lot_dependency(process_request)
         if lot_dependency is None:
             return [process_request]
@@ -58,7 +66,15 @@ class LotHandler:
         # use control policy to sort the requests
         process_request.resource.controller.control_policy(possible_requests_for_lot)
         requests_to_fill_lot = self._get_requests_to_fill_lot(process_request, lot_dependency, possible_requests_for_lot)
+        all_completed_events = [request.completed for request in requests_to_fill_lot] + [process_request.completed]
         for lot_request in requests_to_fill_lot:
             process_request.resource.controller.requests.remove(lot_request)
-        lot = [process_request] + requests_to_fill_lot
-        return lot
+        lot_requests = [process_request] + requests_to_fill_lot
+        lot_entities = [request.entity for request in lot_requests]
+
+        lot = Lot(
+            all_completed_events=all_completed_events,
+            entities=lot_entities,
+        )
+        process_request.entity = lot
+        return process_request

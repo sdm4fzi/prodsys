@@ -17,11 +17,11 @@ from prodsys.simulation.process import (
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
-        product,
         process,
         state,
     )
     from prodsys.simulation import request as request_module
+    from prodsys.simulation.entities import product
 
 
 logger = logging.getLogger(__name__)
@@ -54,39 +54,37 @@ class ProductionProcessHandler:
         self.env = env
         self.resource = None
 
-    def get_products_of_lot(
-        self, lot_requests: list[request_module.Request]
+    def get_entities_of_request(
+        self, process_request: request_module.Request
     ) -> Generator:
         """
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
 
         Args:
-            resource (resources.Resource): The resource to take the product from.
-            product (product.Product): The product that is requesting the product.
+            process_request (request_module.Request): The request to get the entities from.
 
         Returns:
-            List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+            Generator: The generator yields when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        for lot_request in lot_requests:
-            yield from lot_request.origin_queue.get(lot_request.item.data.ID)
+        for entity in process_request.get_atomic_entities():
+            yield from process_request.origin_queue.get(entity.data.ID)
 
-    def put_products_of_lot(
-        self, lot_requests: list[request_module.Request]
+    def put_entities_of_request(
+        self, process_request: request_module.Request
     ) -> Generator:
         """
         Place a product to the output queue (put) of the resource.
 
         Args:
-            resource (resources.Resource): The resource to place the product to.
-            products (List[product.Product]): The products to be placed.
+            process_request (request_module.Request): The request to place the product to.
 
         Returns:
-            List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+            Generator: The generator yields when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        for lot_request in lot_requests:
-            yield from lot_request.target_queue.put(lot_request.item.data)
+        for entity in process_request.get_atomic_entities():
+            yield from process_request.target_queue.put(entity.data)
 
-    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
+    def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Start the next process with the following logic:
 
@@ -99,7 +97,6 @@ class ProductionProcessHandler:
         Yields:
             Generator: The generator yields when the process is finished.
         """
-        process_request = lot_requests[0]
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
@@ -109,42 +106,42 @@ class ProductionProcessHandler:
             yield process_request.request_dependencies()
         yield from resource.setup(process)
         resource_requests = []
-        for lot_request in lot_requests:
+        for _ in range(process_request.capacity_required):
             resource_request = resource.request()
             yield resource_request
             resource_requests.append(resource_request)
-        yield from self.get_products_of_lot(lot_requests)
+        yield from self.get_entities_of_request(process_request)
 
         process_time = get_process_time_for_lots(process_request)
-        resource.controller.mark_started_process(len(lot_requests))
+        resource.controller.mark_started_process(process_request.capacity_required)
         process_state_events = []
-        for lot_request in lot_requests:
-            lot_request.item.update_location(lot_request.resource)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(process_request.resource)
             production_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
             production_state.reserved = True
-            process_event = self.env.process(self.run_process(production_state, lot_request.item, process, process_time))
+            process_event = self.env.process(self.run_process(production_state,entity, process, process_time))
             process_state_events.append((process_event, production_state))
         for process_event, production_state in process_state_events:
             yield process_event
             production_state.process = None
 
-        yield from self.put_products_of_lot(lot_requests)
-        for lot_request in lot_requests:
-            lot_request.item.update_location(lot_request.target_queue)
-        
+        yield from self.put_entities_of_request(process_request)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(process_request.target_queue)
+
         buffer_placement_events = []
-        for lot_request in lot_requests:
-            buffer_placement_event = lot_request.item.router.request_buffering(lot_request)
+        for entity in process_request.get_atomic_entities():
+            buffer_placement_event = entity.router.request_buffering(process_request)
             if buffer_placement_event:
                 buffer_placement_events.append(buffer_placement_event)
         for buffer_placement_event in buffer_placement_events:
             yield buffer_placement_event
 
-        for lot_request in lot_requests:
-            lot_request.item.router.mark_finished_request(lot_request)
-        self.resource.controller.mark_finished_process(len(lot_requests))
+        for entity in process_request.get_atomic_entities():
+            entity.router.mark_finished_request(process_request)
+        self.resource.controller.mark_finished_process(process_request.capacity_required)
         for resource_request in resource_requests:
             resource.release(resource_request)
 
@@ -161,6 +158,8 @@ class ProductionProcessHandler:
         Args:
             input_state (state.State): The production state of the process.
             target_product (product.Product): The product that is processed.
+            process (process.Process): The process to run.
+            process_time (float): The process time.
         """
         input_state.state_info.log_product(
             target_product, state.StateTypeEnum.production

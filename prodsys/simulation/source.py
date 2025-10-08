@@ -6,11 +6,17 @@ from simpy import events
 
 import logging
 
-logger = logging.getLogger(__name__)
 
 from prodsys.simulation import port, sim, time_model
 from prodsys.simulation import router as router_module
 from prodsys.models import source_data, product_data
+
+from prodsys.simulation import product_processor
+
+if TYPE_CHECKING:
+    from prodsys.factories import product_factory
+
+logger = logging.getLogger(__name__)
 
 
 class Source:
@@ -40,9 +46,9 @@ class Source:
         self.product_data = product_data
         self.product_factory = product_factory
         self.time_model = time_model
-        self.router: router_module.Router = None
         self.ports: List[port.Queue] = []
         self.can_move = False
+        self.product_processor = product_processor.ProductProcessor(env)
 
     def add_ports(self, ports: List[port.Queue]):
         """
@@ -97,16 +103,7 @@ class Source:
                 yield from queue.reserve()
                 yield from queue.put(product.data)
                 product.update_location(queue)
-            product.process = self.env.process(product.process_product())
+            self.env.process(self.product_processor.process_product(product))
 
-    def get_location(self, interaction: Literal["output"] = "output") -> List[float]:
-        if interaction == "input":
-            raise ValueError(
-                "Source does not have an input location. Use 'output' instead."
-            )
+    def get_location(self) -> List[float]:
         return self.data.location
-
-
-from prodsys.factories import product_factory
-
-# Source.model_rebuild()

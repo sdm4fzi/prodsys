@@ -5,10 +5,10 @@ from typing import Union, Optional, TYPE_CHECKING
 
 import logging
 
+from prodsys.simulation.entities.entity import Entity, EntityType
 from prodsys.simulation.dependency import DependencyInfo
 
 
-logger = logging.getLogger(__name__)
 
 from simpy import events
 
@@ -25,11 +25,15 @@ if TYPE_CHECKING:
     )
     from prodsys.simulation import router as router_module
     from prodsys.simulation.dependency import Dependency
+    from prodsys.simulation import locatable
 
 
 from prodsys.models import primitives_data
 
-class Primitive:
+logger = logging.getLogger(__name__)
+
+
+class Primitive(Entity):
     """
     Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
     """
@@ -58,7 +62,7 @@ class Primitive:
         self.storage = storage
 
         self.router: router_module.Router = None
-        self.current_locatable: Optional[product.Locatable] = None
+        self.current_locatable: Optional[locatable.Locatable] = None
         self.current_dependant: Union[product.Product, Resource] = None
         self.bound = False
         self.got_free = events.Event(self.env)
@@ -66,7 +70,16 @@ class Primitive:
         # self.primitive_info = PrimitiveInfo()
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
 
-    def update_location(self, locatable: product.Locatable):
+    
+    @property
+    def type(self) -> EntityType:
+        return EntityType.PRIMITIVE
+
+    @property
+    def size(self) -> int:
+        return 1
+
+    def update_location(self, locatable: locatable.Locatable):
         """
         Updates the location of the product object.
 
@@ -107,4 +120,5 @@ class Primitive:
         self.got_free = events.Event(self.env)
 
 
-from prodsys.simulation import port, product, state
+from prodsys.simulation import port
+from prodsys.simulation.entities import product

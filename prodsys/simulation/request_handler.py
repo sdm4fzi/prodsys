@@ -15,13 +15,15 @@ from prodsys.simulation.process_matcher import ProcessMatcher
 logger = logging.getLogger(__name__)
 
 
-from prodsys.simulation import primitive, resources
+from prodsys.simulation import resources
+from prodsys.simulation.entities import primitive
 from prodsys.simulation import request
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, process
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation import resources, process
+    from prodsys.simulation.locatable import Locatable
+    from prodsys.simulation.entities import product
 
     # from prodsys.factories.source_factory import SourceFactory
 
@@ -106,8 +108,60 @@ class RequestHandler:
     pending_requests: dict[str, RequestInfo] = field(default_factory=dict)
     routed_requests: dict[str, RequestInfo] = field(default_factory=dict)
 
+    
+    def add_process_model_request(
+        self, entity: Union[product.Product, primitive.Primitive], 
+        process_model: process.ProcessModelProcess,
+        system_resource: resources.Resource,
+        target: Locatable,
+        target_queue: Locatable,
+    ) -> tuple[request.Request, RequestInfo]:
+        """
+        Adds a new request to the pending requests.
+        """
+        dependencies = []
+        if entity.dependencies:
+            dependencies.extend(entity.dependencies)
+        if process_model.dependencies:
+            dependencies.extend(process_model.dependencies)
+        if system_resource.dependencies:
+            dependencies.extend(system_resource.dependencies)
+        request_info_key = get_request_info_key(entity)
+        request_completion_event = simpy.Event(entity.env)
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=entity,
+            resource_mappings={process_model.data.ID: [process_model]},
+            request_type=request.RequestType.PROCESS_MODEL,
+            origin=None,
+            target=None,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+        )
+        # Add to pending requests
+        self.request_infos[request_info_key] = request_info
+        self.pending_requests[request_info_key] = request_info
+        processing_request = request.Request(
+            requesting_item=entity,
+            entity=entity,
+            # TODO: make sure that request handler makes this request type also for nested process models!
+            request_type=request.RequestType.PROCESS_MODEL,
+            process=entity.process_model,
+            resource=system_resource,
+            origin=entity.current_locatable,
+            target=target,
+            origin_queue=entity.current_locatable,
+            target_queue=target_queue,
+            completed=request_completion_event,
+            required_dependencies=dependencies,
+        )
+        self.pending_requests[id(processing_request.completed)] = request_info
+        self.request_infos[request_info_key] = request_info
+        return processing_request, request_info
+
     def add_product_requests(
-        self, item: Union[product.Product, primitive.Primitive]
+        self, entity: Union[product.Product, primitive.Primitive], 
+        next_possible_processes: List[process.PROCESS_UNION],
     ) -> RequestInfo:
         """
         Adds a new request to the pending requests.
@@ -118,9 +172,9 @@ class RequestHandler:
                 List of possible resources and processes that can handle the request.
             process (Optional[process.PROCESS_UNION]): The process to be executed, defaults to item's next_possible_processes.
         """
-        request_info_key = get_request_info_key(item)
+        request_info_key = get_request_info_key(entity)
         possible_resources_and_processes = self.process_matcher.get_compatible(
-            item.next_possible_processes
+            next_possible_processes
         )
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
@@ -129,15 +183,15 @@ class RequestHandler:
                 resources[resource_id] = []
             resources[resource_id].append(process_instance)
 
-        if hasattr(item, "process_model"):
+        if hasattr(entity, "process_model"):
             request_type = request.RequestType.PRODUCTION
         else:
             request_type = request.RequestType.PRIMITIVE_DEPENDENCY
 
-        request_completion_event = simpy.Event(item.env)
+        request_completion_event = simpy.Event(entity.env)
         request_info = RequestInfo(
             key=request_info_key,
-            item=item,
+            item=entity,
             resource_mappings=resources,
             request_type=request_type,
             origin=None,
@@ -294,15 +348,6 @@ class RequestHandler:
         Args:
             completed_request (request.Request): The request that has been completed.
         """
-        # if completed_request.request_type == request.RequestType.TRANSPORT:
-        #     request_info_key = get_transport_request_info_key(
-        #         completed_request.requesting_item,
-        #         completed_request.origin,
-        #         completed_request.target,
-        #     )
-        # else:
-        #     request_info_key = get_request_info_key(completed_request.requesting_item)
-        # self.request_infos[request_info_key].request_state = "completed"
         request_info = self.routed_requests.pop(id(completed_request.completed), None)
         if not request_info:
             raise ValueError(
@@ -330,7 +375,7 @@ class RequestHandler:
         dependencies = resource.dependencies + process.dependencies
         request_instance = request.Request(
             requesting_item=request_info.item,
-            item=request_info.item,
+            entity=request_info.item,
             resource=resource,
             process=process,
             origin=request_info.origin,
@@ -399,7 +444,7 @@ class RequestHandler:
         """
         return request.Request(
             requesting_item=request_info.item,
-            item=primitive,
+            entity=primitive,
             process=DependencyProcess(),
             request_type=request_info.request_type,
             completed=request_info.request_completion_event,

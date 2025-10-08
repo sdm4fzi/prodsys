@@ -8,7 +8,8 @@ from prodsys.factories import (
 )
 from prodsys.models import dependency_data
 
-from prodsys.simulation import primitive, sim
+from prodsys.simulation import sim
+from prodsys.simulation.entities import primitive
 from prodsys.simulation import router as router_module
 from prodsys.simulation import logger
 
