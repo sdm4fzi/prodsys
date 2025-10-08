@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Generator, Optional, List, Union
+from typing import TYPE_CHECKING, Generator, Optional, List, Union, Any, Protocol
 
 import simpy
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation.product import Product, Locatable
+    from prodsys.simulation.product import Product
     from prodsys.simulation.process import (
         PROCESS_UNION,
         TransportProcess,
@@ -22,6 +22,15 @@ if TYPE_CHECKING:
     from prodsys.simulation.dependency import DependedEntity
     from prodsys.simulation.process import Process
     from prodsys.simulation.dependency import Dependency
+else:
+    Product = Any  # type: ignore
+
+
+class Locatable(Protocol):
+    data: Any
+
+    def get_location(self, *args, **kwargs) -> List[float]:
+        ...
 
 
 class RequestType(Enum):
@@ -77,6 +86,7 @@ class Request:
         resolved_dependency: Optional[Dependency] = None,
         required_dependencies: Optional[list[Dependency]] = None,
         dependency_release_event: Optional[simpy.Event] = None,
+        target_reservations: int = 1,
     ):
         self.request_type = request_type
         self.process = process
@@ -105,6 +115,7 @@ class Request:
         self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
+        self.target_reservations: int = target_reservations
 
     def set_process(self, process: PROCESS_UNION):
         """

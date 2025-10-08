@@ -13,8 +13,9 @@ from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, List, TYPE_CHECKING, Optional, Dict
 from pydantic import ConfigDict, Field
-
+from typing import Dict
 from prodsys.models.core_asset import CoreAsset
+from prodsys.models.product_data import ProductData
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -115,7 +116,8 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-
+    product_disassembly_dict : Optional[Dict[str, List[ProductData]]] = None
+    
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [

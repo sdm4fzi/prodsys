@@ -9,6 +9,8 @@ from typing import (
     Union,
     Dict,
     Tuple,
+    Any,
+    Protocol,
 )
 
 import logging
@@ -37,9 +39,15 @@ if TYPE_CHECKING:
     )
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
-    from prodsys.simulation.product import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
+
+
+class Locatable(Protocol):
+    data: Any
+
+    def get_location(self, *args, **kwargs) -> List[float]:
+        ...
 
 
 def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
@@ -202,7 +210,10 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-        yield from target_port.reserve()
+        reservations = getattr(executed_request, "target_reservations", 1)
+        if target_port is not None and reservations:
+            for _ in range(reservations):
+                yield from target_port.reserve()
         if (
             executed_request.request_type == request.RequestType.PRODUCTION
             and executed_request.requesting_item.current_locatable
@@ -448,7 +459,7 @@ class Router:
         return process_event
 
     def request_transport(
-        self, product: product.Product, target: Locatable
+        self, product_item: "product.Product", target: "Locatable"
     ) -> events.Event:
         """
         Routes a product to perform the next transport by assigning a transport resource to the product.
@@ -459,7 +470,7 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed.
         """
-        request_info = self.request_handler.add_transport_request(product, target)
+        request_info = self.request_handler.add_transport_request(product_item, target)
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event

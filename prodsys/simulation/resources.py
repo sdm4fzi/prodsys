@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from sys import intern
-from typing import TYPE_CHECKING, List, Generator, Literal, Optional, Union
+from typing import TYPE_CHECKING, List, Generator, Literal, Optional, Union, Protocol
 
 import random
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import control, state
     from prodsys.simulation.process import PROCESS_UNION
     from prodsys.simulation.product import Locatable
+    from prodsys.simulation import port
 
 
 from prodsys.models.resource_data import (
@@ -35,6 +36,11 @@ from prodsys.models.resource_data import (
     SystemResourceData,
 )
 from prodsys.util import util
+
+
+class LocatableProtocol(Protocol):
+    def get_location(self) -> List[float]:
+        ...
 
 
 class Resource(resource.Resource):
@@ -406,7 +412,7 @@ class Resource(resource.Resource):
         """
         return sum([len(q.items) for q in self.ports if q.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]])
 
-    def set_location(self, new_location: Locatable) -> None:
+    def set_location(self, new_location: LocatableProtocol) -> None:
         """
         Sets the location of the resource.
 

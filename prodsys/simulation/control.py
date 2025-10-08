@@ -17,6 +17,11 @@ from prodsys.simulation.process_handlers.production_process_handler import Produ
 from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
 from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
+from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
+from prodsys.models.product_data import ProductData
+from prodsys.simulation.product import Product
+from prodsys.models.port_data import PortInterfaceType
+from prodsys.models.processes_data import ProcessTypeEnum
 
 
 if TYPE_CHECKING:
@@ -145,7 +150,14 @@ def get_requets_handler(
     Returns:
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
+    
     if (
+        request.request_type == request_module.RequestType.PRODUCTION
+        and hasattr(request.process, "data")
+        and getattr(request.process.data, "product_disassembly_dict", None)
+    ):
+        return DisassemblyProcessHandler(request.requesting_item.env)  
+    elif (
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK
     ):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Deque, List, TYPE_CHECKING, Literal, Optional, Union, Dict, Set
+from typing import Deque, List, TYPE_CHECKING, Literal, Optional, Union, Dict, Set, Any, Protocol
 from dataclasses import dataclass, field
 
 import logging
@@ -21,9 +21,15 @@ from prodsys.simulation import request
 
 if TYPE_CHECKING:
     from prodsys.simulation import resources, product, process
-    from prodsys.simulation.product import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
+
+
+class Locatable(Protocol):
+    data: Any
+
+    def get_location(self, *args, **kwargs) -> List[float]:
+        ...
 
 RequestInfoKey = str
 ResourceIdentifier = str
@@ -323,6 +329,28 @@ class RequestHandler:
             request.Request: The created request.
         """
         dependencies = resource.dependencies + process.dependencies
+
+        target_reservations = 1
+        process_data = getattr(process, "data", None)
+        item_data = getattr(getattr(request_info.item, "data", None), "type", None)
+        if (
+            request_info.request_type == request.RequestType.PRODUCTION
+            and process_data is not None
+            and item_data is not None
+        ):
+            disassembly_map = getattr(process_data, "product_disassembly_dict", None)
+            if disassembly_map and hasattr(disassembly_map, "get"):
+                if item_data not in disassembly_map:
+                    raise KeyError(
+                        f"No disassembly mapping found for product type '{item_data}' in process '{process_data.ID}'."
+                    )
+                disassembly_list = disassembly_map.get(item_data)
+                if not disassembly_list:
+                    raise ValueError(
+                        f"Disassembly mapping for product type '{item_data}' in process '{process_data.ID}' must define at least one output product."
+                    )
+                target_reservations = len(disassembly_list)
+
         request_instance = request.Request(
             requesting_item=request_info.item,
             resource=resource,
@@ -334,6 +362,7 @@ class RequestHandler:
             resolved_dependency=request_info.dependency,
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,
+            target_reservations=target_reservations,
         )
         return request_instance
 

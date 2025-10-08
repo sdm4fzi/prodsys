@@ -128,17 +128,25 @@ def remove_queues_from_resources(
 
 def remove_unused_queues_from_adapter(
     adapter: ProductionSystemData,
-) -> ProductionSystemData:
-    used_queues_ids = set(
-        [queue_ID for machine in adapter.resource_data for queue_ID in machine.ports]
-        + [queue_ID for source in adapter.source_data for queue_ID in source.ports]
-        + [queue_ID for sink in adapter.sink_data for queue_ID in sink.ports]
-        + [
-            queue_ID
-            for primitive in adapter.primitive_data
-            for queue_ID in primitive.storages
-        ]
-    )
+) -> ProductionSystemData: 
+    used_queues_ids: Set[str] = set()
+
+    for machine in adapter.resource_data:
+        if machine.ports:
+            used_queues_ids.update(machine.ports)
+
+    for source in adapter.source_data:
+        if source.ports:
+            used_queues_ids.update(source.ports)
+
+    for sink in adapter.sink_data:
+        if sink.ports:
+            used_queues_ids.update(sink.ports)
+
+    for primitive in adapter.primitive_data or []:
+        if getattr(primitive, "storages", None):
+            used_queues_ids.update(primitive.storages)
+
     queues_to_remove = []
     for queue in adapter.port_data:
         if queue.ID not in used_queues_ids:
