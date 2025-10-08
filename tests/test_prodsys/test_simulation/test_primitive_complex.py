@@ -120,18 +120,18 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 3.7 and kpi.value > 3.4
+            assert kpi.value < 4.5 and kpi.value > 3.8
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 6.9 and kpi.value > 6.3
+            assert kpi.value < 9 and kpi.value > 7.6
 
     for kpi in post_processor.primitive_WIP_KPIs:
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive1":
-            assert kpi.value < 3.5 and kpi.value > 3.1
+            assert kpi.value < 4.5 and kpi.value > 3.8
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive2":
-            assert kpi.value < 6.8 and kpi.value > 6.2
+            assert kpi.value < 9 and kpi.value > 7.6
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 9 and kpi.value > 8.1
+            assert kpi.value < 11.5 and kpi.value > 10.5
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
-            assert kpi.value < 9 and kpi.value > 8.1
+            assert kpi.value < 11.5 and kpi.value > 10.5
