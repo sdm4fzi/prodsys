@@ -438,6 +438,9 @@ class Router:
                 requesting_item=requesting_item,
             )
             dependency_ready_events.append(request_info.request_completion_event)
+        #FIXME: gilt momentan nur für Primitive Dependencies für Processes
+        if not self.got_primitive_request.triggered:
+            self.got_primitive_request.succeed()
         return dependency_ready_events
 
     def request_processing(self, product: product.Product) -> events.Event:

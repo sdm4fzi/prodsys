@@ -118,32 +118,31 @@ def create_product(*args, **kwargs):
     - Old: create_product(processes=[...], transport_process=..., ID=...)
     - New: create_product(process=..., transport_process=..., ID=...)
     """
-    # Handle old positional API: Product([processes], transport_process, ID)
-    if args and not kwargs:
+    # 1) Map positional args regardless of kwargs presence
+    if args:
         if len(args) >= 2:
             processes_arg = args[0]
             transport_process_arg = args[1]
             id_arg = args[2] if len(args) > 2 else None
-            
-            # Handle old API with processes parameter
-            if isinstance(processes_arg, list):
+
+            # Only set if not already provided explicitly via kwargs
+            if 'process' not in kwargs and 'processes' not in kwargs:
+                # Accept list (handled by validator) or a single process model
                 kwargs['process'] = processes_arg
+            if 'transport_process' not in kwargs:
                 kwargs['transport_process'] = transport_process_arg
-                if id_arg:
-                    kwargs['ID'] = id_arg
-            else:
-                # Handle new API with single process
-                kwargs['process'] = processes_arg
-                kwargs['transport_process'] = transport_process_arg
-                if id_arg:
-                    kwargs['ID'] = id_arg
+            if id_arg is not None and 'ID' not in kwargs:
+                kwargs['ID'] = id_arg
+        elif len(args) == 1:
+            # Allow pattern: Product(process, transport_process=..., ID=..., ...)
+            if 'process' not in kwargs and 'processes' not in kwargs:
+                kwargs['process'] = args[0]
         else:
             raise ValueError("Product requires at least process and transport_process arguments")
-    
-    # Handle old API with processes keyword
+
+    # 2) Backward-compat keyword: processes -> process
     if 'processes' in kwargs and 'process' not in kwargs:
         kwargs['process'] = kwargs.pop('processes')
-    
-    return Product(**kwargs)
 
+    return Product(**kwargs)
 

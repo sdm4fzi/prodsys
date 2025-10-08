@@ -11,7 +11,7 @@ from prodsys.models import dependency_data
 from prodsys.simulation import primitive, sim
 from prodsys.simulation import router as router_module
 from prodsys.simulation import logger
-
+from prodsys.models.product_data import ProductData
 
 from prodsys.models import source_data
 
@@ -104,6 +104,58 @@ class PrimitiveFactory:
         self.primitives.append(primitive_object)
         return primitive_object
     
+    def spawn_dynamic_primitive_from_finished_product(
+        self, product_data_instance: ProductData, sink_queue_id: str
+    ) -> Generator:
+        """
+        Coroutine-Variante: erstellt Primitive und wartet synchron (yield from) auf queue.put.
+        Kann in bestehende SimPy-Prozesse eingebettet werden (env.process(...) Aufruf an der Startstelle).
+        """
+        primitive_data_instance = self.product_to_primitive(product_data_instance).model_copy(deep=True)
+        primitive_data_instance.ID = f"{primitive_data_instance.ID}_dyn_{self.primitive_counter}"
+
+        transport_process = self.process_factory.get_process(primitive_data_instance.transport_process)
+        queue = self.queue_factory.get_queue(sink_queue_id)
+
+        prim = primitive.Primitive(
+            env=self.env,
+            data=primitive_data_instance,
+            transport_process=transport_process,
+            storage=queue,
+        )
+        prim.current_locatable = queue
+        if self.router:
+            prim.router = self.router
+        if self.event_logger:
+            self.event_logger.observe_terminal_primitive_states(prim)
+
+        self.primitive_counter += 1
+        self.primitives.append(prim)
+
+        
+        yield from queue.put(prim.data)
+
+        if self.router:
+            if prim.data.type not in self.router.free_primitives_by_type:
+                self.router.free_primitives_by_type[prim.data.type] = []
+            self.router.free_primitives_by_type[prim.data.type].append(prim)
+            if not self.router.got_primitive_request.triggered:
+                self.router.got_primitive_request.succeed()
+
+        
+        return prim
+    
+    def product_to_primitive(self, product_data_instance: ProductData):
+                
+        primitive_data = primitives_data.PrimitiveData(
+        ID= product_data_instance.ID,
+        description= product_data_instance.description,
+        type= product_data_instance.type,
+        transport_process= product_data_instance.transport_process,
+                                                       
+                                                       )
+        return primitive_data
+        
     def set_router(self, router: router_module.Router) -> None:
         """
         Set the router for the factory.
