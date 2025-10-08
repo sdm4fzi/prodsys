@@ -89,7 +89,7 @@ def get_dependency_request_info_key(
         item_id = requesting_item.data.ID
     else:
         item_id = dependency_item.data.ID
-    # FIXME: consider here product or so, double item_id makes no sense
+    # TODO: consider here product or so, double item_id makes no sense
     return f"{item_id}:{dependency_id}:{item_id}"
 
 
