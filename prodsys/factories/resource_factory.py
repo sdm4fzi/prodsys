@@ -18,6 +18,7 @@ from prodsys.models.resource_data import (
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
+from prodsys.simulation.lot_handler import LotHandler
 
 if TYPE_CHECKING:
     from prodsys.simulation import port
@@ -165,6 +166,7 @@ class ResourceFactory:
                 control.BatchController,
             ]
         ] = []
+        self.lot_handler = LotHandler()
 
     def create_resources(self, adapter: production_system_data.ProductionSystemData):
         """
@@ -211,7 +213,7 @@ class ResourceFactory:
         controller: Union[
             control.Controller,
             control.BatchController,
-        ] = controller_class(control_policy=control_policy, env=self.env)
+        ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.global_system_resource = resources.SystemResource(
             env=self.env,
             data=resource_data,
@@ -274,7 +276,7 @@ class ResourceFactory:
         controller: Union[
             control.Controller,
             control.BatchController,
-        ] = controller_class(control_policy=control_policy, env=self.env)
+        ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.controllers.append(controller)
         values.update({"controller": controller})
 

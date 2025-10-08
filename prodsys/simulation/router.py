@@ -139,7 +139,6 @@ class Router:
         # Initialize the request handler
         self.request_handler = RequestHandler(process_matcher)
         self.interaction_handler = InteractionHandler()
-        self.lot_handler = LotHandler()
 
         # Initialize compatibility tables
 

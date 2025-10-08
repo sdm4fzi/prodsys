@@ -166,28 +166,5 @@ class ProductionProcessHandler:
         )
         input_state.process = self.env.process(input_state.process_state(time=process_time))  # type: ignore False
         input_state.reserved = False
-        self.handle_rework_required(target_product, process)
 
         yield input_state.process
-
-    def handle_rework_required(
-        self, product: product.Product, process: process.Process
-    ):
-        """
-        Determine if rework is needed based on the process's failure rate.
-
-        Args:
-            process (process.Process): The process to check for failure rate.
-        """
-        if isinstance(process, ReworkProcess):
-            return
-        failure_rate = process.data.failure_rate
-        if not failure_rate or failure_rate == 0:
-            return
-        rework_needed = np.random.choice(
-            [True, False], p=[failure_rate, 1 - failure_rate]
-        )
-        if not rework_needed:
-            return
-        product.add_needed_rework(process)
-

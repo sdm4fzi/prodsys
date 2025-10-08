@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.locatable import Locatable
+    from prodsys.simulation.lot_handler import LotHandler
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +60,11 @@ class Controller:
             None,
         ],
         env: sim.Environment,
+        lot_handler: LotHandler,
     ) -> None:
         self.control_policy = control_policy
         self.env = env
+        self.lot_handler = lot_handler
         self.requests: List[request_module.Request] = []
         self.state_changed: events.Event = events.Event(env)
         self.resource: resources.Resource = None
@@ -117,14 +120,12 @@ class Controller:
                 self.state_changed.succeed()
 
     def _should_form_lot(self, process_request: request_module.Request) -> bool:
-        lot_handler = process_request.entity.router.lot_handler
-        return lot_handler.lot_required(process_request)
+        return self.lot_handler.lot_required(process_request)
 
     def _form_lot(self, process_request: request_module.Request) -> Optional[request_module.Request]:
-        lot_handler = process_request.entity.router.lot_handler
-        if not lot_handler.is_lot_feasible(process_request):
+        if not self.lot_handler.is_lot_feasible(process_request):
             return None
-        lot_requests = lot_handler.get_lot_request(process_request)
+        lot_requests = self.lot_handler.get_lot_request(process_request)
         return lot_requests
 
     def mark_started_process(self, num_processes: int = 1) -> None:

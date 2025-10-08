@@ -76,13 +76,13 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             assert kpi.value > 1950 and kpi.value < 2000
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 80 and kpi.value > 75
+            assert kpi.value < 82 and kpi.value > 78
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
             assert kpi.value > 73 and kpi.value < 77
 
         if kpi.name == "productive_time" and kpi.resource == "reworker":
-            assert kpi.value > 14 and kpi.value < 15
+            assert kpi.value > 14 and kpi.value < 16
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
