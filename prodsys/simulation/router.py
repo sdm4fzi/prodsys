@@ -433,7 +433,34 @@ class Router:
         )
         self.request_handler.mark_routing(processing_request)
         self.resource_factory.global_system_resource.controller.request(processing_request)
+        # Handle dependencies for process model requests
+        if processing_request.required_dependencies:
+            self.env.process(self._handle_process_model_dependencies(processing_request))
         return processing_request
+    
+    def _handle_process_model_dependencies(self, processing_request: request.Request) -> Generator:
+        """
+        Handles dependencies for process model requests by waiting for dependencies_requested event
+        and then routing the dependencies.
+        """
+        yield processing_request.dependencies_requested
+        dependency_ready_events = []
+        for dependency in processing_request.required_dependencies:
+            request_info = self.request_handler.add_dependency_request(
+                requiring_dependency=processing_request.requesting_item,
+                requesting_item=processing_request.requesting_item,
+                dependency=dependency,
+                dependency_release_event=processing_request.completed,
+            )
+            if not request_info:
+                continue
+            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+                if not self.got_primitive_request.triggered:
+                    self.got_primitive_request.succeed()
+            dependency_ready_events.append(request_info.request_completion_event)
+        for dependency_ready_event in dependency_ready_events:
+            yield dependency_ready_event
+        processing_request.dependencies_ready.succeed()
 
     def request_process_step(self, product: product.Product, next_possible_processes: List[process.PROCESS_UNION]) -> events.Event:
         """

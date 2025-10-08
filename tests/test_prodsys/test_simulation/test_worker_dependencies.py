@@ -447,7 +447,7 @@ def test_run_simulation_both_dependencies(
             total_wip += kpi.value
             assert kpi.value > 0
 
-    assert total_wip > 600 and total_wip < 700
+    assert total_wip > 650 and total_wip < 750
 
     # Check throughput time
     for kpi in post_processor.aggregated_throughput_time_KPIs:

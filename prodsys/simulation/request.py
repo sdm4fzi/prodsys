@@ -112,7 +112,12 @@ class Request:
     def capacity_required(self) -> int:
         """
         Returns the capacity required for the request.
+        For dependency requests (PROCESS_DEPENDENCY, RESOURCE_DEPENDENCY), returns 1.
+        For entity-based requests (PRODUCTION, TRANSPORT, etc.), returns the entity size.
         """
+        # Dependency requests don't need entity size, they always require capacity of 1 but block the resource completely until finished.
+        if self.request_type in (RequestType.PROCESS_DEPENDENCY, RequestType.RESOURCE_DEPENDENCY):
+            return 1
         return self.entity.size
     
     def set_process(self, process: PROCESS_UNION):
