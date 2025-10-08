@@ -62,7 +62,6 @@ def test_hashing(storage_simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
-    # FIXME: this test holds
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)

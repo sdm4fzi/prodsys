@@ -27,5 +27,4 @@ class ProductProcessor:
         product.info.log_finish_product(
             resource=product.current_locatable, _product=product, event_time=self.env.now
         )
-        # TODO: check if this is needed....
         processing_request.target.register_finished_product(product)

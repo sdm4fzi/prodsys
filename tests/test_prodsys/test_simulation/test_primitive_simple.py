@@ -28,8 +28,6 @@ def simulation_adapter() -> ProductionSystemData:
         ID="workpice_carrier_1",
         transport_process=tp,
         storages=[storage1, storage2],
-        # FIXME: 2 storages aren't working, investigate why
-        # storages=[storage1],
         quantity_in_storages=[5, 20],
     )
 

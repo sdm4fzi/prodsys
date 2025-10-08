@@ -577,7 +577,6 @@ class ProcessModelProcess(Process):
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
-        # TODO: add here cases, when the request requires a process that is contained in the process model or matches any of them maybe
         if not isinstance(requested_process, ProcessModelProcess) and not isinstance(
             requested_process, CompoundProcess
         ):

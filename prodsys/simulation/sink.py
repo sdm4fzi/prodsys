@@ -41,12 +41,7 @@ class Sink:
         """
         self.ports.extend(ports)
 
-    def get_location(self, interaction: Literal["input"] = "input") -> List[float]:
-        # FIXME: updat this location here!
-        if interaction == "out":
-            raise ValueError(
-                "Sink does not have an output location. Use 'input' instead."
-            )
+    def get_location(self) -> List[float]:
         return self.data.location
 
     def get_input_queue_length(self) -> int:

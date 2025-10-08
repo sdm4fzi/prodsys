@@ -361,36 +361,6 @@ class Router:
         routed_request = free_requests.pop(0)
         return routed_request
 
-    def get_dependencies_for_product_processing(
-        self, product: product.Product
-    ) -> List[RequestInfo]:
-        """
-        Routes all dependencies for processing to a product. Covers currently only primitive dependencies (workpiece carriers, e.g.)
-
-        Args:
-            product (product.Product): The product.
-
-        Returns:
-            Generator[None, None, None]: A generator that yields when the dependencies are routed.
-        """
-        # TODO: this function needs to be removed after changing from product to process model processing
-        request_infos = []
-        dependency_release_event = events.Event(self.env)
-        for dependency in product.dependencies:
-            assert (
-                dependency.data.dependency_type == DependencyType.PRIMITIVE
-            ), f"Only primitive dependencies are supported for now. Found {dependency.data.dependency_type} for {product.data.ID}."
-            request_info = self.request_handler.add_dependency_request(
-                requiring_dependency=product,
-                dependency=dependency,
-                requesting_item=product,
-                dependency_release_event=dependency_release_event,
-            )
-            request_infos.append(request_info)
-        if not self.got_primitive_request.triggered:
-            self.got_primitive_request.succeed()
-        return request_infos, dependency_release_event
-
     def get_dependencies_for_execution(
         self,
         resource: resources.Resource,
@@ -517,7 +487,7 @@ class Router:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
         """
         chosen_sink = self._determine_sink_for_product(product)
-        # TODO: determine target port from sink!
+        # TODO: determine target port from sink with interaction handler!
         target_port = chosen_sink.ports[0]
         request_info = self.request_handler.add_transport_request(product, target_port)
         if not self.got_requested.triggered:
