@@ -6,27 +6,26 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 import logging
 import time
 
-
-logger = logging.getLogger(__name__)
-
-
 from prodsys.factories import primitive_factory
 from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import request, process
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, process
+    from prodsys.simulation import resources, process
     from prodsys.factories import (
         resource_factory,
         sink_factory,
         product_factory,
         source_factory,
     )
+    from prodsys.simulation.entities import product
     from prodsys.models import product_data
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation.locatable import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -168,7 +167,6 @@ class ProcessMatcher:
                             self.production_compatibility[key].append(
                                 (resource, offered_process)
                             )
-                            dummy_product.update_executed_process(offered_process)
 
     def get_all_required_processes(
         self, product: product.Product
@@ -182,9 +180,7 @@ class ProcessMatcher:
         Returns:
             List[process.PROCESS_UNION]: List of required processes.
         """
-        process_model = product.process_model
-        # FIXME: resolve that also precedence graph models work
-        return process_model.process_list
+        return product.process_model.contained_processes
 
     def precompute_compatibility_tables(self):
         """

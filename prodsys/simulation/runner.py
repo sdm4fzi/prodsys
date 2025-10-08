@@ -22,6 +22,7 @@ from prodsys.factories import (
     sink_factory,
     source_factory,
     node_factory,
+    router_factory,
 )
 
 
@@ -120,6 +121,7 @@ class Runner:
         self.source_factory: source_factory.SourceFactory = None
         self.primitive_factory: primitive_factory.PrimitiveFactory = None
         self.product_factory: product_factory.ProductFactory = None
+        self.router_factory: router_factory.RouterFactory = None
         self.event_logger: logger.Logger = None
         self.time_stamp: str = ""
         self.post_processor: PostProcessor = None
@@ -164,6 +166,7 @@ class Runner:
             self.product_factory = product_factory.ProductFactory(
                 env=self.env,
                 process_factory=self.process_factory,
+                adapter=self.adapter,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -222,7 +225,7 @@ class Runner:
             )
             link_transport_process_updater_instance.update_links_with_objects()
 
-            router = Router(
+            self.router_factory = router_factory.RouterFactory(
                 env=self.env,
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
@@ -231,13 +234,15 @@ class Runner:
                 primitive_factory=self.primitive_factory,
                 production_system_data=self.adapter,
             )
-            self.primitive_factory.set_router(router)
+            self.router_factory.create_routers()
+            global_router = self.router_factory.global_system_router
+            self.primitive_factory.set_router(global_router)
+            self.product_factory.set_router(global_router)
 
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
             self.env.process(self.primitive_factory.place_primitives_in_queues())
-            self.env.process(router.resource_routing_loop())
-            self.env.process(router.primitive_routing_loop())
+            self.router_factory.start_routers()
 
     def run(self, time_range: int):
         """

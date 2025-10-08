@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Generator, Optional, List, Union
+from typing import TYPE_CHECKING, Optional, List, Union
 
 import simpy
 
+from prodsys.simulation.entities.entity import EntityType
 
 if TYPE_CHECKING:
-    from prodsys.simulation.product import Product, Locatable
+    from prodsys.simulation.locatable import Locatable
     from prodsys.simulation.process import (
         PROCESS_UNION,
-        TransportProcess,
-        LinkTransportProcess,
-        CapabilityProcess,
-        ProductionProcess,
     )
-    from prodsys.simulation.primitive import Primitive
+    # from prodsys.simulation.primitive import Primitive
+    from prodsys.simulation.entities.product import Product
+    from prodsys.simulation.entities.primitive import Primitive
+    from prodsys.simulation.entities.lot import Lot
 
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.port import Store, Queue
@@ -66,8 +66,8 @@ class Request:
         request_type: RequestType,
         process: PROCESS_UNION,
         resource: Optional[Resource] = None,
-        requesting_item: Optional[Product | Primitive | Resource | Process] = None,
-        item: Optional[Product | Primitive] = None,
+        requesting_item: Optional[Product | Primitive | Lot | Resource | Process] = None,
+        entity: Optional[Product | Primitive | Lot] = None,
         origin_queue: Optional[Queue] = None,
         target_queue: Optional[Store] = None,
         origin: Optional[Locatable] = None,
@@ -81,7 +81,7 @@ class Request:
         self.request_type = request_type
         self.process = process
         self.requesting_item = requesting_item
-        self.item = item
+        self.entity = entity
         self.resource = resource
         self.origin = origin
         self.target = target
@@ -92,7 +92,7 @@ class Request:
         self.transport_to_target: Optional[simpy.Event] = None
 
         self.resolved_dependency: Optional[Dependency] = resolved_dependency
-        self.required_dependencies: Optional[List[DependedEntity]] = (
+        self.required_dependencies: Optional[List[Dependency]] = (
             required_dependencies
         )
         self.dependencies_requested: Optional[simpy.Event] = simpy.Event(
@@ -107,6 +107,14 @@ class Request:
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
 
+    
+    @property
+    def capacity_required(self) -> int:
+        """
+        Returns the capacity required for the request.
+        """
+        return self.entity.size
+    
     def set_process(self, process: PROCESS_UNION):
         """
         Sets the process of the request.
@@ -125,14 +133,24 @@ class Request:
         """
         return self.process
 
-    def get_item(self) -> Union[Product, Primitive]:
+    def get_entity(self) -> Union[Product, Primitive, Lot]:
         """
         Returns the item of the request.
 
         Returns:
             Union[product.Product, primitive.Primitive]: The item (product or primitive).
         """
-        return self.requesting_item
+        return self.entity
+
+    def get_atomic_entities(self) -> List[Union[Product, Primitive]]:
+        if self.entity.type == EntityType.PRODUCT:
+            return [self.entity]
+        elif self.entity.type == EntityType.PRIMITIVE:
+            return [self.entity]
+        elif self.entity.type == EntityType.LOT:
+            return self.entity.get_atomic_entities()
+        else:
+            raise ValueError(f"Entity type {self.entity.type} not supported.")
 
     def get_resource(self) -> Resource:
         """

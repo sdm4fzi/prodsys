@@ -12,8 +12,8 @@ from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
 import pandas as pd
 
-from prodsys.simulation import primitive, state
-
+from prodsys.simulation import state
+from prodsys.simulation.entities import primitive, product
 
 if TYPE_CHECKING:
     from prodsys.simulation import product

@@ -5,7 +5,6 @@ from typing import List, Generator, TYPE_CHECKING, Union
 import logging
 
 from prodsys.simulation import (
-    primitive,
     route_finder,
     sim,
     state,
@@ -17,12 +16,12 @@ from prodsys.simulation.process import (
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
-        product,
         state,
         resources,
     )
     from prodsys.simulation import request as request_module
-
+    from prodsys.simulation import locatable
+    from prodsys.simulation.entities import product, primitive
 logger = logging.getLogger(__name__)
 
 
@@ -36,61 +35,50 @@ class TransportProcessHandler:
         self.resource = None
         self.blocked_capacity = 0
 
-    def get_products_of_lot(
-        self, lot_requests: list[request_module.Request]
+    def get_entities_of_request(
+        self, process_request: request_module.Request
     ) -> Generator:
         """
         Get the next product for a process from the output queue of a resource.
 
         Args:
-            resource (product.Locatable): Resource or Source to get the product from.
-            product (product.Product): The product that shall be transported.
-
+            process_request (request_module.Request): The request to get the entities from.
+        
         Raises:
             ValueError: If the product is not in the queue.
-            ValueError: If the resource is not a  Resource
 
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        first_origin_queue = lot_requests[0].origin_queue
-        for lot_request in lot_requests:
-            if lot_request.origin_queue != first_origin_queue:
-                raise ValueError(f"Origin queue of lot requests is not the same. {lot_request.origin_queue} != {first_origin_queue}")
-        for lot_request in lot_requests:
-            yield from lot_request.origin_queue.get(lot_request.item.data.ID)
+        for entity in process_request.get_atomic_entities():
+            yield from process_request.origin_queue.get(entity.data.ID)
+
+
         
-    def put_products_of_lot(
-        self, lot_requests: list[request_module.Request]
+    def put_entities_of_request(
+        self, process_request: request_module.Request
     ) -> Generator:
         """
         Put a product to the input queue of a resource.
 
         Args:
-            locatable (product.Locatable): Resource or Sink to put the product to.
-            product (product.Product): The product that shall be transported.
+            process_request (request_module.Request): The request to put the entities to.
 
-        Raises:
-            ValueError: If the resource is not a  Resource
 
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        first_target_queue = lot_requests[0].target_queue
-        for lot_request in lot_requests:
-            if lot_request.target_queue != first_target_queue:
-                raise ValueError(f"Target queue of lot requests is not the same. {lot_request.target_queue} != {first_target_queue}")
-        for lot_request in lot_requests:
-            yield from lot_request.target_queue.put(lot_request.item.data)
-
+        for entity in process_request.get_atomic_entities():
+            yield from process_request.target_queue.put(entity.data)
+        
     def update_location(
-        self, locatable: product.Locatable, location: list[float]
+        self, locatable: locatable.Locatable, location: list[float]
     ) -> None:
         """
         Set the current position of the transport resource.
 
         Args:
-            locatable (product.Locatable): The current position.
+            locatable (locatable.Locatable): The current position.
             to_output (Optional[bool], optional): If the transport resource is moving to the output location. Defaults to None.
         """
         self.resource.set_location(locatable)
@@ -104,7 +92,7 @@ class TransportProcessHandler:
         transport_resource.controller.reserved_requests_count -= self.blocked_capacity
         self.blocked_capacity = 0
 
-    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
+    def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Start the next process.
 
@@ -125,7 +113,6 @@ class TransportProcessHandler:
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        process_request = lot_requests[0]
         resource = process_request.get_resource()
         self.resource = resource
         process = process_request.get_process()
@@ -140,36 +127,36 @@ class TransportProcessHandler:
         if not resource.current_locatable:
             resource.set_location(origin)
         resource_requests = []
-        for lot_request in lot_requests:
+        for _ in range(process_request.capacity_required):
             resource_request = resource.request()
             yield resource_request
             resource_requests.append(resource_request)
-        resource.controller.mark_started_process(len(lot_requests))
+        resource.controller.mark_started_process(process_request.capacity_required)
         if origin_queue.get_location() != resource.get_location():
             route_to_origin = self.find_route_to_origin(process_request)
             transport_state_events = []
-            for lot_request in lot_requests:
+            for entity in process_request.get_atomic_entities():
                 transport_state: state.State = yield from resource.wait_for_free_process(process)
                 transport_state.reserved = True
                 transport_event = self.env.process(self.run_transport(
-                    transport_state, lot_request.item, route_to_origin, empty_transport=True
+                    transport_state, entity, route_to_origin, empty_transport=True
                 ))
                 transport_state_events.append((transport_event, transport_state))
             for transport_event, transport_state in transport_state_events:
                 yield transport_event
                 transport_state.process = None
-        yield from self.get_products_of_lot(lot_requests)
-        for lot_request in lot_requests:
-            lot_request.item.update_location(self.resource)
+        yield from self.get_entities_of_request(process_request)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(self.resource)
 
         transport_state_events = []
-        for lot_request in lot_requests:
+        for entity in process_request.get_atomic_entities():
             transport_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
             transport_state.reserved = True
             transport_event = self.env.process(self.run_transport(
-                transport_state, lot_request.item, route_to_target, empty_transport=False
+                transport_state, entity, route_to_target, empty_transport=False
             ))
             transport_state_events.append((transport_event, transport_state))
         for transport_event, transport_state in transport_state_events:
@@ -177,13 +164,13 @@ class TransportProcessHandler:
             transport_state.process = None
 
 
-        yield from self.put_products_of_lot(lot_requests)
-        for lot_request in lot_requests:
-            lot_request.item.update_location(lot_request.target_queue)
+        yield from self.put_entities_of_request(process_request)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(process_request.target_queue)
 
-        for lot_request in lot_requests:
-            lot_request.item.router.mark_finished_request(lot_request)
-        self.resource.controller.mark_finished_process(len(lot_requests))
+        for entity in process_request.get_atomic_entities():
+            entity.router.mark_finished_request(process_request)
+        self.resource.controller.mark_finished_process(process_request.capacity_required)
         for resource_request in resource_requests:
             resource.release(resource_request)
         self.unblock_other_transports(resource)
@@ -192,7 +179,7 @@ class TransportProcessHandler:
         self,
         transport_state: state.State,
         item: Union[product.Product, primitive.Primitive],
-        route: List[product.Locatable],
+        route: List[locatable.Locatable],
         empty_transport: bool,
     ) -> Generator:
         """
@@ -201,7 +188,7 @@ class TransportProcessHandler:
         Args:
             transport_state (state.State): The transport state of the process.
             product (product.Product): The product that is transported.
-            route (List[product.Locatable]): The route of the transport with locatable objects.
+            route (List[locatable.Locatable]): The route of the transport with locatable objects.
             empty_transport (bool): If the transport is empty.
 
         Yields:
@@ -231,7 +218,7 @@ class TransportProcessHandler:
 
     def get_target_location(
         self,
-        target: product.Locatable,
+        target: locatable.Locatable,
         empty_transport: bool,
         last_transport_step: bool,
     ) -> list[float]:
@@ -239,7 +226,7 @@ class TransportProcessHandler:
         Get the position of the target where the material exchange is done (either picking up or putting down)
 
         Args:
-            target (product.Locatable): The target of the transport.
+            target (locatable.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             last_transport_step (bool): If this is the last transport step.
 
@@ -252,7 +239,7 @@ class TransportProcessHandler:
         self,
         input_state: state.TransportState,
         item: Union[product.Product, primitive.Primitive],
-        target: product.Locatable,
+        target: locatable.Locatable,
         empty_transport: bool,
         initial_transport_step: bool,
         last_transport_step: bool,
@@ -263,7 +250,7 @@ class TransportProcessHandler:
         Args:
             input_state (state.State): The transport state of the process.
             item (Union[product.Product, primitive.Primitive]): The product that is transported.
-            target (product.Locatable): The target of the transport.
+            target (locatable.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             initial_transport_step (bool): If this is the initial transport step.
             last_transport_step (bool): If this is the last transport step.
@@ -291,7 +278,7 @@ class TransportProcessHandler:
 
     def find_route_to_origin(
         self, process_request: request_module.Request
-    ) -> List[product.Locatable]:
+    ) -> List[locatable.Locatable]:
         """
         Find the route to the origin of the transport request.
 
@@ -299,7 +286,7 @@ class TransportProcessHandler:
             process_request (request.TransportResquest): The transport request.
 
         Returns:
-            List[product.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
+            List[locatable.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
             route_to_origin = route_finder.find_route(

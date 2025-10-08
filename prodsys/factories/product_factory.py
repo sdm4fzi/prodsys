@@ -4,13 +4,17 @@ from typing import TYPE_CHECKING, List, Dict
 
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import RoutingHeuristic
+from prodsys.models import processes_data
 from prodsys.simulation import process_models
 from prodsys.simulation import process
 from prodsys.simulation import router as router_module
+from prodsys.simulation import product_info
 
 if TYPE_CHECKING:
+    from prodsys.models import production_system_data
     from prodsys.factories import process_factory
-    from prodsys.simulation import sim, product
+    from prodsys.simulation import sim
+    from prodsys.simulation.entities import product
     from prodsys.simulation import logger
     from prodsys.factories.dependency_factory import DependencyFactory
 
@@ -25,16 +29,26 @@ class ProductFactory:
     """
 
     def __init__(
-        self, env: sim.Environment, process_factory: process_factory.ProcessFactory
+        self, env: sim.Environment, process_factory: process_factory.ProcessFactory, adapter: production_system_data.ProductionSystemData
     ):
         self.env = env
         self.process_factory = process_factory
+        self.adapter: production_system_data.ProductionSystemData = None
         self.products: Dict[str, product.Product] = {}
         self.finished_products = []
         self.event_logger: logger.EventLogger = None
         self.product_counter = 0
         self.router: router_module.Router = None
         self.dependency_factory: DependencyFactory = None
+
+    def set_router(self, router: router_module.Router) -> None:
+        """
+        Set the router for the factory.
+
+        Args:
+            router (router_module.Router): The router to be set.
+        """
+        self.router = router
 
     def create_product(
         self, product_data: ProductData, routing_heuristic: RoutingHeuristic
@@ -78,6 +92,8 @@ class ProductFactory:
         else:
             dependencies = None
 
+        product_info_instance = product_info.ProductInfo()
+
         product_object = product.Product(
             env=self.env,
             data=product_data,
@@ -86,7 +102,7 @@ class ProductFactory:
             process_model=process_model,
             transport_process=transport_processes,
             dependencies=dependencies,
-            
+            info=product_info_instance,
         )
         if self.event_logger:
             self.event_logger.observe_terminal_product_states(product_object)
@@ -131,10 +147,17 @@ class ProductFactory:
 
         Returns:
             proces_models.ProcessModel: Created process model.
-        """
-        return self.get_precendece_graph_from_id_adjacency_matrix(
-            product_data.processes
+        """ 
+        process_model_data = processes_data.ProcessModelData(
+            ID=product_data.ID,
+            description="",
+            type=processes_data.ProcessTypeEnum.ProcessModels,
+            adjacency_matrix=product_data.processes,
+            # TODO: maybe use the dependencies of the product here... -> only resources and processes have dependencies
         )
+        self.process_factory.add_processes(process_model_data, self.adapter)
+        process_model_process = self.process_factory.get_process(process_model_data.ID)
+        return process_model_process
 
     def get_product(self, ID: str) -> product.Product:
         """
@@ -173,4 +196,4 @@ class ProductFactory:
         self.remove_product(product)
 
 
-from prodsys.simulation import product
+from prodsys.simulation.entities import product

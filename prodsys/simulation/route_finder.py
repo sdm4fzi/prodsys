@@ -10,7 +10,7 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 
 if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation.locatable import Locatable
 
 
 def find_route(

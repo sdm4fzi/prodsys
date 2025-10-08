@@ -20,11 +20,11 @@ from prodsys.simulation.process import (
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
-        product,
         state,
     )
     from prodsys.simulation import request as request_module
     from prodsys.simulation.dependency import Dependency
+    from prodsys.simulation import locatable
 
 logger = logging.getLogger(__name__)
 
@@ -35,18 +35,18 @@ class DependencyProcessHandler:
         self.resource = None
 
     def update_location(
-        self, locatable: product.Locatable, location: list[float]
+        self, locatable: locatable.Locatable, location: list[float]
     ) -> None:
         """
         Set the current position of the transport resource.
 
         Args:
-            locatable (product.Locatable): The current position.
+            locatable (locatable.Locatable): The current position.
             to_output (Optional[bool], optional): If the transport resource is moving to the output location. Defaults to None.
         """
         self.resource.set_location(locatable)
 
-    def handle_request(self, lot_requests: list[request_module.Request]) -> Generator:
+    def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Start the next process with the following logic:
 
@@ -57,7 +57,6 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the process is finished.
         """
-        process_request = lot_requests[0]
         requesting_item = process_request.requesting_item
         self.resource = process_request.get_resource()
         self.resource.bind_to_dependant(requesting_item)
@@ -122,7 +121,7 @@ class DependencyProcessHandler:
     def run_transport(
         self,
         transport_state: state.State,
-        route: List[product.Locatable],
+        route: List[locatable.Locatable],
         empty_transport: bool,
         dependency: Dependency,
     ) -> Generator:
@@ -132,7 +131,7 @@ class DependencyProcessHandler:
         Args:
             transport_state (state.State): The transport state of the process.
             product (product.Product): The product that is transported.
-            route (List[product.Locatable]): The route of the transport with locatable objects.
+            route (List[locatable.Locatable]): The route of the transport with locatable objects.
             empty_transport (bool): If the transport is empty.
 
         Yields:
@@ -163,7 +162,7 @@ class DependencyProcessHandler:
 
     def get_target_location(
         self,
-        target: product.Locatable,
+        target: locatable.Locatable,
         empty_transport: bool,
         last_transport_step: bool,
     ) -> list[float]:
@@ -171,7 +170,7 @@ class DependencyProcessHandler:
         Get the position of the target where the material exchange is done (either picking up or putting down)
 
         Args:
-            target (product.Locatable): The target of the transport.
+            target (locatable.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             last_transport_step (bool): If this is the last transport step.
 
@@ -183,7 +182,7 @@ class DependencyProcessHandler:
     def run_process(
         self,
         input_state: state.TransportState,
-        target: product.Locatable,
+        target: locatable.Locatable,
         empty_transport: bool,
         initial_transport_step: bool,
         last_transport_step: bool,
@@ -195,7 +194,7 @@ class DependencyProcessHandler:
         Args:
             input_state (state.State): The transport state of the process.
             item (Union[product.Product, primitive.Primitive]): The product that is transported.
-            target (product.Locatable): The target of the transport.
+            target (locatable.Locatable): The target of the transport.
             empty_transport (bool): If the transport is empty.
             initial_transport_step (bool): If this is the initial transport step.
             last_transport_step (bool): If this is the last transport step.
@@ -224,7 +223,7 @@ class DependencyProcessHandler:
 
     def find_route_to_origin(
         self, process_request: request_module.Request
-    ) -> List[product.Locatable]:
+    ) -> List[locatable.Locatable]:
         """
         Find the route to the origin of the transport request.
 
@@ -232,7 +231,7 @@ class DependencyProcessHandler:
             process_request (request.TransportResquest): The transport request.
 
         Returns:
-            List[product.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
+            List[locatable.Locatable]: The route to the origin. In case of a simple transport process, the route is just the origin.
         """
         if isinstance(process_request.process, LinkTransportProcess):
             route_to_origin = route_finder.find_route(

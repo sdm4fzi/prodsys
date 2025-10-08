@@ -65,6 +65,7 @@ class ProcessFactory:
             isinstance(process_data, processes_data.CompoundProcessData)
             or isinstance(process_data, processes_data.RequiredCapabilityProcessData)
             or isinstance(process_data, processes_data.ProcessModelData)
+            or isinstance(process_data, processes_data.ProcessModelData)
         ):
             time_model = self.time_model_factory.get_time_model(
                 process_data.time_model_id
@@ -105,8 +106,17 @@ class ProcessFactory:
         if isinstance(process_data, (processes_data.ProcessModelData)):
             # For ProcessModelData, we don't need contained_processes at creation time
             # as the processes are referenced by ID in the adjacency matrix
+            def get_contained_processes(process_data: processes_data.ProcessModelData) -> List[process.PROCESS_UNION]:
+                contained_process_ids = [process_id for process_id in process_data.adjacency_matrix.keys()]
+                for processes in process_data.adjacency_matrix.values():
+                    for process_id in processes:
+                        if process_id not in contained_process_ids:
+                            contained_process_ids.append(process_id)
+                contained_processes = [self.get_process(process_id) for process_id in contained_process_ids]
+                return contained_processes
+
             values.update({
-                "contained_processes": [],
+                "contained_processes": get_contained_processes(process_data),
                 "adjacency_matrix": process_data.adjacency_matrix
             })
 

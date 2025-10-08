@@ -22,6 +22,7 @@ from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
 from prodsys.simulation.request_handler import RequestHandler, RequestInfo
 from prodsys.simulation.lot_handler import LotHandler
+from prodsys.simulation.entities.entity import EntityType
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +30,18 @@ from simpy import events
 
 
 if TYPE_CHECKING:
-    from prodsys.simulation import resources, product, sink, process, port
+    from prodsys.simulation import resources, sink, process, port
     from prodsys.factories import (
         resource_factory,
         sink_factory,
         product_factory,
         source_factory,
     )
+    from prodsys.simulation.entities import product
+    
     from prodsys.control import routing_control_env
     from prodsys.models import product_data
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation.locatable import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
 
@@ -97,6 +100,7 @@ class Router:
         source_factory: Optional[source_factory.SourceFactory] = None,
         primitive_factory: Optional[primitive_factory.PrimitiveFactory] = None,
         production_system_data: Optional[production_system_data.ProductionSystemData] = None,
+        resources: Optional[List[resources.Resource]] = None,
     ):
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
@@ -113,8 +117,7 @@ class Router:
                 self.free_primitives_by_type[primitive.data.type] = []
             self.free_primitives_by_type[primitive.data.type].append(primitive)
 
-        self.product_factory.router = self
-
+        self.resources = resources
         self.reachability_cache: Dict[Tuple[str, str], bool] = {}
         self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
@@ -148,7 +151,11 @@ class Router:
             resource (resources.Resource): The resource to mark as free.
         """
         self.request_handler.mark_completion(request)
-        request.completed.succeed()
+        if request.entity.type == EntityType.LOT:
+            for completed_event in request.entity.all_completed_events:
+                completed_event.succeed()
+        else:
+            request.completed.succeed()
         if not self.resource_got_free.triggered:
             self.resource_got_free.succeed()
 
@@ -157,7 +164,7 @@ class Router:
         Main allocation loop for the router.
         This method should be called in a separate thread to run the allocation process.
         """
-        free_resources = list(self.resource_factory.all_resources.values())
+        free_resources = self.resources
         while True:
             yield self.got_requested
             self.got_requested = events.Event(self.env)
@@ -193,8 +200,8 @@ class Router:
                 self.env.update_progress_bar()
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
-                self.free_primitives_by_type[request.item.data.type].remove(
-                    request.item
+                self.free_primitives_by_type[request.entity.data.type].remove(
+                    request.entity
                 )
                 self.env.process(self.execute_primitive_routing(request))
 
@@ -253,32 +260,32 @@ class Router:
     def execute_primitive_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
-        executed_request.item.bind(
+        executed_request.entity.bind(
             executed_request.requesting_item, executed_request.resolved_dependency
         )
         # TODO: add here with interaction handler searching for interaction points
         trans_process_finished_event = self.request_transport(
-            executed_request.item, executed_request.requesting_item.current_locatable
+            executed_request.entity, executed_request.requesting_item.current_locatable
         )
         yield trans_process_finished_event
         # retrieve from queue after transport for binding
-        yield from executed_request.item.current_locatable.get(executed_request.item.data.ID)
+        yield from executed_request.entity.current_locatable.get(executed_request.entity.data.ID)
 
         executed_request.completed.succeed()
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
         # place in storage after binding
         yield from executed_request.requesting_item.current_locatable.reserve()
-        yield from executed_request.requesting_item.current_locatable.put(executed_request.item.data)
-        executed_request.item.current_locatable = executed_request.requesting_item.current_locatable
-        target_storage = self._find_available_storage_for_primitive(executed_request.item)
+        yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
+        executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable
+        target_storage = self._find_available_storage_for_primitive(executed_request.entity)
         transport_process_finished_event = self.request_transport(
-            executed_request.item, target_storage
+            executed_request.entity, target_storage
         )
         yield transport_process_finished_event
-        executed_request.item.release()
-        self.free_primitives_by_type[executed_request.item.data.type].append(
-            executed_request.item
+        executed_request.entity.release()
+        self.free_primitives_by_type[executed_request.entity.data.type].append(
+            executed_request.entity
         )
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
@@ -415,7 +422,21 @@ class Router:
             dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
 
-    def request_processing(self, product: product.Product) -> events.Event:
+    def request_processing(self, product_instance: product.Product) -> request.Request:
+        product_sink = self._determine_sink_for_product(product_instance)
+        product_sink_port = product_sink.ports[0]
+        processing_request, request_info = self.request_handler.add_process_model_request(
+            entity=product_instance,
+            process_model=product_instance.process_model,
+            system_resource=self.resource_factory.global_system_resource,
+            target=product_sink,
+            target_queue=product_sink_port,
+        )
+        self.request_handler.mark_routing(processing_request)
+        self.resource_factory.global_system_resource.controller.request(processing_request)
+        return processing_request
+
+    def request_process_step(self, product: product.Product, next_possible_processes: List[process.PROCESS_UNION]) -> events.Event:
         """
         Routes a product to perform the next process by assigning a production resource, that performs the process, to the product
         and assigning a transport resource to transport the product to the next process.
@@ -427,7 +448,7 @@ class Router:
             Generator[Tuple[request.Request, request.TransportResquest]]: A generator that yields when the product is routed.
         """
         process_event = self.request_handler.add_product_requests(
-            product
+            product, next_possible_processes
         ).request_completion_event
         if not self.got_requested.triggered:
             self.got_requested.succeed()
@@ -450,6 +471,15 @@ class Router:
             self.got_requested.succeed()
         return request_info.request_completion_event
 
+    def _determine_sink_for_product(self, product: product.Product) -> sink.Sink:
+        """
+        Determines a sink for a product.
+        """
+        possible_sinks = self.sink_factory.get_sinks_with_product_type(
+            product.data.type
+        )
+        return random.choice(possible_sinks)
+
     def route_product_to_sink(self, product: product.Product) -> tuple[events.Event, sink.Sink]:
         """
         Routes a product to a sink.
@@ -460,11 +490,8 @@ class Router:
         Returns:
             Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
         """
-        possible_sinks = self.sink_factory.get_sinks_with_product_type(
-            product.data.type
-        )
-        chosen_sink = random.choice(possible_sinks)
-        # TODO: move retrieving chosen sink ports to interactin handler!
+        chosen_sink = self._determine_sink_for_product(product)
+        # TODO: determine target port from sink!
         target_port = chosen_sink.ports[0]
         request_info = self.request_handler.add_transport_request(product, target_port)
         if not self.got_requested.triggered:
@@ -555,4 +582,5 @@ ROUTING_HEURISTIC = {
 A dictionary of available routing heuristics.
 """
 
-from prodsys.simulation import primitive, request
+from prodsys.simulation import request
+from prodsys.simulation.entities import primitive

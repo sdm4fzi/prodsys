@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     )
     from prodsys.simulation import request as request_module
     from prodsys.control import sequencing_control_env
-    from prodsys.simulation.product import Locatable
+    from prodsys.simulation.locatable import Locatable
 
 logger = logging.getLogger(__name__)
 
@@ -103,25 +103,28 @@ class Controller:
                 continue
             self.control_policy(self.requests)
             selected_request = self.requests.pop(0)
-            lot_requests = self.get_lot_for_request(selected_request)
-            if not lot_requests:
-                continue
-            self.reserved_requests_count += len(lot_requests)
+            if self._should_form_lot(selected_request):
+                lot_request = self._form_lot(selected_request)
+                if not lot_request:
+                    self.requests.insert(0, selected_request)
+                    continue
+                selected_request = lot_request
+            self.reserved_requests_count += selected_request.capacity_required
             self.resource.update_full()
             process_handler = get_requets_handler(selected_request)
-            self.env.process(process_handler.handle_request(lot_requests))
+            self.env.process(process_handler.handle_request(selected_request))
             if not self.resource.full and self.requests:
                 self.state_changed.succeed()
 
+    def _should_form_lot(self, process_request: request_module.Request) -> bool:
+        lot_handler = process_request.entity.router.lot_handler
+        return lot_handler.lot_required(process_request)
 
-    def get_lot_for_request(self, process_request: request_module.Request) -> list[request_module.Request]:
-        if process_request.request_type not in [request_module.RequestType.PRODUCTION, request_module.RequestType.TRANSPORT]:
-            return [process_request]
-        lot_handler = process_request.item.router.lot_handler
+    def _form_lot(self, process_request: request_module.Request) -> Optional[request_module.Request]:
+        lot_handler = process_request.entity.router.lot_handler
         if not lot_handler.is_lot_feasible(process_request):
-            self.requests.insert(0, process_request)
-            return []
-        lot_requests = lot_handler.get_requests_of_lot(process_request)
+            return None
+        lot_requests = lot_handler.get_lot_request(process_request)
         return lot_requests
 
     def mark_started_process(self, num_processes: int = 1) -> None:
@@ -367,7 +370,7 @@ class BatchController(Controller):
 
             if (
                 req.process == selected_request.process
-                and req.get_item().data.type == selected_request.get_item().data.type
+                and req.get_entity().data.type == selected_request.get_entity().data.type
             ):
                 batch_requests.append(req)
                 self.requests.remove(req)
