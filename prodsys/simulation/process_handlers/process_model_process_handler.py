@@ -72,7 +72,9 @@ class ProcessModelHandler:
         entity = process_request.get_entity()
         target_queue = process_request.target_queue
 
+        previous_router = process_request.entity.router
         router = resource.router
+        process_request.entity.router = router
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
@@ -80,7 +82,7 @@ class ProcessModelHandler:
         yield from resource.setup(proc)
 
         resource.controller.mark_started_process(process_request.capacity_required)
-
+        # TODO: add logging to start and end of process model handling for product entity
         self.set_next_possible_production_processes()
         while self.next_possible_processes:
             executed_process_event = router.request_process_step(entity, self.next_possible_processes)
@@ -91,8 +93,15 @@ class ProcessModelHandler:
                 self.register_rework(entity.current_process)
             self.update_executed_process(entity.current_process)
             self.set_next_possible_production_processes()
+        
+        # After all internal processes are complete, set the entity's current_process to this ProcessModelProcess
+        # This ensures that when control returns to a parent handler, it sees the ProcessModelProcess as completed,
+        # not the last internal process that was executed
+        entity.current_process = proc
+        
         arrived_at_queue = router.request_transport(entity, target_queue)
         yield arrived_at_queue
+        process_request.entity.router = previous_router
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
 

@@ -309,6 +309,13 @@ class ProcessMatcher:
                 )
                 compatible_resources.extend(self.production_compatibility.get(key, []))
 
+            elif isinstance(requested_process, process.ProcessModelProcess):
+                # For ProcessModel processes, find resources that offer this specific process model
+                key = ResourceCompatibilityKey(
+                    process_signature=requested_process.get_process_signature(),
+                )
+                compatible_resources.extend(self.production_compatibility.get(key, []))
+
             elif isinstance(requested_process, process.CompoundProcess):
                 # For compound processes, check compatibility for each contained process
                 for process_id in requested_process.data.process_ids:

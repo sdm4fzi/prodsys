@@ -9,7 +9,7 @@ import simpy
 
 from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.dependency import DependedEntity, Dependency
-from prodsys.simulation.process import DependencyProcess
+from prodsys.simulation.process import DependencyProcess, ProcessModelProcess
 from prodsys.simulation.process_matcher import ProcessMatcher
 
 logger = logging.getLogger(__name__)
@@ -183,7 +183,11 @@ class RequestHandler:
                 resources[resource_id] = []
             resources[resource_id].append(process_instance)
 
-        if hasattr(entity, "process_model"):
+        # Determine request type based on the process type
+        # If any of the next_possible_processes is a ProcessModelProcess, use PROCESS_MODEL request type
+        if any(isinstance(p, ProcessModelProcess) for p in next_possible_processes):
+            request_type = request.RequestType.PROCESS_MODEL
+        elif hasattr(entity, "process_model"):
             request_type = request.RequestType.PRODUCTION
         else:
             request_type = request.RequestType.PRIMITIVE_DEPENDENCY
@@ -350,6 +354,9 @@ class RequestHandler:
         """
         request_info = self.routed_requests.pop(id(completed_request.completed), None)
         if not request_info:
+            router_resources = completed_request.entity.router.resources
+            print(f"router resources: {[resource.data.ID for resource in router_resources]}")
+            print(f"request to resource {completed_request.resource.data.ID} and process {completed_request.process.data.ID} not found")
             raise ValueError(
                 f"Request info not found for completed request {completed_request.completed}"
             )

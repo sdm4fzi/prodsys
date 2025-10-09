@@ -234,6 +234,7 @@ def main():
     # Print results
     print("\n10. Simulation Results:")
     system.runner.print_results()
+    system.runner.save_results_as_csv()
 
 if __name__ == "__main__":
     main()
