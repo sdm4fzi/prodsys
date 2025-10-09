@@ -110,6 +110,7 @@ def main():
     cell_process_model = psx.ProcessModel(
         adjacency_matrix={
             "machine1_process": ["machine2_process"],
+            "machine2_process": []
         },
         ID="cell_process_model"
     )
@@ -122,7 +123,8 @@ def main():
         can_contain_other_models=True,
         ID="product_process_model",
         adjacency_matrix={
-            "machine3_process": ["cell_process_model"]
+            "machine3_process": ["cell_process_model"],
+            "cell_process_model": []
         }
     )
     

@@ -558,6 +558,7 @@ class SystemResource(Resource):
         setup_states: List[state.SetupState] = None,
         charging_states: List[state.ChargingState] = None,
         ports: List[port.Queue] = None,
+        buffers: List[port.Queue] = None
     ):
         # Store original capacity for systems with capacity 0
         self._actual_capacity = data.capacity
@@ -568,7 +569,7 @@ class SystemResource(Resource):
             
         super().__init__(
             env, data, processes, controller, can_move, can_process,
-            states, production_states, setup_states, charging_states, ports
+            states, production_states, setup_states, charging_states, ports, buffers
         )
 
         self.subresources = subresources
