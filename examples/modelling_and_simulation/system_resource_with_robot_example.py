@@ -220,38 +220,18 @@ def main():
     # ========== VALIDATION AND SIMULATION ==========
     print("\n9. Validating and running simulation...")
     
-    try:
-        system.validate()
-        print("   ✓ System validated successfully")
-        
-        # Run simulation
-        system.run(time_range=1000)
-        print("   ✓ Simulation completed")
-        
-        # Print results
-        print("\n10. Simulation Results:")
-        system.runner.print_results()
-        
-    except Exception as e:
-        print(f"   ✗ Error: {e}")
-        import traceback
-        traceback.print_exc()
+    system.validate()
+    print("   ✓ System validated successfully")
+    system_data = system.to_model()
+    system_data.write("examples/modelling_and_simulation/simulation_example_data/system_resource_with_robot_example.json")
     
-    print("\n=== Example completed successfully! ===")
-    print("\nKey features demonstrated:")
-    print("- SystemResource: Manufacturing cell with robot and machines")
-    print("- ProcessModel: Parallel process execution (machine1 OR machine2)")
-    print("- Adjacency Matrix: Defines workflow within the cell")
-    print("- Robot Operations: Loading and unloading at cell ports")
-    print("- AGV Transport: Global material transport")
-    print("\nAdjacency Matrix Structure:")
-    print("  robot_load → [machine1_process, machine2_process]")
-    print("  machine1_process → [robot_unload]")
-    print("  machine2_process → [robot_unload]")
-    print("  robot_unload → []")
-    print("\nThis allows either machine1 or machine2 to process the product,")
-    print("with the robot handling loading/unloading operations.")
-
+    # Run simulation
+    system.run(time_range=1000)
+    print("   ✓ Simulation completed")
+    
+    # Print results
+    print("\n10. Simulation Results:")
+    system.runner.print_results()
 
 if __name__ == "__main__":
     main()
