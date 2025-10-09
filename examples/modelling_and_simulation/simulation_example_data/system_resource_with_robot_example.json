@@ -51,7 +51,8 @@
             "adjacency_matrix": {
                 "machine3_process": [
                     "cell_process_model"
-                ]
+                ],
+                "cell_process_model": []
             },
             "dependency_ids": []
         },
@@ -95,7 +96,8 @@
             "adjacency_matrix": {
                 "machine1_process": [
                     "machine2_process"
-                ]
+                ],
+                "machine2_process": []
             },
             "dependency_ids": []
         }
@@ -354,7 +356,8 @@
             "processes": {
                 "machine3_process": [
                     "cell_process_model"
-                ]
+                ],
+                "cell_process_model": []
             },
             "dependency_ids": []
         }

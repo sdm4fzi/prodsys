@@ -83,6 +83,7 @@ class Product(core.ExpressObject):
             # Create SequentialProcess with a dummy time model
             from prodsys.express import time_model
             dummy_time_model = time_model.FunctionTimeModel("constant", 0.0, ID="dummy_time_model")
+            # TODO: update this function to work properly with ProcessModel
             sequential_process = process.SequentialProcess(
                 time_model=dummy_time_model,
                 process_ids=process_ids,

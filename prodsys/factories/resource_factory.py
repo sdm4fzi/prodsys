@@ -73,6 +73,12 @@ def register_production_states_for_processes(
         resource.processes, resource.data.process_capacities
     ):
         process_instance: process.PROCESS_UNION
+        
+        # Skip ProcessModelProcess as it doesn't have a time_model_id
+        # ProcessModels are containers for other processes and don't need their own production state
+        if isinstance(process_instance, process.ProcessModelProcess):
+            continue
+            
         state_data_dict = {
             "new_state": {
                 "ID": process_instance.data.ID,

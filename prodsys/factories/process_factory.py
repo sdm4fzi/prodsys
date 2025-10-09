@@ -45,15 +45,57 @@ class ProcessFactory:
     def create_processes(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates process objects based on the given adapter.
+        Uses multiple passes to handle ProcessModels that reference other processes:
+        1. First pass: Create all non-ProcessModel processes
+        2. Subsequent passes: Create ProcessModel processes in dependency order (handling nested ProcessModels)
 
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the process data.
         """
+        # First pass: Create all non-ProcessModel processes
         for process_data in adapter.process_data:
-            # Skip ProcessModelData as it's not a real process but a process model
             if isinstance(process_data, processes_data.ProcessModelData):
                 continue
             self.add_processes(process_data, adapter)
+        
+        # Subsequent passes: Create ProcessModel processes iteratively
+        # ProcessModels may reference other ProcessModels, so we need to create them in dependency order
+        process_models_to_create = [
+            pd for pd in adapter.process_data 
+            if isinstance(pd, processes_data.ProcessModelData)
+        ]
+        
+        max_iterations = len(process_models_to_create) + 1  # Prevent infinite loops
+        iteration = 0
+        
+        while process_models_to_create and iteration < max_iterations:
+            created_in_this_iteration = []
+            
+            for process_data in process_models_to_create:
+                # Check if all referenced processes exist
+                all_process_ids = set()
+                for key_process_id in process_data.adjacency_matrix.keys():
+                    all_process_ids.add(key_process_id)
+                for value_process_ids in process_data.adjacency_matrix.values():
+                    all_process_ids.update(value_process_ids)
+                
+                # Check if all referenced processes have been created
+                all_exist = all(process_id in self.processes for process_id in all_process_ids)
+                
+                if all_exist:
+                    self.add_processes(process_data, adapter)
+                    created_in_this_iteration.append(process_data)
+            
+            # Remove created ProcessModels from the to-do list
+            for created in created_in_this_iteration:
+                process_models_to_create.remove(created)
+            
+            iteration += 1
+        
+        # If we still have uncreated ProcessModels, there might be a circular dependency or missing processes
+        if process_models_to_create:
+            missing_ids = [pm.ID for pm in process_models_to_create]
+            raise ValueError(f"Could not create ProcessModels: {missing_ids}. Check for circular dependencies or missing process references.")
 
     def add_processes(
         self,
