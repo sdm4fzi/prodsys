@@ -108,7 +108,6 @@ def main():
     # Workflow: robot_load → (machine1 OR machine2) → robot_unload
     # The adjacency matrix allows parallel choice between machine1 and machine2
     cell_process_model = psx.ProcessModel(
-        time_model=tm_process_model,
         adjacency_matrix={
             "machine1_process": ["machine2_process"],
         },
@@ -117,6 +116,15 @@ def main():
     
     print("   ✓ ProcessModel created with adjacency matrix:")
     print(f"      {cell_process_model.adjacency_matrix}")
+
+    product_process_model = psx.ProcessModel(
+        time_model=tm_process_model,
+        can_contain_other_models=True,
+        ID="product_process_model",
+        adjacency_matrix={
+            "machine3_process": ["cell_process_model"]
+        }
+    )
     
     # ========== RESOURCES ==========
     print("\n4. Creating resources...")
@@ -181,7 +189,7 @@ def main():
     print("\n6. Creating product...")
     
     product = psx.Product(
-        process=[cell_process_model, machine3_process],
+        process=product_process_model,
         transport_process=agv_transport,
         ID="product"
     )
@@ -201,7 +209,7 @@ def main():
     print("\n8. Creating ProductionSystem...")
     
     system = psx.ProductionSystem(
-        resources=[robot, machine1, machine2, manufacturing_cell, agv],
+        resources=[robot, machine1, machine2, machine3, manufacturing_cell, agv],
         sources=[source],
         sinks=[sink],
         ID="production_system"
@@ -217,7 +225,7 @@ def main():
         print("   ✓ System validated successfully")
         
         # Run simulation
-        system.run(simulation_time=1000)
+        system.run(time_range=1000)
         print("   ✓ Simulation completed")
         
         # Print results

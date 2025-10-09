@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from uuid import uuid1
 
 
@@ -14,6 +14,8 @@ import prodsys
 import prodsys.models
 from prodsys.models.core_asset import Location2D
 import prodsys.models.production_system_data
+
+from prodsys.express.product import Product
 
 
 @dataclass
@@ -69,7 +71,7 @@ class Source(core.ExpressObject):
         ```
     """
 
-    product: product.Product
+    product: Product
     time_model: time_model.TIME_MODEL_UNION
     location: Location2D
     routing_heuristic: source_data.RoutingHeuristic = (
