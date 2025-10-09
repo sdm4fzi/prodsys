@@ -35,7 +35,7 @@ class InteractionHandler:
             return None
         elif routed_request.request_type == request.RequestType.TRANSPORT:
             return None
-        elif routed_request.request_type == request.RequestType.PRODUCTION:
+        elif routed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL):
             return self.handle_production_buffer(routed_request)
         else:
             raise ValueError(f"Unknown request type: {routed_request.request_type}")
@@ -66,7 +66,7 @@ class InteractionHandler:
             return None, None
         elif routed_request.request_type == request.RequestType.TRANSPORT:
             return self.handle_transport_interaction(routed_request)
-        elif routed_request.request_type == request.RequestType.PRODUCTION:
+        elif routed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL):
             return self.handle_production_interaction(routed_request)
         else:
             raise ValueError(f"Unknown request type: {routed_request.request_type}")
