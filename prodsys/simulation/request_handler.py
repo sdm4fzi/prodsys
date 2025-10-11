@@ -113,6 +113,8 @@ class RequestHandler:
         self, entity: Union[product.Product, primitive.Primitive], 
         process_model: process.ProcessModelProcess,
         system_resource: resources.Resource,
+        origin: Locatable,
+        origin_queue: Locatable,
         target: Locatable,
         target_queue: Locatable,
     ) -> tuple[request.Request, RequestInfo]:
@@ -133,8 +135,8 @@ class RequestHandler:
             item=entity,
             resource_mappings={process_model.data.ID: [process_model]},
             request_type=request.RequestType.PROCESS_MODEL,
-            origin=None,
-            target=None,
+            origin=origin,
+            target=target,
             request_state="pending",
             request_completion_event=request_completion_event,
         )
@@ -144,13 +146,12 @@ class RequestHandler:
         processing_request = request.Request(
             requesting_item=entity,
             entity=entity,
-            # TODO: make sure that request handler makes this request type also for nested process models!
             request_type=request.RequestType.PROCESS_MODEL,
             process=entity.process_model,
             resource=system_resource,
-            origin=entity.current_locatable,
+            origin=origin,
             target=target,
-            origin_queue=entity.current_locatable,
+            origin_queue=origin_queue,
             target_queue=target_queue,
             completed=request_completion_event,
             required_dependencies=dependencies,

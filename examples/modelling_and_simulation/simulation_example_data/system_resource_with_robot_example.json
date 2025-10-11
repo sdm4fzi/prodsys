@@ -6,38 +6,38 @@
             "ID": "tm_agv",
             "description": "",
             "speed": 60.0,
-            "reaction_time": 0.2,
+            "reaction_time": 0.1,
             "metric": "manhattan"
         },
         {
             "ID": "tm_machine1",
             "description": "",
             "distribution_function": "normal",
-            "location": 20.0,
-            "scale": 3.0,
+            "location": 1.8,
+            "scale": 0.2,
             "batch_size": 100
         },
         {
             "ID": "tm_machine2",
             "description": "",
             "distribution_function": "normal",
-            "location": 22.0,
-            "scale": 3.5,
+            "location": 2.2,
+            "scale": 0.7,
             "batch_size": 100
         },
         {
             "ID": "tm_machine3",
             "description": "",
             "distribution_function": "normal",
-            "location": 24.0,
-            "scale": 3.5,
+            "location": 2.0,
+            "scale": 0.5,
             "batch_size": 100
         },
         {
             "ID": "tm_arrival",
             "description": "",
             "distribution_function": "exponential",
-            "location": 60.0,
+            "location": 4.0,
             "scale": 0.0,
             "batch_size": 100
         }
@@ -120,7 +120,7 @@
             "description": "",
             "capacity": 0,
             "location": [
-                10.0,
+                12.0,
                 10.0
             ],
             "interface_type": "input_output",
@@ -204,7 +204,7 @@
     "resource_data": [
         {
             "location": [
-                10.0,
+                12.0,
                 10.0
             ],
             "ID": "robot",

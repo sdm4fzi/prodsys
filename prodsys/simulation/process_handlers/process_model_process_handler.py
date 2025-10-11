@@ -72,9 +72,11 @@ class ProcessModelHandler:
         entity = process_request.get_entity()
         target_queue = process_request.target_queue
 
-        previous_router = process_request.entity.router
-        router = resource.router
-        process_request.entity.router = router
+        super_system_router = process_request.entity.router
+        system_router = resource.router
+        process_request.entity.router = system_router
+
+        assert process_request.entity.current_locatable == process_request.origin_queue, f"Product {entity.data.ID} is not at the origin queue {process_request.origin_queue}"
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
@@ -85,10 +87,10 @@ class ProcessModelHandler:
         # TODO: add logging to start and end of process model handling for product entity
         self.set_next_possible_production_processes()
         while self.next_possible_processes:
-            executed_process_event = router.request_process_step(entity, self.next_possible_processes)
+            executed_process_event = system_router.request_process_step(entity, self.next_possible_processes)
             yield executed_process_event
             if self.is_rework_required(entity.current_process):
-                self.add_needed_rework(entity.current_process, router)
+                self.add_needed_rework(entity.current_process, system_router)
             if isinstance(entity.current_process, ReworkProcess):
                 self.register_rework(entity.current_process)
             self.update_executed_process(entity.current_process)
@@ -99,9 +101,9 @@ class ProcessModelHandler:
         # not the last internal process that was executed
         entity.current_process = proc
         
-        arrived_at_queue = router.request_transport(entity, target_queue)
+        arrived_at_queue = system_router.request_transport(entity, target_queue)
         yield arrived_at_queue
-        process_request.entity.router = previous_router
+        process_request.entity.router = super_system_router
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
 

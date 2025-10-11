@@ -31,39 +31,34 @@ def main():
     # Machine time models
     tm_machine1 = psx.FunctionTimeModel(
         distribution_function="normal",
-        location=20.0,
-        scale=3.0,
+        location=1.8,
+        scale=0.2,
         ID="tm_machine1"
     )
     tm_machine2 = psx.FunctionTimeModel(
         distribution_function="normal",
-        location=22.0,
-        scale=3.5,
+        location=2.2,
+        scale=0.7,
         ID="tm_machine2"
     )
 
     tm_machine3 = psx.FunctionTimeModel(
         distribution_function="normal",
-        location=24.0,
-        scale=3.5,
+        location=2.0,
+        scale=0.5,
         ID="tm_machine3"
     )
     
     # Transport and system time models
     tm_agv = psx.DistanceTimeModel(
         speed=60.0,
-        reaction_time=0.2,
+        reaction_time=0.1,
         metric="manhattan",
         ID="tm_agv"
     )
-    tm_process_model = psx.FunctionTimeModel(
-        distribution_function="constant",
-        location=0.0,
-        ID="tm_process_model"
-    )
     tm_arrival = psx.FunctionTimeModel(
         distribution_function="exponential",
-        location=60.0,
+        location=4.0,
         ID="tm_arrival"
     )
     
@@ -119,7 +114,6 @@ def main():
     print(f"      {cell_process_model.adjacency_matrix}")
 
     product_process_model = psx.ProcessModel(
-        time_model=tm_process_model,
         can_contain_other_models=True,
         ID="product_process_model",
         adjacency_matrix={
@@ -135,7 +129,7 @@ def main():
     robot = psx.Resource(
         # processes=[robot_handling_process], # TODO: use later capability processes hor multiple different processes
         processes=[agv_transport],
-        location=[10, 10],  # Inside the cell
+        location=[12, 10],  # Inside the cell
         capacity=1,
         ID="robot"
     )
