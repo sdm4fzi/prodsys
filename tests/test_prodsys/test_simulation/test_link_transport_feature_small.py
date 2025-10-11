@@ -78,7 +78,7 @@ def simulation_adapter() -> ProductionSystemData:
 
     # All products
     product01 = psx.Product(
-        processes=[
+        process=[
             productionprocess01,
             productionprocess02,
             productionprocess03,
@@ -88,7 +88,7 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     product02 = psx.Product(
-        processes=[
+        process=[
             productionprocess03,
             productionprocess02,
             productionprocess01,
