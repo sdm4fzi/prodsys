@@ -213,7 +213,7 @@ class Router:
         if target_port:
             yield from target_port.reserve()
         if (
-            executed_request.request_type == request.RequestType.PRODUCTION
+            executed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL)
             and executed_request.requesting_item.current_locatable
             != origin_port
         ):
@@ -392,14 +392,19 @@ class Router:
         return dependency_ready_events
 
     def request_processing(self, product_instance: product.Product) -> request.Request:
-        product_sink = self._determine_sink_for_product(product_instance)
-        product_sink_port = product_sink.ports[0]
+        origin = product_instance.current_locatable
+        origin_queue = product_instance.current_locatable
+        target = self._determine_sink_for_product(product_instance)
+        target_queue = target.ports[0]
+
         processing_request, request_info = self.request_handler.add_process_model_request(
             entity=product_instance,
             process_model=product_instance.process_model,
             system_resource=self.resource_factory.global_system_resource,
-            target=product_sink,
-            target_queue=product_sink_port,
+            origin=origin,
+            origin_queue=origin_queue,
+            target=target,
+            target_queue=target_queue,
         )
         self.request_handler.mark_routing(processing_request)
         self.resource_factory.global_system_resource.controller.request(processing_request)
