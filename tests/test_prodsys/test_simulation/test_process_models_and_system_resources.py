@@ -5,9 +5,7 @@ Tests for ProcessModel and SystemResource features.
 This module contains tests for the new ProcessModel and SystemResource functionality.
 """
 
-import pytest
 import prodsys.express as psx
-from prodsys.models import production_system_data
 
 
 def test_process_models_creation():
@@ -237,4 +235,186 @@ def test_data_model_conversion():
     assert sr_data.subresource_ids == ["r1"]
 
 
-# TODO: run also simulations!
+def test_system_resource_with_robot_simulation():
+    """Test a complete simulation with SystemResource containing robot and machines."""
+    
+    # ========== TIME MODELS ==========
+    tm_machine1 = psx.FunctionTimeModel(
+        distribution_function="normal",
+        location=1.8,
+        scale=0.2,
+        ID="tm_machine1"
+    )
+    tm_machine2 = psx.FunctionTimeModel(
+        distribution_function="normal",
+        location=2.2,
+        scale=0.7,
+        ID="tm_machine2"
+    )
+    tm_machine3 = psx.FunctionTimeModel(
+        distribution_function="normal",
+        location=2.0,
+        scale=0.5,
+        ID="tm_machine3"
+    )
+    
+    tm_agv = psx.DistanceTimeModel(
+        speed=60.0,
+        reaction_time=0.1,
+        metric="manhattan",
+        ID="tm_agv"
+    )
+    tm_arrival = psx.FunctionTimeModel(
+        distribution_function="exponential",
+        location=2.5,
+        ID="tm_arrival"
+    )
+    
+    # ========== PROCESSES ==========
+    machine1_process = psx.ProductionProcess(
+        time_model=tm_machine1,
+        ID="machine1_process"
+    )
+    machine2_process = psx.ProductionProcess(
+        time_model=tm_machine2,
+        ID="machine2_process"
+    )
+    machine3_process = psx.ProductionProcess(
+        time_model=tm_machine3,
+        ID="machine3_process"
+    )
+    
+    agv_transport = psx.TransportProcess(
+        time_model=tm_agv,
+        ID="agv_transport"
+    )
+    
+    # ========== PROCESS MODEL ==========
+    cell_process_model = psx.ProcessModel(
+        adjacency_matrix={
+            "machine1_process": ["machine2_process"],
+            "machine2_process": []
+        },
+        ID="cell_process_model"
+    )
+    
+    product_process_model = psx.ProcessModel(
+        can_contain_other_models=True,
+        ID="product_process_model",
+        adjacency_matrix={
+            "machine3_process": ["cell_process_model"],
+            "cell_process_model": []
+        }
+    )
+    
+    # ========== RESOURCES ==========
+    robot = psx.Resource(
+        processes=[agv_transport],
+        location=[12, 10],
+        capacity=1,
+        ID="robot"
+    )
+    
+    machine1 = psx.Resource(
+        processes=[machine1_process],
+        location=[12, 8],
+        capacity=1,
+        ID="machine1"
+    )
+    machine2 = psx.Resource(
+        processes=[machine2_process],
+        location=[12, 12],
+        capacity=1,
+        ID="machine2"
+    )
+    machine3 = psx.Resource(
+        processes=[machine3_process],
+        location=[12, 16],
+        capacity=1,
+        ID="machine3"
+    )
+    
+    agv = psx.Resource(
+        processes=[agv_transport],
+        location=[0, 10],
+        capacity=1,
+        ID="agv"
+    )
+    
+    # ========== SYSTEM RESOURCE (CELL) ==========
+    manufacturing_cell = psx.SystemResource(
+        processes=[cell_process_model],
+        location=[10, 10],
+        subresource_ids=["robot", "machine1", "machine2"],
+        capacity=5,
+        ID="manufacturing_cell"
+    )
+    
+    # ========== PRODUCT ==========
+    product = psx.Product(
+        process=product_process_model,
+        transport_process=agv_transport,
+        ID="product"
+    )
+    
+    # ========== SOURCES AND SINKS ==========
+    source = psx.Source(product, tm_arrival, [0, 10], ID="source")
+    sink = psx.Sink(product, [20, 10], ID="sink")
+    
+    # ========== PRODUCTION SYSTEM ==========
+    system = psx.ProductionSystem(
+        resources=[robot, machine1, machine2, machine3, manufacturing_cell, agv],
+        sources=[source],
+        sinks=[sink],
+        ID="production_system"
+    )
+    
+    # ========== VALIDATION AND SIMULATION ==========
+    system.validate()
+    system_data = system.to_model()
+    
+    # Validate system structure
+    assert len(system_data.resource_data) == 6
+    assert "manufacturing_cell" in [r.ID for r in system_data.resource_data]
+    
+    # Run simulation^
+    system.run(time_range=1000)
+    
+    # Get post processor for KPI validation
+    post_processor = system.runner.get_post_processor()
+    
+    # Validate output and throughput KPIs (from terminal: Output=395, Throughput=0.397259)
+    for kpi in post_processor.throughput_and_output_KPIs:
+        if kpi.name == "output" and kpi.product_type == "product":
+            assert kpi.value > 370 and kpi.value < 420, f"Output {kpi.value} out of expected range"
+        if kpi.name == "throughput" and kpi.product_type == "product":
+            assert kpi.value > 0.37 and kpi.value < 0.42, f"Throughput {kpi.value} out of expected range"
+    
+    # Validate WIP KPIs (from terminal: WIP=10.180611)
+    for kpi in post_processor.WIP_KPIs:
+        if kpi.name == "WIP" and kpi.product_type == "product":
+            assert kpi.value > 8.0 and kpi.value < 12.0, f"WIP {kpi.value} out of expected range"
+    
+    # Validate throughput time (from terminal: 22.857539)
+    for kpi in post_processor.aggregated_throughput_time_KPIs:
+        if kpi.name == "throughput_time":
+            assert kpi.value > 18.0 and kpi.value < 28.0, f"Throughput time {kpi.value} out of expected range"
+    
+    # Validate resource states (from terminal output)
+    for kpi in post_processor.machine_state_KPIS:
+        if kpi.name == "productive_time":
+            if kpi.resource == "machine1":
+                # Expected: ~71.7%
+                assert kpi.value > 65 and kpi.value < 78, f"Machine1 productive time {kpi.value} out of expected range"
+            elif kpi.resource == "machine2":
+                # Expected: ~86.6%
+                assert kpi.value > 80 and kpi.value < 92, f"Machine2 productive time {kpi.value} out of expected range"
+            elif kpi.resource == "machine3":
+                # Expected: ~80.3%
+                assert kpi.value > 75 and kpi.value < 86, f"Machine3 productive time {kpi.value} out of expected range"
+            elif kpi.resource == "agv":
+                # Expected: ~64.3%
+                assert kpi.value > 58 and kpi.value < 70, f"AGV productive time {kpi.value} out of expected range"
+            elif kpi.resource == "robot":
+                # Expected: ~27.6%
+                assert kpi.value > 22 and kpi.value < 33, f"Robot productive time {kpi.value} out of expected range"

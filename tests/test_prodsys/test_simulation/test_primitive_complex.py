@@ -53,13 +53,13 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     product1 = psx.Product(
-        processes=[p1, p2],
+        process=[p1, p2],
         transport_process=tp,
         ID="product1",
         dependencies=[primitive_dependency_1],
     )
     product2 = psx.Product(
-        processes=[p2, p1],
+        process=[p2, p1],
         transport_process=tp,
         ID="product2",
         dependencies=[primitive_dependency_2],

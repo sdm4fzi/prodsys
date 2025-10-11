@@ -37,7 +37,7 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     product1 = psx.Product(
-        processes=[p1],
+        process=[p1],
         transport_process=tp,
         ID="product1",
         dependencies=[workpiece_carrier_dependency_1],
