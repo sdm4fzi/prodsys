@@ -68,7 +68,8 @@ class ProcessModelHandler:
         resource: SystemResource = process_request.get_resource()
         self.resource = resource
         proc = process_request.get_process()
-        self.process_model = proc.precedence_graph
+        self.process_model = proc.precedence_graph.create_instance()
+        
         entity = process_request.get_entity()
         target_queue = process_request.target_queue
 
