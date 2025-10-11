@@ -122,7 +122,7 @@ class LotDependencyData(DependencyData):
             str: Hash of the lot dependency.
         """
         return md5(
-            "".join([self.dependency_type, self.min_lot_size, self.max_lot_size]).encode("utf-8")
+            "".join([str(self.dependency_type.value), str(self.min_lot_size), str(self.max_lot_size)]).encode("utf-8")
         ).hexdigest()
 
 
