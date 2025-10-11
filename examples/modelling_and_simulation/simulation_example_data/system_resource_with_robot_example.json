@@ -37,7 +37,7 @@
             "ID": "tm_arrival",
             "description": "",
             "distribution_function": "exponential",
-            "location": 4.0,
+            "location": 2.5,
             "scale": 0.0,
             "batch_size": 100
         }
@@ -309,9 +309,9 @@
                 "cell_process_model"
             ],
             "control_policy": "FIFO",
-            "capacity": 1,
+            "capacity": 5,
             "process_capacities": [
-                1
+                5
             ],
             "state_ids": [],
             "controller": "PipelineController",

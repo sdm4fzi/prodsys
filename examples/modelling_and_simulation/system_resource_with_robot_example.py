@@ -58,7 +58,7 @@ def main():
     )
     tm_arrival = psx.FunctionTimeModel(
         distribution_function="exponential",
-        location=4.0,
+        location=2.5,
         ID="tm_arrival"
     )
     
@@ -174,7 +174,7 @@ def main():
         processes=[cell_process_model],
         location=[10, 10],
         subresource_ids=["robot", "machine1", "machine2"],
-        capacity=1,  # One product can be in the system at a time
+        capacity=5,  # One product can be in the system at a time
         ID="manufacturing_cell"
     )
     

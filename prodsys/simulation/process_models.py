@@ -209,6 +209,36 @@ class PrecedenceGraphProcessModel(ProcessModel):
             node.marking = False
         self.current_marking = None
         self.set_initial_marking()
+    
+    def create_instance(self) -> "PrecedenceGraphProcessModel":
+        """
+        Creates a fresh instance of the precedence graph with the same structure
+        but independent marking state. This is necessary for concurrent processing
+        of multiple products in systems with capacity > 1.
+        
+        Returns:
+            PrecedenceGraphProcessModel: A new instance with the same structure.
+        """
+        new_graph = PrecedenceGraphProcessModel()
+        
+        # Create new nodes for each process
+        node_map = {}  # Map old nodes to new nodes
+        for old_node in self.nodes:
+            new_node = PrecendeGraphNode(
+                process=old_node.process,
+                successors=[],
+                predecessors=[]
+            )
+            new_graph.nodes.append(new_node)
+            node_map[old_node] = new_node
+        
+        # Copy the successor and predecessor relationships
+        for old_node in self.nodes:
+            new_node = node_map[old_node]
+            new_node.successors = [node_map[succ] for succ in old_node.successors]
+            new_node.predecessors = [node_map[pred] for pred in old_node.predecessors]
+        
+        return new_graph
 
     def set_initial_marking(self):
         """
