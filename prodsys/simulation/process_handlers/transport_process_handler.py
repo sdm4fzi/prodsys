@@ -168,8 +168,7 @@ class TransportProcessHandler:
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.target_queue)
 
-        for entity in process_request.get_atomic_entities():
-            entity.router.mark_finished_request(process_request)
+        process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
         for resource_request in resource_requests:
             resource.release(resource_request)
