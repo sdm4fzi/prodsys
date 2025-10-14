@@ -132,6 +132,7 @@ class TransportProcessHandler:
             yield resource_request
             resource_requests.append(resource_request)
         resource.controller.mark_started_process(process_request.capacity_required)
+        # TODO: consider conveyor must not go to origin to pickup material, only agv -> differntiate by can_move attribute of resource
         if origin_queue.get_location() != resource.get_location():
             route_to_origin = self.find_route_to_origin(process_request)
             transport_state_events = []

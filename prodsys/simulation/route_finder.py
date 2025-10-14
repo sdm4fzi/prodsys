@@ -6,7 +6,8 @@ import numpy as np
 
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
-
+# TODO: consider using a star for finding faster routes
+from pathfinding.finder.a_star import AStarFinder
 
 if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
