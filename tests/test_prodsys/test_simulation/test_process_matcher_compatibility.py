@@ -48,27 +48,27 @@ class TestProcessMatcherCompatibility:
         
         t3 = psx.DistanceTimeModel(60, 0.05, "manhattan", ID="t3")
         tp = psx.TransportProcess(t3, "tp")
-        tp_aux = psx.TransportProcess(t3, "tp_aux")
+        tp_prim = psx.TransportProcess(t3, "tp_primitive")
         
         machine = psx.Resource([p1], [5, 0], 1, ID="machine")
         machine2 = psx.Resource([p2], [5, 5], 2, ID="machine2")
         transport = psx.Resource([tp], [3, 0], 1, ID="transport")
         transport2 = psx.Resource([tp], [3, 0], 1, ID="transport2")
-        transport_aux = psx.Resource([tp_aux], [4, 0], 1, ID="transport_aux")
+        transport_prim = psx.Resource([tp_prim], [4, 0], 1, ID="transport_primitive")
         
         storage1 = psx.Store(ID="storage1", location=[6, 0], capacity=30)
         storage2 = psx.Store(ID="storage2", location=[11, 0], capacity=20)
         
         primitive1 = psx.Primitive(
             ID="primitive1",
-            transport_process=tp_aux,
+            transport_process=tp_prim,
             storages=[storage1],
             quantity_in_storages=[10],
         )
         
         primitive2 = psx.Primitive(
             ID="primitive2",
-            transport_process=tp_aux,
+            transport_process=tp_prim,
             storages=[storage2],
             quantity_in_storages=[20],
         )
@@ -105,7 +105,7 @@ class TestProcessMatcherCompatibility:
         source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
         
         system = psx.ProductionSystem(
-            [machine, machine2, transport, transport2, transport_aux], 
+            [machine, machine2, transport, transport2, transport_prim], 
             [source1, source2], 
             [sink1, sink2], 
             [primitive1, primitive2]

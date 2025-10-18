@@ -50,11 +50,9 @@ class Primitive(Entity):
 
         Args:
             env (sim.Environment): prodsys simulation environment.
-            auxilary_data (auxilary.Auxilary): Auxilary data of the product.
-            transport_process (process.Process): Transport process of the product.
-            storage (store.Store): Storage of the product.
-            relevant_processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Relevant processes of the product.
-            relevant_transport_processes (List[process.TransportProcess]): Relevant transport processes of the product.
+            data (primitives_data.PrimitiveData): Primitive data of the product.
+            transport_process (process.Process): Transport process of the primitive.
+            storage (port.Store): Storage of the primitive.
         """
         self.env = env
         self.data = data

@@ -51,13 +51,13 @@ def get_required_primitives(
     adapter_object: adapters.ProductionSystemData,
 ) -> List[PrimitiveData]:
     """
-    Function that returns the required auxiliaries for the production system.
+    Function that returns the required primitives for the production system.
 
     Args:
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
 
     Returns:
-        List[PrimitiveData]: List of required auxiliaries
+        List[PrimitiveData]: List of required primitives
     """
     dependency_ids = set()
     for product in adapter_object.product_data:
