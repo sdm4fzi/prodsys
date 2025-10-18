@@ -201,7 +201,7 @@ class DependencyProcessHandler:
         """
         # TODO: update logs here to consider dependencies
         # if not hasattr(product, "product_info"):
-        #     input_state.state_info.log_auxiliary(product, state.StateTypeEnum.transport)
+        #     input_state.state_info.log_Primitive(product, state.StateTypeEnum.transport)
         # else:
         #     input_state.state_info.log_product(product, state.StateTypeEnum.transport)
 

@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class Primitive(Entity):
     """
-    Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
+    Class that represents an Primitive in the discrete event simulation. For easier instantion of the class, use the PrimitiveFactory at prodsys.factories.Primitive_factory.
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class Primitive(Entity):
         storage: port.Store,
     ):
         """
-        Initializes the Auxiliary class.
+        Initializes the Primitive class.
 
         Args:
             env (sim.Environment): prodsys simulation environment.
@@ -107,7 +107,7 @@ class Primitive(Entity):
 
     def release(self):
         """
-        Releases the auxiliary from the product after storage of the auxiliary.
+        Releases the Primitive from the product after storage of the Primitive.
         """
         self.dependency_info.log_end_dependency(
             event_time=self.env.now,

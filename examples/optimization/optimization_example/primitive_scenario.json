@@ -8,7 +8,7 @@
   },
   "options": {
     "transformations": [
-      "auxiliary_capacity"
+      "primitive_capacity"
     ],
     "positions": [
       [0, 0],
@@ -31,7 +31,7 @@
     "machine_cost": 30000,
     "transport_resource_cost": 15000,
     "process_module_cost": 5000,
-    "auxiliary_cost": 2500,
+    "primitive_cost": 2500,
     "breakdown_cost": 0.11,
     "time_range": 360 ,
     "maximum_breakdown_time": 180

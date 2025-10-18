@@ -112,7 +112,7 @@ class RouteFinder:
             links (List[List[Locatable]]): The links as a list of lists of locatable objects.
             origin (Locatable): The origin locatable object.
             target (Locatable): The target locatable object.
-            empty_transport (bool): Indicates whether the transport is empty or a product / auxiliary is transported.
+            empty_transport (bool): Indicates whether the transport is empty or an entity is transported.
 
         Returns:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
