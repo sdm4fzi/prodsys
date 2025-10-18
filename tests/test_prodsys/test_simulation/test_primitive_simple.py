@@ -92,7 +92,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             assert kpi.value < 6.5 and kpi.value > 5.5
 
     for kpi in post_processor.primitive_WIP_KPIs:
-        if kpi.name == "primitive_WIP" and kpi.product_type == "auxiliary1":
+        if kpi.name == "primitive_WIP" and kpi.product_type == "Primitive1":
             assert kpi.value < 6 and kpi.value > 5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:

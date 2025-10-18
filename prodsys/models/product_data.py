@@ -27,8 +27,8 @@ class ProductData(PrimitiveData):
         product_type (str): Type of the product. If not given, the ID is used.
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
         transport_process (str): Transport process of the product.
-        aauxiliaries (List[str], optional): List of auxiliary components required to process or transport the product. Defaults to [].
-
+        dependency_ids (List[str]): IDs of the dependencies of the product.
+        
     Examples:
         Product with sequential process model:
         ``` py

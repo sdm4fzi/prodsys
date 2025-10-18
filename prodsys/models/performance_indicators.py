@@ -167,12 +167,12 @@ class PrimitiveWIP(KPI):
         json_schema_extra={
             "examples": [
                 {
-                    "name": "AUXILIARY_WIP",
+                    "name": "PRIMITIVE_WIP",
                     "target": "min",
                     "weight": 1,
                     "value": 121,
                     "context": ["system", "product_type"],
-                    "product_type": "Auxiliary_1",
+                    "product_type": "Primitive_1",
                 }
             ]
         }

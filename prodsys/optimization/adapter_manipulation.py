@@ -18,10 +18,10 @@ from prodsys.optimization.util import (
     adjust_process_capacities,
     clean_out_breakdown_states_of_resources,
     get_grouped_processes_of_machine,
-    get_required_auxiliaries,
+    get_required_primitives,
 )
 
-
+from prodsys.models.primitives_data import StoredPrimitive
 import random
 from uuid import uuid1
 
@@ -317,46 +317,46 @@ def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     return True
 
 
-def add_auxiliary(adapter_object: adapters.ProductionSystemData) -> bool:
+def add_primitive(adapter_object: adapters.ProductionSystemData) -> bool:
     """
-    Function that adds a random auxiliary component to the production system.
+    Function that adds a random primitive component to the production system.
 
     Args:
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
 
     Returns:
-        bool: True if an auxiliary component was added, False otherwise (if adding is not possible due to constraint violations).
+        bool: True if an primitive component was added, False otherwise (if adding is not possible due to constraint violations).
     """
-    required_auxiliaries = get_required_auxiliaries(adapter_object)
-    auxiliary = random.choice(required_auxiliaries)
-    storage_index = random.choice(range(len(auxiliary.storages)))
+    required_primitives = get_required_primitives(adapter_object)
+    primitive: StoredPrimitive = random.choice(required_primitives)
+    storage_index = random.choice(range(len(primitive.quantity_in_storages)))
     queue = [
         queue
         for queue in adapter_object.port_data
-        if queue.ID == auxiliary.storages[storage_index]
+        if queue.ID == primitive.storages[storage_index]
     ][0]
-    if queue.capacity == auxiliary.quantity_in_storages[storage_index]:
+    if queue.capacity == primitive.quantity_in_storages[storage_index]:
         return False
-    auxiliary.quantity_in_storages[storage_index] += 1
+    primitive.quantity_in_storages[storage_index] += 1
     return True
 
 
-def remove_auxiliary(adapter_object: adapters.ProductionSystemData) -> bool:
+def remove_primitive(adapter_object: adapters.ProductionSystemData) -> bool:
     """
-    Function that removes a random auxiliary component from the production system.
+    Function that removes a random primitive component from the production system.
 
     Args:
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
 
     Returns:
-        bool: True if an auxiliary component was removed, False otherwise (if removing is not possible due to constraint violations).
+        bool: True if an primitive component was removed, False otherwise (if removing is not possible due to constraint violations).
     """
-    required_auxiliaries = get_required_auxiliaries(adapter_object)
-    auxiliary = random.choice(required_auxiliaries)
-    storage_index = random.choice(range(len(auxiliary.storages)))
-    if auxiliary.quantity_in_storages[storage_index] == 0:
+    required_primitives = get_required_primitives(adapter_object)
+    primitive: StoredPrimitive = random.choice(required_primitives)
+    storage_index = random.choice(range(len(primitive.storages)))
+    if primitive.quantity_in_storages[storage_index] == 0:
         return False
-    auxiliary.quantity_in_storages[storage_index] -= 1
+    primitive.quantity_in_storages[storage_index] -= 1
     return True
 
 
@@ -487,15 +487,15 @@ def get_random_transport_capacity(
     return adapter_object
 
 
-def get_random_auxiliary_capacity(
+def get_random_primitive_capacity(
     adapter_object: adapters.ProductionSystemData,
 ) -> adapters.ProductionSystemData:
-    required_auxiliaries = get_required_auxiliaries(adapter_object)
+    required_auxiliaries = get_required_primitives(adapter_object)
     available_storage_capacities = {
         queue.ID: queue.capacity for queue in adapter_object.port_data
     }
-    for auxiliary in required_auxiliaries:
-        for storage_index, storage in enumerate(auxiliary.storages):
+    for primitive in required_auxiliaries:
+        for storage_index, storage in enumerate(primitive.storages):
             if available_storage_capacities[storage] == 0:
                 continue
             random_capacity = random.choice(
@@ -503,7 +503,7 @@ def get_random_auxiliary_capacity(
             )
             if available_storage_capacities[storage] - random_capacity < 0:
                 random_capacity = available_storage_capacities[storage]
-            auxiliary.quantity_in_storages[storage_index] = random_capacity
+            primitive.quantity_in_storages[storage_index] = random_capacity
             available_storage_capacities[storage] -= random_capacity
     return adapter_object
 
@@ -595,8 +595,8 @@ def random_configuration(
         get_random_production_capacity(adapter_object)
     if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
         get_random_transport_capacity(adapter_object)
-    if scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY in transformations:
-        get_random_auxiliary_capacity(adapter_object)
+    if scenario_data.ReconfigurationEnum.PRIMITIVE_CAPACITY in transformations:
+        get_random_primitive_capacity(adapter_object)
     if (
         scenario_data.ReconfigurationEnum.LAYOUT in transformations
         and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
@@ -720,9 +720,9 @@ TRANSFORMATIONS = {
         add_transport_resource,
         remove_transport_resource,
     ],
-    scenario_data.ReconfigurationEnum.AUXILIARY_CAPACITY: [
-        add_auxiliary,
-        remove_auxiliary,
+    scenario_data.ReconfigurationEnum.PRIMITIVE_CAPACITY: [
+        add_primitive,
+        remove_primitive,
     ],
     scenario_data.ReconfigurationEnum.LAYOUT: [move_machine],
     scenario_data.ReconfigurationEnum.SETUP: [move_process_module],

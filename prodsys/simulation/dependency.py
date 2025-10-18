@@ -61,7 +61,7 @@ class DependencyInfo:
 
     def __init__(self, resource_id: Optional[str]=None, primitive_id: Optional[str]=None):
         """
-        Initializes the AuxiliaryInfo class.
+        Initializes the DependencyInfo class.
         """
         self.resource_ID: str = resource_id
         self.state_ID: str = "Dependency"
@@ -114,7 +114,7 @@ class DependencyInfo:
 
 class Dependency:
     """
-    Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
+    Class that represents a dependency in the discrete event simulation. For easier instantion of the class, use the PrimitiveFactory at prodsys.factories.primitive.
 
     Args:
         env (sim.Environment): prodsys simulation environment.
@@ -137,7 +137,7 @@ class Dependency:
         interaction_node: [node.Node],
     ):
         """
-        Initializes the Auxiliary class.
+        Initializes the Dependency class.
 
         Args:
             env (sim.Environment): prodsys simulation environment.

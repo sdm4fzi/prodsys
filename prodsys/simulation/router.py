@@ -64,23 +64,6 @@ def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
         return requests[0].primitive.env
 
 
-def get_item_to_transport(
-    request_for_transport: Union[request.Request, request.AuxiliaryTransportRequest],
-) -> Union[product.Product, primitive.Primitive]:
-    """
-    Returns the item to transport from a request.
-
-    Args:
-        request_for_transport (Union[request.Request, request.AuxiliaryRequest]): The request.
-
-    Returns:
-        Union[product.Product, auxiliary.Auxiliary]: The item to transport.
-    """
-    if isinstance(request_for_transport, request.AuxiliaryTransportRequest):
-        return request_for_transport.primitive
-    return request_for_transport.requesting_item
-
-
 class Router:
     """
     Base class for all routers.

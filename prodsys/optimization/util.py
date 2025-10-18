@@ -9,8 +9,8 @@ from enum import Enum
 import logging
 
 from prodsys.express.state import ProcessBreakdownState
-from prodsys.models.dependency_data import AuxiliaryData
-
+from prodsys.models.primitives_data import PrimitiveData
+from prodsys.models.dependency_data import DependencyType
 
 logger = logging.getLogger(__name__)
 from pydantic import TypeAdapter
@@ -47,9 +47,9 @@ def get_breakdown_state_ids_of_machine_with_processes(
     return state_ids
 
 
-def get_required_auxiliaries(
+def get_required_primitives(
     adapter_object: adapters.ProductionSystemData,
-) -> List[AuxiliaryData]:
+) -> List[PrimitiveData]:
     """
     Function that returns the required auxiliaries for the production system.
 
@@ -57,18 +57,20 @@ def get_required_auxiliaries(
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
 
     Returns:
-        List[AuxiliaryData]: List of required auxiliaries
+        List[PrimitiveData]: List of required auxiliaries
     """
-    auxiliary_ids = set()
+    dependency_ids = set()
     for product in adapter_object.product_data:
-        auxiliary_ids.update(product.dependency_ids)
-    if not auxiliary_ids:
+        dependency_ids.update(product.dependency_ids)
+    if not dependency_ids:
         return []
-    return [
-        auxiliary
-        for auxiliary in adapter_object.depdendency_data
-        if auxiliary.ID in auxiliary_ids or auxiliary.auxiliary_type in auxiliary_ids
+    primitive_dependencies = [
+        dependency.required_primitive for dependency in adapter_object.depdendency_data if dependency.dependency_type == DependencyType.PRIMITIVE
     ]
+    primitives = [
+        primitive for primitive in adapter_object.primitive_data if primitive.ID in primitive_dependencies
+    ]
+    return primitives
 
 
 def check_breakdown_state_available(

@@ -13,7 +13,7 @@ from prodsys.optimization.optimization_data import (
 from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_num_of_process_modules,
-    get_required_auxiliaries,
+    get_required_primitives,
     get_weights,
 )
 from prodsys.simulation import sim
@@ -67,9 +67,9 @@ def get_reconfiguration_cost(
         num_process_modules_before = get_num_of_process_modules(baseline)
 
     if adapter_object.depdendency_data:
-        auxiliary_cost = get_auxiliary_cost(adapter_object, baseline)
+        primitive_cost = get_primitive_cost(adapter_object, baseline)
     else:
-        auxiliary_cost = 0
+        primitive_cost = 0
 
     machine_cost = (
         num_machines - num_machines_before
@@ -87,26 +87,26 @@ def get_reconfiguration_cost(
     if not adapter_object.scenario_data.info.selling_process_modules:
         process_module_cost = max(0, process_module_cost)
     if not adapter_object.scenario_data.info.selling_auxiliaries:
-        auxiliary_cost = max(0, auxiliary_cost)
-    return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
+        primitive_cost = max(0, primitive_cost)
+    return machine_cost + transport_resource_cost + process_module_cost + primitive_cost
 
 
-def get_auxiliary_cost(
+def get_primitive_cost(
     adapter_object: adapters.ProductionSystemData,
     baseline: adapters.ProductionSystemData,
 ) -> float:
-    auxiliary_cost = 0
-    for new_auxiliary, auxiliary_before in zip(
-        adapter_object.depdendency_data, baseline.depdendency_data
+    primitive_cost = 0
+    for new_primitive, before_primitive in zip(
+        adapter_object.primitive_data, baseline.primitive_data
     ):
-        for i, storage in enumerate(new_auxiliary.quantity_in_storages):
-            storage_before = auxiliary_before.quantity_in_storages[i]
-            auxiliary_cost += max(
+        for i, storage in enumerate(new_primitive.quantity_in_storages):
+            storage_before = before_primitive.quantity_in_storages[i]
+            primitive_cost += max(
                 0,
                 (storage - storage_before)
-                * adapter_object.scenario_data.info.auxiliary_cost,
+                * adapter_object.scenario_data.info.primitive_cost,
             )
-    return auxiliary_cost
+    return primitive_cost
 
 
 def valid_num_machines(configuration: adapters.ProductionSystemData) -> bool:
@@ -196,7 +196,9 @@ def check_valid_configuration(
     if not valid_num_process_modules(configuration):
         return False
     try:
-        assert_required_auxiliaries_available(configuration)
+        # assert_required_auxiliaries_available(configuration)
+        # FIXME: this has to be resolved by asserting dependencies and primitives
+        pass
     except ValueError as e:
         return False
     try:
@@ -214,10 +216,10 @@ def check_valid_configuration(
 def assert_required_auxiliaries_available(
     configuration: adapters.ProductionSystemData,
 ) -> bool:
-    required_auxiliaries = get_required_auxiliaries(configuration)
-    for auxiliary in required_auxiliaries:
-        if not sum(auxiliary.quantity_in_storages) > 0:
-            raise ValueError(f"Required auxiliary {auxiliary.ID} is not available.")
+    required_primitives = get_required_primitives(configuration)
+    for primitive in required_primitives:
+        if not sum(primitive.quantity_in_storages) > 0:
+            raise ValueError(f"Required primitive {primitive.ID} is not available.")
 
 
 def get_throughput_time(pp: PostProcessor) -> float:
