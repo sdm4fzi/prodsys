@@ -130,9 +130,9 @@ def remove_unused_queues_from_adapter(
     adapter: ProductionSystemData,
 ) -> ProductionSystemData:
     used_queues_ids = set(
-        [queue_ID for machine in adapter.resource_data for queue_ID in machine.ports]
-        + [queue_ID for source in adapter.source_data for queue_ID in source.ports]
-        + [queue_ID for sink in adapter.sink_data for queue_ID in sink.ports]
+        [queue_ID for machine in adapter.resource_data for queue_ID in (machine.ports or [])]
+        + [queue_ID for source in adapter.source_data for queue_ID in (source.ports or [])]
+        + [queue_ID for sink in adapter.sink_data for queue_ID in (sink.ports or [])]
         + [
             queue_ID
             for primitive in adapter.primitive_data
