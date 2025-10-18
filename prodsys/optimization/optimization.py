@@ -86,7 +86,7 @@ def get_reconfiguration_cost(
         transport_resource_cost = max(0, transport_resource_cost)
     if not adapter_object.scenario_data.info.selling_process_modules:
         process_module_cost = max(0, process_module_cost)
-    if not adapter_object.scenario_data.info.selling_auxiliaries:
+    if not adapter_object.scenario_data.info.selling_primitives:
         primitive_cost = max(0, primitive_cost)
     return machine_cost + transport_resource_cost + process_module_cost + primitive_cost
 
@@ -196,7 +196,7 @@ def check_valid_configuration(
     if not valid_num_process_modules(configuration):
         return False
     try:
-        # assert_required_auxiliaries_available(configuration)
+        # assert_required_primitives_available(configuration)
         # FIXME: this has to be resolved by asserting dependencies and primitives
         pass
     except ValueError as e:
@@ -213,7 +213,7 @@ def check_valid_configuration(
     return True
 
 
-def assert_required_auxiliaries_available(
+def assert_required_primitives_available(
     configuration: adapters.ProductionSystemData,
 ) -> bool:
     required_primitives = get_required_primitives(configuration)

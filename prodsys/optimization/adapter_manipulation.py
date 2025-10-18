@@ -490,11 +490,11 @@ def get_random_transport_capacity(
 def get_random_primitive_capacity(
     adapter_object: adapters.ProductionSystemData,
 ) -> adapters.ProductionSystemData:
-    required_auxiliaries = get_required_primitives(adapter_object)
+    required_primitives = get_required_primitives(adapter_object)
     available_storage_capacities = {
         queue.ID: queue.capacity for queue in adapter_object.port_data
     }
-    for primitive in required_auxiliaries:
+    for primitive in required_primitives:
         for storage_index, storage in enumerate(primitive.storages):
             if available_storage_capacities[storage] == 0:
                 continue

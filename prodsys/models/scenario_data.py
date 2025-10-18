@@ -141,7 +141,7 @@ class ScenarioInfoData(BaseModel):
         selling_machines (Optional[bool], optional): Flag that indicates if machines can be sold. Defaults to None.
         selling_transport_resources (Optional[bool], optional): Flag that indicates if transport resources can be sold. Defaults to None.
         selling_process_modules (Optional[bool], optional): Flag that indicates if process modules can be sold. Defaults to None.
-        selling_auxiliaries (Optional[bool], optional): Flag that indicates if auxiliaries can be sold. Defaults to None.
+        selling_primitives (Optional[bool], optional): Flag that indicates if primtives can be sold. Defaults to None.
         breakdown_cost (Optional[float], optional): Cost of a breakdown. Defaults to None.
         time_range (Optional[int], optional): Time range of the scenario in minutes to be considered. Defaults to None.
         maximum_breakdown_time (Optional[int], optional): Maximum allowable breakdown time in the scenario in minutes. Defaults to None.
@@ -154,7 +154,7 @@ class ScenarioInfoData(BaseModel):
     selling_machines: bool = False
     selling_transport_resources: bool = False
     selling_process_modules: bool = False
-    selling_auxiliaries: bool = False
+    selling_primitives: bool = False
     breakdown_cost: Optional[float] = None
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int] = None

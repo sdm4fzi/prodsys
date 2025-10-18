@@ -45,8 +45,7 @@ class Process(ABC):
         """
         self.data = data
         self.time_model = time_model
-        self.auxiliaries = dependencies if dependencies else []
-        self.dependencies: List[Dependency] = []
+        self.dependencies: List[Dependency] = dependencies if dependencies else []
 
 
     @abstractmethod

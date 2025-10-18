@@ -156,10 +156,7 @@
             "processes": [
                 "p1"
             ],
-            "transport_process": "tp",
-            "auxiliaries": [
-                "primitive1"
-            ]
+            "transport_process": "tp"
         }
     ],
     "sink_data": [

@@ -116,7 +116,7 @@ class ProductData(PrimitiveData):
                 )
             processes_hashes.append(process.hash(adapter))
 
-        # TODO: add hashing for auxiliaries!
+        # TODO: add hashing for dependencies!
 
         for transport_process in adapter.process_data:
             if transport_process.ID == self.transport_process:
@@ -148,7 +148,6 @@ class ProductData(PrimitiveData):
                     "product_type": "Product_1",
                     "processes": ["P1", "P2", "P3"],
                     "transport_process": "TP1",
-                    "auxiliaries": ["Pallette"],
                 },
                 {
                     "ID": "Product_1",
