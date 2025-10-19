@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.dependency import Dependency
 
 
-class RequestType(Enum):
+class RequestType(str, Enum):
     """
     Enum to represent the type of request.
 

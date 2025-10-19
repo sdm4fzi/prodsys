@@ -6,7 +6,7 @@ from pydantic import ConfigDict, Field
 
 from prodsys.models.core_asset import CoreAsset, Locatable, Location2D
 
-class PortInterfaceType(Enum):
+class PortInterfaceType(str, Enum):
     """
     Enum that represents the type of an interface.
     """
@@ -14,7 +14,7 @@ class PortInterfaceType(Enum):
     OUTPUT = "output"
     INPUT_OUTPUT = "input_output"
 
-class PortType(Enum):
+class PortType(str, Enum):
     """
     Enum that represents the kind of an interface.
     """

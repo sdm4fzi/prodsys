@@ -34,7 +34,7 @@ class Entity(ABC):
         """Update current location"""
         pass
 
-class EntityType(Enum):
+class EntityType(str, Enum):
     PRODUCT = "product"
     PRIMITIVE = "primitive"
     LOT = "lot"
