@@ -9,7 +9,7 @@ from enum import Enum
 import logging
 
 from prodsys.express.state import ProcessBreakdownState
-from prodsys.models.dependency_data import AuxiliaryData
+from prodsys.models.dependency_data import DependencyData
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def get_breakdown_state_ids_of_machine_with_processes(
 
 def get_required_auxiliaries(
     adapter_object: adapters.ProductionSystemData,
-) -> List[AuxiliaryData]:
+) -> List[DependencyData]:
     """
     Function that returns the required auxiliaries for the production system.
 

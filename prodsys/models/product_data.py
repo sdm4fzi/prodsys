@@ -83,11 +83,12 @@ class ProductData(PrimitiveData):
     def check_processes(cls, v):
         if isinstance(v, list):
             # create adjacency matrix for old API support
-            v = {process_id: [] for process_id in v}
-            for counter, node_id in enumerate(v):
-                if counter == len(v) - 1:
+            process_ids = v
+            v = {process_id: [] for process_id in process_ids}
+            for counter, node_id in enumerate(process_ids):
+                if counter == len(process_ids) - 1:
                     break
-                v[node_id].append(v[counter + 1])
+                v[node_id].append(process_ids[counter + 1])
         return v
 
     def hash(self, adapter: ProductionSystemData) -> str:

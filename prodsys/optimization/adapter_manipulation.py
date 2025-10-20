@@ -140,7 +140,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             description="",
             capacity=1,
             location=(0.0, 0.0),
-            controller="TransportController",
+            controller="PipelineController",
             control_policy=control_policy,
             process_ids=[transport_process],
         )
