@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.dependency import Dependency
 
 
-class RequestType(Enum):
+class RequestType(str, Enum):
     """
     Enum to represent the type of request.
 
@@ -32,7 +32,11 @@ class RequestType(Enum):
         TRANSPORT: Represents a transport request.
         MOVE: Represents a move request.
         REWORK: Represents a rework request.
-        AUXILIARY_TRANSPORT: Represents an primitive transport request.
+        PRODUCTION: Represents a production request.
+        PRIMITIVE_DEPENDENCY: Represents a primitive dependency request.
+        PROCESS_DEPENDENCY: Represents a process dependency request.
+        RESOURCE_DEPENDENCY: Represents a resource dependency request.
+        PROCESS_MODEL: Represents a process model request.
     """
 
     TRANSPORT = "transport"

@@ -10,7 +10,6 @@ if __name__ == "__main__":
         "examples/modelling_and_simulation/simulation_example_data/example_configuration.json"
     )
     prodsys.set_logging("DEBUG")
-    adapter_object = add_default_queues_to_production_system(adapter_object)
     runner_object = prodsys.runner.Runner(production_system_data=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(200000)

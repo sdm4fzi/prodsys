@@ -168,7 +168,7 @@ class RequestHandler:
         Adds a new request to the pending requests.
 
         Args:
-            item (Union[product.Product, auxiliary.Auxiliary]): The item making the request.
+            item (Union[product.Product, primitive.Primitive]): The item making the request.
             possible_resources_and_processes (List[Tuple[resources.Resource, process.PROCESS_UNION]]):
                 List of possible resources and processes that can handle the request.
             process (Optional[process.PROCESS_UNION]): The process to be executed, defaults to item's next_possible_processes.
@@ -218,7 +218,7 @@ class RequestHandler:
         Adds a new transport request to the pending requests.
 
         Args:
-            item (Union[product.Product, auxiliary.Auxiliary]): The item to transport.
+            item (Union[product.Product, primitive.Primitive]): The item to transport.
             origin (Locatable): The origin location.
             target (Locatable): The target location.
             possible_resources_and_processes (List[Tuple[resources.Resource, process.PROCESS_UNION]]):

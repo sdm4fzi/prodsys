@@ -81,7 +81,7 @@ class ProcessMatcher:
         Args:
             resource_factory (ResourceFactory): Factory for creating resources.
             sink_factory (SinkFactory): Factory for creating sinks.
-            auxiliary_factory (AuxiliaryFactory): Factory for creating auxiliaries.
+            primtiive_factory (PrimitiveFactory): Factory for creating primitives.
             product_factory (ProductFactory): Factory for creating products.
             source_factory (SourceFactory): Factory for creating sources.
             routing_control_env (RoutingControlEnv): Environment for routing control.

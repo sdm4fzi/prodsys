@@ -138,7 +138,7 @@ class StateInfo:
         self._product_ID = _product.data.ID
         self._state_type = state_type
 
-    def log_primitive(self, _auxiliary: primitive.Primitive, state_type: StateTypeEnum):
+    def log_primitive(self, _primitive: primitive.Primitive, state_type: StateTypeEnum):
         """
         Logs the product of a transport or production state.
 
@@ -146,7 +146,7 @@ class StateInfo:
             _product (product.Product): The product.
             state_type (StateTypeEnum): The type of the state.
         """
-        self._product_ID = _auxiliary.data.ID
+        self._product_ID = _primitive.data.ID
         self._state_type = state_type
 
     def log_start_state(

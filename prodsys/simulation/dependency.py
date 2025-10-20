@@ -61,7 +61,7 @@ class DependencyInfo:
 
     def __init__(self, resource_id: Optional[str]=None, primitive_id: Optional[str]=None):
         """
-        Initializes the AuxiliaryInfo class.
+        Initializes the DependencyInfo class.
         """
         self.resource_ID: str = resource_id
         self.state_ID: str = "Dependency"
@@ -114,18 +114,8 @@ class DependencyInfo:
 
 class Dependency:
     """
-    Class that represents an auxiliary in the discrete event simulation. For easier instantion of the class, use the AuxiliaryFactory at prodsys.factories.auxiliary_factory.
-
-    Args:
-        env (sim.Environment): prodsys simulation environment.
-        auxilary_data (auxilary.Auxilary): Auxilary data of the product.
+    Class that represents a dependency in the discrete event simulation. For easier instantion of the class, use the PrimitiveFactory at prodsys.factories.primitive.
     """
-
-    env: sim.Environment
-    data: dependency_data.DependencyData
-    required_process: process.Process
-    required_primitive: primitive.Primitive
-    required_resource: resources.Resource
 
     def __init__(
         self,
@@ -137,15 +127,15 @@ class Dependency:
         interaction_node: [node.Node],
     ):
         """
-        Initializes the Auxiliary class.
+        Initializes the Dependency class.
 
         Args:
             env (sim.Environment): prodsys simulation environment.
-            auxilary_data (auxilary.Auxilary): Auxilary data of the product.
-            transport_process (process.Process): Transport process of the product.
-            storage (store.Store): Storage of the product.
-            relevant_processes (List[Union[process.ProductionProcess, process.CapabilityProcess]]): Relevant processes of the product.
-            relevant_transport_processes (List[process.TransportProcess]): Relevant transport processes of the product.
+            data (dependency_data.DependencyData): Dependency data of the product.
+            required_process (process.Process): Required process of the product.
+            required_primitive (primitive.Primitive): Required primitive of the product.
+            required_resource (resources.Resource): Required resource of the product.
+            interaction_node (node.Node): Interaction node of the product.
         """
         self.env = env
         self.data = data

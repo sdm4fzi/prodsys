@@ -10,10 +10,10 @@ MUTATION_RATE = 0.15
 
 SAVE_FOLDER = "data/ea_results"
 BASE_CONFIGURATION_FILE_PATH = (
-    "examples/optimization/optimization_example/simple_auxiliary_example.json"
+    "examples/optimization/optimization_example/simple_primitive_example.json"
 )
 SCENARIO_FILE_PATH = (
-    "examples/optimization/optimization_example/auxiliary_scenario.json"
+    "examples/optimization/optimization_example/primitive_scenario.json"
 )
 
 

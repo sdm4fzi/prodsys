@@ -156,10 +156,7 @@
             "processes": [
                 "p1"
             ],
-            "transport_process": "tp",
-            "auxiliaries": [
-                "auxiliary1"
-            ]
+            "transport_process": "tp"
         }
     ],
     "sink_data": [
@@ -193,11 +190,11 @@
         }
     ],
     "scenario_data": null,
-    "auxiliary_data": [
+    "primitive_data": [
         {
-            "ID": "auxiliary1",
+            "ID": "primitive1",
             "description": "",
-            "auxiliary_type": "auxiliary1",
+            "primitive_type": "primitive1",
             "transport_process": "tp",
             "storages": [
                 "storage1",

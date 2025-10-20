@@ -74,7 +74,7 @@ class PrimitiveFactory:
         self, primitive_data_instance: primitives_data.PrimitiveData, storage_id: str
     ) -> primitive.Primitive:
         """
-        Add a new auxiliary object to the factory.
+        Add a new primitive object to the factory.
 
         Args:
                 primitive_data_instance (primitives_data.PrimitiveData): The primitive data for the new object.
@@ -118,7 +118,7 @@ class PrimitiveFactory:
 
     def place_primitives_in_queues(self) -> Generator:
         """
-        Place the auxiliary objects in the system.
+        Place the primitive objects in the system.
         """
         for primitive in self.primitives:
             yield from primitive.current_locatable.reserve()
@@ -135,9 +135,9 @@ class PrimitiveFactory:
             primitive.Primitive: The primitive object with the specified ID.
 
         Raises:
-            IndexError: If no auxiliary object with the specified ID is found.
+            IndexError: If no primitive object with the specified ID is found.
         """
         return [s for s in self.primitives if s.data.type == ID].pop()
 
 
-# AuxiliaryFactory.model_rebuild()
+# primitiveFactory.model_rebuild()

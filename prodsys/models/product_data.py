@@ -27,8 +27,8 @@ class ProductData(PrimitiveData):
         product_type (str): Type of the product. If not given, the ID is used.
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
         transport_process (str): Transport process of the product.
-        aauxiliaries (List[str], optional): List of auxiliary components required to process or transport the product. Defaults to [].
-
+        dependency_ids (List[str]): IDs of the dependencies of the product.
+        
     Examples:
         Product with sequential process model:
         ``` py
@@ -83,12 +83,12 @@ class ProductData(PrimitiveData):
     def check_processes(cls, v):
         if isinstance(v, list):
             # create adjacency matrix for old API support
-            process_ids = v
-            v = {process_id: [] for process_id in process_ids}
-            for counter, node_id in enumerate(process_ids):
-                if counter == len(process_ids) - 1:
+            process_dict = {process_id: [] for process_id in v}
+            for counter, node_id in enumerate(v):
+                if counter == len(v) - 1:
                     break
-                v[node_id].append(process_ids[counter + 1])
+                process_dict[node_id].append(v[counter + 1])
+            v = process_dict
         return v
 
     def hash(self, adapter: ProductionSystemData) -> str:
@@ -117,7 +117,7 @@ class ProductData(PrimitiveData):
                 )
             processes_hashes.append(process.hash(adapter))
 
-        # TODO: add hashing for auxiliaries!
+        # TODO: add hashing for dependencies!
 
         for transport_process in adapter.process_data:
             if transport_process.ID == self.transport_process:
@@ -149,7 +149,6 @@ class ProductData(PrimitiveData):
                     "product_type": "Product_1",
                     "processes": ["P1", "P2", "P3"],
                     "transport_process": "TP1",
-                    "auxiliaries": ["Pallette"],
                 },
                 {
                     "ID": "Product_1",

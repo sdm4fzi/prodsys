@@ -46,7 +46,7 @@ class SourceFactory:
         self.time_model_factory = time_model_factory
         self.queue_factory = queue_factory
         self.resource_factory = resource_factory
-        self.auxiliary_factory = primitive_factory
+        self.primitive_factory = primitive_factory
         self.sink_factory = sink_factory
 
         self.sources: Dict[str, source.Source] = {}
