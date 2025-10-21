@@ -371,6 +371,9 @@ class Router:
             if dependency.data.dependency_type == DependencyType.PRIMITIVE:
                 if not self.got_primitive_request.triggered:
                     self.got_primitive_request.succeed()
+            else:
+                if not self.got_requested.triggered:
+                    self.got_requested.succeed()
             dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
 

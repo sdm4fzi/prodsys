@@ -59,7 +59,7 @@ class DependencyProcessHandler:
         """
         requesting_item = process_request.requesting_item
         self.resource = process_request.get_resource()
-        self.resource.bind_to_dependant(requesting_item)
+
         process = [
             process
             for process in self.resource.processes
