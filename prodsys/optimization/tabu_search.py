@@ -16,8 +16,6 @@ from prodsys.optimization.optimization import check_valid_configuration
 
 # from prodsys.optimization.util import document_individual
 
-logger = logging.getLogger(__name__)
-
 
 from pydantic import BaseModel, ConfigDict
 
@@ -27,6 +25,8 @@ from prodsys.optimization.util import (
     create_default_breakdown_states,
 )
 from prodsys.util.util import set_seed
+
+logger = logging.getLogger(__name__)
 
 
 class TabuSearch:
@@ -158,7 +158,8 @@ class TabuSearchHyperparameters(BaseModel):
                     "number_of_seeds": 1,
                 },
             ]
-        }
+        },
+        extra="forbid",
     )
 
 
@@ -184,7 +185,6 @@ def tabu_search_optimization(
     hyper_parameters: TabuSearchHyperparameters = optimizer.hyperparameters
     set_seed(hyper_parameters.seed)
 
-    performances = optimizer.performances_cache
     solution_dict = optimizer.optimization_cache_first_found_hashes
 
     class Algorithm(TabuSearch):
