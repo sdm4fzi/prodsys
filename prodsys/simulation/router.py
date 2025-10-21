@@ -114,7 +114,8 @@ class Router:
             primitive_factory
         )
         self.production_system_data: Optional[production_system_data.ProductionSystemData] = production_system_data
-        self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}
+        self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}        
+        
         for primitive in self.primitive_factory.primitives:
             if primitive.data.type not in self.free_primitives_by_type:
                 self.free_primitives_by_type[primitive.data.type] = []
@@ -185,9 +186,9 @@ class Router:
         """
         while True:
             yield self.got_primitive_request
+            self.got_primitive_request = events.Event(self.env)
             if not self.free_primitives_by_type:
                 continue
-            self.got_primitive_request = events.Event(self.env)
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
@@ -201,7 +202,7 @@ class Router:
                 self.request_handler.mark_routing(request)
                 self.free_primitives_by_type[request.item.data.type].remove(
                     request.item
-                )
+                )                
                 self.env.process(self.execute_primitive_routing(request))
 
     def execute_resource_routing(
@@ -437,8 +438,7 @@ class Router:
                 dependency=dependency,
                 requesting_item=requesting_item,
             )
-            dependency_ready_events.append(request_info.request_completion_event)
-        #FIXME: gilt momentan nur für Primitive Dependencies für Processes
+            dependency_ready_events.append(request_info.request_completion_event)        
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
         return dependency_ready_events

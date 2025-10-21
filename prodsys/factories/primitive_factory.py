@@ -112,7 +112,7 @@ class PrimitiveFactory:
         Kann in bestehende SimPy-Prozesse eingebettet werden (env.process(...) Aufruf an der Startstelle).
         """
         primitive_data_instance = self.product_to_primitive(product_data_instance).model_copy(deep=True)
-        primitive_data_instance.ID = f"{primitive_data_instance.ID}_dyn_{self.primitive_counter}"
+        primitive_data_instance.ID = f"{primitive_data_instance.ID}_{self.primitive_counter}"
 
         transport_process = self.process_factory.get_process(primitive_data_instance.transport_process)
         queue = self.queue_factory.get_queue(sink_queue_id)
@@ -125,7 +125,8 @@ class PrimitiveFactory:
         )
         prim.current_locatable = queue
         if self.router:
-            prim.router = self.router
+            prim.router = self.router           
+      
         if self.event_logger:
             self.event_logger.observe_terminal_primitive_states(prim)
 
@@ -155,7 +156,7 @@ class PrimitiveFactory:
                                                        
                                                        )
         return primitive_data
-        
+   
     def set_router(self, router: router_module.Router) -> None:
         """
         Set the router for the factory.

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 from simpy import events
 
 from prodsys.models import product_data
-
+from prodsys.simulation.dependency import DependencyInfo
 
 if TYPE_CHECKING:
     from prodsys.simulation.dependency import DependedEntity, Dependency
@@ -197,6 +197,11 @@ class Product:
         self.process: events.Process = None
         self.info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
+        self.bound = False
+        self.being_bound = events.Event(self.env)
+        self.got_free = events.Event(self.env)
+        self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
+        
 
     def update_location(self, locatable: Locatable):
         """
@@ -233,19 +238,26 @@ class Product:
                 self.register_rework(self.current_process)
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
+            
+            
         arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
         yield arrived_at_sink_event
+        
+        
+        sink.register_finished_product(self)
+        if (self.data.becomes_primitive):
+            yield self.being_bound
         self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
-        sink.register_finished_product(self)
-
+        
         for dependency in self.depended_entities:
             # TODO: use here interaction handler to select ports
             yield from self.current_locatable.put(dependency.data)
             dependency.current_locatable = self.current_locatable
-            dependency.release()
-
+            dependency.release()   
+        
+        
     def add_needed_rework(self, failed_process: PROCESS_UNION) -> None:
         """
         Adds a process to the list of processes that need rework.
@@ -335,6 +347,34 @@ class Product:
 
         self.next_possible_processes = next_possible_processes
 
+
+    def bind(self, dependant: Union[Product, resources.Resource], dependency: Dependency) -> None:
+            """
+            Reserves the product object.
+            """
+            if self.bound:
+                raise Exception(
+                    f"Primitive {self.data.ID} is bound reserved. Cannot bind again."
+                )
+            self.bound = True
+            self.being_bound.succeed()
+            self.current_dependant = dependant
+            dependant.depended_entities.append(self)
+           
+
+    def release(self):
+        """
+        Releases the auxiliary from the product after storage of the auxiliary.
+        """
+        self.dependency_info.log_end_dependency(
+            event_time=self.env.now,
+            requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
+            dependency_id=self.data.ID,
+        )
+        self.current_dependant = None
+        self.bound = False
+        self.got_free.succeed()
+        self.got_free = events.Event(self.env)
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
 from prodsys.simulation import port, process

@@ -79,6 +79,7 @@ class ProductData(PrimitiveData):
     processes: Union[Dict[str, List[str]]]
     dependency_ids: List[str] = []
     routing_heuristic: Union[RoutingHeuristic, None] = None
+    becomes_primitive: bool = False
 
     @field_validator("processes", mode="before")
     def check_processes(cls, v):

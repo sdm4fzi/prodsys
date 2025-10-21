@@ -7,7 +7,7 @@ from prodsys.models.source_data import RoutingHeuristic
 from prodsys.simulation import process_models
 from prodsys.simulation import process
 from prodsys.simulation import router as router_module
-
+from prodsys.models import production_system_data
 if TYPE_CHECKING:
     from prodsys.factories import process_factory
     from prodsys.simulation import sim, product
@@ -30,6 +30,7 @@ class ProductFactory:
         self.env = env
         self.process_factory = process_factory
         self.products: Dict[str, product.Product] = {}
+        self.products_init: Dict[str, product.Product] = {}
         self.finished_products = []
         self.event_logger: logger.EventLogger = None
         self.product_counter = 0
@@ -95,6 +96,75 @@ class ProductFactory:
         self.products[product_data.ID] = product_object
         return product_object
 
+    def create_product_mockup(
+        self, adapter: production_system_data.ProductionSystemData
+    ) -> product.Product:
+        """
+        Creates a product object based on the given product data and router.
+
+        Args:
+            product_data (ProductData): Product data that is used to create the product object.
+            router (router.Router): Router that is used to route the product object.
+
+        Raises:
+            ValueError: If the transport process is not found.
+
+        Returns:
+            product.Product: Created product object.
+        """
+        for product_data in adapter.product_data:
+        
+        
+            product_data = product_data.model_copy()
+            product_data.ID = (
+                str(product_data.type) 
+            )
+            process_model = self.create_process_model(product_data)
+            transport_processes = self.process_factory.get_process(
+                product_data.transport_process
+            )
+            if not transport_processes or isinstance(
+                transport_processes, process.ProductionProcess
+            ):
+                raise ValueError("Transport process not found.")
+            # For mockups we can safely default to FIFO to ensure any heuristic call works
+            routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
+                RoutingHeuristic.FIFO, None
+            )
+            
+            
+            #TODO: hier möglicherweise bei verschachtelten Dependencies nicht möglich momentan noch
+            
+            
+            # During initialization mockup, the dependency_factory may not yet be created.
+            # Mockups are used for compatibility precomputation and don't require dependencies.
+            if (
+                product_data.dependency_ids 
+                and getattr(self, "dependency_factory", None) is not None
+            ):
+                dependencies = []
+                for dependency_id in product_data.dependency_ids:
+                    dependency = self.dependency_factory.get_dependency(dependency_id)
+                    dependencies.append(dependency)
+            else:
+                dependencies = None
+
+            product_object = product.Product(
+                env=self.env,
+                data=product_data,
+                product_router=self.router,
+                routing_heuristic=routing_heuristic_callable,
+                process_model=process_model,
+                transport_process=transport_processes,
+                dependencies=dependencies,
+                
+            )
+            
+            self.products_init[product_data.ID] = product_object
+            
+            #return ist useless
+        return product_object
+    
     def get_precendece_graph_from_id_adjacency_matrix(
         self, id_adjacency_matrix: Dict[str, List[str]]
     ) -> process_models.PrecedenceGraphProcessModel:
@@ -148,6 +218,20 @@ class ProductFactory:
         """
         if ID in self.products:
             return self.products[ID]
+        raise ValueError(f"Product with ID {ID} not found.")
+    
+    def get_product_init(self, ID: str) -> product.Product:
+        """
+        Returns the product object with the given ID.
+
+        Args:
+            ID (str): ID of the product object.
+
+        Returns:
+            product.Product: Product object with the given ID.
+        """
+        if ID in self.products_init:
+            return self.products_init[ID]
         raise ValueError(f"Product with ID {ID} not found.")
 
     def remove_product(self, product: product.Product):

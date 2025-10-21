@@ -73,15 +73,18 @@ class Sink:
         Args:
             product (product.Product): The finished product.
         """
-        #TODO: bisher werden alle fertigen Produkte als Primitives erzeugt und deklariert, Filterung hilfreich
-        #TODO: bisher erster port geholt, bei sinks aber nicht stark relevant
-        #TODO: Konsistenzprüfung
-        if self.product_factory.router and self.product_factory.router.primitive_factory:
-            self.env.process(
-                self.product_factory.router.primitive_factory.spawn_dynamic_primitive_from_finished_product(
-                    product.data, self.ports[0].data.ID
-                )
-            )
+        
+        if(product.data.becomes_primitive):
+            router = self.product_factory.router
+            
+            self.product_factory.router.primitive_factory.primitives.append(product)
+            
+            if self.product_factory.router:
+                if product.data.type not in router.free_primitives_by_type:
+                    router.free_primitives_by_type[product.data.type] = []
+                router.free_primitives_by_type[product.data.type].append(product)
+                if not router.got_primitive_request.triggered:
+                    router.got_primitive_request.succeed() 
         
         self.product_factory.register_finished_product(product)
 

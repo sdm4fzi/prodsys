@@ -165,7 +165,7 @@ class Runner:
                 env=self.env,
                 process_factory=self.process_factory,
             )
-
+            self.product_factory.create_product_mockup(self.adapter)
             self.sink_factory = sink_factory.SinkFactory(
                 env=self.env,
                 product_factory=self.product_factory,
