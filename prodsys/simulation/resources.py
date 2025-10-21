@@ -464,20 +464,6 @@ class Resource(resource.Resource):
         ]
         yield events.AllOf(self.env, running_setups)
 
-    def get_free_of_processes_in_preparation(self) -> Generator:
-        """
-        Returns a generator that yields when all processes in preparation are finished.
-
-        Yields:
-            Generator: The generator of the yield, which is yielded when all processes in preparation are finished.
-        """
-        running_processes = [
-            state.process
-            for state in self.production_states
-            if (state.process and state.process.is_alive)
-        ]
-        yield events.AllOf(self.env, running_processes)
-
     def setup(self, _process: PROCESS_UNION) -> Generator:
         """
         Sets up the resource for a process.
