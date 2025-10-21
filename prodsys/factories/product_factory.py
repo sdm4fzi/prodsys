@@ -112,6 +112,11 @@ class ProductFactory:
         Returns:
             product.Product: Created product object.
         """
+        
+        if not getattr(adapter, "product_data", None):
+            return None  
+
+        last_product = None
         for product_data in adapter.product_data:
         
         
@@ -128,16 +133,8 @@ class ProductFactory:
             ):
                 raise ValueError("Transport process not found.")
             # For mockups we can safely default to FIFO to ensure any heuristic call works
-            routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
-                RoutingHeuristic.FIFO, None
-            )
+            routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get("FIFO")
             
-            
-            #TODO: hier möglicherweise bei verschachtelten Dependencies nicht möglich momentan noch
-            
-            
-            # During initialization mockup, the dependency_factory may not yet be created.
-            # Mockups are used for compatibility precomputation and don't require dependencies.
             if (
                 product_data.dependency_ids 
                 and getattr(self, "dependency_factory", None) is not None
@@ -159,11 +156,10 @@ class ProductFactory:
                 dependencies=dependencies,
                 
             )
-            
             self.products_init[product_data.ID] = product_object
-            
-            #return ist useless
-        return product_object
+            last_product = product_object
+
+        return last_product  
     
     def get_precendece_graph_from_id_adjacency_matrix(
         self, id_adjacency_matrix: Dict[str, List[str]]
