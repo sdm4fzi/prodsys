@@ -15,6 +15,61 @@ def hex_to_rgba(h, alpha):
     return tuple([int(h.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)] + [alpha])
 
 
+def plot_output_over_time(
+    post_processor: post_processing.PostProcessor,
+    return_html: bool = False,
+    return_image: bool = False,
+):
+    """
+    Plots the output of the production system over time of the simulation.
+
+    Args:
+        post_processor (post_processing.PostProcessor): Post processor of the simulation.
+    """
+    df_tpt = post_processor.df_throughput.copy()
+    df_tpt.sort_values(by="End_time", inplace=True)
+    # Output is just the index of each row grouped by each product type    
+    df_tpt["Output"] = df_tpt.groupby("Product_type")["Product"].cumcount() + 1
+    fig = px.line(
+        df_tpt,
+        x="End_time",
+        y="Output",
+        color="Product_type",
+        # trendline="expanding",
+        line_shape="hv"
+        # opacity=0.01,
+    )
+    # fig.data = [t for t in fig.data if t.mode == "lines"]
+    fig.update_traces(showlegend=True)
+    fig.update_layout(
+        xaxis_title="Time [Minutes]",
+        yaxis_title="Output [Products]",
+    )
+    min_start_time = df_tpt["End_time"].min()
+    max_start_time = df_tpt["End_time"].max()
+    new_x_range = [min_start_time, max_start_time]
+    fig.update_layout(xaxis_range=new_x_range)
+    fig.add_vline(
+        x=post_processor.warm_up_cutoff_time,
+        line_dash="dash",
+        line_color="red",
+        annotation_text="Steady State",
+        annotation_position="top right",
+    )
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))
+    fig.write_html( 
+        os.path.join(os.getcwd(), "plots", "output_over_time.html"),
+        auto_open=not return_html,
+    )
+    if return_html:
+        return pio.to_html(fig, full_html=False)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "output_over_time.png")
+        fig.write_image(image_path)
+        return image_path
+
+
 def plot_throughput_time_distribution(
     post_processor: post_processing.PostProcessor,
     return_html: bool = False,

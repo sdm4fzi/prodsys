@@ -1,6 +1,5 @@
-from enum import Enum
 from pydantic import BaseModel, ConfigDict
-from typing import Literal, Union, Optional, List, Tuple, TYPE_CHECKING
+from typing import Optional, List, Tuple
 
 from prodsys.models.performance_indicators import (
     KPIEnum,
@@ -98,7 +97,7 @@ class Performance(BaseModel):
         }
     )
 
-    event_log: List[Event]
+    event_log: Optional[List[Event]]
     kpis: List[KPI_UNION]
 
     def get_kpi_for_context(self, context: Tuple[KPILevelEnum, ...]) -> List[KPI_UNION]:
