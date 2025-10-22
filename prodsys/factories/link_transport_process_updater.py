@@ -119,7 +119,7 @@ class LinkTransportProcessUpdater:
         except KeyError:
             pass
         try:
-            port = self.queue_factory.get_port(ID)
+            port = self.queue_factory.get_queue(ID)
             return port
         except KeyError:
             pass
