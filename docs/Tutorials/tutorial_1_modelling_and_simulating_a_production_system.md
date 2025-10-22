@@ -226,7 +226,7 @@ required_capability_process_turning = psx.RequiredCapabilityProcess(
 )
 
 product = psx.Product(
-    processes=[required_capability_process_turning],
+    process=[required_capability_process_turning],
     transport_process=transport_process,
     ID="product",
 )
@@ -258,7 +258,7 @@ required_capability_process_turning = psx.RequiredCapabilityProcess(
     capability="turning", ID="rcp_turning"
 )
 product = psx.Product(
-    processes=[required_capability_process_turning],
+    process=[required_capability_process_turning],
     transport_process=transport_process,
     ID="product",
 )
