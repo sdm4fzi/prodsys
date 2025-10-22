@@ -66,7 +66,7 @@ agv01 = psx.Resource(
 
 # All products
 product01 = psx.Product(
-    processes=[
+    process=[
         productionprocess01,
         productionprocess02,
         productionprocess03,
@@ -76,7 +76,7 @@ product01 = psx.Product(
 )
 
 product02 = psx.Product(
-    processes=[
+    process=[
         productionprocess03,
         productionprocess02,
         productionprocess01,

@@ -76,7 +76,7 @@ machine06 = psx.Resource(
 )
 
 product01 = psx.Product(
-    processes=[
+    process=[
         productionprocess01,
         productionprocess02,
         productionprocess03,
@@ -89,7 +89,7 @@ product01 = psx.Product(
 )
 
 product02 = psx.Product(
-    processes=[
+    process=[
         productionprocess01,
         productionprocess02,
         productionprocess03,
