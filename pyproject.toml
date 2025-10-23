@@ -23,6 +23,8 @@ dependencies = [
     "simpy>=4.1.1",
     "toml>=0.10.2",
     "tqdm>=4.67.1",
+    "matplotlib (>=3.7.2,<4.0.0)",
+    "scikit-image (>=0.25.2,<0.26.0)",
 ]
 
 [project.optional-dependencies]

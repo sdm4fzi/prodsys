@@ -87,10 +87,14 @@ class TransportProcessHandler:
         free_capacity = transport_resource.get_free_capacity()
         transport_resource.controller.reserved_requests_count += free_capacity
         self.blocked_capacity += free_capacity
+        transport_resource.update_full()
+
 
     def unblock_other_transports(self, transport_resource: resources.Resource):
         transport_resource.controller.reserved_requests_count -= self.blocked_capacity
         self.blocked_capacity = 0
+        transport_resource.update_full()
+
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """

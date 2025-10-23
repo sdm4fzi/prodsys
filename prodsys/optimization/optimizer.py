@@ -434,7 +434,7 @@ class FileSystemSaveOptimizer(Optimizer):
 
     def save_configuration(self, configuration: ProductionSystemData) -> None:
         configuration_hash = configuration.hash()
-        ProductionSystemData.model_validate(configuration).write_data(
+        ProductionSystemData.model_validate(configuration).write(
             f"{self.save_folder}/hash_{configuration_hash}.json"
         )
 

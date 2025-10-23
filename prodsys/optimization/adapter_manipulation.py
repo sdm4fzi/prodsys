@@ -590,8 +590,8 @@ def random_configuration(
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
-
-    if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
+    #FIXME: 
+    """if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
     if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
         get_random_transport_capacity(adapter_object)
@@ -609,7 +609,7 @@ def random_configuration(
         get_random_control_policies(adapter_object)
     if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
         get_random_routing_logic(adapter_object)
-
+    """
     add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)

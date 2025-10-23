@@ -6,7 +6,7 @@ from prodsys.models.performance_indicators import KPIEnum
 import prodsys.models.node_data
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
 from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
-from prodsys.optimization.optimizer import FileSystemSaveOptimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
 prodsys.set_logging("DEBUG")
 
 def main():
@@ -23,22 +23,10 @@ def main():
     def new_transformation(adapter: ProductionSystemData) -> bool:
         print("Mutation function called.")
 
-
     add_transformation_operation(
         transformation=ReconfigurationEnum.PRODUCTION_CAPACITY,
         operation=new_transformation,
     )
-
-    #Node data
-    # Note: Node IDs must be unique across ALL objects (sources, sinks, resources, etc.)
-    # Using "Node_" prefix to avoid ID collisions with sources/sinks
-    node1 = prodsys.models.node_data.NodeData(ID="N1", description="Node 0_0", location=[0.0, 0.0])
-    N_R1 = prodsys.models.node_data.NodeData(ID="Node_R1", description="Resource R1 location", location=[0.0, 0.0])
-    N_Port1 = prodsys.models.node_data.NodeData(ID="Node_Port1", description="Port1 / TR1 location", location=[10.0, 10.0])
-    N_TR1 = prodsys.models.node_data.NodeData(ID="Node_TR1", description="Transport TR1 location", location=[10.0, 10.0])
-    N_ST1 = prodsys.models.node_data.NodeData(ID="Node_ST1", description="Store ST1 location", location=[-10.0, -10.0])
-    N_S1 = prodsys.models.node_data.NodeData(ID="Node_S1", description="Source S1 location", location=[-100.0, -100.0])
-    N_K1 = prodsys.models.node_data.NodeData(ID="Node_K1", description="Sink K1 location", location=[100.0, 100.0])
 
     # Time models
     ftmp1 = prodsys.time_model_data.FunctionTimeModelData(
@@ -117,27 +105,6 @@ def main():
         type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
     )
 
-    TP1 = prodsys.processes_data.LinkTransportProcessData( #Link Transport Process 
-        ID="TP1",
-        description="Transport Process 1",
-        time_model_id="md1",
-        capability="TP1",
-        type=prodsys.processes_data.ProcessTypeEnum.LinkTransportProcesses,
-        # Updated links to use correct node IDs (with "Node_" prefix) and actual resource/source/sink IDs
-        links=[["N1", "R1"], ["N1", "Port1"], ["N1", "TR1"],
-        ["N1", "ST1"], ["N1", "S1"], ["N1", "K1"], ["R1", "N1"],
-        ["R1", "Port1"], ["R1", "TR1"], ["R1", "ST1"], ["R1",
-        "Node_S1"], ["R1", "Node_K1"], ["Port1", "N1"], ["Port1", "R1"],
-        ["Port1", "TR1"], ["Port1", "ST1"], ["Port1", "Node_S1"], ["Port1",
-        "Node_K1"], ["TR1", "N1"], ["TR1", "R1"], ["TR1", "Port1"],
-        ["TR1", "ST1"], ["TR1", "Node_S1"], ["TR1", "Node_K1"], ["ST1",
-        "N1"], ["ST1", "R1"], ["ST1", "Port1"], ["ST1", "TR1"],
-        ["ST1", "Node_S1"], ["ST1", "Node_K1"], ["S1", "N1"], ["S1",
-        "Node_R1"], ["S1", "Node_Port1"], ["S1", "Node_TR1"], ["S1", "Node_ST1"],
-        ["S1", "Node_K1"], ["K1", "N1"], ["K1", "Node_R1"], ["K1",
-        "Node_Port1"], ["K1", "Node_TR1"], ["K1", "Node_ST1"], ["K1", "Node_S1"]]
-    )
-
     # Port / Queue
     ST1 = prodsys.port_data.QueueData(
         ID="ST1",
@@ -175,10 +142,11 @@ def main():
         process_ids=["TP1"],
     )
 
+
     # Product
     Product_1 = prodsys.product_data.ProductData(
         ID="Product_1",
-        description="Product with sequential process",
+        description="",
         type="Product_1",
         processes=["P1"],
         transport_process="TP1",
@@ -251,25 +219,43 @@ def main():
     scenario = prodsys.scenario_data.ScenarioData(options=Opt, info=Info, objectives=[objectives], constraints=constraints)
 
     # Assemble the production system
-    production_system_instance = prodsys.production_system_data.ProductionSystemData(
+    production_system_instance = ProductionSystemData(
         time_model_data=[ftmp1, ftmp2, ftmp3, ftmp4, ftm1, ftm2, md1],
-        process_data=[P1, P2, P3, P4, TP1],
+        process_data=[P1, P2, P3, P4],
         port_data=[ST1, Port1],
         resource_data=[R1, TR1],
         product_data=[Product_1],
         source_data=[S1],
         sink_data=[K1],
         scenario_data=scenario,
-        node_data=[node1, N_R1, N_Port1, N_TR1, N_ST1, N_S1, N_K1], # All nodes now have unique IDs with "Node_" prefix where needed
+        valid_configuration=True,
     )
 
-    add_default_queues_to_production_system(production_system_instance, reset=False)
-    production_system_instance.validate_configuration()
+
+    #Generation of Link Transport Processes section
+    #first generate Nodes:
+    
+    #initialize Link Transport Process Data
+    TP1 = prodsys.processes_data.LinkTransportProcessData( #Link Transport Process initialized at the end
+        ID="TP1",
+        description="Transport Process 1",
+        time_model_id="md1",
+        type=prodsys.processes_data.ProcessTypeEnum.LinkTransportProcesses,
+    )
+    production_system_instance.process_data.append(TP1)
+
+    add_default_queues_to_production_system(production_system_instance)
+    #production_system_instance.validate_configuration()
     
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
-    runner.initialize_simulation()
-    runner.run(100)
-    runner.print_results()
+    #runner.initialize_simulation()
+    #runner.run(100)
+    #runner.print_results()
+    #runner.plot_results()
+    #runner.save_results_as_csv() 
+
+
+
 
     optimizer = FileSystemSaveOptimizer(
         adapter=production_system_instance,
