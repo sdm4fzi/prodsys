@@ -26,7 +26,6 @@ from prodsys.factories import (
 )
 
 
-from prodsys.simulation.router import Router
 from prodsys.util.post_processing import PostProcessor
 
 from prodsys.util import util
@@ -284,7 +283,7 @@ class Runner:
         """
         p = self.get_post_processor()
         from prodsys.util import kpi_visualization
-
+        kpi_visualization.plot_output_over_time(p)
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
         if self.adapter.primitive_data:
@@ -343,7 +342,9 @@ class Runner:
             )
         return events
 
-    def get_performance_data(self) -> performance_data.Performance:
+    def get_performance_data(
+        self, dynamic_data: bool = False, event_log: bool = True
+    ) -> performance_data.Performance:
         """
         Returns the performance data of the simulation.
 
@@ -356,8 +357,17 @@ class Runner:
         kpis += p.throughput_and_output_KPIs
         kpis += p.aggregated_throughput_time_KPIs
         kpis += p.machine_state_KPIS
-        event_data = self.get_event_data_of_simulation()
+        if dynamic_data:
+            kpis += p.dynamic_thoughput_time_KPIs
+            kpis += p.dynamic_system_WIP_KPIs
+            kpis += p.dynamic_WIP_per_resource_KPIs
+        if event_log:
+            event_data = self.get_event_data_of_simulation()
+        else:
+            event_data = None
         return performance_data.Performance(kpis=kpis, event_log=event_data)
+
+
 
     def get_aggregated_data_simulation_results(self) -> dict:
         """

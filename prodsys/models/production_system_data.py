@@ -10,6 +10,7 @@ from pydantic import (
     ConfigDict,
     TypeAdapter,
     field_validator,
+    model_validator,
     ValidationInfo,
 )
 
@@ -147,9 +148,20 @@ def remove_unused_queues_from_adapter(
         adapter.port_data.remove(queue)
     return adapter
 
+def has_input_port(locatable: resource_data_module.ResourceData, adapter: ProductionSystemData) -> bool:
+    if not locatable.ports:
+        return False
+    ports = [port for port in adapter.port_data if port.ID in locatable.ports]
+    return any(port.interface_type in [port_data.PortInterfaceType.INPUT, port_data.PortInterfaceType.INPUT_OUTPUT] for port in ports)
+
+def has_output_port(locatable: resource_data_module.ResourceData, adapter: ProductionSystemData) -> bool:
+    if not locatable.ports:
+        return False
+    ports = [port for port in adapter.port_data if port.ID in locatable.ports]
+    return any(port.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT] for port in ports)
 
 def add_default_queues_to_resources(
-    adapter: ProductionSystemData, queue_capacity=0.0
+    adapter: ProductionSystemData, queue_capacity=0.0, reset=True
 ) -> ProductionSystemData:
     """
     Convenience function to add default queues to all machines in the adapter.
@@ -162,6 +174,8 @@ def add_default_queues_to_resources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
     """
     for machine in adapter.resource_data:
+        if not reset and has_input_port(machine, adapter) and has_output_port(machine, adapter):
+            continue
         remove_queues_from_resource(machine)
         remove_unused_queues_from_adapter(adapter)
         port = get_default_queue_for_resource(
@@ -194,7 +208,7 @@ def get_default_queue_for_source(
 
 
 def add_default_queues_to_sources(
-    adapter: ProductionSystemData, queue_capacity=0.0
+    adapter: ProductionSystemData, queue_capacity=0.0, reset=True
 ) -> ProductionSystemData:
     """
     Convenience function to add default queues to all sources in the adapter.
@@ -207,10 +221,11 @@ def add_default_queues_to_sources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sources
     """
     for source in adapter.source_data:
-        if not source.ports:
-            output_queues = [get_default_queue_for_source(source, queue_capacity)]
-            source.ports = list(get_set_of_IDs(output_queues))
-            adapter.port_data += output_queues
+        if not reset and has_output_port(source, adapter):
+            continue
+        output_queues = [get_default_queue_for_source(source, queue_capacity)]
+        source.ports = list(get_set_of_IDs(output_queues))
+        adapter.port_data += output_queues
     return adapter
 
 
@@ -236,7 +251,7 @@ def get_default_queue_for_sink(
 
 
 def add_default_queues_to_sinks(
-    adapter: ProductionSystemData, queue_capacity=0.0
+    adapter: ProductionSystemData, queue_capacity=0.0, reset=True
 ) -> ProductionSystemData:
     """
     Convenience function to add default queues to all sinks in the adapter.
@@ -249,15 +264,16 @@ def add_default_queues_to_sinks(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all sinks
     """
     for sink in adapter.sink_data:
-        if not sink.ports:
-            input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
-            sink.ports = list(get_set_of_IDs(input_queues))
-            adapter.port_data += input_queues
+        if not reset and has_input_port(sink, adapter):
+            continue
+        input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
+        sink.ports = list(get_set_of_IDs(input_queues))
+        adapter.port_data += input_queues
     return adapter
 
 
 def add_default_queues_to_production_system(
-    adapter: ProductionSystemData, queue_capacity=0.0
+    adapter: ProductionSystemData, queue_capacity=0.0, reset=True
 ) -> ProductionSystemData:
     """
     Convenience function to add default queues to all machines, sources and sinks in the adapter.
@@ -269,9 +285,9 @@ def add_default_queues_to_production_system(
     Returns:
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines, sources and sinks
     """
-    adapter = add_default_queues_to_resources(adapter, queue_capacity)
-    adapter = add_default_queues_to_sources(adapter, queue_capacity)
-    adapter = add_default_queues_to_sinks(adapter, queue_capacity)
+    adapter = add_default_queues_to_resources(adapter, queue_capacity, reset)
+    adapter = add_default_queues_to_sources(adapter, queue_capacity, reset)
+    adapter = add_default_queues_to_sinks(adapter, queue_capacity, reset)
     return adapter
 
 
@@ -327,6 +343,7 @@ class ProductionSystemData(BaseModel):
 
     model_config = ConfigDict(
         validate_assignment=True,
+        revalidate_instances='always',
         json_schema_extra={
             "examples": [
                 # TODO: update data here
@@ -732,6 +749,33 @@ class ProductionSystemData(BaseModel):
         with open(filepath, "w", encoding="utf-8") as json_file:
             json_file.write(self.model_dump_json(indent=4))
 
+    def revalidate(self) -> 'ProductionSystemData':
+        """
+        Explicitly revalidates the entire ProductionSystemData model.
+        
+        This is useful after making in-place modifications to lists (e.g., appending items)
+        to ensure all validators run, including the duplicate ID check.
+        
+        Example:
+            ```python
+            system = ProductionSystemData(...)
+            system.node_data.append(new_node)  # In-place modification
+            system.revalidate()  # Trigger validation
+            ```
+        
+        Returns:
+            ProductionSystemData: Self, after validation
+            
+        Raises:
+            ValueError: If validation fails (e.g., duplicate IDs detected)
+        """
+        # Trigger validation by re-parsing the model
+        validated = self.model_validate(self.model_dump())
+        # Update self with validated data
+        for key, value in validated.__dict__.items():
+            setattr(self, key, value)
+        return self
+
     def hash(self) -> str:
         """
         Generates a hash of the adapter based on the hash of all contained entities. Only information describing the physical structure and functionality of the production system is considered. Can be used to compare two production systems of adapters for functional equality.
@@ -767,6 +811,70 @@ class ProductionSystemData(BaseModel):
                 )
             ).encode("utf-8")
         ).hexdigest()
+
+    @model_validator(mode='after')
+    def check_no_duplicate_ids(self) -> 'ProductionSystemData':
+        """
+        Validates that no duplicate IDs exist across all data types in the production system.
+        This is critical for proper object resolution, especially for link transport processes.
+        
+        This validator runs automatically:
+        - On initialization of a new ProductionSystemData instance
+        - When entire fields are reassigned (e.g., `system.node_data = new_list`)
+        
+        For in-place mutations (e.g., `system.node_data.append(item)`), call `revalidate()` 
+        or `model_validate()` explicitly to trigger validation.
+        
+        Raises:
+            ValueError: If duplicate IDs are found with details about which IDs and where.
+        """
+        id_registry = {}  # Maps ID to list of (field_name, object_type) tuples
+        
+        # Define all fields to check
+        fields_to_check = [
+            ('time_model_data', self.time_model_data, 'TimeModel'),
+            ('state_data', self.state_data, 'State'),
+            ('process_data', self.process_data, 'Process'),
+            ('port_data', self.port_data, 'Port/Queue'),
+            ('node_data', self.node_data, 'Node'),
+            ('resource_data', self.resource_data, 'Resource'),
+            ('product_data', self.product_data, 'Product'),
+            ('sink_data', self.sink_data, 'Sink'),
+            ('source_data', self.source_data, 'Source'),
+            ('depdendency_data', self.depdendency_data or [], 'Dependency'),
+            ('primitive_data', self.primitive_data or [], 'Primitive'),
+        ]
+        
+        # Collect all IDs and their locations
+        for field_name, data_list, object_type in fields_to_check:
+            for item in data_list:
+                if hasattr(item, 'ID'):
+                    item_id = item.ID
+                    if item_id not in id_registry:
+                        id_registry[item_id] = []
+                    id_registry[item_id].append((field_name, object_type))
+        
+        # Find duplicates
+        duplicates = {id_: locations for id_, locations in id_registry.items() if len(locations) > 1}
+        
+        if duplicates:
+            error_messages = []
+            for duplicate_id, locations in duplicates.items():
+                location_strs = [f"{obj_type} (in {field})" for field, obj_type in locations]
+                error_messages.append(
+                    f"  - ID '{duplicate_id}' is used in: {', '.join(location_strs)}"
+                )
+            
+            raise ValueError(
+                "\n\nDuplicate IDs detected in ProductionSystemData!\n"
+                "Each ID must be unique across ALL data types (nodes, sources, sinks, resources, ports, etc.).\n"
+                "This is required for proper object resolution, especially for link transport processes.\n\n"
+                "Duplicate IDs found:\n" + "\n".join(error_messages) + "\n\n"
+                "Resolution: Please rename the conflicting objects to have unique IDs.\n"
+                "Example: If both a Node and Source have ID 'S1', rename them to 'Node_S1' and 'Source_S1'.\n"
+            )
+        
+        return self
 
     @field_validator("state_data")
     def check_states(
@@ -1075,7 +1183,8 @@ def assert_all_links_available(adapter: ProductionSystemData):
     resources = get_set_of_IDs(adapter.resource_data)
     sources = get_set_of_IDs(adapter.source_data)
     sinks = get_set_of_IDs(adapter.sink_data)
-    all_location_ids = nodes | resources | sources | sinks
+    ports = get_set_of_IDs(adapter.port_data)
+    all_location_ids = nodes | resources | sources | sinks | ports
     for link_transport_process in link_transport_processes:
         link_pairs: List[List[str]] = []
         if isinstance(link_transport_process.links, dict):

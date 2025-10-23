@@ -113,7 +113,9 @@ class Controller:
                     continue
                 selected_request = lot_request
             self.reserved_requests_count += selected_request.capacity_required
-            # TODO: add that dependency blocks all capacity of resource while being bound!
+            # For dependency requests, immediately bind the resource to block other processes
+            if selected_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
+                self.resource.bind_to_dependant(selected_request.requesting_item)
             self.resource.update_full()
             process_handler = get_requets_handler(selected_request)
             self.env.process(process_handler.handle_request(selected_request))
