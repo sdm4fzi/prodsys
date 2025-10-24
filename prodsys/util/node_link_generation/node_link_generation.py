@@ -221,52 +221,33 @@ def mainGenerate(productionsystem: production_system_data):
             count = location_match_count.get(key, 0)
             resources = location_to_resources[key]
             if count < len(resources):
-                matched_id = resources[count].get("ID")
+                matched_id = resources[count][0]
                 location_match_count[key] = count + 1
 
-        # If no match, fall back to GML node id
+        # If no match, fall back to nx node id
         if not matched_id:
-            matched_id = f"node{id}" if id is not None else None
-
+            matched_id = id + 1
         if matched_id:
-            new_nodes.append({ #TODO: von json zu models format ändern
-                "ID": matched_id,
-                "description": "",
-                "location": [x, y]
-            })
-            if id is not None:
-                nx_id_to_resource_id[id] = matched_id
+            new_nodes.append([ matched_id , [x, y]])
+            nx_id_to_resource_id[id] = matched_id
 
     new_links = []
     edge_blocks = G.edges
-    for block in edge_blocks: #TODO: 
-        src_match = re.search(r'source\s+(\d+)', block)
-        tgt_match = re.search(r'target\s+(\d+)', block)
-        if src_match and tgt_match:
-            src_id = int(src_match.group(1))
-            tgt_id = int(tgt_match.group(1))
+    for block in edge_blocks:
+        src_id, tgt_id = block[:2]
+        if src_id is not None and tgt_id is not None:
             src = nx_id_to_resource_id.get(src_id, f"node{src_id}")
             tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
             new_links.append([src, tgt])
-        # Replace node_data in the JSON file
-    content["node_data"] = new_nodes
-    # Replace links inside LinkTransportProcesses
-    if "process_data" in content:
-        for process in content["process_data"]:
-            if process.get("type") == "LinkTransportProcesses":
-                process["links"] = new_links
-    # Save file back
-    with open(json_file, "w") as f: #TODO: change file here to create a copy instead of overwriting
-        json.dump(content, f, indent=4)
-
-
+    #TODO: Replace node_data in the ProdSys
     for LinkTransportProcess in productionsystem.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links.append()
 
-
-
-
+    #TODO: Replace links inside LinkTransportProcesses
+    for process in productionsystem.processes_data_module:
+        if process.type == "LinkTransportProcesses":
+            process.links = new_links
 
 
 #Classes from Marvin Ruedt
