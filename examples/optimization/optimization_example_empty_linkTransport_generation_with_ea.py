@@ -104,6 +104,14 @@ def main():
         time_model_id="ftmp4",
         type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
     )
+    TP1 = prodsys.processes_data.LinkTransportProcessData( #Link Transport Process initialized at the end
+        ID="TP1",
+        description="Transport Process 1",
+        time_model_id="md1",
+        capability="TP1",
+        type=prodsys.processes_data.ProcessTypeEnum.LinkTransportProcesses,
+        links=[],
+    )
 
     # Port / Queue
     ST1 = prodsys.port_data.QueueData(
@@ -217,11 +225,11 @@ def main():
         target_product_count={"Product_1": 200}
     )
     scenario = prodsys.scenario_data.ScenarioData(options=Opt, info=Info, objectives=[objectives], constraints=constraints)
-
+    
     # Assemble the production system
     production_system_instance = ProductionSystemData(
         time_model_data=[ftmp1, ftmp2, ftmp3, ftmp4, ftm1, ftm2, md1],
-        process_data=[P1, P2, P3, P4],
+        process_data=[P1, P2, P3, P4, TP1],
         port_data=[ST1, Port1],
         resource_data=[R1, TR1],
         product_data=[Product_1],
@@ -229,25 +237,20 @@ def main():
         sink_data=[K1],
         scenario_data=scenario,
         valid_configuration=True,
+        node_data=[]
     )
+    add_default_queues_to_production_system(production_system_instance, reset=False)
 
 
     #Generation of Link Transport Processes section
     #first generate Nodes:
     
-    #initialize Link Transport Process Data
-    TP1 = prodsys.processes_data.LinkTransportProcessData( #Link Transport Process initialized at the end
-        ID="TP1",
-        description="Transport Process 1",
-        time_model_id="md1",
-        type=prodsys.processes_data.ProcessTypeEnum.LinkTransportProcesses,
-    )
-    production_system_instance.process_data.append(TP1)
+    #add links to the Link Transport Process
+    #production_system_instance.process_data
 
-    add_default_queues_to_production_system(production_system_instance)
     #production_system_instance.validate_configuration()
     
-    runner = prodsys.runner.Runner(production_system_data=production_system_instance)
+    #runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     #runner.initialize_simulation()
     #runner.run(100)
     #runner.print_results()

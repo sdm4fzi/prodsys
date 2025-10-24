@@ -146,6 +146,7 @@ def mainGenerate(productionsystem: production_system_data):
     from edge_directionality import EdgeDirectionality # type: ignore
     import a_star_algorithm # type: ignore
     import networkx as nx
+    import format_to_networkx # type: ignore
 
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
 
@@ -156,15 +157,74 @@ def mainGenerate(productionsystem: production_system_data):
     edge_directionality = EdgeDirectionality(table_config, node_edge_generator)
     visualization = Visualization(config, table_config, station_config, node_edge_generator)
     networkx_formater = format_to_networkx.NetworkXGraphGenerator(node_edge_generator.graph, station_config)
-    vda5050_formater = format_to_vda5050.VDA5050JSONGenerator(node_edge_generator, station_config) #optionally allow 
+    #vda5050_formater = format_to_vda5050.VDA5050JSONGenerator(node_edge_generator, station_config) #optionally allow 
     a_star = a_star_algorithm.AStar(table_config, station_config, node_edge_generator, visualization)
     for table in tables:
         table_config.add_table(table['corner_nodes'], visualization)
     table_config.generate_table_configuration()
 
+    # Add stations and update table configuration considering the stations.
+    station_config.add_stations(stations, visualization)
+    table_config.table_configuration_with_stations(station_config)
+    #visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
 
+    # Define the medial axis of the table configuration.    MARKER: Optional
+    #table_config.define_medial_axis()
+    #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=True, station_nodes=True, medial_axis=True)
 
+    # Define zones of the table configuration.  MARKER: Optional
+    #table_config.define_zones(layout_nr=1) 
+    #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=False, station_nodes=False, zones=True)
 
+    # Define station nodes and edges. Add edges optionally.
+    # Variable is defined, so it is consistent with functions called afterwards.
+    # Station nodes (and edges) must be added before other nodes are added. Here only trajectory nodes are defined.
+    add_edges = False
+    node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False)
+    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+
+    # Add nodes (and edges) along the boundary of table configuration considering stations.
+    # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
+    add_nodes_between = True
+    tablesize = min(dim_x, dim_y)
+    min_node_distance = max(0.1*tablesize, 20) #Todo: make min and max distance adapt automatically dependent on the layout size
+    max_node_distance = 0.2*tablesize
+    node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance ,
+                                                    min_node_distance=min_node_distance, add_edges=add_edges)
+    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+
+    # Define random nodes in the free space of the table configuration.
+    #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)    #TODO: choose a grid generation method that is defined here
+    node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
+    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+
+    # Connect nodes by edges using the Delaunay triangulation.
+    node_edge_generator.delaunay_triangulation(nodes=node_edge_generator.graph.nodes, without_distance_check=False)
+    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+
+    # Define boundary nodes and edges. Nodes with 1 or 2 edges must be removed first.
+    edge_directionality.define_boundary_nodes_and_edges()
+
+    # Define boundary edges unidirectional (if possible). Graph connections must be updated afterwards.
+    exterior_direction = 'ccw'
+    edge_directionality.define_boundary_edges_directionality(exterior_direction=exterior_direction, narrow_sections_unidirectional=False)
+    node_edge_generator.graph.update_graph_connections()
+    visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
+
+    # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
+    # The graph can be visualized. 
+    G, DiG = networkx_formater.generate_nx_graph(plot=False)
+
+    # Save the graph to a file in gml format.
+    path_G = f'test_nx_graph.gml'
+    nx.write_gml(G, path_G)
+    #for directional graphs (not used here):
+    #path_DiG = f'NodeEdgeNetworkGeneration/output_files/NodeGeneratorProdsys/layout_{layout_nr}_random_nodes_{min_node_distance}_{exterior_direction}_{random_int}_nx_digraph.gml'
+    #nx.write_gml(DiG, path_DiG)
+
+    for LinkTransportProcess in productionsystem.process_data:
+        if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
+            LinkTransportProcess.links.append()
 
 
 
