@@ -3,36 +3,11 @@ from prodsys.models import production_system_data, resource_data, sink_data, sou
 from typing import List, Any, Set, Optional, Tuple, Union
 import json
 
-def get_io_locations( 
-    locatable: Union[
-        resource_data.ResourceData,
-        source_data.SourceData,
-        sink_data.SinkData,
-        port_data.StoreData,
-    ],
-) -> List[List[float]]:
-    locations = []
-    if (
-        hasattr(locatable, "input_location")
-        and locatable.input_location != locatable.location
-    ):
-        locations.append(locatable.input_location)
-    else:
-        locations.append(locatable.location)
-    if (
-        hasattr(locatable, "output_location")
-        and locatable.output_location != locatable.location
-    ):
-        locations.append(locatable.output_location)
-    return locations
 
 def get_all_locations(productionsystem: production_system_data):
     locations = []
-    for node in productionsystem.resource_data, productionsystem.source_data, productionsystem.sink_data, productionsystem.port_data:
-        locations.append(get_io_locations(node))
-        for location in locations:
-            coord = (node.ID, location)
-            locations.append(coord)    
+    for node in productionsystem.port_data: #(productionsystem.resource_data + productionsystem.source_data + productionsystem.sink_data + productionsystem.port_data):
+        locations.append([node.ID, [x*10 for x in node.location]]) #transform necessary because node link generation works in cm
     return locations
 
 def generate_stations_json(stations: list) -> None:
@@ -103,7 +78,7 @@ def find_borders(productionsystem: production_system_data):
 
 def mainGenerate(productionsystem: production_system_data):
     
-    min_x, min_y, max_x, max_y = find_borders(productionsystem)
+    min_x, min_y, max_x, max_y = find_borders(productionsystem)*10 #transform necessary because node link generation works in cm
     tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
     tableYMax=max(1.1*max_y,50+max_y)
     tableXMin=min(1.1*min_x,min_x-50)
@@ -121,8 +96,7 @@ def mainGenerate(productionsystem: production_system_data):
     }
     with open('/tables.json', 'w') as f:
         json.dump(table_data, f, indent=4) #MARKER Brauchts umbedingt diese json?
-
-    generate_stations_json(stations)
+    generate_stations_json([tuple(item[1]) for item in get_all_locations(productionsystem)])
 
     # Load the tables from the JSON file.
     with open('NodeEdgeNetworkGeneration/input_files/tables.json', 'r') as f:  # open('NodeEdgeNetworkGeneration/input_files/track_modules_layout_rotated.json', 'r') as f:
@@ -213,14 +187,78 @@ def mainGenerate(productionsystem: production_system_data):
 
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
-    G, DiG = networkx_formater.generate_nx_graph(plot=False)
+    G, DiG = networkx_formater.generate_nx_graph(plot=False) #G: undirected graph, DiG: directed graph
+    nodes = {}
+    links = []
 
-    # Save the graph to a file in gml format.
-    path_G = f'test_nx_graph.gml'
-    nx.write_gml(G, path_G)
-    #for directional graphs (not used here):
-    #path_DiG = f'NodeEdgeNetworkGeneration/output_files/NodeGeneratorProdsys/layout_{layout_nr}_random_nodes_{min_node_distance}_{exterior_direction}_{random_int}_nx_digraph.gml'
-    #nx.write_gml(DiG, path_DiG)
+    all_resources = get_all_locations(productionsystem)
+
+    new_nodes = []
+    # Build a lookup: location -> list of resources
+    location_to_resources = {}
+    for resource in all_resources:
+        key = tuple(resource[1])
+        location_to_resources.setdefault(key, []).append(resource)
+    location_match_count = {}
+
+    # Map GML node id (int) to matched resource ID
+    nx_id_to_resource_id = {}
+
+    new_nodes = []
+    node_blocks = G.nodes
+    for id, block in enumerate(node_blocks):
+        pos = block.get("pos")
+        if len(pos) >= 2:
+            x = pos[0] /10 #transform back
+            y = pos[1] /10
+        else:
+            x, y = 0.0, 0.0
+            # or throw error?
+
+        key = (x, y)
+        matched_id = None
+        if key in location_to_resources:
+            count = location_match_count.get(key, 0)
+            resources = location_to_resources[key]
+            if count < len(resources):
+                matched_id = resources[count].get("ID")
+                location_match_count[key] = count + 1
+
+        # If no match, fall back to GML node id
+        if not matched_id:
+            matched_id = f"node{id}" if id is not None else None
+
+        if matched_id:
+            new_nodes.append({ #TODO: von json zu models format ändern
+                "ID": matched_id,
+                "description": "",
+                "location": [x, y]
+            })
+            if id is not None:
+                nx_id_to_resource_id[id] = matched_id
+
+    new_links = []
+    edge_blocks = G.edges
+    for block in edge_blocks: #TODO: 
+        src_match = re.search(r'source\s+(\d+)', block)
+        tgt_match = re.search(r'target\s+(\d+)', block)
+        if src_match and tgt_match:
+            src_id = int(src_match.group(1))
+            tgt_id = int(tgt_match.group(1))
+            src = nx_id_to_resource_id.get(src_id, f"node{src_id}")
+            tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
+            new_links.append([src, tgt])
+        # Replace node_data in the JSON file
+    content["node_data"] = new_nodes
+    # Replace links inside LinkTransportProcesses
+    if "process_data" in content:
+        for process in content["process_data"]:
+            if process.get("type") == "LinkTransportProcesses":
+                process["links"] = new_links
+    # Save file back
+    with open(json_file, "w") as f: #TODO: change file here to create a copy instead of overwriting
+        json.dump(content, f, indent=4)
+
 
     for LinkTransportProcess in productionsystem.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):

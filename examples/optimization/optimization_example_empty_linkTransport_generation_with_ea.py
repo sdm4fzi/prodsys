@@ -7,6 +7,8 @@ import prodsys.models.node_data
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
 from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
 from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
+from prodsys.util.node_link_generation import node_link_generation
+
 prodsys.set_logging("DEBUG")
 
 def main():
@@ -43,32 +45,11 @@ def main():
         location=4.167,
         scale=0.4167
     )
-    ftmp3 = prodsys.time_model_data.FunctionTimeModelData(
-        ID="ftmp3",
-        description="function time model process 3",
-        distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Normal,
-        location=0.667,
-        scale=0.0667
-    )
-    ftmp4 = prodsys.time_model_data.FunctionTimeModelData(
-        ID="ftmp4",
-        description="function time model process 4",
-        distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Normal,
-        location=3.0,
-        scale=0.3
-    )
     ftm1 = prodsys.time_model_data.FunctionTimeModelData(
         ID="ftm1",
         description="function time model product 1",
         distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
         location=4.05,
-        scale=0.0
-    )
-    ftm2 = prodsys.time_model_data.FunctionTimeModelData(
-        ID="ftm2",
-        description="function time model product 2",
-        distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
-        location=5.0,
         scale=0.0
     )
     md1 = prodsys.time_model_data.DistanceTimeModelData(
@@ -92,19 +73,7 @@ def main():
         time_model_id="ftmp2",
         type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
     )
-    P3 = prodsys.processes_data.ProductionProcessData(
-        ID="P3",
-        description="Process 3",
-        time_model_id="ftmp3",
-        type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
-    )
-    P4 = prodsys.processes_data.ProductionProcessData(
-        ID="P4",
-        description="Process 4",
-        time_model_id="ftmp4",
-        type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
-    )
-    TP1 = prodsys.processes_data.LinkTransportProcessData( #Link Transport Process initialized at the end
+    TP1 = prodsys.processes_data.LinkTransportProcessData( #empty links, to be generated
         ID="TP1",
         description="Transport Process 1",
         time_model_id="md1",
@@ -114,22 +83,22 @@ def main():
     )
 
     # Port / Queue
-    ST1 = prodsys.port_data.QueueData(
-        ID="ST1",
-        description="Store Q1",
+    Port0 = prodsys.port_data.QueueData(
+        ID="Port0",
+        description="Queue 0",
         capacity=0,
         location=[-10, -10],
-        interface_type=prodsys.port_data.PortInterfaceType.INPUT_OUTPUT
+        interface_type=prodsys.port_data.PortInterfaceType.INPUT
     )
     Port1 = prodsys.port_data.QueueData(
         ID="Port1",
         description="Queue 1",
         capacity=0,
         location=[10, 10],
-        interface_type=prodsys.port_data.PortInterfaceType.INPUT_OUTPUT
+        interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
     )
     # Resource
-    R1 = prodsys.resource_data.ResourceData(
+    R1 = prodsys.resource_data.ResourceData( #resource with two ports
         ID="R1",
         description="Resource 1",
         capacity=2,
@@ -137,9 +106,20 @@ def main():
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],
-        ports=[ST1.ID, Port1.ID],
+        ports=[Port0.ID, Port1.ID],
         can_move=False,
     )
+    R1_1 = prodsys.resource_data.ResourceData( #resource without ports: standart port are generated below
+        ID="R1_1",
+        description="Resource 1_1",
+        capacity=2,
+        location=[0, 50.0],
+        controller=prodsys.resource_data.ControllerEnum.PipelineController,
+        control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
+        process_ids=["P1", "P2"],
+        can_move=False,
+    )
+    #Transport Resource like AGV
     TR1 = prodsys.resource_data.ResourceData(
         ID="TR1",
         description="Transport Resource 1",
@@ -149,7 +129,6 @@ def main():
         control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
         process_ids=["TP1"],
     )
-
 
     # Product
     Product_1 = prodsys.product_data.ProductData(
@@ -228,10 +207,10 @@ def main():
     
     # Assemble the production system
     production_system_instance = ProductionSystemData(
-        time_model_data=[ftmp1, ftmp2, ftmp3, ftmp4, ftm1, ftm2, md1],
-        process_data=[P1, P2, P3, P4, TP1],
-        port_data=[ST1, Port1],
-        resource_data=[R1, TR1],
+        time_model_data=[ftmp1, ftmp2, ftm1, md1],
+        process_data=[P1, P2, TP1],
+        port_data=[Port0, Port1],
+        resource_data=[R1, TR1, R1_1],
         product_data=[Product_1],
         source_data=[S1],
         sink_data=[K1],
@@ -240,7 +219,7 @@ def main():
         node_data=[]
     )
     add_default_queues_to_production_system(production_system_instance, reset=False)
-
+    print(node_link_generation.get_all_locations(production_system_instance))
 
     #Generation of Link Transport Processes section
     #first generate Nodes:
