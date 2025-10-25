@@ -1,7 +1,15 @@
 import prodsys
 from prodsys.models import production_system_data, resource_data, sink_data, source_data, node_data, port_data
+from prodsys.util.node_link_generation.table_configuration import TableConfiguration
+from prodsys.util.node_link_generation.table_configuration import StationConfiguration
+from prodsys.util.node_link_generation.table_configuration import Visualization
+from prodsys.util.node_link_generation.table_configuration_nodes_edges import NodeEdgeGenerator
+from prodsys.util.node_link_generation.edge_directionality import EdgeDirectionality 
+from prodsys.util.node_link_generation.configuration import Configuration 
+#import a_star_algorithm 
+import networkx as nx
+import prodsys.util.node_link_generation.format_to_networkx as format_to_networkx
 from typing import List, Any, Set, Optional, Tuple, Union
-import json
 
 
 def get_all_locations(productionsystem: production_system_data):
@@ -104,22 +112,13 @@ def mainGenerate(productionsystem: production_system_data):
     dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
     # Set the dimensions of the layout.
     config = Configuration()
-    config.set(Configuration.Dim_X, dim_x)
-    config.set(Configuration.Dim_Y, dim_y)
-    
+    config.set(Configuration.Dim_X, int(dim_x))
+    config.set(Configuration.Dim_Y, int(dim_y))
+    table_config = TableConfiguration(config)
+    station_config = StationConfiguration(config, table_config)
+
     # Add tables and define corner nodes of the table configuration.
-    from prodsys.util.node_link_generation.table_configuration import TableConfiguration
-    from prodsys.util.node_link_generation.table_configuration import StationConfiguration
-    from prodsys.util.node_link_generation.table_configuration import Visualization
-    from prodsys.util.node_link_generation.table_configuration_nodes_edges import NodeEdgeGenerator
-    from prodsys.util.node_link_generation.edge_directionality import EdgeDirectionality # type: ignore
-    import a_star_algorithm # type: ignore
-    import networkx as nx
-    import format_to_networkx # type: ignore
-
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
-
-    config = Configuration()
     table_config = TableConfiguration(config)
     station_config = StationConfiguration(config, table_config)
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
@@ -127,15 +126,14 @@ def mainGenerate(productionsystem: production_system_data):
     visualization = Visualization(config, table_config, station_config, node_edge_generator)
     networkx_formater = format_to_networkx.NetworkXGraphGenerator(node_edge_generator.graph, station_config)
     #vda5050_formater = format_to_vda5050.VDA5050JSONGenerator(node_edge_generator, station_config) #optionally allow 
-    a_star = a_star_algorithm.AStar(table_config, station_config, node_edge_generator, visualization)
-    for table in tables:
-        table_config.add_table(table['corner_nodes'], visualization)
+    #a_star = a_star_algorithm.AStar(table_config, station_config, node_edge_generator, visualization)
+    table_config.add_table(tables['corner_nodes'], visualization)
     table_config.generate_table_configuration()
 
     # Add stations and update table configuration considering the stations.
     station_config.add_stations(stations, visualization)
     table_config.table_configuration_with_stations(station_config)
-    #visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
+    visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
 
     # Define the medial axis of the table configuration.    MARKER: Optional
     #table_config.define_medial_axis()
@@ -156,12 +154,11 @@ def mainGenerate(productionsystem: production_system_data):
     # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
-    min_node_distance = max(0.1*tablesize, 20) #Todo: make min and max distance adapt automatically dependent on the layout size
-    max_node_distance = 0.2*tablesize
-    node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance ,
-                                                    min_node_distance=min_node_distance, add_edges=add_edges)
+    min_node_distance = 1000#max(0.1*tablesize, 20) #TODO: make min and max distance adapt automatically dependent on the layout size #TODO: sinnvole adaptive distances
+    max_node_distance = 1000#0.2*tablesize
+    node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
-
+####
     # Define random nodes in the free space of the table configuration.
     #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)    #TODO: choose a grid generation method that is defined here
     node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
@@ -178,7 +175,7 @@ def mainGenerate(productionsystem: production_system_data):
     exterior_direction = 'ccw'
     edge_directionality.define_boundary_edges_directionality(exterior_direction=exterior_direction, narrow_sections_unidirectional=False)
     node_edge_generator.graph.update_graph_connections()
-    visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
+    #visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
 
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
@@ -202,13 +199,12 @@ def mainGenerate(productionsystem: production_system_data):
     new_nodes = []
     node_blocks = G.nodes
     for id, block in enumerate(node_blocks):
-        pos = block.get("pos")
+        pos = G.nodes[block].get("pos")
         if len(pos) >= 2:
             x = pos[0] /10 #transform back
             y = pos[1] /10
         else:
-            x, y = 0.0, 0.0
-            # or throw error?
+            raise ValueError(f"Node {block} position is not two-dimensional: {pos}")
 
         key = (x, y)
         matched_id = None
@@ -221,10 +217,10 @@ def mainGenerate(productionsystem: production_system_data):
 
         # If no match, fall back to nx node id
         if not matched_id:
-            matched_id = id + 1
+            matched_id = f"node{block}"
             new_nodes.append([ matched_id , [x, y]])
         else:
-            nx_id_to_resource_id[id] = matched_id
+            nx_id_to_resource_id[block] = matched_id
 
     new_links = []
     edge_blocks = G.edges
@@ -234,64 +230,11 @@ def mainGenerate(productionsystem: production_system_data):
             src = nx_id_to_resource_id.get(src_id, f"node{src_id}")
             tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
             new_links.append([src, tgt])
-    #TODO: Replace node_data in the ProdSys
+    # Replace node_data in the Prodocutionsystem
     for node in new_nodes:
-        productionsystem.node_data.append(node_data(ID=node[0], location=node[1]))
+        productionsystem.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
 
-    #TODO: Replace links inside LinkTransportProcesses
+    # Replace links inside LinkTransportProcesses in the Productionsystem
     for LinkTransportProcess in productionsystem.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
-            LinkTransportProcess.links.append(new_links)
-
-
-#Classes from Marvin Ruedt
-
-class Configuration: # Singleton class to store configuration parameters for node and link generation.
-    _instance = None
-
-    Boundary_Distance = 'boundary-distance'
-    Min_Node_Distance = 'min-node-distance'
-    Min_Node_Edge_Distance = 'min-node-edge-distance'
-    Trajectory_Node_Distance = 'trajectory-node-distance'
-    Buffer_Node_Distance = 'buffer-node-distance'
-    Dim_X = 'dim-x'
-    Dim_Y = 'dim-y'
-    Dim_Table_X = 'dim-table-x'
-    Dim_Table_Y = 'dim-table-y'
-    Blocked_Space_Value = 'blocked-space-value'
-
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(Configuration, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self, dim_x=None, dim_y=None):
-        """
-        Only one instance of this class is allowed. The constructor is called only once.
-        """
-        self.current_config = {
-            # All distances should be integer values in cm.
-            Configuration.Boundary_Distance: 16,  # Minimal distance between the boundary and the table configuration.
-                                                  # 16 = A2NTS rotation radius / 2.
-            Configuration.Min_Node_Distance: 32,  # Minimal distance between two nodes.
-                                                  # 32 = A2NTS rotation radius.
-            Configuration.Min_Node_Edge_Distance: 24,  # Minimal distance between a node and an edge.
-                                                       # 24 = A2NTS rotation radius + A2NTS width / 2.
-            Configuration.Trajectory_Node_Distance: 16,  # Distance between station boundary and station trajectory node.
-                                                         # Distance has no physical meaning. Must be equal or larger than Boundary_Distance.
-            Configuration.Buffer_Node_Distance: 32,  # Minimal distance between a buffer node and a station node.
-            Configuration.Dim_Table_X: 100,  # Dimension of the tables in x direction (when angle is 0 degrees).
-            Configuration.Dim_Table_Y: 50,  # Dimension of the tables in y direction (when angle is 0 degrees).
-            Configuration.Dim_X: dim_x,  # Dimension of the usable area in x direction. Depends on the production layout.
-            Configuration.Dim_Y: dim_y,  # Dimension of the usable area in y direction. Depends on the production layout.
-            Configuration.Blocked_Space_Value: 0.55  # Value is used or the visualization.
-        }
-
-    def get(self, entry):
-        return self.current_config[entry]
-
-    def set(self, entry, value):
-        if entry in self.current_config.keys():
-            self.current_config[entry] = value
-        else:
-            raise ValueError(f"Invalid entry: {entry}")
+            LinkTransportProcess.links = new_links

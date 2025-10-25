@@ -87,14 +87,14 @@ def main():
         ID="Port0",
         description="Queue 0",
         capacity=0,
-        location=[-10, -10],
+        location=[-1, -1],
         interface_type=prodsys.port_data.PortInterfaceType.INPUT
     )
     Port1 = prodsys.port_data.QueueData(
         ID="Port1",
         description="Queue 1",
         capacity=0,
-        location=[10, 10],
+        location=[1, 1],
         interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
     )
     # Resource
@@ -113,7 +113,7 @@ def main():
         ID="R1_1",
         description="Resource 1_1",
         capacity=2,
-        location=[0, 50.0],
+        location=[0, 5.0],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],
@@ -124,7 +124,7 @@ def main():
         ID="TR1",
         description="Transport Resource 1",
         capacity=1,
-        location=[10.0, 10.0],
+        location=[1.0, 1.0],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
         process_ids=["TP1"],
@@ -143,7 +143,7 @@ def main():
     S1 = prodsys.source_data.SourceData(
         ID="S1",
         description="Source 1",
-        location=[-100.0, -100.0],
+        location=[-10.0, -10.0],
         product_type="Product_1",
         time_model_id="ftm1",
         routing_heuristic=prodsys.source_data.RoutingHeuristic.shortest_queue
@@ -153,7 +153,7 @@ def main():
     K1 = prodsys.sink_data.SinkData(
         ID="K1",
         description="Sink 1",
-        location=[100.0, 100.0],
+        location=[10.0, 10.0],
         product_type="Product_1",
     )
 
@@ -220,17 +220,10 @@ def main():
     )
     add_default_queues_to_production_system(production_system_instance, reset=False)
     node_link_generation.mainGenerate(production_system_instance)
-    #Generation of Link Transport Processes section
-    #first generate Nodes:
     
-    #add links to the Link Transport Process
-    #production_system_instance.process_data
-
-    #production_system_instance.validate_configuration()
-    
-    #runner = prodsys.runner.Runner(production_system_data=production_system_instance)
-    #runner.initialize_simulation()
-    #runner.run(100)
+    runner = prodsys.runner.Runner(production_system_data=production_system_instance)
+    runner.initialize_simulation()
+    runner.run(100)
     #runner.print_results()
     #runner.plot_results()
     #runner.save_results_as_csv() 

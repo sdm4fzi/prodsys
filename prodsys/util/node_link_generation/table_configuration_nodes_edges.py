@@ -3,8 +3,8 @@ import random
 import numpy as np
 import shapely
 from scipy.spatial import Delaunay
-from configuration import Configuration
-from graph import Graph
+from prodsys.util.node_link_generation.configuration import Configuration 
+from prodsys.util.node_link_generation.graph import Graph
 
 
 class NodeEdgeGenerator:
