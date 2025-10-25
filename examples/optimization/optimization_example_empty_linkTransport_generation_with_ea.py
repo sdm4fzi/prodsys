@@ -219,8 +219,7 @@ def main():
         node_data=[]
     )
     add_default_queues_to_production_system(production_system_instance, reset=False)
-    print(node_link_generation.get_all_locations(production_system_instance))
-
+    node_link_generation.mainGenerate(production_system_instance)
     #Generation of Link Transport Processes section
     #first generate Nodes:
     

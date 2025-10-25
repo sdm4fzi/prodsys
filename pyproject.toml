@@ -25,6 +25,9 @@ dependencies = [
     "tqdm>=4.67.1",
     "matplotlib (>=3.7.2,<4.0.0)",
     "scikit-image (>=0.25.2,<0.26.0)",
+    "shapely (==2.0.2)",
+    "pygeoops (==0.3.0)",
+    "numpy (<2)",
 ]
 
 [project.optional-dependencies]

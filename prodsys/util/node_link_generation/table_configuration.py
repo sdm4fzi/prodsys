@@ -7,7 +7,7 @@ import matplotlib.patches as mpatches
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import shapely
 import pygeoops
-from configuration import Configuration
+from prodsys.util.node_link_generation.node_link_generation import Configuration
 
 
 """

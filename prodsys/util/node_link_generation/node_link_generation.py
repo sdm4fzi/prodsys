@@ -6,7 +6,7 @@ import json
 
 def get_all_locations(productionsystem: production_system_data):
     locations = []
-    for node in productionsystem.port_data: #(productionsystem.resource_data + productionsystem.source_data + productionsystem.sink_data + productionsystem.port_data):
+    for node in productionsystem.port_data: #get all port locations
         locations.append([node.ID, [x*10 for x in node.location]]) #transform necessary because node link generation works in cm
     return locations
 
@@ -52,9 +52,7 @@ def generate_stations_json(stations: list) -> None:
             }
         new_data["physical_objects"].append(station_data)
 
-    # Save all stations in a single JSON file.
-    with open('NodeEdgeNetworkGeneration/input_files/stations.json', 'w') as f:
-        json.dump(new_data, f, indent=4)
+    return new_data
 
 def find_borders(productionsystem: production_system_data):
     #finds the area within all stations are located
@@ -62,28 +60,30 @@ def find_borders(productionsystem: production_system_data):
     #TODO: consider 3d coordinates
 
     stations = get_all_locations(productionsystem)
-    max_x, max_y, = stations[0, 0]
-    min_x, min_y = stations[0, 0]
+    max_x, max_y, = stations[0][1]
+    min_x, min_y = stations[0][1]
     for station in stations: #get the max x and y coordinates of the stations to determine the size of the table layout
-        if station[0] > max_x:
-            max_x = station[0] 
-        if station[1] > max_y:
-            max_y = station[1]
-        if station[0] < min_x:
-            min_x = station[0]
-        if station[1] < min_y:
-            min_y = station[1]
-    tables = [[0,0,0]]
+        if station[1][0] > max_x:
+            max_x = station[1][0]
+        if station[1][1] > max_y:
+            max_y = station[1][1]
+        if station[1][0] < min_x:
+            min_x = station[1][0]
+        if station[1][1] < min_y:
+            min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
 def mainGenerate(productionsystem: production_system_data):
-    
-    min_x, min_y, max_x, max_y = find_borders(productionsystem)*10 #transform necessary because node link generation works in cm
+    min_x, min_y, max_x, max_y = find_borders(productionsystem)
+    min_x *= 10
+    min_y *= 10
+    max_x *= 10
+    max_y *= 10 #transform necessary because node link generation works in cm
     tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
     tableYMax=max(1.1*max_y,50+max_y)
     tableXMin=min(1.1*min_x,min_x-50)
     tableYMin=min(1.1*min_y,min_y-50)
-    table_data = {
+    tables = {
         "corner_nodes": [
             {"pose": [tableXMin, tableYMin, 0]}, 
             {"pose": [tableXMax, tableYMin, 0]},
@@ -94,16 +94,11 @@ def mainGenerate(productionsystem: production_system_data):
             {"pose": [((tableXMin + tableXMax)/2), ((tableYMin + tableYMax)/2), 0]}
         ]
     }
-    with open('/tables.json', 'w') as f:
-        json.dump(table_data, f, indent=4) #MARKER Brauchts umbedingt diese json?
-    generate_stations_json([tuple(item[1]) for item in get_all_locations(productionsystem)])
-
-    # Load the tables from the JSON file.
-    with open('NodeEdgeNetworkGeneration/input_files/tables.json', 'r') as f:  # open('NodeEdgeNetworkGeneration/input_files/track_modules_layout_rotated.json', 'r') as f:
-        tables = json.load(f)
-    # Load the stations from the JSON file.
-    with open('NodeEdgeNetworkGeneration/input_files/stations.json', 'r') as f:  
-        stations = json.load(f)
+    items = [
+        [loc[1][0]*10] + [loc[1][0]*10] + [0] + [0] + ["U"]
+        for loc in get_all_locations(productionsystem)
+    ]
+    stations = generate_stations_json(items)
 
     # Get the dimensions of the production layout.
     dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
@@ -113,11 +108,11 @@ def mainGenerate(productionsystem: production_system_data):
     config.set(Configuration.Dim_Y, dim_y)
     
     # Add tables and define corner nodes of the table configuration.
-    from table_configuration import TableConfiguration
-    from table_configuration import StationConfiguration
-    from table_configuration import Visualization
-    from table_configuration_nodes_edges import NodeEdgeGenerator
-    from edge_directionality import EdgeDirectionality # type: ignore
+    from prodsys.util.node_link_generation.table_configuration import TableConfiguration
+    from prodsys.util.node_link_generation.table_configuration import StationConfiguration
+    from prodsys.util.node_link_generation.table_configuration import Visualization
+    from prodsys.util.node_link_generation.table_configuration_nodes_edges import NodeEdgeGenerator
+    from prodsys.util.node_link_generation.edge_directionality import EdgeDirectionality # type: ignore
     import a_star_algorithm # type: ignore
     import networkx as nx
     import format_to_networkx # type: ignore
@@ -227,8 +222,8 @@ def mainGenerate(productionsystem: production_system_data):
         # If no match, fall back to nx node id
         if not matched_id:
             matched_id = id + 1
-        if matched_id:
             new_nodes.append([ matched_id , [x, y]])
+        else:
             nx_id_to_resource_id[id] = matched_id
 
     new_links = []
@@ -240,14 +235,13 @@ def mainGenerate(productionsystem: production_system_data):
             tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
             new_links.append([src, tgt])
     #TODO: Replace node_data in the ProdSys
-    for LinkTransportProcess in productionsystem.process_data:
-        if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
-            LinkTransportProcess.links.append()
+    for node in new_nodes:
+        productionsystem.node_data.append(node_data(ID=node[0], location=node[1]))
 
     #TODO: Replace links inside LinkTransportProcesses
-    for process in productionsystem.processes_data_module:
-        if process.type == "LinkTransportProcesses":
-            process.links = new_links
+    for LinkTransportProcess in productionsystem.process_data:
+        if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
+            LinkTransportProcess.links.append(new_links)
 
 
 #Classes from Marvin Ruedt
