@@ -148,7 +148,7 @@ def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
         return False
 
     positions = [
-        machine.input_location
+        machine.location
         for machine in adapters.get_production_resources(configuration)
     ]
     possible_positions = configuration.scenario_data.options.positions

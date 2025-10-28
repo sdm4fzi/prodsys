@@ -54,11 +54,10 @@ def get_production_resources(
     Returns:
         List[resource_data_module.ResourceData]: List of all machines in the adapter
     """
-    # FIXME: updated bugs here and validation and so on for optimization.
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.ResourceControlPolicy)
+        if not getattr(resource, 'can_move', False)
     ]
 
 
@@ -77,7 +76,7 @@ def get_transport_resources(
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.ResourceData)
+        if getattr(resource, 'can_move', False)
     ]
 
 
