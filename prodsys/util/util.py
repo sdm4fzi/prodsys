@@ -84,7 +84,7 @@ def read_initial_solutions(
         if ".json" not in file_path or file_path == "optimization_results.json":
             continue
         adapter = prodsys.models.production_system_data.ProductionSystemData()
-        adapter.read_data(join(folder_path, file_path))
+        adapter.read(join(folder_path, file_path))
         adapter.scenario_data = base_configuration.scenario_data.model_copy()
         if not adapter.ID:
             adapter.ID = f"initial_solution_{counter}"
