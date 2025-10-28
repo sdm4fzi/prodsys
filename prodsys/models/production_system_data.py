@@ -128,7 +128,7 @@ def get_default_queue_for_resource(
             description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
             location=resource.location,
-            interface_type=port_data.PortInterfaceType.INPUT,
+            interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
             port_type=port_data.PortType.QUEUE,
         )
     return queue
