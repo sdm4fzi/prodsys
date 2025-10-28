@@ -58,7 +58,7 @@ def get_production_resources(
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.ResourceControlPolicy)
+        #if isinstance(resource, resource_data_module.ResourceControlPolicy)
     ]
 
 
@@ -1104,6 +1104,7 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
 
 
 def get_location_of_locatable(
+    adapter: ProductionSystemData,
     locatable: Union[
         resource_data_module.ResourceData,
         source_data_module.SourceData,
@@ -1112,16 +1113,15 @@ def get_location_of_locatable(
     ],
 ) -> List[List[float]]:
     locations = [locatable.location]
-    if (
-        hasattr(locatable, "input_location")
-        and locatable.input_location != locatable.location
-    ):
-        locations.append(locatable.input_location)
-    if (
-        hasattr(locatable, "output_location")
-        and locatable.output_location != locatable.location
-    ):
-        locations.append(locatable.output_location)
+    if hasattr(locatable, "ports") and locatable.ports:
+        for port_ID in locatable.ports:
+            port = next((portx for portx in adapter.port_data if portx.ID == port_ID), None)
+            if port.location != locatable.location:
+                result = get_location_of_locatable(adapter, port)
+                if isinstance(result, list):
+                    locations.extend(result)
+                else:
+                    locations.append(result)
     return locations
 
 
@@ -1137,14 +1137,14 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
     """
     machine_locations = []
     for production_resource in get_production_resources(adapter):
-        machine_locations += get_location_of_locatable(production_resource)
+        machine_locations += get_location_of_locatable(adapter, production_resource)
     source_locations = []
     for source in adapter.source_data:
-        source_locations += get_location_of_locatable(source)
+        source_locations += get_location_of_locatable(adapter, source)
     source_locations = remove_duplicate_locations(source_locations)
     sink_locations = []
     for sink in adapter.sink_data:
-        sink_locations += get_location_of_locatable(sink)
+        sink_locations += get_location_of_locatable(adapter, sink)
     sink_locations = remove_duplicate_locations(
         [sink.location for sink in adapter.sink_data]
     )
@@ -1152,7 +1152,7 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
     for store in adapter.port_data:
         if not isinstance(store, port_data.StoreData):
             continue
-        store_locations += get_location_of_locatable(store)
+        store_locations += get_location_of_locatable(adapter, store)
 
     positions = machine_locations + source_locations + sink_locations + store_locations
     for location in positions:

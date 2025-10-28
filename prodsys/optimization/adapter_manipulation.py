@@ -289,14 +289,11 @@ def update_production_resource_location(                         #MARKER
         new_location[1] - resource.location[1],
     ]
     resource.location = new_location
-    resource.input_location = [
-        resource.input_location[0] + position_delta[0],
-        resource.input_location[1] + position_delta[1],
-    ]
-    resource.output_location = [
-        resource.output_location[0] + position_delta[0],
-        resource.output_location[1] + position_delta[1],
-    ]
+    for port in resource.ports:
+        adapter_object.port_data[port] = [
+            adapter_object.port_data[port].location[0] + position_delta[0],
+            adapter_object.port_data[port].location[1] + position_delta[1],
+        ]
     node_link_generation.mainGenerate(adapter_object)
 
 
@@ -598,13 +595,13 @@ def random_configuration(
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
-    #FIXME: 
-    """if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
+    
+    if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
-    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
+    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations: #FIXME: update to new standard in order to create valid configurations
         get_random_transport_capacity(adapter_object)
     if scenario_data.ReconfigurationEnum.PRIMITIVE_CAPACITY in transformations:
-        get_random_primitive_capacity(adapter_object)
+        get_random_primitive_capacity(adapter_object) #FIXME: update?
     if (
         scenario_data.ReconfigurationEnum.LAYOUT in transformations
         and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations
@@ -617,7 +614,7 @@ def random_configuration(
         get_random_control_policies(adapter_object)
     if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
         get_random_routing_logic(adapter_object)
-    """
+    
     add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
@@ -645,7 +642,7 @@ def get_random_configuration_asserted(
         if adapter_object:
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1000 == 0:
+        if invalid_configuration_counter % 100 == 0:
             logging.info(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )

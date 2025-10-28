@@ -9,14 +9,13 @@ from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyp
 from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
 from prodsys.util.node_link_generation import node_link_generation
 
-prodsys.set_logging("DEBUG")
 
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=0,
         number_of_generations=32,
-        population_size=16,
-        mutation_rate=0.5,
+        population_size=4,
+        mutation_rate=0.4,
         crossover_rate=0.2,
         number_of_seeds=2,
         number_of_processes=12,
@@ -218,7 +217,7 @@ def main():
     )
     add_default_queues_to_production_system(production_system_instance, reset=False)
     node_link_generation.mainGenerate(production_system_instance)
-    
+    prodsys.set_logging("DEBUG")
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()
     runner.run(500)
