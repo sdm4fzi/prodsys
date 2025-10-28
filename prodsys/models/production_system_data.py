@@ -1337,36 +1337,37 @@ def assert_all_links_available(adapter: ProductionSystemData):
 
 def assert_ports_have_locations(adapter: ProductionSystemData):
     """
-    Checks if all ports that are associated with resources, sources, or sinks have locations.
+    Checks if ports associated with resources have locations.
     Ports without locations cannot be used for transport routing.
+    
+    Note: Source and sink ports (SourceQueue, SinkQueue) are excluded from this check
+    as they are logical grouping points that may be shared across multiple sources/sinks.
 
     Args:
         adapter (ProductionSystemAdapter): Adapter containing the production system to validate.
 
     Raises:
-        ValueError: If ports are missing locations.
+        ValueError: If resource ports are missing locations.
     """
-    # Get all port IDs that are referenced by resources, sources, and sinks
-    referenced_port_ids = set()
+    # Only check ports that are referenced by RESOURCES (not sources/sinks)
+    # Sources and sinks use shared SourceQueue/SinkQueue which don't need individual locations
+    resource_port_ids = set()
     for resource in adapter.resource_data:
         if resource.ports:
-            referenced_port_ids.update(resource.ports)
-    for source in adapter.source_data:
-        if source.ports:
-            referenced_port_ids.update(source.ports)
-    for sink in adapter.sink_data:
-        if sink.ports:
-            referenced_port_ids.update(sink.ports)
+            resource_port_ids.update(resource.ports)
     
-    # Check that all referenced ports have locations
+    # Check that all resource ports have locations
     ports_without_locations = []
     for port in adapter.port_data:
-        if port.ID in referenced_port_ids and port.location is None:
+        if port.ID in resource_port_ids and port.location is None:
+            # Skip common shared queues
+            if port.ID in ['SourceQueue', 'SinkQueue']:
+                continue
             ports_without_locations.append(port.ID)
     
     if ports_without_locations:
         raise ValueError(
-            f"The following ports are missing locations (required for transport routing): {ports_without_locations}. "
+            f"The following resource ports are missing locations (required for transport routing): {ports_without_locations}. "
             f"Ports must have locations to enable transport compatibility precomputation. "
             f"Use add_default_queues_to_resources() to automatically set port locations from resource locations."
         )
