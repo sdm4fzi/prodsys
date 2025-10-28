@@ -49,7 +49,7 @@ def main():
         ID="ftm1",
         description="function time model product 1",
         distribution_function=prodsys.time_model_data.FunctionTimeModelEnum.Exponential,
-        location=4.05,
+        location=10.05,
         scale=0.0
     )
     md1 = prodsys.time_model_data.DistanceTimeModelData(
@@ -87,14 +87,14 @@ def main():
         ID="Port0",
         description="Queue 0",
         capacity=0,
-        location=[-1, -1],
+        location=[-10, -10],
         interface_type=prodsys.port_data.PortInterfaceType.INPUT
     )
     Port1 = prodsys.port_data.QueueData(
         ID="Port1",
         description="Queue 1",
         capacity=0,
-        location=[1, 1],
+        location=[10, 10],
         interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
     )
     # Resource
@@ -106,14 +106,14 @@ def main():
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],
-        ports=[Port0.ID, Port1.ID],
+        ports=[Port0.ID, Port1.ID], 
         can_move=False,
     )
     R1_1 = prodsys.resource_data.ResourceData( #resource without ports: standart port are generated below
         ID="R1_1",
         description="Resource 1_1",
         capacity=2,
-        location=[0, 5.0],
+        location=[0, -50.0],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],
@@ -124,10 +124,11 @@ def main():
         ID="TR1",
         description="Transport Resource 1",
         capacity=1,
-        location=[1.0, 1.0],
+        location=[0, 50],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
         process_ids=["TP1"],
+        can_move=True,
     )
 
     # Product
@@ -143,7 +144,7 @@ def main():
     S1 = prodsys.source_data.SourceData(
         ID="S1",
         description="Source 1",
-        location=[-10.0, -10.0],
+        location=[-100.0, -100.0],
         product_type="Product_1",
         time_model_id="ftm1",
         routing_heuristic=prodsys.source_data.RoutingHeuristic.shortest_queue
@@ -153,7 +154,7 @@ def main():
     K1 = prodsys.sink_data.SinkData(
         ID="K1",
         description="Sink 1",
-        location=[10.0, 10.0],
+        location=[100.0, 100.0],
         product_type="Product_1",
     )
 
@@ -223,8 +224,8 @@ def main():
     
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()
-    runner.run(100)
-    #runner.print_results()
+    runner.run(1000)
+    runner.print_results()
     #runner.plot_results()
     #runner.save_results_as_csv() 
 

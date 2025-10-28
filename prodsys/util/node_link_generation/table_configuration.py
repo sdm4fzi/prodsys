@@ -830,7 +830,7 @@ class Visualization:
     def draw_ellipse_to_layer(self, layer_id: str, center: tuple, rad_x: int, rad_y: int, rot: float) -> None:
 
         rr, cc = skimage.draw.ellipse(center[1], center[0], rad_y, rad_x,
-                                      shape=(self.config.get(Configuration.Dim_Y), self.config.get(Configuration.Dim_X)), rotation=-rot)
+                                        shape=(self.config.get(Configuration.Dim_Y), self.config.get(Configuration.Dim_X)), rotation=-rot)
         self.occupancy_matrices[layer_id][rr, cc] = self.config.get(Configuration.Blocked_Space_Value)
 
     def draw_polygon_to_layer(self, layer_id: str, vertices: list, value=1) -> None:
@@ -844,7 +844,7 @@ class Visualization:
         vertices_y = lst[1]
 
         rr, cc = skimage.draw.polygon(vertices_y, vertices_x,
-                                      shape=(self.config.get(Configuration.Dim_Y), self.config.get(Configuration.Dim_X)))
+                                        shape=(self.config.get(Configuration.Dim_Y), self.config.get(Configuration.Dim_X)))
 
         if value == 0:
             factor = 0
@@ -855,9 +855,9 @@ class Visualization:
         pass
 
     def show_table_configuration(self, nodes: bool = False, edges: bool = False, tables: bool = False,
-                                 stations: bool = False, station_nodes: bool = False, table_configuration: bool = False,
-                                 boundary: bool = False, medial_axis: bool = False, zones: bool = False,
-                                 layer_ids: list = None, block: bool = True) -> None:
+                                stations: bool = False, station_nodes: bool = False, table_configuration: bool = False,
+                                boundary: bool = False, medial_axis: bool = False, zones: bool = False,
+                                layer_ids: list = None, block: bool = True) -> None:
         """
         Function shows the table configuration.
         """
@@ -870,7 +870,7 @@ class Visualization:
                     x, y = zip(*table.table_corner_nodes)
                     # plt.scatter(x, y, c="green", marker=".", label="Module")
                     modules,  = plt.plot([x[0], x[1], x[2], x[3], x[0]], [y[0], y[1], y[2], y[3], y[0]],
-                                                         linewidth=1.5, c="green", linestyle="-", label="Module")
+                                                        linewidth=1.5, c="green", linestyle="-", label="Module")
                 else:
                     x, y = zip(*table.table_corner_nodes)
                     # plt.scatter(x, y, c="green", marker=".")

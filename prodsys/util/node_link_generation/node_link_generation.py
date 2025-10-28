@@ -14,8 +14,8 @@ from typing import List, Any, Set, Optional, Tuple, Union
 
 def get_all_locations(productionsystem: production_system_data):
     locations = []
-    for node in productionsystem.port_data: #get all port locations
-        locations.append([node.ID, [x*10 for x in node.location]]) #transform necessary because node link generation works in cm
+    for node in list(productionsystem.resource_data) + list(productionsystem.source_data) + list(productionsystem.sink_data): #list(productionsystem.port_data) + list(productionsystem.resource_data): #get all port locations
+        locations.append([node.ID, [x for x in node.location]]) #transform necessary because node link generation works in cm
     return locations
 
 def generate_stations_json(stations: list) -> None:
@@ -83,10 +83,6 @@ def find_borders(productionsystem: production_system_data):
 
 def mainGenerate(productionsystem: production_system_data):
     min_x, min_y, max_x, max_y = find_borders(productionsystem)
-    min_x *= 10
-    min_y *= 10
-    max_x *= 10
-    max_y *= 10 #transform necessary because node link generation works in cm
     tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
     tableYMax=max(1.1*max_y,50+max_y)
     tableXMin=min(1.1*min_x,min_x-50)
@@ -103,7 +99,7 @@ def mainGenerate(productionsystem: production_system_data):
         ]
     }
     items = [
-        [loc[1][0]*10] + [loc[1][0]*10] + [0] + [0] + ["U"]
+        [loc[1][0]] + [loc[1][1]] + [0] + [0] + ["U"] #Transformation
         for loc in get_all_locations(productionsystem)
     ]
     stations = generate_stations_json(items)
@@ -116,11 +112,8 @@ def mainGenerate(productionsystem: production_system_data):
     config.set(Configuration.Dim_Y, int(dim_y))
     table_config = TableConfiguration(config)
     station_config = StationConfiguration(config, table_config)
-
     # Add tables and define corner nodes of the table configuration.
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
-    table_config = TableConfiguration(config)
-    station_config = StationConfiguration(config, table_config)
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
     edge_directionality = EdgeDirectionality(table_config, node_edge_generator)
     visualization = Visualization(config, table_config, station_config, node_edge_generator)
@@ -133,29 +126,30 @@ def mainGenerate(productionsystem: production_system_data):
     # Add stations and update table configuration considering the stations.
     station_config.add_stations(stations, visualization)
     table_config.table_configuration_with_stations(station_config)
-    visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
+    #visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
 
     # Define the medial axis of the table configuration.    MARKER: Optional
-    #table_config.define_medial_axis()
+    table_config.define_medial_axis()
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=True, station_nodes=True, medial_axis=True)
 
     # Define zones of the table configuration.  MARKER: Optional
-    #table_config.define_zones(layout_nr=1) 
+    table_config.define_zones(layout_nr=1) 
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=False, station_nodes=False, zones=True)
 
     # Define station nodes and edges. Add edges optionally.
     # Variable is defined, so it is consistent with functions called afterwards.
     # Station nodes (and edges) must be added before other nodes are added. Here only trajectory nodes are defined.
     add_edges = False
-    node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False)
+    node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False) #this method is also used in add_outer_nodes_and_edges
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Add nodes (and edges) along the boundary of table configuration considering stations.
     # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
-    min_node_distance = 1000#max(0.1*tablesize, 20) #TODO: make min and max distance adapt automatically dependent on the layout size #TODO: sinnvole adaptive distances
-    max_node_distance = 1000#0.2*tablesize
+    distance=100
+    min_node_distance = distance #max(0.1*tablesize, 20) #TODO: make min and max distance adapt automatically dependent on the layout size #TODO: sinnvole adaptive distances
+    max_node_distance = distance #0.2*tablesize
     node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 ####
@@ -183,42 +177,39 @@ def mainGenerate(productionsystem: production_system_data):
     nodes = {}
     links = []
 
-    all_resources = get_all_locations(productionsystem)
-
+    all_locations = get_all_locations(productionsystem)
     new_nodes = []
     # Build a lookup: location -> list of resources
     location_to_resources = {}
-    for resource in all_resources:
+    for resource in all_locations:
         key = tuple(resource[1])
         location_to_resources.setdefault(key, []).append(resource)
-    location_match_count = {}
 
+    location_match_count = {}
     # Map GML node id (int) to matched resource ID
     nx_id_to_resource_id = {}
-
-    new_nodes = []
+    new_nodes = [] #nodes that where generated and not previously existing in the production system
     node_blocks = G.nodes
-    for id, block in enumerate(node_blocks):
+    for block in node_blocks:
         pos = G.nodes[block].get("pos")
         if len(pos) >= 2:
-            x = pos[0] /10 #transform back
-            y = pos[1] /10
+            x = pos[0] 
+            y = pos[1] 
         else:
             raise ValueError(f"Node {block} position is not two-dimensional: {pos}")
 
-        key = (x, y)
         matched_id = None
-        if key in location_to_resources:
-            count = location_match_count.get(key, 0)
-            resources = location_to_resources[key]
+        if pos in location_to_resources:
+            count = location_match_count.get(pos, 0)
+            resources = location_to_resources[pos]
             if count < len(resources):
                 matched_id = resources[count][0]
-                location_match_count[key] = count + 1
+                location_match_count[pos] = count + 1
 
-        # If no match, fall back to nx node id
+        # If no match, fall back to nx node id and add to new nodes
         if not matched_id:
             matched_id = f"node{block}"
-            new_nodes.append([ matched_id , [x, y]])
+            new_nodes.append([matched_id, [x, y]])
         else:
             nx_id_to_resource_id[block] = matched_id
 

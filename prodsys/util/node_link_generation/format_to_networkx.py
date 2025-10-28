@@ -38,7 +38,6 @@ class NetworkXGraphGenerator:
             self.G.add_node(node.node_id, pos=node.position, type=node.node_type, orientation=node_orientation)
             self.DiG.add_node(node.node_id, pos=node.position, type=node.node_type, orientation=node_orientation)
 
-        print(self.graph.nodes[1].position)
         # Add edges to the graph.
         for edge_index, edge in enumerate(self.graph.edges):
             edge.edge_id = edge_index + 1

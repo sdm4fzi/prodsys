@@ -36,7 +36,7 @@ class NodeEdgeGenerator:
                     station_nodes.append(point)
                     node_types.append('trajectory')
 
-            # Station buffer nodes.
+            # Station buffer nodes. (not used in prodsys)
             """if buffer_nodes:
                 for buffer_node in station.station_buffer_nodes:
                     point = shapely.Point(buffer_node)
@@ -121,7 +121,7 @@ class NodeEdgeGenerator:
                 node_distances = point.distance(self.graph.node_points)
                 too_close_node_indices = np.where(node_distances < self.required_node_clearance)[0]
 
-                # Iterate through too close nodes and check if it is a buffer node.
+                # Iterate through too close nodes and check if it is a buffer node. #TODO: Adapt this to prodsys, as it might result in errors
                 for too_close_node_index in too_close_node_indices:
                     if self.graph.nodes[too_close_node_index].node_type == 'buffer':
                         if corner_type == 'convex' and replace_buffer and len(too_close_node_indices) == 1 \
@@ -463,7 +463,7 @@ class NodeEdgeGenerator:
             self.connect_station_trajectory_to_station_buffer_nodes()
 
     def add_outer_nodes_and_edges(self, edge_directionality, add_nodes_between=False, max_node_distance=64, min_node_distance=32,
-                                  add_edges=False) -> None:
+                                    add_edges=False) -> None:
         """
         Function adds nodes along the outer (exterior and interior) edges of the table configuration to the graph.
         Corner nodes of the table configuration are the basis nodes. Station nodes must be added before.
