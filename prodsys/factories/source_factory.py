@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from prodsys.simulation import sim, source
 from prodsys.simulation import router as router_module
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import SourceData
+from prodsys.models import performance_data
 
 
 if TYPE_CHECKING:
@@ -40,6 +41,8 @@ class SourceFactory:
         resource_factory: resource_factory.ResourceFactory,
         primitive_factory: primitive_factory.PrimitiveFactory,
         sink_factory: sink_factory.SinkFactory,
+        conwip: Optional[int] = None,
+        schedule: Optional[List[performance_data.Event]] = None,
     ):
         self.env = env
         self.product_factory = product_factory
@@ -48,6 +51,8 @@ class SourceFactory:
         self.resource_factory = resource_factory
         self.primitive_factory = primitive_factory
         self.sink_factory = sink_factory
+        self.conwip = conwip
+        self.schedule = schedule
 
         self.sources: Dict[str, source.Source] = {}
 
@@ -76,6 +81,8 @@ class SourceFactory:
             product_data=product_data_of_source,
             product_factory=self.product_factory,
             time_model=time_model,
+            conwip=self.conwip,
+            schedule=self.schedule,
         )
         self.add_ports_to_source(source_object, source_data.ports)
         self.sources[source_data.ID] = source_object

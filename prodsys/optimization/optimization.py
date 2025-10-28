@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional, Tuple, Union
+import logging
 from prodsys import adapters, runner
 from prodsys.models.production_system_data import (
     assert_no_redudant_locations,
@@ -152,7 +153,8 @@ def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
         for machine in adapters.get_production_resources(configuration)
     ]
     possible_positions = configuration.scenario_data.options.positions
-    if any(position not in possible_positions for position in positions):
+    # If no positions are specified, any position is valid
+    if possible_positions and any(position not in possible_positions for position in positions):
         return False
     return True
 
@@ -190,25 +192,32 @@ def check_valid_configuration(
         bool: True if the configuration is valid, False otherwise.
     """
     if not valid_num_machines(configuration):
+        logging.debug("Failed valid_num_machines")
         return False
     if not valid_transport_capacity(configuration):
+        logging.debug("Failed valid_transport_capacity")
         return False
     if not valid_num_process_modules(configuration):
+        logging.debug("Failed valid_num_process_modules")
         return False
     try:
         # assert_required_primitives_available(configuration)
         # FIXME: this has to be resolved by asserting dependencies and primitives
         pass
     except ValueError as e:
+        logging.debug(f"Failed assert_required_primitives_available: {e}")
         return False
     try:
         assert_required_processes_in_resources_available(configuration)
     except ValueError as e:
+        logging.debug(f"Failed assert_required_processes_in_resources_available: {e}")
         return False
     if not valid_positions(configuration):
+        logging.debug("Failed valid_positions")
         # TODO: raise error if the positions cannot be changed (no production capacity or layout in transformations of scenario)
         return False
     if not valid_reconfiguration_cost(configuration, base_configuration):
+        logging.debug("Failed valid_reconfiguration_cost")
         return False
     return True
 

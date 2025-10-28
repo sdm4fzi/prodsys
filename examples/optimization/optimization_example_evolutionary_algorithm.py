@@ -39,6 +39,7 @@ def main():
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=True,
+        smart_initial_solutions=True,
         # initial_solutions=[base_configuration]
     )
     # optimizer = InMemoryOptimizer(

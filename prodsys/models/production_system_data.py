@@ -18,7 +18,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import port_data, production_system_data
+from prodsys.models import port_data, production_system_data, performance_data
 from prodsys.models import (
     dependency_data,
     node_data,
@@ -333,6 +333,8 @@ class ProductionSystemData(BaseModel):
         sink_data (List[sink_data_module.SinkData], optional): List of sinks in the production system. Defaults to [].
         source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
+        schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
+        conwip_number (Optional[int], optional): Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
@@ -352,6 +354,8 @@ class ProductionSystemData(BaseModel):
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
     depdendency_data: Optional[List[dependency_data_module.DEPENDENCY_TYPES]] = []
     primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
+    schedule: Optional[List[performance_data.Event]] = None
+    conwip_number: Optional[int] = None
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
@@ -1082,6 +1086,51 @@ class ProductionSystemData(BaseModel):
                 )
         return sources
 
+    @field_validator("schedule")
+    def check_schedule(
+        cls, schedule: Optional[List[performance_data.Event]], info: ValidationInfo
+    ):
+        if schedule is None:
+            return schedule
+        event_resources_ids = set()
+        event_process_ids = set()
+        event_product_ids = set()
+        schedule_to_consider = []
+        for event in schedule:
+            if not isinstance(event, performance_data.Event):
+                raise ValueError(
+                    f"The event {event} is not a valid event of {schedule}."
+                )
+            event_resources_ids.add(event.resource)
+            product_id = "_".join(event.product.split("_")[:-1])
+            event_product_ids.add(product_id)
+            if event.process:
+                event_process_ids.add(event.process)
+            if not event.activity == "start state":
+                continue
+            schedule_to_consider.append(event)
+
+        values = info.data
+        resources_ids = get_set_of_IDs(values["resource_data"])
+        processes_ids = get_set_of_IDs(values["process_data"])
+        products_ids = get_set_of_IDs(values["product_data"])
+
+        if event_resources_ids - resources_ids != set():
+            raise ValueError(
+                f"The resources {event_resources_ids - resources_ids} of the schedule are not valid resources of {resources_ids}."
+            )
+        if event_process_ids - processes_ids != set():
+            raise ValueError(
+                f"The processes {event_process_ids - processes_ids} of the schedule are not valid processes of {processes_ids}."
+            )
+        
+        if event_product_ids - products_ids != set():
+            raise ValueError(
+                f"The products {event_product_ids - products_ids} of the schedule are not valid products of {products_ids}."
+            )
+
+        return schedule_to_consider
+
     def read_scenario(self, scenario_file_path: str):
         self.scenario_data = scenario_data_module.ScenarioData.parse_file(
             scenario_file_path
@@ -1438,6 +1487,277 @@ def get_contained_required_capability_processes_from_compound_processes(
     return processes
 
 
+def get_required_process_ids(
+    configuration: ProductionSystemData,
+) -> List[str]:
+    """
+    Returns all required process IDs that are used in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List[str]: List of required process IDs
+    """
+    required = util.flatten(
+        [
+            product.processes
+            for product in configuration.product_data
+            if not isinstance(product.processes, dict)
+        ]
+    )
+    required_dict_processes = util.flatten(
+        [
+            list(product.processes.keys())
+            for product in configuration.product_data
+            if isinstance(product.processes, dict)
+        ]
+    )
+    required_transport_processes = [product.transport_process for product in configuration.product_data]
+    return list(set(list(required) + list(required_dict_processes) + required_transport_processes))
+
+
+def get_available_process_ids(
+    configuration: ProductionSystemData,
+) -> List[str]:
+    """
+    Returns all available process IDs that are used in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List[str]: List of available process IDs
+    """
+    return list(
+        set(
+            util.flatten(
+                [resource.process_ids for resource in configuration.resource_data]
+            )
+        )
+    )
+
+
+def get_required_production_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all required production processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of required production processes
+    """
+    required = get_required_process_ids(configuration)
+    required_production_processes = get_production_processes_from_ids(
+        configuration, required
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    for compound_process in compound_processes:
+        if not all(
+            process_id in all_process_ids for process_id in compound_process.process_ids
+        ):
+            raise ValueError(
+                f"Compound process {compound_process.ID} contains processes that are not available in the data."
+            )
+    required_compound_processes = get_compound_processes_from_ids(
+        configuration, required
+    )
+    required_production_processes += (
+        get_contained_production_processes_from_compound_processes(
+            configuration, required_compound_processes
+        )
+    )
+    return required_production_processes
+
+
+def get_required_transport_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all required transport processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of required transport processes
+    """
+    required = get_required_process_ids(configuration)
+    required_transport_processes = get_transport_processes_from_ids(
+        configuration, required
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    required_compound_processes = get_compound_processes_from_ids(
+        configuration, required
+    )
+    required_transport_processes += (
+        get_contained_transport_processes_from_compound_processes(
+            configuration, required_compound_processes
+        )
+    )
+    return required_transport_processes
+
+
+def get_required_capability_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all required capability processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of required capability processes
+    """
+    required = get_required_process_ids(configuration)
+    required_capability_processes = get_capability_processes_from_ids(
+        configuration, required
+    )
+    required_capability_processes += get_required_capability_processes_from_ids(
+        configuration, required
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    required_compound_processes = get_compound_processes_from_ids(
+        configuration, required
+    )
+    required_capability_processes += (
+        get_contained_capability_processes_from_compound_processes(
+            configuration, required_compound_processes
+        )
+    )
+    required_capability_processes += (
+        get_contained_required_capability_processes_from_compound_processes(
+            configuration, required_compound_processes
+        )
+    )
+    return required_capability_processes
+
+
+def get_available_production_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all available production processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of available production processes
+    """
+    available = get_available_process_ids(configuration)
+    available_production_processes = get_production_processes_from_ids(
+        configuration, available
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    available_compound_processes = get_compound_processes_from_ids(
+        configuration, available
+    )
+    available_production_processes += (
+        get_contained_production_processes_from_compound_processes(
+            configuration, available_compound_processes
+        )
+    )
+    return available_production_processes
+
+
+def get_available_transport_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all available transport processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of available transport processes
+    """
+    available = get_available_process_ids(configuration)
+    available_transport_processes = get_transport_processes_from_ids(
+        configuration, available
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    available_compound_processes = get_compound_processes_from_ids(
+        configuration, available
+    )
+    available_transport_processes += (
+        get_contained_transport_processes_from_compound_processes(
+            configuration, available_compound_processes
+        )
+    )
+    return available_transport_processes
+
+
+def get_available_capability_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all available capability processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of available capability processes
+    """
+    available = get_available_process_ids(configuration)
+    available_capability_processes = get_capability_processes_from_ids(
+        configuration, available
+    )
+    all_process_ids = set([process.ID for process in configuration.process_data])
+    compound_processes = get_compound_processes_from_ids(configuration, all_process_ids)
+    available_compound_processes = get_compound_processes_from_ids(
+        configuration, available
+    )
+    available_capability_processes += (
+        get_contained_capability_processes_from_compound_processes(
+            configuration, available_compound_processes
+        )
+    )
+    return available_capability_processes
+
+
+def get_missing_production_processes(
+    available: List[
+        Union[
+            processes_data_module.ProductionProcessData,
+            processes_data_module.ReworkProcessData,
+        ]
+    ],
+    required: List[
+        Union[
+            processes_data_module.ProductionProcessData,
+            processes_data_module.ReworkProcessData,
+        ]
+    ],
+) -> List[Union[processes_data_module.ProductionProcessData, processes_data_module.ReworkProcessData]]:
+    """
+    Returns list of missing production processes.
+
+    Args:
+        available (List[processes_data_module.ProductionProcessData]): production processes that are available in the production system resources
+        required (List[processes_data_module.ProductionProcessData]): production processes that are required from the products
+    
+    Returns:
+        List: List of missing production processes
+    """
+    available_ids = set([process.ID for process in available])
+    required_ids = set([process.ID for process in required])
+    missing = required_ids - available_ids
+    missing_processes = [p for p in required if p.ID in missing]
+    return missing_processes
+
+
 def assert_production_processes_available(
     available: List[
         Union[
@@ -1469,6 +1789,27 @@ def assert_production_processes_available(
         )
 
 
+def get_missing_transport_processes(
+    available: List[processes_data_module.TransportProcessData],
+    required: List[processes_data_module.TransportProcessData],
+) -> List[processes_data_module.TransportProcessData]:
+    """
+    Returns list of missing transport processes.
+
+    Args:
+        available (List[processes_data_module.TransportProcessData]): transport processes that are available in the production system resources
+        required (List[processes_data_module.TransportProcessData]): transport processes that are required from the products
+
+    Returns:
+        List: List of missing transport processes
+    """
+    available_ids = set([process.ID for process in available])
+    required_ids = set([process.ID for process in required])
+    missing = required_ids - available_ids
+    missing_processes = [p for p in required if p.ID in missing]
+    return missing_processes
+
+
 def assert_transport_processes_available(
     available: List[processes_data_module.TransportProcessData],
     required: List[processes_data_module.TransportProcessData],
@@ -1489,6 +1830,31 @@ def assert_transport_processes_available(
         raise ValueError(
             f"Required transport processes {required - available} are not available."
         )
+
+
+def get_missing_capability_processes(
+    available: List[processes_data_module.CapabilityProcessData],
+    required: List[processes_data_module.CapabilityProcessData],
+) -> List[processes_data_module.CapabilityProcessData]:
+    """
+    Returns list of missing capability processes.
+
+    Args:
+        available (List[processes_data_module.CapabilityProcessData]): capability processes that are available in the production system resources
+        required (List[processes_data_module.CapabilityProcessData]): capability processes that are required from the products
+
+    Returns:
+        List: List of missing capability processes
+    """
+    available_ids = set([process.capability for process in available])
+    required_ids = set([process.capability for process in required])
+    missing_capabilities = required_ids - available_ids
+    missing_processes = [
+        p
+        for p in required
+        if p.capability in missing_capabilities
+    ]
+    return missing_processes
 
 
 def assert_capability_processes_available(

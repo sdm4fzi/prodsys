@@ -5,6 +5,7 @@ import random
 from typing import List, Literal
 
 import numpy as np
+import pandas as pd
 import time
 
 from prodsys.models import production_system_data
@@ -324,9 +325,15 @@ class Runner:
         p = self.get_post_processor()
         df_raw = self.event_logger.get_data_as_dataframe()
         events = []
+        # Fill NaN values for optional fields
         df_raw["Expected End Time"] = df_raw["Expected End Time"].fillna(value=-1)
-        df_raw["Target location"] = df_raw["Target location"].fillna(value="")
-        df_raw["Product"] = df_raw["Product"].fillna(value="")
+        df_raw["Origin location"] = df_raw.get("Origin location", pd.Series([None] * len(df_raw))).fillna(value="")
+        df_raw["Target location"] = df_raw.get("Target location", pd.Series([None] * len(df_raw))).fillna(value="")
+        df_raw["Product"] = df_raw.get("Product", pd.Series([None] * len(df_raw))).fillna(value="")
+        df_raw["Empty Transport"] = df_raw.get("Empty Transport", pd.Series([None] * len(df_raw)))
+        df_raw["Requesting Item"] = df_raw.get("Requesting Item", pd.Series([None] * len(df_raw))).fillna(value="")
+        df_raw["Dependency"] = df_raw.get("Dependency", pd.Series([None] * len(df_raw))).fillna(value="")
+        
         for index, row in df_raw.iterrows():
             events.append(
                 performance_data.Event(
@@ -335,9 +342,13 @@ class Runner:
                     state=row["State"],
                     state_type=row["State Type"],
                     activity=row["Activity"],
-                    product=row["Product"],
-                    expected_end_time=row["Expected End Time"],
-                    target_location=row["Target location"],
+                    product=row["Product"] if row["Product"] else None,
+                    expected_end_time=row["Expected End Time"] if row["Expected End Time"] != -1 else None,
+                    origin_location=row["Origin location"] if row["Origin location"] else None,
+                    target_location=row["Target location"] if row["Target location"] else None,
+                    empty_transport=row["Empty Transport"] if pd.notna(row["Empty Transport"]) else None,
+                    requesting_item=row["Requesting Item"] if row["Requesting Item"] else None,
+                    dependency=row["Dependency"] if row["Dependency"] else None,
                 )
             )
         return events
