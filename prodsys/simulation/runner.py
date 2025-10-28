@@ -333,6 +333,7 @@ class Runner:
         df_raw["Empty Transport"] = df_raw.get("Empty Transport", pd.Series([None] * len(df_raw)))
         df_raw["Requesting Item"] = df_raw.get("Requesting Item", pd.Series([None] * len(df_raw))).fillna(value="")
         df_raw["Dependency"] = df_raw.get("Dependency", pd.Series([None] * len(df_raw))).fillna(value="")
+        df_raw["process"] = df_raw.get("process", pd.Series([None] * len(df_raw))).fillna(value="")
         
         for index, row in df_raw.iterrows():
             events.append(
@@ -349,6 +350,7 @@ class Runner:
                     empty_transport=row["Empty Transport"] if pd.notna(row["Empty Transport"]) else None,
                     requesting_item=row["Requesting Item"] if row["Requesting Item"] else None,
                     dependency=row["Dependency"] if row["Dependency"] else None,
+                    process=row["process"] if row["process"] else None,
                 )
             )
         return events
