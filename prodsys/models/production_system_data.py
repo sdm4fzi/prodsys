@@ -47,6 +47,7 @@ def get_production_resources(
 ) -> List[resource_data_module.ResourceData]:
     """
     Returns a list of all machines in the adapter.
+    Resources are considered production resources if they have production or capability processes.
 
     Args:
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
@@ -54,10 +55,20 @@ def get_production_resources(
     Returns:
         List[resource_data_module.ResourceData]: List of all machines in the adapter
     """
+    # Get all production process IDs (flatten tuples for compound processes)
+    production_process_ids = get_possible_production_processes_IDs(adapter)
+    flat_production_ids = set()
+    for p_id in production_process_ids:
+        if isinstance(p_id, tuple):
+            flat_production_ids.update(p_id)
+        else:
+            flat_production_ids.add(p_id)
+    
+    # Return resources that have at least one production process
     return [
         resource
         for resource in adapter.resource_data
-        if not getattr(resource, 'can_move', False)
+        if any(proc_id in flat_production_ids for proc_id in resource.process_ids)
     ]
 
 
@@ -66,6 +77,7 @@ def get_transport_resources(
 ) -> List[resource_data_module.ResourceData]:
     """
     Returns a list of all transport resources in the adapter.
+    Resources are considered transport resources if they have transport processes.
 
     Args:
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
@@ -73,10 +85,14 @@ def get_transport_resources(
     Returns:
         List[resource_data_module.ResourceData]: List of all transport resources in the adapter
     """
+    # Get all transport process IDs
+    transport_process_ids = set(get_possible_transport_processes_IDs(adapter))
+    
+    # Return resources that have at least one transport process
     return [
         resource
         for resource in adapter.resource_data
-        if getattr(resource, 'can_move', False)
+        if any(proc_id in transport_process_ids for proc_id in resource.process_ids)
     ]
 
 

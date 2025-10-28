@@ -362,18 +362,27 @@ def change_control_policy(adapter_object: adapters.ProductionSystemData) -> bool
     if not adapter_object.resource_data:
         return False
     resource = random.choice(adapter_object.resource_data)
-    if isinstance(resource, resource_data.ResourceData):
+    
+    # Check if transport resource based on process types
+    transport_process_ids = set(get_possible_transport_processes_IDs(adapter_object))
+    is_transport = any(proc_id in transport_process_ids for proc_id in resource.process_ids)
+    
+    if is_transport:
         possible_control_policies = deepcopy(
-            adapter_object.scenario_data.options.machine_controllers
+            adapter_object.scenario_data.options.transport_controllers
         )
     else:
         possible_control_policies = deepcopy(
-            adapter_object.scenario_data.options.transport_controllers
+            adapter_object.scenario_data.options.machine_controllers
         )
 
     if len(possible_control_policies) < 2:
         return False
-    possible_control_policies.remove(resource.control_policy)
+    # Only remove if the current policy is in the list
+    if resource.control_policy in possible_control_policies:
+        possible_control_policies.remove(resource.control_policy)
+    if not possible_control_policies:
+        return False
     new_control_policy = random.choice(possible_control_policies)
     resource.control_policy = new_control_policy
     return True
