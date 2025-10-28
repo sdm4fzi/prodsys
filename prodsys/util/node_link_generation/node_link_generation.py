@@ -222,6 +222,7 @@ def mainGenerate(productionsystem: production_system_data):
             tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
             new_links.append([src, tgt])
     # Replace node_data in the Prodocutionsystem
+    productionsystem.node_data = []
     for node in new_nodes:
         productionsystem.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
 

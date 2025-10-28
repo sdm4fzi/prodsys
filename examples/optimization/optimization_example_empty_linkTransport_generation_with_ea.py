@@ -14,12 +14,12 @@ prodsys.set_logging("DEBUG")
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=0,
-        number_of_generations=3,
-        population_size=4,
-        mutation_rate=0.15,
-        crossover_rate=0.1,
+        number_of_generations=32,
+        population_size=16,
+        mutation_rate=0.5,
+        crossover_rate=0.2,
         number_of_seeds=2,
-        number_of_processes=8,
+        number_of_processes=12,
     )
 
     def new_transformation(adapter: ProductionSystemData) -> bool:
@@ -109,8 +109,8 @@ def main():
         ports=[Port0.ID, Port1.ID], 
         can_move=False,
     )
-    R1_1 = prodsys.resource_data.ResourceData( #resource without ports: standart port are generated below
-        ID="R1_1",
+    R2 = prodsys.resource_data.ResourceData( #resource without ports: standart port are generated below
+        ID="R2",
         description="Resource 1_1",
         capacity=2,
         location=[0, -50.0],
@@ -207,7 +207,7 @@ def main():
         time_model_data=[ftmp1, ftmp2, ftm1, md1],
         process_data=[P1, P2, TP1],
         port_data=[Port0, Port1],
-        resource_data=[R1, TR1, R1_1],
+        resource_data=[R1, TR1, R2],
         product_data=[Product_1],
         source_data=[S1],
         sink_data=[K1],
@@ -220,7 +220,7 @@ def main():
     
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()
-    runner.run(1000)
+    runner.run(500)
     runner.print_results()
     #runner.plot_results()
     #runner.save_results_as_csv() 

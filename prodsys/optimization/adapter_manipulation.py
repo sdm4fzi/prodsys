@@ -20,7 +20,7 @@ from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_required_primitives,
 )
-
+from prodsys.util.node_link_generation import node_link_generation
 from prodsys.models.primitives_data import StoredPrimitive
 import random
 from uuid import uuid1
@@ -112,6 +112,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
         )
     )
     add_default_queues_to_resources(adapter_object)
+    node_link_generation.mainGenerate(adapter_object)
     add_setup_states_to_machine(adapter_object, machine_id)
     return True
 
@@ -145,6 +146,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             process_ids=[transport_process],
         )
     )
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
@@ -169,6 +171,7 @@ def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool: #
         if process_id not in machine.process_ids:
             machine.process_ids.append(process_id)
     add_setup_states_to_machine(adapter_object, machine.ID)
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
@@ -187,6 +190,7 @@ def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARK
         return False
     machine = random.choice(possible_machines)
     adapter_object.resource_data.remove(machine)
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
@@ -205,6 +209,7 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
         return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
@@ -232,6 +237,7 @@ def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool
     for process in process_module_to_delete:
         machine.process_ids.remove(process)
     add_setup_states_to_machine(adapter_object, machine.ID)
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
@@ -264,11 +270,12 @@ def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool: 
         to_machine.process_ids.append(process_module)
     add_setup_states_to_machine(adapter_object, from_machine.ID)
     add_setup_states_to_machine(adapter_object, to_machine.ID)
+    node_link_generation.mainGenerate(adapter_object)
     return True
 
 
 def update_production_resource_location(                         #MARKER
-    resource: resource_data.ResourceData, new_location: List[float]
+    resource: resource_data.ResourceData, new_location: List[float], adapter_object: adapters.ProductionSystemData
 ) -> None:
     """
     Function that updates the location of a machine.
@@ -290,6 +297,7 @@ def update_production_resource_location(                         #MARKER
         resource.output_location[0] + position_delta[0],
         resource.output_location[1] + position_delta[1],
     ]
+    node_link_generation.mainGenerate(adapter_object)
 
 
 def move_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
@@ -313,7 +321,7 @@ def move_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     if not possible_positions:
         return False
     new_location = random.choice(possible_positions)
-    update_production_resource_location(moved_machine, new_location)
+    update_production_resource_location(moved_machine, new_location, adapter_object)
     return True
 
 
@@ -435,7 +443,7 @@ def arrange_machines(adapter_object: adapters.ProductionSystemData) -> None:    
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
-        update_production_resource_location(machine, new_location)
+        update_production_resource_location(machine, new_location, adapter_object)
         possible_positions.remove(new_location)
 
 
@@ -523,7 +531,7 @@ def get_random_layout(
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
-        update_production_resource_location(machine, new_location)
+        update_production_resource_location(machine, new_location, adapter_object)
         possible_positions.remove(new_location)
     return adapter_object
 
