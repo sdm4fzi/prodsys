@@ -137,6 +137,7 @@ def get_default_queue_for_resource(
 def get_default_queues_for_resource(
     resource: resource_data_module.ResourceData,
     queue_capacity: Union[float, int] = 0.0,
+    adapter: Optional[ProductionSystemData] = None,
 ) -> tuple[queue_data_module.QueueData, queue_data_module.QueueData]:
     """
     Returns default input and output queues for the given resource.
@@ -144,12 +145,27 @@ def get_default_queues_for_resource(
     Args:
         resource (resource_data_module.ResourceData): Resource for which the default queues should be returned
         queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+        adapter (Optional[ProductionSystemData], optional): Production system adapter containing process data. 
+                                                           Required for accurate transport resource detection. Defaults to None.
 
     Returns:
         tuple[queue_data_module.QueueData, queue_data_module.QueueData]: Tuple of (input_queue, output_queue)
     """
+    # Determine if this is a transport resource by checking:
+    # 1. First priority: check if resource has transport processes (if adapter provided)
+    # 2. Fallback: check can_move attribute
+    is_transport_resource = False
+    
+    if adapter is not None:
+        # Check if any of the resource's processes are transport processes
+        transport_process_ids = set(get_possible_transport_processes_IDs(adapter))
+        is_transport_resource = any(proc_id in transport_process_ids for proc_id in resource.process_ids)
+    else:
+        # Fallback to can_move attribute if no adapter provided
+        is_transport_resource = hasattr(resource, 'can_move') and resource.can_move
+    
     # For transport resources, create a single input_output queue
-    if hasattr(resource, 'can_move') and resource.can_move:
+    if is_transport_resource:
         queue = queue_data_module.QueueData(
             ID=resource.ID + "_default_queue",
             description="Default queue for transport resource " + resource.ID,
@@ -245,9 +261,9 @@ def add_default_queues_to_resources(
         remove_queues_from_resource(resource)
         remove_unused_queues_from_adapter(adapter)
         
-        # Get both input and output queues
+        # Get both input and output queues, passing adapter for proper transport resource detection
         input_queue, output_queue = get_default_queues_for_resource(
-            resource, queue_capacity
+            resource, queue_capacity, adapter
         )
         
         # Add queues to adapter
