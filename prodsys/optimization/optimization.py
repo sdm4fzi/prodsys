@@ -180,6 +180,7 @@ def valid_reconfiguration_cost(
 def check_valid_configuration(
     configuration: adapters.ProductionSystemData,
     base_configuration: adapters.ProductionSystemData,
+    verbose: bool = False,
 ) -> bool:
     """
     Function that checks if a configuration is valid.
@@ -187,37 +188,40 @@ def check_valid_configuration(
     Args:
         configuration (adapters.ProductionSystemAdapter): Configuration to be checked.
         base_configuration (adapters.ProductionSystemAdapter): Baseline configuration.
+        verbose (bool): If True, use warning-level logging instead of debug-level.
 
     Returns:
         bool: True if the configuration is valid, False otherwise.
     """
+    log_func = logging.warning if verbose else logging.debug
+    
     if not valid_num_machines(configuration):
-        logging.debug("Failed valid_num_machines")
+        log_func("Failed valid_num_machines")
         return False
     if not valid_transport_capacity(configuration):
-        logging.debug("Failed valid_transport_capacity")
+        log_func("Failed valid_transport_capacity")
         return False
     if not valid_num_process_modules(configuration):
-        logging.debug("Failed valid_num_process_modules")
+        log_func("Failed valid_num_process_modules")
         return False
     try:
         # assert_required_primitives_available(configuration)
         # FIXME: this has to be resolved by asserting dependencies and primitives
         pass
     except ValueError as e:
-        logging.debug(f"Failed assert_required_primitives_available: {e}")
+        log_func(f"Failed assert_required_primitives_available: {e}")
         return False
     try:
         assert_required_processes_in_resources_available(configuration)
     except ValueError as e:
-        logging.debug(f"Failed assert_required_processes_in_resources_available: {e}")
+        log_func(f"Failed assert_required_processes_in_resources_available: {e}")
         return False
     if not valid_positions(configuration):
-        logging.debug("Failed valid_positions")
+        log_func("Failed valid_positions")
         # TODO: raise error if the positions cannot be changed (no production capacity or layout in transformations of scenario)
         return False
     if not valid_reconfiguration_cost(configuration, base_configuration):
-        logging.debug("Failed valid_reconfiguration_cost")
+        log_func("Failed valid_reconfiguration_cost")
         return False
     return True
 

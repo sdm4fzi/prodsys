@@ -81,7 +81,7 @@ def baseline_configuration() -> ProductionSystemData:
             machine_controllers=[],
             transport_controllers=[],
             routing_heuristics=[],
-            positions=[],
+            positions=[[x * 5, y * 5] for x in range(6) for y in range(6)],  # 6x6 grid
         ),
         objectives=[
             Objective(name=KPIEnum.THROUGHPUT, weight=1.0, target="max"),
@@ -179,7 +179,7 @@ def test_configuration_capacity_based_different_targets():
             machine_controllers=[],
             transport_controllers=[],
             routing_heuristics=[],
-            positions=[],
+            positions=[[x * 5, y * 5] for x in range(6) for y in range(6)],  # 6x6 grid
         ),
         objectives=[
             Objective(name=KPIEnum.THROUGHPUT, weight=1.0, target="max"),
@@ -264,7 +264,7 @@ def test_random_configuration_capacity_based_mutation():
             machine_controllers=[],
             transport_controllers=[],
             routing_heuristics=[],
-            positions=[],
+            positions=[[x * 5, y * 5] for x in range(6) for y in range(6)],  # 6x6 grid
         ),
         objectives=[
             Objective(name=KPIEnum.THROUGHPUT, weight=1.0, target="max"),
@@ -334,7 +334,7 @@ def test_capacity_based_with_breakdown_states():
             machine_controllers=[],
             transport_controllers=[],
             routing_heuristics=[],
-            positions=[],
+            positions=[[x * 5, y * 5] for x in range(6) for y in range(6)],  # 6x6 grid
         ),
         objectives=[
             Objective(name=KPIEnum.THROUGHPUT, weight=1.0, target="max"),
@@ -399,7 +399,7 @@ def test_capacity_based_configuration_id_uniqueness():
             machine_controllers=[],
             transport_controllers=[],
             routing_heuristics=[],
-            positions=[],
+            positions=[[x * 5, y * 5] for x in range(6) for y in range(6)],  # 6x6 grid
         ),
         objectives=[
             Objective(name=KPIEnum.THROUGHPUT, weight=1.0, target="max"),

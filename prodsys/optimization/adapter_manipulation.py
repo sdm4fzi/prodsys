@@ -17,7 +17,7 @@ from prodsys.models.production_system_data import (
 from prodsys.models import resource_data, scenario_data
 from prodsys.models.processes_data import CompoundProcessData, TransportProcessData
 from prodsys.models.state_data import BreakDownStateData
-from prodsys.models.time_model_data import TIME_MODEL_DATA
+from prodsys.models.time_model_data import TIME_MODEL_DATA, DistanceTimeModelData
 from prodsys.optimization.optimization import check_valid_configuration
 from prodsys.optimization.util import (
     add_setup_states_to_machine,
@@ -739,16 +739,12 @@ def configuration_capacity_based(
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
 
-    # Initialize a runner to access time models and processes
-    runner_instance = runner.Runner(production_system_data=adapter_object)
-    runner_instance.initialize_simulation()
-
     # Get mapping of processes and time models
+    # NOTE: We do NOT initialize a runner here because it would validate the configuration,
+    # which may fail if required processes are not yet assigned to machines.
+    # Instead, we work directly with the data and use process matching later only if needed.
     time_models_per_id = {t.ID: t for t in adapter_object.time_model_data}
     processes_per_id = {p.ID: p for p in adapter_object.process_data}
-    simulation_process_per_id = {
-        p.data.ID: p for p in runner_instance.process_factory.processes.values()
-    }
 
     # Calculate product arrival rates from sources
     product_arrival_rates = {}
@@ -763,27 +759,17 @@ def configuration_capacity_based(
                 product_arrival_rates.get(product_id, 0) + rate
             )
 
-    # Helper function for transport time calculation
-    def calculate_max_transport_time(
-        runner_instance: runner.Runner, time_model_data: TIME_MODEL_DATA
-    ) -> float:
-        possible_positions = runner_instance.adapter.scenario_data.options.positions
-        expected_times = []
-
-        for origin_position in possible_positions:
-            for destination_position in possible_positions:
-                time_model = runner_instance.time_model_factory.get_time_model(
-                    time_model_data.ID
-                )
-                expected_time = time_model.get_next_time(
-                    origin_position, destination_position
-                )
-                expected_times.append(expected_time)
-
-        mean_transport_time = (
-            sum(expected_times) / len(expected_times) if expected_times else 1.0
-        )
-        return mean_transport_time
+    # Helper function for transport time calculation (simplified - no runner needed)
+    def estimate_transport_time(time_model_data: TIME_MODEL_DATA) -> float:
+        """Estimate average transport time based on time model type."""
+        if isinstance(time_model_data, DistanceTimeModelData):
+            # For distance-based models, use a reasonable average distance
+            # Assuming typical distance between positions
+            avg_distance = 10.0  # Reasonable default
+            return avg_distance / time_model_data.speed + time_model_data.reaction_time
+        else:
+            # For other time models, use the location parameter
+            return time_model_data.location
 
     @dataclass
     class ProductProcessRequirement:
@@ -793,29 +779,6 @@ def configuration_capacity_based(
         expecteded_time: float
         num_instances: float
         product_arrival_rate: float
-
-    def get_matching_process_ids(
-        requesting_process: process.Process, runner_instance: runner.Runner
-    ) -> List[str]:
-        matching_process_ids = []
-        for offering_process in runner_instance.process_factory.processes.values():
-            if not hasattr(offering_process.data, "time_model_id"):
-                continue
-            if isinstance(
-                offering_process.data,
-                TransportProcessData,
-            ):
-                continue
-
-            dummy_request = request.Request(
-                request_type=request.RequestType.PRODUCTION,
-                process=requesting_process,
-                requesting_item=None
-            )
-            if offering_process.matches_request(dummy_request):
-                matching_process_ids.append(offering_process.data.ID)
-
-        return matching_process_ids
 
     # Calculate process requirements
     process_requirements = {}
@@ -833,9 +796,7 @@ def configuration_capacity_based(
                 transport_process.time_model_id
             )
             if transport_time_model:
-                transport_time = calculate_max_transport_time(
-                    runner_instance, transport_time_model
-                )
+                transport_time = estimate_transport_time(transport_time_model)
                 num_transports = 2 * (
                     len(product.processes) + 2
                 )  # Source, sink, and pickup/dropoff
@@ -849,35 +810,28 @@ def configuration_capacity_based(
                     product_arrival_rates[product.ID],
                 )
 
+        # Calculate production process requirements
+        # SIMPLIFIED: We just use the process IDs directly from the product
+        # This allows us to work with incomplete baselines (processes not yet assigned to machines)
         for process_id in product.processes:
             required_process_data = processes_per_id.get(process_id)
-            simulation_required_process = simulation_process_per_id.get(process_id)
 
-            if not required_process_data or not simulation_required_process:
+            if not required_process_data:
                 continue
 
-            compatible_process_ids = get_matching_process_ids(
-                simulation_required_process, runner_instance
-            )
-
-            if not compatible_process_ids:
+            # Use the process directly (no need to find compatible ones)
+            time_model_id = required_process_data.time_model_id
+            time_model = time_models_per_id.get(time_model_id)
+            
+            if not time_model:
                 continue
 
-            min_time_process_id = min(
-                compatible_process_ids,
-                key=lambda x: time_models_per_id[
-                    processes_per_id[x].time_model_id
-                ].location,
-            )
-
-            process_requirements[product.ID + ":" + min_time_process_id] = (
+            process_requirements[product.ID + ":" + process_id] = (
                 ProductProcessRequirement(
                     product.ID,
-                    min_time_process_id,
-                    processes_per_id[min_time_process_id].time_model_id,
-                    time_models_per_id[
-                        processes_per_id[min_time_process_id].time_model_id
-                    ].location,
+                    process_id,
+                    time_model_id,
+                    time_model.location,
                     1,
                     product_arrival_rates[product.ID],
                 )
@@ -1073,33 +1027,107 @@ def configuration_capacity_based(
     for group in combined_processes:
         covered_process_ids.update(group["process_ids"])
     
-    # Add missing processes as individual resources
+    # Add missing processes as individual resources with PRIORITY (insert at beginning)
     missing_process_ids = required_process_ids - covered_process_ids
-    if missing_process_ids:
-        logging.info(f"Adding missing processes to configuration: {missing_process_ids}")
     for missing_pid in missing_process_ids:
         # Add each missing process as a separate resource group with minimal utilization
-        combined_processes.append({
+        # Insert at the beginning to ensure they get created before hitting resource limits
+        combined_processes.insert(0, {
             "process_ids": [missing_pid],
             "group_total_utilization": cap_target  # Use cap_target to ensure at least one resource is created
         })
 
     # Create resources based on the combined process groups
     adapter_object.resource_data = []
-    possible_positions = adapter_object.scenario_data.options.positions.copy()
-
-    # Create resources for each process group
+    all_possible_positions = adapter_object.scenario_data.options.positions.copy()
+    possible_positions = all_possible_positions.copy()
+    
+    # Track resource counts to respect constraints
+    max_production_resources = adapter_object.scenario_data.constraints.max_num_machines
+    max_transport_resources = adapter_object.scenario_data.constraints.max_num_transport_resources
+    production_resource_count = 0
+    transport_resource_count = 0
+    
     compound_processes_per_id = {
         p.ID: p for p in compound_processes
     }
+    
+    # PHASE 1: Ensure each process group has at least ONE resource (to cover all required processes)
+    skipped_groups = []
     for group in combined_processes:
-        for num in range(int(group["group_total_utilization"] / cap_target) + 1):
+        process_data = group["process_ids"]
+        if not process_data:
+            continue
+
+        sample_process = processes_per_id.get(process_data[0])
+        if isinstance(sample_process, TransportProcessData):
+            # Check transport resource limit
+            if transport_resource_count >= max_transport_resources:
+                skipped_groups.append(process_data)
+                continue
+                
+            # Create transport resource
+            resource = resource_data.ResourceData(
+                location=[0, 0],
+                ID=str(uuid1()),
+                description="",
+                capacity=1,
+                can_move=True,
+                control_policy="FIFO",
+                controller=resource_data.ControllerEnum.PipelineController,
+                process_ids=process_data,
+            )
+            transport_resource_count += 1
+            adapter_object.resource_data.append(resource)
+        else:
+            # Check production resource limit
+            if production_resource_count >= max_production_resources:
+                skipped_groups.append(process_data)
+                continue
+                
+            # Create production resource
+            if possible_positions:
+                position = possible_positions.pop()
+            else:
+                # If we run out of positions, reuse from the original list
+                position = random.choice(all_possible_positions)
+
+            updated_process_data = []
+            for process_id in process_data:
+                if process_id in compound_processes_per_id:
+                    compound_process = compound_processes_per_id[process_id]
+                    updated_process_data.extend(compound_process.process_ids)
+                else:
+                    updated_process_data.append(process_id)
+
+            resource = resource_data.ResourceData(
+                ID=str(uuid1()),
+                description="",
+                process_ids=updated_process_data,
+                location=position,
+                capacity=1,
+                controller=resource_data.ControllerEnum.PipelineController,
+                control_policy="FIFO",
+            )
+            production_resource_count += 1
+            adapter_object.resource_data.append(resource)
+    
+    
+    # PHASE 2: Add additional resources based on utilization (if capacity allows)
+    for group in combined_processes:
+        num_additional_resources = int(group["group_total_utilization"] / cap_target)  # Already created 1, so subtract 1 from the total
+        
+        for num in range(num_additional_resources):
             process_data = group["process_ids"]
             if not process_data:
                 continue
 
             sample_process = processes_per_id.get(process_data[0])
             if isinstance(sample_process, TransportProcessData):
+                # Check transport resource limit
+                if transport_resource_count >= max_transport_resources:
+                    break
+                    
                 # Create transport resource
                 resource = resource_data.ResourceData(
                     location=[0, 0],
@@ -1111,12 +1139,19 @@ def configuration_capacity_based(
                     controller=resource_data.ControllerEnum.PipelineController,
                     process_ids=process_data,
                 )
+                transport_resource_count += 1
+                adapter_object.resource_data.append(resource)
             else:
+                # Check production resource limit
+                if production_resource_count >= max_production_resources:
+                    break
+                    
                 # Create production resource
                 if possible_positions:
                     position = possible_positions.pop()
                 else:
-                    position = [random.randint(0, 30), random.randint(0, 30)]
+                    # If we run out of positions, reuse from the original list
+                    position = random.choice(all_possible_positions)
 
                 updated_process_data = []
                 for process_id in process_data:
@@ -1135,9 +1170,8 @@ def configuration_capacity_based(
                     controller=resource_data.ControllerEnum.PipelineController,
                     control_policy="FIFO",
                 )
-
-            # Add the resource to the adapter object
-            adapter_object.resource_data.append(resource)
+                production_resource_count += 1
+                adapter_object.resource_data.append(resource)
 
     # Finalize configuration
     adapter_object = add_default_queues_to_resources(adapter_object)
@@ -1166,13 +1200,18 @@ def configuration_capacity_based_asserted(
     while invalid_configuration_counter < max_attempts:
         try:
             adapter_object = configuration_capacity_based(baseline, cap_target)
-            if check_valid_configuration(adapter_object, baseline):
+            # Use verbose logging for the first few attempts to debug
+            verbose = invalid_configuration_counter < 3
+            if check_valid_configuration(adapter_object, baseline, verbose=verbose):
                 return adapter_object
             else:
                 last_error = "Configuration validation failed"
+                if verbose:
+                    logging.warning(f"Configuration validation failed on attempt {invalid_configuration_counter + 1}")
         except Exception as e:
             last_error = str(e)
-            logging.warning(f"Error during configuration creation: {e}")
+            if invalid_configuration_counter < 3:
+                logging.warning(f"Error during configuration creation on attempt {invalid_configuration_counter + 1}: {e}")
 
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 10 == 0:
