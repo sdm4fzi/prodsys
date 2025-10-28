@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Tuple
 
 from prodsys.models.performance_indicators import (
@@ -20,40 +20,59 @@ class Event(BaseModel):
         activity (str): Activity of the event, representing a state.StateEnum.
         product (Optional[str], optional): Product of the event. Defaults to None.
         expected_end_time (Optional[float], optional): Expected end time of the event. Defaults to None.
+        origin_location (Optional[str], optional): Origin location of the event. Defaults to None.
         target_location (Optional[str], optional): Target location of the event. Defaults to None.
+        empty_transport (Optional[bool], optional): Whether the transport is empty. Defaults to None.
+        requesting_item (Optional[str], optional): ID of the item requesting a dependency. Defaults to None.
+        dependency (Optional[str], optional): ID of the dependency. Defaults to None.
     """
 
-    time: float
-    resource: str
-    state: str
-    state_type: str
-    activity: str
-    product: Optional[str] = None
-    expected_end_time: Optional[float] = None
-    target_location: Optional[str] = None
+    time: float = Field(alias="Time")
+    resource: str = Field(alias="Resource")
+    state: str = Field(alias="State")
+    state_type: str = Field(alias="State Type")
+    activity: str = Field(alias="Activity")
+    product: Optional[str] = Field(default=None, alias="Product")
+    expected_end_time: Optional[float] = Field(default=None, alias="Expected End Time")
+    origin_location: Optional[str] = Field(default=None, alias="Origin location")
+    target_location: Optional[str] = Field(default=None, alias="Target location")
+    empty_transport: Optional[bool] = Field(default=None, alias="Empty Transport")
+    requesting_item: Optional[str] = Field(default=None, alias="Requesting Item")
+    dependency: Optional[str] = Field(default=None, alias="Dependency")
+    process: Optional[str] = Field(default=None, alias="process")
 
     model_config = ConfigDict(
+        populate_by_name=True,
+        serialize_by_alias=True,
         json_schema_extra={
             "examples": [
                 {
-                    "time": 12.0,
-                    "resource": "R1",
-                    "state": "P1",
-                    "state_type": "Production",
-                    "activity": "start state",
-                    "product": "Product_1_12",
-                    "expected_end_time": 24.3,
-                    "target_location": None,
+                    "Time": 12.0,
+                    "Resource": "R1",
+                    "State": "P1",
+                    "State Type": "Production",
+                    "Activity": "start state",
+                    "Product": "Product_1_12",
+                    "Expected End Time": 24.3,
+                    "Origin location": "",
+                    "Target location": "",
+                    "Empty Transport": None,
+                    "Requesting Item": None,
+                    "Dependency": None,
                 },
                 {
-                    "time": 24.3,
-                    "resource": "R1",
-                    "state": "P1",
-                    "state_type": "Production",
-                    "activity": "end state",
-                    "product": "Product_1_12",
-                    "expected_end_time": None,
-                    "target_location": "L1",
+                    "Time": 24.3,
+                    "Resource": "R1",
+                    "State": "P1",
+                    "State Type": "Production",
+                    "Activity": "end state",
+                    "Product": "Product_1_12",
+                    "Expected End Time": None,
+                    "Origin location": "",
+                    "Target location": "L1",
+                    "Empty Transport": None,
+                    "Requesting Item": None,
+                    "Dependency": None,
                 },
             ]
         }

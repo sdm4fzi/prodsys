@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Literal, Tuple, Generator
+from typing import List, TYPE_CHECKING, Literal, Optional, Set, Tuple, Generator
 
 from simpy import events
 
@@ -9,7 +9,7 @@ import logging
 
 from prodsys.simulation import port, sim, time_model
 from prodsys.simulation import router as router_module
-from prodsys.models import source_data, product_data
+from prodsys.models import source_data, product_data, performance_data
 
 from prodsys.simulation import product_processor
 
@@ -40,12 +40,18 @@ class Source:
         product_data: product_data.ProductData,
         product_factory: product_factory.ProductFactory,
         time_model: time_model.TimeModel,
+        conwip: Optional[int] = None,
+        schedule: Optional[List[performance_data.Event]] = None,
     ):
         self.env = env
         self.data = data
         self.product_data = product_data
         self.product_factory = product_factory
         self.time_model = time_model
+        self.conwip = conwip
+        self.schedule = schedule
+        self.release_index = 0
+        self.released_product_ids: Set[str] = set()
         self.ports: List[port.Queue] = []
         self.can_move = False
         self.product_processor = product_processor.ProductProcessor(env)
@@ -91,19 +97,43 @@ class Source:
             Generator: Yields when a product is created or when a product is put in an output queue.
         """
         while True:
-            inter_arrival_time = self.time_model.get_next_time()
-            if inter_arrival_time <= 0:
-                break
+            if self.schedule:
+                if self.release_index >= len(self.schedule):
+                    return
+                if self.schedule[self.release_index].product in self.released_product_ids:
+                    self.release_index += 1
+                    continue
+                inter_arrival_time = self.schedule[self.release_index].time - self.env.now
+                if inter_arrival_time <= 0:
+                    inter_arrival_time = 1
+            else:
+                inter_arrival_time = self.time_model.get_next_time()
+                if inter_arrival_time <= 0:
+                    break
             yield self.env.timeout(inter_arrival_time)
-            product = self.product_factory.create_product(
-                self.product_data, self.data.routing_heuristic
-            )
+            if self.conwip is not None and len(self.product_factory.products) >= self.conwip:
+                continue
+            if self.schedule:
+                product_index = int(self.schedule[self.release_index].product.split("_")[-1])
+                self.released_product_ids.add(self.schedule[self.release_index].product)
+                # Temporarily override the product_counter to use the scheduled product index
+                saved_counter = self.product_factory.product_counter
+                self.product_factory.product_counter = product_index
+                product = self.product_factory.create_product(
+                    self.product_data, self.data.routing_heuristic
+                )
+                # Don't restore counter - let it continue from here
+            else:
+                product = self.product_factory.create_product(
+                    self.product_data, self.data.routing_heuristic
+                )
             # TODO: this logic should be moved to the interaction handler!
             for queue in self.ports:
                 yield from queue.reserve()
                 yield from queue.put(product.data)
                 product.update_location(queue)
             self.env.process(self.product_processor.process_product(product))
+            self.release_index += 1
 
     def get_location(self) -> List[float]:
         return self.data.location

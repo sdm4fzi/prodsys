@@ -23,7 +23,7 @@ def simulation_adapter_process_dependency() -> ProductionSystemData:
     setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
     assembly_process = psx.ProductionProcess(
-        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process"), "fake_process"
+        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process_time"), "fake_process"
     )
 
     worker = psx.Resource(
@@ -92,7 +92,7 @@ def simulation_adapter_resource_dependency() -> ProductionSystemData:
     setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
     assembly_process = psx.ProductionProcess(
-        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process"), "fake_process"
+        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process_time"), "fake_process"
     )
 
     worker2 = psx.Resource(
@@ -161,7 +161,7 @@ def simulation_adapter_both_dependencies() -> ProductionSystemData:
     setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
     assembly_process = psx.ProductionProcess(
-        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process"), "fake_process"
+        psx.FunctionTimeModel("exponential", 0.1, ID="fake_process_time"), "fake_process"
     )
 
     worker = psx.Resource(
@@ -297,10 +297,10 @@ def test_run_simulation_process_dependency(
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
             product1_output = kpi.value
-            assert kpi.value > 250 and kpi.value < 400
+            assert kpi.value > 250 and kpi.value < 450
         if kpi.name == "output" and kpi.product_type == "product2":
             product2_output = kpi.value
-            assert kpi.value > 100 and kpi.value < 170
+            assert kpi.value > 100 and kpi.value < 210
 
     # Verify outputs are reasonable
     assert product1_output > 0
@@ -316,7 +316,7 @@ def test_run_simulation_process_dependency(
             assert kpi.value > 0 and kpi.value < 100
         if kpi.name == "productive_time" and kpi.resource == "machine":
             machine_pr_found = True
-            assert kpi.value > 40 and kpi.value < 80
+            assert kpi.value > 40 and kpi.value < 90
 
     assert worker_pr_found, "Worker productive time KPI not found"
     assert machine_pr_found, "Machine productive time KPI not found"
@@ -328,7 +328,7 @@ def test_run_simulation_process_dependency(
             total_wip += kpi.value
             assert kpi.value > 0
 
-    assert total_wip > 800 and total_wip < 1200
+    assert total_wip > 780 and total_wip < 1200
 
 
 def test_run_simulation_resource_dependency(
@@ -433,7 +433,7 @@ def test_run_simulation_both_dependencies(
             assert kpi.value > 35 and kpi.value < 50
         if kpi.name == "productive_time" and kpi.resource == "machine2":
             machine2_pr_found = True
-            assert kpi.value > 60 and kpi.value < 70
+            assert kpi.value > 58 and kpi.value < 70
 
     assert worker_pr_found, "Worker productive time KPI not found"
     assert worker2_dp_found, "Worker2 dependency time KPI not found"

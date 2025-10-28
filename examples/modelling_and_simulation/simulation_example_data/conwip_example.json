@@ -1,0 +1,160 @@
+{
+    "ID": "conwip_example",
+    "seed": 42,
+    "time_model_data": [
+        {
+            "ID": "process_time",
+            "description": "Processing time",
+            "distribution_function": "exponential",
+            "location": 2.0,
+            "scale": 0.5,
+            "batch_size": 1
+        },
+        {
+            "ID": "transport_time",
+            "description": "Transport time",
+            "speed": 100.0,
+            "reaction_time": 0.2,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "arrival_time",
+            "description": "Product arrival time",
+            "distribution_function": "exponential",
+            "location": 1.5,
+            "scale": 0.0,
+            "batch_size": 1
+        }
+    ],
+    "state_data": [],
+    "process_data": [
+        {
+            "ID": "Assembly",
+            "description": "Assembly process",
+            "time_model_id": "process_time",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "Transport",
+            "description": "Transport process",
+            "time_model_id": "transport_time",
+            "dependency_ids": [],
+            "type": "TransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null
+        }
+    ],
+    "port_data": [
+        {
+            "ID": "source_queue",
+            "description": "",
+            "capacity": 0.0,
+            "location": [0.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "station_queue",
+            "description": "",
+            "capacity": 20,
+            "location": [10.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "transport_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [5.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "sink_queue",
+            "description": "",
+            "capacity": 0.0,
+            "location": [20.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        }
+    ],
+    "node_data": [],
+    "resource_data": [
+        {
+            "location": [10.0, 0.0],
+            "ID": "Station_1",
+            "description": "Assembly Station",
+            "process_ids": ["Assembly"],
+            "control_policy": "FIFO",
+            "capacity": 2,
+            "process_capacities": [2],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["station_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [5.0, 0.0],
+            "ID": "Robot",
+            "description": "Transport Robot",
+            "process_ids": ["Transport"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["transport_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "Widget",
+            "description": "Standard Widget",
+            "type": "Widget",
+            "transport_process": "Transport",
+            "processes": {
+                "Assembly": []
+            },
+            "dependency_ids": []
+        }
+    ],
+    "sink_data": [
+        {
+            "location": [20.0, 0.0],
+            "ID": "Output",
+            "description": "System output",
+            "product_type": "Widget",
+            "ports": ["sink_queue"]
+        }
+    ],
+    "source_data": [
+        {
+            "location": [0.0, 0.0],
+            "ID": "Input",
+            "description": "System input with CONWIP control",
+            "product_type": "Widget",
+            "time_model_id": "arrival_time",
+            "routing_heuristic": "shortest_queue",
+            "ports": ["source_queue"]
+        }
+    ],
+    "scenario_data": null,
+    "depdendency_data": [],
+    "primitive_data": [],
+    "schedule": null,
+    "conwip_number": 5,
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
+}
+

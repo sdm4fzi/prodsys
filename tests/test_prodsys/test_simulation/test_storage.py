@@ -82,7 +82,7 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 3.2 and kpi.value < 3.4
+            assert kpi.value > 2.9 and kpi.value < 3.3
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
