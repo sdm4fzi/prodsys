@@ -140,7 +140,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             description="",
             capacity=1,
             location=(0.0, 0.0),
-            controller="TransportController",
+            can_move=True,
+            controller=resource_data.ControllerEnum.PipelineController,
             control_policy=control_policy,
             process_ids=[transport_process],
         )
@@ -277,19 +278,7 @@ def update_production_resource_location(
         resource (resource_data.ResourceData): Machine to update.
         location (List[float]): New location of the machine.
     """
-    position_delta = [
-        new_location[0] - resource.location[0],
-        new_location[1] - resource.location[1],
-    ]
     resource.location = new_location
-    resource.input_location = [
-        resource.input_location[0] + position_delta[0],
-        resource.input_location[1] + position_delta[1],
-    ]
-    resource.output_location = [
-        resource.output_location[0] + position_delta[0],
-        resource.output_location[1] + position_delta[1],
-    ]
 
 
 def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
