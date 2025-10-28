@@ -114,22 +114,70 @@ def get_default_queue_for_resource(
     queue_capacity: Union[float, int] = 0.0,
 ) -> queue_data_module.QueueData:
     """
-    Returns a tuple of two lists of default queues for the given resource. The first list contains the default input queues and the second list contains the default output queues.
+    Returns a default input queue for the given resource.
 
     Args:
-        resource (resource_data_module.ResourceData): Resource for which the default queues should be returned
+        resource (resource_data_module.ResourceData): Resource for which the default queue should be returned
         queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
 
     Returns:
-        queue_data_module.QueueData: Default queue for the given resource
+        queue_data_module.QueueData: Default input queue for the given resource
     """
     queue = queue_data_module.QueueData(
             ID=resource.ID + "_default_input_queue",
             description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
             location=resource.location,
+            interface_type=port_data.PortInterfaceType.INPUT,
+            port_type=port_data.PortType.QUEUE,
         )
     return queue
+
+
+def get_default_queues_for_resource(
+    resource: resource_data_module.ResourceData,
+    queue_capacity: Union[float, int] = 0.0,
+) -> tuple[queue_data_module.QueueData, queue_data_module.QueueData]:
+    """
+    Returns default input and output queues for the given resource.
+
+    Args:
+        resource (resource_data_module.ResourceData): Resource for which the default queues should be returned
+        queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+
+    Returns:
+        tuple[queue_data_module.QueueData, queue_data_module.QueueData]: Tuple of (input_queue, output_queue)
+    """
+    # For transport resources, create a single input_output queue
+    if hasattr(resource, 'can_move') and resource.can_move:
+        queue = queue_data_module.QueueData(
+            ID=resource.ID + "_default_queue",
+            description="Default queue for transport resource " + resource.ID,
+            capacity=queue_capacity,
+            location=resource.location,
+            interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
+            port_type=port_data.PortType.QUEUE,
+        )
+        return (queue, None)
+    
+    # For production resources, create separate input and output queues
+    input_queue = queue_data_module.QueueData(
+        ID=resource.ID + "_default_input_queue",
+        description="Default input queue of " + resource.ID,
+        capacity=queue_capacity,
+        location=resource.location,
+        interface_type=port_data.PortInterfaceType.INPUT,
+        port_type=port_data.PortType.QUEUE,
+    )
+    output_queue = queue_data_module.QueueData(
+        ID=resource.ID + "_default_output_queue",
+        description="Default output queue of " + resource.ID,
+        capacity=queue_capacity,
+        location=resource.location,
+        interface_type=port_data.PortInterfaceType.OUTPUT,
+        port_type=port_data.PortType.QUEUE,
+    )
+    return (input_queue, output_queue)
 
 def remove_queues_from_resource(machine: resource_data_module.ResourceData):
     machine.ports = []
@@ -179,25 +227,38 @@ def add_default_queues_to_resources(
     adapter: ProductionSystemData, queue_capacity=0.0, reset=True
 ) -> ProductionSystemData:
     """
-    Convenience function to add default queues to all machines in the adapter.
+    Convenience function to add default queues to all resources in the adapter.
+    Creates both input and output queues for production resources, and a single 
+    input_output queue for transport resources.
 
     Args:
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+        reset (bool, optional): If True, removes existing ports and creates new ones. If False, only adds ports if missing. Defaults to True.
 
     Returns:
-        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
+        ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all resources
     """
-    for machine in adapter.resource_data:
-        if not reset and has_input_port(machine, adapter) and has_output_port(machine, adapter):
+    for resource in adapter.resource_data:
+        if not reset and has_input_port(resource, adapter) and has_output_port(resource, adapter):
             continue
-        remove_queues_from_resource(machine)
+        remove_queues_from_resource(resource)
         remove_unused_queues_from_adapter(adapter)
-        port = get_default_queue_for_resource(
-            machine, queue_capacity
+        
+        # Get both input and output queues
+        input_queue, output_queue = get_default_queues_for_resource(
+            resource, queue_capacity
         )
-        adapter.port_data.append(port)
-        machine.ports = [port.ID]
+        
+        # Add queues to adapter
+        adapter.port_data.append(input_queue)
+        port_ids = [input_queue.ID]
+        
+        if output_queue is not None:
+            adapter.port_data.append(output_queue)
+            port_ids.append(output_queue.ID)
+        
+        resource.ports = port_ids
     return adapter
 
 
@@ -219,6 +280,8 @@ def get_default_queue_for_source(
         description="Default output queue of " + source.ID,
         capacity=queue_capacity,
         location=source.location,
+        interface_type=port_data.PortInterfaceType.OUTPUT,
+        port_type=port_data.PortType.QUEUE,
     )
 
 
@@ -262,6 +325,8 @@ def get_default_queue_for_sink(
         description="Default input queue of " + sink.ID,
         capacity=queue_capacity,
         location=sink.location,
+        interface_type=port_data.PortInterfaceType.INPUT,
+        port_type=port_data.PortType.QUEUE,
     )
 
 
@@ -1157,10 +1222,12 @@ class ProductionSystemData(BaseModel):
             ValueError: If multiple objects are positioned at the same location.
             ValueError: If not all required process are available.
             ValueError: If not all links are available for LinkTransportProcesses.
+            ValueError: If ports are missing locations (needed for transport routing).
         """
         assert_no_redudant_locations(self)
         assert_required_processes_in_resources_available(self)
         assert_all_links_available(self)
+        assert_ports_have_locations(self)
 
 
 def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float]]:
@@ -1266,6 +1333,43 @@ def assert_all_links_available(adapter: ProductionSystemData):
                 raise ValueError(
                     f"The link from {start} to {target} of process {link_transport_process.ID} is not a valid location because {target} is no valid location id."
                 )
+
+
+def assert_ports_have_locations(adapter: ProductionSystemData):
+    """
+    Checks if all ports that are associated with resources, sources, or sinks have locations.
+    Ports without locations cannot be used for transport routing.
+
+    Args:
+        adapter (ProductionSystemAdapter): Adapter containing the production system to validate.
+
+    Raises:
+        ValueError: If ports are missing locations.
+    """
+    # Get all port IDs that are referenced by resources, sources, and sinks
+    referenced_port_ids = set()
+    for resource in adapter.resource_data:
+        if resource.ports:
+            referenced_port_ids.update(resource.ports)
+    for source in adapter.source_data:
+        if source.ports:
+            referenced_port_ids.update(source.ports)
+    for sink in adapter.sink_data:
+        if sink.ports:
+            referenced_port_ids.update(sink.ports)
+    
+    # Check that all referenced ports have locations
+    ports_without_locations = []
+    for port in adapter.port_data:
+        if port.ID in referenced_port_ids and port.location is None:
+            ports_without_locations.append(port.ID)
+    
+    if ports_without_locations:
+        raise ValueError(
+            f"The following ports are missing locations (required for transport routing): {ports_without_locations}. "
+            f"Ports must have locations to enable transport compatibility precomputation. "
+            f"Use add_default_queues_to_resources() to automatically set port locations from resource locations."
+        )
 
 
 def check_for_clean_compound_processes(
