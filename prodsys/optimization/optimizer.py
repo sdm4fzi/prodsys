@@ -40,12 +40,17 @@ from prodsys.optimization.tabu_search import (
     TabuSearchHyperparameters,
     tabu_search_optimization,
 )
+from prodsys.optimization.capacity_based_optimization import (
+    CapacityBasedHyperparameters,
+    capacity_based_optimization,
+)
 
 HyperParameters = (
     EvolutionaryAlgorithmHyperparameters
     | SimulatedAnnealingHyperparameters
     | TabuSearchHyperparameters
     | MathOptHyperparameters
+    | CapacityBasedHyperparameters
 )
 
 
@@ -105,6 +110,10 @@ class Optimizer(ABC):
         elif isinstance(self.hyperparameters, MathOptHyperparameters):
             self.weights = get_weights(self.adapter, "min")
             return mathematical_optimization, 1
+        elif isinstance(self.hyperparameters, CapacityBasedHyperparameters):
+            updates = self.hyperparameters.num_solutions
+            self.weights = get_weights(self.adapter, "max")
+            return capacity_based_optimization, updates
         else:
             raise ValueError("No algorithm provided for the optimization.")
 
