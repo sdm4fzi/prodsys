@@ -64,7 +64,7 @@ def crossover(ind1, ind2):
     return ind1, ind2
 
 
-def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
+def add_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     """
     Function that adds a random machine to the production system.
 
@@ -116,7 +116,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     return True
 
 
-def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool:
+def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     """
     Function that adds a random transport resource to the production system.
 
@@ -148,7 +148,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     return True
 
 
-def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
+def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER?
     """
     Function that adds a random process module to a random machine of the production system.
 
@@ -172,7 +172,7 @@ def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     return True
 
 
-def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
+def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     """
     Function that removes a random machine from the production system.
 
@@ -190,7 +190,7 @@ def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     return True
 
 
-def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool:
+def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     """
     Function that removes a random transport resource from the production system.
 
@@ -208,7 +208,7 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
     return True
 
 
-def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
+def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER?
     """
     Function that removes a random process module from a random machine of the production system.
 
@@ -235,7 +235,7 @@ def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool
     return True
 
 
-def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
+def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER?
     """
     Function that moves a random process module from a random machine to another random machine of the production system.
 
@@ -267,7 +267,7 @@ def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     return True
 
 
-def update_production_resource_location(
+def update_production_resource_location(                         #MARKER
     resource: resource_data.ResourceData, new_location: List[float]
 ) -> None:
     """
@@ -292,7 +292,7 @@ def update_production_resource_location(
     ]
 
 
-def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
+def move_machine(adapter_object: adapters.ProductionSystemData) -> bool: #MARKER
     """
     Function that moves a random machine to a random position of the production system.
 
@@ -419,7 +419,7 @@ def get_mutation_operations(
     return mutations_operations
 
 
-def mutation(individual):
+def mutation(individual):                                                               
     mutation_operation = random.choice(get_mutation_operations(individual[0]))
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
@@ -431,7 +431,7 @@ def mutation(individual):
     return (individual,)
 
 
-def arrange_machines(adapter_object: adapters.ProductionSystemData) -> None:
+def arrange_machines(adapter_object: adapters.ProductionSystemData) -> None:            #MARKER
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)

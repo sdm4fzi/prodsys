@@ -160,7 +160,6 @@ def main():
 
     Opt = prodsys.scenario_data.ScenarioOptionsData(
         transformations=[
-            ReconfigurationEnum.PRODUCTION_CAPACITY,
             ReconfigurationEnum.TRANSPORT_CAPACITY#,
             #ReconfigurationEnum.LAYOUT
         ],
@@ -178,11 +177,8 @@ def main():
             prodsys.source_data.RoutingHeuristic.FIFO
         ],
         positions=[
-            [22.0, 22.0],
             [50.0, 50.0],
             [110, 110],
-            [10.0, 10.0],
-            [0.0, 0.0],
             [90.0, 90.0],
         ]
     )
@@ -190,7 +186,7 @@ def main():
     Info = prodsys.scenario_data.ScenarioInfoData(
         machine_cost=10,
         transport_resource_cost=5,
-        time_range=10000
+        time_range=1000
     )
 
     objectives = prodsys.scenario_data.Objective(
@@ -198,7 +194,7 @@ def main():
         weight=1.0
     )
     constraints = prodsys.scenario_data.ScenarioConstrainsData(
-        max_reconfiguration_cost = 1000000000000000000000,
+        max_reconfiguration_cost = 10,
         max_num_machines=50,
         max_num_processes_per_machine=20,
         max_num_transport_resources=5,
@@ -245,7 +241,7 @@ def main():
     # )
 
     
-    #optimizer.optimize()
+    optimizer.optimize()
 
 
 if __name__ == "__main__":
