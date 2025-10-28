@@ -37,10 +37,10 @@ def get_process_module_cost(
             process_cost = process_module_cost.get(process, 0)
         else:
             process_cost = process_module_cost
-        #sum_process_module_cost += ( #FIXME:
-        #    num_process_modules[process_tuple]
-        #    - num_process_modules_before.get(process_tuple, 0)
-        #) * process_cost
+        sum_process_module_cost += ( #FIXME:
+            num_process_modules[process_tuple]
+            - num_process_modules_before.get(process_tuple, 0)
+        ) * process_cost
     return sum_process_module_cost
 
 

@@ -186,7 +186,8 @@ def main():
     Info = prodsys.scenario_data.ScenarioInfoData(
         machine_cost=10,
         transport_resource_cost=5,
-        time_range=1000
+        time_range=1000,
+        process_module_cost=2,
     )
 
     objectives = prodsys.scenario_data.Objective(
