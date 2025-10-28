@@ -157,6 +157,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             process_ids=[transport_process],
         )
     )
+    add_default_queues_to_resources(adapter_object)
     return True
 
 
