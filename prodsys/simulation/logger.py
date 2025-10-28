@@ -132,6 +132,9 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Origin location": state_info._origin_ID,
         "Target location": state_info._target_ID,
         "Empty Transport": state_info._empty_transport,
+        "Requesting Item": None,
+        "Dependency": state_info._dependency_ID,
+        "process": None,
     }
     data.append(item)
 
@@ -152,6 +155,13 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
         "State Type": product_info.state_type,
         "Activity": product_info.activity,
         "Product": product_info.product_ID,
+        "Expected End Time": None,
+        "Origin location": None,
+        "Target location": None,
+        "Empty Transport": None,
+        "Requesting Item": None,
+        "Dependency": None,
+        "process": None,
     }
     data.append(item)
 
@@ -168,12 +178,19 @@ def post_monitor_primitive_dependency(
 
     item = {
         "Time": dependency_info.event_time,
+        "Resource": None,
         "Primitive": dependency_info.primitive_ID,
         "State": dependency_info.state_ID,
         "State Type": dependency_info.state_type,
         "Activity": dependency_info.activity,
+        "Product": None,
+        "Expected End Time": None,
+        "Origin location": None,
+        "Target location": None,
+        "Empty Transport": None,
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
+        "process": None,
     }
     data.append(item)
 
@@ -195,9 +212,15 @@ def post_monitor_resource_dependency(
         "State": dependency_info.state_ID,
         "State Type": dependency_info.state_type,
         "Activity": dependency_info.activity,
+        "Product": None,
+        "Expected End Time": None,
+        "Origin location": None,
+        "Target location": None,
+        "Empty Transport": None,
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
-        }
+        "process": None,
+    }
     data.append(item)
 
 
