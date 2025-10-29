@@ -572,7 +572,7 @@ system = psx.ProductionSystem(resources=resources, sources=[src], sinks=[sink])
 
 system.validate()
 model = system.to_model()
-model.conwip_number = 10
+model.conwip_number = 20
 # model.conwip_number = 200
 sim = runner.Runner(production_system_data=model)
 sim.initialize_simulation()
