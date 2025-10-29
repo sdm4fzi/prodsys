@@ -207,11 +207,10 @@ class Router:
         )
 
         if is_production_request:
-            # Reserve a spot in the machine's input queue. This will wait if the queue is full.
-            # print(f"[DEBUG ROUTING] Attempting to reserve ORIGIN port: {origin_port.data.ID}")
-            # print(f"  Origin port capacity: {origin_port.capacity}, current: {len(origin_port.items.values())}, reserved: {origin_port._pending_put}")
+            # Reserve a spot in the input queue for this single item
+            # (lot formation happens AFTER routing for production processes)
             yield from origin_port.reserve()
-            # print(f"[DEBUG ROUTING] Origin port reserved successfully at time {self.env.now:.2f}")
+            yield from target_port.reserve()
 
         if (
             is_production_request

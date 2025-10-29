@@ -152,6 +152,11 @@ class TransportProcessHandler:
         for entity in process_request.get_atomic_entities():
             entity.update_location(self.resource)
 
+        # Don't reserve target queue for transport!
+        # For INPUT_OUTPUT queues, reserving causes deadlock because processed items fill the queue
+        # For separate queues with batching, we can't know batch size until lot is formed
+        # Let PUT naturally wait for space - this is safer and avoids circular dependencies
+
         transport_state_events = []
         for entity in process_request.get_atomic_entities():
             transport_state: state.State = yield from resource.wait_for_free_process(

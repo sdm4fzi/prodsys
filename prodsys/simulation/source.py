@@ -111,7 +111,7 @@ class Source:
                 if inter_arrival_time <= 0:
                     break
             yield self.env.timeout(inter_arrival_time)
-            if self.conwip is not None and len(self.product_factory.products) >= self.conwip:
+            if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
                 continue
             if self.schedule:
                 product_index = int(self.schedule[self.release_index].product.split("_")[-1])
