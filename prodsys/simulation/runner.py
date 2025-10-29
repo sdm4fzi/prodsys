@@ -190,6 +190,7 @@ class Runner:
                 resource_factory=self.resource_factory,
                 primitive_factory=self.dependency_factory,
                 sink_factory=self.sink_factory,
+                conwip=self.adapter.conwip_number,
             )
             self.source_factory.create_sources(self.adapter)
             self.primitive_factory = primitive_factory.PrimitiveFactory(
