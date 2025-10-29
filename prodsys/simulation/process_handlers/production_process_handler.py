@@ -112,6 +112,14 @@ class ProductionProcessHandler:
             resource_requests.append(resource_request)
         yield from self.get_entities_of_request(process_request)
 
+        # Reserve space in output queue after taking items from input queue
+        # This prevents deadlock by ensuring output space is available before processing completes
+        # For INPUT_OUTPUT queues, this reserves space for putting the item back
+        # For separate INPUT/OUTPUT queues, this reserves space in the output queue
+        # print(f"[DEBUG PRODUCTION] Time={self.env.now:.2f} | Reserving output space in queue: {process_request.target_queue.data.ID}")
+        yield from process_request.target_queue.reserve()
+        # print(f"[DEBUG PRODUCTION] Output space reserved at time {self.env.now:.2f}")
+
         process_time = get_process_time_for_lots(process_request)
         resource.controller.mark_started_process(process_request.capacity_required)
         process_state_events = []

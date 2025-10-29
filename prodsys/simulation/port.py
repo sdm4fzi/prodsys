@@ -75,6 +75,7 @@ class Queue:
 
         # Insert item
         self.items[item.ID] = item
+        # print(f"[DEBUG QUEUE PUT] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item.ID} | Count={len(self.items)}/{self.capacity}")
 
         # Notify getters that an item is available
         self._notify("on_item")
@@ -89,6 +90,7 @@ class Queue:
             yield ev
 
         item = self.items.pop(item_id)
+        # print(f"[DEBUG QUEUE GET] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Count={len(self.items)}/{self.capacity}")
 
         # Space has freed up (unless unbounded)
         if self.capacity != float("inf"):

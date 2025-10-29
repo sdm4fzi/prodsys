@@ -193,30 +193,59 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-        if target_port:
-            yield from target_port.reserve()
+
+        # print(f"\n[DEBUG ROUTING] Time={self.env.now:.2f} | Item={executed_request.requesting_item.data.ID}")
+        # print(f"  Request Type: {executed_request.request_type}")
+        # print(f"  Resource: {executed_request.resource.data.ID}")
+        # print(f"  Origin Port: {origin_port.data.ID if origin_port else None}")
+        # print(f"  Target Port: {target_port.data.ID if target_port else None}")
+        # print(f"  Item Current Location: {executed_request.requesting_item.current_locatable.data.ID if executed_request.requesting_item.current_locatable else None}")
+
+        is_production_request = executed_request.request_type in (
+            request.RequestType.PRODUCTION,
+            request.RequestType.PROCESS_MODEL,
+        )
+
+        if is_production_request:
+            # Reserve a spot in the machine's input queue. This will wait if the queue is full.
+            # print(f"[DEBUG ROUTING] Attempting to reserve ORIGIN port: {origin_port.data.ID}")
+            # print(f"  Origin port capacity: {origin_port.capacity}, current: {len(origin_port.items.values())}, reserved: {origin_port._pending_put}")
+            yield from origin_port.reserve()
+            # print(f"[DEBUG ROUTING] Origin port reserved successfully at time {self.env.now:.2f}")
+
         if (
-            executed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL)
+            is_production_request
             and executed_request.requesting_item.current_locatable
             != origin_port
         ):
+            # print(f"[DEBUG ROUTING] Requesting transport to origin port")
+            # print(f"  From: {executed_request.requesting_item.current_locatable.data.ID}")
+            # print(f"  To: {origin_port.data.ID}")
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, origin_port
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
+            # print(f"[DEBUG ROUTING] Transport to origin completed at time {self.env.now:.2f}")
         
         if executed_request.request_type == request.RequestType.TRANSPORT:
             route = self.request_handler.process_matcher.get_route(
                 origin_port, target_port, executed_request.process
             )
             executed_request.route = route
+            # print(f"[DEBUG ROUTING] Transport route determined: {[loc.data.ID for loc in route] if route else None}")
 
         executed_request.origin_queue = origin_port
         executed_request.target_queue = target_port
 
+        # Don't reserve target port here for production requests - it will be reserved in the production handler
+        # after getting items from the origin queue. This prevents premature queue slot locking.
+        # Target reservation happens in production_process_handler.py after get_entities_of_request()
+
+        # print(f"[DEBUG ROUTING] Sending request to resource controller")
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
+            # print(f"[DEBUG ROUTING] Request has dependencies, waiting...")
             yield executed_request.dependencies_requested
             dependency_ready_events = self.get_dependencies_for_execution(
                 resource=executed_request.resource,
@@ -227,7 +256,13 @@ class Router:
             for dependency_ready_event in dependency_ready_events:
                 yield dependency_ready_event
             executed_request.dependencies_ready.succeed()
+            # print(f"[DEBUG ROUTING] All dependencies ready at time {self.env.now:.2f}")
             yield executed_request.completed
+            # print(f"[DEBUG ROUTING] Request completed at time {self.env.now:.2f}")
+        else:
+            # print(f"[DEBUG ROUTING] No dependencies, waiting for completion")
+            yield executed_request.completed
+            # print(f"[DEBUG ROUTING] Request completed at time {self.env.now:.2f}")
 
     def request_buffering(self, executed_request: request.Request) -> Optional[events.Event]:
         buffer = self.interaction_handler.get_interaction_buffer(executed_request)
