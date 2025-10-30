@@ -273,6 +273,8 @@ class TransportProcessHandler:
             target,
             state.StateTypeEnum.transport,
             empty_transport=empty_transport,
+            initial_transport_step=initial_transport_step,
+            last_transport_step=last_transport_step,
         )
         target_location = self.get_target_location(
             target, empty_transport, last_transport_step=last_transport_step

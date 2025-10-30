@@ -129,6 +129,7 @@ class ProductionProcessHandler:
             production_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
+            production_state.state_info.log_queues(process_request.origin_queue, process_request.target_queue)
             production_state.reserved = True
             process_event = self.env.process(self.run_process(production_state,entity, process, process_time))
             process_state_events.append((process_event, production_state))

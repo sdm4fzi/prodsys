@@ -313,7 +313,7 @@ class Runner:
         kpi_visualization.plot_transport_utilization_over_time(
             p, transport_resource_ids
         )
-        kpi_visualization.plot_util_WIP_resource(p)
+        kpi_visualization.plot_WIP_resource_boxplots(p)
         kpi_visualization.plot_oee(p)
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
