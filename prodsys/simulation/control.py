@@ -104,14 +104,31 @@ class Controller:
                 or not self.requests
             ):
                 continue
-            self.control_policy(self.requests)
-            selected_request = self.requests.pop(0)
-            if self._should_form_lot(selected_request):
-                lot_request = self._form_lot(selected_request)
-                if not lot_request:
-                    self.requests.insert(0, selected_request)
-                    continue
-                selected_request = lot_request
+            
+            # Try to find a processable request (may need to skip requests that can't form lots)
+            attempts = 0
+            max_attempts = len(self.requests)
+            
+            while attempts < max_attempts:
+                self.control_policy(self.requests)
+                selected_request = self.requests.pop(0)
+                
+                if self._should_form_lot(selected_request):
+                    lot_request = self._form_lot(selected_request)
+                    if not lot_request:
+                        # Can't form lot yet - move to end and try next request
+                        self.requests.append(selected_request)
+                        attempts += 1
+                        continue
+                    selected_request = lot_request
+                
+                # Found a processable request, break out of the inner loop
+                break
+            else:
+                # Tried all requests, none can be processed right now
+                # Wait for state change (new request or process completion)
+                continue
+            
             self.reserved_requests_count += selected_request.capacity_required
             # For dependency requests, immediately bind the resource to block other processes
             if selected_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
@@ -416,7 +433,7 @@ def scheduled_control_policy(
     request_sequence_indices = {}
     for request_instance in requests:
         product_id = request_instance.product.product_data.ID
-        if not product_id in product_sequence_indices:
+        if product_id not in product_sequence_indices:
             non_scheduled_products.append(request_instance)
             continue
         request_priority = product_sequence_indices[product_id]

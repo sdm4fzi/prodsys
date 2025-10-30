@@ -231,11 +231,11 @@ pp_glue_cater_auto   = P_automated("PstGlueCaterpillar", 80.2)
 # These define batching requirements for processes
 # LotDependency should equal the storageUnitType: Single=1, Double=2, Tray=4
 # Tool capacity = storageZoneType.size × storageUnitType.size (e.g., SzTray7 × SuTray = 7 × 4 = 28)
-dep_lot_oven_cover  = psx.LotDependency(min_lot_size=1, max_lot_size=4, ID="dep_lot_ov_cov")  # SuTray (4 products)
-dep_lot_oven_adjust = psx.LotDependency(min_lot_size=1, max_lot_size=2, ID="dep_lot_ov_adj") # SuDouble (2 products)
-dep_lot_oven_hot    = psx.LotDependency(min_lot_size=1, max_lot_size=2, ID="dep_lot_ov_hot") # SuDouble (2 products)
-dep_lot_cooling     = psx.LotDependency(min_lot_size=1, max_lot_size=2, ID="dep_lot_cool")   # SuDouble (2 products)
-dep_lot_buffer      = psx.LotDependency(min_lot_size=1, max_lot_size=2, ID="dep_lot_buffer") # SuDouble (2 products)
+dep_lot_oven_cover  = psx.LotDependency(min_lot_size=4, max_lot_size=4, ID="dep_lot_ov_cov")  # SuTray (4 products)
+dep_lot_oven_adjust = psx.LotDependency(min_lot_size=2, max_lot_size=2, ID="dep_lot_ov_adj") # SuDouble (2 products)
+dep_lot_oven_hot    = psx.LotDependency(min_lot_size=2, max_lot_size=2, ID="dep_lot_ov_hot") # SuDouble (2 products)
+dep_lot_cooling     = psx.LotDependency(min_lot_size=2, max_lot_size=2, ID="dep_lot_cool")   # SuDouble (2 products)
+dep_lot_buffer      = psx.LotDependency(min_lot_size=2, max_lot_size=2, ID="dep_lot_buffer") # SuDouble (2 products)
 
 
 # BufferSlide: 0s manual + 450s automated (lotSize=5, SuDouble)
@@ -385,7 +385,7 @@ r_cover = create_resource_with_queues(
 # Note: Offset slightly from base location to avoid duplicate location error
 r_oven_cover = create_resource_with_queues(
     [pp_oven_cover_manual, pp_oven_cover_auto], [3.862, 6.700], 28, "WcOven", ip_oven,
-    wip_in_capacity=28, wip_out_capacity=2
+    wip_in_capacity=28, wip_out_capacity=4
 )
 
 # WcOven adjust: work2:SzDouble5 (10), wipIn:SzTray7 (28), wipOut:SzDouble1 (2)

@@ -43,7 +43,12 @@ class LotHandler:
         if process_request.resource.get_free_capacity() < lot_dependency.min_lot_size:
             return False
         possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
-        return len(possible_requests_for_lot) >= lot_dependency.min_lot_size - 1
+        num_possible = len(possible_requests_for_lot)
+        # When min = max lot size, we need exactly that many items
+        if lot_dependency.min_lot_size == lot_dependency.max_lot_size:
+            return num_possible == lot_dependency.min_lot_size - 1
+        # Otherwise, we need at least min_lot_size - 1 additional requests
+        return num_possible >= lot_dependency.min_lot_size - 1
 
 
     def _get_requests_to_fill_lot(self, process_request: request.Request, lot_dependency: LotDependencyData, possible_requests_for_lot: list[request.Request]) -> list[request.Request]:
