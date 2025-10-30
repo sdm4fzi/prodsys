@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pydantic.type_adapter import P
+# removed unused import P from pydantic.type_adapter
 
 from prodsys.models import port_data
 from prodsys.simulation import request
@@ -157,6 +157,9 @@ class InteractionHandler:
             ]
         ]
         origin_port = self.get_origin_port(origin_input_ports, routed_request)
+
+        # Prefer dedicated OUTPUT ports for target; if none, use INPUT_OUTPUT but avoid the same
+        # port selected for origin when possible to prevent returning to input.
         target_output_ports = [
             q
             for q in routed_request.resource.ports
@@ -166,7 +169,17 @@ class InteractionHandler:
                 port_data.PortInterfaceType.INPUT_OUTPUT,
             ]
         ]
-        target_port = self.get_target_port(target_output_ports, routed_request)
+
+        # Prioritize OUTPUT-only ports
+        preferred_targets = [
+            q for q in target_output_ports if q.data.interface_type == port_data.PortInterfaceType.OUTPUT
+        ]
+        fallback_targets = [
+            q for q in target_output_ports if q.data.interface_type == port_data.PortInterfaceType.INPUT_OUTPUT and q is not origin_port
+        ]
+        filtered_targets = preferred_targets or fallback_targets or target_output_ports
+
+        target_port = self.get_target_port(filtered_targets, routed_request)
         return (origin_port, target_port)
 
     def get_origin_port(
@@ -182,12 +195,12 @@ class InteractionHandler:
         Returns:
             store.Queue: The selected origin port.
         """
-        # For primitives, use port selection heuristic instead of looking for specific item
-        if hasattr(routed_request.requesting_item, 'data') and hasattr(routed_request.requesting_item.data, 'type'):
-            # This is likely a primitive, use heuristic selection
+        # Distinguish primitives from products based on presence of product_info (primitives don't have it)
+        if not hasattr(routed_request.requesting_item, 'product_info'):
+            # Primitive: choose by heuristic
             origin_port = self.port_selection_heuristic(possible_ports, routed_request)
         else:
-            # For products, try to find the port with the specific item
+            # Product: find the concrete port that currently contains the item
             origin_port = get_port_with_item(
                 possible_ports, routed_request.requesting_item.data.ID
             )

@@ -308,21 +308,18 @@ def create_resource_with_queues(processes, location, capacity, id, ip_node, wip_
     """
     resource = psx.Resource(processes=processes, location=location, capacity=capacity, ID=id)
     
-    # Create input queue
+    # Create input/output queues with slight positional offsets to disambiguate
+    ix, iy = ip_node.location
     input_queue = psx.Queue(
         ID=f"{id}_input",
-        # capacity=wip_in_capacity if wip_in_capacity > 8 else 8,
-        capacity=20,  # Fixed to 30 to resolve queue size issues (temporary fix)
-        location=ip_node.location,
+        capacity=20,
+        location=[ix - 0.05, iy],
         interface_type=PortInterfaceType.INPUT
     )
-    
-    # Create output queue
     output_queue = psx.Queue(
         ID=f"{id}_output",
-        # capacity=wip_out_capacity if wip_out_capacity > 8 else 8,
-        capacity=20,  # Fixed to 30 to resolve queue size issues (temporary fix)
-        location=ip_node.location,
+        capacity=20,
+        location=[ix + 0.05, iy],
         interface_type=PortInterfaceType.OUTPUT
     )
     
@@ -501,12 +498,18 @@ ltp_worker1_links = [
     [n103, ip_align], [ip_align, n103],
     [n105, ip_cater], [ip_cater, n105],
     [n106, ip_asm], [ip_asm, n106],
-    # Links to stations for product transport in Worker 1 area (bidirectional)
-    [n101, r_glue6], [r_glue6, n101],
-    [n102, r_solder], [r_solder, n102],
-    [n103, r_align], [r_align, n103],
-    [n105, r_cater], [r_cater, n105],
-    [n106, r_asm], [r_asm, n106],
+# Links to stations for product transport in Worker 1 area (bidirectional)
+# connect to specific input/output ports
+[n101, r_glue6.ports[0]], [r_glue6.ports[0], n101],  # input
+[n101, r_glue6.ports[1]], [r_glue6.ports[1], n101],  # output
+[n102, r_solder.ports[0]], [r_solder.ports[0], n102],
+[n102, r_solder.ports[1]], [r_solder.ports[1], n102],
+[n103, r_align.ports[0]], [r_align.ports[0], n103],
+[n103, r_align.ports[1]], [r_align.ports[1], n103],
+[n105, r_cater.ports[0]], [r_cater.ports[0], n105],
+[n105, r_cater.ports[1]], [r_cater.ports[1], n105],
+[n106, r_asm.ports[0]], [r_asm.ports[0], n106],
+[n106, r_asm.ports[1]], [r_asm.ports[1], n106],
     # Source connection
     [src, n_src], [n_src, src],
 ]
@@ -535,21 +538,32 @@ ltp_worker2_links = [
     [n113, ip_cooling], [ip_cooling, n113],
     [n114, ip_final], [ip_final, n114],
     [n115, ip_pack], [ip_pack, n115],
-    # Links to stations for product transport in Worker 2 area (bidirectional)
-    # Assembly station (for handoff from Worker 1)
-    [n106, r_asm], [r_asm, n106],
-    [n106, ip_asm], [ip_asm, n106],
-    # Cover and beyond
-    [n107, r_cover], [r_cover, n107],
-    [n108, r_oven_cover], [r_oven_cover, n108],
-    [n108, r_oven_adjust], [r_oven_adjust, n108],
-    [n109, r_adjust_1], [r_adjust_1, n109],
-    [n110, r_adjust_2], [r_adjust_2, n110],
-    [n111, r_oven_hot], [r_oven_hot, n111],
-    [n112, r_hot_1], [r_hot_1, n112],
-    [n113, r_cooling], [r_cooling, n113],
-    [n114, r_final_1], [r_final_1, n114],
-    [n115, r_pack], [r_pack, n115],
+# Links to stations for product transport in Worker 2 area (bidirectional)
+# Assembly station (for handoff from Worker 1)
+[n106, r_asm.ports[0]], [r_asm.ports[0], n106],
+[n106, r_asm.ports[1]], [r_asm.ports[1], n106],
+[n106, ip_asm], [ip_asm, n106],
+# Cover and beyond (connect to specific input/output ports)
+[n107, r_cover.ports[0]], [r_cover.ports[0], n107],
+[n107, r_cover.ports[1]], [r_cover.ports[1], n107],
+[n108, r_oven_cover.ports[0]], [r_oven_cover.ports[0], n108],
+[n108, r_oven_cover.ports[1]], [r_oven_cover.ports[1], n108],
+[n108, r_oven_adjust.ports[0]], [r_oven_adjust.ports[0], n108],
+[n108, r_oven_adjust.ports[1]], [r_oven_adjust.ports[1], n108],
+[n109, r_adjust_1.ports[0]], [r_adjust_1.ports[0], n109],
+[n109, r_adjust_1.ports[1]], [r_adjust_1.ports[1], n109],
+[n110, r_adjust_2.ports[0]], [r_adjust_2.ports[0], n110],
+[n110, r_adjust_2.ports[1]], [r_adjust_2.ports[1], n110],
+[n111, r_oven_hot.ports[0]], [r_oven_hot.ports[0], n111],
+[n111, r_oven_hot.ports[1]], [r_oven_hot.ports[1], n111],
+[n112, r_hot_1.ports[0]], [r_hot_1.ports[0], n112],
+[n112, r_hot_1.ports[1]], [r_hot_1.ports[1], n112],
+[n113, r_cooling.ports[0]], [r_cooling.ports[0], n113],
+[n113, r_cooling.ports[1]], [r_cooling.ports[1], n113],
+[n114, r_final_1.ports[0]], [r_final_1.ports[0], n114],
+[n114, r_final_1.ports[1]], [r_final_1.ports[1], n114],
+[n115, r_pack.ports[0]], [r_pack.ports[0], n115],
+[n115, r_pack.ports[1]], [r_pack.ports[1], n115],
     # Sink connection
     [n_sink, sink], [sink, n_sink],
 ]

@@ -202,6 +202,7 @@ class TransportProcessHandler:
             Generator: The generator yields when the transport is over.
         """
         for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
+            # FIXME: when two queues are at the same location, route finding can be confused and find a correct route for locations but wrong locatable...
             if link_index == 0:
                 initial_transport_step = True
             else:
