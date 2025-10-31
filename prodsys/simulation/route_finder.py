@@ -223,9 +223,6 @@ class RouteFinder:
         Returns:
             GraphNode: The graph node.
         """
-        # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.resources import Resource
-        from prodsys.simulation.port import Store
 
         existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:
@@ -316,6 +313,7 @@ class RouteFinder:
             return []
             
         finder = DijkstraFinder()
+        #finder = AStarFinder() #TODO: make AStar work
         try:
             path, _ = finder.find_path(origin, target, graph)
             if path is None:

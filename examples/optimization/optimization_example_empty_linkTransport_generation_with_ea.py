@@ -18,7 +18,7 @@ def main():
         mutation_rate=0.4,
         crossover_rate=0.2,
         number_of_seeds=2,
-        number_of_processes=12,
+        number_of_processes=8
     )
 
     def new_transformation(adapter: ProductionSystemData) -> bool:
@@ -82,20 +82,20 @@ def main():
     )
 
     # Port / Queue
-    Port0 = prodsys.port_data.QueueData(
-        ID="Port0",
-        description="Queue 0",
-        capacity=0,
-        location=[-10, -10],
-        interface_type=prodsys.port_data.PortInterfaceType.INPUT
-    )
-    Port1 = prodsys.port_data.QueueData(
-        ID="Port1",
-        description="Queue 1",
-        capacity=0,
-        location=[10, 10],
-        interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
-    )
+    #Port0 = prodsys.port_data.QueueData(
+    #    ID="Port0",
+    #    description="Queue 0",
+    #    capacity=0,
+    #    location=[-10, -10],
+    #    interface_type=prodsys.port_data.PortInterfaceType.INPUT
+    #)
+    #Port1 = prodsys.port_data.QueueData(
+    #    ID="Port1",
+    #    description="Queue 1",
+    #    capacity=0,
+    #    location=[10, 10],
+    #    interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
+    #)
     # Resource
     R1 = prodsys.resource_data.ResourceData( #resource with two ports
         ID="R1",
@@ -105,7 +105,7 @@ def main():
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],
-        ports=[Port0.ID, Port1.ID], 
+        #ports=[Port0.ID, Port1.ID], 
         can_move=False,
     )
     R2 = prodsys.resource_data.ResourceData( #resource without ports: standart port are generated below
@@ -179,6 +179,16 @@ def main():
             [50.0, 50.0],
             [110, 110],
             [90.0, 90.0],
+            [-50.0, -50.0],
+            [50.0, 50.0],
+            [0,50],
+            [0,-50],
+            [50.0, 0],
+            [100,100],
+            [-100,-100],
+            [0,0],
+            [10,10],
+            [-10,-10],
         ]
     )
     #scenario
@@ -206,7 +216,7 @@ def main():
     production_system_instance = ProductionSystemData(
         time_model_data=[ftmp1, ftmp2, ftm1, md1],
         process_data=[P1, P2, TP1],
-        port_data=[Port0, Port1],
+        #port_data=[Port0, Port1],
         resource_data=[R1, TR1, R2],
         product_data=[Product_1],
         source_data=[S1],

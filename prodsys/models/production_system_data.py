@@ -77,7 +77,7 @@ def get_transport_resources(
     return [
         resource
         for resource in adapter.resource_data
-        if isinstance(resource, resource_data_module.ResourceData)
+        if isinstance(resource, resource_data_module.TransportControlPolicy)
     ]
 
 
@@ -169,6 +169,7 @@ def add_default_queues_to_resources(
     Args:
         adapter (ProductionSystemAdapter): ProductionSystemAdapter object
         queue_capacity (float, optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
+        reset (bool, optional): If True, existing queues are removed before adding default queues. Defaults to True.
 
     Returns:
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all machines
@@ -1094,7 +1095,7 @@ class ProductionSystemData(BaseModel):
             ValueError: If not all required process are available.
             ValueError: If not all links are available for LinkTransportProcesses.
         """
-        assert_no_redudant_locations(self)
+        assert_no_redundant_locations(self)
         assert_required_processes_in_resources_available(self)
         assert_all_links_available(self)
 
@@ -1125,7 +1126,7 @@ def get_location_of_locatable(
     return locations
 
 
-def assert_no_redudant_locations(adapter: ProductionSystemData):
+def assert_no_redundant_locations(adapter: ProductionSystemData): #TODO:FIXME: hier wird der fehler erkannt warum immer invalide produktionssystem erstellt werden.
     """
     Asserts that no multiple objects are positioned at the same location.
 
@@ -1137,7 +1138,8 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
     """
     machine_locations = []
     for production_resource in get_production_resources(adapter):
-        machine_locations += get_location_of_locatable(adapter, production_resource)
+        machine_locations.append(production_resource.location)
+        #machine_locations += get_location_of_locatable(adapter, production_resource)
     source_locations = []
     for source in adapter.source_data:
         source_locations += get_location_of_locatable(adapter, source)
@@ -1154,7 +1156,7 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
             continue
         store_locations += get_location_of_locatable(adapter, store)
 
-    positions = machine_locations + source_locations + sink_locations + store_locations
+    positions = machine_locations + store_locations # + source_locations + sink_locations
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(

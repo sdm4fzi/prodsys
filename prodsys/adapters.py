@@ -10,6 +10,7 @@ from prodsys.models.production_system_data import (
     get_production_resources,
     get_transport_resources,
     check_for_clean_compound_processes,
+    get_location_of_locatable,
 )
 
 # Re-export the main ProductionSystemData class as the primary adapter

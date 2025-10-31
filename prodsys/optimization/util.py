@@ -47,7 +47,7 @@ def get_breakdown_state_ids_of_machine_with_processes(
     return state_ids
 
 
-def get_required_primitives(
+def get_required_primitives( #TODO:
     adapter_object: adapters.ProductionSystemData,
 ) -> List[PrimitiveData]:
     """

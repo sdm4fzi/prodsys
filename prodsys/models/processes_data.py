@@ -234,6 +234,7 @@ class TransportProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.TransportProcesses]
     loading_time_model_id: Optional[str] = None
     unloading_time_model_id: Optional[str] = None
+    can_move: Optional[bool] = True #TODO: automatically adapt this to the resources can_move property
 
     model_config = ConfigDict(
         json_schema_extra={
