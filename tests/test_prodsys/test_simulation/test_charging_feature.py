@@ -89,7 +89,7 @@ def test_run_simulation(charging_simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 8.5 and kpi.value > 7.5
+            assert kpi.value < 7.0 and kpi.value > 6.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":

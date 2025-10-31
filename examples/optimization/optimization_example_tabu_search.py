@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 def main():
     hyper_parameters = TabuSearchHyperparameters(
-        full_save="data/tabu_results",
         seed=22,
         tabu_size=2,
         max_steps=5,
@@ -28,9 +27,10 @@ def main():
         operation=new_transformation,
     )
 
-    base_configuration = ProductionSystemData()
-    base_configuration.read_data(
+    base_configuration = ProductionSystemData.read(
         "examples/optimization/optimization_example/base_scenario.json",
+    )
+    base_configuration.read_scenario(
         "examples/optimization/optimization_example/scenario.json",
     )
 

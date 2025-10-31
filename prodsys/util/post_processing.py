@@ -1055,7 +1055,7 @@ class PostProcessor:
 
         df = df.loc[
             df["WIP_Increment"] != 0
-        ]  # Remove rows where WIP_Increment is 0
+        ].copy()  # Remove rows where WIP_Increment is 0
 
         df["WIP"] = df["WIP_Increment"].cumsum()
         return df

@@ -5,7 +5,7 @@ from prodsys.optimization.adapter_manipulation import add_transformation_operati
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
 )
-from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer
 
 
 def main():
@@ -27,11 +27,11 @@ def main():
         operation=new_transformation,
     )
 
-    base_configuration = ProductionSystemData()
-
-    base_configuration.read_data(
+    base_configuration = ProductionSystemData.read(
         "examples/optimization/optimization_example/base_scenario.json",
-        "examples/optimization/optimization_example/scenario.json",
+    )
+    base_configuration.read_scenario(
+                "examples/optimization/optimization_example/scenario.json",
     )
 
     optimizer = FileSystemSaveOptimizer(
@@ -39,6 +39,7 @@ def main():
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=True,
+        smart_initial_solutions=True,
         # initial_solutions=[base_configuration]
     )
     # optimizer = InMemoryOptimizer(

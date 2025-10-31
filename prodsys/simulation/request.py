@@ -99,15 +99,18 @@ class Request:
         self.required_dependencies: Optional[List[Dependency]] = (
             required_dependencies
         )
-        self.dependencies_requested: Optional[simpy.Event] = simpy.Event(
-            self.requesting_item.env
-        )
-        self.dependencies_ready: Optional[simpy.Event] = simpy.Event(
-            self.requesting_item.env
-        )
-        self.lot_process_time: Optional[float] = None
-
         self.requesting_item = requesting_item
+        if requesting_item is not None:
+            self.dependencies_requested: Optional[simpy.Event] = simpy.Event(
+                self.requesting_item.env
+            )
+            self.dependencies_ready: Optional[simpy.Event] = simpy.Event(
+                self.requesting_item.env
+            )
+        else:
+            self.dependencies_requested: Optional[simpy.Event] = None
+            self.dependencies_ready: Optional[simpy.Event] = None
+        self.lot_process_time: Optional[float] = None
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
 
