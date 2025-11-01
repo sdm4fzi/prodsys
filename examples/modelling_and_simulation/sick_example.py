@@ -312,14 +312,14 @@ def create_resource_with_queues(processes, location, capacity, id, ip_node, wip_
     ix, iy = ip_node.location
     input_queue = psx.Queue(
         ID=f"{id}_input",
-        capacity=20,
-        location=[ix - 0.05, iy],
+        capacity=13,
+        location=ip_node.location,
         interface_type=PortInterfaceType.INPUT
     )
     output_queue = psx.Queue(
         ID=f"{id}_output",
-        capacity=20,
-        location=[ix + 0.05, iy],
+        capacity=13,
+        location=ip_node.location,
         interface_type=PortInterfaceType.OUTPUT
     )
     
@@ -586,11 +586,11 @@ system = psx.ProductionSystem(resources=resources, sources=[src], sinks=[sink])
 
 system.validate()
 model = system.to_model()
-model.conwip_number = 20
+model.conwip_number = 200
 # model.conwip_number = 200
 sim = runner.Runner(production_system_data=model)
 sim.initialize_simulation()
-sim.run(80 * 60 * 60)  # Run for 8 hours
+sim.run(80 *60 * 60)  # Run for 8 hours
 sim.save_results_as_csv()
 sim.save_results_as_json()
 sim.print_results()
