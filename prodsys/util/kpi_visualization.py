@@ -88,6 +88,9 @@ def plot_throughput_time_distribution(
 
     group_labels = grouped.index
 
+    if len(values) == 0:
+        return None
+
     # Create distplot with custom bin_size
     fig = ff.create_distplot(
         values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
