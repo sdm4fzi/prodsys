@@ -139,6 +139,13 @@ class ProcessMatcher:
             )
         return dummy_products
 
+    def _remove_dummy_products(self, dummy_products: dict[str, product.Product]):
+        """
+        Remove dummy products from the system.
+        """
+        for product_type, dummy_product in dummy_products.items():
+            self.product_factory.products.pop(dummy_product.data.ID)
+
     def _precompute_production_compatibility(self, dummy_products: dict[str, product.Product]):
         """
         Precompute production resource compatibility.
@@ -210,7 +217,7 @@ class ProcessMatcher:
                     self.production_compatibility[key] = []
                 self.production_compatibility[key].append((resource, offered_process))
 
-        
+        self._remove_dummy_products(dummy_products)
 
         logger.info(
             f"Precomputation completed in {time.time() - start_time:.2f} seconds"

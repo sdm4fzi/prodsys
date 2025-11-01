@@ -288,6 +288,123 @@ pp_packaging_manual = P_manual("PstPackaging", 6.2, 2, ip_pack)
 # pp_packaging_auto   = P_automated("PstPackaging", 0)
 
 # ----------------------
+# STEP 2.5: Create process models combining manual and automated processes
+# ----------------------
+# Process models define the workflow: manual -> automated for each station
+pm_glue6 = psx.ProcessModel(
+    adjacency_matrix={
+        "PstGlue6Point_manual": ["PstGlue6Point_auto"],
+        "PstGlue6Point_auto": []
+    },
+    ID="pm_glue6"
+)
+
+pm_solder = psx.ProcessModel(
+    adjacency_matrix={
+        "PstSolderingEc_manual": []
+    },
+    ID="pm_solder"
+)
+
+pm_align = psx.ProcessModel(
+    adjacency_matrix={
+        "PstAlignEcLoadProg_manual": ["PstAlignEcLoadProg_auto"],
+        "PstAlignEcLoadProg_auto": ["PstAlignEcFirstTrack_manual"],
+        "PstAlignEcFirstTrack_manual": ["PstAlignEcFirstTrack_auto"],
+        "PstAlignEcFirstTrack_auto": ["PstAlignEcSecondTrack_manual"],
+        "PstAlignEcSecondTrack_manual": ["PstAlignEcSecondTrack_auto"],
+        "PstAlignEcSecondTrack_auto": []
+    },
+    ID="pm_align"
+)
+
+pm_glue_cater = psx.ProcessModel(
+    adjacency_matrix={
+        "PstGlueCaterpillar_manual": ["PstGlueCaterpillar_auto"],
+        "PstGlueCaterpillar_auto": []
+    },
+    ID="pm_glue_cater"
+)
+
+pm_assembly = psx.ProcessModel(
+    adjacency_matrix={
+        "PstBufferSlide_auto": ["PstAssemblyTorque_manual"],
+        "PstAssemblyTorque_manual": []
+    },
+    ID="pm_assembly"
+)
+
+pm_glue_cover = psx.ProcessModel(
+    adjacency_matrix={
+        "PstGlueCover_manual": ["PstGlueCover_auto"],
+        "PstGlueCover_auto": []
+    },
+    ID="pm_glue_cover"
+)
+
+pm_oven_cover = psx.ProcessModel(
+    adjacency_matrix={
+        "PstOvenCover_manual": ["PstOvenCover_auto"],
+        "PstOvenCover_auto": []
+    },
+    ID="pm_oven_cover"
+)
+
+pm_oven_adjust = psx.ProcessModel(
+    adjacency_matrix={
+        "PstOvenAdjust_manual": ["PstOvenAdjust_auto"],
+        "PstOvenAdjust_auto": []
+    },
+    ID="pm_oven_adjust"
+)
+
+pm_adjust = psx.ProcessModel(
+    adjacency_matrix={
+        "PstAdjust_manual": ["PstAdjust_auto"],
+        "PstAdjust_auto": []
+    },
+    ID="pm_adjust"
+)
+
+pm_oven_hot = psx.ProcessModel(
+    adjacency_matrix={
+        "PstOvenHotTest_manual": ["PstOvenHotTest_auto"],
+        "PstOvenHotTest_auto": []
+    },
+    ID="pm_oven_hot"
+)
+
+pm_hot_test = psx.ProcessModel(
+    adjacency_matrix={
+        "PstHotTest_manual": ["PstHotTest_auto"],
+        "PstHotTest_auto": []
+    },
+    ID="pm_hot_test"
+)
+
+pm_cooling = psx.ProcessModel(
+    adjacency_matrix={
+        "PstCooling_auto": []
+    },
+    ID="pm_cooling"
+)
+
+pm_final_test = psx.ProcessModel(
+    adjacency_matrix={
+        "PstFinalTest_manual": ["PstFinalTest_auto"],
+        "PstFinalTest_auto": []
+    },
+    ID="pm_final_test"
+)
+
+pm_packaging = psx.ProcessModel(
+    adjacency_matrix={
+        "PstPackaging_manual": []
+    },
+    ID="pm_packaging"
+)
+
+# ----------------------
 # STEP 3: Define station resources
 # ----------------------
 # Stations with actual physical coordinates from SICK model (in meters)
@@ -298,7 +415,7 @@ def create_resource_with_queues(processes, location, capacity, id, ip_node, wip_
     Create a resource with explicit input and output queues.
     
     Args:
-        processes: List of production processes
+        processes: List of processes (can be ProcessModel or individual processes)
         location: Resource location [x, y]
         capacity: Work capacity (number of products being processed)
         id: Resource ID
@@ -340,27 +457,27 @@ def create_resource_with_queues(processes, location, capacity, id, ip_node, wip_
 #   - SzTray7 = 7 × 4 (SuTray) = 28 products
 
 # WcGlue6Point: work:SzSingle1 (1), wipIn:virtual (1), wipOut:virtual (1)
+# Include both the process model and individual processes
 r_glue6 = create_resource_with_queues(
-    [pp_glue6_manual, pp_glue6_auto], [4.268, 1.762], 1, "WcGlue6Point", ip_glue6, 
+    [pm_glue6, pp_glue6_manual, pp_glue6_auto], [4.268, 1.762], 1, "WcGlue6Point", ip_glue6, 
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcSolderingEc: work:SzSingle1 (1), wipIn:virtual (1), wipOut:SzDouble1 (2)
 r_solder = create_resource_with_queues(
-    [pp_solder_manual], [4.115, 2.452], 1, "WcSolderingEc", ip_solder,
+    [pm_solder, pp_solder_manual], [4.115, 2.452], 1, "WcSolderingEc", ip_solder,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcAlignEc: work:SzDouble1 (2), wipIn:virtual (1), wipOut:virtual (1)
 r_align = create_resource_with_queues(
-    [pp_align_load_manual, pp_align_load_auto, pp_align_track1_manual, pp_align_track1_auto, 
-     pp_align_track2_manual, pp_align_track2_auto], [4.160, 3.360], 2, "WcAlignEc", ip_align,
+    [pm_align, pp_align_load_manual, pp_align_load_auto, pp_align_track1_manual, pp_align_track1_auto, pp_align_track2_manual, pp_align_track2_auto], [4.160, 3.360], 2, "WcAlignEc", ip_align,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcGlueCaterpillar: work:SzSingle1 (1), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_cater = create_resource_with_queues(
-    [pp_glue_cater_manual, pp_glue_cater_auto], [4.094, 4.249], 1, "WcGlueCaterpillar", ip_cater,
+    [pm_glue_cater, pp_glue_cater_manual, pp_glue_cater_auto], [4.094, 4.249], 1, "WcGlueCaterpillar", ip_cater,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
@@ -368,106 +485,98 @@ r_cater = create_resource_with_queues(
 # Combined capacity for both processes (buffer slide uses 10, assembly uses 1)
 # Virtual zones use SuDouble (2) based on buffer slide process
 r_asm = create_resource_with_queues(
-    [pp_buffer_slide_auto, pp_assembly_torque_manual], [4.115, 4.900], 11, "WcAssemblyTorque", ip_asm,
+    [pm_assembly, pp_buffer_slide_auto, pp_assembly_torque_manual], [4.115, 4.900], 11, "WcAssemblyTorque", ip_asm,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcGlueCover: work:SzSingle1 (1), wipIn:SzSingle1 (1), wipOut:SzTray1 (4)
 r_cover = create_resource_with_queues(
-    [pp_glue_cover_manual, pp_glue_cover_auto], [4.311, 5.561], 1, "WcGlueCover", ip_cover,
+    [pm_glue_cover, pp_glue_cover_manual, pp_glue_cover_auto], [4.311, 5.561], 1, "WcGlueCover", ip_cover,
     wip_in_capacity=2, wip_out_capacity=4
 )
 
 # WcOven cover: work1:SzTray7 (28), wipIn:SzTray7 (28), wipOut:SzDouble1 (2)
 # Note: Offset slightly from base location to avoid duplicate location error
 r_oven_cover = create_resource_with_queues(
-    [pp_oven_cover_manual, pp_oven_cover_auto], [3.862, 6.700], 28, "WcOven", ip_oven,
+    [pm_oven_cover, pp_oven_cover_manual, pp_oven_cover_auto], [3.862, 6.700], 28, "WcOven", ip_oven,
     wip_in_capacity=28, wip_out_capacity=4
 )
 
 # WcOven adjust: work2:SzDouble5 (10), wipIn:SzTray7 (28), wipOut:SzDouble1 (2)
 # Note: Offset slightly from cover oven to represent different process area, shares input with cover
 r_oven_adjust = create_resource_with_queues(
-    [pp_oven_adjust_manual, pp_oven_adjust_auto], [3.862, 6.705], 10, "WcOvenAdjust", ip_oven,
+    [pm_oven_adjust, pp_oven_adjust_manual, pp_oven_adjust_auto], [3.862, 6.705], 10, "WcOvenAdjust", ip_oven,
     wip_in_capacity=28, wip_out_capacity=2
 )
 
 # WcAdjust: work1:SzSingle1 (1), work2:SzSingle1 (1), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_adjust_1 = create_resource_with_queues(
-    [pp_adjust_manual, pp_adjust_auto], [2.501, 7.443], 1, "WcAdjust_1", ip_adjust1,
+    [pm_adjust, pp_adjust_manual, pp_adjust_auto], [2.501, 7.443], 1, "WcAdjust_1", ip_adjust1,
     wip_in_capacity=2, wip_out_capacity=2
 )
 r_adjust_2 = create_resource_with_queues(
-    [pp_adjust_manual, pp_adjust_auto], [1.429, 6.347], 1, "WcAdjust_2", ip_adjust2,
+    [pm_adjust, pp_adjust_manual, pp_adjust_auto], [1.429, 6.347], 1, "WcAdjust_2", ip_adjust2,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcOvenHotTest: work1:SzDouble9 (18), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_oven_hot = create_resource_with_queues(
-    [pp_oven_hot_manual, pp_oven_hot_auto], [1.644, 5.348], 18, "WcOvenHotTest", ip_oven_hot,
+    [pm_oven_hot, pp_oven_hot_manual, pp_oven_hot_auto], [1.644, 5.348], 18, "WcOvenHotTest", ip_oven_hot,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcHotTest: work1:SzSingle1 (1), work2:SzSingle1 (1), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_hot_1 = create_resource_with_queues(
-    [pp_hot_test_manual, pp_hot_test_auto], [1.430, 4.368], 1, "WcHotTest_1", ip_hot,
+    [pm_hot_test, pp_hot_test_manual, pp_hot_test_auto], [1.430, 4.368], 1, "WcHotTest_1", ip_hot,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcCooling: work:SzDouble3 (6), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_cooling = create_resource_with_queues(
-    [pp_cooling_auto], [1.625, 3.622], 6, "WcCooling", ip_cooling,
+    [pm_cooling, pp_cooling_auto], [1.625, 3.622], 6, "WcCooling", ip_cooling,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcFinalTest: work1:SzSingle1 (1), work2:SzSingle1 (1), wipIn:SzDouble1 (2), wipOut:SzDouble1 (2)
 r_final_1 = create_resource_with_queues(
-    [pp_final_test_manual, pp_final_test_auto], [1.430, 2.740], 1, "WcFinalTest_1", ip_final,
+    [pm_final_test, pp_final_test_manual, pp_final_test_auto], [1.430, 2.740], 1, "WcFinalTest_1", ip_final,
     wip_in_capacity=2, wip_out_capacity=2
 )
 
 # WcPackaging: work:SzSingle1 (1), wipIn:SzDouble1 (2), wipOut:SzSingle1 (1)
 r_pack = create_resource_with_queues(
-    [pp_packaging_manual], [1.405, 1.160], 1, "WcPackaging", ip_pack,
+    [pm_packaging, pp_packaging_manual], [1.405, 1.160], 1, "WcPackaging", ip_pack,
     wip_in_capacity=2, wip_out_capacity=2
 )
 # ----------------------
 # Product + link transport
 # ----------------------
-# Product route - manual processes before automated processes for each station
+# Product route - using process models that are specified at resources
+# The product process model references process model IDs (not individual process IDs)
+# This creates the overall flow through all stations
+product_process_model = psx.ProcessModel(
+    adjacency_matrix={
+        "pm_glue6": ["pm_solder"],
+        "pm_solder": ["pm_align"],
+        "pm_align": ["pm_glue_cater"],
+        "pm_glue_cater": ["pm_assembly"],
+        "pm_assembly": ["pm_glue_cover"],
+        "pm_glue_cover": ["pm_oven_cover"],
+        "pm_oven_cover": ["pm_oven_adjust"],
+        "pm_oven_adjust": ["pm_adjust"],
+        "pm_adjust": ["pm_oven_hot"],
+        "pm_oven_hot": ["pm_hot_test"],
+        "pm_hot_test": ["pm_cooling"],
+        "pm_cooling": ["pm_final_test"],
+        "pm_final_test": ["pm_packaging"],
+        "pm_packaging": []
+    },
+    can_contain_other_models=True,
+    ID="product_process_model"
+)
+
 product = psx.Product(
-    process=[
-        # Glue6Point: manual then automated
-        pp_glue6_manual, pp_glue6_auto,
-        # SolderingEc: manual then automated
-        pp_solder_manual,
-        # AlignEc: manual then automated for each step
-        pp_align_load_manual, pp_align_load_auto,
-        pp_align_track1_manual, pp_align_track1_auto,
-        pp_align_track2_manual, pp_align_track2_auto,
-        # GlueCaterpillar: manual then automated
-        pp_glue_cater_manual, pp_glue_cater_auto,
-        # Assembly: manual then automated for each step
-        pp_buffer_slide_auto,
-        pp_assembly_torque_manual,
-        # GlueCover: manual then automated
-        pp_glue_cover_manual, pp_glue_cover_auto,
-        # Oven processes: manual then automated
-        pp_oven_cover_manual, pp_oven_cover_auto,
-        pp_oven_adjust_manual, pp_oven_adjust_auto,
-        # Adjust: manual then automated (parallel stations available)
-        pp_adjust_manual, pp_adjust_auto,
-        # OvenHotTest: manual then automated
-        pp_oven_hot_manual, pp_oven_hot_auto,
-        # HotTest: manual then automated
-        pp_hot_test_manual, pp_hot_test_auto,
-        # Cooling: manual then automated
-        pp_cooling_auto,
-        # FinalTest: manual then automated
-        pp_final_test_manual, pp_final_test_auto,
-        # Packaging: manual then automated
-        pp_packaging_manual,
-    ],
+    process=product_process_model,
     # We use a RequiredCapabilityProcess and back it with actual LinkTransportProcess resources
     # The product will be transported by different workers at different stages
     transport_process=psx.RequiredCapabilityProcess(capability=cap_transport, ID="rcp_transport"),
@@ -502,11 +611,11 @@ ltp_worker1_links = [
 # connect to specific input/output ports
 [n101, r_glue6.ports[0]], [r_glue6.ports[0], n101],  # input
 [n101, r_glue6.ports[1]], [r_glue6.ports[1], n101],  # output
-[n102, r_solder.ports[0]], [r_solder.ports[0], n102],
-[n102, r_solder.ports[1]], [r_solder.ports[1], n102],
-[n103, r_align.ports[0]], [r_align.ports[0], n103],
-[n103, r_align.ports[1]], [r_align.ports[1], n103],
-[n105, r_cater.ports[0]], [r_cater.ports[0], n105],
+    [n102, r_solder.ports[0]], [r_solder.ports[0], n102],
+    [n102, r_solder.ports[1]], [r_solder.ports[1], n102],
+    [n103, r_align.ports[0]], [r_align.ports[0], n103],
+    [n103, r_align.ports[1]], [r_align.ports[1], n103],
+    [n105, r_cater.ports[0]], [r_cater.ports[0], n105],
 [n105, r_cater.ports[1]], [r_cater.ports[1], n105],
 [n106, r_asm.ports[0]], [r_asm.ports[0], n106],
 [n106, r_asm.ports[1]], [r_asm.ports[1], n106],
@@ -577,7 +686,8 @@ ltp_worker2.set_links(ltp_worker2_links)
 # ----------------------
 resources = [
     # stations
-    r_glue6, r_solder, r_align, r_cater, r_asm, r_cover, r_oven_cover, r_oven_adjust,
+    r_glue6, r_solder, r_align, 
+    r_cater, r_asm, r_cover, r_oven_cover, r_oven_adjust,
     r_adjust_1, r_adjust_2, r_oven_hot, r_hot_1, r_cooling, r_final_1, r_pack,
     # workers (they handle both manual processes and transport)
     workers_part1, workers_part2,
@@ -586,7 +696,7 @@ system = psx.ProductionSystem(resources=resources, sources=[src], sinks=[sink])
 
 system.validate()
 model = system.to_model()
-model.conwip_number = 200
+model.conwip_number = 20
 # model.conwip_number = 200
 sim = runner.Runner(production_system_data=model)
 sim.initialize_simulation()

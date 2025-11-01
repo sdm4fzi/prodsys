@@ -4,10 +4,13 @@ from collections.abc import Callable
 from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
 
 from simpy import events
+import simpy
 import logging
 
 from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
+from prodsys.models import port_data
+
 
 from prodsys.simulation import (
     sim,
@@ -16,8 +19,10 @@ from prodsys.simulation import (
 from prodsys.simulation.process_handlers.production_process_handler import ProductionProcessHandler
 from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
-from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
-
+from prodsys.simulation.process_handlers.system_process_model_process_handler import SystemProcessModelHandler
+from prodsys.simulation.process_handlers.resource_process_model_process_handler import ResourceProcessModelHandler
+from prodsys.models.resource_data import ResourceType
+from prodsys.simulation import request as request_module
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -86,6 +91,14 @@ class Controller:
         if not self.state_changed.triggered:
             self.state_changed.succeed()
 
+    def free_up_queue_check(self) -> Generator:
+        # generator that runs until one output queue is free again, getting to know it from a get from the output queue
+        output_queues = [port for port in self.resource.ports if port.data.interface_type == port_data.PortInterfaceType.OUTPUT]
+        queue_get_events = [queue.on_space for queue in output_queues]
+        yield simpy.AnyOf(self.env, queue_get_events)
+        if not self.state_changed.triggered:
+            self.state_changed.succeed()
+
     def control_loop(self) -> Generator:
         """
         The control loop is the main process of the controller. It has to run indefinetely.
@@ -98,6 +111,19 @@ class Controller:
             yield self.state_changed
             self.state_changed = events.Event(self.env)
             logger.debug(f"[CONTROL LOOP] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Requests={len(self.requests)} | Full={self.resource.full} | In Setup={self.resource.in_setup} | Bound={self.resource.bound}")
+            
+            # Detailed logging for blocking conditions
+            if not self.requests:
+                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=NO_REQUESTS")
+            elif self.resource.full:
+                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=FULL | Free Capacity={self.resource.get_free_capacity()} | Running Processes={self.num_running_processes} | Reserved Count={self.reserved_requests_count} | Capacity Current Setup={self.resource.capacity_current_setup} | Capacity={self.resource.capacity}")
+                for i, req in enumerate(self.requests):
+                    logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={req.request_type} | Entity={req.entity.data.ID if req.entity else 'None'} | Origin={req.origin_queue.data.ID if req.origin_queue else 'None'} | Target={req.target_queue.data.ID if req.target_queue else 'None'}")
+            elif self.resource.in_setup:
+                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=IN_SETUP | Setup={self.resource.reserved_setup}")
+            elif self.resource.bound:
+                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=BOUND | Bound To={self.resource.bound_to}")
+            
             if (
                 self.resource.full
                 or self.resource.in_setup
@@ -140,25 +166,36 @@ class Controller:
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
-                for request in requests:
+                for i, request in enumerate(requests):
+                    logger.debug(f"[CONTROL FEASIBILITY CHECK] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'} | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID if request.target_queue else 'None'}")
                     if is_request_feasible(request):
+                        logger.debug(f"[CONTROL FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'}")
                         self.requests.remove(request)
                         return request
+                    else:
+                        logger.debug(f"[CONTROL NOT FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'} | Reason=CHECK_FAILED")
                     # If request becomes infeasible (queue full), reroute it back to router
                     # This allows it to be retried later when space becomes available
                     # Only reroute transport requests - production requests should have been validated
                     # before routing and if item is in INPUT_OUTPUT queue, it should be processable
                     if request.request_type == request_module.RequestType.TRANSPORT:
+                        logger.debug(f"[CONTROL REROUTE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Rerouting transport request for Entity={request.entity.data.ID if request.entity else 'None'}")
                         self.requests.remove(request)
                         request.requesting_item.router.request_handler.reroute_request(request)
                         # Trigger router to check for new routing opportunities
                         if not request.requesting_item.router.got_requested.triggered:
                             request.requesting_item.router.got_requested.succeed()
+                logger.debug(f"[CONTROL NO FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | No feasible request found from {len(requests)} requests")
                 return None
             
             selected_request = get_feasible_request(self.requests)
             if not selected_request:
                 logger.debug(f"[CONTROL] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | No feasible request found | Remaining requests={len(self.requests)}")
+                # Log all remaining requests for debugging
+                for i, req in enumerate(self.requests):
+                    logger.debug(f"[CONTROL REMAINING REQUEST] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={req.request_type} | Entity={req.entity.data.ID if req.entity else 'None'} | Origin Queue Full={req.origin_queue.is_full if req.origin_queue else 'N/A'} | Target Queue Full={req.target_queue.is_full if req.target_queue else 'N/A'} | Entity In Origin={req.entity.data.ID in req.origin_queue.items if req.origin_queue and req.entity else 'N/A'}")
+                # If there are requests waiting on full output queues, wait for space
+                self.env.process(self.free_up_queue_check())
                 continue
             
             logger.debug(f"[CONTROL SELECTED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request={selected_request.request_type} | Origin={selected_request.origin_queue.data.ID if selected_request.origin_queue else 'None'} | Target={selected_request.target_queue.data.ID if selected_request.target_queue else 'None'}")
@@ -234,7 +271,7 @@ class Controller:
 
 def get_requets_handler(
     request: request_module.Request,
-) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, ProcessModelHandler]:
+) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, SystemProcessModelHandler, ResourceProcessModelHandler]:
     """
     Get the process handler for a given process.
 
@@ -257,7 +294,11 @@ def get_requets_handler(
     ):
         return DependencyProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.PROCESS_MODEL:
-        return ProcessModelHandler(request.requesting_item.env)
+        # Route to SystemProcessModelHandler for system resources, ResourceProcessModelHandler for regular resources
+        if request.resource.data.resource_type == ResourceType.SYSTEM:
+            return SystemProcessModelHandler(request.requesting_item.env)
+        else:
+            return ResourceProcessModelHandler(request.requesting_item.env)
     else:
         raise ValueError(f"Unknown process type: {type(process)}")
 
@@ -513,5 +554,4 @@ def scheduled_control_policy(
 
 
 # TODO: add a Controller which starts processes with delays...
-from prodsys.simulation import request as request_module
 

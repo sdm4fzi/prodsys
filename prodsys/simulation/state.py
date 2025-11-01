@@ -136,8 +136,10 @@ class StateInfo:
         self._last_transport_step = last_transport_step
 
     def log_queues(self, origin: Optional[Locatable], target: Locatable):
-        self._origin_ID = origin.data.ID
-        self._target_ID = target.data.ID
+        if origin:
+            self._origin_ID = origin.data.ID
+        if target:
+            self._target_ID = target.data.ID
 
     def log_product(self, _product: product.Product, state_type: StateTypeEnum):
         """

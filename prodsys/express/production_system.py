@@ -106,6 +106,67 @@ class ProductionSystem(core.ExpressObject):
                 + [resource.processes for resource in self.resources]
             )
         )
+        
+        # Collect processes from states (SetupState, ProcessBreakdownState, etc.)
+        states = list(
+            util.flatten_object([resource.states for resource in self.resources])
+        )
+        states = remove_duplicate_items(states)
+        
+        # Extract processes from states
+        state_processes = []
+        for state_instance in states:
+            if isinstance(state_instance, state.SetupState):
+                state_processes.append(state_instance.origin_setup)
+                state_processes.append(state_instance.target_setup)
+            elif isinstance(state_instance, state.ProcessBreakdownState):
+                state_processes.append(state_instance.process)
+        
+        # Add processes from states to the processes list
+        processes.extend(state_processes)
+        
+        # Build a mapping of process IDs to process objects for resolving ProcessModel references
+        process_id_to_process = {proc.ID: proc for proc in processes}
+        
+        # Extract processes referenced in ProcessModel adjacency matrices
+        process_model_processes = []
+        for proc in processes:
+            if isinstance(proc, process.ProcessModel):
+                # Extract all process IDs from the adjacency matrix
+                process_ids = set()
+                for key in proc.adjacency_matrix.keys():
+                    process_ids.add(key)
+                for value_list in proc.adjacency_matrix.values():
+                    process_ids.update(value_list)
+                
+                # Find process objects by ID from our mapping
+                for process_id in process_ids:
+                    if process_id in process_id_to_process:
+                        # Already in the list, skip
+                        continue
+                    # Try to find the process in resources' processes
+                    for resource_instance in self.resources:
+                        for resource_process in resource_instance.processes:
+                            if resource_process.ID == process_id and resource_process not in processes:
+                                process_id_to_process[process_id] = resource_process
+                                process_model_processes.append(resource_process)
+                                break
+                        # Also check states for this process
+                        for state_instance in resource_instance.states:
+                            if isinstance(state_instance, state.SetupState):
+                                if state_instance.origin_setup.ID == process_id and state_instance.origin_setup not in processes:
+                                    process_id_to_process[process_id] = state_instance.origin_setup
+                                    process_model_processes.append(state_instance.origin_setup)
+                                if state_instance.target_setup.ID == process_id and state_instance.target_setup not in processes:
+                                    process_id_to_process[process_id] = state_instance.target_setup
+                                    process_model_processes.append(state_instance.target_setup)
+                            elif isinstance(state_instance, state.ProcessBreakdownState):
+                                if state_instance.process.ID == process_id and state_instance.process not in processes:
+                                    process_id_to_process[process_id] = state_instance.process
+                                    process_model_processes.append(state_instance.process)
+        
+        # Add processes found from ProcessModel adjacency matrices
+        processes.extend(process_model_processes)
         processes = remove_duplicate_items(processes)
         dependencies += list(
             util.flatten_object(
@@ -150,10 +211,7 @@ class ProductionSystem(core.ExpressObject):
             )
         )
         primitive_stores = remove_duplicate_items(primitive_stores)
-        states = list(
-            util.flatten_object([resource.states for resource in self.resources])
-        )
-        states = remove_duplicate_items(states)
+        # States are already collected above, no need to collect again
 
         time_models = (
             [

@@ -60,13 +60,13 @@ def set_input_output_queue(resource: psx.Resource):
         ),
     ]
 
-set_input_output_queues(machine)
-set_input_output_queues(machine2)
+set_input_output_queue(machine)
+set_input_output_queue(machine2)
 
 transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
-product1 = psx.Product([p1], tp, "product1")
-product2 = psx.Product([p2], tp, "product2")
+product1 = psx.Product([p1, p2], tp, "product1")
+product2 = psx.Product([p1, p2], tp, "product2")
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 sink2 = psx.Sink(product2, [10, 0], "sink2")
@@ -88,10 +88,10 @@ from prodsys import runner
 
 runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-system.run(10)
+system.run(1000)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-# runner_instance.plot_results()
+runner_instance.plot_results()
 runner_instance.save_results_as_csv()

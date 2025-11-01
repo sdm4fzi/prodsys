@@ -139,9 +139,13 @@ def register_production_states_for_processes(
     for process_instance, capacity in zip(
         resource.processes, resource.data.process_capacities
     ):
-        # Skip ProcessModelProcess as it doesn't have a time_model_id
-        # ProcessModels are containers for other processes and don't need their own production state
-        if isinstance(process_instance, process.ProcessModelProcess):
+        # ProcessModels are containers for other processes and only need production states for subprocesses
+        if isinstance(process_instance, process.ProcessModelProcess) and not isinstance(resource, resources.SystemResource):
+            contained_processes = process_instance.contained_processes
+            for contained_process in contained_processes:
+                register_production_state_for_process(
+                    resource, contained_process, state_factory, _env
+                )
             continue
         
         register_production_state_for_process(

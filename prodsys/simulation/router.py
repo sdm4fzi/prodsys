@@ -474,7 +474,7 @@ class Router:
             target=target,
             target_queue=target_queue,
         )
-        self.request_handler.mark_routing(processing_request)
+        self.request_handler.mark_routing(processing_request, setting_current_process=False)
         self.resource_factory.global_system_resource.controller.request(processing_request)
         # Handle dependencies for process model requests
         if processing_request.required_dependencies:

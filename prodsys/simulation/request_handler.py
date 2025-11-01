@@ -326,14 +326,15 @@ class RequestHandler:
             self.pending_resource_requests.append(request_info_key)
         return request_info
 
-    def mark_routing(self, allocated_request: request.Request) -> None:
+    def mark_routing(self, allocated_request: request.Request, setting_current_process: bool = True) -> None:
         """
         Marks a request as allocated to a resource.
 
         Args:
             allocated_request (request.Request): The request that has been allocated.
         """
-        if allocated_request.request_type == request.RequestType.PRODUCTION:
+
+        if setting_current_process and allocated_request.request_type in [request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL]:
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
