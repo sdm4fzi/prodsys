@@ -30,8 +30,8 @@ def find_route(
     Returns:
         List[Locatable]: The route as a list of locatable objects.
     """
-    if request.route and not find_route_to_origin:
-        return request.route
+    if request.get_route() and not find_route_to_origin:
+        return request.get_route()
     route_finder = RouteFinder()
     route = route_finder.find_route(
         request=request, process=process, find_route_to_origin=find_route_to_origin

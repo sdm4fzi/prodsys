@@ -72,7 +72,7 @@ class TransportProcessHandler:
             yield from process_request.target_queue.put(entity.data)
         
     def update_location(
-        self, locatable: locatable.Locatable, location: list[float]
+        self, locatable: locatable.Locatable
     ) -> None:
         """
         Set the current position of the transport resource.
@@ -148,6 +148,7 @@ class TransportProcessHandler:
             for transport_event, transport_state in transport_state_events:
                 yield transport_event
                 transport_state.process = None
+        self.update_location(process_request.get_origin())
         yield from self.get_entities_of_request(process_request)
         for entity in process_request.get_atomic_entities():
             entity.update_location(self.resource)
@@ -202,7 +203,6 @@ class TransportProcessHandler:
             Generator: The generator yields when the transport is over.
         """
         for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
-            # FIXME: when two queues are at the same location, route finding can be confused and find a correct route for locations but wrong locatable...
             if link_index == 0:
                 initial_transport_step = True
             else:
@@ -284,7 +284,7 @@ class TransportProcessHandler:
             input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
         yield input_state.process
-        self.update_location(target, location=target_location)
+        self.update_location(target)
 
     def find_route_to_origin(
         self, process_request: request_module.Request

@@ -1351,8 +1351,10 @@ class PostProcessor:
         transport_condition = df["State Type"] == "Transport"
         # Handle None/NaN values in Empty Transport column (occurs for non-transport activities)
         # We need explicit False check (not just "not True") to exclude None/NaN values
-        non_empty_transport = transport_condition & df["Empty Transport"].fillna(True).eq(False)
-        first_transport_step = df["Initial Transport Step"].fillna(False).eq(True)
+        filled_empty_transport = df["Empty Transport"].apply(lambda x: True if pd.isna(x) else x)
+        non_empty_transport = transport_condition & ~filled_empty_transport
+        filled_first_transport = df["Initial Transport Step"].apply(lambda x: False if pd.isna(x) else x)
+        first_transport_step = filled_first_transport
         
         # Transport start state: -1 at Origin, +1 at Transport resource
         transport_start = non_empty_transport & first_transport_step & (df["Activity"] == "start state")
@@ -1361,7 +1363,8 @@ class PostProcessor:
         df.loc[transport_start_indices, "WIP_resource"] = df.loc[transport_start_indices, "Origin location"]
         
         # Transport end state: -1 at Transport resource, +1 at Target
-        last_transport_step = df["Last Transport Step"].fillna(False).eq(True)
+        filled_last_transport = df["Last Transport Step"].apply(lambda x: False if pd.isna(x) else x)
+        last_transport_step = filled_last_transport
         transport_end = non_empty_transport & last_transport_step & (df["Activity"] == "end state")
         transport_end_indices = df[transport_end].index
         df.loc[transport_end_indices, "WIP_Increment"] = 1
@@ -1385,7 +1388,8 @@ class PostProcessor:
         
         
         
-        INTERRUPTED_CONDITION = df["Empty Transport"].fillna(True).eq(False) & (
+        filled_empty_transport_interrupt = df["Empty Transport"].apply(lambda x: True if pd.isna(x) else x)
+        INTERRUPTED_CONDITION = ~filled_empty_transport_interrupt & (
             df["Activity"] == "end interrupt"
         )
         df.loc[INTERRUPTED_CONDITION, "WIP_Increment"] = 1

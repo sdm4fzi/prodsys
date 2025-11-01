@@ -231,7 +231,7 @@ class Router:
             route = self.request_handler.process_matcher.get_route(
                 origin_port, target_port, executed_request.process
             )
-            executed_request.route = route
+            executed_request.set_route(route=route)
             # print(f"[DEBUG ROUTING] Transport route determined: {[loc.data.ID for loc in route] if route else None}")
 
         executed_request.origin_queue = origin_port
