@@ -106,6 +106,44 @@ class Queue:
             self._notify("on_space")
 
         return item
+    
+    def get_and_reserve_return(self, item_id: str) -> Generator:
+        """
+        Get an item AND immediately reserve a slot for its return.
+        This minimizes race conditions for INPUT_OUTPUT queues.
+        
+        For INPUT_OUTPUT queues with capacity 1:
+        - Item is in queue (full)
+        - Get removes item (notifies on_space, wakes waiting processes)
+        - Immediately reserve return slot
+        - If reservation happens fast enough, queue appears full again (reserved),
+          preventing other items from being put
+        
+        Args:
+            item_id (str): The ID of the item to get.
+            
+        Yields:
+            Generator: Yields until item is retrieved and return slot is reserved.
+        """
+        # Wait for item to exist
+        while item_id not in self.items:
+            ev = self.on_item
+            yield ev
+        
+        # Remove item (frees space)
+        item = self.items.pop(item_id)
+        
+        # CRITICAL: Reserve BEFORE notifying on_space to minimize race window
+        # After removing item, space is available. Reserve it immediately.
+        # This prevents other processes from grabbing the freed space between
+        # the get() and reserve() operations.
+        self._pending_put += 1
+        
+        # Now notify on_space - but queue is effectively full again (reserved)
+        if self.capacity != float("inf"):
+            self._notify("on_space")
+        
+        return item
 
     def get_location(self) -> List[float]:
         return self.data.location

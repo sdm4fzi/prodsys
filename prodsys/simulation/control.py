@@ -107,10 +107,28 @@ class Controller:
 
             self.control_policy(self.requests)
             def is_request_feasible(request: request_module.Request) -> bool:
-                if request.request_type not in (request_module.RequestType.TRANSPORT):
-                    return True
-                if request.target_queue.is_full:
-                    return False
+                # Check transport requests for target queue availability
+                if request.request_type == request_module.RequestType.TRANSPORT:
+                    if request.target_queue.is_full:
+                        return False
+                # Check production requests for INPUT_OUTPUT queue deadlock prevention
+                elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
+                    # For INPUT_OUTPUT queues, check if output space is available
+                    # If origin == target (same INPUT_OUTPUT queue), check if item is in queue
+                    if request.origin_queue == request.target_queue:
+                        # If item is in queue, we can remove it then put it back
+                        item_id = request.requesting_item.data.ID
+                        if item_id in request.origin_queue.items:
+                            # Item is in queue - feasible (we'll remove then put back)
+                            return True
+                        else:
+                            # Item not in queue - need space
+                            if request.target_queue.is_full:
+                                return False
+                    else:
+                        # Separate queues - check if target has space
+                        if request.target_queue.is_full:
+                            return False
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
@@ -118,8 +136,16 @@ class Controller:
                     if is_request_feasible(request):
                         self.requests.remove(request)
                         return request
-                    # self.requests.remove(request)
-                    # request.requesting_item.router.request_handler.reroute_request(request)
+                    # If request becomes infeasible (queue full), reroute it back to router
+                    # This allows it to be retried later when space becomes available
+                    # Only reroute transport requests - production requests should have been validated
+                    # before routing and if item is in INPUT_OUTPUT queue, it should be processable
+                    if request.request_type == request_module.RequestType.TRANSPORT:
+                        self.requests.remove(request)
+                        request.requesting_item.router.request_handler.reroute_request(request)
+                        # Trigger router to check for new routing opportunities
+                        if not request.requesting_item.router.got_requested.triggered:
+                            request.requesting_item.router.got_requested.succeed()
                 return None
             
             selected_request = get_feasible_request(self.requests)
@@ -134,7 +160,9 @@ class Controller:
                     continue
                 selected_request = lot_request
                 
-            yield from self.reserve_output_queue(selected_request)
+            # Reserve output queue for transport requests (production requests reserve in their handler)
+            if selected_request.request_type == request_module.RequestType.TRANSPORT:
+                yield from self.reserve_output_queue(selected_request)
             
             self.reserved_requests_count += selected_request.capacity_required
             # For dependency requests, immediately bind the resource to block other processes

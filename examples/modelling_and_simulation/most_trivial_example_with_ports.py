@@ -38,13 +38,13 @@ def set_input_output_queues(resource: psx.Resource):
     resource.ports = [
         psx.Queue(
             ID=f"{resource.ID}_input",
-            capacity=1,
+            capacity=1,  # Test with queue size 1 to verify deadlock prevention
             location=resource.location,
             interface_type=port_data.PortInterfaceType.INPUT,
         ),
         psx.Queue(
             ID=f"{resource.ID}_output",
-            capacity=1,
+            capacity=1,  # Test with queue size 1 to verify deadlock prevention
             location=resource.location,
             interface_type=port_data.PortInterfaceType.OUTPUT
         )
@@ -54,7 +54,7 @@ def set_input_output_queue(resource: psx.Resource):
     resource.ports = [
         psx.Queue(
             ID=f"{resource.ID}_input",
-            capacity=2, # Input_Output queue capacity must be at least 2.
+            capacity=1,  # Test with queue size 1 to verify deadlock prevention
             location=resource.location,
             interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
         ),
@@ -94,4 +94,4 @@ runner_instance = system.runner
 
 runner_instance.print_results()
 runner_instance.plot_results()
-# runner_instance.save_results_as_csv("examples")
+runner_instance.save_results_as_csv()

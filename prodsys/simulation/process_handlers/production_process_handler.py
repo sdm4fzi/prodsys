@@ -110,16 +110,29 @@ class ProductionProcessHandler:
             resource_request = resource.request()
             yield resource_request
             resource_requests.append(resource_request)
-        yield from self.get_entities_of_request(process_request)
-
-        # Reserve space in output queue after taking items from input queue
-        # This prevents deadlock by ensuring output space is available before processing completes
-        # For INPUT_OUTPUT queues, this reserves space for putting the item back
-        # For separate INPUT/OUTPUT queues, this reserves space in the output queue
-        # IMPORTANT: Reserve N spots for N entities in the batch/lot!
-        # num_entities = len(process_request.get_atomic_entities())
-        # for _ in range(num_entities):
-        #     yield from process_request.target_queue.reserve()
+        
+        # CRITICAL: Reserve output queue at the right time to prevent deadlocks
+        # For INPUT_OUTPUT queues (origin == target): We need to reserve BEFORE getting
+        # because the item being removed will free space for its return. However, the queue
+        # appears full while the item is in it. The solution: check if item is in queue,
+        # and if so, we can reserve knowing removal will free space.
+        is_input_output_queue = (process_request.origin_queue == process_request.target_queue)
+        
+        if is_input_output_queue:
+            # For INPUT_OUTPUT queues: Use atomic get_and_reserve_return operation
+            # This prevents race condition where another item arrives between get() and reserve()
+            # The get_and_reserve_return ensures the return slot is reserved immediately
+            # after removing the item, before any other process can fill the queue
+            for entity in process_request.get_atomic_entities():
+                yield from process_request.origin_queue.get_and_reserve_return(entity.data.ID)
+        else:
+            # Separate queues: Reserve output space BEFORE retrieving from input
+            num_entities = len(process_request.get_atomic_entities())
+            for _ in range(num_entities):
+                yield from process_request.target_queue.reserve()
+            
+            # Now get all entities
+            yield from self.get_entities_of_request(process_request)
 
         process_time = get_process_time_for_lots(process_request)
         resource.controller.mark_started_process(process_request.capacity_required)
