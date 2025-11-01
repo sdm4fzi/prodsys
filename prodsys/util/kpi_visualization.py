@@ -88,7 +88,7 @@ def plot_throughput_time_distribution(
 
     group_labels = grouped.index
 
-    if len(values) == 0:
+    if len(values) < 30:
         return None
 
     # Create distplot with custom bin_size
