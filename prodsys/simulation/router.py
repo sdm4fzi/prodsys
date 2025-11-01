@@ -101,6 +101,7 @@ class Router:
             self.free_primitives_by_type[primitive.data.type].append(primitive)
 
         self.resources = resources
+        self.free_resources: Dict[str, resources.Resource] = {resource.data.ID: resource for resource in self.resources}
         self.reachability_cache: Dict[Tuple[str, str], bool] = {}
         self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
@@ -141,18 +142,45 @@ class Router:
         if not self.resource_got_free.triggered:
             self.resource_got_free.succeed()
 
+    def mark_resource_free(self, resource: resources.Resource) -> None:
+        """
+        Marks a resource as free in the router.
+        """
+        if resource.data.ID not in self.free_resources:
+            self.free_resources[resource.data.ID] = resource
+
+    def mark_resource_not_free(self, resource: resources.Resource) -> None:
+        """
+        Marks a resource as not free in the router.
+        """
+        if resource.data.ID in self.free_resources:
+            self.free_resources.pop(resource.data.ID)
+
+    def update_free_resources(self) -> None:
+        """
+        Updates the list of free resources.
+        """
+        # self.free_resources = {resource.data.ID: resource for resource in self.resources if not resource.full and not all(port.is_full for port in resource.ports if port.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT])}
+        for resource in self.resources:
+            if resource.full:
+                self.mark_resource_not_free(resource)
+            elif all(port.is_full for port in resource.ports if port.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]):
+                self.mark_resource_not_free(resource)
+            else:
+                self.mark_resource_free(resource)
+
     def resource_routing_loop(self) -> Generator[None, None, None]:
         """
         Main allocation loop for the router.
         This method should be called in a separate thread to run the allocation process.
         """
-        free_resources = self.resources
         while True:
             yield self.got_requested
             self.got_requested = events.Event(self.env)
             while True:
+                self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
-                    free_resources
+                    list(self.free_resources.values())
                 )
                 if not free_requests:
                     break
@@ -205,12 +233,6 @@ class Router:
             request.RequestType.PRODUCTION,
             request.RequestType.PROCESS_MODEL,
         )
-
-        if is_production_request:
-            # Reserve a spot in the input queue for this single item
-            # (lot formation happens AFTER routing for production processes)
-            yield from origin_port.reserve()
-            yield from target_port.reserve()
 
         if (
             is_production_request

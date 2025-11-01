@@ -23,7 +23,7 @@ class Queue:
       - on_space: fired when space frees up (unblocks putters/reservers)
     """
 
-    def __init__(self, env: sim.Environment, data):
+    def __init__(self, env: sim.Environment, data: port_data.QueueData):
         self.env: sim.Environment = env
         self.data = data
         self.capacity: float = float("inf") if getattr(data, "capacity", 0) == 0 else int(data.capacity)
@@ -48,6 +48,15 @@ class Queue:
         setattr(self, which, self.env.event())
 
     # ---- API ----------------------------------------------------------------
+
+    def free_space(self) -> int:
+        return self.capacity - self._pending_put - len(self.items)
+
+    @property
+    def is_full(self) -> bool:
+        return self._is_full()
+
+
     def reserve(self) -> Generator:
         """
         Reserve a slot for a future put. Waits until space is available.

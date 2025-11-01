@@ -104,30 +104,37 @@ class Controller:
                 or not self.requests
             ):
                 continue
+
+            self.control_policy(self.requests)
+            def is_request_feasible(request: request_module.Request) -> bool:
+                if request.request_type not in (request_module.RequestType.TRANSPORT):
+                    return True
+                if request.target_queue.is_full:
+                    return False
+                return True
+
+            def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
+                for request in requests:
+                    if is_request_feasible(request):
+                        self.requests.remove(request)
+                        return request
+                    # self.requests.remove(request)
+                    # request.requesting_item.router.request_handler.reroute_request(request)
+                return None
             
-            # Try to find a processable request (may need to skip requests that can't form lots)
-            attempts = 0
-            max_attempts = len(self.requests)
-            
-            while attempts < max_attempts:
-                self.control_policy(self.requests)
-                selected_request = self.requests.pop(0)
-                
-                if self._should_form_lot(selected_request):
-                    lot_request = self._form_lot(selected_request)
-                    if not lot_request:
-                        # Can't form lot yet - move to end and try next request
-                        self.requests.append(selected_request)
-                        attempts += 1
-                        continue
-                    selected_request = lot_request
-                
-                # Found a processable request, break out of the inner loop
-                break
-            else:
-                # Tried all requests, none can be processed right now
-                # Wait for state change (new request or process completion)
+            selected_request = get_feasible_request(self.requests)
+            if not selected_request:
                 continue
+                
+            if self._should_form_lot(selected_request):
+                lot_request = self._form_lot(selected_request)
+                if not lot_request:
+                    # Can't form lot yet - move to end and try next request
+                    self.requests.append(selected_request)
+                    continue
+                selected_request = lot_request
+                
+            yield from self.reserve_output_queue(selected_request)
             
             self.reserved_requests_count += selected_request.capacity_required
             # For dependency requests, immediately bind the resource to block other processes
@@ -138,6 +145,21 @@ class Controller:
             self.env.process(process_handler.handle_request(selected_request))
             if not self.resource.full and self.requests:
                 self.state_changed.succeed()
+
+    def reserve_output_queue(self, process_request: request_module.Request) -> Generator:
+        """
+        Reserve the output queue for the process.
+
+        Args:
+            process_request (request_module.Request): The request to reserve the output queue for.
+        """
+        if process_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
+            return
+        for entity in process_request.get_atomic_entities():
+            if process_request.target_queue.is_full:
+                raise ValueError(f"Target queue {process_request.target_queue.data.ID} is full for request {process_request.completed}")
+            yield from process_request.target_queue.reserve()
+            print(f"{process_request.requesting_item.env.now:.2f}: reserved output queue {process_request.target_queue.data.ID} for request {process_request.completed}")
 
     def _should_form_lot(self, process_request: request_module.Request) -> bool:
         return self.lot_handler.lot_required(process_request)

@@ -312,13 +312,13 @@ def create_resource_with_queues(processes, location, capacity, id, ip_node, wip_
     ix, iy = ip_node.location
     input_queue = psx.Queue(
         ID=f"{id}_input",
-        capacity=13,
+        capacity=8,
         location=ip_node.location,
         interface_type=PortInterfaceType.INPUT
     )
     output_queue = psx.Queue(
         ID=f"{id}_output",
-        capacity=13,
+        capacity=8,
         location=ip_node.location,
         interface_type=PortInterfaceType.OUTPUT
     )
@@ -477,7 +477,7 @@ product = psx.Product(
 # Source/Sink placed at actual network endpoints
 # TODO: 15000 Stück in 120 Stunden -> Zwischenankunftszeit: 28.8s
 src = psx.Source(product=product,
-                 time_model=psx.FunctionTimeModel("exponential",28.0, ID="tm_arrival"),
+                 time_model=psx.FunctionTimeModel("exponential",2.0, ID="tm_arrival"),
                  location=[3.528, 0.800], ID="Source")
 sink = psx.Sink(product=product, location=[2.135, 0.600], ID="Sink")
 

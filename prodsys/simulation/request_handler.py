@@ -346,6 +346,20 @@ class RequestHandler:
         request_info.request_state = "routed"
         self.routed_requests[id(allocated_request.completed)] = request_info
 
+
+    def reroute_request(self, rerouted_request: request.Request) -> None:
+        """
+        Reroutes a request to the router.
+        """
+        print(f"{rerouted_request.requesting_item.env.now:.2f}: rerouting request {rerouted_request.completed}")
+        routed_request_info = self.routed_requests.pop(id(rerouted_request.completed), None)
+        if not routed_request_info:
+            raise ValueError(
+                f"Request info not found for rerouted request {rerouted_request.completed}"
+            )
+        routed_request_info.request_state = "pending"
+        self.pending_requests[id(rerouted_request.completed)] = routed_request_info
+
     def mark_completion(self, completed_request: request.Request) -> None:
         """
         Marks a request as completed.
