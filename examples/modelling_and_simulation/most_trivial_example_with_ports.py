@@ -3,7 +3,7 @@ import prodsys
 from prodsys.models import port_data
 
 print("version used:", prodsys.VERSION)
-prodsys.set_logging("CRITICAL")
+prodsys.set_logging("DEBUG")
 
 t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
 t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
@@ -20,14 +20,14 @@ setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
 machine = psx.Resource(
-    [p2],
+    [p1],
     [5, 0],
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine",
 )
 machine2 = psx.Resource(
-    [p1],
+    [p2],
     [7, 0],
     2,
     states=[setup_state_1, setup_state_2],
@@ -61,7 +61,7 @@ def set_input_output_queue(resource: psx.Resource):
     ]
 
 set_input_output_queues(machine)
-set_input_output_queue(machine2)
+set_input_output_queues(machine2)
 
 transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
@@ -88,10 +88,10 @@ from prodsys import runner
 
 runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-system.run(1000)
+system.run(10)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-runner_instance.plot_results()
+# runner_instance.plot_results()
 runner_instance.save_results_as_csv()

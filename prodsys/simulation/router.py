@@ -208,16 +208,8 @@ class Router:
                     break
                 self.env.update_progress_bar()
                 # Filter out requests that would cause deadlocks by checking target queue availability
-                feasible_requests = [
-                    req for req in free_requests 
-                    if self._is_request_feasible(req)
-                ]
-                if not feasible_requests:
-                    # No feasible requests right now - wait for state change
-                    if not self.resource_got_free.triggered:
-                        self.resource_got_free.succeed()
-                    break
-                request: request.Request = self.route_request(feasible_requests)
+                logger.debug(f"[ROUTER] Time={self.env.now:.2f} | Routing {len(free_requests)} free requests")
+                request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
                 self.env.process(self.execute_resource_routing(request))
 
@@ -409,60 +401,8 @@ class Router:
         
         # Fallback to the first storage if none found
         return possible_storages[0] if possible_storages else primitive.storage
-
-    def _is_request_feasible(self, req: request.Request) -> bool:
-        """
-        Check if a request is feasible by verifying target queue availability.
-        This prevents deadlocks by ensuring we don't route to full queues.
-        
-        Args:
-            req (request.Request): The request to check.
-            
-        Returns:
-            bool: True if the request is feasible, False otherwise.
-        """
-        try:
-            # For transport requests, check if target queue has space
-            if req.request_type == request.RequestType.TRANSPORT:
-                origin_port, target_port = self.interaction_handler.get_interaction_ports(req)
-                if target_port and target_port.is_full:
-                    return False
-            
-            # For production requests, check if target queue (output) has space
-            # Note: For INPUT_OUTPUT queues, we need to be careful - if origin == target,
-            # the item will be removed then put back, so we need to check if item is in queue
-            elif req.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL):
-                origin_port, target_port = self.interaction_handler.get_interaction_ports(req)
-                if target_port:
-                    # For INPUT_OUTPUT queues where origin == target, check if item is in queue
-                    if origin_port == target_port:
-                        # If item is in the queue, we can remove it then put it back
-                        # Check if the requesting item is currently in this queue
-                        item_id = req.requesting_item.data.ID
-                        if item_id in origin_port.items:
-                            # Item is in queue - we can process it (remove then put back)
-                            # Even if queue appears full, removing the item frees space
-                            # We'll reserve return slot immediately after get() in handler
-                            return True
-                        else:
-                            # Item not in queue yet - need space to put it in
-                            # For INPUT_OUTPUT queues, check if there's space considering reservations
-                            # We need: free_space() > 0 OR item is currently being processed elsewhere
-                            if target_port.free_space() <= 0:
-                                return False
-                    else:
-                        # Separate queues - just check if target has space
-                        if target_port.is_full:
-                            return False
-            
-            # Dependency requests don't use queues the same way
-            return True
-        except (ValueError, AttributeError) as e:
-            # If we can't determine ports (e.g., origin/target not set), assume feasible
-            # The actual check will happen later in execute_resource_routing
-            logger.debug(f"Could not determine ports for feasibility check: {e}")
-            return True
-
+    
+    
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
         Allocates a resource to a request.

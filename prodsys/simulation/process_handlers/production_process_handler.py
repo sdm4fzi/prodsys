@@ -66,8 +66,12 @@ class ProductionProcessHandler:
         Returns:
             Generator: The generator yields when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
+        logger.debug(f"[PROD GET START] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Origin Queue={process_request.origin_queue.data.ID} | Entities={len(process_request.get_atomic_entities())}")
         for entity in process_request.get_atomic_entities():
+            logger.debug(f"[PROD GET] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Origin Queue={process_request.origin_queue.data.ID} | Getting entity")
             yield from process_request.origin_queue.get(entity.data.ID)
+            logger.debug(f"[PROD GET DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Successfully got entity")
+            process_request.target_queue.reserve()
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -81,8 +85,11 @@ class ProductionProcessHandler:
         Returns:
             Generator: The generator yields when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
+        logger.debug(f"[PROD PUT START] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Target Queue={process_request.target_queue.data.ID} | Entities={len(process_request.get_atomic_entities())} | Queue Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
         for entity in process_request.get_atomic_entities():
+            logger.debug(f"[PROD PUT] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | Before put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
             yield from process_request.target_queue.put(entity.data)
+            logger.debug(f"[PROD PUT DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | After put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
@@ -111,28 +118,10 @@ class ProductionProcessHandler:
             yield resource_request
             resource_requests.append(resource_request)
         
-        # CRITICAL: Reserve output queue at the right time to prevent deadlocks
-        # For INPUT_OUTPUT queues (origin == target): We need to reserve BEFORE getting
-        # because the item being removed will free space for its return. However, the queue
-        # appears full while the item is in it. The solution: check if item is in queue,
-        # and if so, we can reserve knowing removal will free space.
-        is_input_output_queue = (process_request.origin_queue == process_request.target_queue)
-        
-        if is_input_output_queue:
-            # For INPUT_OUTPUT queues: Use atomic get_and_reserve_return operation
-            # This prevents race condition where another item arrives between get() and reserve()
-            # The get_and_reserve_return ensures the return slot is reserved immediately
-            # after removing the item, before any other process can fill the queue
-            for entity in process_request.get_atomic_entities():
-                yield from process_request.origin_queue.get_and_reserve_return(entity.data.ID)
-        else:
-            # Separate queues: Reserve output space BEFORE retrieving from input
-            num_entities = len(process_request.get_atomic_entities())
-            for _ in range(num_entities):
-                yield from process_request.target_queue.reserve()
+
             
-            # Now get all entities
-            yield from self.get_entities_of_request(process_request)
+        # Now get all entities
+        yield from self.get_entities_of_request(process_request)
 
         process_time = get_process_time_for_lots(process_request)
         resource.controller.mark_started_process(process_request.capacity_required)
@@ -150,7 +139,9 @@ class ProductionProcessHandler:
             yield process_event
             production_state.process = None
 
+        logger.debug(f"[PROD BEFORE PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Process finished, about to put entities to target queue")
         yield from self.put_entities_of_request(process_request)
+        logger.debug(f"[PROD AFTER PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Successfully put entities to target queue")
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.target_queue)
 

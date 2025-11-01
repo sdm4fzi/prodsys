@@ -97,6 +97,7 @@ class Controller:
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
+            logger.debug(f"[CONTROL LOOP] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Requests={len(self.requests)} | Full={self.resource.full} | In Setup={self.resource.in_setup} | Bound={self.resource.bound}")
             if (
                 self.resource.full
                 or self.resource.in_setup
@@ -110,6 +111,7 @@ class Controller:
                 # Check transport requests for target queue availability
                 if request.request_type == request_module.RequestType.TRANSPORT:
                     if request.target_queue.is_full:
+                        logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Transport | Target={request.target_queue.data.ID} | Full=True | NOT FEASIBLE")
                         return False
                 # Check production requests for INPUT_OUTPUT queue deadlock prevention
                 elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
@@ -117,18 +119,24 @@ class Controller:
                     # If origin == target (same INPUT_OUTPUT queue), check if item is in queue
                     if request.origin_queue == request.target_queue:
                         # If item is in queue, we can remove it then put it back
-                        item_id = request.requesting_item.data.ID
+                        item_id = request.entity.data.ID
                         if item_id in request.origin_queue.items:
                             # Item is in queue - feasible (we'll remove then put back)
+                            logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production INPUT_OUTPUT | Queue={request.origin_queue.data.ID} | Item={item_id} in queue | FEASIBLE")
                             return True
                         else:
-                            # Item not in queue - need space
-                            if request.target_queue.is_full:
-                                return False
+                            raise ValueError(f"Item {item_id} not in queue {request.origin_queue.data.ID}")
                     else:
-                        # Separate queues - check if target has space
+                        # Separate queues - first check if item is in origin queue
+                        item_id = request.entity.data.ID
+                        is_in_origin = item_id in request.origin_queue.items
+                        if not is_in_origin:
+                            raise ValueError(f"Item {item_id} not in origin queue {request.origin_queue.data.ID}")
+                        # Item is in origin queue - check if target has space
                         if request.target_queue.is_full:
+                            logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production separate queues | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID} | Item={item_id} | In Origin=True | Target Full=True | NOT FEASIBLE")
                             return False
+                        logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production separate queues | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID} | Item={item_id} | In Origin=True | FEASIBLE")
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
@@ -150,7 +158,10 @@ class Controller:
             
             selected_request = get_feasible_request(self.requests)
             if not selected_request:
+                logger.debug(f"[CONTROL] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | No feasible request found | Remaining requests={len(self.requests)}")
                 continue
+            
+            logger.debug(f"[CONTROL SELECTED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request={selected_request.request_type} | Origin={selected_request.origin_queue.data.ID if selected_request.origin_queue else 'None'} | Target={selected_request.target_queue.data.ID if selected_request.target_queue else 'None'}")
                 
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
@@ -162,7 +173,7 @@ class Controller:
                 
             # Reserve output queue for transport requests (production requests reserve in their handler)
             if selected_request.request_type == request_module.RequestType.TRANSPORT:
-                yield from self.reserve_output_queue(selected_request)
+                self.reserve_output_queue(selected_request)
             
             self.reserved_requests_count += selected_request.capacity_required
             # For dependency requests, immediately bind the resource to block other processes
@@ -186,7 +197,7 @@ class Controller:
         for entity in process_request.get_atomic_entities():
             if process_request.target_queue.is_full:
                 raise ValueError(f"Target queue {process_request.target_queue.data.ID} is full for request {process_request.completed}")
-            yield from process_request.target_queue.reserve()
+            process_request.target_queue.reserve()
             print(f"{process_request.requesting_item.env.now:.2f}: reserved output queue {process_request.target_queue.data.ID} for request {process_request.completed}")
 
     def _should_form_lot(self, process_request: request_module.Request) -> bool:

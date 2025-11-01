@@ -57,25 +57,25 @@ class Queue:
         return self._is_full()
 
 
-    def reserve(self) -> Generator:
+    def reserve(self):
         """
         Reserve a slot for a future put. Waits until space is available.
         Usage: yield queue.reserve()
         """
-        while self._is_full():
-            # capture current event ref so we don't get swapped underneath
-            ev = self.on_space
-            yield ev
+        logger.debug(f"[RESERVE] Time={self.env.now:.2f} | Queue={self.data.ID} | Capacity={self.capacity} | Items={len(self.items)} | Pending={self._pending_put} | Full={self._is_full()}")
         self._pending_put += 1
+        logger.debug(f"[RESERVE DONE] Time={self.env.now:.2f} | Queue={self.data.ID} | New Pending={self._pending_put}")
 
     def put(self, item) -> Generator:
         """
         Put an item; if no prior reserve(), it will implicitly wait for space.
         If caller already reserved, this will consume that reservation.
         """
+        logger.debug(f"[PUT START] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item.ID} | Had Reservation={self._pending_put > 0}")
         # If caller did not reserve, wait for space now
         if self._pending_put == 0:
             while self._is_full():
+                logger.debug(f"[PUT WAIT] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item.ID} | Waiting for space...")
                 ev = self.on_space
                 yield ev
         else:
@@ -84,7 +84,7 @@ class Queue:
 
         # Insert item
         self.items[item.ID] = item
-        # print(f"[DEBUG QUEUE PUT] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item.ID} | Count={len(self.items)}/{self.capacity}")
+        logger.debug(f"[PUT DONE] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item.ID} | Count={len(self.items)}/{self.capacity} | Pending={self._pending_put}")
 
         # Notify getters that an item is available
         self._notify("on_item")
@@ -94,12 +94,14 @@ class Queue:
         Get the specific item by ID; waits until it exists.
         Returns the item.
         """
+        logger.debug(f"[GET START] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Items={list(self.items.keys())}")
         while item_id not in self.items:
+            logger.debug(f"[GET WAIT] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Waiting...")
             ev = self.on_item
             yield ev
 
         item = self.items.pop(item_id)
-        # print(f"[DEBUG QUEUE GET] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Count={len(self.items)}/{self.capacity}")
+        logger.debug(f"[GET DONE] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Count={len(self.items)}/{self.capacity}")
 
         # Space has freed up (unless unbounded)
         if self.capacity != float("inf"):
@@ -107,7 +109,7 @@ class Queue:
 
         return item
     
-    def get_and_reserve_return(self, item_id: str) -> Generator:
+    def get_and_reserve_return(self, item_id: str):
         """
         Get an item AND immediately reserve a slot for its return.
         This minimizes race conditions for INPUT_OUTPUT queues.
@@ -125,24 +127,29 @@ class Queue:
         Yields:
             Generator: Yields until item is retrieved and return slot is reserved.
         """
+        logger.debug(f"[GET_RESERVE START] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Items={list(self.items.keys())} | Pending={self._pending_put}")
         # Wait for item to exist
         while item_id not in self.items:
+            logger.debug(f"[GET_RESERVE WAIT] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Waiting...")
             ev = self.on_item
             yield ev
         
         # Remove item (frees space)
         item = self.items.pop(item_id)
+        logger.debug(f"[GET_RESERVE POPPED] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | Count after pop={len(self.items)}")
         
         # CRITICAL: Reserve BEFORE notifying on_space to minimize race window
         # After removing item, space is available. Reserve it immediately.
         # This prevents other processes from grabbing the freed space between
         # the get() and reserve() operations.
-        self._pending_put += 1
+        self.reserve()
+        logger.debug(f"[GET_RESERVE RESERVED] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id} | New Pending={self._pending_put}")
         
         # Now notify on_space - but queue is effectively full again (reserved)
         if self.capacity != float("inf"):
             self._notify("on_space")
         
+        logger.debug(f"[GET_RESERVE DONE] Time={self.env.now:.2f} | Queue={self.data.ID} | Item={item_id}")
         return item
 
     def get_location(self) -> List[float]:
@@ -207,11 +214,11 @@ class StorePort(Queue):
         """
         return self.location
     
-    def reserve(self) -> Generator:
+    def reserve(self):
         """
         Reserves a spot in the queue for a product to be put into.
 
         Raises:
             RuntimeError: If the queue is full.
         """
-        yield from self.store.reserve()
+        self.store.reserve()
