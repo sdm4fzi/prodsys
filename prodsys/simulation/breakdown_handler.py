@@ -84,7 +84,6 @@ class BreakdownHandler:
         """
         Allocates a process to an active resource.
         """
-        print("Allocating process:", process.ID)
         if self.adapter.scenario_data:
             max_processes = self.adapter.scenario_data.constraints.max_num_processes_per_machine
         else:

@@ -66,11 +66,10 @@ class ProductionProcessHandler:
         Returns:
             Generator: The generator yields when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        logger.debug(f"[PROD GET START] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Origin Queue={process_request.origin_queue.data.ID} | Entities={len(process_request.get_atomic_entities())}")
         for entity in process_request.get_atomic_entities():
-            logger.debug(f"[PROD GET] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Origin Queue={process_request.origin_queue.data.ID} | Getting entity")
+            entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
-            logger.debug(f"[PROD GET DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Successfully got entity")
+            entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             process_request.target_queue.reserve()
 
     def put_entities_of_request(
@@ -85,11 +84,10 @@ class ProductionProcessHandler:
         Returns:
             Generator: The generator yields when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        logger.debug(f"[PROD PUT START] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Target Queue={process_request.target_queue.data.ID} | Entities={len(process_request.get_atomic_entities())} | Queue Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
         for entity in process_request.get_atomic_entities():
-            logger.debug(f"[PROD PUT] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | Before put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
+            entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
-            logger.debug(f"[PROD PUT DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | After put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
+            entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
@@ -131,7 +129,6 @@ class ProductionProcessHandler:
             production_state: state.State = yield from resource.wait_for_free_process(
                 process
             )
-            production_state.state_info.log_queues(process_request.origin_queue, process_request.target_queue)
             production_state.reserved = True
             process_event = self.env.process(self.run_process(production_state,entity, process, process_time))
             process_state_events.append((process_event, production_state))

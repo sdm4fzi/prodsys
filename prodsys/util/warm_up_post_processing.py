@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 import pandas as pd
 
@@ -112,7 +112,7 @@ def static_ratio(df: pd.DataFrame, column: str) -> int:
 def get_warm_up_cutoff_index(
     df: pd.DataFrame,
     column: str,
-    method: Literal["mser5", "threshold_stabilization", "static_ratio"] = "mser5",
+    method: Optional[Literal["mser5", "threshold_stabilization", "static_ratio"]] = None,
 ) -> int:
     """
     Calculates the warm up cutoff time for the simulation results.
@@ -124,6 +124,8 @@ def get_warm_up_cutoff_index(
     Returns:
         float: Warm up cutoff indexfor the input data frame and column.
     """
+    if method is None:
+        return 0
     if method == "mser5":
         cut_off_index = mser5(df, column)
     elif method == "threshold_stabilization":

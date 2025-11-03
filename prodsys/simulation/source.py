@@ -112,9 +112,7 @@ class Source:
                     break
             yield self.env.timeout(inter_arrival_time)
             if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
-                print(f"Source {self.data.ID} has reached conwip {self.conwip}, waiting for next product")
                 continue
-            print("creating product")
             if self.schedule:
                 product_index = int(self.schedule[self.release_index].product.split("_")[-1])
                 self.released_product_ids.add(self.schedule[self.release_index].product)

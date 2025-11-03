@@ -352,7 +352,6 @@ class RequestHandler:
         """
         Reroutes a request to the router.
         """
-        print(f"{rerouted_request.requesting_item.env.now:.2f}: rerouting request {rerouted_request.completed}")
         routed_request_info = self.routed_requests.pop(id(rerouted_request.completed), None)
         if not routed_request_info:
             raise ValueError(
@@ -370,9 +369,6 @@ class RequestHandler:
         """
         request_info = self.routed_requests.pop(id(completed_request.completed), None)
         if not request_info:
-            router_resources = completed_request.entity.router.resources
-            print(f"router resources: {[resource.data.ID for resource in router_resources]}")
-            print(f"request to resource {completed_request.resource.data.ID} and process {completed_request.process.data.ID} not found")
             raise ValueError(
                 f"Request info not found for completed request {completed_request.completed}"
             )

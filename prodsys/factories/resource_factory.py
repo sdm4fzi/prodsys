@@ -93,7 +93,7 @@ def register_production_state_for_process(
         "new_state": {
             "ID": process_instance.data.ID,
             "description": process_instance.data.description,
-            "time_model_id": process_instance.data.time_model_id,
+            "time_model_id": process_instance.data.time_model_id if hasattr(process_instance.data, "time_model_id") else None,
         }
     }
     existence_condition = any(

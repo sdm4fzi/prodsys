@@ -51,7 +51,9 @@ class TransportProcessHandler:
             Generator: The generator yields when the product is in the queue.
         """
         for entity in process_request.get_atomic_entities():
+            entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
+            entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
 
 
         
@@ -68,11 +70,10 @@ class TransportProcessHandler:
         Returns:
             Generator: The generator yields when the product is in the queue.
         """
-        logger.debug(f"[TRANS PUT START] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Target Queue={process_request.target_queue.data.ID} | Entities={len(process_request.get_atomic_entities())} | Queue Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
         for entity in process_request.get_atomic_entities():
-            logger.debug(f"[TRANS PUT] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | Before put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
+            entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
-            logger.debug(f"[TRANS PUT DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID if process_request.resource else 'None'} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | After put: Full={process_request.target_queue.is_full} | Free Space={process_request.target_queue.free_space()}")
+            entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         
     def update_location(
         self, locatable: locatable.Locatable

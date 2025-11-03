@@ -13,6 +13,7 @@ from typing import (
 
 import logging
 
+from numpy.random import f
 import simpy
 
 from prodsys.factories import primitive_factory
@@ -245,14 +246,6 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-
-        # print(f"\n[DEBUG ROUTING] Time={self.env.now:.2f} | Item={executed_request.requesting_item.data.ID}")
-        # print(f"  Request Type: {executed_request.request_type}")
-        # print(f"  Resource: {executed_request.resource.data.ID}")
-        # print(f"  Origin Port: {origin_port.data.ID if origin_port else None}")
-        # print(f"  Target Port: {target_port.data.ID if target_port else None}")
-        # print(f"  Item Current Location: {executed_request.requesting_item.current_locatable.data.ID if executed_request.requesting_item.current_locatable else None}")
-
         is_production_request = executed_request.request_type in (
             request.RequestType.PRODUCTION,
             request.RequestType.PROCESS_MODEL,
@@ -263,22 +256,17 @@ class Router:
             and executed_request.requesting_item.current_locatable
             != origin_port
         ):
-            # print(f"[DEBUG ROUTING] Requesting transport to origin port")
-            # print(f"  From: {executed_request.requesting_item.current_locatable.data.ID}")
-            # print(f"  To: {origin_port.data.ID}")
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, origin_port
             )
             executed_request.transport_to_target = transport_process_finished_event
             yield transport_process_finished_event
-            # print(f"[DEBUG ROUTING] Transport to origin completed at time {self.env.now:.2f}")
         
         if executed_request.request_type == request.RequestType.TRANSPORT:
             route = self.request_handler.process_matcher.get_route(
                 origin_port, target_port, executed_request.process
             )
             executed_request.set_route(route=route)
-            # print(f"[DEBUG ROUTING] Transport route determined: {[loc.data.ID for loc in route] if route else None}")
 
         executed_request.origin_queue = origin_port
         executed_request.target_queue = target_port
@@ -287,27 +275,21 @@ class Router:
         # after getting items from the origin queue. This prevents premature queue slot locking.
         # Target reservation happens in production_process_handler.py after get_entities_of_request()
 
-        # print(f"[DEBUG ROUTING] Sending request to resource controller")
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
-            # print(f"[DEBUG ROUTING] Request has dependencies, waiting...")
             yield executed_request.dependencies_requested
-            dependency_ready_events = self.get_dependencies_for_execution(
-                resource=executed_request.resource,
-                process=executed_request.process,
-                requesting_item=executed_request.requesting_item,
-                dependency_release_event=executed_request.completed,
-            )
-            for dependency_ready_event in dependency_ready_events:
-                yield dependency_ready_event
+            yield from self.get_dependencies(executed_request)
             executed_request.dependencies_ready.succeed()
-            # print(f"[DEBUG ROUTING] All dependencies ready at time {self.env.now:.2f}")
-            yield executed_request.completed
-            # print(f"[DEBUG ROUTING] Request completed at time {self.env.now:.2f}")
-        else:
-            # print(f"[DEBUG ROUTING] No dependencies, waiting for completion")
-            yield executed_request.completed
-            # print(f"[DEBUG ROUTING] Request completed at time {self.env.now:.2f}")
+
+    def get_dependencies(self, executed_request: request.Request) -> Generator:
+        dependency_ready_events = self.get_dependencies_for_execution(
+            resource=executed_request.resource,
+            process=executed_request.process,
+            requesting_item=executed_request.requesting_item,
+            dependency_release_event=executed_request.completed,
+        )
+        for dependency_ready_event in dependency_ready_events:
+            yield dependency_ready_event
 
     def request_buffering(self, executed_request: request.Request) -> Optional[events.Event]:
         buffer = self.interaction_handler.get_interaction_buffer(executed_request)
@@ -337,7 +319,7 @@ class Router:
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
         # place in storage after binding
-        yield from executed_request.requesting_item.current_locatable.reserve()
+        executed_request.requesting_item.current_locatable.reserve()
         yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
         executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable
         target_storage = self._find_available_storage_for_primitive(executed_request.entity)

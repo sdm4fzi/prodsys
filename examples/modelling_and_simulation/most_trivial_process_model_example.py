@@ -74,5 +74,5 @@ runner_instance.initialize_simulation()
 runner_instance.run(3000)
 
 runner_instance.print_results()
-# runner_instance.plot_results()
-runner_instance.save_results_as_csv()
+runner_instance.plot_results()
+# runner_instance.save_results_as_csv()

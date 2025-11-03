@@ -146,6 +146,12 @@ class ProcessMatcher:
         for product_type, dummy_product in dummy_products.items():
             self.product_factory.products.pop(dummy_product.data.ID)
 
+    def _reset_primitives_in_queues(self):
+        """
+        Reset primitives in queues to their original locations.
+        """
+        self.primitive_factory.reset_primitives_current_locatable()
+
     def _precompute_production_compatibility(self, dummy_products: dict[str, product.Product]):
         """
         Precompute production resource compatibility.
@@ -218,6 +224,7 @@ class ProcessMatcher:
                 self.production_compatibility[key].append((resource, offered_process))
 
         self._remove_dummy_products(dummy_products)
+        self._reset_primitives_in_queues()
 
         logger.info(
             f"Precomputation completed in {time.time() - start_time:.2f} seconds"
@@ -403,7 +410,6 @@ class ProcessMatcher:
         Returns:
             List[Locatable]: List of all locations in the system.
         """
-        # FIXME: storages are not considered here -> important for primitives in storages
         all_locations = (
             list(self.resource_factory.get_production_resources())
             + list(self.sink_factory.sinks.values())

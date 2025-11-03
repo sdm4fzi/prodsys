@@ -9,7 +9,7 @@ if __name__ == "__main__":
     adapter_object = prodsys.ProductionSystemData.read(
         "examples/modelling_and_simulation/simulation_example_data/example_configuration.json"
     )
-    prodsys.set_logging("DEBUG")
+    prodsys.set_logging("CRITICAL")
     runner_object = prodsys.runner.Runner(production_system_data=adapter_object)
     runner_object.initialize_simulation()
     runner_object.run(200000)

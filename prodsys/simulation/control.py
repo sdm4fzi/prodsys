@@ -235,7 +235,6 @@ class Controller:
             if process_request.target_queue.is_full:
                 raise ValueError(f"Target queue {process_request.target_queue.data.ID} is full for request {process_request.completed}")
             process_request.target_queue.reserve()
-            print(f"{process_request.requesting_item.env.now:.2f}: reserved output queue {process_request.target_queue.data.ID} for request {process_request.completed}")
 
     def _should_form_lot(self, process_request: request_module.Request) -> bool:
         return self.lot_handler.lot_required(process_request)

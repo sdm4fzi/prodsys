@@ -61,12 +61,11 @@ class ResourceProcessModelHandler:
         Yields:
             Generator: The generator yields when the product is taken from the queue.
         """
-        entity = process_request.get_entity()
-        logger.debug(f"[RESOURCE_PM GET] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID} | Entity={entity.data.ID} | Origin Queue={process_request.origin_queue.data.ID} | Getting entity")
-        yield from process_request.origin_queue.get(entity.data.ID)
-        logger.debug(f"[RESOURCE_PM GET DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID} | Entity={entity.data.ID} | Successfully got entity")
-        # Reserve target queue after getting from origin
-        process_request.target_queue.reserve()
+        for entity in process_request.get_atomic_entities():
+            entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
+            yield from process_request.origin_queue.get(entity.data.ID)
+            entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
+            process_request.target_queue.reserve()
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -80,11 +79,11 @@ class ResourceProcessModelHandler:
         Yields:
             Generator: The generator yields when the product is placed in the queue.
         """
-        entity = process_request.get_entity()
-        logger.debug(f"[RESOURCE_PM PUT] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID} | Entity={entity.data.ID} | Target Queue={process_request.target_queue.data.ID} | Putting entity")
-        yield from process_request.target_queue.put(entity.data)
-        logger.debug(f"[RESOURCE_PM PUT DONE] Time={self.env.now:.2f} | Resource={process_request.resource.data.ID} | Entity={entity.data.ID} | Successfully put entity")
-
+        for entity in process_request.get_atomic_entities():
+            entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+            yield from process_request.target_queue.put(entity.data)
+            entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+    
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Handle a process model request by executing all processes in the model sequentially
@@ -97,7 +96,6 @@ class ResourceProcessModelHandler:
         Yields:
             Generator: The generator yields when the process model is finished.
         """
-        print(f"handling process model request for {process_request.requesting_item.data.ID} on resource {process_request.resource.data.ID}")
         resource: Resource = process_request.get_resource()
         self.resource = resource
         proc = process_request.get_process()
@@ -124,7 +122,8 @@ class ResourceProcessModelHandler:
 
         # Get product from origin queue at the beginning
         yield from self.get_entities_of_request(process_request)
-        entity.update_location(resource)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(resource)
 
         resource.controller.mark_started_process(process_request.capacity_required)
         
@@ -133,38 +132,30 @@ class ResourceProcessModelHandler:
         first_process = True
         self.set_next_possible_production_processes()
         while self.next_possible_processes:
-            # FIXME: Get dependencies here
-            # Execute one process from the available processes (if multiple available, choose first)
-            # For regular resources, we execute processes sequentially even if DAG allows parallel execution
             next_process = self.next_possible_processes[0]
+            yield from process_request.entity.router.get_dependencies(process_request)
             yield from resource.setup(next_process)
-            
-            # Wait for a free process slot and get the production state
-            production_state: state.State = yield from resource.wait_for_free_process(next_process)
-            if first_process:
-                origin_queue = process_request.origin_queue
-                # FIXME: avoid this by logging queue interaction events seperately from state info (make counting wip easier)
-                target_queue = None
-                first_process = False
-            else:
-                origin_queue = None
-                target_queue = process_request.target_queue
-                
-                
-            production_state.state_info.log_queues(origin_queue, target_queue)
-            production_state.reserved = True
-            
             # Get process time
             process_time = next_process.time_model.get_next_time()
+            process_state_events = []
+
+            for entity in process_request.get_atomic_entities():
             
-            # Execute the process
-            production_state.state_info.log_product(entity, state.StateTypeEnum.production)
-            # Update entity's current process to the process being executed
-            entity.current_process = next_process
-            production_state.process = self.env.process(production_state.process_state(time=process_time))
-            production_state.reserved = False
-            yield production_state.process
-            production_state.process = None
+                # Wait for a free process slot and get the production state
+                production_state: state.State = yield from resource.wait_for_free_process(next_process)
+                
+                production_state.reserved = True
+                # Execute the process
+                production_state.state_info.log_product(entity, state.StateTypeEnum.production)
+                # Update entity's current process to the process being executed
+                entity.current_process = next_process
+                production_state.process = self.env.process(production_state.process_state(time=process_time))
+                production_state.reserved = False
+                process_state_events.append((production_state.process, production_state))
+            
+            for process_event, production_state in process_state_events:
+                yield process_event
+                production_state.process = None
             
             # Check for rework requirement
             if self.is_rework_required(next_process):
@@ -182,11 +173,14 @@ class ResourceProcessModelHandler:
         # After all internal processes are complete, set the entity's current_process to this ProcessModelProcess
         # This ensures that when control returns, it sees the ProcessModelProcess as completed,
         # not the last internal process that was executed
-        entity.current_process = proc
+        for entity in process_request.get_atomic_entities():
+            entity.current_process = proc
+        process_request.entity.current_process = proc
         
         # Put product back to target queue after all processes are finished
         yield from self.put_entities_of_request(process_request)
-        entity.update_location(process_request.target_queue)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(process_request.target_queue)
 
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)

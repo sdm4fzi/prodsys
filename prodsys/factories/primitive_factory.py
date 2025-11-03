@@ -100,10 +100,18 @@ class PrimitiveFactory:
 
         if self.event_logger:
             self.event_logger.observe_terminal_primitive_states(primitive_object)
+            self.event_logger.observe_primitive_movement(primitive_object)
 
         self.primitive_counter += 1
         self.primitives.append(primitive_object)
         return primitive_object
+
+    def reset_primitives_current_locatable(self):
+        """
+        Reset the current locatable of the primitives to their original locations.
+        """
+        for primitive in self.primitives:
+            primitive.current_locatable = primitive.storage
     
     def set_router(self, router: router_module.Router) -> None:
         """
@@ -121,7 +129,9 @@ class PrimitiveFactory:
         Place the primitive objects in the system.
         """
         for primitive in self.primitives:
-            yield from primitive.current_locatable.reserve()
+            if primitive.current_locatable is None:
+                raise ValueError(f"Primitive {primitive.data.ID} has no current locatable but a storage {primitive.storage.data.ID}")
+            primitive.current_locatable.reserve()
             yield from primitive.current_locatable.put(primitive.data)
 
     def get_primitive_with_type(self, ID: str) -> primitive.Primitive:
