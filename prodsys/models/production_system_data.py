@@ -256,7 +256,7 @@ def add_default_queues_to_resources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all resources
     """
     for resource in adapter.resource_data:
-        if not reset and has_input_port(resource, adapter) and has_output_port(resource, adapter): #or machine.can_move:
+        if (not reset and has_input_port(resource, adapter) and has_output_port(resource, adapter)) or resource.can_move:
             continue
         remove_queues_from_resource(resource)
         remove_unused_queues_from_adapter(adapter)

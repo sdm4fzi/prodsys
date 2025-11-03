@@ -124,7 +124,7 @@ links = [
     [node3, sink02],
 ]
 
-ltp01.set_links(links)
+#ltp01.set_links(links)
 
 # Add production system
 productionsystem = psx.ProductionSystem(
@@ -140,13 +140,13 @@ productionsystem = psx.ProductionSystem(
 )
 
 adapter = productionsystem.to_model()
-runner = prodsys.runner.Runner(production_system_data=adapter)
-runner.initialize_simulation()
-runner.run(1000)
-runner.print_results()
+#runner = prodsys.runner.Runner(production_system_data=adapter)
+#runner.initialize_simulation()
+#runner.run(1000)
+#runner.print_results()
 
-add_default_queues_to_production_system(adapter, reset=False)
-node_link_generation.mainGenerate(adapter)
+#add_default_queues_to_production_system(adapter, reset=False)
+node_link_generation.mainGenerate(adapter)  #TODO: buggy in this example
 runner = prodsys.runner.Runner(production_system_data=adapter)
 runner.initialize_simulation()
 runner.run(1000)

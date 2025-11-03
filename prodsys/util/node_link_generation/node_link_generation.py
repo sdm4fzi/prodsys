@@ -1,5 +1,6 @@
 import prodsys
 from prodsys.models import production_system_data, resource_data, sink_data, source_data, node_data, port_data
+from prodsys.models.production_system_data import get_production_resources
 from prodsys.util.node_link_generation.table_configuration import TableConfiguration
 from prodsys.util.node_link_generation.table_configuration import StationConfiguration
 from prodsys.util.node_link_generation.table_configuration import Visualization
@@ -178,12 +179,16 @@ def mainGenerate(productionsystem: production_system_data):
     links = []
 
     all_locations = get_all_locations(productionsystem)
-    new_nodes = []
+    all_production_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
+    all_production_resources.extend([sink.ID for sink in productionsystem.sink_data])
+    all_production_resources.extend([source.ID for source in productionsystem.source_data])
+
     # Build a lookup: location -> list of resources
     location_to_resources = {}
     for resource in all_locations:
-        key = tuple(resource[1])
-        location_to_resources.setdefault(key, []).append(resource)
+        if resource[0] in all_production_resources:
+            key = tuple(resource[1])
+            location_to_resources.setdefault(key, []).append(resource)
 
     location_match_count = {}
     # Map GML node id (int) to matched resource ID

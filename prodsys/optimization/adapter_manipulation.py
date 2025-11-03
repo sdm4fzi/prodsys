@@ -63,8 +63,8 @@ def crossover(ind1, ind2):
         adapter1.resource_data = machines_1 + transport_resources_2
         adapter2.resource_data = machines_2 + transport_resources_1
 
-    #add_default_queues_to_resources(adapter1, reset=False)
-    #add_default_queues_to_resources(adapter2, reset=False)
+    add_default_queues_to_resources(adapter1, reset=False)
+    add_default_queues_to_resources(adapter2, reset=False)
     clean_out_breakdown_states_of_resources(adapter1)
     clean_out_breakdown_states_of_resources(adapter2)
     adjust_process_capacities(adapter1)
@@ -122,7 +122,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
             process_ids=process_module_list,
         )
     )
-    #add_default_queues_to_resources(adapter_object, reset=False)
+    add_default_queues_to_resources(adapter_object, reset=False)
     add_setup_states_to_machine(adapter_object, machine_id)
 
     for transport_process_data in (process for process in adapter_object.process_data if process.type == "LinkTransportProcess"):
@@ -350,11 +350,11 @@ def update_production_resource_location(
         location (List[float]): New location of the machine.
     """
     resource.location = new_location
-    for port in resource.ports:
-        adapter_object.port_data[port] = [
-            adapter_object.port_data[port].location[0] + position_delta[0],
-            adapter_object.port_data[port].location[1] + position_delta[1],
-        ]
+    #for port in resource.ports:
+    #    adapter_object.port_data[port] = [
+    #        adapter_object.port_data[port].location[0] + position_delta[0],
+    #        adapter_object.port_data[port].location[1] + position_delta[1],
+    #    ]
     node_link_generation.mainGenerate(adapter_object)
 
 
@@ -690,7 +690,7 @@ def random_configuration(
         get_random_routing_logic(adapter_object)
     
     add_default_queues_to_resources(adapter_object, reset=False)
-    #node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.mainGenerate(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     if not check_valid_configuration(adapter_object, baseline):

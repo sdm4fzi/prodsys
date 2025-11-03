@@ -18,7 +18,7 @@ def main():
         mutation_rate=0.4,
         crossover_rate=0.2,
         number_of_seeds=2,
-        number_of_processes=8
+        number_of_processes=1
     )
 
     def new_transformation(adapter: ProductionSystemData) -> bool:
