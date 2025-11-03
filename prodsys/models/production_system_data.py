@@ -1213,9 +1213,8 @@ class ProductionSystemData(BaseModel):
         return schedule_to_consider
 
     def read_scenario(self, scenario_file_path: str):
-        self.scenario_data = scenario_data_module.ScenarioData.parse_file(
-            scenario_file_path
-        )
+        scenario_data = json.load(open(scenario_file_path))
+        self.scenario_data = scenario_data_module.ScenarioData.model_validate_json(scenario_data)
 
     def validate_proceses_available(self):
         required_processes = set(

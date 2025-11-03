@@ -65,7 +65,6 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
-    runner_instance.save_results_as_csv()
     runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()

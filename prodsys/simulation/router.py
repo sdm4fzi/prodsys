@@ -209,7 +209,6 @@ class Router:
                     break
                 self.env.update_progress_bar()
                 # Filter out requests that would cause deadlocks by checking target queue availability
-                logger.debug(f"[ROUTER] Time={self.env.now:.2f} | Routing {len(free_requests)} free requests")
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
                 self.env.process(self.execute_resource_routing(request))

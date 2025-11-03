@@ -110,20 +110,6 @@ class Controller:
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
-            logger.debug(f"[CONTROL LOOP] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Requests={len(self.requests)} | Full={self.resource.full} | In Setup={self.resource.in_setup} | Bound={self.resource.bound}")
-            
-            # Detailed logging for blocking conditions
-            if not self.requests:
-                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=NO_REQUESTS")
-            elif self.resource.full:
-                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=FULL | Free Capacity={self.resource.get_free_capacity()} | Running Processes={self.num_running_processes} | Reserved Count={self.reserved_requests_count} | Capacity Current Setup={self.resource.capacity_current_setup} | Capacity={self.resource.capacity}")
-                for i, req in enumerate(self.requests):
-                    logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={req.request_type} | Entity={req.entity.data.ID if req.entity else 'None'} | Origin={req.origin_queue.data.ID if req.origin_queue else 'None'} | Target={req.target_queue.data.ID if req.target_queue else 'None'}")
-            elif self.resource.in_setup:
-                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=IN_SETUP | Setup={self.resource.reserved_setup}")
-            elif self.resource.bound:
-                logger.debug(f"[CONTROL BLOCKED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Reason=BOUND | Bound To={self.resource.bound_to}")
-            
             if (
                 self.resource.full
                 or self.resource.in_setup
@@ -137,7 +123,6 @@ class Controller:
                 # Check transport requests for target queue availability
                 if request.request_type == request_module.RequestType.TRANSPORT:
                     if request.target_queue.is_full:
-                        logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Transport | Target={request.target_queue.data.ID} | Full=True | NOT FEASIBLE")
                         return False
                 # Check production requests for INPUT_OUTPUT queue deadlock prevention
                 elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
@@ -148,7 +133,6 @@ class Controller:
                         item_id = request.entity.data.ID
                         if item_id in request.origin_queue.items:
                             # Item is in queue - feasible (we'll remove then put back)
-                            logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production INPUT_OUTPUT | Queue={request.origin_queue.data.ID} | Item={item_id} in queue | FEASIBLE")
                             return True
                         else:
                             raise ValueError(f"Item {item_id} not in queue {request.origin_queue.data.ID}")
@@ -160,46 +144,31 @@ class Controller:
                             raise ValueError(f"Item {item_id} not in origin queue {request.origin_queue.data.ID}")
                         # Item is in origin queue - check if target has space
                         if request.target_queue.is_full:
-                            logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production separate queues | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID} | Item={item_id} | In Origin=True | Target Full=True | NOT FEASIBLE")
                             return False
-                        logger.debug(f"[CONTROL FEASIBILITY] Time={self.env.now:.2f} | Production separate queues | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID} | Item={item_id} | In Origin=True | FEASIBLE")
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
                 for i, request in enumerate(requests):
-                    logger.debug(f"[CONTROL FEASIBILITY CHECK] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'} | Origin={request.origin_queue.data.ID if request.origin_queue else 'None'} | Target={request.target_queue.data.ID if request.target_queue else 'None'}")
                     if is_request_feasible(request):
-                        logger.debug(f"[CONTROL FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'}")
                         self.requests.remove(request)
-                        return request
-                    else:
-                        logger.debug(f"[CONTROL NOT FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={request.request_type} | Entity={request.entity.data.ID if request.entity else 'None'} | Reason=CHECK_FAILED")
-                    # If request becomes infeasible (queue full), reroute it back to router
+                        return request# If request becomes infeasible (queue full), reroute it back to router
                     # This allows it to be retried later when space becomes available
                     # Only reroute transport requests - production requests should have been validated
                     # before routing and if item is in INPUT_OUTPUT queue, it should be processable
                     if request.request_type == request_module.RequestType.TRANSPORT:
-                        logger.debug(f"[CONTROL REROUTE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Rerouting transport request for Entity={request.entity.data.ID if request.entity else 'None'}")
                         self.requests.remove(request)
                         request.requesting_item.router.request_handler.reroute_request(request)
                         # Trigger router to check for new routing opportunities
                         if not request.requesting_item.router.got_requested.triggered:
                             request.requesting_item.router.got_requested.succeed()
-                logger.debug(f"[CONTROL NO FEASIBLE] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | No feasible request found from {len(requests)} requests")
                 return None
             
             selected_request = get_feasible_request(self.requests)
             if not selected_request:
-                logger.debug(f"[CONTROL] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | No feasible request found | Remaining requests={len(self.requests)}")
-                # Log all remaining requests for debugging
-                for i, req in enumerate(self.requests):
-                    logger.debug(f"[CONTROL REMAINING REQUEST] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request[{i}]={req.request_type} | Entity={req.entity.data.ID if req.entity else 'None'} | Origin Queue Full={req.origin_queue.is_full if req.origin_queue else 'N/A'} | Target Queue Full={req.target_queue.is_full if req.target_queue else 'N/A'} | Entity In Origin={req.entity.data.ID in req.origin_queue.items if req.origin_queue and req.entity else 'N/A'}")
                 # If there are requests waiting on full output queues, wait for space
                 self.env.process(self.free_up_queue_check())
                 continue
-            
-            logger.debug(f"[CONTROL SELECTED] Time={self.env.now:.2f} | Resource={self.resource.data.ID} | Request={selected_request.request_type} | Origin={selected_request.origin_queue.data.ID if selected_request.origin_queue else 'None'} | Target={selected_request.target_queue.data.ID if selected_request.target_queue else 'None'}")
-                
+                            
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
                 if not lot_request:

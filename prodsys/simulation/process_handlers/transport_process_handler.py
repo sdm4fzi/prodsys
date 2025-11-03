@@ -124,7 +124,6 @@ class TransportProcessHandler:
         process = process_request.get_process()
         origin = process_request.get_origin()
         origin_queue = process_request.origin_queue
-        logger.debug(f"[TRANS HANDLE START] Time={self.env.now:.2f} | Resource={resource.data.ID} | Origin={origin_queue.data.ID if origin_queue else 'None'} | Target={process_request.target_queue.data.ID if process_request.target_queue else 'None'}")
         self.block_other_transports(resource)
         # Take only route and dependencies of the main request of the lot
         route_to_target = process_request.get_route()
@@ -154,9 +153,7 @@ class TransportProcessHandler:
                 yield transport_event
                 transport_state.process = None
         self.update_location(process_request.get_origin())
-        logger.debug(f"[TRANS GET ENTITIES] Time={self.env.now:.2f} | Resource={resource.data.ID} | Origin Queue={origin_queue.data.ID} | About to get entities")
         yield from self.get_entities_of_request(process_request)
-        logger.debug(f"[TRANS GOT ENTITIES] Time={self.env.now:.2f} | Resource={resource.data.ID} | Successfully got entities from origin queue")
         for entity in process_request.get_atomic_entities():
             entity.update_location(self.resource)
 
@@ -164,7 +161,6 @@ class TransportProcessHandler:
         # For INPUT_OUTPUT queues, reserving causes deadlock because processed items fill the queue
         # For separate queues with batching, we can't know batch size until lot is formed
         # Let PUT naturally wait for space - this is safer and avoids circular dependencies
-        logger.debug(f"[TRANS BEFORE TRANSPORT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Target Queue={process_request.target_queue.data.ID} | About to transport to target")
 
         transport_state_events = []
         for entity in process_request.get_atomic_entities():
@@ -180,9 +176,7 @@ class TransportProcessHandler:
             yield transport_event
             transport_state.process = None
 
-        logger.debug(f"[TRANS BEFORE PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Transport finished, about to put entities to target queue")
         yield from self.put_entities_of_request(process_request)
-        logger.debug(f"[TRANS AFTER PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Successfully put entities to target queue")
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.target_queue)
 

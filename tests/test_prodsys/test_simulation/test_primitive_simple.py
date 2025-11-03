@@ -1,5 +1,4 @@
 import pytest
-import prodsys
 from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
@@ -72,7 +71,6 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance.run(1000)
     assert runner_instance.env.now == 1000
     runner_instance.print_results()
-    runner_instance.save_results_as_csv()
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":

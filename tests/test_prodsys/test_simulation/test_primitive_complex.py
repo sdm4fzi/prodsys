@@ -1,5 +1,4 @@
 import pytest
-import prodsys
 from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner

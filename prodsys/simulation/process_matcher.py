@@ -202,7 +202,6 @@ class ProcessMatcher:
         that will speed up resource selection during simulation.
         """
         start_time = time.time()
-        logger.info("Precomputing resource compatibility tables...")
 
         # Get dummy products for testing
         dummy_products = self._create_dummy_products()
@@ -225,22 +224,6 @@ class ProcessMatcher:
 
         self._remove_dummy_products(dummy_products)
         self._reset_primitives_in_queues()
-
-        logger.info(
-            f"Precomputation completed in {time.time() - start_time:.2f} seconds"
-        )
-        logger.info(
-            f"Production compatibility table contains {len(self.production_compatibility)} entries"
-        )
-        logger.info(
-            f"Transport compatibility table contains {len(self.transport_compatibility)} entries"
-        )
-        logger.info(
-            f"Reachability cache contains {len(self.reachability_cache)} entries"
-        )
-        logger.info(
-            f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
-        )
 
     def _get_parent_from_queue(self, locatable: Locatable) -> Locatable:
         """

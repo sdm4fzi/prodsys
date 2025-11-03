@@ -136,9 +136,7 @@ class ProductionProcessHandler:
             yield process_event
             production_state.process = None
 
-        logger.debug(f"[PROD BEFORE PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Process finished, about to put entities to target queue")
         yield from self.put_entities_of_request(process_request)
-        logger.debug(f"[PROD AFTER PUT] Time={self.env.now:.2f} | Resource={resource.data.ID} | Successfully put entities to target queue")
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.target_queue)
 

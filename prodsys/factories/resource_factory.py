@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from functools import partial
-from typing import Callable, Dict, List, Optional, Union, Tuple, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING
 
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
@@ -140,12 +140,16 @@ def register_production_states_for_processes(
         resource.processes, resource.data.process_capacities
     ):
         # ProcessModels are containers for other processes and only need production states for subprocesses
-        if isinstance(process_instance, process.ProcessModelProcess) and not isinstance(resource, resources.SystemResource):
-            contained_processes = process_instance.contained_processes
-            for contained_process in contained_processes:
-                register_production_state_for_process(
-                    resource, contained_process, state_factory, _env
-                )
+        if isinstance(process_instance, process.ProcessModelProcess):
+            if not isinstance(resource, resources.SystemResource):
+                # For regular resources, register states for contained processes
+                contained_processes = process_instance.contained_processes
+                for contained_process in contained_processes:
+                    register_production_state_for_process(
+                        resource, contained_process, state_factory, _env
+                    )
+            # For SystemResource, ProcessModelProcess is just a container/orchestration mechanism
+            # and doesn't need its own production state
             continue
         
         register_production_state_for_process(
