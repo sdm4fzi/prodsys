@@ -51,14 +51,14 @@ class ProductInfo:
         event_time: float = None,
         activity: StateEnum = None,
         product_ID: str = None,
-        state_type: StateTypeEnum = None,
+        state_type: StateTypeEnum = None,        
     ):
         self.resource_ID = resource_ID
         self.state_ID = state_ID
         self.event_time = event_time
         self.activity = activity
         self.product_ID = product_ID
-        self.state_type = state_type
+        self.state_type = state_type        
 
     def log_finish_product(
         self,
@@ -173,6 +173,7 @@ class Product:
         product_router: router.Router,
         routing_heuristic: RoutingHeuristic,
         dependencies: Optional[List[Dependency]] = None,
+        no_transport_to_sink: bool = False,
     ):
         self.env = env
         self.data = data
@@ -198,9 +199,10 @@ class Product:
         self.info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
         self.bound = False
-        self.being_bound = events.Event(self.env)
+       
         self.got_free = events.Event(self.env)
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
+        self.no_transport_to_sink = no_transport_to_sink
         
 
     def update_location(self, locatable: Locatable):
@@ -239,18 +241,17 @@ class Product:
             self.update_executed_process(self.current_process)
             self.set_next_possible_production_processes()
             
-            
-        arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
-        yield arrived_at_sink_event
+        if (self.no_transport_to_sink):
+            self.router.route_product_to_sink(self)
+        else:
+            arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
+            yield arrived_at_sink_event
         
-        
-        sink.register_finished_product(self)
-        if (self.data.becomes_primitive):
-            yield self.being_bound
         self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
-        
+        sink.register_finished_product(self)
+                
         for dependency in self.depended_entities:
             # TODO: use here interaction handler to select ports
             yield from self.current_locatable.put(dependency.data)
@@ -311,14 +312,14 @@ class Product:
 
     def update_executed_process(self, executed_process: PROCESS_UNION) -> None:
         if not isinstance(executed_process, process.ReworkProcess):
-            self.process_model.update_marking_from_transition(executed_process)  # type: ignore
+            self.process_model.update_marking_from_transition(executed_process)  
         self.executed_production_processes.append(executed_process.data.ID)
 
     def set_next_possible_production_processes(self):
         """
         Sets the next process of the product object based on the current state of the product and its process model.
         """
-        # check if rework is needed due to blocking rework processes. If so, execute these rework processes
+        
         if self.blocking_rework_process_mappings:
             next_possible_processes = []
             for process_mapping in self.blocking_rework_process_mappings:
@@ -330,7 +331,7 @@ class Product:
 
         next_possible_processes = self.process_model.get_next_possible_processes()
 
-        # if all normal processes are done, i.e. the product has finished its process sequence, execute rework processes without blocking.
+        
         if not next_possible_processes and self.non_blocking_rework_process_mappings:
             next_possible_processes = []
             for process_mapping in self.non_blocking_rework_process_mappings:
@@ -340,7 +341,7 @@ class Product:
             next_possible_processes = next_possible_processes
             self.next_possible_processes = next_possible_processes
             return
-        # if all normal processes are done and no rework processes are needed, the product has finished its process sequence.
+        
         if not next_possible_processes:
             self.next_possible_processes = None
             return
@@ -357,7 +358,6 @@ class Product:
                     f"Primitive {self.data.ID} is bound reserved. Cannot bind again."
                 )
             self.bound = True
-            self.being_bound.succeed()
             self.current_dependant = dependant
             dependant.depended_entities.append(self)
            

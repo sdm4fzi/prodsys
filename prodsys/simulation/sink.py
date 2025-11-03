@@ -80,9 +80,9 @@ class Sink:
             self.product_factory.router.primitive_factory.primitives.append(product)
             
             if self.product_factory.router:
-                if product.data.type not in router.free_primitives_by_type:
-                    router.free_primitives_by_type[product.data.type] = []
-                router.free_primitives_by_type[product.data.type].append(product)
+                if product.data.type not in router.free_entities_by_type:
+                    router.free_entities_by_type[product.data.type] = []
+                router.free_entities_by_type[product.data.type].append(product)
                 if not router.got_primitive_request.triggered:
                     router.got_primitive_request.succeed() 
         

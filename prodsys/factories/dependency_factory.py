@@ -4,6 +4,7 @@ from prodsys.factories.product_factory import ProductFactory
 from prodsys.factories.resource_factory import ResourceFactory
 from prodsys.models.dependency_data import DEPENDENCY_TYPES, DependencyData, DependencyType
 from prodsys.simulation.dependency import Dependency
+from prodsys.models.product_data import ProductData
 
 
 class DependencyFactory:
@@ -22,8 +23,13 @@ class DependencyFactory:
         self.primitive_factory = primitive_factory
         self.resource_factory = resource_factory
         self.dependencies = {}
+    
+    def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
+        for product_d in product_data:
+            if(dependency_data.required_primitive.__eq__(product_d)):
+                product_d.becomes_primitive = True
 
-    def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES]) -> list[Dependency]:
+    def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES], product_data: ProductData) -> list[Dependency]:
         """
         Creates a list of dependency objects based on the given dependency data.
 
@@ -33,8 +39,10 @@ class DependencyFactory:
         Returns:
             list[Dependency]: List of created dependency objects.
         """
+        
         dependencies = []
         for dependency_data in dependency_data_list:
+            self.check_product_dependencies(dependency_data, product_data)
             dependencies.append(self.create_dependency(dependency_data))
         return dependencies
 
@@ -48,6 +56,7 @@ class DependencyFactory:
         Returns:
             Dependency: Created dependency object.
         """
+        
         if dependency_data.dependency_type == DependencyType.PROCESS:
             process = self.process_factory.get_process(dependency_data.required_process)
             primitive = None

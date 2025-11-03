@@ -144,8 +144,8 @@ class DisassemblyProcessHandler:
 
             
             product.router.mark_finished_request(process_request)
-            #TODO: original product vllt einfahcer in die sink gehen alssen, also wirklich über modellierung an ORt!
-            self.resource.controller.mark_finished_process()
+            
+            self.resource.controller.mark_finished_process_no_sink_transport(process, product)
     
     def disassembly(
         self,
@@ -203,6 +203,7 @@ class DisassemblyProcessHandler:
         input_state.reserved = False
         self.handle_rework_required(target_product, process)
         yield input_state.process
+        
 
     def handle_rework_required(
         self, product: product.Product, process: process.Process
