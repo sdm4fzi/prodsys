@@ -7,6 +7,7 @@ import numpy as np
 from pathfinding.core.graph import Graph, GraphNode
 from pathfinding.finder.dijkstra import DijkstraFinder
 # TODO: consider using a star for finding faster routes
+# TODO: consider changing pathfinding Library to networkx or similar
 from pathfinding.finder.a_star import AStarFinder
 
 if TYPE_CHECKING:

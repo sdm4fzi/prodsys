@@ -153,7 +153,7 @@ def mainGenerate(productionsystem: production_system_data):
     max_node_distance = distance #0.2*tablesize
     node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
-####
+
     # Define random nodes in the free space of the table configuration.
     #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)    #TODO: choose a grid generation method that is defined here
     node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
@@ -178,15 +178,19 @@ def mainGenerate(productionsystem: production_system_data):
     nodes = {}
     links = []
 
-    all_locations = get_all_locations(productionsystem)
-    all_production_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
-    all_production_resources.extend([sink.ID for sink in productionsystem.sink_data])
-    all_production_resources.extend([source.ID for source in productionsystem.source_data])
+    #all_locations = get_all_locations(productionsystem)
+    all_relevant_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
+    all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
+    all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
+
+    all_locations = [(prodres.ID, prodres.location) for prodres in productionsystem.resource_data]
+    all_locations.extend([(sink.ID, sink.location) for sink in productionsystem.sink_data])
+    all_locations.extend([(source.ID, source.location) for source in productionsystem.source_data])
 
     # Build a lookup: location -> list of resources
     location_to_resources = {}
     for resource in all_locations:
-        if resource[0] in all_production_resources:
+        if resource[0] in all_relevant_resources:
             key = tuple(resource[1])
             location_to_resources.setdefault(key, []).append(resource)
 
