@@ -13,8 +13,8 @@ from prodsys.util.node_link_generation import node_link_generation
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=0,
-        number_of_generations=32,
-        population_size=4,
+        number_of_generations=64,
+        population_size=16,
         mutation_rate=0.4,
         crossover_rate=0.2,
         number_of_seeds=2,
@@ -245,12 +245,8 @@ def main():
         full_save=True,
         # initial_solutions=[base_configuration]
     )
-    # optimizer = InMemoryOptimizer(
-    #     adapter=base_configuration,
-    #     hyperparameters=hyper_parameters,
-    # )
 
-    
+    runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     optimizer.optimize()
 
 

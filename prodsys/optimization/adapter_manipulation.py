@@ -125,34 +125,35 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     add_default_queues_to_resources(adapter_object, reset=False)
     add_setup_states_to_machine(adapter_object, machine_id)
 
-    for transport_process_data in (process for process in adapter_object.process_data if process.type == "LinkTransportProcess"):
-        if transport_process_data.can_move:
-            node_link_generation.mainGenerate(adapter_object)
-        else: #case like Conveyor that cannot move
-            node_link_generation.mainGenerate(adapter_object)
-            new_Links = []
-            for product in adapter_object.product_data:
-                process_sequence = product.processes
-                current_resource = None
-                for i in range(len(process_sequence)-1):
-                    current_process = process_sequence[i]
-                    next_process = process_sequence[i+1]
-                    possible_next_resources = [
+    if any(transport_process.can_move for transport_process in adapter_object.process_data):
+        node_link_generation.mainGenerate(adapter_object)
+    else: #case like Conveyor that cannot move
+        node_link_generation.mainGenerate(adapter_object)
+        new_Links = []
+        for product in adapter_object.product_data:
+            process_sequence = product.processes
+            current_resource = None
+            
+            for i in range(len(process_sequence)-1): #FIXME: need to consider sources and sinks too
+                current_process = process_sequence[i]
+                next_process = process_sequence[i+1]
+                possible_next_resources = [
+                    resource for resource in adapter_object.resource_data
+                    if next_process in resource.process_ids
+                ]
+                if i == 0:
+                    #find all resources that can do current_process
+                    possible_current_resources = [
                         resource for resource in adapter_object.resource_data
-                        if next_process in resource.process_ids
+                        if current_process in resource.process_ids
                     ]
-                    if i == 0:
-                        #find all resources that can do current_process
-                        possible_current_resources = [
-                            resource for resource in adapter_object.resource_data
-                            if current_process in resource.process_ids
-                        ]
-                        current_resource = random.choice(possible_current_resources) #if there are multiple stations that can do the necessary next process, pick a random one
-                    if possible_next_resources:
-                        next_resource = random.choice(possible_next_resources)
-                        for node in find_route(request=request.Request(origin=current_resource.ID, target=next_resource.ID), process=transport_process_data):
-                            new_Links.append(node.data.ID)
-                        current_resource = next_resource
+                    current_resource = random.choice(possible_current_resources) #if there are multiple stations that can do the necessary next process, pick a random one
+                if possible_next_resources:
+                    next_resource = random.choice(possible_next_resources)
+                    for node in find_route(request=request.Request(origin=current_resource.ID, target=next_resource.ID), process=transport_process_data):
+                        new_Links.append(node.data.ID)
+                    current_resource = next_resource
+        for transport_process_data in adapter_object.process_data:#add the paths to all conveyor-like Transport resources
             transport_process_data.links = new_Links
 
     return True
@@ -198,20 +199,45 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                 can_move=True, 
             )
         )
-    else: #case like Conveyor that cannot move #TODO: revise if this standard config makes sense for conveyors
+    else: #case like Conveyor that cannot move
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
-                capacity=0,
+                capacity=0, #TODO:capacity per meter übernehmen
                 location=machine_location,
                 controller="PipelineController",
                 control_policy=control_policy,
                 process_ids=[transport_process],
                 can_move=False,
-            )
-        )
-    add_default_queues_to_resources(adapter_object)
+            ))
+        new_Links = []
+        for product in adapter_object.product_data:
+            process_sequence = product.processes
+            current_resource = None
+            
+            for i in range(len(process_sequence)-1): #FIXME: need to consider sources and sinks too
+                current_process = process_sequence[i]
+                next_process = process_sequence[i+1]
+                possible_next_resources = [
+                    resource for resource in adapter_object.resource_data
+                    if next_process in resource.process_ids
+                ]
+                if i == 0:
+                    #find all resources that can do current_process
+                    possible_current_resources = [
+                        resource for resource in adapter_object.resource_data
+                        if current_process in resource.process_ids
+                    ]
+                    current_resource = random.choice(possible_current_resources) #if there are multiple stations that can do the necessary next process, pick a random one
+                if possible_next_resources:
+                    next_resource = random.choice(possible_next_resources)
+                    for node in find_route(request=request.Request(origin=current_resource.ID, target=next_resource.ID), process=transport_process_data):
+                        new_Links.append(node.data.ID)
+                    current_resource = next_resource
+        for transport_process_data in adapter_object.process_data:#add the paths to all conveyor-like Transport resources
+            transport_process_data.links = new_Links
+    #add_default_queues_to_resources(adapter_object)
     return True
 
 
@@ -236,7 +262,6 @@ def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
         if process_id not in machine.process_ids:
             machine.process_ids.append(process_id)
     add_setup_states_to_machine(adapter_object, machine.ID)
-    node_link_generation.mainGenerate(adapter_object)
     return True
 
 

@@ -278,7 +278,8 @@ class TransportProcessHandler:
             input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
         yield input_state.process
-        self.update_location(target, location=target_location)
+        if self.resource.can_move:
+            self.update_location(target, location=target_location)
 
     def find_route_to_origin(
         self, process_request: request_module.Request
