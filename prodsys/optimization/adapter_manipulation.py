@@ -246,6 +246,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             process_sequence = product.processes
         for src, tgt in node_link_generation.get_links(adapter_object): #TODO: methode in generator implementieren, die aus den generierten nur die links zurueckgibt
                 G.add_edge(src, tgt)
+        new_links = []
         if len(process_sequence) > 1:
             for i in range(len(process_sequence)-1): 
                 if i == 0 and product.processes.index(process_sequence[i]) == 0:
@@ -259,13 +260,13 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         if next_process in resource.process_ids
                     ]
                     for next_resource in possible_next_resources:
-                        for current_resource in possible_current_resources:
+                        for source in possible_current_resources:
                             try: #TODO: use pathfinding algorithm that considers distances
-                                path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
                             except nx.NetworkXNoPath:
                                 path = []  # No path found
                             for i in range(len(path)-1):
-                                new_Links.append((path[i], path[i+1]))
+                                new_links.append((path[i], path[i+1]))
                 current_process = process_sequence[i]
                 next_process = process_sequence[i+1]
                 possible_next_resources = [
@@ -277,14 +278,14 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                     if current_process in resource.process_ids
                 ]
                 for next_resource in possible_next_resources:
-                    for current_resource in possible_current_resources:
-                        for current_resource in possible_current_resources:
+                    for source in possible_current_resources:
+                        for next_resource in possible_next_resources:
                             try:
-                                path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
                             except nx.NetworkXNoPath:
                                 return []  # No path found
                             for i in range(len(path)-1):
-                                new_Links.append((path[i], path[i+1]))
+                                new_links.append((path[i], path[i+1]))
                 if i==len(process_sequence)-1 and product.processes.index(process_sequence[i+1]) == len(product.processes)-1:
                     possible_current_resources = possible_next_resources
                     possible_next_resources = [
@@ -292,17 +293,45 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         if sink.product_type == product.ID
                     ]
                     for next_resource in possible_next_resources:
-                        for current_resource in possible_current_resources:
+                        for source in possible_current_resources:
                             try:
-                                path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
                             except nx.NetworkXNoPath:
                                 path = []  # No path found
                             for i in range(len(path)-1):
-                                new_Links.append((path[i], path[i+1]))
-        else: #TODO: hier der fall wenn nur ein prozess
+                                new_links.append((path[i], path[i+1]))
+        else: #only one process in sequence
+            possible_sources = [
+                source for source in adapter_object.source_data
+                if source.product_type == product.ID
+            ]
+            possible_resources = [
+                resource for resource in adapter_object.resource_data
+                if process_sequence in resource.process_ids
+            ]
+            possible_sinks = [
+                sink for sink in adapter_object.sink_data
+                if sink.product_type == product.ID
+            ]
+            for resource in possible_resources: #from source to resource
+                for source in possible_sources:
+                    try: #TODO: use pathfinding algorithm that considers distances
+                        path = nx.shortest_path(G, source=source.ID, target=resource.ID)
+                    except nx.NetworkXNoPath:
+                        path = []  # No path found
+                    for i in range(len(path)-1):
+                        new_links.append((path[i], path[i+1]))
+            for resource in possible_resources: #from resource to sink
+                for sink in possible_sinks:
+                    try:
+                        path = nx.shortest_path(G, source=resource.ID, target=sink.ID)
+                    except nx.NetworkXNoPath:
+                        path = []  # No path found
+                    for i in range(len(path)-1):
+                        new_links.append((path[i], path[i+1]))
 
         new_transport_process = deepcopy(transport_process_data)
-        new_transport_process.links = new_Links
+        new_transport_process.links = new_links
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
