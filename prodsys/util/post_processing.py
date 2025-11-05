@@ -478,7 +478,7 @@ class PostProcessor:
 
         # Use shift for next time calculation within groups
         df["next_Time"] = df.groupby("Resource")["Time"].shift(-1)
-        df["next_Time"].fillna(df["Time"].max(), inplace=True)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"].max())
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         # Conditions for time types
