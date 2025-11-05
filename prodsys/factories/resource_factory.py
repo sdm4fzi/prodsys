@@ -275,7 +275,7 @@ class ResourceFactory:
         ports = []
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
-        elif not resource_data.can_move:
+        elif not TransportControlPolicy == resource_data.control_policy:
             raise ValueError("Ports not found for resource" + resource_data.ID)
 
         return ports

@@ -79,24 +79,9 @@ def main():
         capability="TP1",
         type=prodsys.processes_data.ProcessTypeEnum.LinkTransportProcesses,
         links=[],
-        can_move=True
+        can_move=False,
     )
 
-    # Port / Queue
-    #Port0 = prodsys.port_data.QueueData(
-    #    ID="Port0",
-    #    description="Queue 0",
-    #    capacity=0,
-    #    location=[-10, -10],
-    #    interface_type=prodsys.port_data.PortInterfaceType.INPUT
-    #)
-    #Port1 = prodsys.port_data.QueueData(
-    #    ID="Port1",
-    #    description="Queue 1",
-    #    capacity=0,
-    #    location=[10, 10],
-    #    interface_type=prodsys.port_data.PortInterfaceType.OUTPUT
-    #)
     # Resource
     R1 = prodsys.resource_data.ResourceData( #resource with two ports
         ID="R1",
@@ -126,7 +111,7 @@ def main():
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
         process_ids=["TP1"],
-        can_move=True,
+        can_move=False,
     )
 
     # Product

@@ -132,17 +132,23 @@ class Runner:
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
-        for resource_data in self.adapter.resources:
+        for resource_data in self.adapter.resource_data:
             length = 0.0
             for process in resource_data.process_ids:
-                process_data = next(process for process in self.adapter.processes if process.ID == process)
+                process_data = next(p for p in self.adapter.process_data if p.ID == process)
                 if (process_data.type == "LinkTransportProcesses" or process_data.type == "LinkTransportProcess") and not resource_data.can_move:
                     for link in process_data.links:
-                        origin_node = next(node for node in self.adapter.nodes if node.ID == link[0])
-                        target_node = next(node for node in self.adapter.nodes if node.ID == link[1])
+                        origin_node = next(
+                            node for node in list(self.adapter.node_data) + list(self.adapter.source_data) + list(self.adapter.sink_data) + list(self.adapter.resource_data)
+                            if node.ID == link[0]
+                        )
+                        target_node = next(
+                            node for node in list(self.adapter.node_data) + list(self.adapter.source_data) + list(self.adapter.sink_data) + list(self.adapter.resource_data)
+                            if node.ID == link[1]
+                        )
                         if origin_node.location and target_node.location:
                             length += ((origin_node.location[0] - target_node.location[0]) ** 2 + (origin_node.location[1] - target_node.location[1]) ** 2) ** 0.5
-            resource_data.capacity = int(length * resource_data.capacity)
+                    resource_data.capacity = int(length * resource_data.capacity)
 
         self.adapter.validate_configuration()
         with temp_seed(self.adapter.seed):
