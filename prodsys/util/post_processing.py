@@ -1394,8 +1394,6 @@ class PostProcessor:
         # Calculate cumulative WIP per resource
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
 
-        df.to_csv("WIP.csv", index=False)
-
         return df
 
     @cached_property
