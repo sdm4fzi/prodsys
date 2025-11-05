@@ -135,41 +135,51 @@ class PostProcessor:
             pd.DataFrame: Data frame with the simulation results and the added columns.
         """
         df = self.df_raw.copy()
+        
+        # Optimize string operations - use vectorized operations
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
-        df["Combined_activity"] = df["State"] + " " + df["Activity"]
-        df["Product_type"] = df["Product"].str.rsplit("_", n=1).str[0]
+        df["Combined_activity"] = df["State"].astype(str) + " " + df["Activity"].astype(str)
+        
+        # Optimize Product_type extraction - use vectorized str operations
+        product_split = df["Product"].str.rsplit("_", n=1, expand=True)
+        df["Product_type"] = product_split[0] if len(product_split.columns) > 0 else None
+        
         if "Primitive" not in df.columns:
             df["Primitive"] = None
-        df["Primitive_type"] = df["Primitive"].str.rsplit("_", n=1).str[0]
-        df.loc[
-            self.get_conditions_for_interface_state(df),
-            "State_type",
-        ] = "Interface State"
-        df.loc[
-            self.get_conditions_for_process_state(df),
-            "State_type",
-        ] = "Process State"
+        primitive_split = df["Primitive"].str.rsplit("_", n=1, expand=True)
+        df["Primitive_type"] = primitive_split[0] if len(primitive_split.columns) > 0 else None
+        
+        # Pre-compute conditions once
+        interface_condition = self.get_conditions_for_interface_state(df)
+        process_condition = self.get_conditions_for_process_state(df)
+        
+        # Initialize State_type column with NaN (more efficient)
+        df["State_type"] = pd.NA
+        df.loc[interface_condition, "State_type"] = "Interface State"
+        df.loc[process_condition, "State_type"] = "Process State"
 
         # TODO: remove this, if processbreakdown is added
         df = df.loc[df["State Type"] != state.StateTypeEnum.process_breakdown]
 
-        COLUMNS = ["State_type", "Activity", "State_sorting_Index"]
+        # Cache merge mapping - use vectorized map instead of merge for better performance
         STATE_SORTING_INDEX = {
-            "0": ["Interface State", "finished product", 1],
-            "1": ["Interface State", "created product", 2],
-            "2": ["Interface State", "end state", 3],
-            "3": ["Process State", "end interrupt", 4],
-            "4": ["Process State", "end state", 5],
-            "5": ["Process State", "start state", 6],
-            "6": ["Process State", "start interrupt", 7],
-            "7": ["Interface State", "start state", 8],
+            ("Interface State", "finished product"): 1,
+            ("Interface State", "created product"): 2,
+            ("Interface State", "end state"): 3,
+            ("Process State", "end interrupt"): 4,
+            ("Process State", "end state"): 5,
+            ("Process State", "start state"): 6,
+            ("Process State", "start interrupt"): 7,
+            ("Interface State", "start state"): 8,
         }
-
-        df_unique = pd.DataFrame.from_dict(
-            data=STATE_SORTING_INDEX, orient="index", columns=COLUMNS
+        
+        # Use vectorized map operation - create Series of tuples for mapping
+        state_activity_series = pd.Series(
+            list(zip(df["State_type"].fillna(""), df["Activity"].fillna(""))),
+            index=df.index
         )
-
-        df = pd.merge(df, df_unique)
+        df["State_sorting_Index"] = state_activity_series.map(STATE_SORTING_INDEX).fillna(0).astype(int)
+        
         return df
 
     @cached_property
@@ -189,16 +199,17 @@ class PostProcessor:
         return df_finished_product
 
     def get_df_with_product_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
-        df = input_df.copy()
+        # Use vectorized filtering instead of merge (much faster)
         primitive_types = self.get_primitive_types()
-        product_types = df.loc[
-            (df["Product_type"].notna())
-            & (df["Product_type"] != "")
-            & (~df["Product_type"].isin(primitive_types))
-        ]["Product_type"].unique()
-        product_types = pd.Series(product_types, name="Product_type")
-        df_product_info = pd.merge(df, product_types)
-        return df_product_info
+        primitive_set = set(primitive_types) if primitive_types else set()
+        
+        # Vectorized filter - avoid merge operation
+        mask = (
+            input_df["Product_type"].notna()
+            & (input_df["Product_type"] != "")
+            & (~input_df["Product_type"].isin(primitive_set))
+        )
+        return input_df.loc[mask].copy()
 
     @cached_property
     def df_throughput(self) -> pd.DataFrame:
@@ -561,14 +572,17 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
-        df["Bucket"] = 0
-        for resource, group in df.groupby("Resource"):
-            n = len(group)
-            num_bins = int(np.ceil(1 + np.log2(n)))
-            bucket_size = max(1, n // num_bins)
-            df.loc[group.index, "Bucket"] = (
-                group.groupby("Resource").cumcount() // bucket_size
-            )
+        # Vectorized bucket assignment - much faster than loop
+        # Calculate bucket sizes per resource using vectorized operations
+        resource_counts = df.groupby("Resource").size()
+        num_bins = (1 + np.log2(resource_counts)).astype(int)
+        bucket_sizes = (resource_counts / num_bins).astype(int).clip(lower=1)
+        bucket_size_dict = bucket_sizes.to_dict()
+        
+        # Vectorized bucket assignment - use cumcount and map bucket sizes
+        cumcounts = df.groupby("Resource").cumcount()
+        bucket_sizes_mapped = df["Resource"].map(bucket_size_dict).fillna(1).astype(int)
+        df["Bucket"] = (cumcounts // bucket_sizes_mapped).astype(int)
 
         df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
 
@@ -749,50 +763,64 @@ class PostProcessor:
 
         bucket_sizes = [50, 100, 150]
         df_list = []
+        
+        # Pre-compute example rows once for all bucket sizes
+        example_rows_list = []
+        if example_rows_dict:
+            for resource, example_row in example_rows_dict.items():
+                example_row_base = example_row.copy()
+                example_row_base["Used_Capacity"] = 0
+                example_rows_list.append(example_row_base)
 
+        # Pre-compute example_df once outside loop
+        if example_rows_list:
+            example_df_base = pd.concat(example_rows_list, ignore_index=True)
+            example_df_base["Used_Capacity"] = 0
+        
         for bucket_size in bucket_sizes:
+            # Create a view first, copy only when necessary
             df = df_base.copy()
+            
+            # Vectorized bucket assignment
             df["Bucket"] = df.groupby("Resource").cumcount() // bucket_size
             df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])[
                 "Increment"
             ].cumsum()
 
-            # Add example rows more efficiently
-            if example_rows_dict:
-                example_rows = []
-                for resource, example_row in example_rows_dict.items():
-                    example_row_copy = example_row.copy()
-                    example_row_copy["Bucket"] = 0
-                    example_row_copy["Used_Capacity"] = 0
-                    example_rows.append(example_row_copy)
-                if example_rows:
-                    example_df = pd.concat(example_rows, ignore_index=True)
-                    df = pd.concat([example_df, df], ignore_index=True)
+            # Add example rows more efficiently - reuse pre-computed base
+            if example_rows_list:
+                example_df = example_df_base.copy()
+                example_df["Bucket"] = 0
+                df = pd.concat([example_df, df], ignore_index=True)
 
-            df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
-            df["next_Time"] = df["next_Time"].fillna(
-                df.groupby(["Resource", "Bucket"])["Time"].transform("max")
-            )
+            # Vectorized time calculations - optimize groupby operations
+            grouped = df.groupby(["Resource", "Bucket"])["Time"]
+            df["next_Time"] = grouped.shift(-1)
+            max_times = grouped.transform("max")
+            df["next_Time"] = df["next_Time"].fillna(max_times)
             df["time_increment"] = df["next_Time"] - df["Time"]
 
-            standby_condition = (
-                (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-            ) | (df["State_sorting_Index"] == 3)
+            # Pre-extract columns for faster condition evaluation
+            state_sort_idx = df["State_sorting_Index"].values
+            used_cap = df["Used_Capacity"].values
+            state_type = df["State Type"].values
+            
+            # Vectorized condition assignments using numpy
+            standby_condition = ((state_sort_idx == 5) & (used_cap == 0)) | (state_sort_idx == 3)
             productive_condition = (
-                (df["State_sorting_Index"] == 6)
-                | (df["State_sorting_Index"] == 4)
-                | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
+                (state_sort_idx == 6)
+                | (state_sort_idx == 4)
+                | ((state_sort_idx == 5) & (used_cap != 0))
             )
             downtime_condition = (
-                (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
-            ) & (df["State Type"] == state.StateTypeEnum.breakdown)
-            setup_condition = ((df["State_sorting_Index"] == 8)) & (
-                df["State Type"] == state.StateTypeEnum.setup
+                ((state_sort_idx == 7) | (state_sort_idx == 8))
+                & (state_type == state.StateTypeEnum.breakdown)
             )
-            charging_condition = ((df["State_sorting_Index"] == 8)) & (
-                df["State Type"] == state.StateTypeEnum.charging
-            )
+            setup_condition = (state_sort_idx == 8) & (state_type == state.StateTypeEnum.setup)
+            charging_condition = (state_sort_idx == 8) & (state_type == state.StateTypeEnum.charging)
 
+            # Initialize Time_type column once
+            df["Time_type"] = pd.NA
             df.loc[standby_condition, "Time_type"] = "SB"
             df.loc[productive_condition, "Time_type"] = "PR"
             df.loc[downtime_condition, "Time_type"] = "UD"
@@ -819,27 +847,31 @@ class PostProcessor:
             pd.DataFrame: Data frame with the total time spent in each state of each resource.
         """
         df = self.df_resource_states_buckets_boxplot.copy()
-        df = df.loc[df["Time_type"] != "na"]
-
+        # Filter in one step
+        mask = df["Time_type"] != "na"
         if self.warm_up_cutoff:
-            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
+            mask = mask & (df["Time"] >= self.warm_up_cutoff_time)
+        df = df.loc[mask]
 
+        # Optimize: compute both aggregations in a single groupby operation where possible
         df_time_per_state = (
             df.groupby(["Resource", "Bucket", "Time_type"])
             .agg({"time_increment": "sum", "Time": "first"})
             .reset_index()
         )
 
-        # Optimize: compute resource_time more efficiently
+        # Optimize: compute resource_time more efficiently using transform
         df_resource_time = (
             df.groupby(["Resource", "Bucket"])["time_increment"]
             .sum()
             .reset_index(name="resource_time")
         )
         
+        # Use merge with explicit indicator for better performance
         df_time_per_state = pd.merge(
-            df_time_per_state, df_resource_time, on=["Resource", "Bucket"]
+            df_time_per_state, df_resource_time, on=["Resource", "Bucket"], how="left"
         )
+        # Vectorized percentage calculation
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
@@ -1121,16 +1153,20 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time for each primitive.
         """
-        df = pd.DataFrame()
         primitive_types = self.get_primitive_types()
+        df_list = []
+        
+        # Use groupby instead of loop + combine_first for better performance
         for primitive_type in primitive_types:
             df_temp = self.df_prepared.loc[
                 self.df_prepared["Primitive_type"] == primitive_type
             ].copy()
-            df_temp = self.get_primitive_WIP_KPI(df_temp)
-            df = df.combine_first(df_temp)
-
-        return df
+            if not df_temp.empty:
+                df_temp = self.get_primitive_WIP_KPI(df_temp)
+                df_list.append(df_temp)
+        
+        # Concatenate all primitive types at once
+        return pd.concat(df_list, ignore_index=True) if df_list else pd.DataFrame()
 
     @cached_property
     def df_aggregated_primitive_WIP(self) -> pd.DataFrame:
@@ -1328,14 +1364,14 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time for each product type.
         """
-        df = self.df_resource_states.copy()
-        df = self.get_df_with_product_entries(df).copy()
-        df = df.reset_index()
+        # Avoid unnecessary copy - get_df_with_product_entries already returns a copy
+        df = self.get_df_with_product_entries(self.df_resource_states)
+        df = df.reset_index(drop=True)
         
         # Use groupby instead of loop + combine_first for better performance
         df_list = []
-        for product_type, group in df.groupby("Product_type"):
-            if product_type != product_type:  # Skip NaN
+        for product_type, group in df.groupby("Product_type", sort=False):
+            if pd.isna(product_type):  # Skip NaN more efficiently
                 continue
             # get_WIP_KPI modifies the dataframe in place, so we need a copy
             df_temp = self.get_WIP_KPI(group.copy())
@@ -1363,57 +1399,74 @@ class PostProcessor:
             pd.DataFrame: DataFrame with WIP tracking per resource
         """
         df = df.loc[df["Time"] != 0].copy()
-        df["WIP_Increment"] = 0
-        df["WIP_resource"] = None
+        
+        # Initialize columns as numpy arrays for faster assignment
+        n_rows = len(df)
+        wip_increment = np.zeros(n_rows, dtype=int)
+        wip_resource = np.full(n_rows, None, dtype=object)
+        
+        # Extract series once for faster access
+        activity = df["Activity"].values
+        resource = df["Resource"].values
+        state_type_col = df["State Type"].values
 
         # Rule 1: Create product -> +1 at source
-        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
-        df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
-        df.loc[CREATED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION, "Resource"]
+        created_mask = activity == state.StateEnum.created_product
+        wip_increment[created_mask] = 1
+        wip_resource[created_mask] = resource[created_mask]
 
         # Rule 2: Finish product -> -1 at sink
-        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
-        df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-        df.loc[FINISHED_CONDITION, "WIP_resource"] = df.loc[FINISHED_CONDITION, "Resource"]
+        finished_mask = activity == state.StateEnum.finished_product
+        wip_increment[finished_mask] = -1
+        wip_resource[finished_mask] = resource[finished_mask]
+        
+        # Assign back to dataframe
+        df["WIP_Increment"] = wip_increment
+        df["WIP_resource"] = wip_resource
 
         # Rule 3: End loading -> +1 at resource, -1 at Origin location (queue)
-        loading_condition = (df["State Type"] == state.StateTypeEnum.loading) | (df["State Type"] == "Loading")
-        end_loading = loading_condition & (df["Activity"] == "end state")
+        # Use vectorized operations
+        loading_condition = (state_type_col == state.StateTypeEnum.loading) | (state_type_col == "Loading")
+        end_loading = loading_condition & (activity == "end state")
         
         # Rule 4: End unloading -> -1 at resource, +1 at Target location (queue)
-        unloading_condition = (df["State Type"] == state.StateTypeEnum.unloading) | (df["State Type"] == "Unloading")
-        end_unloading = unloading_condition & (df["Activity"] == "end state")
+        unloading_condition = (state_type_col == state.StateTypeEnum.unloading) | (state_type_col == "Unloading")
+        end_unloading = unloading_condition & (activity == "end state")
 
         # Collect all additional rows to add, then concatenate once
-        # Use list comprehension to reduce overhead
+        # Use more efficient indexing and vectorized operations
         additional_rows = []
         
         if end_loading.any():
             end_loading_indices = df.index[end_loading]
+            loading_df = df.loc[end_loading_indices]
+            
             # Create rows for end loading: +1 at resource
-            loading_resource = df.loc[end_loading_indices].copy()
+            loading_resource = loading_df.copy()
             loading_resource["WIP_Increment"] = 1
-            loading_resource["WIP_resource"] = loading_resource["Resource"]
+            loading_resource["WIP_resource"] = loading_resource["Resource"].values
             additional_rows.append(loading_resource)
             
             # Create rows for end loading: -1 at Origin location (queue)
-            loading_queue = df.loc[end_loading_indices].copy()
+            loading_queue = loading_df.copy()
             loading_queue["WIP_Increment"] = -1
-            loading_queue["WIP_resource"] = loading_queue["Origin location"]
+            loading_queue["WIP_resource"] = loading_queue["Origin location"].values
             additional_rows.append(loading_queue)
         
         if end_unloading.any():
             end_unloading_indices = df.index[end_unloading]
+            unloading_df = df.loc[end_unloading_indices]
+            
             # Create rows for end unloading: -1 at resource
-            unloading_resource = df.loc[end_unloading_indices].copy()
+            unloading_resource = unloading_df.copy()
             unloading_resource["WIP_Increment"] = -1
-            unloading_resource["WIP_resource"] = unloading_resource["Resource"]
+            unloading_resource["WIP_resource"] = unloading_resource["Resource"].values
             additional_rows.append(unloading_resource)
             
             # Create rows for end unloading: +1 at Target location (queue)
-            unloading_queue = df.loc[end_unloading_indices].copy()
+            unloading_queue = unloading_df.copy()
             unloading_queue["WIP_Increment"] = 1
-            unloading_queue["WIP_resource"] = unloading_queue["Target location"]
+            unloading_queue["WIP_resource"] = unloading_queue["Target location"].values
             additional_rows.append(unloading_queue)
 
         # Combine all dataframes at once
@@ -1456,28 +1509,38 @@ class PostProcessor:
         Returns:
             List[performance_indicators.KPI]: List of Dynamic WIP KPI values.
         """
-        # Filter first, then copy only what we need (more efficient)
-        df = self.df_WIP_per_resource.loc[self.df_WIP_per_resource["WIP_Increment"] != 0].copy()
+        # Filter first without copying the entire dataframe
+        mask = self.df_WIP_per_resource["WIP_Increment"] != 0
+        df = self.df_WIP_per_resource.loc[mask].copy()
 
+        # Vectorized next_Time calculation
         df["next_Time"] = df.groupby(by="WIP_resource")["Time"].shift(-1)
         df["next_Time"] = df["next_Time"].fillna(df["Time"])
         
         # Use itertuples() instead of iterrows() for better performance
+        # Pre-compute context outside loop
         context = (
             performance_indicators.KPILevelEnum.RESOURCE,
             performance_indicators.KPILevelEnum.ALL_PRODUCTS,
         )
+        
+        # Extract arrays once for faster access
+        wip_values = df["WIP"].values
+        resources = df["WIP_resource"].values
+        times = df["Time"].values
+        next_times = df["next_Time"].values
+        
         KPIs = [
             performance_indicators.DynamicWIP(
                 name=performance_indicators.KPIEnum.DYNAMIC_WIP,
-                value=row.WIP,
+                value=wip_values[i],
                 context=context,
                 product_type="Total",
-                resource=row.WIP_resource,
-                start_time=row.Time,
-                end_time=row.next_Time,
+                resource=resources[i],
+                start_time=times[i],
+                end_time=next_times[i],
             )
-            for row in df.itertuples()
+            for i in range(len(df))
         ]
         return KPIs
 
@@ -1498,8 +1561,7 @@ class PostProcessor:
         df["next_Time"] = df.groupby(by="Product_type")["Time"].shift(-1)
         df["next_Time"] = df["next_Time"].fillna(df["Time"])
         
-        # Use itertuples() instead of iterrows() for better performance
-        KPIs = []
+        # Pre-compute contexts outside loop
         context_total = (
             performance_indicators.KPILevelEnum.SYSTEM,
             performance_indicators.KPILevelEnum.ALL_PRODUCTS,
@@ -1509,18 +1571,24 @@ class PostProcessor:
             performance_indicators.KPILevelEnum.PRODUCT_TYPE,
         )
         
-        for row in df.itertuples():
-            context = context_total if row.Product_type == "Total" else context_product
-            KPIs.append(
-                performance_indicators.DynamicWIP(
-                    name=performance_indicators.KPIEnum.DYNAMIC_WIP,
-                    value=row.WIP,
-                    context=context,
-                    product_type=row.Product_type,
-                    start_time=row.Time,
-                    end_time=row.next_Time,
-                )
+        # Extract arrays once for faster access
+        wip_values = df["WIP"].values
+        product_types = df["Product_type"].values
+        times = df["Time"].values
+        next_times = df["next_Time"].values
+        is_total = (product_types == "Total")
+        
+        KPIs = [
+            performance_indicators.DynamicWIP(
+                name=performance_indicators.KPIEnum.DYNAMIC_WIP,
+                value=wip_values[i],
+                context=context_total if is_total[i] else context_product,
+                product_type=product_types[i],
+                start_time=times[i],
+                end_time=next_times[i],
             )
+            for i in range(len(df))
+        ]
         return KPIs
 
     @cached_property
