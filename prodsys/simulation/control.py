@@ -14,7 +14,7 @@ from prodsys.simulation import (
     process,
 )
 from prodsys.simulation.process_handlers.production_process_handler import ProductionProcessHandler
-from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler
+from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler, ConveyorTransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
 from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
 
@@ -172,7 +172,10 @@ def get_requets_handler(
     ):
         return ProductionProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.TRANSPORT:
-        return TransportProcessHandler(request.requesting_item.env)
+        if request.get_resource().can_move:
+            return TransportProcessHandler(request.requesting_item.env)
+        else:
+            return ConveyorTransportProcessHandler(request.requesting_item.env)
     elif (
         request.request_type == request_module.RequestType.PROCESS_DEPENDENCY
         or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY
