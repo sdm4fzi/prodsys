@@ -179,16 +179,7 @@ class Runner:
 
             self.product_factory.event_logger = self.event_logger
 
-            self.source_factory = source_factory.SourceFactory(
-                env=self.env,
-                product_factory=self.product_factory,
-                time_model_factory=self.time_model_factory,
-                queue_factory=self.queue_factory,
-                resource_factory=self.resource_factory,
-                primitive_factory=self.dependency_factory,
-                sink_factory=self.sink_factory,
-            )
-            self.source_factory.create_sources(self.adapter)
+            
             self.primitive_factory = primitive_factory.PrimitiveFactory(
                 env=self.env,
                 process_factory=self.process_factory,
@@ -205,8 +196,20 @@ class Runner:
                 product_factory=self.product_factory,
                 primitive_factory=self.primitive_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.product_data)
             self.dependency_factory.inject_dependencies()
+            self.source_factory = source_factory.SourceFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                time_model_factory=self.time_model_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                primitive_factory=self.dependency_factory,
+                sink_factory=self.sink_factory,
+            )
+            self.source_factory.create_sources(self.adapter)
+            
+            
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
 
             link_transport_process_updater_instance = (
@@ -285,6 +288,7 @@ class Runner:
             kpi_visualization.plot_primitive_WIP(p)
         kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
+        kpi_visualization.plot_liegezeit_distribution(p)
         kpi_visualization.plot_time_per_state_of_resources(p)
 
     def plot_results_executive(self):
@@ -349,6 +353,7 @@ class Runner:
         kpis += p.WIP_KPIs
         kpis += p.throughput_and_output_KPIs
         kpis += p.aggregated_throughput_time_KPIs
+        kpis += p.liegezeit_KPIs
         kpis += p.machine_state_KPIS
         event_data = self.get_event_data_of_simulation()
         return performance_data.Performance(kpis=kpis, event_log=event_data)
