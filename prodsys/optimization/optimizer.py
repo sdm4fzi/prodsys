@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
+import os
 import time
 from typing import Any, Callable, Optional
 
@@ -23,7 +24,6 @@ if util.run_from_ipython():
 else:
     from tqdm import tqdm
 
-from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
     evolutionary_algorithm_optimization,
@@ -359,18 +359,6 @@ class Optimizer(ABC):
     def get_progress(self) -> OptimizationProgress:
         return self.progress
 
-    @abstractmethod
-    def save_configuration(
-        self, configuration_hash: str, configuration: ProductionSystemData
-    ) -> None:
-        """
-        Caches the configuration.
-        The base class does not implement caching.
-        Subclasses with caching enabled should override this method.
-        """
-        ...
-
-
 class InMemoryOptimizer(Optimizer):
     """
     Optimizer implementation that holds all data in memory (cache).
@@ -462,9 +450,10 @@ class FileSystemSaveOptimizer(Optimizer):
         """
         if self.full_save and fitness_data.event_log_dict:
             df = pd.DataFrame.from_dict(fitness_data.event_log_dict)
-            df.to_json(
-                f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json", indent=4
+            event_log_path = os.path.join(
+                self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
             )
+            df.to_json(event_log_path, indent=4)
             fitness_data.event_log_dict = None  # Free up memory
         # Update the aggregated optimization results on disk.
         optimization_results = {}
@@ -481,7 +470,13 @@ class FileSystemSaveOptimizer(Optimizer):
     def get_configuration_by_hash(
         self, configuration_hash: str
     ) -> ProductionSystemData:
-        config = ProductionSystemData.read(f"{self.save_folder}/hash_{configuration_hash}.json")
+        config_path = f"{self.save_folder}/hash_{configuration_hash}.json"
+        config = ProductionSystemData.read(config_path)
+        metadata = self.optimization_cache_first_found_hashes.hashes.get(
+            configuration_hash
+        )
+        if metadata:
+            config.ID = metadata.ID
         return config
 
     def get_fitness_data_from_persistence(
@@ -497,10 +492,14 @@ class FileSystemSaveOptimizer(Optimizer):
         # In this design, the configuration is loaded separately.
         fitness_data.production_system = None
         if self.full_save:
-            df = pd.read_json(
-                f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json"
+            event_log_path = os.path.join(
+                self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
             )
-            fitness_data.event_log_dict = df.to_dict()
+            if os.path.exists(event_log_path):
+                df = pd.read_json(event_log_path)
+                fitness_data.event_log_dict = df.to_dict()
+            else:
+                fitness_data.event_log_dict = None
         else:
             fitness_data.event_log_dict = None
         return fitness_data
@@ -531,8 +530,12 @@ class FileSystemSaveOptimizer(Optimizer):
                 for adapter_id, fitness_data in optimization_results[
                     generation
                 ].items():
-                    df = pd.read_json(
-                        f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json"
+                    event_log_path = os.path.join(
+                        self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
                     )
-                    fitness_data.event_log_dict = df.to_dict()
+                    if os.path.exists(event_log_path):
+                        df = pd.read_json(event_log_path)
+                        fitness_data.event_log_dict = df.to_dict()
+                    else:
+                        fitness_data.event_log_dict = None
         return optimization_results
