@@ -103,7 +103,6 @@ class ResourceProcessModelHandler:
         
         entity = process_request.get_entity()
         origin_queue = process_request.origin_queue
-        target_queue = process_request.target_queue
 
         assert entity.current_locatable == origin_queue, f"Product {entity.data.ID} is not at the origin queue {origin_queue.data.ID}"
         
@@ -129,11 +128,26 @@ class ResourceProcessModelHandler:
         
         # Execute all processes in the model sequentially on this resource
         # Pick up product from origin queue at the beginning (already done above)
-        first_process = True
         self.set_next_possible_production_processes()
         while self.next_possible_processes:
             next_process = self.next_possible_processes[0]
-            yield from process_request.entity.router.get_dependencies(process_request)
+
+            dependency_release_event = None
+            dependency_ready_events = []
+            router = process_request.entity.router if process_request.entity else None
+            resource_dependencies = getattr(resource, "dependencies", [])
+            process_dependencies = getattr(next_process, "dependencies", [])
+            if router and (resource_dependencies or process_dependencies):
+                dependency_release_event = self.env.event()
+                dependency_ready_events = router.get_dependencies_for_execution(
+                    resource=resource,
+                    process=next_process,
+                    requesting_item=process_request.requesting_item or process_request.entity,
+                    dependency_release_event=dependency_release_event,
+                )
+            for dependency_ready_event in dependency_ready_events:
+                yield dependency_ready_event
+
             yield from resource.setup(next_process)
             # Get process time
             process_time = next_process.time_model.get_next_time()
@@ -156,6 +170,9 @@ class ResourceProcessModelHandler:
             for process_event, production_state in process_state_events:
                 yield process_event
                 production_state.process = None
+
+            if dependency_release_event and not dependency_release_event.triggered:
+                dependency_release_event.succeed()
             
             # Check for rework requirement
             if self.is_rework_required(next_process):
