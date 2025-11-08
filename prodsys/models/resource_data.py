@@ -30,12 +30,9 @@ class ControllerEnum(str, Enum):
     Enum that represents the controller of a resource.
 
     - PipelineController: Pipeline controller.
-    - TransportController: Transport controller.
-    - BatchController: Batch controller.
     """
 
     PipelineController = "PipelineController"
-    BatchController = "BatchController"
 
 
 class ResourceControlPolicy(str, Enum):
