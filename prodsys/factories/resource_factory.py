@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
 CONTROLLER_DICT: Dict = {
     ControllerEnum.PipelineController: control.Controller,
-    ControllerEnum.BatchController: control.BatchController,
 }
 
 CONTROL_POLICY_DICT: Dict = {
@@ -209,8 +208,7 @@ class ResourceFactory:
         self.resources_can_process: Dict[str, resources.Resource] = {}
         self.controllers: List[
             Union[
-                control.ProductionProcessHandler,
-                control.BatchController,
+                control.Controller,
             ]
         ] = []
         self.lot_handler = LotHandler()
@@ -238,7 +236,6 @@ class ResourceFactory:
         """
         Creates the global system resource.
         """
-        # TODO: resolve later that users can specify a system resource, so this function is only needed if no global system resource is specified!
         all_resources = [resource for resource in self.all_resources.values() if not self.is_resource_a_subresource(resource)]
 
         resource_data = SystemResourceData(
@@ -259,7 +256,6 @@ class ResourceFactory:
         )
         controller: Union[
             control.Controller,
-            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.global_system_resource = resources.SystemResource(
             env=self.env,
@@ -322,7 +318,6 @@ class ResourceFactory:
         )
         controller: Union[
             control.Controller,
-            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.controllers.append(controller)
         values.update({"controller": controller})
@@ -386,7 +381,6 @@ class ResourceFactory:
     def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
         Union[
             control.Controller,
-            control.BatchController,
         ]
     ]:
         """
@@ -396,7 +390,7 @@ class ResourceFactory:
             _resource (resources.Resource): Resource object.
 
         Returns:
-            Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]: Controller of the given resource.
+            Optional[Union[control.Controller]]: Controller of the given resource.
         """
         for controller in self.controllers:
             if controller.resource == _resource:
