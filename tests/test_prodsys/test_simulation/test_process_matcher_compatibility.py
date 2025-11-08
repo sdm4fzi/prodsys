@@ -12,7 +12,8 @@ from typing import Dict, List, Tuple
 import prodsys.express as psx
 from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.simulation.process_matcher import ProcessMatcher, ResourceCompatibilityKey, TransportCompatibilityKey
-from prodsys.simulation import process, request, product, resources
+from prodsys.simulation import process, request, resources
+from prodsys.simulation.entities import product
 from prodsys.models.source_data import RoutingHeuristic
 
 
