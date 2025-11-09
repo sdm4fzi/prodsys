@@ -211,14 +211,16 @@ class ProductionSystem(core.ExpressObject):
         def include_process_id(process_id: Optional[str]) -> None:
             if not process_id:
                 return
-            required_process_ids_for_resources.add(process_id)
             process_obj = process_id_to_process.get(process_id)
-            if isinstance(process_obj, process.CapabilityProcess):
-                if process_obj.capability:
-                    required_capabilities.add(process_obj.capability)
             if isinstance(process_obj, process.RequiredCapabilityProcess):
-                if process_obj.capability:
-                    required_capabilities.add(process_obj.capability)
+                capability = getattr(process_obj, "capability", None)
+                if capability:
+                    required_capabilities.add(capability)
+                return
+            required_process_ids_for_resources.add(process_id)
+            capability = getattr(process_obj, "capability", None)
+            if capability:
+                required_capabilities.add(capability)
 
         for product_data_model in product_data_models:
             processes_field = product_data_model.processes
@@ -245,6 +247,10 @@ class ProductionSystem(core.ExpressObject):
             if isinstance(state_process_instance, process.CapabilityProcess):
                 if state_process_instance.capability:
                     required_capabilities.add(state_process_instance.capability)
+            else:
+                capability = getattr(state_process_instance, "capability", None)
+                if capability:
+                    required_capabilities.add(capability)
 
         nodes = []
         for process_instance in processes:
@@ -322,28 +328,14 @@ class ProductionSystem(core.ExpressObject):
         provided_capabilities: Set[str] = set()
 
         for resource_instance in self.resources:
-            original_processes = list(resource_instance.processes)
-            filtered_processes: List[process.PROCESS_UNION] = []
-            for proc_instance in original_processes:
-                if proc_instance.ID in required_process_ids_for_resources:
-                    filtered_processes.append(proc_instance)
-                    continue
-                if (
-                    isinstance(proc_instance, process.CapabilityProcess)
-                    and proc_instance.capability in required_capabilities
-                ):
-                    filtered_processes.append(proc_instance)
-            resource_instance.processes = filtered_processes
             resource_model = resource_instance.to_model()
             resource_model_data.append(resource_model)
-            for proc_instance in filtered_processes:
-                provided_process_ids.add(proc_instance.ID)
-                if (
-                    isinstance(proc_instance, process.CapabilityProcess)
-                    and proc_instance.capability
-                ):
-                    provided_capabilities.add(proc_instance.capability)
-            resource_instance.processes = original_processes
+            for proc_instance in resource_instance.processes:
+                if getattr(proc_instance, "ID", None):
+                    provided_process_ids.add(proc_instance.ID)
+                capability = getattr(proc_instance, "capability", None)
+                if capability:
+                    provided_capabilities.add(capability)
 
         missing_process_ids = required_process_ids_for_resources - provided_process_ids
         missing_capabilities = required_capabilities - provided_capabilities

@@ -1638,11 +1638,35 @@ def get_required_process_ids(
                 required.extend(flattened)
 
     required_transport_processes = [
-        product.transport_process for product in configuration.product_data if product.transport_process
+        product.transport_process
+        for product in configuration.product_data
+        if product.transport_process
+    ]
+
+    primitive_transport_processes = [
+        primitive.transport_process
+        for primitive in configuration.primitive_data
+        if getattr(primitive, "transport_process", None)
+    ]
+
+    dependency_entries = getattr(configuration, "dependency_data", None)
+    if dependency_entries is None:
+        dependency_entries = getattr(configuration, "depdendency_data", []) or []
+    dependency_processes = [
+        dependency.required_process
+        for dependency in dependency_entries
+        if hasattr(dependency, "required_process") and dependency.required_process
     ]
 
     return list(
-        set(required + required_dict_keys + required_dict_values + required_transport_processes)
+        set(
+            required
+            + required_dict_keys
+            + required_dict_values
+            + required_transport_processes
+            + primitive_transport_processes
+            + dependency_processes
+        )
     )
 
 
@@ -2137,10 +2161,10 @@ def assert_required_processes_in_resources_available(
                 raise ValueError(
                     f"The process {process_id} assigned to resource {resource.ID} is not defined in process data."
                 )
+            capability = getattr(process_data, "capability", None)
             if isinstance(
                 process_data, processes_data_module.CapabilityProcessData
             ):
-                capability = getattr(process_data, "capability", None)
                 if not capability or capability not in required_capabilities:
                     raise ValueError(
                         f"The capability process {process_id} of resource {resource.ID} provides capability "
@@ -2154,10 +2178,15 @@ def assert_required_processes_in_resources_available(
                     f"Resource {resource.ID} contains required capability process {process_id}. "
                     "Required capability processes are only allowed on products."
                 )
+            if capability:
+                if capability not in required_capabilities:
+                    raise ValueError(
+                        f"The process {process_id} of resource {resource.ID} provides capability "
+                        f"{capability}, which is not required by any product."
+                    )
+                continue
             if process_id not in required_ids:
-                raise ValueError(
-                    f"The process {process_id} of resource {resource.ID} is not required by any product or state."
-                )
+                continue
 
     assert_production_processes_available(
         available_production_processes, required_production_processes
