@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union, Set
 
 
 from pydantic import Field, PrivateAttr
@@ -98,7 +98,7 @@ class ProductionSystem(core.ExpressObject):
             util.flatten_object([resource.dependencies for resource in self.resources])
         )
         dependencies = remove_duplicate_items(dependencies)
-        processes = list(
+        process_candidates = list(
             util.flatten_object(
                 [product.process for product in products]
                 + [product.transport_process for product in products]
@@ -107,6 +107,24 @@ class ProductionSystem(core.ExpressObject):
             )
         )
         
+        processes: List[process.PROCESS_UNION] = []
+        visited_process_ids: Set[str] = set()
+
+        def add_process_instance(process_instance: process.PROCESS_UNION) -> None:
+            if process_instance is None or not hasattr(process_instance, "ID"):
+                return
+            process_id = process_instance.ID
+            if process_id in visited_process_ids:
+                return
+            visited_process_ids.add(process_id)
+            processes.append(process_instance)
+            if isinstance(process_instance, process.ProcessModel):
+                for nested_process in process_instance.get_all_nested_processes():
+                    add_process_instance(nested_process)
+
+        for process_candidate in process_candidates:
+            add_process_instance(process_candidate)
+
         # Collect processes from states (SetupState, ProcessBreakdownState, etc.)
         states = list(
             util.flatten_object([resource.states for resource in self.resources])
@@ -123,11 +141,14 @@ class ProductionSystem(core.ExpressObject):
                 state_processes.append(state_instance.process)
         
         # Add processes from states to the processes list
-        processes.extend(state_processes)
+        for state_process_instance in state_processes:
+            add_process_instance(state_process_instance)
         
         # Build a mapping of process IDs to process objects for resolving ProcessModel references
-        process_id_to_process = {proc.ID: proc for proc in processes}
-        
+        process_id_to_process: Dict[str, process.PROCESS_UNION] = {
+            proc.ID: proc for proc in processes
+        }
+
         # Extract processes referenced in ProcessModel adjacency matrices
         process_model_processes = []
         for proc in processes:
@@ -166,8 +187,10 @@ class ProductionSystem(core.ExpressObject):
                                     process_model_processes.append(state_instance.process)
         
         # Add processes found from ProcessModel adjacency matrices
-        processes.extend(process_model_processes)
+        for process_model_process in process_model_processes:
+            add_process_instance(process_model_process)
         processes = remove_duplicate_items(processes)
+        process_id_to_process = {proc.ID: proc for proc in processes}
         dependencies += list(
             util.flatten_object(
                 [
@@ -179,6 +202,49 @@ class ProductionSystem(core.ExpressObject):
                 ]
             )
         )
+
+        product_data_models = [product.to_model() for product in products]
+
+        required_process_ids_for_resources: Set[str] = set()
+        required_capabilities: Set[str] = set()
+
+        def include_process_id(process_id: Optional[str]) -> None:
+            if not process_id:
+                return
+            required_process_ids_for_resources.add(process_id)
+            process_obj = process_id_to_process.get(process_id)
+            if isinstance(process_obj, process.CapabilityProcess):
+                if process_obj.capability:
+                    required_capabilities.add(process_obj.capability)
+            if isinstance(process_obj, process.RequiredCapabilityProcess):
+                if process_obj.capability:
+                    required_capabilities.add(process_obj.capability)
+
+        for product_data_model in product_data_models:
+            processes_field = product_data_model.processes
+            if processes_field is None:
+                continue
+            if isinstance(processes_field, dict):
+                for node_id, successors in processes_field.items():
+                    include_process_id(node_id)
+                    if successors:
+                        for successor in successors:
+                            include_process_id(successor)
+            else:
+                flattened = util.flatten_object(processes_field)
+                if flattened:
+                    for process_id in flattened:
+                        include_process_id(process_id)
+            include_process_id(product_data_model.transport_process)
+
+        for state_process_instance in state_processes:
+            if state_process_instance is None or not hasattr(
+                state_process_instance, "ID"
+            ):
+                continue
+            if isinstance(state_process_instance, process.CapabilityProcess):
+                if state_process_instance.capability:
+                    required_capabilities.add(state_process_instance.capability)
 
         nodes = []
         for process_instance in processes:
@@ -250,8 +316,54 @@ class ProductionSystem(core.ExpressObject):
         process_data = [process.to_model() for process in processes]
         state_data = [state.to_model() for state in states]
         nodes_data = [node.to_model() for node in nodes]
-        product_data = [product.to_model() for product in products]
-        resource_data = [resource.to_model() for resource in self.resources]
+        product_data = product_data_models
+        resource_model_data = []
+        provided_process_ids: Set[str] = set()
+        provided_capabilities: Set[str] = set()
+
+        for resource_instance in self.resources:
+            original_processes = list(resource_instance.processes)
+            filtered_processes: List[process.PROCESS_UNION] = []
+            for proc_instance in original_processes:
+                if proc_instance.ID in required_process_ids_for_resources:
+                    filtered_processes.append(proc_instance)
+                    continue
+                if (
+                    isinstance(proc_instance, process.CapabilityProcess)
+                    and proc_instance.capability in required_capabilities
+                ):
+                    filtered_processes.append(proc_instance)
+            resource_instance.processes = filtered_processes
+            resource_model = resource_instance.to_model()
+            resource_model_data.append(resource_model)
+            for proc_instance in filtered_processes:
+                provided_process_ids.add(proc_instance.ID)
+                if (
+                    isinstance(proc_instance, process.CapabilityProcess)
+                    and proc_instance.capability
+                ):
+                    provided_capabilities.add(proc_instance.capability)
+            resource_instance.processes = original_processes
+
+        missing_process_ids = required_process_ids_for_resources - provided_process_ids
+        missing_capabilities = required_capabilities - provided_capabilities
+
+        if missing_process_ids or missing_capabilities:
+            message_fragments = []
+            if missing_process_ids:
+                message_fragments.append(
+                    f"Missing resources for processes: {sorted(missing_process_ids)}"
+                )
+            if missing_capabilities:
+                message_fragments.append(
+                    f"Missing resources providing capabilities: {sorted(missing_capabilities)}"
+                )
+            raise ValueError(
+                "Production system configuration invalid after process assignment. "
+                + " ".join(message_fragments)
+            )
+
+        resource_data = resource_model_data
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
         dependency_data = [dependency.to_model() for dependency in dependencies]

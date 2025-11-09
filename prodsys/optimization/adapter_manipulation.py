@@ -12,10 +12,15 @@ from prodsys.models.production_system_data import (
     add_default_queues_to_resources,
     get_possible_production_processes_IDs,
     get_possible_transport_processes_IDs,
+    get_required_process_ids,
     remove_queues_from_resources,
 )
 from prodsys.models import resource_data, scenario_data
-from prodsys.models.processes_data import CompoundProcessData, TransportProcessData
+from prodsys.models.processes_data import (
+    CompoundProcessData,
+    ProcessModelData,
+    TransportProcessData,
+)
 from prodsys.models.state_data import BreakDownStateData
 from prodsys.models.time_model_data import TIME_MODEL_DATA, DistanceTimeModelData
 from prodsys.optimization.optimization import check_valid_configuration
@@ -30,10 +35,135 @@ from prodsys.optimization.util import (
 from prodsys.models.primitives_data import StoredPrimitive
 import random
 from uuid import uuid1
-
 from prodsys.simulation import process, request, runner
 from prodsys.util.util import flatten
+from prodsys.models.dependency_data import DependencyType
 
+
+def _build_process_data_map(adapter_object: adapters.ProductionSystemData) -> dict[str, object]:
+    """
+    Create a mapping from process ID to process data object for quick lookup.
+    """
+    return {process.ID: process for process in adapter_object.process_data}
+
+
+def _collect_leaf_process_ids(
+    process_data_map: dict[str, object],
+    process_id: str,
+    required_ids: set[str],
+    visited_models: set[str] | None = None,
+) -> set[str]:
+    """
+    Recursively collect all non-ProcessModel process IDs contained within a ProcessModel.
+    """
+    if visited_models is None:
+        visited_models = set()
+    if process_id in visited_models:
+        return set()
+    process_obj = process_data_map.get(process_id)
+    if not isinstance(process_obj, ProcessModelData):
+        return set()
+    visited_models.add(process_id)
+    contained_ids: set[str] = set()
+    adjacency = process_obj.adjacency_matrix or {}
+    node_ids = set(adjacency.keys())
+    for successors in adjacency.values():
+        node_ids.update(successors)
+    for node_id in node_ids:
+        node_obj = process_data_map.get(node_id)
+        if isinstance(node_obj, ProcessModelData):
+            contained_ids.update(
+                _collect_leaf_process_ids(
+                    process_data_map, node_id, required_ids, visited_models
+                )
+            )
+        elif node_obj is not None and node_id in required_ids:
+            contained_ids.add(node_id)
+    return contained_ids
+
+
+def expand_process_ids_with_models(
+    adapter_object: adapters.ProductionSystemData, process_ids: List[str]
+) -> List[str]:
+    """
+    Ensure that process IDs derived from ProcessModels also include their nested processes.
+    """
+    if not process_ids:
+        return []
+    required_ids = set(get_required_process_ids(adapter_object))
+    process_data_map = _build_process_data_map(adapter_object)
+    expanded: List[str] = []
+    seen: set[str] = set()
+    for pid in process_ids:
+        if isinstance(pid, (list, tuple, set)):
+            candidate_ids = list(flatten(pid))
+        else:
+            candidate_ids = [pid]
+        for candidate_id in candidate_ids:
+            if candidate_id not in required_ids:
+                continue
+            if candidate_id not in seen:
+                expanded.append(candidate_id)
+                seen.add(candidate_id)
+            leaf_ids = _collect_leaf_process_ids(
+                process_data_map, candidate_id, required_ids
+            )
+            for leaf_id in leaf_ids:
+                if leaf_id in required_ids and leaf_id not in seen:
+                    expanded.append(leaf_id)
+                    seen.add(leaf_id)
+    return expanded
+
+
+def _get_resource_dependency_ids(
+    adapter_object: adapters.ProductionSystemData,
+) -> set[str]:
+    """
+    Return the set of resource IDs referenced by resource dependencies.
+    """
+    if not adapter_object.depdendency_data:
+        return set()
+    return {
+        dependency.required_resource
+        for dependency in adapter_object.depdendency_data
+        if getattr(dependency, "dependency_type", None) == DependencyType.RESOURCE
+    }
+
+
+def sync_resource_dependencies(adapter_object: adapters.ProductionSystemData) -> None:
+    """
+    Ensure that resource dependencies always reference existing resources.
+    If the original resource is missing, reassign the dependency to a suitable fallback.
+    """
+    if not adapter_object.depdendency_data:
+        return
+
+    available_resources = {resource.ID: resource for resource in adapter_object.resource_data}
+    if not available_resources:
+        return
+
+    transport_resources = adapters.get_transport_resources(adapter_object)
+    production_resources = adapters.get_production_resources(adapter_object)
+    def _pick_fallback(description: str) -> str:
+        desc = (description or "").lower()
+        if "transport" in desc and transport_resources:
+            return transport_resources[0].ID
+        if ("production" in desc or "machine" in desc) and production_resources:
+            return production_resources[0].ID
+        if transport_resources:
+            return transport_resources[0].ID
+        if production_resources:
+            return production_resources[0].ID
+        # As a last resort, return any available resource ID.
+        return next(iter(available_resources.keys()))
+
+    for dependency in adapter_object.depdendency_data:
+        if getattr(dependency, "dependency_type", None) != DependencyType.RESOURCE:
+            continue
+        if dependency.required_resource in available_resources:
+            continue
+        fallback_id = _pick_fallback(getattr(dependency, "description", ""))
+        dependency.required_resource = fallback_id
 
 def crossover(ind1, ind2):
     ind1[0].ID = str(uuid1())
@@ -67,6 +197,8 @@ def crossover(ind1, ind2):
     clean_out_breakdown_states_of_resources(adapter2)
     adjust_process_capacities(adapter1)
     adjust_process_capacities(adapter2)
+    sync_resource_dependencies(adapter1)
+    sync_resource_dependencies(adapter2)
 
     return ind1, ind2
 
@@ -89,11 +221,27 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         )
         + 1
     )
-    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    required_ids = set(get_required_process_ids(adapter_object))
+    possible_processes = [
+        process_module
+        for process_module in get_possible_production_processes_IDs(adapter_object)
+        if (
+            isinstance(process_module, tuple)
+            and all(process_id in required_ids for process_id in process_module)
+        )
+        or (isinstance(process_module, str) and process_module in required_ids)
+    ]
     if num_process_modules > len(possible_processes):
         num_process_modules = len(possible_processes)
+    if num_process_modules == 0 or not possible_processes:
+        return False
     process_module_list = random.sample(possible_processes, num_process_modules)
     process_module_list = list(flatten(process_module_list))
+    process_module_list = expand_process_ids_with_models(
+        adapter_object, process_module_list
+    )
+    if not process_module_list:
+        return False
 
     machine_controllers = adapter_object.scenario_data.options.machine_controllers
     if not machine_controllers:
@@ -141,7 +289,14 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     else:
         control_policy = random.choice(transport_controllers)
 
-    possible_processes = get_possible_transport_processes_IDs(adapter_object)
+    required_ids = set(get_required_process_ids(adapter_object))
+    possible_processes = [
+        process_id
+        for process_id in get_possible_transport_processes_IDs(adapter_object)
+        if process_id in required_ids
+    ]
+    if not possible_processes:
+        return False
     transport_process = random.choice(possible_processes)
 
     transport_resource_id = f"resource_{uuid1().hex}"
@@ -174,10 +329,26 @@ def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     possible_machines = adapters.get_production_resources(adapter_object)
     if not possible_machines:
         return False
-    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    required_ids = set(get_required_process_ids(adapter_object))
+    possible_processes = [
+        process_module
+        for process_module in get_possible_production_processes_IDs(adapter_object)
+        if (
+            isinstance(process_module, tuple)
+            and all(process_id in required_ids for process_id in process_module)
+        )
+        or (isinstance(process_module, str) and process_module in required_ids)
+    ]
     machine = random.choice(possible_machines)
+    if not possible_processes:
+        return False
     process_module_to_add = random.sample(possible_processes, k=1)
     process_module_to_add = list(flatten(process_module_to_add))
+    process_module_to_add = expand_process_ids_with_models(
+        adapter_object, process_module_to_add
+    )
+    if not process_module_to_add:
+        return False
     for process_id in process_module_to_add:
         if process_id not in machine.process_ids:
             machine.process_ids.append(process_id)
@@ -195,7 +366,12 @@ def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     Returns:
         bool: True if a machine was removed, False otherwise (if removing is not possible due to constraint violations).
     """
-    possible_machines = adapters.get_production_resources(adapter_object)
+    required_resource_ids = _get_resource_dependency_ids(adapter_object)
+    possible_machines = [
+        machine
+        for machine in adapters.get_production_resources(adapter_object)
+        if machine.ID not in required_resource_ids
+    ]
     if not possible_machines:
         return False
     machine = random.choice(possible_machines)
@@ -213,7 +389,12 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
     Returns:
         bool: True if a transport resource was removed, False otherwise (if removing is not possible due to constraint violations).
     """
-    transport_resources = adapters.get_transport_resources(adapter_object)
+    required_resource_ids = _get_resource_dependency_ids(adapter_object)
+    transport_resources = [
+        resource
+        for resource in adapters.get_transport_resources(adapter_object)
+        if resource.ID not in required_resource_ids
+    ]
     if not transport_resources:
         return False
     transport_resource = random.choice(transport_resources)
@@ -236,14 +417,26 @@ def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool
         return False
     machine = random.choice(possible_machines)
 
-    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    required_ids = set(get_required_process_ids(adapter_object))
+    possible_processes = [
+        process_module
+        for process_module in get_possible_production_processes_IDs(adapter_object)
+        if (
+            isinstance(process_module, tuple)
+            and all(process_id in required_ids for process_id in process_module)
+        )
+        or (isinstance(process_module, str) and process_module in required_ids)
+    ]
     process_modules = get_grouped_processes_of_machine(machine, possible_processes)
     if not process_modules:
         return False
     process_module_to_delete = random.choice(process_modules)
-
-    for process_instance in process_module_to_delete:
-        machine.process_ids.remove(process_instance)
+    expanded_module = expand_process_ids_with_models(
+        adapter_object, list(process_module_to_delete)
+    )
+    for process_instance in expanded_module:
+        if process_instance in machine.process_ids:
+            machine.process_ids.remove(process_instance)
     add_setup_states_to_machine(adapter_object, machine.ID)
     return True
 
@@ -265,16 +458,33 @@ def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
     possible_machines.remove(from_machine)
     to_machine = random.choice(possible_machines)
 
-    possible_processes = get_possible_production_processes_IDs(adapter_object)
+    required_ids = set(get_required_process_ids(adapter_object))
+    possible_processes = [
+        process_module
+        for process_module in get_possible_production_processes_IDs(adapter_object)
+        if (
+            isinstance(process_module, tuple)
+            and all(process_id in required_ids for process_id in process_module)
+        )
+        or (isinstance(process_module, str) and process_module in required_ids)
+    ]
     grouped_process_module_IDs = get_grouped_processes_of_machine(
         from_machine, possible_processes
     )
     if not grouped_process_module_IDs:
         return False
     process_module_to_move = random.choice(grouped_process_module_IDs)
-    for process_module in process_module_to_move:
-        from_machine.process_ids.remove(process_module)
-        to_machine.process_ids.append(process_module)
+    expanded_module = expand_process_ids_with_models(
+        adapter_object, list(process_module_to_move)
+    )
+    if not expanded_module:
+        return False
+    for process_module in expanded_module:
+        if process_module in from_machine.process_ids:
+            from_machine.process_ids.remove(process_module)
+    for process_module in expanded_module:
+        if process_module not in to_machine.process_ids:
+            to_machine.process_ids.append(process_module)
     add_setup_states_to_machine(adapter_object, from_machine.ID)
     add_setup_states_to_machine(adapter_object, to_machine.ID)
     return True
@@ -437,6 +647,7 @@ def mutation(individual):
     add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
+    sync_resource_dependencies(adapter_object)
 
     return (individual,)
 
@@ -465,10 +676,21 @@ def get_random_production_capacity(
         random.choice(range(adapter_object.scenario_data.constraints.max_num_machines))
         + 1
     )
-    adapter_object.resource_data = adapters.get_transport_resources(adapter_object)
+    required_resource_ids = _get_resource_dependency_ids(adapter_object)
+    original_transport_resources = adapters.get_transport_resources(adapter_object)
+    original_production_resources = adapters.get_production_resources(adapter_object)
+
+    adapter_object.resource_data = list(original_transport_resources)
+    existing_ids = {resource.ID for resource in adapter_object.resource_data}
+    for resource in original_production_resources:
+        if resource.ID in required_resource_ids and resource.ID not in existing_ids:
+            adapter_object.resource_data.append(resource)
+            existing_ids.add(resource.ID)
+
     for _ in range(num_machines):
         add_machine(adapter_object)
 
+    sync_resource_dependencies(adapter_object)
     return adapter_object
 
 
@@ -490,10 +712,21 @@ def get_random_transport_capacity(
         )
         + 1
     )
-    adapter_object.resource_data = adapters.get_production_resources(adapter_object)
+    required_resource_ids = _get_resource_dependency_ids(adapter_object)
+    original_production_resources = adapters.get_production_resources(adapter_object)
+    original_transport_resources = adapters.get_transport_resources(adapter_object)
+
+    adapter_object.resource_data = list(original_production_resources)
+    existing_ids = {resource.ID for resource in adapter_object.resource_data}
+    for resource in original_transport_resources:
+        if resource.ID in required_resource_ids and resource.ID not in existing_ids:
+            adapter_object.resource_data.append(resource)
+            existing_ids.add(resource.ID)
+
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
 
+    sync_resource_dependencies(adapter_object)
     return adapter_object
 
 
@@ -625,6 +858,7 @@ def random_configuration(
     add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
+    sync_resource_dependencies(adapter_object)
     if not check_valid_configuration(adapter_object, baseline):
         return
     return adapter_object
@@ -701,6 +935,7 @@ def random_configuration_with_initial_solution(
             add_default_queues_to_resources(adapter_object)
             clean_out_breakdown_states_of_resources(adapter_object)
             adjust_process_capacities(adapter_object)
+            sync_resource_dependencies(adapter_object)
 
         # Update the adapter's ID to mark the change.
         adapter_object.ID = str(uuid1())
@@ -709,6 +944,7 @@ def random_configuration_with_initial_solution(
         if successful_mutations == num_manipulations and check_valid_configuration(
             adapter_object, baseline
         ):
+            sync_resource_dependencies(adapter_object)
             return adapter_object
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 1000 == 0:
@@ -1100,6 +1336,9 @@ def configuration_capacity_based(
                     updated_process_data.extend(compound_process.process_ids)
                 else:
                     updated_process_data.append(process_id)
+            updated_process_data = expand_process_ids_with_models(
+                adapter_object, updated_process_data
+            )
 
             resource = resource_data.ResourceData(
                 ID=str(uuid1()),
@@ -1161,6 +1400,9 @@ def configuration_capacity_based(
                         updated_process_data.extend(compound_process.process_ids)
                     else:
                         updated_process_data.append(process_id)
+                updated_process_data = expand_process_ids_with_models(
+                    adapter_object, updated_process_data
+                )
 
                 resource = resource_data.ResourceData(
                     ID=str(uuid1()),
@@ -1178,6 +1420,7 @@ def configuration_capacity_based(
     adapter_object = add_default_queues_to_resources(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
+    sync_resource_dependencies(adapter_object)
 
     return adapter_object
 

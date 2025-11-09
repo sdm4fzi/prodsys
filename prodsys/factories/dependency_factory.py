@@ -57,7 +57,10 @@ class DependencyFactory:
             node = self.node_factory.get_node(dependency_data.interaction_node)
         elif dependency_data.dependency_type == DependencyType.RESOURCE:
             resource = self.resource_factory.get_resource(dependency_data.required_resource)
-            node = self.node_factory.get_node(dependency_data.interaction_node)
+            if dependency_data.interaction_node is not None:
+                node = self.node_factory.get_node(dependency_data.interaction_node)
+            else:
+                node = None
         elif dependency_data.dependency_type == DependencyType.PRIMITIVE:
             try:
                 primitive = self.product_factory.get_product(dependency_data.required_primitive)

@@ -391,6 +391,7 @@ class ProcessModel(core.ExpressObject):
         adjacency_matrix (Dict[str, List[str]]): Adjacency matrix representing the DAG structure.
         can_contain_other_models (bool): Whether this process model can contain other process models.
         ID (str): ID of the process model.
+        processes (List[PROCESS_UNION]): List of process instances that are part of this process model.
 
     Examples:
         Process model with a simple sequence:
@@ -403,12 +404,45 @@ class ProcessModel(core.ExpressObject):
         ```
     """
     adjacency_matrix: Dict[str, List[str]]
+    processes: List["PROCESS_UNION"] = Field(default_factory=list)
     can_contain_other_models: bool = False
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     type: processes_data.ProcessTypeEnum = Field(
         init=False, default=processes_data.ProcessTypeEnum.ProcessModels
     )
     dependencies: Optional[List[Dependency]] = Field(default_factory=list)
+
+    def add_process(self, process_instance: "PROCESS_UNION") -> None:
+        """
+        Adds a single process to the list of contained processes.
+        """
+        if process_instance not in self.processes:
+            self.processes.append(process_instance)
+
+    def add_processes(self, process_instances: List["PROCESS_UNION"]) -> None:
+        """
+        Adds multiple processes to the list of contained processes.
+        """
+        for process_instance in process_instances:
+            self.add_process(process_instance)
+
+    def get_contained_processes(self) -> List["PROCESS_UNION"]:
+        """
+        Returns all processes that are directly contained within this process model.
+        """
+        return list(self.processes)
+
+    def get_all_nested_processes(self) -> List["PROCESS_UNION"]:
+        """
+        Returns all processes contained in this process model, including processes contained
+        in child process models.
+        """
+        nested_processes: List["PROCESS_UNION"] = []
+        for process_instance in self.processes:
+            nested_processes.append(process_instance)
+            if isinstance(process_instance, ProcessModel):
+                nested_processes.extend(process_instance.get_all_nested_processes())
+        return nested_processes
 
     def to_model(self) -> processes_data.ProcessModelData:
         """
@@ -454,7 +488,22 @@ class SequentialProcess(ProcessModel):
 
     def __post_init__(self):
         """Generate adjacency matrix for sequential execution after initialization."""
+        if self.processes and self.process_ids is None:
+            self.process_ids = [process_instance.ID for process_instance in self.processes]
+        elif self.processes and self.process_ids is not None:
+            process_ids_from_processes = [
+                process_instance.ID for process_instance in self.processes
+            ]
+            if process_ids_from_processes != self.process_ids:
+                raise ValueError(
+                    "Provided process_ids do not match the IDs of the supplied processes."
+                )
+
         if self.adjacency_matrix is None:
+            if not self.process_ids:
+                raise ValueError(
+                    "SequentialProcess requires either process_ids or processes to be provided."
+                )
             adjacency_matrix = {}
             for i, process_id in enumerate(self.process_ids):
                 if i < len(self.process_ids) - 1:
@@ -470,6 +519,9 @@ class SequentialProcess(ProcessModel):
             return {}
         if ArgsKwargs and isinstance(v, ArgsKwargs):
             v = dict(v.kwargs or {})  # ignore positional args for this model
+        processes = v.get("processes")
+        if processes and "process_ids" not in v:
+            v["process_ids"] = [process_instance.ID for process_instance in processes]
         # check that its purely sequential
         count_nodes_without_successors = 0
         start_node_count = {}
