@@ -173,6 +173,7 @@ class Product:
         product_router: router.Router,
         routing_heuristic: RoutingHeuristic,
         dependencies: Optional[List[Dependency]] = None,
+        no_transport_to_sink: bool = False,
     ):
         self.env = env
         self.data = data
@@ -198,10 +199,9 @@ class Product:
         self.info: ProductInfo = ProductInfo()
         self.executed_production_processes: List = []
         self.bound = False
-        self.being_bound = events.Event(self.env)
         self.got_free = events.Event(self.env)
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
-        
+        self.no_transport_to_sink = no_transport_to_sink
 
     def update_location(self, locatable: Locatable):
         """
@@ -240,13 +240,15 @@ class Product:
             self.set_next_possible_production_processes()
             
             
-        arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
-        yield arrived_at_sink_event
+        if (self.no_transport_to_sink):
+            sink = self.router.route_disassembled_product_to_sink(self)
+        else:
+            arrived_at_sink_event, sink = self.router.route_product_to_sink(self)
+            yield arrived_at_sink_event
         
         
         sink.register_finished_product(self)
-        if (self.data.becomes_primitive):
-            yield self.being_bound
+        
         self.info.log_finish_product(
             resource=self.current_locatable, _product=self, event_time=self.env.now
         )
@@ -355,12 +357,15 @@ class Product:
             if self.bound:
                 raise Exception(
                     f"Primitive {self.data.ID} is bound reserved. Cannot bind again."
-                )
+                )            
             self.bound = True
-            self.being_bound.succeed()
             self.current_dependant = dependant
             dependant.depended_entities.append(self)
-           
+            self.dependency_info.log_start_dependency(
+            event_time=self.env.now,
+            requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
+            dependency_id=self.data.ID,
+        )
 
     def release(self):
         """

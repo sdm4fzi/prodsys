@@ -137,9 +137,9 @@ class PrimitiveFactory:
         yield from queue.put(prim.data)
 
         if self.router:
-            if prim.data.type not in self.router.free_primitives_by_type:
-                self.router.free_primitives_by_type[prim.data.type] = []
-            self.router.free_primitives_by_type[prim.data.type].append(prim)
+            if prim.data.type not in self.router.free_entities_by_type:
+                self.router.free_entities_by_type[prim.data.type] = []
+            self.router.free_entities_by_type[prim.data.type].append(prim)
             if not self.router.got_primitive_request.triggered:
                 self.router.got_primitive_request.succeed()
 

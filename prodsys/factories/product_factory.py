@@ -216,9 +216,9 @@ class ProductFactory:
             return self.products[ID]
         raise ValueError(f"Product with ID {ID} not found.")
     
-    def get_product_init(self, ID: str) -> product.Product:
+    def get_product_init(self, type: str) -> product.Product:
         """
-        Returns the product object with the given ID.
+        Returns the dummy product object with the given ID.
 
         Args:
             ID (str): ID of the product object.
@@ -226,9 +226,9 @@ class ProductFactory:
         Returns:
             product.Product: Product object with the given ID.
         """
-        if ID in self.products_init:
-            return self.products_init[ID]
-        raise ValueError(f"Product with ID {ID} not found.")
+        if type in self.products_init:
+            return self.products_init[type]
+        raise ValueError(f"Product with ID {type} not found.")
 
     def remove_product(self, product: product.Product):
         """

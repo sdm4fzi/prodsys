@@ -68,7 +68,7 @@ class Product(core.ExpressObject):
     ]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
     dependencies: Optional[List[Dependency]] = Field(default_factory=list)
-    becomes_primitive: bool = False
+    becomes_consumable: bool = False
 
     @field_validator('process', mode='before')
     @classmethod
@@ -106,7 +106,7 @@ class Product(core.ExpressObject):
             processes=self.process.adjacency_matrix,
             transport_process=self.transport_process.ID,
             dependency_ids=[dependency.ID for dependency in self.dependencies],
-            becomes_primitive= self.becomes_primitive,
+            becomes_consumable= self.becomes_consumable,
         )
 
 

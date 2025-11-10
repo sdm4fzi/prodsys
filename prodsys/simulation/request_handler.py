@@ -331,25 +331,13 @@ class RequestHandler:
         dependencies = resource.dependencies + process.dependencies
 
         target_reservations = 1
-        process_data = getattr(process, "data", None)
-        item_data = getattr(getattr(request_info.item, "data", None), "type", None)
+        
         if (
             request_info.request_type == request.RequestType.PRODUCTION
-            and process_data is not None
-            and item_data is not None
+            and hasattr(process.data,"product_disassembly_dict")
         ):
-            disassembly_map = getattr(process_data, "product_disassembly_dict", None)
-            if disassembly_map and hasattr(disassembly_map, "get"):
-                if item_data not in disassembly_map:
-                    raise KeyError(
-                        f"No disassembly mapping found for product type '{item_data}' in process '{process_data.ID}'."
-                    )
-                disassembly_list = disassembly_map.get(item_data)
-                if not disassembly_list:
-                    raise ValueError(
-                        f"Disassembly mapping for product type '{item_data}' in process '{process_data.ID}' must define at least one output product."
-                    )
-                target_reservations = len(disassembly_list)
+            if(process.data.product_disassembly_dict is not None):
+                target_reservations = len(process.data.product_disassembly_dict)
 
         request_instance = request.Request(
             requesting_item=request_info.item,

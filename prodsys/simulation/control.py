@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
+from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union, Any
 
 from simpy import events
 import logging
@@ -19,9 +19,10 @@ from prodsys.simulation.process_handlers.dependency_process_handler import Depen
 from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
 from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
 from prodsys.models.product_data import ProductData
-from prodsys.simulation.product import Product
+from prodsys.simulation.product import Product, Locatable
 from prodsys.models.port_data import PortInterfaceType
 from prodsys.models.processes_data import ProcessTypeEnum
+from prodsys.simulation.process import Process
 
 
 if TYPE_CHECKING:
@@ -136,7 +137,21 @@ class Controller:
         self.resource.update_full()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
+            
+    def mark_finished_process_no_sink_transport(self, process: Process, product: Product) -> None:
+        """
+        Mark the process as finished, but no transport to sink required.
 
+        Args:
+            process_request (Request): The request that is being processed.
+        """
+        self.num_running_processes -= 1
+        self.resource.update_full()
+        disassembly_map = getattr(getattr(process, "data", None), "product_disassembly_dict", None)
+        if isinstance(disassembly_map, dict) and disassembly_map:
+            product.no_transport = True
+        if not self.state_changed.triggered:
+            self.state_changed.succeed()   
 
 def get_requets_handler(
     request: request_module.Request,

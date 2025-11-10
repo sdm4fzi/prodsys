@@ -139,14 +139,10 @@ class DisassemblyProcessHandler:
             production_state.reserved = True
             yield from self.run_process(production_state, product, process)
             production_state.process = None
-
-            yield from self.disassembly(process_request, target_queue)
-
-            
+            yield from self.disassembly(process_request, target_queue)          
             product.router.mark_finished_request(process_request)
-            #TODO: original product vllt einfahcer in die sink gehen alssen, also wirklich über modellierung an ORt!
-            self.resource.controller.mark_finished_process()
-    
+            self.resource.controller.mark_finished_process_no_sink_transport(process, product)
+                
     def disassembly(
         self,
         process_request: request_module.Request,

@@ -114,12 +114,12 @@ class Router:
             primitive_factory
         )
         self.production_system_data: Optional[production_system_data.ProductionSystemData] = production_system_data
-        self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}        
+        self.free_entities_by_type: Dict[str, List[primitive.Primitive]] = {}        
         
         for primitive in self.primitive_factory.primitives:
-            if primitive.data.type not in self.free_primitives_by_type:
-                self.free_primitives_by_type[primitive.data.type] = []
-            self.free_primitives_by_type[primitive.data.type].append(primitive)
+            if primitive.data.type not in self.free_entities_by_type:
+                self.free_entities_by_type[primitive.data.type] = []
+            self.free_entities_by_type[primitive.data.type].append(primitive)
 
         self.product_factory.router = self
 
@@ -187,12 +187,12 @@ class Router:
         while True:
             yield self.got_primitive_request
             self.got_primitive_request = events.Event(self.env)
-            if not self.free_primitives_by_type:
+            if not self.free_entities_by_type:
                 continue
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
-                        self.free_primitives_by_type
+                        self.free_entities_by_type
                     )
                 )
                 if not free_requests:
@@ -200,7 +200,7 @@ class Router:
                 self.env.update_progress_bar()
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
-                self.free_primitives_by_type[request.item.data.type].remove(
+                self.free_entities_by_type[request.item.data.type].remove(
                     request.item
                 )                
                 self.env.process(self.execute_primitive_routing(request))
@@ -289,7 +289,7 @@ class Router:
             executed_request.item, target_storage
         )
         yield transport_process_finished_event
-        self.free_primitives_by_type[executed_request.item.data.type].append(
+        self.free_entities_by_type[executed_request.item.data.type].append(
             executed_request.item
         )
         if not self.got_primitive_request.triggered:
@@ -498,7 +498,15 @@ class Router:
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event, chosen_sink
-
+    
+    def route_disassembled_product_to_sink(self, product: product.Product)-> sink.Sink:
+        possible_sinks = self.sink_factory.get_sinks_with_product_type(
+            product.data.type
+        )
+        chosen_sink = random.choice(possible_sinks)
+        target_port = chosen_sink.ports[0]
+        product.update_location(target_port)
+        
     def get_rework_processes(
         self, failed_process: process.Process
     ) -> list[process.ReworkProcess]:
