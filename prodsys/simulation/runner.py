@@ -179,16 +179,7 @@ class Runner:
 
             self.product_factory.event_logger = self.event_logger
 
-            self.source_factory = source_factory.SourceFactory(
-                env=self.env,
-                product_factory=self.product_factory,
-                time_model_factory=self.time_model_factory,
-                queue_factory=self.queue_factory,
-                resource_factory=self.resource_factory,
-                primitive_factory=self.dependency_factory,
-                sink_factory=self.sink_factory,
-            )
-            self.source_factory.create_sources(self.adapter)
+            
             self.primitive_factory = primitive_factory.PrimitiveFactory(
                 env=self.env,
                 process_factory=self.process_factory,
@@ -205,10 +196,19 @@ class Runner:
                 product_factory=self.product_factory,
                 primitive_factory=self.primitive_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.process_data)
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.product_data)
             self.dependency_factory.inject_dependencies()
+            self.source_factory = source_factory.SourceFactory(
+                env=self.env,
+                product_factory=self.product_factory,
+                time_model_factory=self.time_model_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                primitive_factory=self.dependency_factory,
+                sink_factory=self.sink_factory,
+            )
+            self.source_factory.create_sources(self.adapter)            
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
-
             link_transport_process_updater_instance = (
                 link_transport_process_updater.LinkTransportProcessUpdater(
                     process_factory=self.process_factory,

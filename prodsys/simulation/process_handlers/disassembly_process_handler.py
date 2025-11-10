@@ -139,9 +139,12 @@ class DisassemblyProcessHandler:
             production_state.reserved = True
             yield from self.run_process(production_state, product, process)
             production_state.process = None
-            yield from self.disassembly(process_request, target_queue)          
+            product_continues = yield from self.disassembly(process_request, target_queue)          
             product.router.mark_finished_request(process_request)
-            self.resource.controller.mark_finished_process_no_sink_transport(process, product)
+            if (product_continues):
+                self.resource.controller.mark_finished_process()
+            else:
+                self.resource.controller.mark_finished_process_no_sink_transport(process, product)
                 
     def disassembly(
         self,
@@ -151,6 +154,7 @@ class DisassemblyProcessHandler:
         resource = process_request.get_resource()
         process = process_request.get_process()
         product = process_request.get_item()
+        product_continues: bool = False
         
         disassembly_list = [ProductData]
         if hasattr(process, "data") and hasattr(process.data, "product_disassembly_dict"):
@@ -175,8 +179,10 @@ class DisassemblyProcessHandler:
             yield from target_queue.put(prod.data)
             prod.update_location(resource)
             if prod == product:
+                product_continues = True
                 continue
             prod.process = self.env.process(prod.process_product())
+        return product_continues
 
     def run_process(
         self,

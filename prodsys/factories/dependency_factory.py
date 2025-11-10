@@ -23,10 +23,12 @@ class DependencyFactory:
         self.primitive_factory = primitive_factory
         self.resource_factory = resource_factory
         self.dependencies = {}
+        
     def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
         for product_d in product_data:
-            if(dependency_data.required_primitive == product_d):
-                product_d.becomes_primitive = True
+            if(dependency_data.required_primitive.__eq__(product_d)):
+                product_d.becomes_consumable = True
+                
     def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES], product_data: ProductData) -> list[Dependency]:
         """
         Creates a list of dependency objects based on the given dependency data.
