@@ -205,7 +205,7 @@ class Runner:
                 product_factory=self.product_factory,
                 primitive_factory=self.primitive_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.process_data)
             self.dependency_factory.inject_dependencies()
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
 
