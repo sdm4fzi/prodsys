@@ -344,10 +344,11 @@ class ResourceFactory:
         )
         adjust_process_breakdown_states(resource_object, self.state_factory, self.env)
         self.all_resources[resource_object.data.ID] = resource_object
-        if resource_object.can_move:
-            self.resources_can_move[resource_object.data.ID] = resource_object
         if resource_object.can_process:
             self.resources_can_process[resource_object.data.ID] = resource_object
+        else:
+            self.resources_can_move[resource_object.data.ID] = resource_object
+
 
     def start_resources(self):
         """
@@ -424,7 +425,7 @@ class ResourceFactory:
             if target_process.data.ID in res.data.process_ids
         ]
 
-    def get_movable_resources(self) -> List[resources.Resource]:
+    def get_transport_resources(self) -> List[resources.Resource]:
         """
         Method returns a list of transport resource objects.
 

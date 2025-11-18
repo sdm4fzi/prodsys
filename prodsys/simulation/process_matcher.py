@@ -599,7 +599,7 @@ class ProcessMatcher:
         required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
         for item, requested_process in required_transport_processes:
             original_locatable = item.current_locatable
-            for transport_resource in self.resource_factory.get_movable_resources():
+            for transport_resource in self.resource_factory.get_transport_resources():
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair (including queues)
                     for origin in all_locations:

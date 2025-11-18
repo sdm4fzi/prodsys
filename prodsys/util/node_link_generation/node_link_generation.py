@@ -181,9 +181,9 @@ def generator(productionsystem: production_system_data):
 def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph):
 
     #all_locations = get_all_locations(productionsystem)
-    all_relevant_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
-    all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
-    all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
+    #all_relevant_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
+    #all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
+    #all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
 
     all_locations = [(prodres.ID, prodres.location) for prodres in productionsystem.resource_data]
     all_locations.extend([(sink.ID, sink.location) for sink in productionsystem.sink_data])
@@ -192,9 +192,9 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
     # Build a lookup: location -> list of resources
     location_to_resources = {}
     for resource in all_locations:
-        if resource[0] in all_relevant_resources:
-            key = tuple(resource[1])
-            location_to_resources.setdefault(key, []).append(resource)
+        #if resource[0] in all_relevant_resources:
+        key = tuple(resource[1])
+        location_to_resources.setdefault(key, []).append(resource)
 
     location_match_count = {}
     # Map GML node id (int) to matched resource ID
@@ -207,7 +207,7 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
             x = pos[0] 
             y = pos[1] 
         else:
-            raise ValueError(f"Node {block} position is not two-dimensional: {pos}")
+            raise ValueError(f"Node {block} position is not two-dimensional: {pos}") #Generator can only handle 2D positions
 
         matched_id = None
         if pos in location_to_resources:
