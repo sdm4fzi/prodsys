@@ -82,7 +82,7 @@ def find_borders(productionsystem: production_system_data):
             min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
-def mainGenerate(productionsystem: production_system_data):
+def generator(productionsystem: production_system_data):
     min_x, min_y, max_x, max_y = find_borders(productionsystem)
     tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
     tableYMax=max(1.1*max_y,50+max_y)
@@ -175,8 +175,10 @@ def mainGenerate(productionsystem: production_system_data):
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
     G, DiG = networkx_formater.generate_nx_graph(plot=False) #G: undirected graph, DiG: directed graph
-    nodes = {}
-    links = []
+
+    return G
+
+def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph):
 
     #all_locations = get_all_locations(productionsystem)
     all_relevant_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
@@ -230,6 +232,10 @@ def mainGenerate(productionsystem: production_system_data):
             src = nx_id_to_resource_id.get(src_id, f"node{src_id}")
             tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
             new_links.append([src, tgt])
+
+    return new_nodes, new_links
+
+def apply_nodes_links(productionsystem: production_system_data, new_nodes, new_links) -> None:
     # Replace node_data in the Prodocutionsystem
     productionsystem.node_data = []
     for node in new_nodes:
@@ -239,3 +245,9 @@ def mainGenerate(productionsystem: production_system_data):
     for LinkTransportProcess in productionsystem.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links = new_links
+
+
+def generate_and_apply_network(productionsystem: production_system_data) -> None:
+    G = generator(productionsystem)
+    new_nodes, new_links = convert_nx_to_prodsys(productionsystem, G)
+    apply_nodes_links(productionsystem, new_nodes, new_links)

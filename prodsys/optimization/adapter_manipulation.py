@@ -69,8 +69,8 @@ def crossover(ind1, ind2):
     clean_out_breakdown_states_of_resources(adapter2)
     adjust_process_capacities(adapter1)
     adjust_process_capacities(adapter2)
-    node_link_generation.mainGenerate(adapter1)
-    node_link_generation.mainGenerate(adapter2)
+    node_link_generation.generate_and_apply_network(adapter1)
+    node_link_generation.generate_and_apply_network(adapter2)
     return ind1, ind2
 
 
@@ -127,9 +127,9 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     add_setup_states_to_machine(adapter_object, machine_id)
 
     if any(transport_process.can_move for transport_process in adapter_object.process_data):
-        node_link_generation.mainGenerate(adapter_object)
+        node_link_generation.generate_and_apply_network(adapter_object)
     else: #case like Conveyor that cannot move: place links to make all necessary transports possible
-        node_link_generation.mainGenerate(adapter_object)
+        node_link_generation.generate_and_apply_network(adapter_object)
         new_Links = []
         G = nx.Graph()
         for transport_process_data in adapter_object.process_data:
@@ -234,7 +234,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                 can_move=True, 
             )
         )
-        node_link_generation.mainGenerate(adapter_object)
+        node_link_generation.generate_and_apply_network(adapter_object)
     else: #case like Conveyor that cannot move #TODO: neuen prozess erstellen um neue links zu nutzen; links erstellen zischen zwei random resourcen im random prozessabschnit
         new_links = []
         G = nx.Graph()
@@ -388,7 +388,7 @@ def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         return False
     machine = random.choice(possible_machines)
     adapter_object.resource_data.remove(machine)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return True
 
 
@@ -407,7 +407,7 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
         return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return True
 
 
@@ -488,7 +488,7 @@ def update_production_resource_location(
     #        adapter_object.port_data[port].location[0] + position_delta[0],
     #        adapter_object.port_data[port].location[1] + position_delta[1],
     #    ]
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
 
 
 def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
@@ -633,7 +633,7 @@ def mutation(individual):
     if mutation_operation(adapter_object):
         individual[0].ID = str(uuid1())
     add_default_queues_to_resources(adapter_object, reset=False)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
 
@@ -667,7 +667,7 @@ def get_random_production_capacity(
     adapter_object.resource_data = adapters.get_transport_resources(adapter_object)
     for _ in range(num_machines):
         add_machine(adapter_object)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return adapter_object
 
 
@@ -692,7 +692,7 @@ def get_random_transport_capacity(
     adapter_object.resource_data = adapters.get_production_resources(adapter_object)
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
-    #node_link_generation.mainGenerate(adapter_object)
+    #node_link_generation.generate_and_apply_network(adapter_object)
     return adapter_object
 
 
@@ -734,7 +734,7 @@ def get_random_layout(
         new_location = random.choice(possible_positions)
         update_production_resource_location(machine, new_location, adapter_object)
         possible_positions.remove(new_location)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return adapter_object
 
 
@@ -823,7 +823,7 @@ def random_configuration(
         get_random_routing_logic(adapter_object)
     
     add_default_queues_to_resources(adapter_object, reset=False)
-    node_link_generation.mainGenerate(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     if not check_valid_configuration(adapter_object, baseline):

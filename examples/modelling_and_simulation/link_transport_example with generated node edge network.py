@@ -146,7 +146,7 @@ adapter = productionsystem.to_model()
 #runner.print_results()
 
 #add_default_queues_to_production_system(adapter, reset=False)
-node_link_generation.mainGenerate(adapter)  #TODO: buggy in this example
+node_link_generation.generate_and_apply_network(adapter)  #TODO: buggy in this example
 runner = prodsys.runner.Runner(production_system_data=adapter)
 runner.initialize_simulation()
 runner.run(1000)
