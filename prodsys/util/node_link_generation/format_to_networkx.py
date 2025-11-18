@@ -17,7 +17,7 @@ class NetworkXGraphGenerator:
         self.G_sim = nx.Graph()
         self.DiG_sim = nx.Graph()
 
-    def generate_nx_graph(self, plot=False) -> (nx.Graph, nx.DiGraph):
+    def generate_nx_graph(self, plot=False) -> tuple[nx.Graph, nx.DiGraph]:
         """
         Generate a networkx graph from the graph class.
         :param plot: If True, the graph is plotted.

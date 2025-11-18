@@ -197,7 +197,7 @@ class ResourceFactory:
         self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
         self.system_resources: Dict[str, resources.SystemResource] = {}
-        self.resources_can_move: Dict[str, resources.Resource] = {}
+        self.transport_resources: Dict[str, resources.Resource] = {}
         self.resources_can_process: Dict[str, resources.Resource] = {}
         self.controllers: List[
             Union[
@@ -347,7 +347,7 @@ class ResourceFactory:
         if resource_object.can_process:
             self.resources_can_process[resource_object.data.ID] = resource_object
         else:
-            self.resources_can_move[resource_object.data.ID] = resource_object
+            self.transport_resources[resource_object.data.ID] = resource_object
 
 
     def start_resources(self):
@@ -432,7 +432,7 @@ class ResourceFactory:
         Returns:
             List[resources.ResourceData]: List of transport resource objects.
         """
-        return self.resources_can_move.values()
+        return self.transport_resources.values()
 
     def get_production_resources(self) -> List[resources.Resource]:
         """

@@ -251,3 +251,8 @@ def generate_and_apply_network(productionsystem: production_system_data) -> None
     G = generator(productionsystem)
     new_nodes, new_links = convert_nx_to_prodsys(productionsystem, G)
     apply_nodes_links(productionsystem, new_nodes, new_links)
+
+def get_new_links(productionsystem: production_system_data) -> List[Tuple[str, str]]:
+    G = generator(productionsystem)
+    _, new_links = convert_nx_to_prodsys(productionsystem, G)
+    return new_links

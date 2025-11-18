@@ -71,6 +71,7 @@ def crossover(ind1, ind2):
     adjust_process_capacities(adapter2)
     node_link_generation.generate_and_apply_network(adapter1)
     node_link_generation.generate_and_apply_network(adapter2)
+    print(f"Applied crossover: {crossover_type}") #DEBUG
     return ind1, ind2
 
 
@@ -135,7 +136,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         for transport_process_data in adapter_object.process_data:
             for src, tgt in transport_process_data.links:
                 G.add_edge(src, tgt)
-            for product in adapter_object.product_data:
+            for product in adapter_object.product_data: #warum geht man nicht für jedes Produkt für den Transportprozess durch die Porzesskette?
                 process_sequence = product.processes
                 for i in range(len(process_sequence)-1): 
                     if i == 0:
@@ -238,13 +239,15 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     else: #case like Conveyor that cannot move #TODO: neuen prozess erstellen um neue links zu nutzen; links erstellen zischen zwei random resourcen im random prozessabschnit
         new_links = []
         G = nx.Graph()
-        product = random.choice(adapter_object.product_data if transport_process in adapter_object.product_data.transport_processes else [])
+        possible_products = [product for product in adapter_object.product_data
+            if getattr(product, "transport_process", None) == transport_process]
+        product = random.choice(possible_products)
         if len(product.processes) >= 2:
             idx = random.randint(0, len(product.processes) - 2)
             process_sequence = product.processes[idx:idx+2]
         else:
             process_sequence = product.processes
-        for src, tgt in node_link_generation.get_links(adapter_object): #TODO: methode in generator implementieren, die aus den generierten nur die links zurueckgibt
+        for src, tgt in node_link_generation.get_new_links(adapter_object): #TODO: methode in generator implementieren, die aus den generierten nur die links zurueckgibt
                 G.add_edge(src, tgt)
         new_links = []
         if len(process_sequence) > 1:
@@ -331,20 +334,22 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         new_links.append((path[i], path[i+1]))
 
         new_transport_process = deepcopy(transport_process_data)
+        new_transport_process.ID = f"ConveyorProcess_{uuid1().hex}"
         new_transport_process.links = new_links
+        adapter_object.process_data.append(new_transport_process)
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
-                capacity=0, #TODO:capacity per meter übernehmen
+                capacity=1, #FIXME: choose capacity based on process data/capacity per meter
                 location=machine_location,
-                controller="PipelineController",
+                controller=resource_data.ControllerEnum.PipelineController,
                 control_policy=control_policy,
-                process_ids=[new_transport_process],
+                process_ids=[new_transport_process.ID],
                 can_move=False,
             ))
-            
-    #add_default_queues_to_resources(adapter_object)
+
+    add_default_queues_to_resources(adapter_object, reset=False)
     return True
 
 
@@ -629,6 +634,7 @@ def get_mutation_operations(
 
 def mutation(individual):                                                               
     mutation_operation = random.choice(get_mutation_operations(individual[0]))
+    print(f"Applying mutation: {mutation_operation.__name__}") #DEBUG
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
         individual[0].ID = str(uuid1())
@@ -646,6 +652,7 @@ def arrange_machines(adapter_object: adapters.ProductionSystemData) -> None:
         new_location = random.choice(possible_positions)
         update_production_resource_location(machine, new_location, adapter_object)
         possible_positions.remove(new_location)
+    print("Arranged machines randomly.") #DEBUG
 
 
 def get_random_production_capacity(
@@ -1274,7 +1281,7 @@ def configuration_capacity_based(
                 ID=str(uuid1()),
                 description="",
                 capacity=1,
-                can_move=True,
+                can_move=True, #TODO: adapt to the given production system
                 control_policy="FIFO",
                 controller=resource_data.ControllerEnum.PipelineController,
                 process_ids=process_data,
@@ -1336,7 +1343,7 @@ def configuration_capacity_based(
                     ID=str(uuid1()),
                     description="",
                     capacity=1,
-                    can_move=True,
+                    can_move=True, #TODO: adapt to the given production system
                     control_policy="FIFO",
                     controller=resource_data.ControllerEnum.PipelineController,
                     process_ids=process_data,

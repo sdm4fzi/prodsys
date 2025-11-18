@@ -80,7 +80,7 @@ class RouteFinder:
             empty_transport=find_route_to_origin,
         )  # finding route to origin is always an empty transport, since material is picked up at the origin
 
-        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly.
+        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possible.
         origin_node, target_node = self.get_route_origin_and_target(
             request=request, route_to_origin=find_route_to_origin
         )

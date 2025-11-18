@@ -50,7 +50,7 @@ def get_reconfiguration_cost(
     baseline: adapters.ProductionSystemData = None,
 ) -> float:
     num_machines = len(adapters.get_production_resources(adapter_object))
-    num_transport_resources = len(adapters.get_transport_resources(adapter_object)) #TODO: add more complex cost calculation for conveyors/can_move=False: calculate based on costs per meter
+    num_transport_resources = len(adapters.get_transport_resources(adapter_object)) #TODO: add more complex cost calculation for conveyors/can_move=False: calculate based on costs per meter or cost per link
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
         num_machines_before = 0
