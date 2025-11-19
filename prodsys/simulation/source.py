@@ -129,7 +129,6 @@ class Source:
                 )
             # TODO: this logic should be moved to the interaction handler!
             for queue in self.ports:
-                queue.reserve()
                 yield from queue.put(product.data)
                 product.update_location(queue)
             self.env.process(self.product_processor.process_product(product))
