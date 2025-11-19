@@ -59,8 +59,7 @@ class Queue:
 
     def reserve(self):
         """
-        Reserve a slot for a future put. Waits until space is available.
-        Usage: yield queue.reserve()
+        Reserve a slot for a future put. 
         """
         self._pending_put += 1
 

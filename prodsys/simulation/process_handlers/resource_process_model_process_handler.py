@@ -65,7 +65,6 @@ class ResourceProcessModelHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
-            process_request.target_queue.reserve()
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -193,6 +192,10 @@ class ResourceProcessModelHandler:
         for entity in process_request.get_atomic_entities():
             entity.current_process = proc
         process_request.entity.current_process = proc
+
+        # Release resource capacity requests (must be after marking finished)
+        for resource_request in resource_requests:
+            resource.release(resource_request)
         
         # Put product back to target queue after all processes are finished
         yield from self.put_entities_of_request(process_request)
@@ -202,9 +205,7 @@ class ResourceProcessModelHandler:
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
         
-        # Release resource capacity requests (must be after marking finished)
-        for resource_request in resource_requests:
-            resource.release(resource_request)
+
 
     def is_rework_required(self, executed_process: process.PROCESS_UNION) -> bool:
         """

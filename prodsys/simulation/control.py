@@ -303,13 +303,8 @@ def SPT_control_policy(requests: List[request_module.Request]) -> None:
     requests.sort(key=lambda x: x.process.get_expected_process_time())
 
 
-def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
-    if not isinstance(locatable.data, (ResourceData, StoreData)):
-        return locatable.get_location()
-    if mode == "target":
-        return locatable.get_location(interaction="input")
-    else:
-        return locatable.get_location(interaction="output")
+def get_location(locatable: Locatable) -> List[float]:
+    return locatable.get_location()
 
 
 def SPT_transport_control_policy(
@@ -321,10 +316,19 @@ def SPT_transport_control_policy(
     Args:
         requests (List[request.Request]): The list of requests.
     """
-    requests.sort(
-        key=lambda x: x.process.get_expected_process_time(
-            get_location(x.origin, "origin"), get_location(x.target, "target")
+    # for request in requests:
+    #     if request.origin_queue is None or request.target_queue is None:
+    #         raise ValueError(f"Origin queue or target queue is None for request {request.completed}")
+
+    def get_expected_time(request: request_module.Request) -> float:
+        if request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+            return 0.0
+        
+        return request.process.get_expected_process_time(
+            get_location(request.origin_queue), get_location(request.target_queue)
         )
+    requests.sort(
+        key=get_expected_time
     )
 
 
@@ -340,9 +344,9 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")
+                get_location(x.resource), get_location(x.origin_queue)
             ),
-            -x.target.get_output_queue_length(),
+            -x.target_queue.free_space(),
         )
     )
 
@@ -360,9 +364,9 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")
+                get_location(x.resource), get_location(x.origin_queue)
             ),
-            x.target.get_input_queue_length(),
+            x.target_queue.free_space(),
         )
     )
 
@@ -396,7 +400,7 @@ def scheduled_control_policy(
     non_scheduled_products = []
     request_sequence_indices = {}
     for request_instance in requests:
-        product_id = request_instance.product.product_data.ID
+        product_id = request_instance.entity.data.ID
         if product_id not in product_sequence_indices:
             non_scheduled_products.append(request_instance)
             continue
@@ -406,7 +410,7 @@ def scheduled_control_policy(
     if non_scheduled_products:
         request_list_copy = requests[::]
         fallback_policy(request_list_copy)
-        if request_list_copy[0].product.product_data.ID not in product_sequence_indices:
+        if request_list_copy[0].entity.data.ID not in product_sequence_indices:
             fallback_policy(requests)
             return
 

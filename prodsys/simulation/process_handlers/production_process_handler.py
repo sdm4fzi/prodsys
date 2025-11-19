@@ -70,7 +70,6 @@ class ProductionProcessHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
-            process_request.target_queue.reserve()
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -136,6 +135,8 @@ class ProductionProcessHandler:
             yield process_event
             production_state.process = None
 
+        for resource_request in resource_requests:
+            resource.release(resource_request)
         yield from self.put_entities_of_request(process_request)
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.target_queue)
@@ -150,8 +151,6 @@ class ProductionProcessHandler:
 
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
-        for resource_request in resource_requests:
-            resource.release(resource_request)
 
     def run_process(
         self,
