@@ -236,7 +236,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             )
         )
         node_link_generation.generate_and_apply_network(adapter_object)
-    else: #case like Conveyor that cannot move #TODO: neuen prozess erstellen um neue links zu nutzen; links erstellen zischen zwei random resourcen im random prozessabschnit
+    else: #case like Conveyor that cannot move: place links on a path neccessary for a random product and process
         new_links = []
         G = nx.Graph()
         if transport_process_data.capability:
@@ -251,7 +251,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             process_sequence = product.processes[idx:idx+2]
         else:
             process_sequence = product.processes
-        for src, tgt in node_link_generation.get_new_links(adapter_object): #TODO: methode in generator implementieren, die aus den generierten nur die links zurueckgibt
+        for src, tgt in node_link_generation.get_new_links(adapter_object):
                 G.add_edge(src, tgt)
         new_links = []
         if len(process_sequence) > 1:
@@ -346,7 +346,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
-                capacity=1, #TODO: choose capacity based on process data/capacity per meter
+                capacity=2, #TODO: choose capacity based on process data/capacity per meter
                 location=machine_location,
                 controller=resource_data.ControllerEnum.PipelineController,
                 control_policy=control_policy,
@@ -379,7 +379,7 @@ def add_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
         if process_id not in machine.process_ids:
             machine.process_ids.append(process_id)
     add_setup_states_to_machine(adapter_object, machine.ID)
-    #TODO: Update conveyors if necessary
+    #TODO: Update conveyor paths here if necessary
     return True
 
 
@@ -445,7 +445,7 @@ def remove_process_module(adapter_object: adapters.ProductionSystemData) -> bool
     for process_instance in process_module_to_delete:
         machine.process_ids.remove(process_instance)
     add_setup_states_to_machine(adapter_object, machine.ID)
-    #TODO: Update conveyors if necessary
+    #TODO: Update conveyors paths here if necessary
     return True
 
 
@@ -478,7 +478,7 @@ def move_process_module(adapter_object: adapters.ProductionSystemData) -> bool:
         to_machine.process_ids.append(process_module)
     add_setup_states_to_machine(adapter_object, from_machine.ID)
     add_setup_states_to_machine(adapter_object, to_machine.ID)
-    #TODO: Update conveyors if necessary
+    #TODO: Update conveyor paths here if necessary
     return True
 
 

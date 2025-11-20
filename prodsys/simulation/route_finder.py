@@ -9,7 +9,8 @@ from pathfinding.finder.dijkstra import DijkstraFinder
 # TODO: consider using a star for finding faster routes
 # TODO: consider changing pathfinding Library to networkx or similar
 from pathfinding.finder.a_star import AStarFinder
-
+from prodsys.simulation.port import Store
+from prodsys.simulation.resources import Resource
 if TYPE_CHECKING:
     from prodsys.simulation import request, process, resources
     from prodsys.simulation.locatable import Locatable
@@ -118,9 +119,6 @@ class RouteFinder:
         Returns:
             List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
-        # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.port import Store
-        from prodsys.simulation.resources import Resource
 
         pathfinder_edges = []
 

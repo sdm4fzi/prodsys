@@ -82,7 +82,8 @@ def find_borders(productionsystem: production_system_data):
             min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
-def generator(productionsystem: production_system_data):
+def generator(productionsystem: production_system_data): #FIXME: in some cases no nodes are generated for certain stations
+    # Generate tables and stations based on the production system layout.
     min_x, min_y, max_x, max_y = find_borders(productionsystem)
     tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
     tableYMax=max(1.1*max_y,50+max_y)
@@ -149,13 +150,14 @@ def generator(productionsystem: production_system_data):
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
     distance=100
-    min_node_distance = distance #max(0.1*tablesize, 20) #TODO: make min and max distance adapt automatically dependent on the layout size #TODO: sinnvole adaptive distances
-    max_node_distance = distance #0.2*tablesize
+    min_node_distance = max(0.1*tablesize, 20) #TODO: adaptive distances
+    max_node_distance = 0.2*tablesize
     node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Define random nodes in the free space of the table configuration.
-    #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)    #TODO: choose a grid generation method that is defined here
+    # choose a grid generation method that is defined here
+    #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)
     node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
@@ -207,7 +209,7 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
         else:
             raise ValueError(f"Node {block} position is not two-dimensional: {pos}") #Generator can only handle 2D positions
 
-        nx_to_location[block] = (x, y)
+        nx_to_location[block] = pos
         if pos not in location_to_resources:
             new_nodes.append([f"node_{block}", (x, y)])
 
@@ -217,23 +219,22 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
     for block in edge_blocks:
         src_id, tgt_id = block[:2]
         src_loc, tgt_loc = nx_to_location[src_id], nx_to_location[tgt_id]
-        if src_id is not None and tgt_id is not None:
-            if src_loc in location_to_resources and tgt_loc in location_to_resources:
-                for src_resource in location_to_resources.get(src_loc):
-                    for tgt_resource in location_to_resources.get(tgt_loc):
-                        new_links.append([src_resource, tgt_resource])
-            elif src_loc in location_to_resources:
-                tgt = f"node_{tgt_id}"
-                for src_resource in location_to_resources.get(src_loc):
-                    new_links.append([src_resource, tgt])
-            elif tgt_loc in location_to_resources:
-                src = f"node_{src_id}"
-                for tgt_resource in location_to_resources.get(tgt_loc):
-                    new_links.append([src, tgt_resource])                
-            else:
-                src = f"node_{src_id}"
-                tgt = f"node_{tgt_id}"
-                new_links.append([src, tgt])
+        if src_loc in location_to_resources and tgt_loc in location_to_resources:
+            for src_resource in location_to_resources[src_loc]:
+                for tgt_resource in location_to_resources[tgt_loc]:
+                    new_links.append([src_resource, tgt_resource])
+        elif src_loc in location_to_resources:
+            tgt = f"node_{tgt_id}"
+            for src_resource in location_to_resources[src_loc]:
+                new_links.append([src_resource, tgt])
+        elif tgt_loc in location_to_resources:
+            src = f"node_{src_id}"
+            for tgt_resource in location_to_resources[tgt_loc]:
+                new_links.append([src, tgt_resource])                
+        else:
+            src = f"node_{src_id}"
+            tgt = f"node_{tgt_id}"
+            new_links.append([src, tgt])
 
     return new_nodes, new_links
 
