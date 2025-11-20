@@ -239,8 +239,12 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     else: #case like Conveyor that cannot move #TODO: neuen prozess erstellen um neue links zu nutzen; links erstellen zischen zwei random resourcen im random prozessabschnit
         new_links = []
         G = nx.Graph()
+        if transport_process_data.capability:
+            key=transport_process_data.capability
+        else:
+            key=transport_process
         possible_products = [product for product in adapter_object.product_data
-            if getattr(product, "transport_process", None) == transport_process]
+            if product.transport_process == key]
         product = random.choice(possible_products)
         if len(product.processes) >= 2:
             idx = random.randint(0, len(product.processes) - 2)
@@ -335,13 +339,14 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
 
         new_transport_process = deepcopy(transport_process_data)
         new_transport_process.ID = f"ConveyorProcess_{uuid1().hex}"
+        new_transport_process.capability = transport_process_data.capability
         new_transport_process.links = new_links
         adapter_object.process_data.append(new_transport_process)
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
-                capacity=1, #FIXME: choose capacity based on process data/capacity per meter
+                capacity=1, #TODO: choose capacity based on process data/capacity per meter
                 location=machine_location,
                 controller=resource_data.ControllerEnum.PipelineController,
                 control_policy=control_policy,
@@ -699,7 +704,7 @@ def get_random_transport_capacity(
     adapter_object.resource_data = adapters.get_production_resources(adapter_object)
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
-    #node_link_generation.generate_and_apply_network(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return adapter_object
 
 
@@ -812,10 +817,10 @@ def random_configuration(
     
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
-    #if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations: #FIXME: update to new standard in order to create valid configurations
-    #    get_random_transport_capacity(adapter_object)
-    #if scenario_data.ReconfigurationEnum.PRIMITIVE_CAPACITY in transformations:
-    #    get_random_primitive_capacity(adapter_object) #FIXME: update to new standard in order to create valid configurations
+    if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
+        get_random_transport_capacity(adapter_object)
+    if scenario_data.ReconfigurationEnum.PRIMITIVE_CAPACITY in transformations:
+        get_random_primitive_capacity(adapter_object)
     if (
         scenario_data.ReconfigurationEnum.LAYOUT in transformations
         and scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY not in transformations

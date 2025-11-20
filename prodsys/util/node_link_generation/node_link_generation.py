@@ -185,23 +185,21 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
     #all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
     #all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
 
-    all_locations = [(prodres.ID, prodres.location) for prodres in productionsystem.resource_data]
+    all_locations = [(prodres.ID, prodres.location) for prodres in get_production_resources(productionsystem)]
     all_locations.extend([(sink.ID, sink.location) for sink in productionsystem.sink_data])
     all_locations.extend([(source.ID, source.location) for source in productionsystem.source_data])
 
     # Build a lookup: location -> list of resources
     location_to_resources = {}
     for resource in all_locations:
-        #if resource[0] in all_relevant_resources:
         key = tuple(resource[1])
-        location_to_resources.setdefault(key, []).append(resource)
+        location_to_resources.setdefault(key, []).append(resource[0])
 
-    location_match_count = {}
+    nx_to_location = {}
     # Map GML node id (int) to matched resource ID
-    nx_id_to_resource_id = {}
     new_nodes = [] #nodes that where generated and not previously existing in the production system
     node_blocks = G.nodes
-    for block in node_blocks:
+    for block in node_blocks: #extract the newly generated nodes from the networkx graph
         pos = G.nodes[block].get("pos")
         if len(pos) >= 2:
             x = pos[0] 
@@ -209,29 +207,33 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
         else:
             raise ValueError(f"Node {block} position is not two-dimensional: {pos}") #Generator can only handle 2D positions
 
-        matched_id = None
-        if pos in location_to_resources:
-            count = location_match_count.get(pos, 0)
-            resources = location_to_resources[pos]
-            if count < len(resources):
-                matched_id = resources[count][0]
-                location_match_count[pos] = count + 1
+        nx_to_location[block] = (x, y)
+        if pos not in location_to_resources:
+            new_nodes.append([f"node_{block}", (x, y)])
 
-        # If no match, fall back to nx node id and add to new nodes
-        if not matched_id:
-            matched_id = f"node{block}"
-            new_nodes.append([matched_id, [x, y]])
-        else:
-            nx_id_to_resource_id[block] = matched_id
 
     new_links = []
     edge_blocks = G.edges
     for block in edge_blocks:
         src_id, tgt_id = block[:2]
+        src_loc, tgt_loc = nx_to_location[src_id], nx_to_location[tgt_id]
         if src_id is not None and tgt_id is not None:
-            src = nx_id_to_resource_id.get(src_id, f"node{src_id}")
-            tgt = nx_id_to_resource_id.get(tgt_id, f"node{tgt_id}")
-            new_links.append([src, tgt])
+            if src_loc in location_to_resources and tgt_loc in location_to_resources:
+                for src_resource in location_to_resources.get(src_loc):
+                    for tgt_resource in location_to_resources.get(tgt_loc):
+                        new_links.append([src_resource, tgt_resource])
+            elif src_loc in location_to_resources:
+                tgt = f"node_{tgt_id}"
+                for src_resource in location_to_resources.get(src_loc):
+                    new_links.append([src_resource, tgt])
+            elif tgt_loc in location_to_resources:
+                src = f"node_{src_id}"
+                for tgt_resource in location_to_resources.get(tgt_loc):
+                    new_links.append([src, tgt_resource])                
+            else:
+                src = f"node_{src_id}"
+                tgt = f"node_{tgt_id}"
+                new_links.append([src, tgt])
 
     return new_nodes, new_links
 

@@ -102,7 +102,7 @@ def main():
         ID="R1",
         description="Resource 1",
         capacity=2,
-        location=[0.0, 0.0],
+        location=[-100, -100],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.ResourceControlPolicy.FIFO,
         process_ids=["P1", "P2"],

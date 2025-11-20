@@ -72,8 +72,8 @@ def main():
         time_model_id="ftmp2",
         type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
     )
-    TP1 = prodsys.processes_data.LinkTransportProcessData( #empty links, to be generated
-        ID="TP1",
+    CTP = prodsys.processes_data.LinkTransportProcessData( #empty links, to be generated
+        ID="ConveyorProcess_1",
         description="Transport Process 1",
         time_model_id="md1",
         capability="TP1",
@@ -81,6 +81,13 @@ def main():
         links=[],
         can_move=False,
     )
+    TP1 = prodsys.processes_data.RequiredCapabilityProcessData(
+        ID="TP1",
+        description="Required Capability Process 1",
+        capability="TP1",
+        type=prodsys.processes_data.ProcessTypeEnum.RequiredCapabilityProcesses,
+    )
+
 
     # Resource
     R1 = prodsys.resource_data.ResourceData( #resource with two ports
@@ -110,7 +117,7 @@ def main():
         location=[0, 50],
         controller=prodsys.resource_data.ControllerEnum.PipelineController,
         control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
-        process_ids=["TP1"],
+        process_ids=["ConveyorProcess_1"],
         can_move=False,
     )
 
@@ -199,7 +206,7 @@ def main():
     # Assemble the production system
     production_system_instance = ProductionSystemData(
         time_model_data=[ftmp1, ftmp2, ftm1, md1],
-        process_data=[P1, P2, TP1],
+        process_data=[P1, P2, CTP, TP1],
         #port_data=[Port0, Port1],
         resource_data=[R1, TR1, R2],
         product_data=[Product_1],
