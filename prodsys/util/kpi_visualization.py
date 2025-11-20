@@ -88,6 +88,9 @@ def plot_throughput_time_distribution(
 
     group_labels = grouped.index
 
+    if len(values) < 30:
+        return None
+
     # Create distplot with custom bin_size
     fig = ff.create_distplot(
         values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
@@ -544,7 +547,7 @@ def plot_time_per_state_of_resources(
         return image_path
 
 
-def plot_util_WIP_resource(
+def plot_WIP_resource_boxplots(
     post_processor: post_processing.PostProcessor,
     normalized: bool = True,
     return_html: bool = False,
@@ -557,53 +560,32 @@ def plot_util_WIP_resource(
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
         normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
     """
-    df_time_per_state = post_processor.df_mean_wip_per_station
-    # df_time_per_state["mean_wip"] = np.maximum(
-    #     np.ceil(df_time_per_state["mean_wip"]), 1
-    # )
+    df_time_per_state = post_processor.df_WIP_per_resource
     fig1 = go.Figure()
-    fig1.add_trace(
-        go.Bar(
-            name="mean_wip",
-            x=df_time_per_state["Resource"],
-            y=df_time_per_state["mean_wip"],
-            marker_color="purple",
-            yaxis="y2",
-        )
-    )
-
-    df_time_per_state2 = post_processor.df_aggregated_resource_bucket_states
-    df_time_per_state2 = df_time_per_state2.loc[df_time_per_state2["Time_type"] == "PR"]
-
-    resources = df_time_per_state2["Resource"].unique()
-    fig2 = go.Figure()
-    for resource in resources:
-        df_resource = df_time_per_state2.loc[df_time_per_state2["Resource"] == resource]
-        fig2.add_trace(
+    resources = df_time_per_state["WIP_resource"].unique()
+    for resource_id in resources:
+        df_resource = df_time_per_state.loc[df_time_per_state["WIP_resource"] == resource_id]
+        fig1.add_trace(
             go.Box(
                 y=df_resource["percentage"],
-                name=f"{resource}",
+                name=f"{resource_id}",
                 boxmean=True,  # mean and standard deviation
             )
         )
 
-    fig2.update_xaxes(categoryorder="array", categoryarray=resources)
     fig1.update_xaxes(categoryorder="array", categoryarray=resources)
 
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1)
+    fig = make_subplots(rows=1, cols=1, shared_xaxes=True, vertical_spacing=0.1)
     for trace in fig1.data:
-        fig.add_trace(trace, row=2, col=1)
-    for trace in fig2.data:
         fig.add_trace(trace, row=1, col=1)
 
     fig.update_layout(
-        title="Mean WIP and Utilization per Station",
+        title="WIP per Resource",
         showlegend=False,
-        height=800,  # adjust height if needed
+        height=600,  # adjust height if needed
     )
 
-    fig.update_yaxes(title_text="Average WIP [Products]", row=2, col=1)
-    fig.update_yaxes(title_text="Percentage [%]", row=1, col=1)
+    fig.update_yaxes(title_text="WIP [Products]", row=1, col=1)
 
     if not os.path.exists(os.path.join(os.getcwd(), "plots")):
         os.makedirs(os.path.join(os.getcwd(), "plots"))
@@ -615,7 +597,7 @@ def plot_util_WIP_resource(
     if return_html:
         return pio.to_html(fig, full_html=True)
     if return_image:
-        image_path = os.path.join(os.getcwd(), "plots", "util_WIP_resource.png")
+        image_path = os.path.join(os.getcwd(), "plots", "WIP_resource.png")
         fig.write_image(image_path)
         return image_path
 
@@ -696,8 +678,6 @@ def plot_WIP_with_range(
     df = pd.concat([df, df_per_product])
     fig = go.Figure()
 
-    window = 5000
-
     def get_colors() -> List[str]:
         return (
             px.colors.qualitative.Dark24
@@ -709,9 +689,9 @@ def plot_WIP_with_range(
 
     for product_type, df_product_type in df.groupby(by="Product_type"):
         df_product_type["WIP_avg"] = (
-            df_product_type["WIP"].rolling(window=window).mean()
+            df_product_type["WIP"].rolling(window=int(post_processor.df_aggregated_output_and_throughput["Output"].mean()) + 5).mean()
         )
-        df_product_type["WIP_std"] = df_product_type["WIP"].rolling(window=window).std()
+        df_product_type["WIP_std"] = df_product_type["WIP"].rolling(window=int(post_processor.df_aggregated_output_and_throughput["Output"].mean()) + 5).std()
         if not colors:
             colors = get_colors()
         color = colors.pop(0)
@@ -742,6 +722,7 @@ def plot_WIP_with_range(
         )
     fig.update_layout(
         title="Mean WIP and Range per Product Type",
+        showlegend=True,
         xaxis_title="Time [Minutes]",
         yaxis_title="WIP [Products]",
     )

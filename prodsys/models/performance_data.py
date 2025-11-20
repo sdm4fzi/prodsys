@@ -29,7 +29,7 @@ class Event(BaseModel):
 
     time: float = Field(alias="Time")
     resource: str = Field(alias="Resource")
-    state: str = Field(alias="State")
+    state: Optional[str] = Field(default=None, alias="State")
     state_type: str = Field(alias="State Type")
     activity: str = Field(alias="Activity")
     product: Optional[str] = Field(default=None, alias="Product")

@@ -24,9 +24,28 @@ class ResourceDependency(Dependency):
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self):
+        # Infer a resource type hint to support downstream dependency reconciliation.
+        resource_type_hint = ""
+        try:
+            processes = getattr(self.required_resource, "processes", []) or []
+            if processes:
+                # Import locally to avoid circular imports.
+                from prodsys.express import process as _process_module
+
+                if any(
+                    isinstance(proc, (_process_module.TransportProcess, _process_module.LinkTransportProcess))
+                    for proc in processes
+                ):
+                    resource_type_hint = "transport_resource"
+                else:
+                    resource_type_hint = "production_resource"
+        except Exception:
+            # Fallback to empty hint if inference fails.
+            resource_type_hint = ""
+
         return ResourceDependencyData(
             ID=self.ID,
-            description="",
+            description=resource_type_hint,
             required_resource=self.required_resource.ID,
             interaction_node=self.interaction_node.ID if self.interaction_node else None,
             position_type=self.position_type,

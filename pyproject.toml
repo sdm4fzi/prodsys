@@ -1,5 +1,7 @@
 [project]
+[project]
 name = "prodsys"
+version = "1.0.0"
 version = "1.0.0"
 description = "A useful module for production system simulation and optimization"
 authors = [

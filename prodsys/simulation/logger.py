@@ -132,6 +132,8 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Origin location": state_info._origin_ID,
         "Target location": state_info._target_ID,
         "Empty Transport": state_info._empty_transport,
+        "Initial Transport Step": state_info._initial_transport_step,
+        "Last Transport Step": state_info._last_transport_step,
         "Requesting Item": None,
         "Dependency": state_info._dependency_ID,
         "process": None,
@@ -156,15 +158,36 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
         "Activity": product_info.activity,
         "Product": product_info.product_ID,
         "Expected End Time": None,
-        "Origin location": None,
-        "Target location": None,
-        "Empty Transport": None,
-        "Requesting Item": None,
+        "Origin location": product_info.origin_ID,
+        "Target location": product_info.target_ID,
+        "Empty Transport": False,
+        "Requesting Item": product_info.product_ID,
         "Dependency": None,
         "process": None,
     }
     data.append(item)
 
+
+def post_monitor_primitive_movement(data: List[dict], primitive_info: product.ProductInfo):
+    """
+    Post function for monitoring primitive movement. With this post monitor, every primitive movement is logged.
+    """
+    item = {
+        "Time": primitive_info.event_time,
+        "Resource": primitive_info.resource_ID,
+        "State": primitive_info.state_ID,
+        "State Type": primitive_info.state_type,
+        "Activity": primitive_info.activity,
+        "Product": primitive_info.product_ID,
+        "Expected End Time": None,
+        "Origin location": primitive_info.origin_ID,
+        "Target location": primitive_info.target_ID,
+        "Empty Transport": False,
+        "Requesting Item": primitive_info.product_ID,
+        "Dependency": None,
+        "process": None
+    }
+    data.append(item)
 
 def post_monitor_primitive_dependency(
     data: List[dict], dependency_info: DependencyInfo
@@ -288,7 +311,7 @@ class EventLogger(Logger):
         self.register_patch(
             self.event_data,
             product.info,
-            attr=["log_create_product", "log_finish_product"],
+            attr=["log_create_product", "log_finish_product", "log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading"],
             post=post_monitor_product_info,
         )
 
@@ -304,6 +327,17 @@ class EventLogger(Logger):
             primitive.dependency_info,
             attr=["log_start_dependency", "log_end_dependency"],
             post=post_monitor_primitive_dependency,
+        )
+
+    def observe_primitive_movement(self, primitive: primitive.Primitive):
+        """
+        Create path to observe the primitive movement.
+        """
+        self.register_patch(
+            self.event_data,
+            primitive.info,
+            attr=["log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading"],
+            post=post_monitor_primitive_movement,
         )
 
     def observe_resource_dependency_states(

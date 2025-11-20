@@ -326,14 +326,15 @@ class RequestHandler:
             self.pending_resource_requests.append(request_info_key)
         return request_info
 
-    def mark_routing(self, allocated_request: request.Request) -> None:
+    def mark_routing(self, allocated_request: request.Request, setting_current_process: bool = True) -> None:
         """
         Marks a request as allocated to a resource.
 
         Args:
             allocated_request (request.Request): The request that has been allocated.
         """
-        if allocated_request.request_type == request.RequestType.PRODUCTION:
+
+        if setting_current_process and allocated_request.request_type in [request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL]:
             allocated_request.requesting_item.current_process = (
                 allocated_request.process
             )
@@ -346,6 +347,19 @@ class RequestHandler:
         request_info.request_state = "routed"
         self.routed_requests[id(allocated_request.completed)] = request_info
 
+
+    def reroute_request(self, rerouted_request: request.Request) -> None:
+        """
+        Reroutes a request to the router.
+        """
+        routed_request_info = self.routed_requests.pop(id(rerouted_request.completed), None)
+        if not routed_request_info:
+            raise ValueError(
+                f"Request info not found for rerouted request {rerouted_request.completed}"
+            )
+        routed_request_info.request_state = "pending"
+        self.pending_requests[id(rerouted_request.completed)] = routed_request_info
+
     def mark_completion(self, completed_request: request.Request) -> None:
         """
         Marks a request as completed.
@@ -355,9 +369,6 @@ class RequestHandler:
         """
         request_info = self.routed_requests.pop(id(completed_request.completed), None)
         if not request_info:
-            router_resources = completed_request.entity.router.resources
-            print(f"router resources: {[resource.data.ID for resource in router_resources]}")
-            print(f"request to resource {completed_request.resource.data.ID} and process {completed_request.process.data.ID} not found")
             raise ValueError(
                 f"Request info not found for completed request {completed_request.completed}"
             )

@@ -57,15 +57,15 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             assert kpi.value < 82 and kpi.value > 78
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 30 and kpi.value < 35
+            assert kpi.value > 35 and kpi.value < 40
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 3.0 and kpi.value < 3.5
+            assert kpi.value > 5.0 and kpi.value < 6.0
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 2.4 and kpi.value < 2.8
+            assert kpi.value > 4.4 and kpi.value < 5.2
 
 
 def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
@@ -88,11 +88,11 @@ def test_run_simulation_with_cut_off(simulation_adapter: ProductionSystemData):
             assert kpi.value < 82 and kpi.value > 78
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 30 and kpi.value < 35
+            assert kpi.value > 35 and kpi.value < 40
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 3.5 and kpi.value > 3.0
+            assert kpi.value < 6 and kpi.value > 5.0
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 2.8 and kpi.value > 2.4
+            assert kpi.value < 5.2 and kpi.value > 4.4

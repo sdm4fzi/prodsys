@@ -1,5 +1,4 @@
 import pytest
-import prodsys
 from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
@@ -65,6 +64,24 @@ def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
     assert hash_str == "1c73016b17ea21039f0e544b60aded34"
 
+def test_deterministic_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance_1 = runner.Runner(production_system_data=simulation_adapter)
+    runner_instance_1.initialize_simulation()
+    runner_instance_1.run(1000)
+    assert runner_instance_1.env.now == 1000
+    runner_instance_1.print_results()
+    post_processor_1 = runner_instance_1.get_post_processor()
+    runner_instance_2 = runner.Runner(production_system_data=simulation_adapter)
+    runner_instance_2.initialize_simulation()
+    runner_instance_2.run(1000)
+    assert runner_instance_2.env.now == 1000
+    runner_instance_2.print_results()
+    post_processor_2 = runner_instance_2.get_post_processor()
+    assert post_processor_1.WIP_KPIs == post_processor_2.WIP_KPIs
+    assert post_processor_1.primitive_WIP_KPIs == post_processor_2.primitive_WIP_KPIs
+    assert post_processor_1.aggregated_throughput_time_KPIs == post_processor_2.aggregated_throughput_time_KPIs
+
+
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=simulation_adapter)
@@ -72,7 +89,6 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     runner_instance.run(1000)
     assert runner_instance.env.now == 1000
     runner_instance.print_results()
-    runner_instance.save_results_as_csv()
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output":
@@ -89,12 +105,12 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 6.5 and kpi.value > 5.5
+            assert kpi.value < 9.5 and kpi.value > 7.5
 
     for kpi in post_processor.primitive_WIP_KPIs:
-        if kpi.name == "primitive_WIP" and kpi.product_type == "Primitive1":
-            assert kpi.value < 6 and kpi.value > 5
+        if kpi.name == "primitive_WIP" and kpi.product_type == "workpice_carrier_1":
+            assert kpi.value < 9.5 and kpi.value > 7.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
-        if kpi.name == "throughput_time":
-            assert kpi.value < 5.5 and kpi.value > 4.5
+        if kpi.name == "throughput_time" and kpi.product_type == "product1":
+            assert kpi.value < 8 and kpi.value > 7

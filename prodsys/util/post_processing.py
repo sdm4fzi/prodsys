@@ -6,7 +6,7 @@ from functools import cached_property
 from prodsys.simulation import state
 from prodsys.models import performance_indicators
 
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import pandas as pd
 
@@ -43,8 +43,8 @@ class PostProcessor:
     filepath: str = field(default="")
     df_raw: pd.DataFrame = field(default=None)
     warm_up_cutoff: bool = field(default=False)
-    cut_off_method: Literal["mser5", "threshold_stabilization", "static_ratio"] = field(
-        default="mser5"
+    cut_off_method: Optional[Literal["mser5", "threshold_stabilization", "static_ratio"]] = field(
+        default=None
     )
 
     def __post_init__(self):
@@ -82,6 +82,8 @@ class PostProcessor:
                 state.StateTypeEnum.breakdown,
                 state.StateTypeEnum.setup,
                 state.StateTypeEnum.charging,
+                state.StateTypeEnum.loading,
+                state.StateTypeEnum.unloading,
             ]
         )
 
@@ -136,7 +138,7 @@ class PostProcessor:
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
         df["Product_type"] = df["Product"].str.rsplit("_", n=1).str[0]
-        if not "Primitive" in df.columns:
+        if "Primitive" not in df.columns:
             df["Primitive"] = None
         df["Primitive_type"] = df["Primitive"].str.rsplit("_", n=1).str[0]
         df.loc[
@@ -168,7 +170,6 @@ class PostProcessor:
         )
 
         df = pd.merge(df, df_unique)
-        df = df.sort_values(by=["Time", "Resource", "State_sorting_Index"])
         return df
 
     @cached_property
@@ -872,7 +873,7 @@ class PostProcessor:
         unplanned_downtime = average_kpis.get("UD", 0)
         availibility = (100 - unplanned_downtime) / 100
         # TODO: also calculate performance based on arrival rates, available time and output of the system
-        # TODO: calculate scrap rate after merging scrap simulation from feature branch
+        # TODO: calculate scrap rate based on number of failed processes?
 
         # Create new DataFrame
         oee_df = pd.DataFrame(
@@ -1135,50 +1136,125 @@ class PostProcessor:
         """
         df = self.df_resource_states.copy()
         return self.get_WIP_KPI(df)
-
-    @cached_property
-    def df_mean_wip_per_station(self) -> pd.DataFrame:
         """
         Calculate the mean Work-in-Progress (WIP) per station.
+        
+        WIP tracking rules:
+        - Create product: +1 at source resource
+        - Finish product: -1 at sink resource
+        - Transport (empty=False):
+            - start state: -1 at Origin location, +1 at Transport resource
+            - end state: -1 at Transport resource, +1 at Target location
+        - Production:
+            - start state: -1 at Origin location, +1 at Production resource
+            - end state: -1 at Production resource, +1 at Target location
+        - Transport (empty=True): No WIP changes
 
         Returns:
             pd.DataFrame: A DataFrame containing the mean WIP per station.
         """
         df = self.df_resource_states.copy()
-        created_condition = df["Activity"] == state.StateEnum.created_product
-        finished_condition = df["Activity"] == state.StateEnum.finished_product
-
         df["wip_increment"] = 0
+        df["wip_resource"] = None
+
+        # Rule 1: Create product -> +1 at source
+        created_condition = df["Activity"] == state.StateEnum.created_product
         df.loc[created_condition, "wip_increment"] = 1
+        df.loc[created_condition, "wip_resource"] = df.loc[created_condition, "Resource"]
+
+        # Rule 2: Finish product -> -1 at sink
+        finished_condition = df["Activity"] == state.StateEnum.finished_product
         df.loc[finished_condition, "wip_increment"] = -1
-        df.loc[created_condition | finished_condition, "wip_resource"] = df.loc[
-            created_condition | finished_condition, "Resource"
-        ]
-        move_away_condition = (df["Empty Transport"] == False) & (
-            df["Activity"] == "start state"
-        )
-        move_in_condition = (df["Empty Transport"] == False) & (
-            df["Activity"] == "end state"
-        )
-        interrupted_condition = (df["Empty Transport"] == False) & (
+        df.loc[finished_condition, "wip_resource"] = df.loc[finished_condition, "Resource"]
+
+        # Rule 3: Transport with empty=False
+        transport_condition = df["State Type"] == "Transport"
+        # Handle None/NaN values in Empty Transport column (occurs for non-transport activities)
+        # We need explicit False check (not just "not True") to exclude None/NaN values
+        non_empty_transport = transport_condition & df["Empty Transport"].fillna(True).eq(False)
+        
+        # Transport start state: -1 at Origin, +1 at Transport resource
+        transport_start = non_empty_transport & (df["Activity"] == "start state")
+        # Create two entries for each transport start
+        transport_start_indices = df[transport_start].index
+        for idx in transport_start_indices:
+            # Decrement origin
+            df.at[idx, "wip_increment"] = -1
+            df.at[idx, "wip_resource"] = df.at[idx, "Origin location"]
+            # We need to add a separate entry for incrementing transport resource
+            # For now, we'll handle this by creating duplicate rows
+        
+        # Transport end state: -1 at Transport resource, +1 at Target
+        transport_end = non_empty_transport & (df["Activity"] == "end state")
+        transport_end_indices = df[transport_end].index
+        for idx in transport_end_indices:
+            # Increment target
+            df.at[idx, "wip_increment"] = 1
+            df.at[idx, "wip_resource"] = df.at[idx, "Target location"]
+
+        # Rule 4: Production
+        # NOTE: The Origin/Target in Production events represent QUEUE CONFIGURATION, not product movement!
+        # The product stays at the input queue (or resource) during production.
+        # Actual product movement is handled by Transport events.
+        # Therefore, we DON'T create WIP changes based on Production Origin/Target columns.
+        production_condition = df["State Type"] == "Production"
+        
+        # Production start state: Product enters the production resource
+        production_start = production_condition & (df["Activity"] == "start state")
+        production_start_indices = df[production_start].index
+        for idx in production_start_indices:
+            # Mark as no automatic WIP change - will be handled by additional rows below
+            df.at[idx, "wip_increment"] = 1
+            df.at[idx, "wip_resource"] = df.at[idx, "Target location"]
+        
+        # Production end state: Product leaves the production resource
+        production_end = production_condition & (df["Activity"] == "end state")
+        production_end_indices = df[production_end].index
+        for idx in production_end_indices:
+            # Mark as no automatic WIP change - will be handled by additional rows below
+            df.at[idx, "wip_increment"] = -1
+            df.at[idx, "wip_resource"] = df.at[idx, "Origin location"]
+
+        # Handle interrupts (product returned to origin)
+        # We need explicit False check (not just "not True") to exclude None/NaN values
+        interrupted_condition = df["Empty Transport"].fillna(True).eq(False) & (
             df["Activity"] == "end interrupt"
         )
-
-        df.loc[move_away_condition, "wip_increment"] = -1
-        df.loc[move_away_condition, "wip_resource"] = df.loc[
-            move_away_condition, "Origin location"
-        ]
-        df.loc[move_in_condition, "wip_increment"] = 1
-        df.loc[move_in_condition, "wip_resource"] = df.loc[
-            move_in_condition, "Target location"
-        ]
         df.loc[interrupted_condition, "wip_increment"] = 1
         df.loc[interrupted_condition, "wip_resource"] = df.loc[
             interrupted_condition, "Origin location"
         ]
 
+        # Now we need to add the increment entries for transport resources
+        # Create additional rows for transport resource increments (start state)
+        # transport_start_df = df[transport_start].copy()
+        # transport_start_df["wip_increment"] = 1
+        # transport_start_df["wip_resource"] = transport_start_df["Resource"]
+        
+        # # Create additional rows for transport resource decrements (end state)
+        # transport_end_df = df[transport_end].copy()
+        # transport_end_df["wip_increment"] = -1
+        # transport_end_df["wip_resource"] = transport_end_df["Resource"]
+        
+        # NOTE: We do NOT create additional rows for production because:
+        # - Products stay at the input queue during production (based on data analysis)
+        # - Next transport always picks up from input queue, not output queue
+        # - Production Origin/Target represent queue configuration, not product location
+        # - Therefore, WIP doesn't move during production events
+        
+        # Combine all dataframes
+        # df = pd.concat([df, transport_start_df, transport_end_df], ignore_index=False)
+        
+        # Sort by time to maintain chronological order
+        df = df.sort_values(by=["Time", "wip_resource"])
+
+        # Filter out rows with no wip_resource
+        df = df[df["wip_resource"].notna()]
+        
+        # Calculate cumulative WIP per resource
         df["wip"] = df.groupby(by="wip_resource")["wip_increment"].cumsum()
 
+        # Exclude sinks and sources from the final results
         df_temp = df[["State", "State Type"]].drop_duplicates()
         sinks = df_temp.loc[
             df_temp["State Type"] == state.StateTypeEnum.sink, "State"
@@ -1188,8 +1264,12 @@ class PostProcessor:
             df_temp["State Type"] == state.StateTypeEnum.source, "State"
         ].unique()
         df = df.loc[~df["wip_resource"].isin(sources)]
-        resources = df["Resource"].unique()
-        df = df.loc[df["wip_resource"].isin(resources)]
+        
+        # Exclude network nodes (routing points like n_src, n101, n102, etc.)
+        # Network nodes typically start with 'n' followed by '_' or digits
+        # Also exclude input port nodes (ip_glue6, ip_align, etc.)
+        network_node_mask = df["wip_resource"].str.match(r'^(n[_\d]|ip_)', na=False)
+        df = df.loc[~network_node_mask]
 
         if self.warm_up_cutoff:
             df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
@@ -1234,42 +1314,84 @@ class PostProcessor:
         return df
 
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.loc[df["Time"] != 0]
-
-        valid_resources = df["Resource"].unique()
-
-        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
-        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
-
+        """
+        Calculate WIP per resource over time.
+        
+        WIP tracking rules:
+        - Create product: +1 at source resource
+        - Finish product: -1 at sink resource
+        - End loading: +1 at resource (the resource doing the loading), -1 at queue (Origin location)
+        - End unloading: -1 at resource (the resource doing the unloading), +1 at queue (Target location)
+        - Production states: No WIP changes
+        - Transport states: No WIP changes
+        
+        Args:
+            df: DataFrame with resource states
+            
+        Returns:
+            pd.DataFrame: DataFrame with WIP tracking per resource
+        """
+        df = df.loc[df["Time"] != 0].copy()
         df["WIP_Increment"] = 0
+        df["WIP_resource"] = None
+
+        # Rule 1: Create product -> +1 at source
+        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
+        df.loc[CREATED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION, "Resource"]
+
+        # Rule 2: Finish product -> -1 at sink
+        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-        df.loc[CREATED_CONDITION | FINISHED_CONDITION, "WIP_resource"] = df.loc[
-            CREATED_CONDITION | FINISHED_CONDITION, "Resource"
-        ]
-        MOVE_AWAY_CONDITION = (df["Empty Transport"] == False) & (
-            df["Activity"] == "start state"
-        )
-        MOVE_IN_CONDITION = (df["Empty Transport"] == False) & (
-            df["Activity"] == "end state"
-        )
-        INTERRUPTED_CONDITION = (df["Empty Transport"] == False) & (
-            df["Activity"] == "end interrupt"
+        df.loc[FINISHED_CONDITION, "WIP_resource"] = df.loc[FINISHED_CONDITION, "Resource"]
+
+        # Rule 3: End loading -> +1 at resource, -1 at Origin location (queue)
+        loading_condition = (df["State Type"] == state.StateTypeEnum.loading) | (df["State Type"] == "Loading")
+        end_loading = loading_condition & (df["Activity"] == "end state")
+        
+        # Create rows for end loading: +1 at resource
+        end_loading_resource_df = df[end_loading].copy()
+        end_loading_resource_df["WIP_Increment"] = 1
+        end_loading_resource_df["WIP_resource"] = end_loading_resource_df["Resource"]
+        
+        # Create rows for end loading: -1 at Origin location (queue)
+        end_loading_queue_df = df[end_loading].copy()
+        end_loading_queue_df["WIP_Increment"] = -1
+        end_loading_queue_df["WIP_resource"] = end_loading_queue_df["Origin location"]
+
+        # Rule 4: End unloading -> -1 at resource, +1 at Target location (queue)
+        unloading_condition = (df["State Type"] == state.StateTypeEnum.unloading) | (df["State Type"] == "Unloading")
+        end_unloading = unloading_condition & (df["Activity"] == "end state")
+        
+        # Create rows for end unloading: -1 at resource
+        end_unloading_resource_df = df[end_unloading].copy()
+        end_unloading_resource_df["WIP_Increment"] = -1
+        end_unloading_resource_df["WIP_resource"] = end_unloading_resource_df["Resource"]
+        
+        # Create rows for end unloading: +1 at Target location (queue)
+        end_unloading_queue_df = df[end_unloading].copy()
+        end_unloading_queue_df["WIP_Increment"] = 1
+        end_unloading_queue_df["WIP_resource"] = end_unloading_queue_df["Target location"]
+
+        # Combine all dataframes
+        df = pd.concat([
+            df, 
+            end_loading_resource_df, 
+            end_loading_queue_df,
+            end_unloading_resource_df,
+            end_unloading_queue_df
+        ])
+
+        df = df.sort_values(
+            by=["Time", "WIP_Increment"], 
+            ascending=[True, False], 
+            ignore_index=True
         )
 
-        df.loc[MOVE_AWAY_CONDITION, "WIP_Increment"] = -1
-        df.loc[MOVE_AWAY_CONDITION, "WIP_resource"] = df.loc[
-            MOVE_AWAY_CONDITION, "Origin location"
-        ]
-        df.loc[MOVE_IN_CONDITION, "WIP_Increment"] = 1
-        df.loc[MOVE_IN_CONDITION, "WIP_resource"] = df.loc[
-            MOVE_IN_CONDITION, "Target location"
-        ]
-        df.loc[INTERRUPTED_CONDITION, "WIP_Increment"] = 1
-        df.loc[INTERRUPTED_CONDITION, "WIP_resource"] = df.loc[
-            INTERRUPTED_CONDITION, "Origin location"
-        ]
-
+        # Filter out rows with no WIP_resource
+        df = df[df["WIP_resource"].notna()]
+        
+        # Calculate cumulative WIP per resource
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
 
         df_temp = df[["State", "State Type"]].drop_duplicates()
@@ -1308,7 +1430,7 @@ class PostProcessor:
         df = df.loc[df["WIP_Increment"] != 0]
 
         KPIs = []
-        df["next_Time"] = df.groupby(by="Resource")["Time"].shift(-1)
+        df["next_Time"] = df.groupby(by="WIP_resource")["Time"].shift(-1)
         df["next_Time"] = df["next_Time"].fillna(df["Time"])
         for index, row in df.iterrows():
             KPIs.append(
@@ -1320,7 +1442,7 @@ class PostProcessor:
                         performance_indicators.KPILevelEnum.ALL_PRODUCTS,
                     ),
                     product_type="Total",
-                    resource=row["Resource"],
+                    resource=row["WIP_resource"],
                     start_time=row["Time"],
                     end_time=row["next_Time"],
                 )

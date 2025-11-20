@@ -13,6 +13,7 @@ from typing import (
 
 import logging
 
+from numpy.random import f
 import simpy
 
 from prodsys.factories import primitive_factory
@@ -95,12 +96,13 @@ class Router:
         )
         self.production_system_data: Optional[production_system_data.ProductionSystemData] = production_system_data
         self.free_primitives_by_type: Dict[str, List[primitive.Primitive]] = {}
-        for primitive in self.primitive_factory.primitives:
-            if primitive.data.type not in self.free_primitives_by_type:
-                self.free_primitives_by_type[primitive.data.type] = []
-            self.free_primitives_by_type[primitive.data.type].append(primitive)
+        for prim in self.primitive_factory.primitives:
+            if prim.data.type not in self.free_primitives_by_type:
+                self.free_primitives_by_type[prim.data.type] = []
+            self.free_primitives_by_type[prim.data.type].append(prim)
 
         self.resources = resources
+        self.free_resources: Dict[str, resources.Resource] = {resource.data.ID: resource for resource in self.resources}
         self.reachability_cache: Dict[Tuple[str, str], bool] = {}
         self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
@@ -141,22 +143,72 @@ class Router:
         if not self.resource_got_free.triggered:
             self.resource_got_free.succeed()
 
+    def mark_resource_free(self, resource: resources.Resource) -> None:
+        """
+        Marks a resource as free in the router.
+        """
+        if resource.data.ID not in self.free_resources:
+            self.free_resources[resource.data.ID] = resource
+
+    def mark_resource_not_free(self, resource: resources.Resource) -> None:
+        """
+        Marks a resource as not free in the router.
+        """
+        if resource.data.ID in self.free_resources:
+            self.free_resources.pop(resource.data.ID)
+
+    def update_free_resources(self) -> None:
+        """
+        Updates the list of free resources.
+        For INPUT_OUTPUT queues, we need special handling: a resource should be considered
+        free if it has items in INPUT_OUTPUT queues that can be processed (removed and put back).
+        """
+        for resource in self.resources:
+            if resource.full:
+                self.mark_resource_not_free(resource)
+            else:
+                # Check OUTPUT and INPUT_OUTPUT ports
+                output_ports = [port for port in resource.ports if port.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]]
+                if output_ports:
+                    # For INPUT_OUTPUT queues: if there are items in the queue, the resource can still process them
+                    # even if the queue appears full (because items will be removed then put back)
+                    all_ports_full_with_no_items = True
+                    for port in output_ports:
+                        if port.data.interface_type == port_data.PortInterfaceType.INPUT_OUTPUT:
+                            # INPUT_OUTPUT queue: if it has items, resource can process (items will be removed)
+                            if len(port.items) > 0:
+                                all_ports_full_with_no_items = False
+                                break
+                        # For OUTPUT or full INPUT_OUTPUT with no items: check if full
+                        if not port.is_full:
+                            all_ports_full_with_no_items = False
+                            break
+                    
+                    if all_ports_full_with_no_items:
+                        self.mark_resource_not_free(resource)
+                    else:
+                        self.mark_resource_free(resource)
+                else:
+                    # No output ports, just check if resource is full
+                    self.mark_resource_free(resource)
+
     def resource_routing_loop(self) -> Generator[None, None, None]:
         """
         Main allocation loop for the router.
         This method should be called in a separate thread to run the allocation process.
         """
-        free_resources = self.resources
         while True:
             yield self.got_requested
             self.got_requested = events.Event(self.env)
             while True:
+                self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
-                    free_resources
+                    list(self.free_resources.values())
                 )
                 if not free_requests:
                     break
                 self.env.update_progress_bar()
+                # Filter out requests that would cause deadlocks by checking target queue availability
                 request: request.Request = self.route_request(free_requests)
                 self.request_handler.mark_routing(request)
                 self.env.process(self.execute_resource_routing(request))
@@ -193,10 +245,13 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-        if target_port:
-            yield from target_port.reserve()
+        is_production_request = executed_request.request_type in (
+            request.RequestType.PRODUCTION,
+            request.RequestType.PROCESS_MODEL,
+        )
+
         if (
-            executed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL)
+            is_production_request
             and executed_request.requesting_item.current_locatable
             != origin_port
         ):
@@ -210,24 +265,30 @@ class Router:
             route = self.request_handler.process_matcher.get_route(
                 origin_port, target_port, executed_request.process
             )
-            executed_request.route = route
+            executed_request.set_route(route=route)
 
         executed_request.origin_queue = origin_port
         executed_request.target_queue = target_port
 
+        # Don't reserve target port here for production requests - it will be reserved in the production handler
+        # after getting items from the origin queue. This prevents premature queue slot locking.
+        # Target reservation happens in production_process_handler.py after get_entities_of_request()
+
         executed_request.resource.controller.request(executed_request)
         if executed_request.required_dependencies:
             yield executed_request.dependencies_requested
-            dependency_ready_events = self.get_dependencies_for_execution(
-                resource=executed_request.resource,
-                process=executed_request.process,
-                requesting_item=executed_request.requesting_item,
-                dependency_release_event=executed_request.completed,
-            )
-            for dependency_ready_event in dependency_ready_events:
-                yield dependency_ready_event
+            yield from self.get_dependencies(executed_request)
             executed_request.dependencies_ready.succeed()
-            yield executed_request.completed
+
+    def get_dependencies(self, executed_request: request.Request) -> Generator:
+        dependency_ready_events = self.get_dependencies_for_execution(
+            resource=executed_request.resource,
+            process=executed_request.process,
+            requesting_item=executed_request.requesting_item,
+            dependency_release_event=executed_request.completed,
+        )
+        for dependency_ready_event in dependency_ready_events:
+            yield dependency_ready_event
 
     def request_buffering(self, executed_request: request.Request) -> Optional[events.Event]:
         buffer = self.interaction_handler.get_interaction_buffer(executed_request)
@@ -257,7 +318,7 @@ class Router:
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
         # place in storage after binding
-        yield from executed_request.requesting_item.current_locatable.reserve()
+        executed_request.requesting_item.current_locatable.reserve()
         yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
         executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable
         target_storage = self._find_available_storage_for_primitive(executed_request.entity)
@@ -321,7 +382,8 @@ class Router:
         
         # Fallback to the first storage if none found
         return possible_storages[0] if possible_storages else primitive.storage
-
+    
+    
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
         Allocates a resource to a request.
@@ -339,8 +401,9 @@ class Router:
                 routing_heuristic = free_requests[0].requesting_item.routing_heuristic
             routing_heuristic(free_requests)
         except Exception:
-            routing_heuristic = lambda x: x[0]
-            routing_heuristic(free_requests)
+            def fallback_heuristic(x):
+                return x[0]
+            fallback_heuristic(free_requests)
         routed_request = free_requests.pop(0)
         return routed_request
 
@@ -392,7 +455,7 @@ class Router:
             target=target,
             target_queue=target_queue,
         )
-        self.request_handler.mark_routing(processing_request)
+        self.request_handler.mark_routing(processing_request, setting_current_process=False)
         self.resource_factory.global_system_resource.controller.request(processing_request)
         # Handle dependencies for process model requests
         if processing_request.required_dependencies:

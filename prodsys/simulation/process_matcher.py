@@ -139,6 +139,19 @@ class ProcessMatcher:
             )
         return dummy_products
 
+    def _remove_dummy_products(self, dummy_products: dict[str, product.Product]):
+        """
+        Remove dummy products from the system.
+        """
+        for product_type, dummy_product in dummy_products.items():
+            self.product_factory.products.pop(dummy_product.data.ID)
+
+    def _reset_primitives_in_queues(self):
+        """
+        Reset primitives in queues to their original locations.
+        """
+        self.primitive_factory.reset_primitives_current_locatable()
+
     def _precompute_production_compatibility(self, dummy_products: dict[str, product.Product]):
         """
         Precompute production resource compatibility.
@@ -189,7 +202,6 @@ class ProcessMatcher:
         that will speed up resource selection during simulation.
         """
         start_time = time.time()
-        logger.info("Precomputing resource compatibility tables...")
 
         # Get dummy products for testing
         dummy_products = self._create_dummy_products()
@@ -210,23 +222,8 @@ class ProcessMatcher:
                     self.production_compatibility[key] = []
                 self.production_compatibility[key].append((resource, offered_process))
 
-        
-
-        logger.info(
-            f"Precomputation completed in {time.time() - start_time:.2f} seconds"
-        )
-        logger.info(
-            f"Production compatibility table contains {len(self.production_compatibility)} entries"
-        )
-        logger.info(
-            f"Transport compatibility table contains {len(self.transport_compatibility)} entries"
-        )
-        logger.info(
-            f"Reachability cache contains {len(self.reachability_cache)} entries"
-        )
-        logger.info(
-            f"Rework compatibility table contains {len(self.rework_compatibility)} entries"
-        )
+        self._remove_dummy_products(dummy_products)
+        self._reset_primitives_in_queues()
 
     def _get_parent_from_queue(self, locatable: Locatable) -> Locatable:
         """
@@ -396,7 +393,6 @@ class ProcessMatcher:
         Returns:
             List[Locatable]: List of all locations in the system.
         """
-        # FIXME: storages are not considered here -> important for primitives in storages
         all_locations = (
             list(self.resource_factory.get_production_resources())
             + list(self.sink_factory.sinks.values())
@@ -599,7 +595,7 @@ class ProcessMatcher:
         required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
         for item, requested_process in required_transport_processes:
             original_locatable = item.current_locatable
-            for transport_resource in self.resource_factory.get_transport_resources():
+            for transport_resource in self.resource_factory.get_movable_resources():
                 for offered_process in transport_resource.processes:
                     # For each possible origin-target pair (including queues)
                     for origin in all_locations:

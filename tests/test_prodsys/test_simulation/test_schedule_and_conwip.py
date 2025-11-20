@@ -2,6 +2,7 @@
 Tests for schedule-based and CONWIP production control features.
 """
 
+import json
 import pytest
 from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.models.performance_data import Event
@@ -342,9 +343,8 @@ def test_conwip_simulation():
 
 def test_schedule_from_json_file():
     """Test loading a configuration with schedule from JSON file."""
-    config = ProductionSystemData.parse_file(
-        "examples/modelling_and_simulation/simulation_example_data/schedule_example.json"
-    )
+    config_data = json.load(open("examples/modelling_and_simulation/simulation_example_data/schedule_example.json"))
+    config = ProductionSystemData.model_validate(config_data)
     
     assert config.schedule is not None
     assert len(config.schedule) == 4
@@ -358,8 +358,9 @@ def test_schedule_from_json_file():
 
 def test_conwip_from_json_file():
     """Test loading a configuration with CONWIP from JSON file."""
-    config = ProductionSystemData.parse_file(
-        "examples/modelling_and_simulation/simulation_example_data/conwip_example.json"
+    config_data = json.load(open("examples/modelling_and_simulation/simulation_example_data/conwip_example.json"))
+    config = ProductionSystemData.model_validate(
+        config_data
     )
     
     assert config.conwip_number == 5

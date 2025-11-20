@@ -7,6 +7,7 @@ This example shows how to:
 3. Analyze how CONWIP affects system performance
 """
 
+import json
 from prodsys.models import production_system_data
 from prodsys.simulation import runner
 
@@ -20,9 +21,8 @@ def main():
     system is below the CONWIP limit.
     """
     # Load the configuration with CONWIP
-    config = production_system_data.ProductionSystemData.parse_file(
-        "examples/modelling_and_simulation/simulation_example_data/conwip_example.json"
-    )
+    config_data = json.load(open("examples/modelling_and_simulation/simulation_example_data/conwip_example.json"))
+    config = production_system_data.ProductionSystemData.model_validate(config_data)
     
     print("Configuration loaded successfully!")
     print(f"CONWIP limit: {config.conwip_number}")

@@ -15,21 +15,29 @@ from prodsys.models.resource_data import (
     ResourceData,
     SystemResourceData,
     TransportControlPolicy,
+    ResourceControlPolicy,
+    ResourceData,
+    SystemResourceData,
+    TransportControlPolicy,
 )
+from prodsys.models import performance_data
+from prodsys.factories import port_factory, process_factory, state_factory
 from prodsys.models import performance_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
 from prodsys.simulation.lot_handler import LotHandler
+from prodsys.simulation.lot_handler import LotHandler
 
 if TYPE_CHECKING:
+    from prodsys.simulation import port
+    from prodsys.models import production_system_data
     from prodsys.simulation import port
     from prodsys.models import production_system_data
 
 
 CONTROLLER_DICT: Dict = {
     ControllerEnum.PipelineController: control.Controller,
-    ControllerEnum.BatchController: control.BatchController,
 }
 
 CONTROL_POLICY_DICT: Dict = {
@@ -93,7 +101,7 @@ def register_production_state_for_process(
         "new_state": {
             "ID": process_instance.data.ID,
             "description": process_instance.data.description,
-            "time_model_id": process_instance.data.time_model_id,
+            "time_model_id": process_instance.data.time_model_id if hasattr(process_instance.data, "time_model_id") else None,
         }
     }
     existence_condition = any(
@@ -139,9 +147,17 @@ def register_production_states_for_processes(
     for process_instance, capacity in zip(
         resource.processes, resource.data.process_capacities
     ):
-        # Skip ProcessModelProcess as it doesn't have a time_model_id
-        # ProcessModels are containers for other processes and don't need their own production state
+        # ProcessModels are containers for other processes and only need production states for subprocesses
         if isinstance(process_instance, process.ProcessModelProcess):
+            if not isinstance(resource, resources.SystemResource):
+                # For regular resources, register states for contained processes
+                contained_processes = process_instance.contained_processes
+                for contained_process in contained_processes:
+                    register_production_state_for_process(
+                        resource, contained_process, state_factory, _env
+                    )
+            # For SystemResource, ProcessModelProcess is just a container/orchestration mechanism
+            # and doesn't need its own production state
             continue
         
         register_production_state_for_process(
@@ -201,8 +217,7 @@ class ResourceFactory:
         self.resources_can_process: Dict[str, resources.Resource] = {}
         self.controllers: List[
             Union[
-                control.ProductionProcessHandler,
-                control.BatchController,
+                control.Controller,
             ]
         ] = []
         self.lot_handler = LotHandler()
@@ -230,7 +245,6 @@ class ResourceFactory:
         """
         Creates the global system resource.
         """
-        # TODO: resolve later that users can specify a system resource, so this function is only needed if no global system resource is specified!
         all_resources = [resource for resource in self.all_resources.values() if not self.is_resource_a_subresource(resource)]
 
         resource_data = SystemResourceData(
@@ -251,7 +265,6 @@ class ResourceFactory:
         )
         controller: Union[
             control.Controller,
-            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.global_system_resource = resources.SystemResource(
             env=self.env,
@@ -276,7 +289,7 @@ class ResourceFactory:
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
         elif resource_data.control_policy not in TransportControlPolicy:
-            raise ValueError("Ports not found for resource" + resource_data.ID)
+            raise ValueError("Ports not found for resource " + resource_data.ID)
 
         return ports
 
@@ -314,7 +327,6 @@ class ResourceFactory:
         )
         controller: Union[
             control.Controller,
-            control.BatchController,
         ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
         self.controllers.append(controller)
         values.update({"controller": controller})
@@ -379,7 +391,6 @@ class ResourceFactory:
     def get_controller_of_resource(self, _resource: resources.Resource) -> Optional[
         Union[
             control.Controller,
-            control.BatchController,
         ]
     ]:
         """
@@ -389,7 +400,7 @@ class ResourceFactory:
             _resource (resources.Resource): Resource object.
 
         Returns:
-            Optional[Union[control.ProductionController, control.TransportController, control.BatchController]]: Controller of the given resource.
+            Optional[Union[control.Controller]]: Controller of the given resource.
         """
         for controller in self.controllers:
             if controller.resource == _resource:
@@ -425,7 +436,7 @@ class ResourceFactory:
             if target_process.data.ID in res.data.process_ids
         ]
 
-    def get_transport_resources(self) -> List[resources.Resource]:
+    def get_movable_resources(self) -> List[resources.Resource]:
         """
         Method returns a list of transport resource objects.
 

@@ -51,7 +51,9 @@ class TransportProcessHandler:
             Generator: The generator yields when the product is in the queue.
         """
         for entity in process_request.get_atomic_entities():
+            entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
+            entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
 
 
         
@@ -69,10 +71,12 @@ class TransportProcessHandler:
             Generator: The generator yields when the product is in the queue.
         """
         for entity in process_request.get_atomic_entities():
+            entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
+            entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         
     def update_location(
-        self, locatable: locatable.Locatable, location: list[float]
+        self, locatable: locatable.Locatable
     ) -> None:
         """
         Set the current position of the transport resource.
@@ -88,7 +92,6 @@ class TransportProcessHandler:
         transport_resource.controller.reserved_requests_count += free_capacity
         self.blocked_capacity += free_capacity
         transport_resource.update_full()
-
 
     def unblock_other_transports(self, transport_resource: resources.Resource):
         transport_resource.controller.reserved_requests_count -= self.blocked_capacity
@@ -153,6 +156,11 @@ class TransportProcessHandler:
         for entity in process_request.get_atomic_entities():
             entity.update_location(self.resource)
 
+        # Don't reserve target queue for transport!
+        # For INPUT_OUTPUT queues, reserving causes deadlock because processed items fill the queue
+        # For separate queues with batching, we can't know batch size until lot is formed
+        # Let PUT naturally wait for space - this is safer and avoids circular dependencies
+
         transport_state_events = []
         for entity in process_request.get_atomic_entities():
             transport_state: state.State = yield from resource.wait_for_free_process(
@@ -166,7 +174,6 @@ class TransportProcessHandler:
         for transport_event, transport_state in transport_state_events:
             yield transport_event
             transport_state.process = None
-
 
         yield from self.put_entities_of_request(process_request)
         for entity in process_request.get_atomic_entities():
@@ -269,6 +276,8 @@ class TransportProcessHandler:
             target,
             state.StateTypeEnum.transport,
             empty_transport=empty_transport,
+            initial_transport_step=initial_transport_step,
+            last_transport_step=last_transport_step,
         )
         target_location = self.get_target_location(
             target, empty_transport, last_transport_step=last_transport_step
@@ -278,7 +287,7 @@ class TransportProcessHandler:
         )
         yield input_state.process
         if self.resource.can_move:
-            self.update_location(target, location=target_location)
+            self.update_location(target)
 
     def find_route_to_origin(
         self, process_request: request_module.Request

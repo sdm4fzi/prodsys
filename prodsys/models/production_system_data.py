@@ -215,8 +215,8 @@ def remove_unused_queues_from_adapter(
         + [queue_ID for sink in adapter.sink_data for queue_ID in (sink.ports or [])]
         + [
             queue_ID
-            for primitive in adapter.primitive_data or []
-            for queue_ID in getattr(primitive, "storages", []) or []
+            for primitive in adapter.primitive_data
+            for queue_ID in primitive.storages
         ]
     )
     queues_to_remove = []
@@ -1216,9 +1216,8 @@ class ProductionSystemData(BaseModel):
         return schedule_to_consider
 
     def read_scenario(self, scenario_file_path: str):
-        self.scenario_data = scenario_data_module.ScenarioData.parse_file(
-            scenario_file_path
-        )
+        scenario_data = json.load(open(scenario_file_path))
+        self.scenario_data = scenario_data_module.ScenarioData.model_validate_json(scenario_data)
 
     def validate_proceses_available(self):
         required_processes = set(
@@ -1288,7 +1287,6 @@ def assert_no_redundant_locations(adapter: ProductionSystemData): #TODO:FIXME: h
     machine_locations = []
     for production_resource in get_production_resources(adapter):
         machine_locations.append(production_resource.location)
-        #machine_locations += get_location_of_locatable(adapter, production_resource)
     source_locations = []
     for source in adapter.source_data:
         source_locations += get_location_of_locatable(adapter, source)
@@ -1624,22 +1622,55 @@ def get_required_process_ids(
     Returns:
         List[str]: List of required process IDs
     """
-    required = util.flatten(
-        [
-            product.processes
-            for product in configuration.product_data
-            if not isinstance(product.processes, dict)
-        ]
+    required: List[str] = []
+    required_dict_keys: List[str] = []
+    required_dict_values: List[str] = []
+
+    for product in configuration.product_data:
+        processes = product.processes
+        if processes is None:
+            continue
+        if isinstance(processes, dict):
+            required_dict_keys.extend(processes.keys())
+            dict_values = util.flatten(list(processes.values()))
+            if dict_values:
+                required_dict_values.extend(dict_values)
+        else:
+            flattened = util.flatten(processes)
+            if flattened:
+                required.extend(flattened)
+
+    required_transport_processes = [
+        product.transport_process
+        for product in configuration.product_data
+        if product.transport_process
+    ]
+
+    primitive_transport_processes = [
+        primitive.transport_process
+        for primitive in configuration.primitive_data
+        if getattr(primitive, "transport_process", None)
+    ]
+
+    dependency_entries = getattr(configuration, "dependency_data", None)
+    if dependency_entries is None:
+        dependency_entries = getattr(configuration, "depdendency_data", []) or []
+    dependency_processes = [
+        dependency.required_process
+        for dependency in dependency_entries
+        if hasattr(dependency, "required_process") and dependency.required_process
+    ]
+
+    return list(
+        set(
+            required
+            + required_dict_keys
+            + required_dict_values
+            + required_transport_processes
+            + primitive_transport_processes
+            + dependency_processes
+        )
     )
-    required_dict_processes = util.flatten(
-        [
-            list(product.processes.keys())
-            for product in configuration.product_data
-            if isinstance(product.processes, dict)
-        ]
-    )
-    required_transport_processes = [product.transport_process for product in configuration.product_data]
-    return list(set(list(required) + list(required_dict_processes) + required_transport_processes))
 
 
 def get_available_process_ids(
@@ -2016,56 +2047,52 @@ def assert_required_processes_in_resources_available(
     Raises:
         ValueError: If specified processes contain some logical errors.
     """
+    process_map = {process.ID: process for process in configuration.process_data}
+
     available = set(
-        list(
-            util.flatten(
-                [resource.process_ids for resource in configuration.resource_data]
-            )
+        util.flatten(
+            [resource.process_ids for resource in configuration.resource_data]
         )
     )
-    required = util.flatten(
-        [
-            product.processes
-            for product in configuration.product_data
-            if not isinstance(product.processes, dict)
-        ]
-    )
-    required_dict_processes = util.flatten(
-        [
-            list(product.processes.keys())
-            for product in configuration.product_data
-            if isinstance(product.processes, dict)
-        ]
-    )
-    required = set(
-        list(required)
-        + list(required_dict_processes)
-        + [product.transport_process for product in configuration.product_data]
-    )
+
+    required_ids = set(get_required_process_ids(configuration))
+
+    state_related_process_ids: Set[str] = set()
+    for state in configuration.state_data:
+        if hasattr(state, "origin_setup") and state.origin_setup:
+            state_related_process_ids.add(state.origin_setup)
+        if hasattr(state, "target_setup") and state.target_setup:
+            state_related_process_ids.add(state.target_setup)
+        if hasattr(state, "process_id") and state.process_id:
+            state_related_process_ids.add(state.process_id)
+    required_ids.update(state_related_process_ids)
+
+    required_list = list(required_ids)
+    available_list = list(available)
 
     required_production_processes = get_production_processes_from_ids(
-        configuration, required
+        configuration, required_list
     )
     required_transport_processes = get_transport_processes_from_ids(
-        configuration, required
+        configuration, required_list
     )
     required_capability_processes = get_capability_processes_from_ids(
-        configuration, required
+        configuration, required_list
     )
     required_capability_processes += get_required_capability_processes_from_ids(
-        configuration, required
+        configuration, required_list
     )
     available_production_processes = get_production_processes_from_ids(
-        configuration, available
+        configuration, available_list
     )
     available_transport_processes = get_transport_processes_from_ids(
-        configuration, available
+        configuration, available_list
     )
     available_capability_processes = get_capability_processes_from_ids(
-        configuration, available
+        configuration, available_list
     )
     available_required_capability_processes = (
-        get_required_capability_processes_from_ids(configuration, available)
+        get_required_capability_processes_from_ids(configuration, available_list)
     )
     if available_required_capability_processes:
         raise ValueError(
@@ -2082,10 +2109,10 @@ def assert_required_processes_in_resources_available(
                 f"Compound process {compound_process.ID} contains processes that are not available in the data."
             )
     required_compound_processes = get_compound_processes_from_ids(
-        configuration, required
+        configuration, required_list
     )
     available_compound_processes = get_compound_processes_from_ids(
-        configuration, available
+        configuration, available_list
     )
 
     required_production_processes += (
@@ -2123,6 +2150,46 @@ def assert_required_processes_in_resources_available(
             configuration, available_compound_processes
         )
     )
+
+    required_capabilities: Set[str] = {
+        process.capability
+        for process in required_capability_processes
+        if getattr(process, "capability", None)
+    }
+
+    for resource in configuration.resource_data:
+        for process_id in resource.process_ids:
+            process_data = process_map.get(process_id)
+            if process_data is None:
+                raise ValueError(
+                    f"The process {process_id} assigned to resource {resource.ID} is not defined in process data."
+                )
+            capability = getattr(process_data, "capability", None)
+            if isinstance(
+                process_data, processes_data_module.CapabilityProcessData
+            ):
+                if not capability or capability not in required_capabilities:
+                    raise ValueError(
+                        f"The capability process {process_id} of resource {resource.ID} provides capability "
+                        f"{capability}, which is not required by any product."
+                    )
+                continue
+            if isinstance(
+                process_data, processes_data_module.RequiredCapabilityProcessData
+            ):
+                raise ValueError(
+                    f"Resource {resource.ID} contains required capability process {process_id}. "
+                    "Required capability processes are only allowed on products."
+                )
+            if capability:
+                if capability not in required_capabilities:
+                    raise ValueError(
+                        f"The process {process_id} of resource {resource.ID} provides capability "
+                        f"{capability}, which is not required by any product."
+                    )
+                continue
+            if process_id not in required_ids:
+                continue
 
     assert_production_processes_available(
         available_production_processes, required_production_processes

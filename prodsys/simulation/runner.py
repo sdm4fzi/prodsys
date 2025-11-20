@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import random
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -103,9 +103,9 @@ class Runner:
         self,
         production_system_data: production_system_data.ProductionSystemData,
         warm_up_cutoff: bool = False,
-        cut_off_method: Literal[
+        cut_off_method: Optional[Literal[
             "mser5", "threshold_stabilization", "static_ratio"
-        ] = "mser5",
+        ]] = None,
     ):
         """"""
         self.adapter = production_system_data
@@ -209,6 +209,7 @@ class Runner:
                 resource_factory=self.resource_factory,
                 primitive_factory=self.dependency_factory,
                 sink_factory=self.sink_factory,
+                conwip=self.adapter.conwip_number,
             )
             self.source_factory.create_sources(self.adapter)
             self.primitive_factory = primitive_factory.PrimitiveFactory(
@@ -331,7 +332,7 @@ class Runner:
         kpi_visualization.plot_transport_utilization_over_time(
             p, transport_resource_ids
         )
-        kpi_visualization.plot_util_WIP_resource(p)
+        kpi_visualization.plot_WIP_resource_boxplots(p)
         kpi_visualization.plot_oee(p)
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:

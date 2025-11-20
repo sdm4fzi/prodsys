@@ -102,6 +102,8 @@ class DependencyProcessHandler:
                 )
                 transport_state.process = None
 
+            self.update_location(target, location=target.get_location())
+
             # product.product_router.mark_finished_request(process_request)
         process_request.completed.succeed()
         self.resource.dependency_info.log_start_dependency(
@@ -211,6 +213,8 @@ class DependencyProcessHandler:
             target,
             state.StateTypeEnum.transport,
             empty_transport=empty_transport,
+            initial_transport_step=initial_transport_step,
+            last_transport_step=last_transport_step,
         )
         target_location = self.get_target_location(
             target, empty_transport, last_transport_step=last_transport_step

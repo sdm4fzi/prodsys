@@ -111,7 +111,7 @@ class Source:
                 if inter_arrival_time <= 0:
                     break
             yield self.env.timeout(inter_arrival_time)
-            if self.conwip is not None and len(self.product_factory.products) >= self.conwip:
+            if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
                 continue
             if self.schedule:
                 product_index = int(self.schedule[self.release_index].product.split("_")[-1])
@@ -129,7 +129,6 @@ class Source:
                 )
             # TODO: this logic should be moved to the interaction handler!
             for queue in self.ports:
-                yield from queue.reserve()
                 yield from queue.put(product.data)
                 product.update_location(queue)
             self.env.process(self.product_processor.process_product(product))

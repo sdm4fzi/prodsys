@@ -150,8 +150,8 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
     distance=100
-    min_node_distance = max(0.1*tablesize, 20) #TODO: adaptive distances
-    max_node_distance = 0.2*tablesize
+    min_node_distance = distance #max(0.1*tablesize, 20) #TODO: adaptive distances
+    max_node_distance = distance #0.2*tablesize
     node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 

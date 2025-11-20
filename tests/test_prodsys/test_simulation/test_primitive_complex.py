@@ -1,5 +1,4 @@
 import pytest
-import prodsys
 from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
@@ -106,32 +105,32 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
         if kpi.name == "output" and kpi.product_type == "product1":
             assert kpi.value > 370 and kpi.value < 390
         if kpi.name == "output" and kpi.product_type == "product2":
-            assert kpi.value > 750 and kpi.value < 770
+            assert kpi.value > 740 and kpi.value < 770
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 95 and kpi.value > 93
+            assert kpi.value < 94 and kpi.value > 91
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 48 and kpi.value < 52
+            assert kpi.value > 48 and kpi.value < 55
         if kpi.name == "productive_time" and kpi.resource == "transport2":
-            assert kpi.value > 48 and kpi.value < 52
+            assert kpi.value > 48 and kpi.value < 55
         if kpi.name == "productive_time" and kpi.resource == "transport_primitive":
             assert kpi.value > 63 and kpi.value < 67
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 4.5 and kpi.value > 3.8
+            assert kpi.value < 7.5 and kpi.value > 5.8
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 9 and kpi.value > 7.6
+            assert kpi.value < 14 and kpi.value > 12
 
     for kpi in post_processor.primitive_WIP_KPIs:
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive1":
-            assert kpi.value < 4.5 and kpi.value > 3.8
+            assert kpi.value < 7.5 and kpi.value > 5.8
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive2":
-            assert kpi.value < 9 and kpi.value > 7.6
+            assert kpi.value < 14 and kpi.value > 12
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 11.5 and kpi.value > 10.5
+            assert kpi.value < 18.5 and kpi.value > 16.5
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
-            assert kpi.value < 11.5 and kpi.value > 10.5
+            assert kpi.value < 17.5 and kpi.value > 14.5

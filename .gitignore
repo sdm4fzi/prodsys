@@ -32,3 +32,7 @@ plots/*
 
 examples/tutorials/plots/
 Refactorings.md
+
+.DS_Store
+example.py
+buggy_example.py

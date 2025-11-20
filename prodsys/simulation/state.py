@@ -60,6 +60,8 @@ class StateTypeEnum(str, Enum):
     store = "Store"
     charging = "Charging"
     dependency = "Dependency"
+    loading = "Loading"
+    unloading = "Unloading"
 
 
 class StateInfo:
@@ -90,6 +92,8 @@ class StateInfo:
         _origin_ID: str = "",
         _dependency_ID: str = "",
         _empty_transport: Optional[bool] = None,
+        _initial_transport_step: bool = False,
+        _last_transport_step: bool = False,
     ):
         self.ID = ID
         self.resource_ID = resource_ID
@@ -102,13 +106,17 @@ class StateInfo:
         self._origin_ID = _origin_ID
         self._dependency_ID = _dependency_ID
         self._empty_transport = _empty_transport
-
+        self._initial_transport_step = _initial_transport_step
+        self._last_transport_step = _last_transport_step
+        
     def log_transport(
         self,
         origin: Optional[Locatable],
         target: Locatable,
         state_type: StateTypeEnum,
         empty_transport: bool,
+        initial_transport_step: bool,
+        last_transport_step: bool,
     ):
         """
         Logs the target location of a transport state.
@@ -126,6 +134,8 @@ class StateInfo:
         self._target_ID = target.data.ID
         self._state_type = state_type
         self._empty_transport = empty_transport
+        self._initial_transport_step = initial_transport_step
+        self._last_transport_step = last_transport_step
 
     def log_product(self, _product: product.Product, state_type: StateTypeEnum):
         """

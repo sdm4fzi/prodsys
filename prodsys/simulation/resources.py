@@ -124,13 +124,27 @@ class Resource(resource.Resource):
         """
         if not self.current_setup and not self.reserved_setup:
             return self.capacity
-        elif (
+        
+        # Determine which setup to use for capacity calculation
+        setup_to_check = None
+        if (
             self.reserved_setup
+            and self.current_setup
             and self.current_setup.data.ID != self.reserved_setup.data.ID
         ):
-            current_setup_ID = self.reserved_setup.data.ID
+            setup_to_check = self.reserved_setup
+        elif self.reserved_setup:
+            setup_to_check = self.reserved_setup
         elif self.current_setup:
-            current_setup_ID = self.current_setup.data.ID
+            setup_to_check = self.current_setup
+        
+        # If setup is a ProcessModelProcess, it doesn't have production states
+        # so return base capacity instead
+        from prodsys.simulation.process import ProcessModelProcess
+        if setup_to_check and isinstance(setup_to_check, ProcessModelProcess):
+            return self.capacity
+        
+        current_setup_ID = setup_to_check.data.ID
         length = len(
             [
                 state
@@ -138,7 +152,9 @@ class Resource(resource.Resource):
                 if state.data.ID == current_setup_ID
             ]
         )
-        return length
+        # If no production states found for the setup, fall back to base capacity
+        # This can happen for process models or other processes without explicit production states
+        return length if length > 0 else self.capacity
 
     def wait_for_free_process(
         self, process: PROCESS_UNION

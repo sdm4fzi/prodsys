@@ -23,7 +23,7 @@ class Queue:
       - on_space: fired when space frees up (unblocks putters/reservers)
     """
 
-    def __init__(self, env: sim.Environment, data):
+    def __init__(self, env: sim.Environment, data: port_data.QueueData):
         self.env: sim.Environment = env
         self.data = data
         self.capacity: float = float("inf") if getattr(data, "capacity", 0) == 0 else int(data.capacity)
@@ -48,15 +48,19 @@ class Queue:
         setattr(self, which, self.env.event())
 
     # ---- API ----------------------------------------------------------------
-    def reserve(self) -> Generator:
+
+    def free_space(self) -> int:
+        return self.capacity - self._pending_put - len(self.items)
+
+    @property
+    def is_full(self) -> bool:
+        return self._is_full()
+
+
+    def reserve(self):
         """
-        Reserve a slot for a future put. Waits until space is available.
-        Usage: yield queue.reserve()
+        Reserve a slot for a future put. 
         """
-        while self._is_full():
-            # capture current event ref so we don't get swapped underneath
-            ev = self.on_space
-            yield ev
         self._pending_put += 1
 
     def put(self, item) -> Generator:
@@ -94,6 +98,44 @@ class Queue:
         if self.capacity != float("inf"):
             self._notify("on_space")
 
+        return item
+    
+    def get_and_reserve_return(self, item_id: str):
+        """
+        Get an item AND immediately reserve a slot for its return.
+        This minimizes race conditions for INPUT_OUTPUT queues.
+        
+        For INPUT_OUTPUT queues with capacity 1:
+        - Item is in queue (full)
+        - Get removes item (notifies on_space, wakes waiting processes)
+        - Immediately reserve return slot
+        - If reservation happens fast enough, queue appears full again (reserved),
+          preventing other items from being put
+        
+        Args:
+            item_id (str): The ID of the item to get.
+            
+        Yields:
+            Generator: Yields until item is retrieved and return slot is reserved.
+        """
+        # Wait for item to exist
+        while item_id not in self.items:
+            ev = self.on_item
+            yield ev
+        
+        # Remove item (frees space)
+        item = self.items.pop(item_id)
+        
+        # CRITICAL: Reserve BEFORE notifying on_space to minimize race window
+        # After removing item, space is available. Reserve it immediately.
+        # This prevents other processes from grabbing the freed space between
+        # the get() and reserve() operations.
+        self.reserve()
+        
+        # Now notify on_space - but queue is effectively full again (reserved)
+        if self.capacity != float("inf"):
+            self._notify("on_space")
+        
         return item
 
     def get_location(self) -> List[float]:
@@ -158,11 +200,11 @@ class StorePort(Queue):
         """
         return self.location
     
-    def reserve(self) -> Generator:
+    def reserve(self):
         """
         Reserves a spot in the queue for a product to be put into.
 
         Raises:
             RuntimeError: If the queue is full.
         """
-        yield from self.store.reserve()
+        self.store.reserve()

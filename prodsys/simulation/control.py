@@ -4,10 +4,13 @@ from collections.abc import Callable
 from typing import List, Generator, TYPE_CHECKING, Literal, Optional, Union
 
 from simpy import events
+import simpy
 import logging
 
 from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
+from prodsys.models import port_data
+
 
 from prodsys.simulation import (
     sim,
@@ -16,8 +19,10 @@ from prodsys.simulation import (
 from prodsys.simulation.process_handlers.production_process_handler import ProductionProcessHandler
 from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler, ConveyorTransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
-from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
-
+from prodsys.simulation.process_handlers.system_process_model_process_handler import SystemProcessModelHandler
+from prodsys.simulation.process_handlers.resource_process_model_process_handler import ResourceProcessModelHandler
+from prodsys.models.resource_data import ResourceType
+from prodsys.simulation import request as request_module
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -86,6 +91,14 @@ class Controller:
         if not self.state_changed.triggered:
             self.state_changed.succeed()
 
+    def free_up_queue_check(self) -> Generator:
+        # generator that runs until one output queue is free again, getting to know it from a get from the output queue
+        output_queues = [port for port in self.resource.ports if port.data.interface_type == port_data.PortInterfaceType.OUTPUT]
+        queue_get_events = [queue.on_space for queue in output_queues]
+        yield simpy.AnyOf(self.env, queue_get_events)
+        if not self.state_changed.triggered:
+            self.state_changed.succeed()
+
     def control_loop(self) -> Generator:
         """
         The control loop is the main process of the controller. It has to run indefinetely.
@@ -104,14 +117,70 @@ class Controller:
                 or not self.requests
             ):
                 continue
+
             self.control_policy(self.requests)
-            selected_request = self.requests.pop(0)
+            def is_request_feasible(request: request_module.Request) -> bool:
+                # Check transport requests for target queue availability
+                if request.request_type == request_module.RequestType.TRANSPORT:
+                    if request.target_queue.is_full:
+                        return False
+                # Check production requests for INPUT_OUTPUT queue deadlock prevention
+                elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
+                    # For INPUT_OUTPUT queues, check if output space is available
+                    # If origin == target (same INPUT_OUTPUT queue), check if item is in queue
+                    if request.origin_queue == request.target_queue:
+                        # If item is in queue, we can remove it then put it back
+                        item_id = request.entity.data.ID
+                        if item_id in request.origin_queue.items:
+                            # Item is in queue - feasible (we'll remove then put back)
+                            return True
+                        else:
+                            raise ValueError(f"Item {item_id} not in queue {request.origin_queue.data.ID}")
+                    else:
+                        # Separate queues - first check if item is in origin queue
+                        item_id = request.entity.data.ID
+                        is_in_origin = item_id in request.origin_queue.items
+                        if not is_in_origin:
+                            raise ValueError(f"Item {item_id} not in origin queue {request.origin_queue.data.ID}")
+                        # Item is in origin queue - check if target has space
+                        if request.target_queue.is_full:
+                            return False
+                return True
+
+            def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
+                for i, request in enumerate(requests):
+                    if is_request_feasible(request):
+                        self.requests.remove(request)
+                        return request# If request becomes infeasible (queue full), reroute it back to router
+                    # This allows it to be retried later when space becomes available
+                    # Only reroute transport requests - production requests should have been validated
+                    # before routing and if item is in INPUT_OUTPUT queue, it should be processable
+                    if request.request_type == request_module.RequestType.TRANSPORT:
+                        self.requests.remove(request)
+                        request.requesting_item.router.request_handler.reroute_request(request)
+                        # Trigger router to check for new routing opportunities
+                        if not request.requesting_item.router.got_requested.triggered:
+                            request.requesting_item.router.got_requested.succeed()
+                return None
+            
+            selected_request = get_feasible_request(self.requests)
+            if not selected_request:
+                # If there are requests waiting on full output queues, wait for space
+                self.env.process(self.free_up_queue_check())
+                continue
+                            
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
                 if not lot_request:
-                    self.requests.insert(0, selected_request)
+                    # Can't form lot yet - move to end and try next request
+                    self.requests.append(selected_request)
                     continue
                 selected_request = lot_request
+                
+            # Reserve output queue for transport requests (production requests reserve in their handler)
+            if selected_request.request_type == request_module.RequestType.TRANSPORT:
+                self.reserve_output_queue(selected_request)
+            
             self.reserved_requests_count += selected_request.capacity_required
             # For dependency requests, immediately bind the resource to block other processes
             if selected_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
@@ -121,6 +190,20 @@ class Controller:
             self.env.process(process_handler.handle_request(selected_request))
             if not self.resource.full and self.requests:
                 self.state_changed.succeed()
+
+    def reserve_output_queue(self, process_request: request_module.Request) -> Generator:
+        """
+        Reserve the output queue for the process.
+
+        Args:
+            process_request (request_module.Request): The request to reserve the output queue for.
+        """
+        if process_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
+            return
+        for entity in process_request.get_atomic_entities():
+            if process_request.target_queue.is_full:
+                raise ValueError(f"Target queue {process_request.target_queue.data.ID} is full for request {process_request.completed}")
+            process_request.target_queue.reserve()
 
     def _should_form_lot(self, process_request: request_module.Request) -> bool:
         return self.lot_handler.lot_required(process_request)
@@ -156,7 +239,7 @@ class Controller:
 
 def get_requets_handler(
     request: request_module.Request,
-) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, ProcessModelHandler]:
+) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, SystemProcessModelHandler, ResourceProcessModelHandler]:
     """
     Get the process handler for a given process.
 
@@ -182,7 +265,11 @@ def get_requets_handler(
     ):
         return DependencyProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.PROCESS_MODEL:
-        return ProcessModelHandler(request.requesting_item.env)
+        # Route to SystemProcessModelHandler for system resources, ResourceProcessModelHandler for regular resources
+        if request.resource.data.resource_type == ResourceType.SYSTEM:
+            return SystemProcessModelHandler(request.requesting_item.env)
+        else:
+            return ResourceProcessModelHandler(request.requesting_item.env)
     else:
         raise ValueError(f"Unknown process type: {type(process)}")
 
@@ -219,13 +306,8 @@ def SPT_control_policy(requests: List[request_module.Request]) -> None:
     requests.sort(key=lambda x: x.process.get_expected_process_time())
 
 
-def get_location(locatable: Locatable, mode: Literal["origin", "target"]):
-    if not isinstance(locatable.data, (ResourceData, StoreData)):
-        return locatable.get_location()
-    if mode == "target":
-        return locatable.get_location(interaction="input")
-    else:
-        return locatable.get_location(interaction="output")
+def get_location(locatable: Locatable) -> List[float]:
+    return locatable.get_location()
 
 
 def SPT_transport_control_policy(
@@ -237,10 +319,19 @@ def SPT_transport_control_policy(
     Args:
         requests (List[request.Request]): The list of requests.
     """
-    requests.sort(
-        key=lambda x: x.process.get_expected_process_time(
-            get_location(x.origin, "origin"), get_location(x.target, "target")
+    # for request in requests:
+    #     if request.origin_queue is None or request.target_queue is None:
+    #         raise ValueError(f"Origin queue or target queue is None for request {request.completed}")
+
+    def get_expected_time(request: request_module.Request) -> float:
+        if request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+            return 0.1
+        
+        return request.process.get_expected_process_time(
+            get_location(request.origin_queue), get_location(request.target_queue)
         )
+    requests.sort(
+        key=get_expected_time
     )
 
 
@@ -256,9 +347,9 @@ def nearest_origin_and_longest_target_queues_transport_control_policy(
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")
+                get_location(x.resource), get_location(x.origin_queue)
             ),
-            -x.target.get_output_queue_length(),
+            -x.target_queue.free_space(),
         )
     )
 
@@ -276,9 +367,9 @@ def nearest_origin_and_shortest_target_input_queues_transport_control_policy(
     requests.sort(
         key=lambda x: (
             x.process.get_expected_process_time(
-                get_location(x.resource), get_location(x.origin, mode="origin")
+                get_location(x.resource), get_location(x.origin_queue)
             ),
-            x.target.get_input_queue_length(),
+            x.target_queue.free_space(),
         )
     )
 
@@ -296,112 +387,6 @@ def agent_control_policy(
     """
     gym_env.interrupt_simulation_event.succeed()
 
-
-class BatchController(Controller):
-    """
-    A batch controller is responsible for controlling the batch processes of a production resource. The controller is requested by products requiring processes. The controller decides has a control policy that determines with which sequence requests are processed.
-    """
-
-    def control_loop(self) -> Generator:
-        """
-        The control loop is the main process of the controller. It has to run indefinetely.
-
-        The logic is the control loop of a production resource is the following:
-
-        1. Wait until a request is made or a process is finished.
-        2. If a request is made, add it to the list of requests.
-        3. If a process is finished, remove it from the list of running processes.
-        4. If the resource is full or there are not enough requests for a batch, go to 1.
-        5. Sort the queue according to the control policy.
-        6. Start the next process. Go to 1.
-
-        Yields:
-            Generator: The generator yields when a request is made or a process is finished.
-        """
-        while True:
-            if self.resource.requires_charging:
-                yield self.env.process(self.resource.charge())
-            yield self.state_changed
-            self.state_changed = events.Event(self.env)
-            if (
-                self.resource.full 
-                or self.resource.in_setup
-                or self.resource.bound
-                or not self.requests
-            ):
-                continue
-            if self.resource.get_free_capacity() < self.resource.batch_size:
-                continue
-            self.control_policy(self.requests)
-            selected_request = self.requests.pop(0)
-            batch_requests = self.get_batch_requests(
-                selected_request
-            )
-
-            # TODO: Adjust BatchController to start all processes at once and stop otherwise!
-            if len(batch_requests) < self.resource.batch_size:
-                self.requests.extend(batch_requests)
-                continue
-
-            self.reserved_requests_count += len(batch_requests)
-            self.resource.update_full()
-
-            process_handlers = [get_requets_handler(request) for request in batch_requests]
-            batch_process_time = self.get_batch_process_time(
-                selected_request
-            )
-            for process_handler, request in zip(process_handlers, batch_requests):
-                process_handler.set_process_time(
-                    batch_process_time
-                )
-                self.env.process(
-                    process_handler.handle_request(request)
-                )
-
-    def get_batch_requests(
-            self, selected_request: request_module.Request
-    ) -> List[request_module.Request]:
-        """
-        Get the batch requests for a given request which have the same process.
-
-        Args:
-            request (request_module.Request): The request to get the batch requests for.
-
-        Returns:
-            List[request_module.Request]: The batch requests for the given request.
-        """
-        batch_requests = [selected_request]
-        for req in list(self.requests):
-            if len(batch_requests) >= self.resource.batch_size:
-                break
-
-            if (
-                req.process == selected_request.process
-                and req.get_entity().data.type == selected_request.get_entity().data.type
-            ):
-                batch_requests.append(req)
-                self.requests.remove(req)
-
-        return batch_requests
-
-    def get_batch_process_time(
-            self, request: request_module.Request
-    ) -> float:
-        """
-        Get the expected process time for a batch of requests.
-
-        Args:
-            request (request_module.Request): The request to get the process time for.
-
-        Returns:
-            float: The expected process time for the batch.
-        """
-        if not request.process:
-            raise ValueError("Request has no process.")
-        return request.process.time_model.get_next_time(
-        )
-
-
 def scheduled_control_policy(
     product_sequence_indices: dict[str, str], fallback_policy: Callable, requests: List[request_module.Request]
 ) -> None:
@@ -418,8 +403,8 @@ def scheduled_control_policy(
     non_scheduled_products = []
     request_sequence_indices = {}
     for request_instance in requests:
-        product_id = request_instance.product.product_data.ID
-        if not product_id in product_sequence_indices:
+        product_id = request_instance.entity.data.ID
+        if product_id not in product_sequence_indices:
             non_scheduled_products.append(request_instance)
             continue
         request_priority = product_sequence_indices[product_id]
@@ -428,7 +413,7 @@ def scheduled_control_policy(
     if non_scheduled_products:
         request_list_copy = requests[::]
         fallback_policy(request_list_copy)
-        if request_list_copy[0].product.product_data.ID not in product_sequence_indices:
+        if request_list_copy[0].entity.data.ID not in product_sequence_indices:
             fallback_policy(requests)
             return
 
@@ -439,4 +424,3 @@ def scheduled_control_policy(
 
 # TODO: add a Controller which starts processes with delays...
 
-from prodsys.simulation import request as request_module

@@ -31,11 +31,9 @@ class ControllerEnum(str, Enum):
 
     - PipelineController: Pipeline controller.
     - TransportController: Transport controller.
-    - BatchController: Batch controller.
     """
 
     PipelineController = "PipelineController"
-    BatchController = "BatchController"
 
 
 class ResourceControlPolicy(str, Enum):
@@ -72,6 +70,18 @@ class TransportControlPolicy(str, Enum):
     )
 
 
+class ResourceType(str, Enum):
+    """
+    Enum that represents the type of resource.
+
+    - SYSTEM: System resource.
+    - RESOURCE: Resource.
+    """
+
+    SYSTEM = "system"
+    RESOURCE = "resource"
+
+
 class ResourceData(CoreAsset, Locatable):
     """
     Class that represents resource data. Base class for ResourceData and ResourceData.
@@ -90,7 +100,7 @@ class ResourceData(CoreAsset, Locatable):
         can_move (Optional[bool], optional): Whether the resource can move. Defaults to None (if None, the can_move attribute is inferred from the processes).
         dependency_ids (List[str]): List of dependency IDs that are required by the resource.
     """
-
+    resource_type: ResourceType = ResourceType.RESOURCE
     process_ids: List[str]
 
     control_policy: Union[ResourceControlPolicy, TransportControlPolicy]
@@ -249,6 +259,7 @@ class SystemResourceData(ResourceData):
         can_move (Optional[bool], optional): Whether the system resource can move. Defaults to None.
         dependency_ids (List[str]): List of dependency IDs that are required by the system resource.
     """
+    resource_type: ResourceType = ResourceType.SYSTEM
     subresource_ids: List[str]
 
     model_config = ConfigDict(

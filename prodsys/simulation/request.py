@@ -181,7 +181,7 @@ class Request:
             cached_request (TransportResquest): The cached request with routes.
         """
         if hasattr(cached_request, "route") and hasattr(self, "route"):
-            self.route = cached_request.route
+            self.set_route(route=cached_request.get_route())
 
     def set_route(self, route: List[Locatable]) -> None:
         """
@@ -190,8 +190,7 @@ class Request:
         Args:
             route (List[Locatable]): The route as a list of locations.
         """
-        if hasattr(self, "route"):
-            self.route = route
+        self.route = route
 
     def get_route(self) -> List[Locatable]:
         """
@@ -200,7 +199,7 @@ class Request:
         Returns:
             List[Locatable]: The route as a list of locations.
         """
-        if hasattr(self, "route"):
+        if self.route:
             return self.route
         return []
 

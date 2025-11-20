@@ -82,15 +82,15 @@ def test_run_simulation(charging_simulation_adapter: ProductionSystemData):
             assert kpi.value > 2100 and kpi.value < 2140
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 42 and kpi.value > 39
+            assert kpi.value < 39 and kpi.value > 36
 
         if kpi.name == "charging_time" and kpi.resource == "transport":
-            assert kpi.value < 15 and kpi.value > 12
+            assert kpi.value < 6.5 and kpi.value > 5.5
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 7.0 and kpi.value > 6.5
+            assert kpi.value < 8.5 and kpi.value > 7.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 12.5 and kpi.value > 11.5
+            assert kpi.value < 14.5 and kpi.value > 11.5

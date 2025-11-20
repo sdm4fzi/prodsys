@@ -7,7 +7,7 @@ import logging
 
 from prodsys.simulation.entities.entity import Entity, EntityType
 from prodsys.simulation.dependency import DependencyInfo
-
+from prodsys.simulation.product_info import ProductInfo
 
 
 from simpy import events
@@ -67,6 +67,7 @@ class Primitive(Entity):
         self.finished_process = events.Event(self.env)
         # self.primitive_info = PrimitiveInfo()
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
+        self.info = ProductInfo(product_ID=self.data.ID)
 
     
     @property

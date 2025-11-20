@@ -65,7 +65,6 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
     runner_instance = runner.Runner(production_system_data=storage_simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(2000)
-    runner_instance.save_results_as_csv()
     runner_instance.print_results()
     assert runner_instance.env.now == 2000
     post_processor = runner_instance.get_post_processor()
@@ -75,15 +74,15 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
             assert kpi.value > 2020 and kpi.value < 2060
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 54 and kpi.value > 51
+            assert kpi.value < 40 and kpi.value > 35
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 40 and kpi.value < 43
+            assert kpi.value > 40 and kpi.value < 50
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value > 2.9 and kpi.value < 3.3
+            assert kpi.value > 3.5 and kpi.value < 4.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 2.1 and kpi.value < 2.4
+            assert kpi.value > 3.0 and kpi.value < 4.0

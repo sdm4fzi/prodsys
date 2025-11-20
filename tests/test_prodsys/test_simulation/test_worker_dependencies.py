@@ -395,6 +395,7 @@ def test_run_simulation_both_dependencies(
     )
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 1000
     post_processor = runner_instance.get_post_processor()
 
@@ -404,10 +405,10 @@ def test_run_simulation_both_dependencies(
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
             product1_output = kpi.value
-            assert kpi.value > 500 and kpi.value < 600
+            assert kpi.value > 750 and kpi.value < 850
         if kpi.name == "output" and kpi.product_type == "product2":
             product2_output = kpi.value
-            assert kpi.value > 200 and kpi.value < 300
+            assert kpi.value > 300 and kpi.value < 400
 
     # Verify outputs are reasonable
     assert product1_output > 0
@@ -430,10 +431,10 @@ def test_run_simulation_both_dependencies(
             assert kpi.value > 95 and kpi.value <= 100
         if kpi.name == "productive_time" and kpi.resource == "machine":
             machine_pr_found = True
-            assert kpi.value > 35 and kpi.value < 50
+            assert kpi.value > 75 and kpi.value < 90
         if kpi.name == "productive_time" and kpi.resource == "machine2":
             machine2_pr_found = True
-            assert kpi.value > 58 and kpi.value < 70
+            assert kpi.value > 75 and kpi.value < 90
 
     assert worker_pr_found, "Worker productive time KPI not found"
     assert worker2_dp_found, "Worker2 dependency time KPI not found"
@@ -447,10 +448,10 @@ def test_run_simulation_both_dependencies(
             total_wip += kpi.value
             assert kpi.value > 0
 
-    assert total_wip > 650 and total_wip < 750
+    assert total_wip > 200 and total_wip < 300
 
     # Check throughput time
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 200 and kpi.value < 250
+            assert kpi.value > 60 and kpi.value < 90
 
