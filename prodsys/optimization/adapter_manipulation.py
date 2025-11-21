@@ -368,8 +368,6 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     else:
         control_policy = random.choice(transport_controllers)
 
-    possible_processes = get_possible_transport_processes_IDs(adapter_object)
-    transport_process = random.choice(possible_processes)
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for resource in adapters.get_production_resources(adapter_object):
         if resource.location in possible_positions:
@@ -380,7 +378,9 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     possible_processes = [
         process_id
         for process_id in get_possible_transport_processes_IDs(adapter_object)
-        if process_id in required_ids
+        if process_id in required_ids or (
+            process.capability in required_ids for process in adapter_object.process_data if process.ID == process_id
+        )
     ]
     if not possible_processes:
         return False
@@ -501,24 +501,26 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         path = []  # No path found
                     for i in range(len(path)-1):
                         new_links.append((path[i], path[i+1]))
-
+        
         new_transport_process = deepcopy(transport_process_data)
-        new_transport_process.ID = f"ConveyorProcess_{uuid1().hex}"
+        new_tp_id = f"ConveyorProcess_{uuid1().hex}"
+        new_transport_process.ID = new_tp_id
         new_transport_process.capability = transport_process_data.capability
         new_transport_process.links = new_links
         adapter_object.process_data.append(new_transport_process)
-        adapter_object.resource_data.append(
-            resource_data.ResourceData(
+        new_transport_resource = resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
                 capacity=2, #TODO: choose capacity based on process data/capacity per meter
-                location=machine_location,
+                location=(0,0),
                 controller=resource_data.ControllerEnum.PipelineController,
                 control_policy=control_policy,
                 process_ids=[new_transport_process.ID],
                 can_move=False,
-            ))
-
+            )
+        adapter_object.resource_data.append(new_transport_resource)
+    if not new_transport_process.ID == new_transport_resource.process_ids[0]:
+        print("Transport process and resource are not correctly linked.")
     add_default_queues_to_resources(adapter_object, reset=False)
     return True
 
@@ -937,8 +939,8 @@ def get_random_transport_capacity(
 
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
-    node_link_generation.generate_and_apply_network(adapter_object)
     sync_resource_dependencies(adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return adapter_object
 
 
@@ -1096,7 +1098,7 @@ def get_random_configuration_asserted(
         if adapter_object:
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1 == 0:
+        if invalid_configuration_counter % 1 == 0: #
             logging.info(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )
@@ -1161,7 +1163,7 @@ def random_configuration_with_initial_solution(
             sync_resource_dependencies(adapter_object)
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1000 == 0:
+        if invalid_configuration_counter % 50 == 0:
             logging.warning(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )

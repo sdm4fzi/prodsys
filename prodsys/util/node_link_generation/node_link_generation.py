@@ -180,16 +180,16 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
 
     return G
 
-def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph):
+def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
 
     #all_locations = get_all_locations(productionsystem)
     #all_relevant_resources = [prodres.ID for prodres in get_production_resources(productionsystem)]
     #all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
     #all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
 
-    all_locations = [(prodres.ID, prodres.location) for prodres in get_production_resources(productionsystem)]
-    all_locations.extend([(sink.ID, sink.location) for sink in productionsystem.sink_data])
-    all_locations.extend([(source.ID, source.location) for source in productionsystem.source_data])
+    all_locations = [(prodres.ID, prodres.location) for prodres in get_production_resources(adapter)]
+    all_locations.extend([(sink.ID, sink.location) for sink in adapter.sink_data])
+    all_locations.extend([(source.ID, source.location) for source in adapter.source_data])
 
     # Build a lookup: location -> list of resources
     location_to_resources = {}
@@ -238,24 +238,24 @@ def convert_nx_to_prodsys(productionsystem: production_system_data, G: nx.Graph)
 
     return new_nodes, new_links
 
-def apply_nodes_links(productionsystem: production_system_data, new_nodes, new_links) -> None:
+def apply_nodes_links(adapter: production_system_data, new_nodes, new_links) -> None:
     # Replace node_data in the Prodocutionsystem
-    productionsystem.node_data = []
+    adapter.node_data = []
     for node in new_nodes:
-        productionsystem.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
+        adapter.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
 
     # Replace links inside LinkTransportProcesses in the Productionsystem
-    for LinkTransportProcess in productionsystem.process_data:
+    for LinkTransportProcess in adapter.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links = new_links
 
 
-def generate_and_apply_network(productionsystem: production_system_data) -> None:
-    G = generator(productionsystem)
-    new_nodes, new_links = convert_nx_to_prodsys(productionsystem, G)
-    apply_nodes_links(productionsystem, new_nodes, new_links)
+def generate_and_apply_network(adapter: production_system_data) -> None:
+    G = generator(adapter)
+    new_nodes, new_links = convert_nx_to_prodsys(adapter, G)
+    apply_nodes_links(adapter, new_nodes, new_links)
 
-def get_new_links(productionsystem: production_system_data) -> List[Tuple[str, str]]:
-    G = generator(productionsystem)
-    _, new_links = convert_nx_to_prodsys(productionsystem, G)
+def get_new_links(adapter: production_system_data) -> List[Tuple[str, str]]:
+    G = generator(adapter)
+    _, new_links = convert_nx_to_prodsys(adapter, G)
     return new_links
