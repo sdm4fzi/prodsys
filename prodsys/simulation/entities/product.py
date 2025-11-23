@@ -9,10 +9,10 @@ from prodsys.models.source_data import RoutingHeuristic
 
 
 from prodsys.models import product_data
-
+from prodsys.simulation.dependency import DependencyInfo
 from prodsys.simulation.entities.entity import Entity, EntityType
-
-
+from simpy import events
+from prodsys.simulation import resources
 if TYPE_CHECKING:
     from prodsys.simulation.dependency import DependedEntity, Dependency
     from prodsys.simulation import (
@@ -53,6 +53,7 @@ class Product(Entity):
         routing_heuristic: RoutingHeuristic,
         info: product_info.ProductInfo,
         dependencies: Optional[List[Dependency]] = None,
+        no_transport_to_sink: bool = False,
     ):
         self.env = env
         self.data = data
@@ -63,11 +64,13 @@ class Product(Entity):
         self.info = info
         self.dependencies: Optional[List[Dependency]] = dependencies
         self.depended_entities: List[DependedEntity] = []
-
         self.current_locatable: locatable.Locatable = None
         self.current_process: Optional[process.PROCESS_UNION] = None
-        
+        self.no_transport_to_sink = no_transport_to_sink
         self.executed_production_processes: List = []
+        self.got_free = events.Event(self.env)
+        self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
+        self.bound = False
 
     @property
     def type(self) -> EntityType:
@@ -86,5 +89,39 @@ class Product(Entity):
         """
         self.current_locatable = locatable
 
+    def bind(self, dependant: Union[Product, resources.Resource], dependency: Dependency) -> None:
+                """
+                Reserves the product object.
+                """
+                if self.bound:
+                    raise Exception(
+                        f"Product {self.data.ID} is already bound. Cannot bind again."
+                    )
+                before = self.bound
+                self.bound = True
+                logger.debug(f"[Product.bind] id={id(self)} pid={self.data.ID} before={before} after={self.bound} "
+                            f"dep={getattr(dependant, 'data', None) and dependant.data.ID}")
+                self.current_dependant = dependant
+                dependant.depended_entities.append(self)
+                self.dependency_info.log_start_dependency(
+                    event_time=self.env.now,
+                    requesting_item_id=dependant.data.ID if dependant else None,
+                    dependency_id=dependency.data.ID,
+                )
+           
 
+    def release(self):
+        """
+        Releases the auxiliary from the product after storage of the auxiliary.
+        """
+        self.dependency_info.log_end_dependency(
+            event_time=self.env.now,
+            requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
+            dependency_id=self.data.ID,
+        )
+        self.current_dependant = None
+        self.bound = False
+        self.got_free.succeed()
+        self.got_free = events.Event(self.env)
+        
 from prodsys.simulation import process

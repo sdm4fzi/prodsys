@@ -17,7 +17,9 @@ from prodsys.simulation.process_handlers.production_process_handler import Produ
 from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
 from prodsys.simulation.process_handlers.process_model_process_handler import ProcessModelHandler
-
+from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
+from prodsys.simulation.request import Request
+from prodsys.simulation.entities.entity import Entity
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -28,7 +30,7 @@ if TYPE_CHECKING:
     from prodsys.control import sequencing_control_env
     from prodsys.simulation.locatable import Locatable
     from prodsys.simulation.lot_handler import LotHandler
-
+    
 logger = logging.getLogger(__name__)
 
 
@@ -152,7 +154,20 @@ class Controller:
         self.resource.update_full()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
+            
+    def mark_finished_process_no_sink_transport(self, process_request: Request, entity: Entity) -> None:
+        """
+        Mark the process as finished, but no transport to sink required.
 
+        Args:
+            process_request (Request): The request that is being processed.
+        """
+        
+        self.num_running_processes -= process_request.capacity_required
+        self.resource.update_full()
+        entity.no_transport_to_sink = True
+        if not self.state_changed.triggered:
+            self.state_changed.succeed()
 
 def get_requets_handler(
     request: request_module.Request,
@@ -167,6 +182,12 @@ def get_requets_handler(
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
     if (
+        request.request_type == request_module.RequestType.PRODUCTION
+        and hasattr(request.process, "data")
+        and getattr(request.process.data, "product_disassembly_dict", None) 
+    ):
+        return DisassemblyProcessHandler(request.requesting_item.env) 
+    elif (
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK
     ):

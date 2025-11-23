@@ -173,7 +173,7 @@ class Runner:
                 product_factory=self.product_factory,
                 queue_factory=self.queue_factory,
             )
-
+            self.product_factory.create_product_mockup(self.adapter)
             self.sink_factory.create_sinks(self.adapter)
 
             self.event_logger = logger.EventLogger()
@@ -181,6 +181,16 @@ class Runner:
 
             self.product_factory.event_logger = self.event_logger
 
+            
+            self.primitive_factory = primitive_factory.PrimitiveFactory(
+                env=self.env,
+                process_factory=self.process_factory,
+                queue_factory=self.queue_factory,
+                resource_factory=self.resource_factory,
+                sink_factory=self.sink_factory,
+                event_logger=self.event_logger,
+            )
+            self.primitive_factory.create_primitives(self.adapter)
             self.source_factory = source_factory.SourceFactory(
                 env=self.env,
                 product_factory=self.product_factory,
@@ -191,16 +201,6 @@ class Runner:
                 sink_factory=self.sink_factory,
             )
             self.source_factory.create_sources(self.adapter)
-            self.primitive_factory = primitive_factory.PrimitiveFactory(
-                env=self.env,
-                process_factory=self.process_factory,
-                queue_factory=self.queue_factory,
-                resource_factory=self.resource_factory,
-                sink_factory=self.sink_factory,
-                event_logger=self.event_logger,
-            )
-            self.primitive_factory.create_primitives(self.adapter)
-
             self.dependency_factory = dependency_factory.DependencyFactory(
                 process_factory=self.process_factory,
                 resource_factory=self.resource_factory,
@@ -208,7 +208,7 @@ class Runner:
                 primitive_factory=self.primitive_factory,
                 node_factory=self.node_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.product_data)
             self.dependency_factory.inject_dependencies()
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
 

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.entities import product
     from prodsys.simulation import logger
     from prodsys.factories.dependency_factory import DependencyFactory
-
+    from prodsys.models import production_system_data
 
 class ProductFactory:
     """
@@ -40,7 +40,8 @@ class ProductFactory:
         self.product_counter = 0
         self.router: router_module.Router = None
         self.dependency_factory: DependencyFactory = None
-
+        self.products_init: Dict[str, product.Product] = {}
+        
     def set_router(self, router: router_module.Router) -> None:
         """
         Set the router for the factory.
@@ -110,7 +111,90 @@ class ProductFactory:
         self.product_counter += 1
         self.products[product_data.ID] = product_object
         return product_object
+    
+    def create_product_mockup(
+            self, adapter: production_system_data.ProductionSystemData
+        ) -> product.Product:
+            """
+            Creates a product object based on the given product data and router.
 
+            Args:
+                product_data (ProductData): Product data that is used to create the product object.
+                router (router.Router): Router that is used to route the product object.
+
+            Raises:
+                ValueError: If the transport process is not found.
+
+            Returns:
+                product.Product: Created product object.
+            """
+            
+            if not getattr(adapter, "product_data", None):
+                return None  
+
+            last_product = None
+            for product_data in adapter.product_data:
+            
+            
+                product_data = product_data.model_copy()
+                product_data.ID = (
+                    str(product_data.type) 
+                )
+                process_model = self.create_process_model(product_data)
+                transport_processes = self.process_factory.get_process(
+                    product_data.transport_process
+                )
+                if not transport_processes or isinstance(
+                    transport_processes, process.ProductionProcess
+                ):
+                    raise ValueError("Transport process not found.")
+                
+                routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get("FIFO")
+                
+                if (
+                    product_data.dependency_ids 
+                    and getattr(self, "dependency_factory", None) is not None
+                ):
+                    dependencies = []
+                    for dependency_id in product_data.dependency_ids:
+                        dependency = self.dependency_factory.get_dependency(dependency_id)
+                        dependencies.append(dependency)
+                else:
+                    dependencies = None
+
+                product_info_instance = product_info.ProductInfo()
+
+                product_object = product.Product(
+                    env=self.env,
+                    data=product_data,
+                    product_router=self.router,
+                    routing_heuristic=routing_heuristic_callable,
+                    process_model=process_model,
+                    transport_process=transport_processes,
+                    dependencies=dependencies,
+                    info=product_info_instance,
+                    
+                )
+                
+                self.products_init[product_data.ID] = product_object
+                
+                last_product = product_object
+            return last_product
+        
+    def get_product_init(self, ID: str) -> product.Product:
+        """
+        Returns the product object with the given ID.
+
+        Args:
+            ID (str): ID of the product object.
+
+        Returns:
+            product.Product: Product object with the given ID.
+        """
+        if ID in self.products_init:
+            return self.products_init[ID]
+        raise ValueError(f"Product with ID {ID} not found.")
+    
     def get_precendece_graph_from_id_adjacency_matrix(
         self, id_adjacency_matrix: Dict[str, List[str]]
     ) -> process_models.PrecedenceGraphProcessModel:

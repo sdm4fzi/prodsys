@@ -81,6 +81,7 @@ class Request:
         resolved_dependency: Optional[Dependency] = None,
         required_dependencies: Optional[list[Dependency]] = None,
         dependency_release_event: Optional[simpy.Event] = None,
+        target_reservations: int = 1,
     ):
         self.request_type = request_type
         self.process = process
@@ -110,6 +111,7 @@ class Request:
         self.requesting_item = requesting_item
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
+        self.target_reservations: int = target_reservations
 
     
     @property

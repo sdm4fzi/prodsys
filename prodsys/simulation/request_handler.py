@@ -189,7 +189,7 @@ class RequestHandler:
         if any(isinstance(p, ProcessModelProcess) for p in next_possible_processes):
             request_type = request.RequestType.PROCESS_MODEL
         elif hasattr(entity, "process_model"):
-            request_type = request.RequestType.PRODUCTION
+            request_type = request.RequestType.PRODUCTION 
         else:
             request_type = request.RequestType.PRIMITIVE_DEPENDENCY
 
@@ -381,6 +381,18 @@ class RequestHandler:
             request.Request: The created request.
         """
         dependencies = resource.dependencies + process.dependencies
+        
+        target_reservations = 1
+        if (
+            request_info.request_type == request.RequestType.PRODUCTION 
+            and hasattr(process.data, "product_disassembly_dict")
+        ):
+            item_data = request_info.item.data.type
+            disassembly_map = process.data.product_disassembly_dict
+            if disassembly_map is not None:
+                disassembly_list = disassembly_map.get(item_data)
+                
+                target_reservations = len(disassembly_list) 
         request_instance = request.Request(
             requesting_item=request_info.item,
             entity=request_info.item,
@@ -393,6 +405,7 @@ class RequestHandler:
             resolved_dependency=request_info.dependency,
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,
+            target_reservations=target_reservations,
         )
         return request_instance
 

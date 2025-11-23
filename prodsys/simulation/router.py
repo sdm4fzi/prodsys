@@ -168,9 +168,10 @@ class Router:
         """
         while True:
             yield self.got_primitive_request
+            self.got_primitive_request = events.Event(self.env)
             if not self.free_primitives_by_type:
                 continue
-            self.got_primitive_request = events.Event(self.env)
+            
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
@@ -193,8 +194,10 @@ class Router:
         origin_port, target_port = self.interaction_handler.get_interaction_ports(
             executed_request
         )
-        if target_port:
-            yield from target_port.reserve()
+        reservations = getattr(executed_request, "target_reservations", 1)
+        if target_port is not None and reservations:
+            for _ in range(reservations):
+                yield from target_port.reserve()
         if (
             executed_request.request_type in (request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL)
             and executed_request.requesting_item.current_locatable
@@ -260,15 +263,17 @@ class Router:
         yield from executed_request.requesting_item.current_locatable.reserve()
         yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
         executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable
-        target_storage = self._find_available_storage_for_primitive(executed_request.entity)
-        transport_process_finished_event = self.request_transport(
-            executed_request.entity, target_storage
-        )
-        yield transport_process_finished_event
-        executed_request.entity.release()
-        self.free_primitives_by_type[executed_request.entity.data.type].append(
-            executed_request.entity
-        )
+        for entity in executed_request.get_atomic_entities():
+            if(not entity.data.becomes_consumable):
+                target_storage = self._find_available_storage_for_primitive(executed_request.entity)
+                transport_process_finished_event = self.request_transport(
+                    executed_request.entity, target_storage
+                )
+                yield transport_process_finished_event
+                executed_request.entity.release()
+                self.free_primitives_by_type[executed_request.entity.data.type].append(
+                    executed_request.entity
+                )
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
 
@@ -467,6 +472,7 @@ class Router:
         )
         return random.choice(possible_sinks)
 
+#FIXME:never called!
     def route_product_to_sink(self, product: product.Product) -> tuple[events.Event, sink.Sink]:
         """
         Routes a product to a sink.
@@ -484,7 +490,15 @@ class Router:
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event, chosen_sink
-
+    
+    def route_disassembled_product_to_sink(self, product: product.Product)-> sink.Sink:
+            possible_sinks = self.sink_factory.get_sinks_with_product_type(
+                product.data.type
+            )
+            chosen_sink = random.choice(possible_sinks)
+            target_port = chosen_sink.ports[0]
+            product.update_location(target_port)
+            
     def get_rework_processes(
         self, failed_process: process.Process
     ) -> list[process.ReworkProcess]:
