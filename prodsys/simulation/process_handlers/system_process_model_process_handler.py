@@ -102,8 +102,12 @@ class SystemProcessModelHandler:
         # not the last internal process that was executed
         entity.current_process = proc
         
-        arrived_at_queue = system_router.request_transport(entity, target_queue)
-        yield arrived_at_queue
+        if(entity.no_transport_to_sink):
+            entity.router.route_disassembled_product_to_sink(entity)
+        else:
+            arrived_at_queue = system_router.request_transport(entity, target_queue)
+            yield arrived_at_queue
+            
         process_request.entity.router = super_system_router
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)

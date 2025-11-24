@@ -6,7 +6,7 @@ from prodsys.simulation import port, sim
 from prodsys.models import sink_data
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product
+    from prodsys.simulation.entities import product
 
 
 class Sink:
@@ -68,6 +68,18 @@ class Sink:
         Args:
             product (product.Product): The finished product.
         """
+        router = self.product_factory.router
+
+        self.product_factory.router.primitive_factory.primitives.append(product)
+        if(product.data.becomes_consumable):    
+            if self.product_factory.router:
+                if product.data.type not in router.free_primitives_by_type:
+                    router.free_primitives_by_type[product.data.type] = []
+                router.free_primitives_by_type[product.data.type].append(product)
+                if not router.got_primitive_request.triggered:
+                    router.got_primitive_request.succeed() 
+                    
+                    
         self.product_factory.register_finished_product(product)
 
 

@@ -5,7 +5,8 @@ from prodsys.factories.resource_factory import ResourceFactory
 from prodsys.factories.node_factory import NodeFactory
 from prodsys.models.dependency_data import DEPENDENCY_TYPES, DependencyType
 from prodsys.simulation.dependency import Dependency
-
+from prodsys.models.product_data import ProductData
+from prodsys.models import product_data
 
 class DependencyFactory:
     def __init__(self, process_factory: ProcessFactory, product_factory: ProductFactory, primitive_factory: PrimitiveFactory, resource_factory: ResourceFactory, node_factory: NodeFactory):
@@ -25,8 +26,13 @@ class DependencyFactory:
         self.resource_factory = resource_factory
         self.node_factory = node_factory
         self.dependencies = {}
-
-    def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES]) -> list[Dependency]:
+        
+    def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
+        for product_d in product_data:
+            if(product_d.ID == dependency_data.required_primitive): 
+                product_d.becomes_consumable = True
+                
+    def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES], product_data: ProductData) -> list[Dependency]:
         """
         Creates a list of dependency objects based on the given dependency data.
 
@@ -39,6 +45,7 @@ class DependencyFactory:
         dependencies = []
         for dependency_data in dependency_data_list:
             dependencies.append(self.create_dependency(dependency_data))
+            self.check_product_dependencies(dependency_data, product_data)
         return dependencies
 
     def create_dependency(self, dependency_data: DEPENDENCY_TYPES) -> Dependency:
@@ -63,13 +70,14 @@ class DependencyFactory:
                 node = None
         elif dependency_data.dependency_type == DependencyType.PRIMITIVE:
             try:
-                primitive = self.product_factory.get_product(dependency_data.required_primitive)
+                primitive = self.product_factory.get_product_init(dependency_data.required_primitive)
             except Exception as e:
                 pass
-            try:
-                primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_primitive)
-            except Exception as e:
-                raise ValueError(f"Primitive with ID {dependency_data.required_primitive} not found.") from e   
+            if(primitive == None):
+                try:
+                    primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_primitive)
+                except Exception as e:
+                    raise ValueError(f"Primitive with ID {dependency_data.required_primitive} not found.") from e   
         elif dependency_data.dependency_type == DependencyType.LOT:
             pass
         else:
