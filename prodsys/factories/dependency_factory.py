@@ -28,6 +28,8 @@ class DependencyFactory:
         self.dependencies = {}
         
     def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
+        if not dependency_data.dependency_type == DependencyType.PRIMITIVE:
+            return
         for product_d in product_data:
             if(product_d.ID == dependency_data.required_primitive): 
                 product_d.becomes_consumable = True
