@@ -4,6 +4,7 @@ from hashlib import md5
 from typing import Union, List, Dict, TYPE_CHECKING
 from pydantic import ConfigDict, model_validator, field_validator
 from prodsys.models.primitives_data import PrimitiveData
+from prodsys.models.source_data import RoutingHeuristic
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -78,7 +79,9 @@ class ProductData(PrimitiveData):
 
     processes: Union[Dict[str, List[str]]]
     dependency_ids: List[str] = []
-
+    routing_heuristic: Union[RoutingHeuristic, None] = None
+    becomes_consumable: bool = False
+    
     @field_validator("processes", mode="before")
     def check_processes(cls, v):
         if isinstance(v, list):

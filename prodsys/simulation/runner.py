@@ -174,7 +174,7 @@ class Runner:
                 product_factory=self.product_factory,
                 queue_factory=self.queue_factory,
             )
-
+            self.product_factory.create_product_mockup(self.adapter)
             self.sink_factory.create_sinks(self.adapter)
 
             self.event_logger = logger.EventLogger()
@@ -210,7 +210,7 @@ class Runner:
                 primitive_factory=self.primitive_factory,
                 node_factory=self.node_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.depdendency_data)
+            self.dependency_factory.create_dependencies(self.adapter.depdendency_data, self.adapter.product_data)
             self.dependency_factory.inject_dependencies()
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
 

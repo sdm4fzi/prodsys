@@ -10,7 +10,9 @@ import logging
 from prodsys.models.port_data import StoreData
 from prodsys.models.resource_data import ResourceData
 from prodsys.models import port_data
-
+from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
+from prodsys.simulation.request import Request
+from prodsys.simulation.entities.entity import Entity
 
 from prodsys.simulation import (
     sim,
@@ -235,6 +237,20 @@ class Controller:
         self.resource.update_full()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
+            
+    def mark_finished_process_no_sink_transport(self, process_request: Request, entity: Entity) -> None:
+        """
+        Mark the process as finished, but no transport to sink required.
+
+        Args:
+            process_request (Request): The request that is being processed.
+        """
+        
+        self.num_running_processes -= process_request.capacity_required
+        self.resource.update_full()
+        entity.no_transport_to_sink = True
+        if not self.state_changed.triggered:
+            self.state_changed.succeed()
 
 
 def get_requets_handler(
@@ -250,6 +266,12 @@ def get_requets_handler(
         Union[ProductionProcessHandler, TransportProcessHandler]: The process handler for the given process.
     """
     if (
+        request.request_type == request_module.RequestType.PRODUCTION
+        and hasattr(request.process, "data")
+        and getattr(request.process.data, "product_disassembly_dict", None) 
+    ):
+        return DisassemblyProcessHandler(request.requesting_item.env) 
+    elif (
         request.request_type == request_module.RequestType.PRODUCTION
         or request.request_type == request_module.RequestType.REWORK
     ):
