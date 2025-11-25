@@ -322,18 +322,25 @@ class Router:
         yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
         executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
         for entity in executed_request.get_atomic_entities():
-            if(not entity.data.becomes_consumable):
-                target_storage = self._find_available_storage_for_primitive(executed_request.entity)
-                transport_process_finished_event = self.request_transport(
-                    executed_request.entity, target_storage
-                )
-                yield transport_process_finished_event
-                executed_request.entity.release()
-                self.free_primitives_by_type[executed_request.entity.data.type].append(
-                    executed_request.entity
-                )                
+            if self._entity_becomes_consumable(entity):
+                continue
+            target_storage = self._find_available_storage_for_primitive(executed_request.entity)
+            transport_process_finished_event = self.request_transport(
+                executed_request.entity, target_storage
+            )
+            yield transport_process_finished_event
+            executed_request.entity.release()
+            self.free_primitives_by_type[executed_request.entity.data.type].append(
+                executed_request.entity
+            )                
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
+
+    def _entity_becomes_consumable(self, entity: primitive.Primitive | product.Product) -> bool:
+        """
+        Only products expose the becomes_consumable flag. Treat everything else as reusable.
+        """
+        return entity.type == EntityType.PRODUCT and entity.data.becomes_consumable
 
     def _find_available_storage_for_primitive(self, primitive: primitive.Primitive) -> port.Store:
         """
