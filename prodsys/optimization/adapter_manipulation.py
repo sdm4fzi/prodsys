@@ -502,7 +502,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                     for i in range(len(path)-1):
                         new_links.append((path[i], path[i+1]))
         
-        new_transport_process = deepcopy(transport_process_data)
+        new_transport_process = transport_process_data.model_copy(deep=True)
         new_tp_id = f"ConveyorProcess_{uuid1().hex}"
         new_transport_process.ID = new_tp_id
         new_transport_process.capability = transport_process_data.capability
@@ -519,8 +519,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                 can_move=False,
             )
         adapter_object.resource_data.append(new_transport_resource)
-    if not new_transport_process.ID == new_transport_resource.process_ids[0]:
-        print("Transport process and resource are not correctly linked.")
+        if not new_transport_process.ID == adapter_object.process_data[-1].ID:
+            print("Transport process and resource are not correctly linked.")
     add_default_queues_to_resources(adapter_object, reset=False)
     return True
 

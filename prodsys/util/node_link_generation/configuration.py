@@ -23,7 +23,7 @@ class Configuration:
         """
         self.current_config = {
             # All distances should be integer values in cm.
-            Configuration.Boundary_Distance: 16,  # Minimal distance between the boundary and the table configuration.
+            Configuration.Boundary_Distance: 0,  # Minimal distance between the boundary and the table configuration.
                                                   # 16 = A2NTS rotation radius / 2.
             Configuration.Min_Node_Distance: 32,  # Minimal distance between two nodes.
                                                   # 32 = A2NTS rotation radius.

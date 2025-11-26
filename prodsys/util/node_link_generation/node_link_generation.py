@@ -11,7 +11,64 @@ from prodsys.util.node_link_generation.configuration import Configuration
 import networkx as nx
 import prodsys.util.node_link_generation.format_to_networkx as format_to_networkx
 from typing import List, Any, Set, Optional, Tuple, Union
+import xml.etree.ElementTree as ET
 
+def parse_drawio_rectangles(xml_path):
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+
+    tables = []
+
+    # Find all mxCell elements with vertex="1"
+    for cell in root.iter("mxCell"):
+        if cell.get("vertex") != "1":
+            continue
+
+        # Identify rotation -> reject non-zero (draw.io writes e.g. rotation=45)
+        style = cell.get("style", "")
+        # draw.io stores rotation as "rotation=xx"
+        rotation = None
+        for part in style.split(";"):
+            if part.startswith("rotation="):
+                rotation = float(part.split("=")[1])
+        if rotation not in (None, 0):
+            raise ValueError(f"Non-right-angle rotation detected in cell {cell.get('id')}.")
+
+        geom = cell.find("mxGeometry")
+        if geom is None:
+            continue  # useless entry
+
+        # draw.io omits coordinates if they're zero; default to 0
+        x = float(geom.get("x", 0)) /10
+        y = float(geom.get("y", 0)) /10
+        w = float(geom.get("width", 0)) /10
+        h = float(geom.get("height", 0)) /10
+
+        # compute rectangle corner points
+        tableXMin = x
+        tableYMin = y
+        tableXMax = x + w
+        tableYMax = y + h
+
+        rectangle = {
+            "corner_nodes": [
+                {"pose": [tableXMin, tableYMin, 0]},
+                {"pose": [tableXMax, tableYMin, 0]},
+                {"pose": [tableXMax, tableYMax, 0]},
+                {"pose": [tableXMin, tableYMax, 0]},
+            ],
+            "center_node": [
+                {"pose": [
+                    (tableXMin + tableXMax) / 2,
+                    (tableYMin + tableYMax) / 2,
+                    0,
+                ]}
+            ]
+        }
+
+        tables.append(rectangle)
+
+    return tables
 
 def get_all_locations(productionsystem: production_system_data):
     locations = []
@@ -19,7 +76,7 @@ def get_all_locations(productionsystem: production_system_data):
         locations.append([node.ID, [x for x in node.location]]) #transform necessary because node link generation works in cm
     return locations
 
-def generate_stations_json(stations: list) -> None:
+def generate_stations_config(stations: list) -> None:
     """
     Function is used to generate a JSON file for the station configuration.
     """
@@ -82,32 +139,50 @@ def find_borders(productionsystem: production_system_data):
             min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
-def generator(productionsystem: production_system_data): #FIXME: in some cases no nodes are generated for certain stations
+def generator(productionsystem: production_system_data, area=None): #FIXME: in some cases no nodes are generated for certain stations
     # Generate tables and stations based on the production system layout.
-    min_x, min_y, max_x, max_y = find_borders(productionsystem)
-    tableXMax=max(1.1*max_x,50+max_x) #MARKER macht das sinn
-    tableYMax=max(1.1*max_y,50+max_y)
-    tableXMin=min(1.1*min_x,min_x-50)
-    tableYMin=min(1.1*min_y,min_y-50)
-    tables = {
-        "corner_nodes": [
-            {"pose": [tableXMin, tableYMin, 0]}, 
-            {"pose": [tableXMax, tableYMin, 0]},
-            {"pose": [tableXMax, tableYMax, 0]},
-            {"pose": [tableXMin, tableYMax, 0]}
-        ],
-        "center_node": [
-            {"pose": [((tableXMin + tableXMax)/2), ((tableYMin + tableYMax)/2), 0]}
-        ]
-    }
     items = [
-        [loc[1][0]] + [loc[1][1]] + [0] + [0] + ["U"] #Transformation
+        [loc[1][0]] + [loc[1][1]] + [0] + [0] + ["U"]
         for loc in get_all_locations(productionsystem)
     ]
-    stations = generate_stations_json(items)
-
-    # Get the dimensions of the production layout.
-    dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
+    stations = generate_stations_config(items)
+    # Determine table configuration based on area or production system layout.
+    if area is None:
+        min_x, min_y, max_x, max_y = find_borders(productionsystem)
+        tableXMax=max(1.1*max_x,50+max_x)
+        tableYMax=max(1.1*max_y,50+max_y)
+        tableXMin=min(1.1*min_x,min_x-50)
+        tableYMin=min(1.1*min_y,min_y-50)
+        tables = {
+            "corner_nodes": [
+                {"pose": [tableXMin, tableYMin, 0]}, 
+                {"pose": [tableXMax, tableYMin, 0]},
+                {"pose": [tableXMax, tableYMax, 0]},
+                {"pose": [tableXMin, tableYMax, 0]}
+            ],
+            "center_node": [
+                {"pose": [((tableXMin + tableXMax)/2), ((tableYMin + tableYMax)/2), 0]}
+            ]
+        }
+        # Get the dimensions of the production layout.
+        dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
+    else:
+        tables = area
+        min_x, min_y, _ = tables[0]['corner_nodes'][0]['pose']
+        max_x, max_y, _ = tables[0]['corner_nodes'][0]['pose']
+    
+        for table in tables:
+            for corner in table['corner_nodes']:
+                if corner['pose'][0] > max_x:
+                    max_x = corner['pose'][0]
+                if corner['pose'][1] > max_y:
+                    max_y = corner['pose'][1]
+                if corner['pose'][0] < min_x:
+                    min_x = corner['pose'][0]
+                if corner['pose'][1] < min_y:
+                    min_y = corner['pose'][1]
+        dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
+    
     # Set the dimensions of the layout.
     config = Configuration()
     config.set(Configuration.Dim_X, int(dim_x))
@@ -116,13 +191,16 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
     station_config = StationConfiguration(config, table_config)
     # Add tables and define corner nodes of the table configuration.
     node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
-    node_edge_generator = NodeEdgeGenerator(config, table_config, station_config)
     edge_directionality = EdgeDirectionality(table_config, node_edge_generator)
     visualization = Visualization(config, table_config, station_config, node_edge_generator)
     networkx_formater = format_to_networkx.NetworkXGraphGenerator(node_edge_generator.graph, station_config)
     #vda5050_formater = format_to_vda5050.VDA5050JSONGenerator(node_edge_generator, station_config) #optionally allow 
     #a_star = a_star_algorithm.AStar(table_config, station_config, node_edge_generator, visualization)
-    table_config.add_table(tables['corner_nodes'], visualization)
+    if isinstance(tables, list):
+        for table in tables:  # in case of multiple tables
+            table_config.add_table(table['corner_nodes'], visualization)
+    else:
+        table_config.add_table(tables['corner_nodes'], visualization)
     table_config.generate_table_configuration()
 
     # Add stations and update table configuration considering the stations.
@@ -135,7 +213,7 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=True, station_nodes=True, medial_axis=True)
 
     # Define zones of the table configuration.  MARKER: Optional
-    table_config.define_zones(layout_nr=1) 
+    table_config.define_zones() 
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=False, station_nodes=False, zones=True)
 
     # Define station nodes and edges. Add edges optionally.
@@ -143,7 +221,7 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
     # Station nodes (and edges) must be added before other nodes are added. Here only trajectory nodes are defined.
     add_edges = False
     node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False) #this method is also used in add_outer_nodes_and_edges
-    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+    visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Add nodes (and edges) along the boundary of table configuration considering stations.
     # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
@@ -172,7 +250,7 @@ def generator(productionsystem: production_system_data): #FIXME: in some cases n
     exterior_direction = 'ccw'
     edge_directionality.define_boundary_edges_directionality(exterior_direction=exterior_direction, narrow_sections_unidirectional=False)
     node_edge_generator.graph.update_graph_connections()
-    #visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
+    visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
 
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
@@ -249,9 +327,12 @@ def apply_nodes_links(adapter: production_system_data, new_nodes, new_links) -> 
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links = new_links
 
-
-def generate_and_apply_network(adapter: production_system_data) -> None:
-    G = generator(adapter)
+def generate_and_apply_network(adapter: production_system_data, xml_path = None) -> None:
+    if xml_path:
+        tables = parse_drawio_rectangles(xml_path)
+    else:
+        tables = None
+    G = generator(adapter, tables)
     new_nodes, new_links = convert_nx_to_prodsys(adapter, G)
     apply_nodes_links(adapter, new_nodes, new_links)
 

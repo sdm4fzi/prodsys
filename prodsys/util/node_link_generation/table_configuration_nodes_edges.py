@@ -504,7 +504,7 @@ class NodeEdgeGenerator:
                                                                 min_node_distance, add_edges=add_edges,
                                                                 previous_node=previous_node, boundary_index=boundary_index)
 
-        if min_node_distance > 50 or not add_nodes_between: #MARKER for prdsys adapt the 50 to be dynamically adjusted
+        if min_node_distance > 50 or not add_nodes_between: #TODO: adapt the 50 to be dynamically adjusted
             # Adjust minimum node distance between intermediate nodes.
             # add_corner_nodes_and_edges is only working properly, if node distance is not too large.
             self.remove_intermediate_outer_nodes(edge_directionality, min_node_distance=min_node_distance,

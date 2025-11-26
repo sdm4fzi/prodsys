@@ -6,6 +6,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import shapely
+from shapely.geometry import Polygon
 import pygeoops
 from prodsys.util.node_link_generation.configuration import Configuration 
 
@@ -285,21 +286,21 @@ class TableConfiguration:
             self.table_configuration_polygon = table_polygon
 
         # Check if table module is overlapping with the existing table modules. #MARKER kann man das entfernen oder wird es sonst buggy?
-        #elif not table_polygon.overlaps(self.table_configuration_polygon) and not table_polygon.within(self.table_configuration_polygon):
-        #    # Define table polygon of table object for calculate_intersection_nodes.
-        #    table_object.table_polygon = table_polygon
-        #    # Check if the polygons intersect.
-        #    if table_polygon.intersects(self.table_configuration_polygon):
-        #        # Extract the intersection line(s) of the two polygons.
-        #        intersection_line = table_polygon.intersection(self.table_configuration_polygon)
-        #        self.calculate_intersection_nodes(intersection_line)
-#
-        #    # Define table configuration polygon.
-        #    self.table_configuration_polygon = shapely.unary_union([table_polygon, self.table_configuration_polygon])
-#
-        #else:
-        #    raise ValueError("Table module is overlapping with the existing table modules or is within the existing table configuration: " + str(table_corner_nodes))
+        elif not table_polygon.contains(self.table_configuration_polygon):# and not table_polygon.within(self.table_configuration_polygon):
+            # Define table polygon of table object for calculate_intersection_nodes.
+            table_object.table_polygon = table_polygon
+            # Check if the polygons intersect.
+            if table_polygon.intersects(self.table_configuration_polygon):
+                # Extract the intersection line(s) of the two polygons.
+                intersection_line = table_polygon.intersection(self.table_configuration_polygon)
+                self.calculate_intersection_nodes(intersection_line)
 
+            # Define table configuration polygon.
+            self.table_configuration_polygon = shapely.unary_union([table_polygon, self.table_configuration_polygon])
+
+        else:
+            raise ValueError("Table module is overlapping with the existing table modules or is within the existing table configuration: " + str(table_corner_nodes))
+        
         # Table module is not overlapping with the existing table modules and can be added.
         table_object.table_orientation = table_corners_poses[0]['pose'][2]
         table_object.table_polygon = table_polygon
