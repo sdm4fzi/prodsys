@@ -39,10 +39,10 @@ def parse_drawio_rectangles(xml_path):
             continue  # useless entry
 
         # draw.io omits coordinates if they're zero; default to 0
-        x = float(geom.get("x", 0)) /10
-        y = float(geom.get("y", 0)) /10
-        w = float(geom.get("width", 0)) /10
-        h = float(geom.get("height", 0)) /10
+        x = float(geom.get("x", 0))
+        y = float(geom.get("y", 0))
+        w = float(geom.get("width", 0))
+        h = float(geom.get("height", 0))
 
         # compute rectangle corner points
         tableXMin = x
@@ -139,7 +139,7 @@ def find_borders(productionsystem: production_system_data):
             min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
-def generator(productionsystem: production_system_data, area=None): #FIXME: in some cases no nodes are generated for certain stations
+def generator(productionsystem: production_system_data, area=None, visualize=False): #FIXME: in some cases no nodes are generated for certain stations
     # Generate tables and stations based on the production system layout.
     items = [
         [loc[1][0]] + [loc[1][1]] + [0] + [0] + ["U"]
@@ -221,15 +221,15 @@ def generator(productionsystem: production_system_data, area=None): #FIXME: in s
     # Station nodes (and edges) must be added before other nodes are added. Here only trajectory nodes are defined.
     add_edges = False
     node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False) #this method is also used in add_outer_nodes_and_edges
-    visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
+    #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Add nodes (and edges) along the boundary of table configuration considering stations.
     # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
     distance=100
-    min_node_distance = distance #max(0.1*tablesize, 20) #TODO: adaptive distances
-    max_node_distance = distance #0.2*tablesize
+    min_node_distance = max(0.1*tablesize, 20) #TODO: adaptive distances
+    max_node_distance = 0.2*tablesize
     node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
@@ -250,7 +250,8 @@ def generator(productionsystem: production_system_data, area=None): #FIXME: in s
     exterior_direction = 'ccw'
     edge_directionality.define_boundary_edges_directionality(exterior_direction=exterior_direction, narrow_sections_unidirectional=False)
     node_edge_generator.graph.update_graph_connections()
-    visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
+    if visualize:
+        visualization.show_table_configuration(table_configuration=False, stations=True, station_nodes=False, nodes=True, edges=True)
 
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
@@ -327,12 +328,12 @@ def apply_nodes_links(adapter: production_system_data, new_nodes, new_links) -> 
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links = new_links
 
-def generate_and_apply_network(adapter: production_system_data, xml_path = None) -> None:
+def generate_and_apply_network(adapter: production_system_data, xml_path = None, visualize=False) -> None:
     if xml_path:
         tables = parse_drawio_rectangles(xml_path)
     else:
         tables = None
-    G = generator(adapter, tables)
+    G = generator(adapter, tables, visualize=visualize)
     new_nodes, new_links = convert_nx_to_prodsys(adapter, G)
     apply_nodes_links(adapter, new_nodes, new_links)
 
