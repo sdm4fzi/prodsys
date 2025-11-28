@@ -121,7 +121,7 @@ class NodeEdgeGenerator:
                 node_distances = point.distance(self.graph.node_points)
                 too_close_node_indices = np.where(node_distances < self.required_node_clearance)[0]
 
-                # Iterate through too close nodes and check if it is a buffer node. #TODO: Adapt this to prodsys, as it might result in errors
+                # Iterate through too close nodes and check if it is a buffer node. #TODO: Adapt this to not use buffer nodes, as it might result in errors
                 for too_close_node_index in too_close_node_indices:
                     if self.graph.nodes[too_close_node_index].node_type == 'buffer':
                         if corner_type == 'convex' and replace_buffer and len(too_close_node_indices) == 1 \
@@ -223,7 +223,7 @@ class NodeEdgeGenerator:
                     self.graph.add_node(random_node, point)
                     count += 1
 
-        print(str(count) + " random nodes defined in cfree.")
+        #print(str(count) + " random nodes defined in cfree.")
 
     def define_local_grids(self, grid_spacing: int = 32) -> None:
         """

@@ -122,8 +122,6 @@ def generate_stations_config(stations: list) -> None:
 
 def find_borders(productionsystem: production_system_data):
     #finds the area within all stations are located
-    #TODO: tables mit drawio konfigurieren und tableJSON davon generieren
-    #TODO: consider 3d coordinates
 
     stations = get_all_locations(productionsystem)
     max_x, max_y, = stations[0][1]
@@ -139,7 +137,7 @@ def find_borders(productionsystem: production_system_data):
             min_y = station[1][1]
     return min_x, min_y, max_x, max_y
 
-def generator(productionsystem: production_system_data, area=None, visualize=False): #FIXME: in some cases no nodes are generated for certain stations
+def generator(productionsystem: production_system_data, area=None, visualize=False, style="grid", simple_connection=True) -> nx.Graph:
     # Generate tables and stations based on the production system layout.
     items = [
         [loc[1][0]] + [loc[1][1]] + [0] + [0] + ["U"]
@@ -227,16 +225,23 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
     # Intermediate nodes along the boundary edges can be added optionally. The minimum distance between nodes can be defined.
     add_nodes_between = True
     tablesize = min(dim_x, dim_y)
-    distance=100
-    min_node_distance = max(0.1*tablesize, 20) #TODO: adaptive distances
-    max_node_distance = 0.2*tablesize
-    node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
+
+    if not simple_connection:
+        min_node_distance = max(0.1*tablesize, 10)
+        max_node_distance = 0.2*tablesize
+    else:
+        min_node_distance = tablesize
+        max_node_distance = tablesize
+    if any(resource.can_move for resource in productionsystem.resource_data if isinstance(resource.control_policy, resource_data.TransportControlPolicy)):
+        node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Define random nodes in the free space of the table configuration.
     # choose a grid generation method that is defined here
-    #node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)
-    node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
+    if style == "grid":
+        node_edge_generator.define_global_grid(grid_spacing=min_node_distance, adjust_spacing=False, add_corner_nodes_first=False)
+    elif style == "random":
+        node_edge_generator.define_random_nodes(min_node_distance=min_node_distance)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Connect nodes by edges using the Delaunay triangulation.
@@ -317,27 +322,29 @@ def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
 
     return new_nodes, new_links
 
-def apply_nodes_links(adapter: production_system_data, new_nodes, new_links) -> None:
+def apply_nodes_links(adapter: production_system_data, nodes, links) -> None:
+
+    
     # Replace node_data in the Prodocutionsystem
     adapter.node_data = []
-    for node in new_nodes:
+    for node in nodes:
         adapter.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
 
     # Replace links inside LinkTransportProcesses in the Productionsystem
     for LinkTransportProcess in adapter.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
-            LinkTransportProcess.links = new_links
+            LinkTransportProcess.links = links
 
-def generate_and_apply_network(adapter: production_system_data, xml_path = None, visualize=False) -> None:
+def generate_and_apply_network(adapter: production_system_data, xml_path = None, visualize=False, style="grid", simple_connection=True) -> None:
     if xml_path:
         tables = parse_drawio_rectangles(xml_path)
     else:
         tables = None
-    G = generator(adapter, tables, visualize=visualize)
-    new_nodes, new_links = convert_nx_to_prodsys(adapter, G)
-    apply_nodes_links(adapter, new_nodes, new_links)
+    G = generator(adapter, tables, visualize=visualize, style=style, simple_connection=simple_connection)
+    nodes, links = convert_nx_to_prodsys(adapter, G)
+    apply_nodes_links(adapter, nodes, links)
 
-def get_new_links(adapter: production_system_data) -> List[Tuple[str, str]]:
-    G = generator(adapter)
+def get_new_links(adapter: production_system_data, style="grid") -> List[Tuple[str, str]]:
+    G = generator(adapter, style=style)
     _, new_links = convert_nx_to_prodsys(adapter, G)
     return new_links

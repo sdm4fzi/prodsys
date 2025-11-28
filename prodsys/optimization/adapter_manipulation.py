@@ -284,71 +284,7 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     add_default_queues_to_resources(adapter_object, reset=False)
     add_setup_states_to_machine(adapter_object, machine_id)
 
-    if any(transport_process.can_move for transport_process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object)
-    else: #case like Conveyor that cannot move: place links to make all necessary transports possible
-        node_link_generation.generate_and_apply_network(adapter_object)
-        new_Links = []
-        G = nx.Graph()
-        for transport_process_data in adapter_object.process_data:
-            for src, tgt in transport_process_data.links:
-                G.add_edge(src, tgt)
-            for product in adapter_object.product_data: #warum geht man nicht für jedes Produkt für den Transportprozess durch die Porzesskette?
-                process_sequence = product.processes
-                for i in range(len(process_sequence)-1): 
-                    if i == 0:
-                        next_process = process_sequence[0]
-                        possible_current_resources = [
-                            source for source in adapter_object.source_data
-                            if source.product_type == product.ID
-                        ]
-                        possible_next_resources = [
-                            resource for resource in adapter_object.resource_data
-                            if next_process in resource.process_ids
-                        ]
-                        for next_resource in possible_next_resources:
-                            for current_resource in possible_current_resources:
-                                try: #TODO: use pathfinding algorithm that considers distances
-                                    path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
-                                except nx.NetworkXNoPath:
-                                    path = []  # No path found
-                                for i in range(len(path)-1):
-                                    new_Links.append((path[i], path[i+1]))
-                    current_process = process_sequence[i]
-                    next_process = process_sequence[i+1]
-                    possible_next_resources = [
-                        resource for resource in adapter_object.resource_data
-                        if next_process in resource.process_ids
-                    ]
-                    possible_current_resources = [
-                        resource for resource in adapter_object.resource_data
-                        if current_process in resource.process_ids
-                    ]
-                    for next_resource in possible_next_resources:
-                        for current_resource in possible_current_resources:
-                            for current_resource in possible_current_resources:
-                                try:
-                                    path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
-                                except nx.NetworkXNoPath:
-                                    return []  # No path found
-                                for i in range(len(path)-1):
-                                    new_Links.append((path[i], path[i+1]))
-                    if i==len(process_sequence)-1:
-                        possible_current_resources = possible_next_resources
-                        possible_next_resources = [
-                            sink for sink in adapter_object.sink_data
-                            if sink.product_type == product.ID
-                        ]
-                        for next_resource in possible_next_resources:
-                            for current_resource in possible_current_resources:
-                                try:
-                                    path = nx.shortest_path(G, source=current_resource.ID, target=next_resource.ID)
-                                except nx.NetworkXNoPath:
-                                    path = []  # No path found
-                                for i in range(len(path)-1):
-                                    new_Links.append((path[i], path[i+1]))
-            transport_process_data.links = new_Links
-
+    node_link_generation.generate_and_apply_network(adapter_object)
     return True
 
 
@@ -508,10 +444,21 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
         new_transport_process.capability = transport_process_data.capability
         new_transport_process.links = new_links
         adapter_object.process_data.append(new_transport_process)
+
+        possible_transport_resources = []
+        for resource in adapter_object.resource_data:
+            if transport_process in resource.process_ids:
+                possible_transport_resources.append(resource)
+
+        try:
+            new_object_capacity = random.choice(possible_transport_resources).capacity
+        except IndexError:
+            new_object_capacity = 5
+
         new_transport_resource = resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
-                capacity=2, #TODO: choose capacity based on process data/capacity per meter
+                capacity=new_object_capacity,
                 location=(0,0),
                 controller=resource_data.ControllerEnum.PipelineController,
                 control_policy=control_policy,
@@ -712,7 +659,6 @@ def update_production_resource_location(
         location (List[float]): New location of the machine.
     """
     resource.location = new_location
-    node_link_generation.generate_and_apply_network(adapter_object)
 
 
 def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
@@ -737,6 +683,7 @@ def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         return False
     new_location = random.choice(possible_positions)
     update_production_resource_location(moved_machine, new_location, adapter_object)
+    node_link_generation.generate_and_apply_network(adapter_object)
     return True
 
 
@@ -1098,7 +1045,7 @@ def get_random_configuration_asserted(
         if adapter_object:
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1 == 0: #
+        if invalid_configuration_counter % 50 == 0: 
             logging.info(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )

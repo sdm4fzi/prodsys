@@ -132,7 +132,7 @@ class Runner:
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
-        for resource_data in self.adapter.resource_data: #Capacity per meter calculation for LinkTransportResources
+        for resource_data in self.adapter.resource_data: #capacity per 100 meter calculation for LinkTransportResources
             length = 0.0
             original_capacity = resource_data.capacity
             for process in resource_data.process_ids:
@@ -149,7 +149,7 @@ class Runner:
                         )
                         if origin_node.location and target_node.location:
                             length += ((origin_node.location[0] - target_node.location[0]) ** 2 + (origin_node.location[1] - target_node.location[1]) ** 2) ** 0.5
-                    resource_data.capacity = int(length * original_capacity)
+                    resource_data.capacity = int(length * original_capacity * 0.01)
 
         self.adapter.validate_configuration()
         with temp_seed(self.adapter.seed):

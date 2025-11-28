@@ -159,7 +159,7 @@ def main():
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(BASE_DIR, "simulation_example_data", "FreeSpace.drawio.xml")
-    node_link_generation.generate_and_apply_network(production_system_instance, path, visualize=True)
+    node_link_generation.generate_and_apply_network(production_system_instance, path, visualize=True, style="random", simple_connection=False)
     prodsys.set_logging("DEBUG")
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()

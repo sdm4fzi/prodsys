@@ -217,7 +217,7 @@ def main():
         node_data=[]
     )
     add_default_queues_to_production_system(production_system_instance, reset=False)
-    node_link_generation.generate_and_apply_network(production_system_instance)
+    node_link_generation.generate_and_apply_network(production_system_instance, simple_connection=True, visualize=False)
     prodsys.set_logging("DEBUG")
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()
