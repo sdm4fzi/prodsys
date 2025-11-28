@@ -7,13 +7,13 @@ The following processes are possible:
 - `CapabilityProcessData`: A process that can be performed on a product by a resource, based on the capability of the resource.
 - `TransportProcessData`: A process that can be performed on a product by a transport resource.
 """
-
 from __future__ import annotations
+from typing import Dict
 from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, List, TYPE_CHECKING, Optional, Dict
 from pydantic import ConfigDict, Field
-
+from prodsys.models.product_data import ProductData
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
@@ -115,7 +115,8 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-
+    product_disassembly_dict : Optional[Dict[str, List[ProductData]]] = None
+    
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [

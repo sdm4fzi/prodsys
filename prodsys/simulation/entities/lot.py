@@ -19,6 +19,7 @@ class Lot(Entity):
         self.data = entities[0].data
         self.current_locatable = None
         self.router = entities[0].router
+        self.no_transport_to_sink = False
         
         # Lot can have its own process model
         if entities[0].type == EntityType.PRODUCT:

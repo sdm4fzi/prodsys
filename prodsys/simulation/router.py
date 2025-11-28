@@ -220,9 +220,9 @@ class Router:
         """
         while True:
             yield self.got_primitive_request
-            if not self.free_primitives_by_type:
-                continue
             self.got_primitive_request = events.Event(self.env)
+            if not self.free_primitives_by_type:
+                continue            
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
@@ -320,18 +320,27 @@ class Router:
         # place in storage after binding
         executed_request.requesting_item.current_locatable.reserve()
         yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
-        executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable
-        target_storage = self._find_available_storage_for_primitive(executed_request.entity)
-        transport_process_finished_event = self.request_transport(
-            executed_request.entity, target_storage
-        )
-        yield transport_process_finished_event
-        executed_request.entity.release()
-        self.free_primitives_by_type[executed_request.entity.data.type].append(
-            executed_request.entity
-        )
+        executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
+        for entity in executed_request.get_atomic_entities():
+            if self._entity_becomes_consumable(entity):
+                continue
+            target_storage = self._find_available_storage_for_primitive(executed_request.entity)
+            transport_process_finished_event = self.request_transport(
+                executed_request.entity, target_storage
+            )
+            yield transport_process_finished_event
+            executed_request.entity.release()
+            self.free_primitives_by_type[executed_request.entity.data.type].append(
+                executed_request.entity
+            )                
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
+
+    def _entity_becomes_consumable(self, entity: primitive.Primitive | product.Product) -> bool:
+        """
+        Only products expose the becomes_consumable flag. Treat everything else as reusable.
+        """
+        return entity.type == EntityType.PRODUCT and entity.data.becomes_consumable
 
     def _find_available_storage_for_primitive(self, primitive: primitive.Primitive) -> port.Store:
         """
@@ -529,7 +538,8 @@ class Router:
             product.data.type
         )
         return random.choice(possible_sinks)
-
+    
+#FIXME:never called!
     def route_product_to_sink(self, product: product.Product) -> tuple[events.Event, sink.Sink]:
         """
         Routes a product to a sink.
@@ -547,6 +557,14 @@ class Router:
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event, chosen_sink
+    
+    def route_disassembled_product_to_sink(self, product: product.Product)-> sink.Sink:
+            possible_sinks = self.sink_factory.get_sinks_with_product_type(
+                product.data.type
+            )
+            chosen_sink = random.choice(possible_sinks)
+            target_port = chosen_sink.ports[0]
+            product.update_location(target_port)
 
     def get_rework_processes(
         self, failed_process: process.Process
