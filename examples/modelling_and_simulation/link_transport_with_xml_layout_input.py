@@ -1,34 +1,10 @@
-import datetime
 import prodsys
 import os
 from prodsys.models.production_system_data import ProductionSystemData, add_default_queues_to_production_system
-from prodsys.models.scenario_data import ReconfigurationEnum
-from prodsys.models.performance_indicators import KPIEnum
-import prodsys.models.node_data
-from prodsys.optimization.adapter_manipulation import add_transformation_operation
-from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
-from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
 from prodsys.util.node_link_generation import node_link_generation
 
 
 def main():
-    hyper_parameters = EvolutionaryAlgorithmHyperparameters(
-        seed=0,
-        number_of_generations=64,
-        population_size=16,
-        mutation_rate=0.4,
-        crossover_rate=0.2,
-        number_of_seeds=2,
-        number_of_processes=1
-    )
-
-    def new_transformation(adapter: ProductionSystemData) -> bool:
-        print("Mutation function called.")
-
-    add_transformation_operation(
-        transformation=ReconfigurationEnum.PRODUCTION_CAPACITY,
-        operation=new_transformation,
-    )
 
     # Time models
     ftmp1 = prodsys.time_model_data.FunctionTimeModelData(
