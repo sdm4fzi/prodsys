@@ -1032,12 +1032,78 @@ class ProductionSystemData(BaseModel):
                     raise ValueError(
                         f"The state {state} of resource {resource.ID} is not a valid state of {states}."
                     )
-            port_data = get_set_of_IDs(values["port_data"])
+            
+            # Check if resource only has transport processes
+            # If it does, no queues are required
+            has_only_transport_processes = False
+            if resource.process_ids:
+                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
+                if process_objects:
+                    # Check if all processes are transport processes
+                    has_only_transport_processes = all(
+                        isinstance(p, processes_data_module.TransportProcessData) 
+                        for p in process_objects
+                    )
+            
+            port_data_ids = get_set_of_IDs(values["port_data"])
+            
+            # If resource has no ports and doesn't only have transport processes, add default queues
+            if not resource.ports and not has_only_transport_processes:
+                # Create default queues for the resource using the existing function
+                # We need to create a minimal adapter-like object for get_default_queues_for_resource
+                # But since we're in a validator, we can check process types directly
+                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
+                is_transport_resource = (
+                    process_objects and 
+                    all(isinstance(p, processes_data_module.TransportProcessData) for p in process_objects)
+                )
+                
+                if is_transport_resource:
+                    # For transport resources, create a single input_output queue
+                    queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_queue",
+                        description="Default queue for transport resource " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    if "port_data" not in values:
+                        values["port_data"] = []
+                    values["port_data"].append(queue)
+                    resource.ports = [queue.ID]
+                else:
+                    # For production resources, create input and output queues
+                    input_queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_input_queue",
+                        description="Default input queue of " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.INPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    output_queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_output_queue",
+                        description="Default output queue of " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.OUTPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    if "port_data" not in values:
+                        values["port_data"] = []
+                    values["port_data"].append(input_queue)
+                    values["port_data"].append(output_queue)
+                    resource.ports = [input_queue.ID, output_queue.ID]
+                
+                port_data_ids = get_set_of_IDs(values["port_data"])
+            
+            # Validate ports if they exist (skip validation for transport-only resources without ports)
             if resource.ports:
                 for port in resource.ports:
-                    if port not in port_data:
+                    if port not in port_data_ids:
                         raise ValueError(
-                            f"The port {port} of resource {resource.ID} is not a valid port of {port_data}."
+                            f"The port {port} of resource {resource.ID} is not a valid port of {port_data_ids}."
                         )
                 resource_ports: list[port_data.QueueData] = [port for port in values["port_data"] if port.ID in resource.ports]
                 if not any(
@@ -1091,12 +1157,12 @@ class ProductionSystemData(BaseModel):
         values = info.data
         for sink in sinks:
             try:
-                products = get_set_of_IDs(values["product_data"])
+                product_types = set([product.type for product in values["product_data"]])
             except KeyError:
                 raise ValueError("Product data is missing or faulty.")
-            if sink.product_type not in products:
+            if sink.product_type not in product_types:
                 raise ValueError(
-                    f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
+                    f"The product type {sink.product_type} of sink {sink.ID} is not a valid product type of {product_types}."
                 )
             if not sink.ports:
                 input_queue = get_default_queue_for_sink(sink)
@@ -1135,12 +1201,12 @@ class ProductionSystemData(BaseModel):
                     f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
                 )
             try:
-                products = get_set_of_IDs(values["product_data"])
+                product_types = set([product.type for product in values["product_data"]])
             except KeyError:
                 raise ValueError("Product data is missing or faulty.")
-            if source.product_type not in products:
+            if source.product_type not in product_types:
                 raise ValueError(
-                    f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
+                    f"The product type {source.product_type} of source {source.ID} is not a valid product type of {product_types}."
                 )
             if not source.ports:
                 output_queue = get_default_queue_for_source(source)

@@ -117,10 +117,30 @@ class ResourceData(CoreAsset, Locatable):
     def check_process_capacity(cls, values):
         if not isinstance(values, dict):
             return values
+        # Use default capacity if not provided
+        if "capacity" not in values:
+            values["capacity"] = 1
         if "process_capacities" not in values or values["process_capacities"] is None:
             values["process_capacities"] = [
                 values["capacity"] for _ in values["process_ids"]
             ]
+        else:
+            # Handle partial specification: fill missing values with capacity
+            process_capacities = values["process_capacities"]
+            num_processes = len(values["process_ids"])
+            capacity = values["capacity"]
+            
+            # Replace None values with capacity
+            process_capacities = [
+                capacity if cap is None else cap for cap in process_capacities
+            ]
+            
+            # Extend list if shorter than process_ids
+            if len(process_capacities) < num_processes:
+                process_capacities.extend([capacity] * (num_processes - len(process_capacities)))
+            
+            values["process_capacities"] = process_capacities
+        
         if len(values["process_capacities"]) != len(values["process_ids"]):
             raise ValueError(
                 f"process_capacities {values['process_capacities']} must have the same length as processes {values['process_ids']}"
@@ -260,6 +280,8 @@ class SystemResourceData(ResourceData):
     """
     resource_type: ResourceType = ResourceType.SYSTEM
     subresource_ids: List[str]
+    system_ports: Optional[List[str]] = None
+    internal_routing_matrix: Optional[Dict[str, List[str]]] = None
 
     model_config = ConfigDict(
         json_schema_extra={

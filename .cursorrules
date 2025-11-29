@@ -1,0 +1,18 @@
+# Cursor Agent Configuration
+
+## Python Execution
+When running Python scripts or commands, always use `uv run python` instead of `python` or `python3`.
+
+For example:
+- Use: `uv run python script.py`
+- Not: `python script.py` or `python3 script.py`
+
+## Testing
+When running tests with pytest, use: `uv run pytest` instead of `pytest`.
+
+## Package Management
+This project uses `uv` for package management. Always use `uv` commands for:
+- Installing dependencies: `uv sync`
+- Running scripts: `uv run <command>`
+- Adding packages: `uv add <package>`
+
