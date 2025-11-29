@@ -86,7 +86,8 @@ class Resource(core.ExpressObject):
                     resource, self.internal_queue_size
                 )
             ]
-            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
+            if port_data is not None:
+                self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource
@@ -149,7 +150,8 @@ class SystemResource(Resource):
                     resource, self.internal_queue_size
                 )
             ]
-            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
+            if port_data is not None:
+                self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource

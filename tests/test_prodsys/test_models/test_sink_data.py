@@ -123,7 +123,7 @@ class TestSinkData:
             location=[50.0, 50.0],
             product_type="Product_1",
         )
-        assert sink.ports == []
+        assert sink.ports is None
 
     def test_with_ports(self):
         """Test creating SinkData with ports."""

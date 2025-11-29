@@ -141,7 +141,7 @@ class TestSourceData:
             time_model_id="tm_arrival",
             routing_heuristic=RoutingHeuristic.shortest_queue,
         )
-        assert source.ports == []
+        assert source.ports is None
 
     def test_with_ports(self):
         """Test creating SourceData with ports."""

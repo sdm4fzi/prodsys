@@ -279,9 +279,6 @@ class ResourceFactory:
         ports = []
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
-        else:
-            raise ValueError("Ports not found for resource" + resource_data.ID)
-
         return ports
 
     def get_buffers_for_resource(

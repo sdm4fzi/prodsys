@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hashlib import md5
 from typing import List, Optional, TYPE_CHECKING
-from pydantic import ConfigDict, conlist
+from pydantic import ConfigDict
 from enum import Enum
 
 from prodsys.models.core_asset import CoreAsset, Locatable
@@ -53,7 +53,7 @@ class SourceData(CoreAsset, Locatable):
     product_type: str
     time_model_id: str
     routing_heuristic: RoutingHeuristic
-    ports: List[str] = []
+    ports: Optional[List[str]] = None
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -88,15 +88,16 @@ class SourceData(CoreAsset, Locatable):
             )
 
         output_queue_hashes = []
-        for output_queue in self.ports:
-            for queue in adapter.port_data:
-                if queue.ID == output_queue:
-                    output_queue_hashes.append(queue.hash())
-                    break
-            else:
-                raise ValueError(
-                    f"Queue with ID {output_queue} not found for source {self.ID}."
-                )
+        if self.ports:
+            for output_queue in self.ports:
+                for queue in adapter.port_data:
+                    if queue.ID == output_queue:
+                        output_queue_hashes.append(queue.hash())
+                        break
+                else:
+                    raise ValueError(
+                        f"Queue with ID {output_queue} not found for source {self.ID}."
+                    )
 
         return md5(
             (

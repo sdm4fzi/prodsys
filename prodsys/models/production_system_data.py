@@ -109,36 +109,12 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
     return set([obj.ID for obj in list_of_objects])
 
 
+
 def get_default_queue_for_resource(
     resource: resource_data_module.ResourceData,
     queue_capacity: Union[float, int] = 0.0,
-) -> queue_data_module.QueueData:
-    """
-    Returns a default input queue for the given resource.
-
-    Args:
-        resource (resource_data_module.ResourceData): Resource for which the default queue should be returned
-        queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
-
-    Returns:
-        queue_data_module.QueueData: Default input queue for the given resource
-    """
-    queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_input_queue",
-            description="Default input queue of " + resource.ID,
-            capacity=queue_capacity,
-            location=resource.location,
-            interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
-            port_type=port_data.PortType.QUEUE,
-        )
-    return queue
-
-
-def get_default_queues_for_resource(
-    resource: resource_data_module.ResourceData,
-    queue_capacity: Union[float, int] = 0.0,
     adapter: Optional[ProductionSystemData] = None,
-) -> tuple[queue_data_module.QueueData, queue_data_module.QueueData]:
+) -> queue_data_module.QueueData:
     """
     Returns default input and output queues for the given resource.
 
@@ -166,34 +142,18 @@ def get_default_queues_for_resource(
     
     # For transport resources, create a single input_output queue
     if is_transport_resource:
-        queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_queue",
-            description="Default queue for transport resource " + resource.ID,
+        return 
+    
+    # For production resources, create separate input and output queues
+    queue = queue_data_module.QueueData(
+            ID=resource.ID + "_default_input_queue",
+            description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
             location=resource.location,
             interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
             port_type=port_data.PortType.QUEUE,
         )
-        return (queue, None)
-    
-    # For production resources, create separate input and output queues
-    input_queue = queue_data_module.QueueData(
-        ID=resource.ID + "_default_input_queue",
-        description="Default input queue of " + resource.ID,
-        capacity=queue_capacity,
-        location=resource.location,
-        interface_type=port_data.PortInterfaceType.INPUT,
-        port_type=port_data.PortType.QUEUE,
-    )
-    output_queue = queue_data_module.QueueData(
-        ID=resource.ID + "_default_output_queue",
-        description="Default output queue of " + resource.ID,
-        capacity=queue_capacity,
-        location=resource.location,
-        interface_type=port_data.PortInterfaceType.OUTPUT,
-        port_type=port_data.PortType.QUEUE,
-    )
-    return (input_queue, output_queue)
+    return queue
 
 def remove_queues_from_resource(machine: resource_data_module.ResourceData):
     machine.ports = []
@@ -204,6 +164,14 @@ def remove_queues_from_resources(
 ):
     for machine in machines:
         remove_queues_from_resource(machine)
+
+
+def remove_queues_from_source(source: source_data_module.SourceData):
+    source.ports = []
+
+
+def remove_queues_from_sink(sink: sink_data_module.SinkData):
+    sink.ports = []
 
 
 def remove_unused_queues_from_adapter(
@@ -262,19 +230,13 @@ def add_default_queues_to_resources(
         remove_unused_queues_from_adapter(adapter)
         
         # Get both input and output queues, passing adapter for proper transport resource detection
-        input_queue, output_queue = get_default_queues_for_resource(
+        default_queue = get_default_queue_for_resource(
             resource, queue_capacity, adapter
         )
-        
-        # Add queues to adapter
-        adapter.port_data.append(input_queue)
-        port_ids = [input_queue.ID]
-        
-        if output_queue is not None:
-            adapter.port_data.append(output_queue)
-            port_ids.append(output_queue.ID)
-        
-        resource.ports = port_ids
+        if default_queue is not None:
+            # Add queues to adapter
+            adapter.port_data.append(default_queue)
+            resource.ports = [default_queue.ID]
     return adapter
 
 
@@ -317,6 +279,9 @@ def add_default_queues_to_sources(
     for source in adapter.source_data:
         if not reset and has_output_port(source, adapter):
             continue
+        remove_queues_from_source(source)
+        remove_unused_queues_from_adapter(adapter)
+
         output_queues = [get_default_queue_for_source(source, queue_capacity)]
         source.ports = list(get_set_of_IDs(output_queues))
         adapter.port_data += output_queues
@@ -362,6 +327,9 @@ def add_default_queues_to_sinks(
     for sink in adapter.sink_data:
         if not reset and has_input_port(sink, adapter):
             continue
+        remove_queues_from_sink(sink)
+        remove_unused_queues_from_adapter(adapter)
+
         input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
         sink.ports = list(get_set_of_IDs(input_queues))
         adapter.port_data += input_queues
