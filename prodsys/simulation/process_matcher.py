@@ -590,6 +590,8 @@ class ProcessMatcher:
         """
         # Get all locations including queues
         all_locations = self._get_all_locations()
+
+        # TODO: add caching here to avoid redundant work....
         
         # Get all transport processes from products and primitives
         required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
