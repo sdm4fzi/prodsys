@@ -1,6 +1,6 @@
 from __future__ import annotations
 from hashlib import md5
-from typing import List, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from pydantic import ConfigDict
 
 from prodsys.models.core_asset import CoreAsset, Locatable
@@ -29,13 +29,13 @@ class SinkData(CoreAsset, Locatable):
             description="Sink 1",
             location=[50.0, 50.0],
             product_type="Product_1",
-            input_queues=["SinkQueue"],
+            ports=["SinkQueue"],
         )
         ```
     """
 
     product_type: str
-    ports: List[str] = []
+    ports: Optional[List[str]] = None
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -75,15 +75,16 @@ class SinkData(CoreAsset, Locatable):
             )
 
         port_hashes = []
-        for port_id in self.ports:
-            for port in adapter.port_data:
-                if port.ID == port_id:
-                    port_hashes.append(port.hash())
-                    break
-            else:
-                raise ValueError(
-                    f"Queue with ID {port_id} not found for sink {self.ID}."
-                )
+        if self.ports:
+            for port_id in self.ports:
+                for port in adapter.port_data:
+                    if port.ID == port_id:
+                        port_hashes.append(port.hash())
+                        break
+                else:
+                    raise ValueError(
+                        f"Queue with ID {port_id} not found for sink {self.ID}."
+                    )
 
         return md5(
             "".join([base_class_hash, product_hash, *sorted(port_hashes)]).encode(

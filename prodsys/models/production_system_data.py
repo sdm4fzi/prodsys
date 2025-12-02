@@ -109,36 +109,12 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
     return set([obj.ID for obj in list_of_objects])
 
 
+
 def get_default_queue_for_resource(
     resource: resource_data_module.ResourceData,
     queue_capacity: Union[float, int] = 0.0,
-) -> queue_data_module.QueueData:
-    """
-    Returns a default input queue for the given resource.
-
-    Args:
-        resource (resource_data_module.ResourceData): Resource for which the default queue should be returned
-        queue_capacity (Union[float, int], optional): Capacity of the default queues. Defaults to 0.0 (infinite queue).
-
-    Returns:
-        queue_data_module.QueueData: Default input queue for the given resource
-    """
-    queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_input_queue",
-            description="Default input queue of " + resource.ID,
-            capacity=queue_capacity,
-            location=resource.location,
-            interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
-            port_type=port_data.PortType.QUEUE,
-        )
-    return queue
-
-
-def get_default_queues_for_resource(
-    resource: resource_data_module.ResourceData,
-    queue_capacity: Union[float, int] = 0.0,
     adapter: Optional[ProductionSystemData] = None,
-) -> tuple[queue_data_module.QueueData, queue_data_module.QueueData]:
+) -> queue_data_module.QueueData:
     """
     Returns default input and output queues for the given resource.
 
@@ -166,34 +142,18 @@ def get_default_queues_for_resource(
     
     # For transport resources, create a single input_output queue
     if is_transport_resource:
-        queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_queue",
-            description="Default queue for transport resource " + resource.ID,
+        return 
+    
+    # For production resources, create separate input and output queues
+    queue = queue_data_module.QueueData(
+            ID=resource.ID + "_default_input_queue",
+            description="Default input queue of " + resource.ID,
             capacity=queue_capacity,
             location=resource.location,
             interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
             port_type=port_data.PortType.QUEUE,
         )
-        return (queue, None)
-    
-    # For production resources, create separate input and output queues
-    input_queue = queue_data_module.QueueData(
-        ID=resource.ID + "_default_input_queue",
-        description="Default input queue of " + resource.ID,
-        capacity=queue_capacity,
-        location=resource.location,
-        interface_type=port_data.PortInterfaceType.INPUT,
-        port_type=port_data.PortType.QUEUE,
-    )
-    output_queue = queue_data_module.QueueData(
-        ID=resource.ID + "_default_output_queue",
-        description="Default output queue of " + resource.ID,
-        capacity=queue_capacity,
-        location=resource.location,
-        interface_type=port_data.PortInterfaceType.OUTPUT,
-        port_type=port_data.PortType.QUEUE,
-    )
-    return (input_queue, output_queue)
+    return queue
 
 def remove_queues_from_resource(machine: resource_data_module.ResourceData):
     machine.ports = []
@@ -204,6 +164,14 @@ def remove_queues_from_resources(
 ):
     for machine in machines:
         remove_queues_from_resource(machine)
+
+
+def remove_queues_from_source(source: source_data_module.SourceData):
+    source.ports = []
+
+
+def remove_queues_from_sink(sink: sink_data_module.SinkData):
+    sink.ports = []
 
 
 def remove_unused_queues_from_adapter(
@@ -265,19 +233,13 @@ def add_default_queues_to_resources(
         remove_unused_queues_from_adapter(adapter)
         
         # Get both input and output queues, passing adapter for proper transport resource detection
-        input_queue, output_queue = get_default_queues_for_resource(
+        default_queue = get_default_queue_for_resource(
             resource, queue_capacity, adapter
         )
-        
-        # Add queues to adapter
-        adapter.port_data.append(input_queue)
-        port_ids = [input_queue.ID]
-        
-        if output_queue is not None:
-            adapter.port_data.append(output_queue)
-            port_ids.append(output_queue.ID)
-        
-        resource.ports = port_ids
+        if default_queue is not None:
+            # Add queues to adapter
+            adapter.port_data.append(default_queue)
+            resource.ports = [default_queue.ID]
     return adapter
 
 
@@ -320,6 +282,9 @@ def add_default_queues_to_sources(
     for source in adapter.source_data:
         if not reset and has_output_port(source, adapter):
             continue
+        remove_queues_from_source(source)
+        remove_unused_queues_from_adapter(adapter)
+
         output_queues = [get_default_queue_for_source(source, queue_capacity)]
         source.ports = list(get_set_of_IDs(output_queues))
         adapter.port_data += output_queues
@@ -365,6 +330,9 @@ def add_default_queues_to_sinks(
     for sink in adapter.sink_data:
         if not reset and has_input_port(sink, adapter):
             continue
+        remove_queues_from_sink(sink)
+        remove_unused_queues_from_adapter(adapter)
+
         input_queues = [get_default_queue_for_sink(sink, queue_capacity)]
         sink.ports = list(get_set_of_IDs(input_queues))
         adapter.port_data += input_queues
@@ -1035,12 +1003,78 @@ class ProductionSystemData(BaseModel):
                     raise ValueError(
                         f"The state {state} of resource {resource.ID} is not a valid state of {states}."
                     )
-            port_data = get_set_of_IDs(values["port_data"])
+            
+            # Check if resource only has transport processes
+            # If it does, no queues are required
+            has_only_transport_processes = False
+            if resource.process_ids:
+                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
+                if process_objects:
+                    # Check if all processes are transport processes
+                    has_only_transport_processes = all(
+                        isinstance(p, processes_data_module.TransportProcessData) 
+                        for p in process_objects
+                    )
+            
+            port_data_ids = get_set_of_IDs(values["port_data"])
+            
+            # If resource has no ports and doesn't only have transport processes, add default queues
+            if not resource.ports and not has_only_transport_processes:
+                # Create default queues for the resource using the existing function
+                # We need to create a minimal adapter-like object for get_default_queues_for_resource
+                # But since we're in a validator, we can check process types directly
+                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
+                is_transport_resource = (
+                    process_objects and 
+                    all(isinstance(p, processes_data_module.TransportProcessData) for p in process_objects)
+                )
+                
+                if is_transport_resource:
+                    # For transport resources, create a single input_output queue
+                    queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_queue",
+                        description="Default queue for transport resource " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    if "port_data" not in values:
+                        values["port_data"] = []
+                    values["port_data"].append(queue)
+                    resource.ports = [queue.ID]
+                else:
+                    # For production resources, create input and output queues
+                    input_queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_input_queue",
+                        description="Default input queue of " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.INPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    output_queue = queue_data_module.QueueData(
+                        ID=resource.ID + "_default_output_queue",
+                        description="Default output queue of " + resource.ID,
+                        capacity=0.0,
+                        location=resource.location,
+                        interface_type=port_data.PortInterfaceType.OUTPUT,
+                        port_type=port_data.PortType.QUEUE,
+                    )
+                    if "port_data" not in values:
+                        values["port_data"] = []
+                    values["port_data"].append(input_queue)
+                    values["port_data"].append(output_queue)
+                    resource.ports = [input_queue.ID, output_queue.ID]
+                
+                port_data_ids = get_set_of_IDs(values["port_data"])
+            
+            # Validate ports if they exist (skip validation for transport-only resources without ports)
             if resource.ports:
                 for port in resource.ports:
-                    if port not in port_data:
+                    if port not in port_data_ids:
                         raise ValueError(
-                            f"The port {port} of resource {resource.ID} is not a valid port of {port_data}."
+                            f"The port {port} of resource {resource.ID} is not a valid port of {port_data_ids}."
                         )
                 resource_ports: list[port_data.QueueData] = [port for port in values["port_data"] if port.ID in resource.ports]
                 if not any(
@@ -1094,12 +1128,12 @@ class ProductionSystemData(BaseModel):
         values = info.data
         for sink in sinks:
             try:
-                products = get_set_of_IDs(values["product_data"])
+                product_types = set([product.type for product in values["product_data"]])
             except KeyError:
                 raise ValueError("Product data is missing or faulty.")
-            if sink.product_type not in products:
+            if sink.product_type not in product_types:
                 raise ValueError(
-                    f"The product type {sink.product_type} of sink {sink.ID} is not a valid product of {products}."
+                    f"The product type {sink.product_type} of sink {sink.ID} is not a valid product type of {product_types}."
                 )
             if not sink.ports:
                 input_queue = get_default_queue_for_sink(sink)
@@ -1138,12 +1172,12 @@ class ProductionSystemData(BaseModel):
                     f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
                 )
             try:
-                products = get_set_of_IDs(values["product_data"])
+                product_types = set([product.type for product in values["product_data"]])
             except KeyError:
                 raise ValueError("Product data is missing or faulty.")
-            if source.product_type not in products:
+            if source.product_type not in product_types:
                 raise ValueError(
-                    f"The product type {source.product_type} of source {source.ID} is not a valid product of {products}."
+                    f"The product type {source.product_type} of source {source.ID} is not a valid product type of {product_types}."
                 )
             if not source.ports:
                 output_queue = get_default_queue_for_source(source)

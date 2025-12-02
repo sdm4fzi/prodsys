@@ -23,9 +23,9 @@ class ProductData(PrimitiveData):
     See the examples for more insights.
 
     Args:
-        ID (str): ID of the product. If not given, the product type is used. Gets overwritten to the instance product ID, when an instance is created during simulation.
+        ID (str): ID of the product. If not given, the type is used. Gets overwritten to the instance product ID, when an instance is created during simulation.
         description (str): Description of the product.
-        product_type (str): Type of the product. If not given, the ID is used.
+        type (str): Type of the product. If not given, the ID is used.
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
         transport_process (str): Transport process of the product.
         dependency_ids (List[str]): IDs of the dependencies of the product.
@@ -37,7 +37,7 @@ class ProductData(PrimitiveData):
         prodsys.product_data.ProductData(
             ID="Product_1",
             description="product 1",
-            product_type="Product_1",
+            type="Product_1",
             processes=["P1", "P2", "P3"],
             transport_process="TP1",
         )
@@ -49,7 +49,7 @@ class ProductData(PrimitiveData):
         prodsys.product_data.ProductData(
             ID="Product_1",
             description="Product 1",
-            product_type="Product_1",
+            type="Product_1",
             processes={
                 "P1": ["P2", "P3"],
                 "P2": ["P3"],
@@ -65,7 +65,7 @@ class ProductData(PrimitiveData):
         prodsys.product_data.ProductData(
             ID="Product_1",
             description="Product 1",
-            product_type="Product_1",
+            type="Product_1",
             processes=[
                 ["P1", "P2"],
                 ["P1", "P3"],
@@ -136,11 +136,13 @@ class ProductData(PrimitiveData):
         ).hexdigest()
 
     @model_validator(mode="before")
-    def check_product_type(cls, values):
-        if "product_type" in values and values["product_type"]:
-            values["ID"] = values["product_type"]
-        else:
-            values["product_type"] = values["ID"]
+    def check_type(cls, values):
+        # Set type field (required by PrimitiveData)
+        if "type" not in values or not values["type"]:
+            values["type"] = values.get("ID", "")
+        # If ID is not set, use type
+        if "ID" not in values or not values["ID"]:
+            values["ID"] = values.get("type", "")
         return values
 
     model_config = ConfigDict(
@@ -149,14 +151,14 @@ class ProductData(PrimitiveData):
                 {
                     "ID": "Product_1",
                     "description": "Product with sequential process",
-                    "product_type": "Product_1",
+                    "type": "Product_1",
                     "processes": ["P1", "P2", "P3"],
                     "transport_process": "TP1",
                 },
                 {
                     "ID": "Product_1",
                     "description": "Process with adjacency matrix process",
-                    "product_type": "Product_1",
+                    "type": "Product_1",
                     "processes": {
                         "P1": ["P2", "P3"],
                         "P2": ["P3"],
@@ -167,7 +169,7 @@ class ProductData(PrimitiveData):
                 {
                     "ID": "Product_1",
                     "description": "Process with graph edges process",
-                    "product_type": "Product_1",
+                    "type": "Product_1",
                     "processes": [
                         ["P1", "P2"],
                         ["P1", "P3"],
