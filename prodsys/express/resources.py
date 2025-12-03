@@ -52,7 +52,7 @@ class Resource(core.ExpressObject):
         resource_data.ResourceControlPolicy, resource_data.TransportControlPolicy
     ] = resource_data.ResourceControlPolicy.FIFO
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
-
+    can_move: Optional[bool] = None
     internal_queue_size: Optional[int] = 0
     ports: List[port.Queue] = Field(default_factory=list, init=False)
     buffers: List[port.Queue] = Field(default_factory=list, init=False)
@@ -79,15 +79,8 @@ class Resource(core.ExpressObject):
             controller=self.controller,
             control_policy=self.control_policy,
             dependency_ids=[dep.ID for dep in self.dependencies],
+            can_move=self.can_move,
         )
-        if not self.ports:
-            port_data = [
-                prodsys.models.production_system_data.get_default_queue_for_resource(
-                    resource, self.internal_queue_size
-                )
-            ]
-            if port_data is not None:
-                self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource
@@ -144,14 +137,6 @@ class SystemResource(Resource):
             dependency_ids=[dep.ID for dep in self.dependencies],
             subresource_ids=self.subresource_ids,
         )
-        if not self.ports:
-            port_data = [
-                prodsys.models.production_system_data.get_default_queue_for_resource(
-                    resource, self.internal_queue_size
-                )
-            ]
-            if port_data is not None:
-                self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
         resource.ports = [port.ID for port in self.ports]
         resource.buffers = [buffer.ID for buffer in self.buffers]
         return resource

@@ -83,7 +83,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 def test_hashing(simulation_adapter: ProductionSystemData):
     """Test that the batch controller system produces a consistent hash."""
     hash_str = simulation_adapter.hash()
-    assert hash_str == "deb21fcc8230b5966bddff0814d54571"
+    assert hash_str == "055c6e5c35951f8af92c0bfc425fd3d5"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

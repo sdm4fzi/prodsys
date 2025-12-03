@@ -48,7 +48,7 @@ def test_initialize_simulation(
 
 def test_hashing(loading_times_simulation_adapter: ProductionSystemData):
     hash_str = loading_times_simulation_adapter.hash()
-    assert hash_str == "9611e8a0d102e5938073e3434242d19a"
+    assert hash_str == "2dd078e3dff07b673321b5b70f3e8d80"
 
 
 def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):

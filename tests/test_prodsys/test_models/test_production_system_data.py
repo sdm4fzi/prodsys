@@ -1812,14 +1812,12 @@ class TestDefaultQueueCreation:
         
         # Resource should have default queues added
         assert resource.ports is not None
-        assert len(resource.ports) == 2
-        assert f"{resource.ID}_default_input_queue" in resource.ports
-        assert f"{resource.ID}_default_output_queue" in resource.ports
+        assert len(resource.ports) == 1
+        assert f"{resource.ID}_default_queue" in resource.ports
         
         # Queues should be in port_data
         port_ids = [p.ID for p in system.port_data]
-        assert f"{resource.ID}_default_input_queue" in port_ids
-        assert f"{resource.ID}_default_output_queue" in port_ids
+        assert f"{resource.ID}_default_queue" in port_ids
     
     def test_transport_resource_no_queues(self):
         """Test that a transport resource with only transport processes doesn't get queues."""
@@ -1909,9 +1907,8 @@ class TestDefaultQueueCreation:
         
         # Resource should have default queues added (has production process)
         assert resource.ports is not None
-        assert len(resource.ports) == 2
-        assert f"{resource.ID}_default_input_queue" in resource.ports
-        assert f"{resource.ID}_default_output_queue" in resource.ports
+        assert len(resource.ports) == 1
+        assert f"{resource.ID}_default_queue" in resource.ports
     
     def test_resource_with_existing_ports_no_auto_creation(self):
         """Test that a resource with existing ports doesn't get additional default queues."""
@@ -2020,14 +2017,12 @@ class TestDefaultQueueCreation:
         
         # Both resources should have default queues
         assert resource1.ports is not None
-        assert len(resource1.ports) == 2
+        assert len(resource1.ports) == 1
         assert resource2.ports is not None
-        assert len(resource2.ports) == 2
+        assert len(resource2.ports) == 1
         
         # All queues should be in port_data
         port_ids = [p.ID for p in system.port_data]
-        assert f"{resource1.ID}_default_input_queue" in port_ids
-        assert f"{resource1.ID}_default_output_queue" in port_ids
-        assert f"{resource2.ID}_default_input_queue" in port_ids
-        assert f"{resource2.ID}_default_output_queue" in port_ids
+        assert f"{resource1.ID}_default_queue" in port_ids
+        assert f"{resource2.ID}_default_queue" in port_ids
 

@@ -263,21 +263,21 @@ def test_hashing_process_dependency(
     simulation_adapter_process_dependency: ProductionSystemData,
 ):
     hash_str = simulation_adapter_process_dependency.hash()
-    assert hash_str == "90b05fbe4291fde09227d06934a731fc"
+    assert hash_str == "cde3b1c03f7468d16172fc5d5b451665"
 
 
 def test_hashing_resource_dependency(
     simulation_adapter_resource_dependency: ProductionSystemData,
 ):
     hash_str = simulation_adapter_resource_dependency.hash()
-    assert hash_str == "02b202eab366c2ec634e9030d30c2c50"
+    assert hash_str == "a6f711e5c32b42bcb2b472c0c112f005"
 
 
 def test_hashing_both_dependencies(
     simulation_adapter_both_dependencies: ProductionSystemData,
 ):
     hash_str = simulation_adapter_both_dependencies.hash()
-    assert hash_str == "0548f963430e9fc11b13aa0c23afaa05"
+    assert hash_str == "b2a4cd0f153ad504babceff8bfe83f03"
 
 
 def test_run_simulation_process_dependency(

@@ -62,7 +62,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "1c73016b17ea21039f0e544b60aded34"
+    assert hash_str == "52e4513c7a2a4e748c699edacc6eaf51"
 
 def test_deterministic_simulation(simulation_adapter: ProductionSystemData):
     runner_instance_1 = runner.Runner(production_system_data=simulation_adapter)
