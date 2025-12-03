@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from hashlib import md5
+import datetime
 import json
-from typing import List, Any, Set, Optional, Tuple, Union
-from warnings import warn
+from typing import List, Any, Set, Optional, Tuple, Union, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -18,7 +17,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import port_data, production_system_data, performance_data
+from prodsys.models import port_data, performance_data
 from prodsys.models import (
     dependency_data,
     node_data,
@@ -380,7 +379,10 @@ class ProductionSystemData(BaseModel):
         source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
         schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
+        order_data (Optional[List[order_data_module.OrderData]], optional): List of orders in the production system. Defaults to None.
         conwip_number (Optional[int], optional): Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
+        reference_time (Optional[datetime.datetime], optional): Reference time of the production system. Defaults to None.
+        time_unit (Literal["s", "min", "h", "d"], optional): Time unit of the production system. Defaults to "min".
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
@@ -403,6 +405,8 @@ class ProductionSystemData(BaseModel):
     schedule: Optional[List[performance_data.Event]] = None
     order_data: Optional[List[order_data_module.OrderData]] = None
     conwip_number: Optional[int] = None
+    reference_time: Optional[datetime.datetime] = None
+    time_unit: Literal["s", "min", "h", "d"] = "min"
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
