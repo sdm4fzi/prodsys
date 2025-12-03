@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -13,8 +13,8 @@ class OrderData(BaseModel):
     ID: str
     ordered_products: List[OrderedProductData]
     order_time: float
-    release_time: float
-    due_time: float
+    due_time: Optional[float] = None
+    release_time: Optional[float] = None
     priority: int
-    products: List[ProductData]
+    products: Optional[List[ProductData]] = None
     
