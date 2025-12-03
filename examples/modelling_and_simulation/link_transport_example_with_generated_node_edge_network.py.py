@@ -32,12 +32,6 @@ timer_model_interarrival_time2 = psx.FunctionTimeModel(
     distribution_function="constant", location=6, ID="time_model_source02"
 )
 
-# All nodes
-node1 = psx.Node(location=[10, 0], ID="node1")
-node2 = psx.Node(location=[0, 15], ID="node2")
-node3 = psx.Node(location=[20, 20], ID="node3")
-node4 = psx.Node(location=[0, 20], ID="node4")
-
 # All processes
 ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, ID="ltp01")
 productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
@@ -104,28 +98,6 @@ source02 = psx.Source(
 sink01 = psx.Sink(product=product01, ID="sink01", location=[200, 205])
 sink02 = psx.Sink(product=product02, ID="sink02", location=[200, 205])
 
-
-# Update processes
-links = [
-    [source01, node1],
-    [source02, node1],
-    [source01, node2],
-    [source02, node2],
-    [node1, machine01],
-    [node2, machine01],
-    [node2, node4],
-    [machine02, machine03],
-    [machine03, machine01],
-    [machine01, machine02],
-    [machine03, node3],
-    [machine02, node3],
-    [node4, machine03],
-    [node3, sink01],
-    [node3, sink02],
-]
-
-#ltp01.set_links(links)
-
 # Add production system
 productionsystem = psx.ProductionSystem(
     resources=[
@@ -140,10 +112,6 @@ productionsystem = psx.ProductionSystem(
 )
 
 adapter = productionsystem.to_model()
-#runner = prodsys.runner.Runner(production_system_data=adapter)
-#runner.initialize_simulation()
-#runner.run(1000)
-#runner.print_results()
 
 #add_default_queues_to_production_system(adapter, reset=False)
 node_link_generation.generate_and_apply_network(adapter)
