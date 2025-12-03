@@ -22,6 +22,7 @@ from prodsys.models import port_data, production_system_data, performance_data
 from prodsys.models import (
     dependency_data,
     node_data,
+    order_data as order_data_module,
     product_data,
     resource_data,
     sink_data,
@@ -400,6 +401,7 @@ class ProductionSystemData(BaseModel):
     depdendency_data: Optional[List[dependency_data_module.DEPENDENCY_TYPES]] = []
     primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
     schedule: Optional[List[performance_data.Event]] = None
+    order_data: Optional[List[order_data_module.OrderData]] = None
     conwip_number: Optional[int] = None
 
     valid_configuration: bool = True
