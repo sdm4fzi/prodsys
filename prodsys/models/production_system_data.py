@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from hashlib import md5
+import datetime
 import json
-from typing import List, Any, Set, Optional, Tuple, Union
-from warnings import warn
+from typing import List, Any, Set, Optional, Tuple, Union, Literal
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -18,10 +17,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from prodsys.models import port_data, production_system_data, performance_data
+from prodsys.models import port_data, performance_data
 from prodsys.models import (
     dependency_data,
     node_data,
+    order_data as order_data_module,
     product_data,
     resource_data,
     sink_data,
@@ -109,12 +109,19 @@ def get_set_of_IDs(list_of_objects: List[Any]) -> Set[str]:
     return set([obj.ID for obj in list_of_objects])
 
 
+def has_only_transport_processes(resource: resource_data_module.ResourceData, available_processes: List[processes_data_module.PROCESS_DATA_UNION]) -> bool:
+    process_objects = [process for process in available_processes if process.ID in resource.process_ids]
+    return all(process.type in [
+        processes_data_module.ProcessTypeEnum.TransportProcesses, 
+    processes_data_module.ProcessTypeEnum.LinkTransportProcesses
+    ] for process in process_objects)
+
 
 def get_default_queue_for_resource(
     resource: resource_data_module.ResourceData,
+    adapter: ProductionSystemData,
     queue_capacity: Union[float, int] = 0.0,
-    adapter: Optional[ProductionSystemData] = None,
-) -> queue_data_module.QueueData:
+) -> Optional[queue_data_module.QueueData]:
     """
     Returns default input and output queues for the given resource.
 
@@ -130,24 +137,13 @@ def get_default_queue_for_resource(
     # Determine if this is a transport resource by checking:
     # 1. First priority: check if resource has transport processes (if adapter provided)
     # 2. Fallback: check can_move attribute
-    is_transport_resource = False
-    
-    if adapter is not None:
-        # Check if any of the resource's processes are transport processes
-        transport_process_ids = set(get_possible_transport_processes_IDs(adapter))
-        is_transport_resource = any(proc_id in transport_process_ids for proc_id in resource.process_ids)
-    else:
-        # Fallback to can_move attribute if no adapter provided
-        is_transport_resource = hasattr(resource, 'can_move') and resource.can_move
-    
-    # For transport resources, create a single input_output queue
-    if is_transport_resource:
-        return 
+    if has_only_transport_processes(resource, adapter.process_data):
+        return None
     
     # For production resources, create separate input and output queues
     queue = queue_data_module.QueueData(
-            ID=resource.ID + "_default_input_queue",
-            description="Default input queue of " + resource.ID,
+            ID=resource.ID + "_default_queue",
+            description="Default queue of " + resource.ID,
             capacity=queue_capacity,
             location=resource.location,
             interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
@@ -234,7 +230,7 @@ def add_default_queues_to_resources(
         
         # Get both input and output queues, passing adapter for proper transport resource detection
         default_queue = get_default_queue_for_resource(
-            resource, queue_capacity, adapter
+            resource, adapter, queue_capacity
         )
         if default_queue is not None:
             # Add queues to adapter
@@ -386,7 +382,10 @@ class ProductionSystemData(BaseModel):
         source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
         schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
+        order_data (Optional[List[order_data_module.OrderData]], optional): List of orders in the production system. Defaults to None.
         conwip_number (Optional[int], optional): Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
+        reference_time (Optional[datetime.datetime], optional): Reference time of the production system. Defaults to None.
+        time_unit (Literal["s", "min", "h", "d"], optional): Time unit of the production system. Defaults to "min".
         valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
         reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
@@ -407,7 +406,10 @@ class ProductionSystemData(BaseModel):
     depdendency_data: Optional[List[dependency_data_module.DEPENDENCY_TYPES]] = []
     primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
     schedule: Optional[List[performance_data.Event]] = None
+    order_data: Optional[List[order_data_module.OrderData]] = None
     conwip_number: Optional[int] = None
+    reference_time: Optional[datetime.datetime] = None
+    time_unit: Literal["s", "min", "h", "d"] = "min"
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0
@@ -1006,68 +1008,29 @@ class ProductionSystemData(BaseModel):
             
             # Check if resource only has transport processes
             # If it does, no queues are required
-            has_only_transport_processes = False
-            if resource.process_ids:
-                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
-                if process_objects:
-                    # Check if all processes are transport processes
-                    has_only_transport_processes = all(
-                        isinstance(p, processes_data_module.TransportProcessData) 
-                        for p in process_objects
-                    )
-            
-            port_data_ids = get_set_of_IDs(values["port_data"])
+
+            available_processes = values["process_data"]
+            available_processes = TypeAdapter(List[processes_data_module.PROCESS_DATA_UNION]).validate_python(available_processes)
+
+            only_transport_processes = has_only_transport_processes(resource, available_processes)
+
             
             # If resource has no ports and doesn't only have transport processes, add default queues
-            if not resource.ports and not has_only_transport_processes:
-                # Create default queues for the resource using the existing function
-                # We need to create a minimal adapter-like object for get_default_queues_for_resource
-                # But since we're in a validator, we can check process types directly
-                process_objects = [p for p in values["process_data"] if p.ID in resource.process_ids]
-                is_transport_resource = (
-                    process_objects and 
-                    all(isinstance(p, processes_data_module.TransportProcessData) for p in process_objects)
+            if not resource.ports and not only_transport_processes:
+                queue = queue_data_module.QueueData(
+                    ID=resource.ID + "_default_queue",
+                    description="Default queue of " + resource.ID,
+                    capacity=0.0,
+                    location=resource.location,
+                    interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
+                    port_type=port_data.PortType.QUEUE,
                 )
+                if "port_data" not in values:
+                    values["port_data"] = []
+                values["port_data"].append(queue)
+                resource.ports = [queue.ID]
                 
-                if is_transport_resource:
-                    # For transport resources, create a single input_output queue
-                    queue = queue_data_module.QueueData(
-                        ID=resource.ID + "_default_queue",
-                        description="Default queue for transport resource " + resource.ID,
-                        capacity=0.0,
-                        location=resource.location,
-                        interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
-                        port_type=port_data.PortType.QUEUE,
-                    )
-                    if "port_data" not in values:
-                        values["port_data"] = []
-                    values["port_data"].append(queue)
-                    resource.ports = [queue.ID]
-                else:
-                    # For production resources, create input and output queues
-                    input_queue = queue_data_module.QueueData(
-                        ID=resource.ID + "_default_input_queue",
-                        description="Default input queue of " + resource.ID,
-                        capacity=0.0,
-                        location=resource.location,
-                        interface_type=port_data.PortInterfaceType.INPUT,
-                        port_type=port_data.PortType.QUEUE,
-                    )
-                    output_queue = queue_data_module.QueueData(
-                        ID=resource.ID + "_default_output_queue",
-                        description="Default output queue of " + resource.ID,
-                        capacity=0.0,
-                        location=resource.location,
-                        interface_type=port_data.PortInterfaceType.OUTPUT,
-                        port_type=port_data.PortType.QUEUE,
-                    )
-                    if "port_data" not in values:
-                        values["port_data"] = []
-                    values["port_data"].append(input_queue)
-                    values["port_data"].append(output_queue)
-                    resource.ports = [input_queue.ID, output_queue.ID]
-                
-                port_data_ids = get_set_of_IDs(values["port_data"])
+            port_data_ids = get_set_of_IDs(values["port_data"])
             
             # Validate ports if they exist (skip validation for transport-only resources without ports)
             if resource.ports:
