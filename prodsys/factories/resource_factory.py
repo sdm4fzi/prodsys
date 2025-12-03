@@ -15,23 +15,14 @@ from prodsys.models.resource_data import (
     ResourceData,
     SystemResourceData,
     TransportControlPolicy,
-    ResourceControlPolicy,
-    ResourceData,
-    SystemResourceData,
-    TransportControlPolicy,
 )
-from prodsys.models import performance_data
-from prodsys.factories import port_factory, process_factory, state_factory
 from prodsys.models import performance_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
 from prodsys.simulation.lot_handler import LotHandler
-from prodsys.simulation.lot_handler import LotHandler
 
 if TYPE_CHECKING:
-    from prodsys.simulation import port
-    from prodsys.models import production_system_data
     from prodsys.simulation import port
     from prodsys.models import production_system_data
 

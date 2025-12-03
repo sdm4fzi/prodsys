@@ -73,7 +73,7 @@ def parse_drawio_rectangles(xml_path):
 def get_all_locations(productionsystem: production_system_data):
     locations = []
     for node in list(productionsystem.resource_data) + list(productionsystem.source_data) + list(productionsystem.sink_data): #list(productionsystem.port_data) + list(productionsystem.resource_data): #get all port locations
-        locations.append([node.ID, [x for x in node.location]]) #transform necessary because node link generation works in cm
+        locations.append([node.ID, [x for x in node.location]])
     return locations
 
 def generate_stations_config(stations: list) -> None:

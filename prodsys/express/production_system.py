@@ -2,18 +2,14 @@ from typing import Dict, List, Optional, Union, Set
 
 
 from pydantic import Field, PrivateAttr
-from pydantic import Field, PrivateAttr
 from pydantic.dataclasses import dataclass
 
 from prodsys.express.primitive import Primitive
-from prodsys.express.primitive import Primitive
 from prodsys.util import util
-from prodsys.models import production_system_data
 from prodsys.models import production_system_data
 
 from prodsys.express import (
     core,
-    node,
     node,
     resources,
     source,

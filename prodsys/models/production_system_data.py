@@ -1308,7 +1308,7 @@ def get_location_of_locatable(
     return locations
 
 
-def assert_no_redundant_locations(adapter: ProductionSystemData): #TODO:FIXME: hier wird der fehler erkannt warum immer invalide produktionssystem erstellt werden.
+def assert_no_redundant_locations(adapter: ProductionSystemData):
     """
     Asserts that no multiple objects are positioned at the same location.
 
