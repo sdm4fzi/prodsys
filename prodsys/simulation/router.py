@@ -8,24 +8,21 @@ from typing import (
     Optional,
     Union,
     Dict,
-    Tuple,
 )
 
 import logging
 
-from numpy.random import f
 import simpy
 
 from prodsys.factories import primitive_factory
 from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.dependency import Dependency
 from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
-from prodsys.simulation.request_handler import RequestHandler, RequestInfo
-from prodsys.simulation.lot_handler import LotHandler
+from prodsys.simulation.request_handler import RequestHandler
 from prodsys.simulation.entities.entity import EntityType
 
-logger = logging.getLogger(__name__)
 
 from simpy import events
 
@@ -41,11 +38,12 @@ if TYPE_CHECKING:
     from prodsys.simulation.entities import product
     
     from prodsys.control import routing_control_env
-    from prodsys.models import product_data
     from prodsys.simulation.locatable import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
 
+
+logger = logging.getLogger(__name__)
 
 def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
     """
@@ -219,6 +217,7 @@ class Router:
                         self.free_primitives_by_type
                     )
                 )
+                print(self.free_primitives_by_type.keys())
                 if not free_requests:
                     break
                 self.env.update_progress_bar()
@@ -271,9 +270,25 @@ class Router:
             executed_request.dependencies_ready.succeed()
 
     def get_dependencies(self, executed_request: request.Request) -> Generator:
+        # get at first primitive dependencies -> material is available
+        primitive_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
+        resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE]
+        process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
+        if primitive_dependencies:
+            print("primitive dependencies for item ", executed_request.requesting_item.data.ID)
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
-            process=executed_request.process,
+            relevant_dependencies=primitive_dependencies,
+            requesting_item=executed_request.requesting_item,
+            dependency_release_event=executed_request.completed,
+        )
+        for dependency_ready_event in dependency_ready_events:
+            yield dependency_ready_event
+
+        # get resource and process dependencies after primitive dependencies are available
+        dependency_ready_events = self.get_dependencies_for_execution(
+            resource=executed_request.resource,
+            relevant_dependencies=resource_dependencies + process_dependencies,
             requesting_item=executed_request.requesting_item,
             dependency_release_event=executed_request.completed,
         )
@@ -409,7 +424,7 @@ class Router:
     def get_dependencies_for_execution(
         self,
         resource: resources.Resource,
-        process: process.Process,
+        relevant_dependencies: List[Dependency],
         requesting_item: Union[product.Product, primitive.Primitive],
         dependency_release_event: events.Event,
     ) -> List[simpy.Event]:
@@ -421,7 +436,7 @@ class Router:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
         dependency_ready_events = []
-        for dependency in resource.dependencies + process.dependencies:
+        for dependency in relevant_dependencies:
             request_info = self.request_handler.add_dependency_request(
                 requiring_dependency=resource,
                 requesting_item=requesting_item,

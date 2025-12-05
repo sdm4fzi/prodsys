@@ -77,7 +77,7 @@ class Sink:
                     router.free_primitives_by_type[product.data.type] = []
                 router.free_primitives_by_type[product.data.type].append(product)
                 if not router.got_primitive_request.triggered:
-                    router.got_primitive_request.succeed() 
+                    router.got_primitive_request.succeed()
                     
                     
         self.product_factory.register_finished_product(product)
