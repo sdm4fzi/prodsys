@@ -25,7 +25,7 @@ class DependencyFactory:
         self.primitive_factory = primitive_factory
         self.resource_factory = resource_factory
         self.node_factory = node_factory
-        self.dependencies = {}
+        self.dependencies: dict[str, Dependency] = {}
         
     def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
         if not dependency_data.dependency_type == DependencyType.PRIMITIVE:

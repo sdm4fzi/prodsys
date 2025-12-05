@@ -4,6 +4,10 @@ from typing import TYPE_CHECKING
 
 from prodsys.simulation import sim
 from prodsys.simulation import router as router_module
+from prodsys.simulation.process_matcher import ProcessMatcher
+
+from prodsys.simulation import request
+
 
 if TYPE_CHECKING:
     from prodsys.simulation import sim
@@ -13,6 +17,7 @@ if TYPE_CHECKING:
         product_factory,
         source_factory,
         primitive_factory,
+        dependency_factory,
     )
     from prodsys.models import production_system_data
 
@@ -25,6 +30,7 @@ class RouterFactory:
         product_factory: product_factory.ProductFactory,
         source_factory: source_factory.SourceFactory,
         primitive_factory: primitive_factory.PrimitiveFactory,
+        dependency_factory: dependency_factory.DependencyFactory,
         production_system_data: production_system_data.ProductionSystemData,
     ):
         self.env = env
@@ -33,10 +39,21 @@ class RouterFactory:
         self.product_factory = product_factory
         self.source_factory = source_factory
         self.primitive_factory = primitive_factory
+        self.dependency_factory = dependency_factory
         self.production_system_data = production_system_data
 
         self.system_routers: dict[str, router_module.Router] = {}
         self.global_system_router: router_module.Router = None
+
+
+        self.process_matcher = ProcessMatcher(
+            self.resource_factory,
+            self.sink_factory,
+            self.product_factory,
+            self.source_factory,
+            self.primitive_factory,
+            self.dependency_factory,
+        )
 
     def create_routers(self):
         for system_sources in self.resource_factory.system_resources.values():
@@ -49,6 +66,7 @@ class RouterFactory:
                 primitive_factory=self.primitive_factory,
                 production_system_data=self.production_system_data,
                 resources=system_sources.subresources,
+                process_matcher=self.process_matcher,
             )
             self.system_routers[system_sources.data.ID] = system_sources.router
             system_sources.set_router(system_sources.router)
@@ -62,6 +80,7 @@ class RouterFactory:
             primitive_factory=self.primitive_factory,
             production_system_data=self.production_system_data,
             resources=self.resource_factory.global_system_resource.subresources,
+            process_matcher=self.process_matcher,
         )
         self.global_system_router = global_system_router
         self.resource_factory.global_system_resource.set_router(global_system_router)

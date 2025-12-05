@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from prodsys.simulation.port import Queue
+from prodsys.simulation.source import Source
+from prodsys.simulation.sink import Sink
+from prodsys.simulation.resources import Resource
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import logging
@@ -8,7 +12,8 @@ import time
 
 from prodsys.factories import primitive_factory
 from prodsys.models.source_data import RoutingHeuristic
-from prodsys.simulation import request, process
+from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation import request, process, route_finder
 
 
 if TYPE_CHECKING:
@@ -18,6 +23,7 @@ if TYPE_CHECKING:
         sink_factory,
         product_factory,
         source_factory,
+        dependency_factory,
     )
     from prodsys.simulation.entities import product
     from prodsys.models import product_data
@@ -26,7 +32,6 @@ if TYPE_CHECKING:
     # from prodsys.factories.source_factory import SourceFactory
 
 logger = logging.getLogger(__name__)
-
 
 @dataclass(frozen=True)
 class ResourceCompatibilityKey:
@@ -72,8 +77,7 @@ class ProcessMatcher:
         product_factory: product_factory.ProductFactory,
         source_factory: source_factory.SourceFactory,
         primitive_factory: primitive_factory.PrimitiveFactory,
-        reachability_cache: Dict[Tuple[str, str], bool],
-        route_cache: Dict[Tuple[str, str, str], request.Request],
+        dependency_factory: dependency_factory.DependencyFactory,
     ):
         """
         Initialize the ProcessMatcher with the necessary factories and routing control environment.
@@ -91,8 +95,9 @@ class ProcessMatcher:
         self.product_factory = product_factory
         self.source_factory = source_factory
         self.primitive_factory = primitive_factory
-        self.route_cache = route_cache
-        self.reachability_cache = reachability_cache
+        self.dependency_factory = dependency_factory
+        self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
+        self.reachability_cache: Dict[Tuple[str, str], bool] = {}
 
         # Compatibility tables for resources and processes
         self.production_compatibility: dict[
@@ -417,6 +422,36 @@ class ProcessMatcher:
         all_locations.extend(list(nodes_from_links))
         return all_locations
 
+
+    def get_all_transport_locations(self) -> List[Locatable]:
+        """
+        Get all transport locations in the system.
+        
+        Returns:
+            List[Locatable]: List of all transport locations in the system.
+        """
+        transport_interaction_locations = (
+            [q for q in self.resource_factory.queue_factory.queues 
+               if hasattr(q.data, "location") and q.data.location is not None]
+        )
+        
+        # Also consider nodes that are interaction nodes of dependencies
+        interaction_nodes = {}
+        # TODO: probably also consider depndencies without interaction points -> goes to the resource having this dependency
+        for resource in self.resource_factory.all_resources.values():
+            process_dependencies = []
+            for process in resource.processes:
+                process_dependencies.extend(process.dependencies)
+
+            for dependency in resource.dependencies + process_dependencies:
+                if dependency.interaction_node:
+                    interaction_nodes[dependency.interaction_node.data.ID] = dependency.interaction_node
+                else:
+                    interaction_nodes[resource.data.ID] = resource
+
+        transport_interaction_locations.extend(list(interaction_nodes.values()))
+        return transport_interaction_locations
+
     def _get_all_queues(self) -> List:
         """
         Get all queues in the system.
@@ -507,7 +542,7 @@ class ProcessMatcher:
         resource: resources.Resource,
         offered_process: process.LinkTransportProcess,
         origin: Locatable,
-        target: Locatable
+        target: Locatable,
     ):
         """
         Handle compatibility checking for link transport processes.
@@ -535,7 +570,10 @@ class ProcessMatcher:
             
             # Use the route finder to check if a valid route exists
             # The route finder will handle the link connectivity checking internally
-            route = find_route(route_request, offered_process)
+            if (origin.data.ID, target.data.ID, offered_process.get_process_signature()) in self.route_cache:
+                route = self.route_cache[(origin.data.ID, target.data.ID, offered_process.get_process_signature())].get_route()
+            else:
+                route = find_route(route_request, offered_process)
             
             if route:
                 key = TransportCompatibilityKey(
@@ -547,7 +585,7 @@ class ProcessMatcher:
                 
                 # Cache reachability
                 self.reachability_cache[(origin.data.ID, target.data.ID)] = True
-                
+
                 # Cache the route
                 self._cache_route(route_request, origin, target, offered_process, route)
         except ImportError:
@@ -557,7 +595,7 @@ class ProcessMatcher:
 
     def _cache_route(
         self,
-        request: request.Request,
+        request_instance: request.Request,
         origin: Locatable,
         target: Locatable,
         process: process.PROCESS_UNION,
@@ -579,7 +617,15 @@ class ProcessMatcher:
             process.get_process_signature(),
         )
         if route_key not in self.route_cache:
-            self.route_cache[route_key] = request
+            self.route_cache[route_key] = request_instance
+
+    def get_required_transport_processes(self, dummy_products: dict[str, product.Product]) -> List[Tuple[product.Product, process.PROCESS_UNION]]:
+        transport_process_with_product = {}
+        for product in dummy_products.values():
+            transport_process_with_product[product.transport_process.data.ID] = (product, product.transport_process)
+        for primitive in self.primitive_factory.primitives:
+            transport_process_with_product[primitive.transport_process.data.ID] = (primitive, primitive.transport_process)
+        return list(transport_process_with_product.values())
 
     def _precompute_transport_compatibility(self, dummy_products: dict[str, product.Product]):
         """
@@ -588,13 +634,11 @@ class ProcessMatcher:
         Args:
             dummy_products: Dictionary of dummy products for testing.
         """
-        # Get all locations including queues
-        all_locations = self._get_all_locations()
+        all_locations = self.get_all_transport_locations()
 
-        # TODO: add caching here to avoid redundant work....
-        
-        # Get all transport processes from products and primitives
-        required_transport_processes = [(item, item.transport_process) for item in list(dummy_products.values()) + self.primitive_factory.primitives]
+        # TODO: maybe add caching to avoid symmetric keys (origin -> target and target -> origin)        
+        required_transport_processes = self.get_required_transport_processes(dummy_products)
+
         for item, requested_process in required_transport_processes:
             original_locatable = item.current_locatable
             for transport_resource in self.resource_factory.get_movable_resources():
@@ -602,9 +646,7 @@ class ProcessMatcher:
                     # For each possible origin-target pair (including queues)
                     for origin in all_locations:
                         for target in all_locations:
-                            # Create a dummy request to test matching
                             item.current_locatable = origin
-
                             dummy_transport_request = request.Request(
                                 process=requested_process,
                                 requesting_item=item,
@@ -616,7 +658,6 @@ class ProcessMatcher:
                             if not offered_process.matches_request(dummy_transport_request):
                                 continue
                             # Handle different types of transport processes
-                            # TODO: remove special handling for required capabilitiy process
                             if isinstance(offered_process, process.RequiredCapabilityProcess):
                                 self._handle_required_capability_process(
                                     dummy_transport_request, requested_process, 
@@ -635,8 +676,6 @@ class ProcessMatcher:
                                     process_signature=requested_process.get_process_signature(),
                                 )
                                 self._add_to_transport_compatibility(key, transport_resource, offered_process)
-                                
-                                # Cache reachability information
                                 self.reachability_cache[(origin.data.ID, target.data.ID)] = True
                                 
                                 # Cache the route

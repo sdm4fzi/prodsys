@@ -236,7 +236,7 @@ class RequestHandler:
             )
         )
         if not possible_resources_and_processes:
-            raise ValueError(f"No resource available for transport of item {item.data.ID} with process {item.data.transport_process}")
+            raise ValueError(f"No resource available for transport of item {item.data.ID} with process {item.data.transport_process} from {origin.data.ID} to {target.data.ID}")
         resources = {}
         for resource, process_instance in possible_resources_and_processes:
             resource_id = resource.data.ID

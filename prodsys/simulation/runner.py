@@ -188,7 +188,6 @@ class Runner:
                 time_model_factory=self.time_model_factory,
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
-                primitive_factory=self.dependency_factory,
                 sink_factory=self.sink_factory,
                 conwip=self.adapter.conwip_number,
             )
@@ -233,6 +232,7 @@ class Runner:
                 product_factory=self.product_factory,
                 source_factory=self.source_factory,
                 primitive_factory=self.primitive_factory,
+                dependency_factory=self.dependency_factory,
                 production_system_data=self.adapter,
             )
             self.router_factory.create_routers()

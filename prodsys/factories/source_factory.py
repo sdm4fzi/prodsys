@@ -39,7 +39,6 @@ class SourceFactory:
         time_model_factory: time_model_factory.TimeModelFactory,
         queue_factory: port_factory.QueueFactory,
         resource_factory: resource_factory.ResourceFactory,
-        primitive_factory: primitive_factory.PrimitiveFactory,
         sink_factory: sink_factory.SinkFactory,
         conwip: Optional[int] = None,
         schedule: Optional[List[performance_data.Event]] = None,
@@ -49,7 +48,6 @@ class SourceFactory:
         self.time_model_factory = time_model_factory
         self.queue_factory = queue_factory
         self.resource_factory = resource_factory
-        self.primitive_factory = primitive_factory
         self.sink_factory = sink_factory
         self.conwip = conwip
         self.schedule = schedule

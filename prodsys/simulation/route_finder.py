@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import Dict, List, TYPE_CHECKING, Optional, Tuple, Union
+from typing import Dict, List, TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
+import heapq
+from pathfinding.core.graph import GraphNode
 
-from pathfinding.core.graph import Graph, GraphNode
-from pathfinding.finder.dijkstra import DijkstraFinder
-# TODO: consider using a star for finding faster routes
-from pathfinding.finder.a_star import AStarFinder
+from prodsys.util.dijkstra_all import DijkstraAllPaths
 
 if TYPE_CHECKING:
-    from prodsys.simulation import request, process, resources
+    from prodsys.simulation import request, process
     from prodsys.simulation.locatable import Locatable
+
 
 
 def find_route(
@@ -41,16 +41,21 @@ def find_route(
     return route
 
 
+
 class RouteFinder:
     """
     Class representing a route finder for transportation requests in a graph.
+    Uses efficient Dijkstra exploration to cache all paths from each origin.
     """
+    # Cache: (process_id, origin_id, target_id) -> List[Locatable]
+    _route_cache: Dict[Tuple[str, str, str], List["Locatable"]] = {}
 
     def __init__(self):
         """
-        Initializes two empty lists of nodes and node locations.
+        Initializes the route finder with empty node dictionary and Dijkstra path finder.
         """
         self.nodes: Dict[str, GraphNode] = {}
+        self.dijkstra_finder = DijkstraAllPaths()
 
     def find_route(
         self,
@@ -60,6 +65,7 @@ class RouteFinder:
     ) -> List[Locatable]:
         """
         The general function which includes all sub functions to find the shortest route for a TransportRequest.
+        Uses efficient Dijkstra exploration to cache all paths from each origin.
 
         Args:
             request (Request): The transportation request.
@@ -72,11 +78,16 @@ class RouteFinder:
         origin, target = self.get_route_origin_and_target_locatables(
             request=request, route_to_origin=find_route_to_origin
         )
+        
+        # Check route cache first
+        route_cache_key = (process.data.ID, origin.data.ID, target.data.ID)
+        if route_cache_key in self._route_cache:
+            return self._route_cache[route_cache_key]
+        
+        # Build edges from links
         edges = self.process_links_to_graph_edges(
             links=process.links,
             origin=origin,
-            target=target,
-            empty_transport=find_route_to_origin,
         )  # finding route to origin is always an empty transport, since material is picked up at the origin
 
         # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly.
@@ -84,27 +95,41 @@ class RouteFinder:
             request=request, route_to_origin=find_route_to_origin
         )
 
-        graph = Graph(edges=edges, bi_directional=True)
         if not origin_node or not target_node:
             return []
-        graph_node_path = self.find_graphnode_path(origin_node, target_node, graph)
-        if not graph_node_path:
-            return []
-        route = self.convert_node_path_to_locatable_route(
-            graph_node_path=graph_node_path, links=process.links
+        
+        # Use DijkstraAllPaths to get the path (will use cache if available)
+        graph_node_paths = self.dijkstra_finder.get_all_paths_from_origin(
+            origin=origin_node,
+            edges=edges,
+            process_id=process.data.ID,
         )
 
-        if hasattr(origin, 'can_move') and origin.can_move:
-            route = route[1:]
-        return route
+        route_to_return = []
+        locatable_per_id = {locatable.data.ID: locatable for locatable in [link[0] for link in process.links] + [link[1] for link in process.links]}
+        for graph_node_path in graph_node_paths.values():
+            
+            route = self.convert_node_path_to_locatable_route(
+                graph_node_path=graph_node_path, locatable_per_id=locatable_per_id
+            )
+
+            if hasattr(origin, 'can_move') and origin.can_move:
+                route = route[1:]
+            if not route:
+                continue
+            route_target = route[-1]
+            if route_target.data.ID == target.data.ID:
+                route_to_return = route
+            route_cache_key = (process.data.ID, origin.data.ID, route_target.data.ID)
+            # Cache the route
+            self._route_cache[route_cache_key] = route
+        return route_to_return
 
     def process_links_to_graph_edges(
         self,
         links: List[List[Locatable]],
         origin: Locatable,
-        target: Locatable,
-        empty_transport: bool,
-    ) -> List[Tuple[GraphNode, GraphNode, int]]:
+    ) -> List[Tuple[GraphNode, GraphNode, float]]:
         """
         Processes the given links to create (Graph)-edges for the graph.
 
@@ -115,12 +140,8 @@ class RouteFinder:
             empty_transport (bool): Indicates whether the transport is empty or an entity is transported.
 
         Returns:
-            List[Tuple[Graphnode, Graphnode, int]]: The edges as a list of tuples (with a start_node, end_node and related costs).
+            List[Tuple[GraphNode, GraphNode, float]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
-        # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.port import Store
-        from prodsys.simulation.resources import Resource
-
         pathfinder_edges = []
 
         if hasattr(origin, 'can_move') and origin.can_move:
@@ -142,25 +163,8 @@ class RouteFinder:
         for link in links:
             link_origin = link[0]
             link_target = link[1]
-            if (
-                not isinstance(link_origin, (Store)) or (isinstance(link_origin, Resource) and not (hasattr(link_origin, 'can_move') and link_origin.can_move)) 
-                or not link_origin == origin
-            ):
-                origin_location = link_origin.get_location()
-            elif empty_transport:
-                origin_location = link_origin.get_location(interaction="input")
-            elif not empty_transport:
-                origin_location = link_origin.get_location(interaction="output")
-
-            if (
-                not isinstance(link_target, (Store)) or (isinstance(link_target, Resource) and not (hasattr(link_target, 'can_move') and link_target.can_move))
-                or not link_target == target
-            ):
-                target_location = link_target.get_location()
-            elif empty_transport:
-                target_location = link_target.get_location(interaction="output")
-            elif not empty_transport:
-                target_location = link_target.get_location(interaction="input")
+            origin_location = link_origin.get_location()
+            target_location = link_target.get_location()
 
             edge = self.get_graph_edge(
                 link_origin,
@@ -178,7 +182,7 @@ class RouteFinder:
         target: Locatable,
         origin_location: list[float],
         target_location: list[float],
-    ) -> Tuple[GraphNode, GraphNode, int]:
+    ) -> Tuple[GraphNode, GraphNode, float]:
         """
         Creates a graph edge for a link.
 
@@ -188,7 +192,7 @@ class RouteFinder:
             target_location (List[float]): The target location.
 
         Returns:
-            Tuple[GraphNode, GraphNode, int]: A tuple containing the origin and target nodes for a link and the cost.
+            Tuple[GraphNode, GraphNode, float]: A tuple containing the origin and target nodes for a link and the cost.
         """
         cost = self.calculate_cost(origin_location, target_location)
         origin_graph_node = self.get_graph_node_for_locatable(origin, origin_location)
@@ -223,10 +227,6 @@ class RouteFinder:
         Returns:
             GraphNode: The graph node.
         """
-        # TODO: make the imports at top or bottom of file
-        from prodsys.simulation.resources import Resource
-        from prodsys.simulation.port import Store
-
         existing_node = self.get_existing_graph_node_for_locatable(locatable)
         if existing_node:
             return existing_node
@@ -293,40 +293,9 @@ class RouteFinder:
         target_graph_node = self.get_existing_graph_node_for_locatable(target_locatable)
         return origin_graph_node, target_graph_node
 
-    def find_graphnode_path(
-        self, origin: GraphNode, target: GraphNode, graph: Graph
-    ) -> List[GraphNode]:
-        """
-        Finds the path between the origin and target graph nodes.
-
-        Args:
-            origin (GraphNode): The origin node.
-            target (GraphNode): The target node.
-            graph (Graph): The graph.
-
-        Returns:
-            The path as a list of graph nodes.
-        """
-        # Early termination if origin and target are the same
-        if origin.node_id == target.node_id:
-            return [origin]
-            
-        # Limit the number of nodes to prevent excessive computation
-        if len(graph.nodes) > 100:  # Arbitrary limit to prevent infinite loops
-            return []
-            
-        finder = DijkstraFinder()
-        try:
-            path, _ = finder.find_path(origin, target, graph)
-            if path is None:
-                return []
-            return path
-        except Exception:
-            # If pathfinding fails, return empty path
-            return []
 
     def convert_node_path_to_locatable_route(
-        self, graph_node_path: List[GraphNode], links: List[List[Locatable]]
+        self, graph_node_path: List[GraphNode], locatable_per_id: Dict[str, Locatable]
     ) -> List[Locatable]:
         """
         Converts the path of graph nodes to a route of Locatable objects.
@@ -342,12 +311,7 @@ class RouteFinder:
         seen_node_ids = []  # no node several times in the path
 
         for node in graph_node_path:
-            for link in links:
-                for locatable in link:
-                    if (
-                        node.node_id == locatable.data.ID
-                        and locatable.data.ID not in seen_node_ids
-                    ):
-                        route.append(locatable)
-                        seen_node_ids.append(locatable.data.ID)
+            if node.node_id in locatable_per_id:
+                route.append(locatable_per_id[node.node_id])
+                seen_node_ids.append(node.node_id)
         return route

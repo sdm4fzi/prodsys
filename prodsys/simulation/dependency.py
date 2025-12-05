@@ -122,9 +122,9 @@ class Dependency:
         env: sim.Environment,
         data: dependency_data.DependencyData,
         required_process: Optional[process.Process],
-        required_primitive: [primitive.Primitive],
-        required_resource: [resources.Resource],
-        interaction_node: [node.Node],
+        required_primitive: Optional[primitive.Primitive],
+        required_resource: Optional[resources.Resource],
+        interaction_node: Optional[node.Node],
     ):
         """
         Initializes the Dependency class.
