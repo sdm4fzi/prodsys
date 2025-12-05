@@ -143,7 +143,6 @@ class Controller:
                                     all_primitives_available = False
                                     break
                             if not all_primitives_available:
-                                print("not complete, waiting for primitive for item ", request.entity.data.ID)
                                 continue
                     requests_with_available_dependencies.append(request)
                 return requests_with_available_dependencies
@@ -200,7 +199,6 @@ class Controller:
             if not selected_request:
                 # If there are requests waiting on full output queues, wait for space
                 self.env.process(self.free_up_queue_check())
-                print("waiting for space")
                 continue
                             
             if self._should_form_lot(selected_request):

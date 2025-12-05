@@ -228,7 +228,6 @@ class Router:
                         self.free_primitives_by_type
                     )
                 )
-                print(self.free_primitives_by_type.keys())
                 if not free_requests:
                     break
                 self.env.update_progress_bar()
@@ -285,10 +284,6 @@ class Router:
         primitive_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
         resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE]
         process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
-        if primitive_dependencies:
-            print("primitive dependencies for item ", executed_request.requesting_item.data.ID)
-        if executed_request.requesting_item.data.type == "subassembly":
-            print("subassembly request")
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
             relevant_dependencies=primitive_dependencies,
@@ -330,14 +325,14 @@ class Router:
         )
         yield trans_process_finished_event
         # retrieve from queue after transport for binding
-        yield from executed_request.entity.current_locatable.get(executed_request.entity.data.ID)
+        # yield from executed_request.entity.current_locatable.get(executed_request.entity.data.ID)
 
         executed_request.completed.succeed()
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
         # place in storage after binding
-        executed_request.requesting_item.current_locatable.reserve()
-        yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
+        # executed_request.requesting_item.current_locatable.reserve()
+        # yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
         executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
         for entity in executed_request.get_atomic_entities():
             if self._entity_becomes_consumable(entity):

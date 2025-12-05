@@ -38,6 +38,7 @@ class StateEnum(str, Enum):
     end_state = "end state"
 
     created_product = "created product"
+    consumed_product = "consumed product"
     finished_product = "finished product"
 
     created_primitive = "created primitive"
@@ -56,6 +57,8 @@ class StateTypeEnum(str, Enum):
     process_breakdown = "ProcessBreakdown"
     setup = "Setup"
     source = "Source"
+    assembly = "Assembly"
+    disassembly = "Disassembly"
     sink = "Sink"
     store = "Store"
     charging = "Charging"

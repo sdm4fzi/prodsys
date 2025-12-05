@@ -150,6 +150,23 @@ class ProductInfo:
         self.origin_ID = None
         self.target_ID = target.data.ID
 
+    def log_consumption(
+        self,
+        resource: Locatable,
+        _product: Product,
+        event_time: float,
+    ) -> None:
+        """
+        Logs the consumption of a product.
+        """
+        self.resource_ID = resource.data.ID
+        self.event_time = event_time
+        self.product_ID = _product.data.ID
+        self.activity = StateEnum.consumed_product
+        self.state_type = StateTypeEnum.assembly
+        self.origin_ID = None
+        self.target_ID = None
+
     def log_bind(
         self,
         resource: Locatable,

@@ -311,7 +311,7 @@ class EventLogger(Logger):
         self.register_patch(
             self.event_data,
             product.info,
-            attr=["log_create_product", "log_finish_product", "log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading"],
+            attr=["log_create_product", "log_finish_product", "log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading", "log_consumption"],
             post=post_monitor_product_info,
         )
 

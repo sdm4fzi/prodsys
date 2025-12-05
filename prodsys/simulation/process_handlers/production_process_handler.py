@@ -14,6 +14,7 @@ from prodsys.simulation import (
 from prodsys.simulation.process import (
     ReworkProcess,
 )
+from prodsys.models.dependency_data import DependencyType
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -70,6 +71,12 @@ class ProductionProcessHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
+        required_primitive_types = [dependency.data.required_primitive for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type in required_primitive_types:
+                dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
+                yield from dependant_entity.current_locatable.get(dependant_entity.data.ID)
+                dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -87,6 +94,10 @@ class ProductionProcessHandler:
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+        required_primitive_types = [dependency.data.required_primitive for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type in required_primitive_types:
+                dependant_entity.info.log_consumption(process_request.resource, dependant_entity, self.env.now)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """

@@ -19,6 +19,7 @@ class DependencyType(str, Enum):
     - RESOURCE: Dependency on a resource.
     - PRIMITIVE: Dependency on a primitive. This covers also StoragePrimitives and Products (due to inheritance).
     """
+    # TODO: seperate PRIMITIVE dependency into -> assembly_consumption (assembly), assembly_creationg (disassembly) and tool dependency (wor piece carrier, tool for resource, ....)
 
     PROCESS = "process"
     RESOURCE = "resource"
