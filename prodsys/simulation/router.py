@@ -85,6 +85,7 @@ class Router:
         primitive_factory: Optional[primitive_factory.PrimitiveFactory] = None,
         production_system_data: Optional[production_system_data.ProductionSystemData] = None,
         resources: Optional[List[resources.Resource]] = None,
+        process_matcher: Optional[ProcessMatcher] = None,
     ):
         self.env = env
         self.resource_factory: resource_factory.ResourceFactory = resource_factory
@@ -102,27 +103,16 @@ class Router:
             self.free_primitives_by_type[prim.data.type].append(prim)
 
         self.resources = resources
+        self.process_matcher: ProcessMatcher = process_matcher
+
         self.free_resources: Dict[str, resources.Resource] = {resource.data.ID: resource for resource in self.resources}
-        self.reachability_cache: Dict[Tuple[str, str], bool] = {}
-        self.route_cache: Dict[Tuple[str, str, str], request.Request] = {}
 
         self.got_requested = events.Event(self.env)
         self.got_primitive_request = events.Event(self.env)
         self.resource_got_free = events.Event(self.env)
 
-        # Initialize the resource process mapper with precomputed compatibility tables
-        process_matcher = ProcessMatcher(
-            self.resource_factory,
-            self.sink_factory,
-            self.product_factory,
-            self.source_factory,
-            self.primitive_factory,
-            self.reachability_cache,
-            self.route_cache,
-        )
-
         # Initialize the request handler
-        self.request_handler = RequestHandler(process_matcher)
+        self.request_handler = RequestHandler(self.process_matcher)
         self.interaction_handler = InteractionHandler()
 
         # Initialize compatibility tables
