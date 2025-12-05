@@ -66,11 +66,12 @@ worker_process = psx.ProductionProcess(
     "worker_process"
 )
 worker_transport = psx.TransportProcess(t_transport, "worker_transport")
-
+from prodsys.models.resource_data import TransportControlPolicy
 worker = psx.Resource(
     [worker_transport, worker_process, tp],
     [1, 1],
     1,
+    control_policy=TransportControlPolicy.SPT_transport,
     ID="worker",
 )
 
