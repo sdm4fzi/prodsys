@@ -209,8 +209,14 @@ class Router:
         while True:
             yield self.got_primitive_request
             self.got_primitive_request = events.Event(self.env)
-            if not self.free_primitives_by_type:
-                continue            
+            has_free_primitives = any(
+                primitives for primitives in self.free_primitives_by_type.values()
+            )
+            if not has_free_primitives:
+                # If no free primitives but there are pending requests, 
+                # we still need to wait for primitives to be released
+                # The event will be triggered in execute_primitive_routing when primitives are released
+                continue        
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
@@ -276,6 +282,8 @@ class Router:
         process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
         if primitive_dependencies:
             print("primitive dependencies for item ", executed_request.requesting_item.data.ID)
+        if executed_request.requesting_item.data.type == "subassembly":
+            print("subassembly request")
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
             relevant_dependencies=primitive_dependencies,
@@ -337,7 +345,12 @@ class Router:
             executed_request.entity.release()
             self.free_primitives_by_type[executed_request.entity.data.type].append(
                 executed_request.entity
-            )                
+            )
+            # Notify all resources that might be waiting for this primitive type
+            # This allows controllers to recheck feasibility of pending requests
+            for resource in self.resources:
+                if resource.controller and not resource.controller.state_changed.triggered:
+                    resource.controller.state_changed.succeed()
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
 

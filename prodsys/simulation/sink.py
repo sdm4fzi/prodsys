@@ -76,9 +76,15 @@ class Sink:
                 if product.data.type not in router.free_primitives_by_type:
                     router.free_primitives_by_type[product.data.type] = []
                 router.free_primitives_by_type[product.data.type].append(product)
+                print("updating free primitives from sink with product ", product.data.ID)
+                # Notify all resources that might be waiting for this primitive type
+                # This allows controllers to recheck feasibility of pending requests
+                for resource in router.resources:
+                    if resource.controller and not resource.controller.state_changed.triggered:
+                        resource.controller.state_changed.succeed()
                 if not router.got_primitive_request.triggered:
+                    print("succeeding got primitive request from sink")
                     router.got_primitive_request.succeed()
-                    
                     
         self.product_factory.register_finished_product(product)
 
