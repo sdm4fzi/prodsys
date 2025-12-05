@@ -207,11 +207,13 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
     #visualization.show_table_configuration(table_configuration=False, boundary=True, stations=True, station_nodes=True)
 
     # Define the medial axis of the table configuration.    MARKER: Optional
-    table_config.define_medial_axis()
+    if not simple_connection:    
+        table_config.define_medial_axis()
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=True, station_nodes=True, medial_axis=True)
 
     # Define zones of the table configuration.  MARKER: Optional
-    table_config.define_zones() 
+    if not simple_connection:
+        table_config.define_zones()
     #visualization.show_table_configuration(table_configuration=True, boundary=True, stations=False, station_nodes=False, zones=True)
 
     # Define station nodes and edges. Add edges optionally.
