@@ -106,7 +106,7 @@ sink_main_assembly = psx.Sink(main_assembly, [10, 5], "sink_main_assembly")
 
 # Create sources for primitives
 # arrival_model = psx.FunctionTimeModel("constant", 5, ID="arrival_model")
-arrival_model = psx.FunctionTimeModel("exponential", 10, ID="arrival_model")
+arrival_model = psx.FunctionTimeModel("exponential", 30, ID="arrival_model")
 
 source_screw = psx.Source(screw, arrival_model, [0, 0], ID="source_screw")
 source_bolt = psx.Source(bolt, arrival_model, [0, 0], ID="source_bolt")
@@ -131,5 +131,6 @@ runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
 runner_instance.run(1000)
 runner_instance.print_results()
+runner_instance.plot_results()
 runner_instance.save_results_as_csv()
 

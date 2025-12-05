@@ -186,8 +186,13 @@ class Router:
         This method should be called in a separate thread to run the allocation process.
         """
         while True:
-            yield self.got_requested
-            self.got_requested = events.Event(self.env)
+            # Wait for either new requests or resources becoming free
+            yield simpy.AnyOf(self.env, [self.got_requested, self.resource_got_free])
+            # Reset events if they were triggered
+            if self.got_requested.triggered:
+                self.got_requested = events.Event(self.env)
+            if self.resource_got_free.triggered:
+                self.resource_got_free = events.Event(self.env)
             while True:
                 self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
