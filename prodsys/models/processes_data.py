@@ -115,7 +115,6 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-    product_disassembly_dict : Optional[Dict[str, List[ProductData]]] = None
     
     model_config = ConfigDict(
         json_schema_extra={

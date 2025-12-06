@@ -52,5 +52,5 @@ from prodsys.express.product import Product
 from prodsys.express.source import Source
 from prodsys.express.sink import Sink
 from prodsys.express.primitive import Primitive
-from prodsys.express.dependency import ResourceDependency, PrimitiveDependency, ProcessDependency, LotDependency
+from prodsys.express.dependency import ResourceDependency, ToolDependency, ProcessDependency, LotDependency, AssemblyDependency, DisassemblyDependency
 from prodsys.express.production_system import ProductionSystem

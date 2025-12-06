@@ -23,16 +23,16 @@ work_piece_carriers = psx.Primitive(
 lot_dependency_with_carrier = psx.LotDependency(
     min_lot_size=1,
     max_lot_size=4,
-    ID="lot_dependency",
+    ID="lot_dependency_with_carrier",
 )
-work_piece_carrier_dependency = psx.PrimitiveDependency(
-    required_primitive=work_piece_carriers
+work_piece_carrier_dependency = psx.ToolDependency(
+    required_entity=work_piece_carriers
 )
 
 lot_dependency_without_carrier = psx.LotDependency(
     min_lot_size=2,
     max_lot_size=3,
-    ID="lot_dependency",
+    ID="lot_dependency_without_carrier",
 )
 
 machine = psx.Resource(

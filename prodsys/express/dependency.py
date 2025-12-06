@@ -6,7 +6,7 @@ from pydantic import Field
 from pydantic.dataclasses import dataclass
 
 from prodsys.express import core
-from prodsys.models.dependency_data import PrimitiveDependencyData, ProcessDependencyData, ResourceDependencyData, LotDependencyData
+from prodsys.models.dependency_data import ToolDependencyData, ProcessDependencyData, ResourceDependencyData, LotDependencyData, AssemblyDependencyData, DisassemblyDependencyData
 from prodsys.express.node import Node
 
 
@@ -70,17 +70,42 @@ class ProcessDependency(Dependency):
 
 
 @dataclass
-class PrimitiveDependency(Dependency):
-    required_primitive: Union[Product, Primitive]
+class ToolDependency(Dependency):
+    required_entity: Union[Product, Primitive]
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self):
-        return PrimitiveDependencyData(
+        return ToolDependencyData(
             ID=self.ID,
             description="",
-            required_primitive=self.required_primitive.ID,
+            required_entity=self.required_entity.ID,
         )
 
+
+@dataclass
+class AssemblyDependency(Dependency):
+    required_entity: Union[Product, Primitive]
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+    def to_model(self):
+        return AssemblyDependencyData(
+            ID=self.ID,
+            description="",
+            required_entity=self.required_entity.ID,
+        )
+
+
+@dataclass
+class DisassemblyDependency(Dependency):
+    required_entity: Union[Product, Primitive]
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+
+    def to_model(self):
+        return DisassemblyDependencyData(
+            ID=self.ID,
+            description="",
+            required_entity=self.required_entity.ID,
+        )
 
 @dataclass
 class LotDependency(Dependency):

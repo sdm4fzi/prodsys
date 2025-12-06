@@ -33,8 +33,8 @@ t_subassembly = psx.FunctionTimeModel("normal", 5, 0.5, "t_subassembly")
 t_main_assembly = psx.FunctionTimeModel("normal", 10, 1.0, "t_main_assembly")
 
 # Create dependencies for subassembly (requires screw and bolt)
-screw_dependency = psx.PrimitiveDependency(required_primitive=screw)
-bolt_dependency = psx.PrimitiveDependency(required_primitive=bolt)
+screw_dependency = psx.ToolDependency(required_entity=screw)
+bolt_dependency = psx.ToolDependency(required_entity=bolt)
 
 # Production process for subassembly with primitive dependencies
 p_subassembly = psx.ProductionProcess(
@@ -47,8 +47,8 @@ p_subassembly = psx.ProductionProcess(
 subassembly = psx.Product([p_subassembly], tp, "subassembly")
 
 # Create dependency for main assembly (requires subassembly and washer)
-subassembly_dependency = psx.PrimitiveDependency(required_primitive=subassembly)
-washer_dependency = psx.PrimitiveDependency(required_primitive=washer)
+subassembly_dependency = psx.ToolDependency(required_entity=subassembly)
+washer_dependency = psx.ToolDependency(required_entity=washer)
 
 # Production process for main assembly with dependencies
 p_main_assembly = psx.ProductionProcess(

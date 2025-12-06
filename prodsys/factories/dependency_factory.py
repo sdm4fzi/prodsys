@@ -28,10 +28,10 @@ class DependencyFactory:
         self.dependencies: dict[str, Dependency] = {}
         
     def check_product_dependencies(self,dependency_data: DEPENDENCY_TYPES, product_data: list[ProductData]):
-        if not dependency_data.dependency_type == DependencyType.PRIMITIVE:
+        if not dependency_data.dependency_type == DependencyType.ASSEMBLY:
             return
         for product_d in product_data:
-            if(product_d.ID == dependency_data.required_primitive): 
+            if(product_d.ID == dependency_data.required_entity): 
                 product_d.becomes_consumable = True
                 
     def create_dependencies(self, dependency_data_list: list[DEPENDENCY_TYPES], product_data: ProductData) -> list[Dependency]:
@@ -70,16 +70,21 @@ class DependencyFactory:
                 node = self.node_factory.get_node(dependency_data.interaction_node)
             else:
                 node = None
-        elif dependency_data.dependency_type == DependencyType.PRIMITIVE:
+        elif dependency_data.dependency_type == DependencyType.ASSEMBLY or dependency_data.dependency_type == DependencyType.DISASSEMBLY:
             try:
-                primitive = self.product_factory.get_product_init(dependency_data.required_primitive)
+                primitive = self.product_factory.get_product_init(dependency_data.required_entity)
             except Exception as e:
                 pass
             if(primitive == None):
                 try:
-                    primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_primitive)
+                    primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
                 except Exception as e:
-                    raise ValueError(f"Primitive with ID {dependency_data.required_primitive} not found.") from e   
+                    raise ValueError(f"Primitive with ID {dependency_data.required_entity} not found.") from e  
+        elif dependency_data.dependency_type == DependencyType.TOOL:
+            try:
+                primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
+            except Exception as e:
+                raise ValueError(f"Primitive with ID {dependency_data.required_entity} not found.") from e  
         elif dependency_data.dependency_type == DependencyType.LOT:
             pass
         else:

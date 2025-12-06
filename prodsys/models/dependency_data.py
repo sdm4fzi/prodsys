@@ -5,7 +5,7 @@ from hashlib import md5
 from typing import TYPE_CHECKING, Literal, Optional, Union
 
 
-from prodsys.models.core_asset import CoreAsset, Location2D
+from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -17,13 +17,16 @@ class DependencyType(str, Enum):
 
     - PROCESS: Dependency on a process.
     - RESOURCE: Dependency on a resource.
-    - PRIMITIVE: Dependency on a primitive. This covers also StoragePrimitives and Products (due to inheritance).
+    - TOOL: Dependency on a tool. For example, a tool needed for a production process (e.g. a drill bit) or a work piece carrier for a transport process.
+    - ASSEMBLY: Dependency on an assembly. A primitive or product needed for an assembly process.
+    - DISASSEMBLY: Dependency on a disassembly. A primitive or product created by an disassembly process.
+    - LOT: Dependency on a lot. For example, a lot needed for a production process (e.g. a lot of screws) or a work piece carrier for a transport process.
     """
-    # TODO: seperate PRIMITIVE dependency into -> assembly_consumption (assembly), assembly_creationg (disassembly) and tool dependency (wor piece carrier, tool for resource, ....)
-
     PROCESS = "process"
     RESOURCE = "resource"
-    PRIMITIVE = "primitive"
+    TOOL = "tool"
+    ASSEMBLY = "assembly"
+    DISASSEMBLY = "disassembly"
     LOT = "lot"
 
 class DependencyData(CoreAsset):
@@ -74,9 +77,9 @@ class ResourceDependencyData(DependencyData):
         ).hexdigest()
 
 
-class PrimitiveDependencyData(DependencyData):
+class ToolDependencyData(DependencyData):
     """
-    Class that defines a dependency on a primitive. This could mean, e.g. that a product requires a workpiece carrier to be transported or a tool to be processed. The primitive is not a product itself, but a component that is needed for the production process.
+    Class that defines a dependency on a tool. This could mean, e.g. that a product requires a workpiece carrier to be transported or a tool to be processed. The tool is not a product itself, but a component that is needed for the production process.
 
     Args:
         ID (str): ID of the dependency.
@@ -88,8 +91,8 @@ class PrimitiveDependencyData(DependencyData):
         _type_: _description_
     """
 
-    required_primitive: str
-    dependency_type: DependencyType = DependencyType.PRIMITIVE
+    required_entity: str
+    dependency_type: DependencyType = DependencyType.TOOL
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -98,12 +101,52 @@ class PrimitiveDependencyData(DependencyData):
         Returns:
             str: Hash of the primitive dependency.
         """
-        primitive_hash = ""
-        for primitive in adapter.primitive_data:
-            if primitive.ID == self.required_primitive:
-                primitive_hash = primitive.hash(adapter)
+        entity_hash = ""
+        for entity in adapter.primitive_data + adapter.product_data:
+            if entity.ID == self.required_entity:
+                entity_hash = entity.hash(adapter)
         return md5(
-            "".join([self.dependency_type, primitive_hash]).encode("utf-8")
+            "".join([self.dependency_type, entity_hash]).encode("utf-8")
+        ).hexdigest()
+
+
+class AssemblyDependencyData(DependencyData):
+    required_entity: str
+    dependency_type: DependencyType = DependencyType.ASSEMBLY
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Function to hash the assembly dependency.
+
+        Returns:
+            str: Hash of the assembly dependency.
+        """
+        entity_hash = ""
+        for entity in adapter.primitive_data + adapter.product_data:
+            if entity.ID == self.required_entity:
+                entity_hash = entity.hash(adapter)
+        return md5(
+            "".join([self.dependency_type, entity_hash]).encode("utf-8")
+        ).hexdigest()
+
+
+class DisassemblyDependencyData(DependencyData):
+    required_entity: str
+    dependency_type: DependencyType = DependencyType.DISASSEMBLY
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Function to hash the disassembly dependency.
+
+        Returns:
+            str: Hash of the disassembly dependency.
+        """
+        entity_hash = ""
+        for entity in adapter.primitive_data + adapter.product_data:
+            if entity.ID == self.required_entity:
+                entity_hash = entity.hash(adapter)
+        return md5(
+            "".join([self.dependency_type, entity_hash]).encode("utf-8")
         ).hexdigest()
 
 
@@ -113,6 +156,7 @@ class LotDependencyData(DependencyData):
     """
     min_lot_size: int = 1
     max_lot_size: int = 1
+    input_output: Literal["input", "output", "input_output"] = "input_output"
     dependency_type: DependencyType = DependencyType.LOT
 
     def hash(self, adapter: ProductionSystemData) -> str:
@@ -123,13 +167,15 @@ class LotDependencyData(DependencyData):
             str: Hash of the lot dependency.
         """
         return md5(
-            "".join([str(self.dependency_type.value), str(self.min_lot_size), str(self.max_lot_size)]).encode("utf-8")
+            "".join([str(self.dependency_type.value), str(self.min_lot_size), str(self.max_lot_size), str(self.input_output)]).encode("utf-8")
         ).hexdigest()
 
 
 DEPENDENCY_TYPES = Union[
     ProcessDependencyData,
     ResourceDependencyData,
-    PrimitiveDependencyData,
+    ToolDependencyData,
+    AssemblyDependencyData,
+    DisassemblyDependencyData,
     LotDependencyData,
 ]

@@ -280,13 +280,13 @@ class Router:
             executed_request.dependencies_ready.succeed()
 
     def get_dependencies(self, executed_request: request.Request) -> Generator:
-        # get at first primitive dependencies -> material is available
-        primitive_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
+        # get at first entity dependencies -> material is available
+        entity_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
         resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE]
         process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
-            relevant_dependencies=primitive_dependencies,
+            relevant_dependencies=entity_dependencies,
             requesting_item=executed_request.requesting_item,
             dependency_release_event=executed_request.completed,
         )
@@ -330,27 +330,27 @@ class Router:
         executed_request.completed.succeed()
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
-        # place in storage after binding
-        # executed_request.requesting_item.current_locatable.reserve()
-        # yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
-        executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
-        for entity in executed_request.get_atomic_entities():
-            if self._entity_becomes_consumable(entity):
-                continue
-            target_storage = self._find_available_storage_for_primitive(executed_request.entity)
-            transport_process_finished_event = self.request_transport(
-                executed_request.entity, target_storage
-            )
-            yield transport_process_finished_event
-            executed_request.entity.release()
-            self.free_primitives_by_type[executed_request.entity.data.type].append(
-                executed_request.entity
-            )
-            # Notify all resources that might be waiting for this primitive type
-            # This allows controllers to recheck feasibility of pending requests
-            for resource in self.resources:
-                if resource.controller and not resource.controller.state_changed.triggered:
-                    resource.controller.state_changed.succeed()
+        # place in storage after releasing the dependency binding
+        executed_request.requesting_item.current_locatable.reserve()
+        if executed_request.resolved_dependency.data.dependency_type == DependencyType.TOOL:
+            executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
+            for entity in executed_request.get_atomic_entities():
+                if self._entity_becomes_consumable(entity):
+                    continue
+                target_storage = self._find_available_storage_for_primitive(executed_request.entity)
+                transport_process_finished_event = self.request_transport(
+                    executed_request.entity, target_storage
+                )
+                yield transport_process_finished_event
+                executed_request.entity.release()
+                self.free_primitives_by_type[executed_request.entity.data.type].append(
+                    executed_request.entity
+                )
+                # Notify all resources that might be waiting for this primitive type
+                # This allows controllers to recheck feasibility of pending requests
+                for resource in self.resources:
+                    if resource.controller and not resource.controller.state_changed.triggered:
+                        resource.controller.state_changed.succeed()
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
 
@@ -458,7 +458,7 @@ class Router:
             )
             if not request_info:
                 continue
-            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+            if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
                 if not self.got_primitive_request.triggered:
                     self.got_primitive_request.succeed()
             else:
@@ -505,7 +505,7 @@ class Router:
             )
             if not request_info:
                 continue
-            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+            if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
                 if not self.got_primitive_request.triggered:
                     self.got_primitive_request.succeed()
             dependency_ready_events.append(request_info.request_completion_event)
@@ -577,12 +577,13 @@ class Router:
         return request_info.request_completion_event, chosen_sink
     
     def route_disassembled_product_to_sink(self, product: product.Product)-> sink.Sink:
-            possible_sinks = self.sink_factory.get_sinks_with_product_type(
-                product.data.type
-            )
-            chosen_sink = random.choice(possible_sinks)
-            target_port = chosen_sink.ports[0]
-            product.update_location(target_port)
+        possible_sinks = self.sink_factory.get_sinks_with_product_type(
+            product.data.type
+        )
+        chosen_sink = random.choice(possible_sinks)
+        target_port = chosen_sink.ports[0]
+        product.update_location(target_port)
+        return chosen_sink
 
     def get_rework_processes(
         self, failed_process: process.Process

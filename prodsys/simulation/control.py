@@ -125,7 +125,7 @@ class Controller:
                 requests_with_available_dependencies = []
                 for request in requests:
                     if request.required_dependencies:
-                        primitive_dependencies = [dependency for dependency in request.required_dependencies if dependency.data.dependency_type == DependencyType.PRIMITIVE]
+                        primitive_dependencies = [dependency for dependency in request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
                         if primitive_dependencies:
                             router = request.requesting_item.router
                             # Check if all required primitives are available
@@ -300,6 +300,7 @@ def get_requets_handler(
         and hasattr(request.process, "data")
         and getattr(request.process.data, "product_disassembly_dict", None) 
     ):
+        # FIXME: resolve this dependency type to dependency type DISASSEMBLY
         return DisassemblyProcessHandler(request.requesting_item.env) 
     elif (
         request.request_type == request_module.RequestType.PRODUCTION

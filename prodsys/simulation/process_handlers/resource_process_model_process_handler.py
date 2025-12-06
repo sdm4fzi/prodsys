@@ -15,6 +15,7 @@ from prodsys.simulation import (
 from prodsys.simulation.process import (
     ReworkProcess,
 )
+from prodsys.models.dependency_data import DependencyType
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -65,6 +66,14 @@ class ResourceProcessModelHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
+        required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_assembly_types:
+                continue
+            dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
+            yield from process_request.origin_queue.get(dependant_entity.data.ID)
+            dependant_entity.current_locatable = process_request.resource
+            dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -82,6 +91,21 @@ class ResourceProcessModelHandler:
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+        required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_assembly_types:
+                continue
+            dependant_entity.info.log_start_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
+            yield from process_request.target_queue.put(dependant_entity.data)
+            dependant_entity.info.log_end_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
+        required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_tool_types:
+                continue
+            dependant_entity.current_locatable = process_request.entity.current_locatable
+            dependant_entity.info.log_start_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
+            yield from dependant_entity.current_locatable.put(dependant_entity.data)
+            dependant_entity.info.log_end_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
     
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """

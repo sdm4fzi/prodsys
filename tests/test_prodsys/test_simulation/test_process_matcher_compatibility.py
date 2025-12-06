@@ -78,13 +78,13 @@ class TestProcessMatcherCompatibility:
             quantity_in_storages=[20],
         )
 
-        primitive_dependency_1 = psx.PrimitiveDependency(
+        primitive_dependency_1 = psx.ToolDependency(
             ID="primitive_dependency_1",
-            required_primitive=primitive1,
+            required_entity=primitive1,
         )
-        primitive_dependency_2 = psx.PrimitiveDependency(
+        primitive_dependency_2 = psx.ToolDependency(
             ID="primitive_dependency_2",
-            required_primitive=primitive2,
+            required_entity=primitive2,
         )
 
         product1 = psx.Product(

@@ -191,7 +191,7 @@ class RequestHandler:
         elif hasattr(entity, "process_model"):
             request_type = request.RequestType.PRODUCTION
         else:
-            request_type = request.RequestType.PRIMITIVE_DEPENDENCY
+            request_type = request.RequestType.ENTITY_DEPENDENCY
 
         request_completion_event = simpy.Event(entity.env)
         request_info = RequestInfo(
@@ -275,8 +275,8 @@ class RequestHandler:
             requesting_item (Union[product.Product, resources.Resource]): The item making the request.
             dependency (DependedEntity): The dependency to be fulfilled.
         """
-        if dependency.data.dependency_type == DependencyType.PRIMITIVE:
-            request_type = request.RequestType.PRIMITIVE_DEPENDENCY
+        if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
+            request_type = request.RequestType.ENTITY_DEPENDENCY
             resource_mappings = {}
             requiring_dependency = requesting_item
         elif dependency.data.dependency_type == DependencyType.RESOURCE:
@@ -320,7 +320,7 @@ class RequestHandler:
             target=None,
         )
         self.request_infos[request_info_key] = request_info
-        if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+        if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
             self.pending_primitive_requests.append(request_info_key)
         else:
             self.pending_resource_requests.append(request_info_key)

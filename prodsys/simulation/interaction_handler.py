@@ -28,7 +28,7 @@ class InteractionHandler:
         self, routed_request: request.Request
     ) -> port.Queue:
         if routed_request.request_type in (
-            request.RequestType.PRIMITIVE_DEPENDENCY,
+            request.RequestType.ENTITY_DEPENDENCY,
             request.RequestType.PROCESS_DEPENDENCY,
             request.RequestType.RESOURCE_DEPENDENCY,
         ):
@@ -59,7 +59,7 @@ class InteractionHandler:
             tuple[store.Queue, store.Queue]: A tuple containing the input and output ports of the requesting item.
         """
         if routed_request.request_type in (
-            request.RequestType.PRIMITIVE_DEPENDENCY,
+            request.RequestType.ENTITY_DEPENDENCY,
             request.RequestType.PROCESS_DEPENDENCY,
             request.RequestType.RESOURCE_DEPENDENCY,
         ):

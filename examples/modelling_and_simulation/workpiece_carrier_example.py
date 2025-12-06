@@ -28,9 +28,9 @@ workpiece_carrier_1 = psx.Primitive(
     quantity_in_storages=[5, 20],
 )
 
-workpiece_carrier_dependency_1 = psx.PrimitiveDependency(
+workpiece_carrier_dependency_1 = psx.ToolDependency(
     ID="workpiece_carrier_dependency_1",
-    required_primitive=workpiece_carrier_1,
+    required_entity=workpiece_carrier_1,
 )
 
 product1 = psx.Product(
