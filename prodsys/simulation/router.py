@@ -274,14 +274,26 @@ class Router:
         # Target reservation happens in production_process_handler.py after get_entities_of_request()
 
         executed_request.resource.controller.request(executed_request)
-        if executed_request.required_dependencies:
+        # Check for resource and process dependencies - they might not be in required_dependencies
+        # if they were set on the resource/process but not passed through required_dependencies
+        resource_dependencies = [d for d in executed_request.resource.dependencies if d.data.dependency_type == DependencyType.RESOURCE or d.data.dependency_type == DependencyType.PROCESS]
+        process_dependencies = [d for d in executed_request.process.dependencies if d.data.dependency_type == DependencyType.PROCESS]
+        all_dependencies = (executed_request.required_dependencies or []) + resource_dependencies + process_dependencies
+        
+        if all_dependencies:
+            # Ensure dependencies_requested event exists
+            if not executed_request.dependencies_requested:
+                executed_request.dependencies_requested = simpy.Event(executed_request.requesting_item.env)
             yield executed_request.dependencies_requested
             yield from self.get_dependencies(executed_request)
+            if not executed_request.dependencies_ready:
+                executed_request.dependencies_ready = simpy.Event(executed_request.requesting_item.env)
             executed_request.dependencies_ready.succeed()
 
     def get_dependencies(self, executed_request: request.Request) -> Generator:        
         entity_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
-        resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE]
+        # Resource dependencies can be either RESOURCE or PROCESS type (process dependencies can be on the resource)
+        resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE or dependency.data.dependency_type == DependencyType.PROCESS]
         process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
         
         # For per_lot dependencies with a lot entity, use the lot as the requesting_item
