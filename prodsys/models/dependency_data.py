@@ -38,6 +38,7 @@ class ProcessDependencyData(DependencyData):
     dependency_type: DependencyType = DependencyType.PROCESS
     interaction_node: Optional[str] = None
     position_type: Literal["relative", "absolute"] = "absolute"
+    per_lot: bool = True
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -60,7 +61,8 @@ class ResourceDependencyData(DependencyData):
     dependency_type: DependencyType = DependencyType.RESOURCE
     interaction_node: Optional[str] = None
     position_type: Literal["relative", "absolute"] = "absolute"
-
+    per_lot: bool = True
+    
     def hash(self, adapter: ProductionSystemData) -> str:
         """
         Function to hash the resource dependency.
@@ -86,6 +88,7 @@ class ToolDependencyData(DependencyData):
         description (str): Description of the dependency.
         required_primitive (str): ID of the required primitive.
         dependency_type (DependencyType, optional): Type of the dependency. Defaults to DependencyType.PRIMITIVE.
+        per_lot (bool, optional): If True, the dependency is needed once per lot. If False, it's needed for every instance in the lot. Defaults to False.
 
     Returns:
         _type_: _description_
@@ -93,6 +96,7 @@ class ToolDependencyData(DependencyData):
 
     required_entity: str
     dependency_type: DependencyType = DependencyType.TOOL
+    per_lot: bool = True
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -113,6 +117,7 @@ class ToolDependencyData(DependencyData):
 class AssemblyDependencyData(DependencyData):
     required_entity: str
     dependency_type: DependencyType = DependencyType.ASSEMBLY
+    per_lot: bool = False
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """

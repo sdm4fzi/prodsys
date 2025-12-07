@@ -96,7 +96,7 @@ class PrimitiveFactory:
         storage_from_queue_data = self.queue_factory.get_queue(storage_id)
         values.update({"storage": storage_from_queue_data})
         primitive_object = primitive.Primitive(**values)
-        primitive_object.current_locatable = storage_from_queue_data
+        primitive_object._current_locatable = storage_from_queue_data
 
         if self.event_logger:
             self.event_logger.observe_terminal_primitive_states(primitive_object)
@@ -111,7 +111,7 @@ class PrimitiveFactory:
         Reset the current locatable of the primitives to their original locations.
         """
         for primitive in self.primitives:
-            primitive.current_locatable = primitive.storage
+            primitive._current_locatable = primitive.storage
     
     def set_router(self, router: router_module.Router) -> None:
         """
@@ -129,10 +129,10 @@ class PrimitiveFactory:
         Place the primitive objects in the system.
         """
         for primitive in self.primitives:
-            if primitive.current_locatable is None:
+            if primitive._current_locatable is None:
                 raise ValueError(f"Primitive {primitive.data.ID} has no current locatable but a storage {primitive.storage.data.ID}")
-            primitive.current_locatable.reserve()
-            yield from primitive.current_locatable.put(primitive.data)
+            primitive._current_locatable.reserve()
+            yield from primitive._current_locatable.put(primitive.data)
 
     def get_primitive_with_type(self, ID: str) -> primitive.Primitive:
         """

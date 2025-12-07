@@ -224,7 +224,7 @@ class RequestHandler:
             possible_resources_and_processes (List[Tuple[resources.Resource, process.PROCESS_UNION]]):
                 List of possible transport resources and processes.
         """
-        origin = item.current_locatable
+        origin = item._current_locatable
         request_info_key = get_transport_request_info_key(
             item,
             origin,
@@ -267,6 +267,8 @@ class RequestHandler:
         requesting_item: Union[product.Product, resources.Resource],
         dependency: Dependency,
         dependency_release_event: Optional[simpy.Event] = None,
+        parent_origin_queue: Optional[Locatable] = None,
+        parent_target_queue: Optional[Locatable] = None,
     ) -> RequestInfo:
         """
         Adds a new dependency request to the pending requests.
@@ -317,8 +319,10 @@ class RequestHandler:
             dependency=dependency,
             dependency_release_event=dependency_release_event,
             origin=None,
-            target=None,
+            target=parent_origin_queue,  # Store parent origin_queue as target for dependency routing (where to transport dependency to)
         )
+        # Store parent_target_queue separately so we can access it later
+        request_info.parent_target_queue = parent_target_queue
         self.request_infos[request_info_key] = request_info
         if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
             self.pending_primitive_requests.append(request_info_key)
@@ -461,7 +465,7 @@ class RequestHandler:
         Returns:
             request.Request: The created request.
         """
-        return request.Request(
+        dependency_request = request.Request(
             requesting_item=request_info.item,
             entity=primitive,
             process=DependencyProcess(),
@@ -469,7 +473,10 @@ class RequestHandler:
             completed=request_info.request_completion_event,
             resolved_dependency=request_info.dependency,
             dependency_release_event=request_info.dependency_release_event,
+            origin_queue=request_info.target,  # Use target (parent origin_queue) as origin_queue for dependency request
+            target_queue=getattr(request_info, 'parent_target_queue', None),  # Store parent target_queue for when dependency is released
         )
+        return dependency_request
 
     def get_next_primitive_request_to_route(
         self, free_primitives: dict[str, list[primitive.Primitive]]
@@ -493,6 +500,18 @@ class RequestHandler:
             )
             possible_primitive_requests = []
             for possible_primitive in possible_primitives:
+                # Check if primitive is available (not bound to another entity)
+                if possible_primitive.bound:
+                    continue
+                # Check if primitive is in a queue and available for routing
+                # Only route if primitive is in its storage or current locatable queue
+                if possible_primitive._current_locatable is None:
+                    continue
+                # Verify the primitive is actually in the queue at its current location
+                if hasattr(possible_primitive._current_locatable, 'items'):
+                    if possible_primitive.data.ID not in possible_primitive._current_locatable.items:
+                        # Primitive is not in the queue at its current location - skip it
+                        continue
                 new_request = self.create_primitive_request(
                     request_info,
                     possible_primitive,

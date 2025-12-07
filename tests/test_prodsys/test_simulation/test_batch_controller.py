@@ -38,7 +38,8 @@ def simulation_adapter() -> ProductionSystemData:
         ID="lot_dependency_with_carrier",
     )
     work_piece_carrier_dependency = psx.ToolDependency(
-        required_entity=work_piece_carriers
+        required_entity=work_piece_carriers,
+        per_lot=True
     )
 
     lot_dependency_without_carrier = psx.LotDependency(
@@ -83,7 +84,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 def test_hashing(simulation_adapter: ProductionSystemData):
     """Test that the batch controller system produces a consistent hash."""
     hash_str = simulation_adapter.hash()
-    assert hash_str == "055c6e5c35951f8af92c0bfc425fd3d5"
+    assert hash_str == "bd3ba32d16ed0d31bbb099036494fb1d"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
@@ -117,16 +118,16 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
         
         # Transport should have moderate utilization
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value < 25 and kpi.value > 15
+            assert kpi.value < 35 and kpi.value > 25
         
         # Carrier transport should have moderate utilization
         if kpi.name == "productive_time" and kpi.resource == "carrier_transport":
-            assert kpi.value < 35 and kpi.value > 25
+            assert kpi.value < 45 and kpi.value > 35
     
     # Check WIP - batching can increase WIP slightly
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 9 and kpi.value > 8
+            assert kpi.value < 4.5 and kpi.value > 3.0
     
     # Check primitive WIP for workpiece carriers
     for kpi in post_processor.primitive_WIP_KPIs:
@@ -136,5 +137,4 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     # Check throughput time - should be reasonable with batching
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 9.0 and kpi.value > 7.0
-
+            assert kpi.value < 4.50

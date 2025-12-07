@@ -16,6 +16,7 @@ from prodsys.simulation.process import (
     ReworkProcess,
 )
 from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.entities.entity import EntityType
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -102,7 +103,7 @@ class ResourceProcessModelHandler:
         for dependant_entity in process_request.entity.depended_entities:
             if dependant_entity.data.type not in required_tool_types:
                 continue
-            dependant_entity.current_locatable = process_request.entity.current_locatable
+            dependant_entity.current_locatable = process_request.entity._current_locatable
             dependant_entity.info.log_start_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
             yield from dependant_entity.current_locatable.put(dependant_entity.data)
             dependant_entity.info.log_end_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
@@ -127,7 +128,7 @@ class ResourceProcessModelHandler:
         entity = process_request.get_entity()
         origin_queue = process_request.origin_queue
 
-        assert entity.current_locatable == origin_queue, f"Product {entity.data.ID} is not at the origin queue {origin_queue.data.ID}"
+        assert entity._current_locatable == origin_queue, f"Product {entity.data.ID} is not at the origin queue {origin_queue.data.ID}"
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
@@ -144,8 +145,7 @@ class ResourceProcessModelHandler:
 
         # Get product from origin queue at the beginning
         yield from self.get_entities_of_request(process_request)
-        for entity in process_request.get_atomic_entities():
-            entity.update_location(resource)
+        process_request.entity.update_location(resource)
 
         resource.controller.mark_started_process(process_request.capacity_required)
         
@@ -160,6 +160,7 @@ class ResourceProcessModelHandler:
             router = process_request.entity.router if process_request.entity else None
             resource_dependencies = getattr(resource, "dependencies", [])
             process_dependencies = getattr(next_process, "dependencies", [])
+            # TODO: consider lot dependencies here.
             if router and (resource_dependencies or process_dependencies):
                 dependency_release_event = self.env.event()
                 dependency_ready_events = router.get_dependencies_for_execution(
@@ -223,8 +224,10 @@ class ResourceProcessModelHandler:
         
         # Put product back to target queue after all processes are finished
         yield from self.put_entities_of_request(process_request)
-        for entity in process_request.get_atomic_entities():
-            entity.update_location(process_request.target_queue)
+        process_request.entity.update_location(process_request.target_queue)
+
+        if process_request.entity.type == EntityType.LOT:
+            process_request.entity.clear()
 
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)

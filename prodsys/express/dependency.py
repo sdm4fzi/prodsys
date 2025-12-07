@@ -72,6 +72,7 @@ class ProcessDependency(Dependency):
 @dataclass
 class ToolDependency(Dependency):
     required_entity: Union[Product, Primitive]
+    per_lot: bool = False
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self):
@@ -79,6 +80,7 @@ class ToolDependency(Dependency):
             ID=self.ID,
             description="",
             required_entity=self.required_entity.ID,
+            per_lot=self.per_lot,
         )
 
 

@@ -26,7 +26,8 @@ lot_dependency_with_carrier = psx.LotDependency(
     ID="lot_dependency_with_carrier",
 )
 work_piece_carrier_dependency = psx.ToolDependency(
-    required_entity=work_piece_carriers
+    required_entity=work_piece_carriers,
+    per_lot=True
 )
 
 lot_dependency_without_carrier = psx.LotDependency(

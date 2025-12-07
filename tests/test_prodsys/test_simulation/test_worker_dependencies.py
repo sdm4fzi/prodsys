@@ -288,6 +288,7 @@ def test_run_simulation_process_dependency(
     )
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 1000
     post_processor = runner_instance.get_post_processor()
 

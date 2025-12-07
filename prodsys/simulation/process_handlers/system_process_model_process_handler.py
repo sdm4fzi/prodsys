@@ -78,7 +78,7 @@ class SystemProcessModelHandler:
         for dependant_entity in process_request.entity.depended_entities:
             if dependant_entity.data.type not in required_tool_types:
                 continue
-            dependant_entity.current_locatable = process_request.entity.current_locatable
+            dependant_entity.update_location(process_request.entity._current_locatable)
             dependant_entity.info.log_start_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
             yield from dependant_entity.current_locatable.put(dependant_entity.data)
             dependant_entity.info.log_end_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
@@ -106,7 +106,7 @@ class SystemProcessModelHandler:
         system_router = resource.router
         process_request.entity.router = system_router
 
-        assert process_request.entity.current_locatable == process_request.origin_queue, f"Product {entity.data.ID} is not at the origin queue {process_request.origin_queue}"
+        assert process_request.entity._current_locatable == process_request.origin_queue, f"Product {entity.data.ID} is not at the origin queue {process_request.origin_queue}"
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()

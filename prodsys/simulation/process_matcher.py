@@ -646,7 +646,7 @@ class ProcessMatcher:
                     # For each possible origin-target pair (including queues)
                     for origin in all_locations:
                         for target in all_locations:
-                            item.current_locatable = origin
+                            item.update_location(origin)
                             dummy_transport_request = request.Request(
                                 process=requested_process,
                                 requesting_item=item,
@@ -680,7 +680,7 @@ class ProcessMatcher:
                                 
                                 # Cache the route
                                 self._cache_route(dummy_transport_request, origin, target, offered_process, [])
-            item.current_locatable = original_locatable
+            item.update_location(original_locatable)
 
     def _precompute_rework_compatibility(self):
         """

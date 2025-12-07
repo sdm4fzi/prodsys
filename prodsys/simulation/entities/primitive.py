@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union, Optional, TYPE_CHECKING
+from typing import Union, Optional, TYPE_CHECKING, List
 
 
 import logging
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         state,
     )
     from prodsys.simulation import router as router_module
-    from prodsys.simulation.dependency import Dependency
+    from prodsys.simulation.dependency import Dependency, DependedEntity
     from prodsys.simulation import locatable
 
 
@@ -60,16 +60,20 @@ class Primitive(Entity):
         self.storage = storage
 
         self.router: router_module.Router = None
-        self.current_locatable: Optional[locatable.Locatable] = None
+        self.dependencies: Optional[List[Dependency]] = None
+        self.depended_entities: List[DependedEntity] = []
+        self._current_locatable: Optional[locatable.Locatable] = None
+
         self.current_dependant: Union[product.Product, Resource] = None
+        self.currently_resolved_dependency: Dependency = None
         self.bound = False
         self.got_free = events.Event(self.env)
         self.finished_process = events.Event(self.env)
         # self.primitive_info = PrimitiveInfo()
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
         self.info = ProductInfo(product_ID=self.data.ID)
+        self.depended_entities: List[DependedEntity] = []
 
-    
     @property
     def type(self) -> EntityType:
         return EntityType.PRIMITIVE
@@ -85,7 +89,7 @@ class Primitive(Entity):
         Args:
             locatable (Locatable): Location of the product object.
         """
-        self.current_locatable = locatable
+        self._current_locatable = locatable
 
     def bind(self, dependant: Union[product.Product, resources.Resource], dependency: Dependency) -> None:
         """
@@ -97,7 +101,9 @@ class Primitive(Entity):
             )
         self.bound = True
         self.current_dependant = dependant
+        self.currently_resolved_dependency = dependency
         dependant.depended_entities.append(self)
+
         self.dependency_info.log_start_dependency(
             event_time=self.env.now,
             requesting_item_id=dependant.data.ID if dependant else None,
@@ -111,9 +117,11 @@ class Primitive(Entity):
         self.dependency_info.log_end_dependency(
             event_time=self.env.now,
             requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
-            dependency_id=self.data.ID,
+            dependency_id=self.currently_resolved_dependency.data.ID,
         )
+        self._current_locatable = self.current_dependant.current_locatable
         self.current_dependant = None
+        self.currently_resolved_dependency = None
         self.bound = False
         self.got_free.succeed()
         self.got_free = events.Event(self.env)
