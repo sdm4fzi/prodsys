@@ -12,20 +12,34 @@ class LotHandler:
         return None
 
     def _get_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
+        lot_dependencies = []
         for dependency in process_request.required_dependencies:
             if dependency.data.dependency_type == DependencyType.LOT:
-                return dependency.data
-        return None
+                lot_dependencies.append(dependency.data)
+        if len(lot_dependencies) == 0:
+            return None
+        if len(lot_dependencies) == 1:
+            return lot_dependencies[0]
+        # if there are multiple lot dependencies, we need to combine them into one lot dependency
+        combined_lot_dependency = LotDependencyData(
+            ID="combined_lot_dependency",
+            description="Combined lot dependency",
+            dependency_type=DependencyType.LOT,
+            min_lot_size=min(lot_dependency.min_lot_size for lot_dependency in lot_dependencies),
+            max_lot_size=max(lot_dependency.max_lot_size for lot_dependency in lot_dependencies),
+        )
+        return combined_lot_dependency
 
     def lot_required(self, process_request: request.Request) -> bool:
-        if process_request.request_type not in [request.RequestType.PRODUCTION, request.RequestType.TRANSPORT]:
+        if process_request.request_type not in [request.RequestType.PRODUCTION, request.RequestType.TRANSPORT, request.RequestType.PROCESS_MODEL]:
             return False
+        
         if not self._get_lot_dependency_data(process_request):
             return False
         return True
 
     def _request_matches(self, process_request: request.Request, potential_lot_request: request.Request) -> bool:
-        if process_request.request_type == request.RequestType.PRODUCTION:
+        if process_request.request_type == request.RequestType.PRODUCTION or process_request.request_type == request.RequestType.PROCESS_MODEL:
             return process_request.process == potential_lot_request.process
         elif process_request.request_type == request.RequestType.TRANSPORT:
             return process_request.process == potential_lot_request.process and process_request.origin_queue == potential_lot_request.origin_queue and process_request.target_queue == potential_lot_request.target_queue

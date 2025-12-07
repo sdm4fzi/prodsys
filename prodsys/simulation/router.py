@@ -254,6 +254,7 @@ class Router:
             and executed_request.requesting_item._current_locatable
             != origin_port
         ):
+            # transport from WcGlueCaterpillar_output to WcAssemblyTorque_input
             transport_process_finished_event = self.request_transport(
                 executed_request.requesting_item, origin_port
             )

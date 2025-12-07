@@ -358,6 +358,7 @@ class ProductionSystem(core.ExpressObject):
         resource_data = resource_model_data
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
+        dependencies = remove_duplicate_items(dependencies)
         dependency_data = [dependency.to_model() for dependency in dependencies]
         primitive_data = [
             primitive.to_model() for primitive in self.primitives if primitive.storages
