@@ -65,7 +65,7 @@ def get_required_primitives(
     if not dependency_ids:
         return []
     primitive_dependencies = [
-        dependency.required_primitive for dependency in adapter_object.depdendency_data if dependency.dependency_type == DependencyType.PRIMITIVE
+        dependency.required_entity for dependency in adapter_object.dependency_data if dependency.dependency_type == DependencyType.TOOL
     ]
     primitives = [
         primitive for primitive in adapter_object.primitive_data if primitive.ID in primitive_dependencies

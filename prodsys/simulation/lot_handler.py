@@ -1,10 +1,17 @@
 from prodsys.simulation import request
 from prodsys.models.dependency_data import DependencyType, LotDependencyData
+from prodsys.simulation.dependency import Dependency
 from prodsys.simulation.entities.lot import Lot
 
 class LotHandler:
 
-    def _get_lot_dependency(self, process_request: request.Request) -> LotDependencyData:
+    def _get_lot_dependency(self, process_request: request.Request) -> Dependency:
+        for dependency in process_request.required_dependencies:
+            if dependency.data.dependency_type == DependencyType.LOT:
+                return dependency
+        return None
+
+    def _get_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
         for dependency in process_request.required_dependencies:
             if dependency.data.dependency_type == DependencyType.LOT:
                 return dependency.data
@@ -13,7 +20,7 @@ class LotHandler:
     def lot_required(self, process_request: request.Request) -> bool:
         if process_request.request_type not in [request.RequestType.PRODUCTION, request.RequestType.TRANSPORT]:
             return False
-        if not self._get_lot_dependency(process_request):
+        if not self._get_lot_dependency_data(process_request):
             return False
         return True
 
@@ -35,7 +42,7 @@ class LotHandler:
         return possible_requests_for_lot
     
     def is_lot_feasible(self, process_request: request.Request) -> bool:
-        lot_dependency = self._get_lot_dependency(process_request)
+        lot_dependency = self._get_lot_dependency_data(process_request)
         if lot_dependency is None:
             return True
         if process_request.resource.data.capacity < lot_dependency.min_lot_size:
@@ -68,7 +75,7 @@ class LotHandler:
         return possible_requests_for_lot[:num_requests_to_fill_lot]
 
     def get_lot_request(self, process_request: request.Request) -> request.Request:
-        lot_dependency = self._get_lot_dependency(process_request)
+        lot_dependency = self._get_lot_dependency_data(process_request)
         if lot_dependency is None:
             return [process_request]
         possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
@@ -84,6 +91,9 @@ class LotHandler:
         lot = Lot(
             all_completed_events=all_completed_events,
             entities=lot_entities,
+            resolved_dependency=self._get_lot_dependency(process_request),
+            required_dependencies=process_request.required_dependencies,
         )
         process_request.entity = lot
+        process_request.required_dependencies = lot.dependencies
         return process_request

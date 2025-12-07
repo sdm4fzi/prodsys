@@ -4,7 +4,10 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from prodsys.simulation import locatable
-
+from prodsys.simulation.dependency import DependedEntity
+from typing import Optional, List, Union
+from prodsys.simulation.dependency import Dependency
+from prodsys.simulation import resources
 
 class Entity(ABC):
     """
@@ -16,6 +19,13 @@ class Entity(ABC):
     - Occupy capacity in resources and queues
     - Can be routed through the system
     """
+
+    @property
+    def current_locatable(self) -> locatable.Locatable:
+        if self.current_dependant:
+            return self.current_dependant.current_locatable
+        return self._current_locatable
+
 
     @property
     @abstractmethod

@@ -33,7 +33,7 @@ class RequestType(str, Enum):
         MOVE: Represents a move request.
         REWORK: Represents a rework request.
         PRODUCTION: Represents a production request.
-        PRIMITIVE_DEPENDENCY: Represents a primitive dependency request.
+        ENTITY_DEPENDENCY: Represents a entity dependency request.
         PROCESS_DEPENDENCY: Represents a process dependency request.
         RESOURCE_DEPENDENCY: Represents a resource dependency request.
         PROCESS_MODEL: Represents a process model request.
@@ -43,7 +43,7 @@ class RequestType(str, Enum):
     MOVE = "move"
     REWORK = "rework"
     PRODUCTION = "production"
-    PRIMITIVE_DEPENDENCY = "primitive"
+    ENTITY_DEPENDENCY = "entity_dependency"
     PROCESS_DEPENDENCY = "process_dependency"
     RESOURCE_DEPENDENCY = "resource_dependency"
     PROCESS_MODEL = "process_model"

@@ -42,13 +42,13 @@ def simulation_adapter() -> ProductionSystemData:
         quantity_in_storages=[20],
     )
 
-    primitive_dependency_1 = psx.PrimitiveDependency(
+    primitive_dependency_1 = psx.ToolDependency(
         ID="primitive_dependency_1",
-        required_primitive=primitive1,
+        required_entity=primitive1,
     )
-    primitive_dependency_2 = psx.PrimitiveDependency(
+    primitive_dependency_2 = psx.ToolDependency(
         ID="primitive_dependency_2",
-        required_primitive=primitive2,
+        required_entity=primitive2,
     )
 
     product1 = psx.Product(
@@ -91,7 +91,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "cb95ca8efab786ff2822fdb46456627e"
+    assert hash_str == "dbd3cb1cd2ceff29d27b40af9216cd91"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
@@ -115,22 +115,22 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
         if kpi.name == "productive_time" and kpi.resource == "transport2":
             assert kpi.value > 48 and kpi.value < 55
         if kpi.name == "productive_time" and kpi.resource == "transport_primitive":
-            assert kpi.value > 63 and kpi.value < 67
+            assert kpi.value > 73 and kpi.value < 77
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
             assert kpi.value < 7.5 and kpi.value > 5.8
         if kpi.name == "WIP" and kpi.product_type == "product2":
-            assert kpi.value < 14 and kpi.value > 12
+            assert kpi.value < 13 and kpi.value > 11
 
     for kpi in post_processor.primitive_WIP_KPIs:
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive1":
-            assert kpi.value < 7.5 and kpi.value > 5.8
+            assert kpi.value < 7.5 and kpi.value > 5.5
         if kpi.name == "primitive_WIP" and kpi.product_type == "primitive2":
-            assert kpi.value < 14 and kpi.value > 12
+            assert kpi.value < 14 and kpi.value > 11.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 18.5 and kpi.value > 16.5
+            assert kpi.value < 18.5 and kpi.value > 15.5
         if kpi.name == "throughput_time" and kpi.product_type == "product2":
             assert kpi.value < 17.5 and kpi.value > 14.5

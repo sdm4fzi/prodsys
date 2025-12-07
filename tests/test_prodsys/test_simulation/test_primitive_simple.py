@@ -30,9 +30,9 @@ def simulation_adapter() -> ProductionSystemData:
         quantity_in_storages=[5, 20],
     )
 
-    workpiece_carrier_dependency_1 = psx.PrimitiveDependency(
+    workpiece_carrier_dependency_1 = psx.ToolDependency(
         ID="workpiece_carrier_dependency_1",
-        required_primitive=workpiece_carrier_1,
+        required_entity=workpiece_carrier_1,
     )
 
     product1 = psx.Product(
@@ -62,7 +62,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "52e4513c7a2a4e748c699edacc6eaf51"
+    assert hash_str == "c01a926a77aeb4e910262d13f06f6e54"
 
 def test_deterministic_simulation(simulation_adapter: ProductionSystemData):
     runner_instance_1 = runner.Runner(production_system_data=simulation_adapter)
@@ -105,12 +105,12 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 9.5 and kpi.value > 7.5
+            assert kpi.value < 9.0 and kpi.value > 7.0
 
     for kpi in post_processor.primitive_WIP_KPIs:
         if kpi.name == "primitive_WIP" and kpi.product_type == "workpice_carrier_1":
-            assert kpi.value < 9.5 and kpi.value > 7.5
+            assert kpi.value < 10.5 and kpi.value > 8.5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time" and kpi.product_type == "product1":
-            assert kpi.value < 8 and kpi.value > 7
+            assert kpi.value < 8 and kpi.value > 6

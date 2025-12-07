@@ -56,6 +56,7 @@ class Product(Entity):
         dependencies: Optional[List[Dependency]] = None,
         no_transport_to_sink: bool = False,
     ):
+
         self.env = env
         self.data = data
         self.process_model = process_model
@@ -63,10 +64,14 @@ class Product(Entity):
         self.router = product_router
         self.routing_heuristic = routing_heuristic
         self.info = info
+
         self.dependencies: Optional[List[Dependency]] = dependencies
         self.depended_entities: List[DependedEntity] = []
 
-        self.current_locatable: locatable.Locatable = None
+        self.current_dependant: Union[Product, resources.Resource] = None
+        self.currently_resolved_dependency: Dependency = None
+
+        self._current_locatable: locatable.Locatable = None
         self.current_process: Optional[process.PROCESS_UNION] = None
         self.no_transport_to_sink = no_transport_to_sink
         self.executed_production_processes: List = []
@@ -89,7 +94,7 @@ class Product(Entity):
         Args:
             locatable (locatable.Locatable): Locatable objects where product object currently is.
         """
-        self.current_locatable = locatable
+        self._current_locatable = locatable
         
     def bind(self, dependant: Union[Product, resources.Resource], dependency: Dependency) -> None:
                 """
@@ -104,11 +109,13 @@ class Product(Entity):
                 logger.debug(f"[Product.bind] id={id(self)} pid={self.data.ID} before={before} after={self.bound} "
                             f"dep={getattr(dependant, 'data', None) and dependant.data.ID}")
                 self.current_dependant = dependant
+                self.currently_resolved_dependency = dependency
                 dependant.depended_entities.append(self)
+
                 self.dependency_info.log_start_dependency(
                     event_time=self.env.now,
                     requesting_item_id=dependant.data.ID if dependant else None,
-                    dependency_id=dependency.data.ID,
+                    dependency_id=self.currently_resolved_dependency.data.ID,
                 )
            
 
@@ -119,9 +126,11 @@ class Product(Entity):
         self.dependency_info.log_end_dependency(
             event_time=self.env.now,
             requesting_item_id=self.current_dependant.data.ID if self.current_dependant else None,
-            dependency_id=self.data.ID,
+            dependency_id=self.currently_resolved_dependency.data.ID,
         )
+        self._current_locatable = self.current_dependant.current_locatable
         self.current_dependant = None
+        self.currently_resolved_dependency = None
         self.bound = False
         self.got_free.succeed()
         self.got_free = events.Event(self.env)

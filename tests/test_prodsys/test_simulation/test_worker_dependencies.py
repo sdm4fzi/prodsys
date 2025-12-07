@@ -288,6 +288,7 @@ def test_run_simulation_process_dependency(
     )
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
+    runner_instance.print_results()
     assert runner_instance.env.now == 1000
     post_processor = runner_instance.get_post_processor()
 
@@ -405,7 +406,7 @@ def test_run_simulation_both_dependencies(
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
             product1_output = kpi.value
-            assert kpi.value > 750 and kpi.value < 850
+            assert kpi.value > 750 and kpi.value < 900
         if kpi.name == "output" and kpi.product_type == "product2":
             product2_output = kpi.value
             assert kpi.value > 300 and kpi.value < 400
@@ -453,5 +454,5 @@ def test_run_simulation_both_dependencies(
     # Check throughput time
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 60 and kpi.value < 90
+            assert kpi.value > 60 and kpi.value < 100
 

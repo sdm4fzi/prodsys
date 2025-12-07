@@ -34,12 +34,12 @@ def simulation_adapter() -> ProductionSystemData:
     product2 = psx.Product([p3, p5], move_p, "valve block",)
 
 
-    primitive_dependency1 = psx.PrimitiveDependency(
-        required_primitive= product1,        
+    primitive_dependency1 = psx.AssemblyDependency(
+        required_entity= product1,        
     )
     
-    primitive_dependency2 = psx.PrimitiveDependency(
-        required_primitive= product2,        
+    primitive_dependency2 = psx.AssemblyDependency(
+        required_entity= product2,        
     )
     
     p1 = psx.ProductionProcess(t8, "p1", dependencies= [primitive_dependency1,primitive_dependency2])                          
@@ -129,7 +129,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
     print(hash_str)
-    assert hash_str == "fc2c64db3406e7c78f492d3bc5b72252"
+    assert hash_str == "a56173e8ae356a5aa4d2b06933c1bf93"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
@@ -141,14 +141,14 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "assemblymachine_1":
-            assert 55 < kpi.value < 70
+            assert 92 < kpi.value < 96
 
         if kpi.name == "productive_time" and kpi.resource == "assemblymachine_2":
-            assert 55 < kpi.value < 70
+            assert 92 < kpi.value < 96
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "tank":
-            assert kpi.value > 0.1 and kpi.value < 20
+            assert kpi.value > 4 and kpi.value < 6
 
     tank_output = 0.0 
     pump_output = 0.0 

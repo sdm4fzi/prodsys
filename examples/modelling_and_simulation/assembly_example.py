@@ -29,12 +29,12 @@ product1 = psx.Product([p6], tp, "pump",)
 product2 = psx.Product([p3, p5], move_p, "valve block",)
 
 
-primitive_dependency1 = psx.PrimitiveDependency(
-    required_primitive= product1,        
+primitive_dependency1 = psx.AssemblyDependency(
+    required_entity= product1,        
 )
 
-primitive_dependency2 = psx.PrimitiveDependency(
-    required_primitive= product2,        
+primitive_dependency2 = psx.AssemblyDependency(
+    required_entity= product2,        
 )
 
 p1 = psx.ProductionProcess(t8, "p1", dependencies= [primitive_dependency1,primitive_dependency2])                          

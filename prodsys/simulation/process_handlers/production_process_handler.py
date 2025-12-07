@@ -14,6 +14,8 @@ from prodsys.simulation import (
 from prodsys.simulation.process import (
     ReworkProcess,
 )
+from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.entities.entity import EntityType
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -70,6 +72,14 @@ class ProductionProcessHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
+        required_primitive_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_primitive_types:
+                continue
+            dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
+            yield from dependant_entity.current_locatable.get(dependant_entity.data.ID)
+            dependant_entity.update_location(process_request.resource)
+            dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -87,6 +97,19 @@ class ProductionProcessHandler:
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+        required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_assembly_types:
+                continue    
+            dependant_entity.info.log_consumption(process_request.resource, dependant_entity, self.env.now)
+        required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_tool_types:
+                continue
+            dependant_entity.current_locatable = process_request.entity._current_locatable
+            dependant_entity.info.log_start_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
+            yield from dependant_entity.current_locatable.put(dependant_entity.data)
+            dependant_entity.info.log_end_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
@@ -138,8 +161,10 @@ class ProductionProcessHandler:
         for resource_request in resource_requests:
             resource.release(resource_request)
         yield from self.put_entities_of_request(process_request)
-        for entity in process_request.get_atomic_entities():
-            entity.update_location(process_request.target_queue)
+        process_request.entity.update_location(process_request.target_queue)
+
+        if process_request.entity.type == EntityType.LOT:
+            process_request.entity.clear()
 
         buffer_placement_events = []
         for entity in process_request.get_atomic_entities():

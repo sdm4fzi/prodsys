@@ -8,24 +8,21 @@ from typing import (
     Optional,
     Union,
     Dict,
-    Tuple,
 )
 
 import logging
 
-from numpy.random import f
 import simpy
 
 from prodsys.factories import primitive_factory
 from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.dependency import Dependency
 from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
-from prodsys.simulation.request_handler import RequestHandler, RequestInfo
-from prodsys.simulation.lot_handler import LotHandler
+from prodsys.simulation.request_handler import RequestHandler
 from prodsys.simulation.entities.entity import EntityType
 
-logger = logging.getLogger(__name__)
 
 from simpy import events
 
@@ -41,11 +38,12 @@ if TYPE_CHECKING:
     from prodsys.simulation.entities import product
     
     from prodsys.control import routing_control_env
-    from prodsys.models import product_data
     from prodsys.simulation.locatable import Locatable
 
     # from prodsys.factories.source_factory import SourceFactory
 
+
+logger = logging.getLogger(__name__)
 
 def get_env_from_requests(requests: List[request.Request]) -> simpy.Environment:
     """
@@ -188,8 +186,13 @@ class Router:
         This method should be called in a separate thread to run the allocation process.
         """
         while True:
-            yield self.got_requested
-            self.got_requested = events.Event(self.env)
+            # Wait for either new requests or resources becoming free
+            yield simpy.AnyOf(self.env, [self.got_requested, self.resource_got_free])
+            # Reset events if they were triggered
+            if self.got_requested.triggered:
+                self.got_requested = events.Event(self.env)
+            if self.resource_got_free.triggered:
+                self.resource_got_free = events.Event(self.env)
             while True:
                 self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
@@ -211,8 +214,14 @@ class Router:
         while True:
             yield self.got_primitive_request
             self.got_primitive_request = events.Event(self.env)
-            if not self.free_primitives_by_type:
-                continue            
+            has_free_primitives = any(
+                primitives for primitives in self.free_primitives_by_type.values()
+            )
+            if not has_free_primitives:
+                # If no free primitives but there are pending requests, 
+                # we still need to wait for primitives to be released
+                # The event will be triggered in execute_primitive_routing when primitives are released
+                continue        
             while True:
                 free_requests = (
                     self.request_handler.get_next_primitive_request_to_route(
@@ -227,7 +236,7 @@ class Router:
                 self.free_primitives_by_type[request.entity.data.type].remove(
                     request.entity
                 )
-                self.env.process(self.execute_primitive_routing(request))
+                self.env.process(self.execute_entity_routing(request))
 
     def execute_resource_routing(
         self, executed_request: request.Request
@@ -242,7 +251,7 @@ class Router:
 
         if (
             is_production_request
-            and executed_request.requesting_item.current_locatable
+            and executed_request.requesting_item._current_locatable
             != origin_port
         ):
             transport_process_finished_event = self.request_transport(
@@ -265,15 +274,49 @@ class Router:
         # Target reservation happens in production_process_handler.py after get_entities_of_request()
 
         executed_request.resource.controller.request(executed_request)
-        if executed_request.required_dependencies:
+        # Check for resource and process dependencies - they might not be in required_dependencies
+        # if they were set on the resource/process but not passed through required_dependencies
+        resource_dependencies = [d for d in executed_request.resource.dependencies if d.data.dependency_type == DependencyType.RESOURCE or d.data.dependency_type == DependencyType.PROCESS]
+        process_dependencies = [d for d in executed_request.process.dependencies if d.data.dependency_type == DependencyType.PROCESS]
+        all_dependencies = (executed_request.required_dependencies or []) + resource_dependencies + process_dependencies
+        
+        if all_dependencies:
+            # Ensure dependencies_requested event exists
+            if not executed_request.dependencies_requested:
+                executed_request.dependencies_requested = simpy.Event(executed_request.requesting_item.env)
             yield executed_request.dependencies_requested
             yield from self.get_dependencies(executed_request)
+            if not executed_request.dependencies_ready:
+                executed_request.dependencies_ready = simpy.Event(executed_request.requesting_item.env)
             executed_request.dependencies_ready.succeed()
 
-    def get_dependencies(self, executed_request: request.Request) -> Generator:
+    def get_dependencies(self, executed_request: request.Request) -> Generator:        
+        entity_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        # Resource dependencies can be either RESOURCE or PROCESS type (process dependencies can be on the resource)
+        resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE or dependency.data.dependency_type == DependencyType.PROCESS]
+        process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
+        
+        # For per_lot dependencies with a lot entity, use the lot as the requesting_item
+        # Otherwise use the original requesting_item
+        requesting_item_for_dependencies = executed_request.requesting_item
+        if executed_request.entity.type == EntityType.LOT:
+            requesting_item_for_dependencies = executed_request.entity
+        
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
-            process=executed_request.process,
+            relevant_dependencies=entity_dependencies,
+            requesting_item=requesting_item_for_dependencies,
+            dependency_release_event=executed_request.completed,
+            parent_origin_queue=executed_request.origin_queue,
+            parent_target_queue=executed_request.target_queue,
+        )
+        for dependency_ready_event in dependency_ready_events:
+            yield dependency_ready_event
+
+        # get resource and process dependencies after primitive dependencies are available
+        dependency_ready_events = self.get_dependencies_for_execution(
+            resource=executed_request.resource,
+            relevant_dependencies=resource_dependencies + process_dependencies,
             requesting_item=executed_request.requesting_item,
             dependency_release_event=executed_request.completed,
         )
@@ -290,39 +333,81 @@ class Router:
         executed_request.transport_to_target = transport_process_finished_event
         return transport_process_finished_event
 
-    def execute_primitive_routing(
+    def execute_entity_routing(
         self, executed_request: request.Request
     ) -> Generator[None, None, None]:
+        # Verify entity is available and in correct location before routing
+        if executed_request.entity.bound:
+            raise ValueError(f"Entity {executed_request.entity.data.ID} is already bound and cannot be routed")
+        
+        # Check if entity is in the queue at its current location
+        if executed_request.entity._current_locatable is None:
+            raise ValueError(f"Entity {executed_request.entity.data.ID} has no current location")
+        
+        # Verify entity is actually in the queue
+        if hasattr(executed_request.entity._current_locatable, 'items'):
+            if executed_request.entity.data.ID not in executed_request.entity._current_locatable.items:
+                raise ValueError(f"Entity {executed_request.entity.data.ID} is not in queue {executed_request.entity._current_locatable.data.ID}")
+        
         executed_request.entity.bind(
             executed_request.requesting_item, executed_request.resolved_dependency
         )
         # TODO: add here with interaction handler searching for interaction points
+        # Get the target location for transport - this should be where the dependency will be used
+        # For transport/production requests, dependencies should go to the origin_queue where processing starts
+        # Prefer the origin_queue if it's set (passed from parent request), otherwise use requesting_item's location
+        target_location = executed_request.origin_queue
+        
+        if target_location is None:
+            # Fallback to requesting_item's current location
+            target_location = executed_request.requesting_item._current_locatable
+            
+        # If requesting_item is a Lot and still no target, try primary entity's location
+        if target_location is None and executed_request.requesting_item.type == EntityType.LOT:
+            target_location = executed_request.requesting_item.get_primary_entity().current_locatable
+        
+        if target_location is None:
+            raise ValueError(f"Cannot determine target location for dependency routing. Requesting item {executed_request.requesting_item.data.ID} has no current location and no origin_queue set.")
+        
         trans_process_finished_event = self.request_transport(
-            executed_request.entity, executed_request.requesting_item.current_locatable
+            executed_request.entity, target_location
         )
         yield trans_process_finished_event
         # retrieve from queue after transport for binding
-        yield from executed_request.entity.current_locatable.get(executed_request.entity.data.ID)
+        # yield from executed_request.entity.current_locatable.get(executed_request.entity.data.ID)
 
         executed_request.completed.succeed()
         yield executed_request.dependency_release_event
         # Find an appropriate storage for the primitive
-        # place in storage after binding
-        executed_request.requesting_item.current_locatable.reserve()
-        yield from executed_request.requesting_item.current_locatable.put(executed_request.entity.data)
-        executed_request.entity.current_locatable = executed_request.requesting_item.current_locatable        
-        for entity in executed_request.get_atomic_entities():
-            if self._entity_becomes_consumable(entity):
-                continue
-            target_storage = self._find_available_storage_for_primitive(executed_request.entity)
-            transport_process_finished_event = self.request_transport(
-                executed_request.entity, target_storage
-            )
-            yield transport_process_finished_event
-            executed_request.entity.release()
-            self.free_primitives_by_type[executed_request.entity.data.type].append(
-                executed_request.entity
-            )                
+        # place in storage after releasing the dependency binding
+        # After release, the entity should be at the parent request's target_queue (where it was unloaded)
+        # The transport handler should have updated its location, but we ensure it's correct here
+        if executed_request.resolved_dependency.data.dependency_type == DependencyType.TOOL:
+            # The entity was unloaded at the target_queue of the parent request
+            # Update its location to ensure it's correct (transport handler should have done this, but double-check)
+            entity_release_location = executed_request.target_queue if executed_request.target_queue else target_location
+            if entity_release_location:
+                executed_request.entity._current_locatable = entity_release_location
+            
+            # Only transport back to storage if entity is not consumable
+            for entity in executed_request.get_atomic_entities():
+                if self._entity_becomes_consumable(entity):
+                    continue
+                target_storage = self._find_available_storage_for_primitive(executed_request.entity)
+                # request_transport will handle getting the entity from its current_locatable
+                transport_process_finished_event = self.request_transport(
+                    executed_request.entity, target_storage
+                )
+                yield transport_process_finished_event
+                executed_request.entity.release()
+                self.free_primitives_by_type[executed_request.entity.data.type].append(
+                    executed_request.entity
+                )
+                # Notify all resources that might be waiting for this primitive type
+                # This allows controllers to recheck feasibility of pending requests
+                for resource in self.resources:
+                    if resource.controller and not resource.controller.state_changed.triggered:
+                        resource.controller.state_changed.succeed()
         if not self.got_primitive_request.triggered:
             self.got_primitive_request.succeed()
 
@@ -409,34 +494,64 @@ class Router:
     def get_dependencies_for_execution(
         self,
         resource: resources.Resource,
-        process: process.Process,
+        relevant_dependencies: List[Dependency],
         requesting_item: Union[product.Product, primitive.Primitive],
         dependency_release_event: events.Event,
+        parent_origin_queue: Optional[port.Queue] = None,
+        parent_target_queue: Optional[port.Queue] = None,
     ) -> List[simpy.Event]:
         """
         Routes all dependencies for processing to a resource. Covers currently only primitive dependencies (workpiece carriers, e.g.)
         Args:
             resource (resources.Resource): The resource.
+            parent_origin_queue: The origin_queue of the parent request (where the dependency will be picked up)
+            parent_target_queue: The target_queue of the parent request (where the dependency will be unloaded and released)
         Returns:
             Generator[None, None, None]: A generator that yields when the dependencies are routed.
         """
         dependency_ready_events = []
-        for dependency in resource.dependencies + process.dependencies:
-            request_info = self.request_handler.add_dependency_request(
-                requiring_dependency=resource,
-                requesting_item=requesting_item,
-                dependency=dependency,
-                dependency_release_event=dependency_release_event,
-            )
-            if not request_info:
-                continue
-            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
-                if not self.got_primitive_request.triggered:
-                    self.got_primitive_request.succeed()
+        for dependency in relevant_dependencies:
+            # Check if dependency is per_lot - if so, only request once regardless of lot size
+            # For per_instance dependencies, request for each instance in the lot
+            if hasattr(dependency.data, 'per_lot') and dependency.data.per_lot:
+                # Per lot dependency - only request once
+                request_info = self.request_handler.add_dependency_request(
+                    requiring_dependency=resource,
+                    requesting_item=requesting_item,
+                    dependency=dependency,
+                    dependency_release_event=dependency_release_event,
+                    parent_origin_queue=parent_origin_queue,
+                    parent_target_queue=parent_target_queue,
+                )
+                if not request_info:
+                    continue
+                if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
+                    if not self.got_primitive_request.triggered:
+                        self.got_primitive_request.succeed()
+                else:
+                    if not self.got_requested.triggered:
+                        self.got_requested.succeed()
+                dependency_ready_events.append(request_info.request_completion_event)
             else:
-                if not self.got_requested.triggered:
-                    self.got_requested.succeed()
-            dependency_ready_events.append(request_info.request_completion_event)
+                # Per instance dependency - request for each atomic entity
+                # This maintains backward compatibility for dependencies without per_lot attribute
+                request_info = self.request_handler.add_dependency_request(
+                    requiring_dependency=resource,
+                    requesting_item=requesting_item,
+                    dependency=dependency,
+                    dependency_release_event=dependency_release_event,
+                    parent_origin_queue=parent_origin_queue,
+                    parent_target_queue=parent_target_queue,
+                )
+                if not request_info:
+                    continue
+                if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
+                    if not self.got_primitive_request.triggered:
+                        self.got_primitive_request.succeed()
+                else:
+                    if not self.got_requested.triggered:
+                        self.got_requested.succeed()
+                dependency_ready_events.append(request_info.request_completion_event)
         return dependency_ready_events
 
     def request_processing(self, product_instance: product.Product) -> request.Request:
@@ -477,7 +592,7 @@ class Router:
             )
             if not request_info:
                 continue
-            if dependency.data.dependency_type == DependencyType.PRIMITIVE:
+            if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
                 if not self.got_primitive_request.triggered:
                     self.got_primitive_request.succeed()
             dependency_ready_events.append(request_info.request_completion_event)
@@ -528,33 +643,15 @@ class Router:
             product.data.type
         )
         return random.choice(possible_sinks)
-    
-#FIXME:never called!
-    def route_product_to_sink(self, product: product.Product) -> tuple[events.Event, sink.Sink]:
-        """
-        Routes a product to a sink.
 
-        Args:
-            product (product.Product): The product.
-
-        Returns:
-            Generator[request.TransportResquest]: A generator that yields when the product is routed to the sink.
-        """
-        chosen_sink = self._determine_sink_for_product(product)
-        # TODO: determine target port from sink with interaction handler!
-        target_port = chosen_sink.ports[0]
-        request_info = self.request_handler.add_transport_request(product, target_port)
-        if not self.got_requested.triggered:
-            self.got_requested.succeed()
-        return request_info.request_completion_event, chosen_sink
-    
     def route_disassembled_product_to_sink(self, product: product.Product)-> sink.Sink:
-            possible_sinks = self.sink_factory.get_sinks_with_product_type(
-                product.data.type
-            )
-            chosen_sink = random.choice(possible_sinks)
-            target_port = chosen_sink.ports[0]
-            product.update_location(target_port)
+        possible_sinks = self.sink_factory.get_sinks_with_product_type(
+            product.data.type
+        )
+        chosen_sink = random.choice(possible_sinks)
+        target_port = chosen_sink.ports[0]
+        product.update_location(target_port)
+        return chosen_sink
 
     def get_rework_processes(
         self, failed_process: process.Process

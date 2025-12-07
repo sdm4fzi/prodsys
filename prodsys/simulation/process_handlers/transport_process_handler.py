@@ -8,8 +8,10 @@ from prodsys.simulation import (
     route_finder,
     sim,
     state,
-)
 
+)
+from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.entities.entity import EntityType
 from prodsys.simulation.process import (
     LinkTransportProcess,
 )
@@ -54,7 +56,21 @@ class TransportProcessHandler:
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
             yield from process_request.origin_queue.get(entity.data.ID)
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
-
+        required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
+        if not required_tool_types:
+            return
+        
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_tool_types:
+                continue
+            # Verify the entity is in the origin queue before trying to get it
+            if hasattr(process_request.origin_queue, 'items'):
+                if dependant_entity.data.ID not in process_request.origin_queue.items:
+                    raise ValueError(f"Tool entity {dependant_entity.data.ID} not in origin queue {process_request.origin_queue.data.ID}, skipping")
+            
+            dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
+            yield from process_request.origin_queue.get(dependant_entity.data.ID)
+            dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
 
         
     def put_entities_of_request(
@@ -74,6 +90,18 @@ class TransportProcessHandler:
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from process_request.target_queue.put(entity.data)
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
+
+        required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
+        if not required_tool_types:
+            return
+        
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_tool_types:
+                continue
+            
+            dependant_entity.info.log_start_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
+            yield from process_request.target_queue.put(dependant_entity.data)
+            dependant_entity.info.log_end_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
         
     def update_location(
         self, locatable: locatable.Locatable
@@ -129,6 +157,10 @@ class TransportProcessHandler:
         # Take only route and dependencies of the main request of the lot
         route_to_target = process_request.get_route()
         if process_request.required_dependencies:
+            # Dependencies are now handled correctly with per_lot attribute:
+            # - per_lot=True: dependency requested once for the entire lot
+            # - per_lot=False: dependency requested for each instance (backward compatible)
+            # Routing logic now checks entity availability and correct queue location
             yield process_request.request_dependencies()
         yield from resource.setup(process)
         if not resource.current_locatable:
@@ -153,8 +185,7 @@ class TransportProcessHandler:
                 yield transport_event
                 transport_state.process = None
         yield from self.get_entities_of_request(process_request)
-        for entity in process_request.get_atomic_entities():
-            entity.update_location(self.resource)
+        process_request.entity.update_location(self.resource)
 
         # Don't reserve target queue for transport!
         # For INPUT_OUTPUT queues, reserving causes deadlock because processed items fill the queue
@@ -176,8 +207,10 @@ class TransportProcessHandler:
             transport_state.process = None
 
         yield from self.put_entities_of_request(process_request)
-        for entity in process_request.get_atomic_entities():
-            entity.update_location(process_request.target_queue)
+        process_request.entity.update_location(process_request.target_queue)
+
+        if process_request.entity.type == EntityType.LOT:
+            process_request.entity.clear()
 
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)

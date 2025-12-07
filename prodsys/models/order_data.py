@@ -8,6 +8,10 @@ class OrderedProductData(BaseModel):
     product_type: str
     quantity: int
 
+class OrderProductInstance(BaseModel):
+    product_type: str
+    product_id: str
+
 
 class OrderData(BaseModel):
     ID: str
@@ -16,5 +20,5 @@ class OrderData(BaseModel):
     due_time: Optional[float] = None
     release_time: Optional[float] = None
     priority: int
-    products: Optional[List[ProductData]] = None
+    products: Optional[List[OrderProductInstance]] = None
     

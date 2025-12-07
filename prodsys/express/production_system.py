@@ -385,7 +385,7 @@ class ProductionSystem(core.ExpressObject):
             source_data=source_data,
             sink_data=sink_data,
             port_data=port_data + primitive_storage_data,
-            depdendency_data=dependency_data,
+            dependency_data=dependency_data,
             primitive_data=primitive_data,
         )
 

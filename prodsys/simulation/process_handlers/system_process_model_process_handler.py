@@ -9,12 +9,14 @@ import numpy as np
 from prodsys.simulation import (
     sim,
     process,
+    sink,
 )
 
 from prodsys.simulation.process import (
     ReworkProcess,
 )
 
+from prodsys.models.dependency_data import DependencyType
 if TYPE_CHECKING:
     from prodsys.simulation import (
         process,
@@ -55,6 +57,33 @@ class SystemProcessModelHandler:
         for lot_request in lot_requests:
             yield from lot_request.origin_queue.get(lot_request.entity.data.ID)
 
+    def put_entities_of_request(
+        self, process_request: request_module.Request
+    ) -> Generator:
+        """
+        Place a product to the output queue (put) of the resource.
+
+        Args:
+            process_request (request_module.Request): The request to place the product to.
+
+        Returns:
+            Generator: The generator yields when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
+        """
+        required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_assembly_types:
+                continue    
+            dependant_entity.info.log_consumption(dependant_entity.current_locatable, dependant_entity, self.env.now)
+        required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
+        for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity.data.type not in required_tool_types:
+                continue
+            dependant_entity.update_location(process_request.entity._current_locatable)
+            dependant_entity.info.log_start_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
+            yield from dependant_entity.current_locatable.put(dependant_entity.data)
+            dependant_entity.info.log_end_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
+
+
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Handle a process model request by executing the processes according to the DAG structure.
@@ -77,7 +106,7 @@ class SystemProcessModelHandler:
         system_router = resource.router
         process_request.entity.router = system_router
 
-        assert process_request.entity.current_locatable == process_request.origin_queue, f"Product {entity.data.ID} is not at the origin queue {process_request.origin_queue}"
+        assert process_request.entity._current_locatable == process_request.origin_queue, f"Product {entity.data.ID} is not at the origin queue {process_request.origin_queue}"
         
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
@@ -103,11 +132,12 @@ class SystemProcessModelHandler:
         entity.current_process = proc
         
         if(entity.no_transport_to_sink):
-            entity.router.route_disassembled_product_to_sink(entity)
+            sink = entity.router.route_disassembled_product_to_sink(entity)
         else:
             arrived_at_queue = system_router.request_transport(entity, target_queue)
             yield arrived_at_queue
-            
+        yield from self.put_entities_of_request(process_request)
+        process_request.entity.update_location(process_request.target_queue)
         process_request.entity.router = super_system_router
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)

@@ -13,7 +13,7 @@ from prodsys.models import port_data
 from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
 from prodsys.simulation.request import Request
 from prodsys.simulation.entities.entity import Entity
-
+from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation import (
     sim,
     process,
@@ -99,6 +99,7 @@ class Controller:
         queue_get_events = [queue.on_space for queue in output_queues]
         yield simpy.AnyOf(self.env, queue_get_events)
         if not self.state_changed.triggered:
+            print("state changed trigger from queue check")
             self.state_changed.succeed()
 
     def control_loop(self) -> Generator:
@@ -120,9 +121,38 @@ class Controller:
             ):
                 continue
 
-            self.control_policy(self.requests)
+            def get_requests_with_available_dependencies(requests: List[request_module.Request]) -> List[request_module.Request]:
+                requests_with_available_dependencies = []
+                for request in requests:
+                    if request.required_dependencies:
+                        primitive_dependencies = [dependency for dependency in request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
+                        if primitive_dependencies:
+                            router = request.requesting_item.router
+                            # Check if all required primitives are available
+                            all_primitives_available = True
+                            for dependency in primitive_dependencies:
+                                required_primitive = dependency.required_entity
+                                if required_primitive is None:
+                                    all_primitives_available = False
+                                    break
+                                # Get the type from the required_primitive (can be Product or Primitive)
+                                primitive_type = required_primitive.data.type
+                                free_primitives = router.free_primitives_by_type.get(primitive_type, [])
+                                # Check if there are actually free primitives (list is not empty)
+                                if not free_primitives or len(free_primitives) == 0:
+                                    all_primitives_available = False
+                                    break
+                            if not all_primitives_available:
+                                continue
+                    requests_with_available_dependencies.append(request)
+                return requests_with_available_dependencies
+            possible_requests = get_requests_with_available_dependencies(self.requests)
+            if not possible_requests:
+                continue
+            self.control_policy(possible_requests)
             def is_request_feasible(request: request_module.Request) -> bool:
                 # Check transport requests for target queue availability
+
                 if request.request_type == request_module.RequestType.TRANSPORT:
                     if request.target_queue.is_full:
                         return False
@@ -153,7 +183,7 @@ class Controller:
                 for i, request in enumerate(requests):
                     if is_request_feasible(request):
                         self.requests.remove(request)
-                        return request# If request becomes infeasible (queue full), reroute it back to router
+                        return request # If request becomes infeasible (queue full), reroute it back to router
                     # This allows it to be retried later when space becomes available
                     # Only reroute transport requests - production requests should have been validated
                     # before routing and if item is in INPUT_OUTPUT queue, it should be processable
@@ -165,7 +195,7 @@ class Controller:
                             request.requesting_item.router.got_requested.succeed()
                 return None
             
-            selected_request = get_feasible_request(self.requests)
+            selected_request = get_feasible_request(possible_requests)
             if not selected_request:
                 # If there are requests waiting on full output queues, wait for space
                 self.env.process(self.free_up_queue_check())
@@ -267,8 +297,7 @@ def get_requets_handler(
     """
     if (
         request.request_type == request_module.RequestType.PRODUCTION
-        and hasattr(request.process, "data")
-        and getattr(request.process.data, "product_disassembly_dict", None) 
+        and any(dependency.data.dependency_type == DependencyType.DISASSEMBLY for dependency in request.required_dependencies)
     ):
         return DisassemblyProcessHandler(request.requesting_item.env) 
     elif (

@@ -67,7 +67,7 @@ def get_reconfiguration_cost(
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
-    if adapter_object.depdendency_data:
+    if adapter_object.dependency_data:
         primitive_cost = get_primitive_cost(adapter_object, baseline)
     else:
         primitive_cost = 0

@@ -84,6 +84,7 @@ class PostProcessor:
                 state.StateTypeEnum.charging,
                 state.StateTypeEnum.loading,
                 state.StateTypeEnum.unloading,
+                state.StateTypeEnum.assembly,
             ]
         )
 
@@ -157,12 +158,13 @@ class PostProcessor:
         STATE_SORTING_INDEX = {
             "0": ["Interface State", "finished product", 1],
             "1": ["Interface State", "created product", 2],
-            "2": ["Interface State", "end state", 3],
-            "3": ["Process State", "end interrupt", 4],
-            "4": ["Process State", "end state", 5],
-            "5": ["Process State", "start state", 6],
-            "6": ["Process State", "start interrupt", 7],
-            "7": ["Interface State", "start state", 8],
+            "2": ["Interface State", "consumed product", 2],
+            "3": ["Interface State", "end state", 3],
+            "4": ["Process State", "end interrupt", 4],
+            "5": ["Process State", "end state", 5],
+            "6": ["Process State", "start state", 6],
+            "7": ["Process State", "start interrupt", 7],
+            "8": ["Interface State", "start state", 8],
         }
 
         df_unique = pd.DataFrame.from_dict(
@@ -1049,11 +1051,12 @@ class PostProcessor:
     def get_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         CREATED_CONDITION = df["Activity"] == "created product"
         FINISHED_CONDITION = df["Activity"] == "finished product"
+        CONSUMED_CONDITION = df["Activity"] == "consumed product"
 
         df["WIP_Increment"] = 0
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-
+        # df.loc[CONSUMED_CONDITION, "WIP_Increment"] = -1
         df = df.loc[
             df["WIP_Increment"] != 0
         ].copy()  # Remove rows where WIP_Increment is 0
@@ -1340,10 +1343,15 @@ class PostProcessor:
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
         df.loc[CREATED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION, "Resource"]
 
-        # Rule 2: Finish product -> -1 at sink
-        FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
-        df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-        df.loc[FINISHED_CONDITION, "WIP_resource"] = df.loc[FINISHED_CONDITION, "Resource"]
+        # # Rule 2: Finish product -> -1 at sink
+        # FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
+        # df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
+        # df.loc[FINISHED_CONDITION, "WIP_resource"] = df.loc[FINISHED_CONDITION, "Resource"]
+
+        # Rule 2: Consume product -> -1 at resource
+        CONSUMED_CONDITION = df["Activity"] == state.StateEnum.consumed_product
+        df.loc[CONSUMED_CONDITION, "WIP_Increment"] = -1
+        df.loc[CONSUMED_CONDITION, "WIP_resource"] = df.loc[CONSUMED_CONDITION, "Resource"]
 
         # Rule 3: End loading -> +1 at resource, -1 at Origin location (queue)
         loading_condition = (df["State Type"] == state.StateTypeEnum.loading) | (df["State Type"] == "Loading")

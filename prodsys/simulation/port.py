@@ -89,6 +89,7 @@ class Queue:
         Returns the item.
         """
         while item_id not in self.items:
+            print(f"Item {item_id} not in queue {self.data.ID}")
             ev = self.on_item
             yield ev
 

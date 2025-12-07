@@ -1,33 +1,32 @@
 from __future__ import annotations
 
-from typing import Optional, Protocol, TYPE_CHECKING
+from typing import Optional, Protocol, TYPE_CHECKING, runtime_checkable
 
 import logging
 
-logger = logging.getLogger(__name__)
 
 
-from prodsys.simulation import port
 from prodsys.simulation.entities import primitive
-
+from prodsys.simulation import state
 if TYPE_CHECKING:
-    from prodsys.simulation import product, resources, sink, source
-    from prodsys.factories import primitive_factory
+    from prodsys.simulation import resources
 
     from prodsys.models import dependency_data
     from prodsys.simulation import (
-        request,
         process,
         sim,
         state,
         node,
     )
 
+logger = logging.getLogger(__name__)
+
 class DependedEntity(Protocol):
     """
     Protocol that defines the interface for a depended entity. This is used to define the type of the depended entity in the Dependency class.
     """
-    def bind(self, dependant: process.Process | resources.Resource | primitive.Primitive) -> None:
+
+    def bind(self, dependant: process.Process | resources.Resource | primitive.Primitive, dependency: Dependency) -> None:
         """
         Binds the depended entity to the dependency.
         """
@@ -42,8 +41,6 @@ class DependedEntity(Protocol):
         pass
         # release should make DependedEntity available for other processes
         # called by the dependant
-
-    # TODO: use these function and consider them for state / product_info logging, also add logging to primitives
 
 
 class DependencyInfo:
@@ -122,7 +119,7 @@ class Dependency:
         env: sim.Environment,
         data: dependency_data.DependencyData,
         required_process: Optional[process.Process],
-        required_primitive: Optional[primitive.Primitive],
+        required_entity: Optional[primitive.Primitive],
         required_resource: Optional[resources.Resource],
         interaction_node: Optional[node.Node],
     ):
@@ -140,9 +137,8 @@ class Dependency:
         self.env = env
         self.data = data
         self.required_process = required_process
-        self.required_primitive = required_primitive
+        self.required_entity = required_entity
         self.required_resource = required_resource
         self.interaction_node = interaction_node
 
 
-from prodsys.simulation import state
