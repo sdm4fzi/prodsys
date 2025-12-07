@@ -60,7 +60,7 @@ class DependencyFactory:
         Returns:
             Dependency: Created dependency object.
         """
-        process, primitive, resource, node = None, None, None, None
+        process, required_entity, resource, node = None, None, None, None
         if dependency_data.dependency_type == DependencyType.PROCESS:
             process = self.process_factory.get_process(dependency_data.required_process)
             node = self.node_factory.get_node(dependency_data.interaction_node)
@@ -72,17 +72,28 @@ class DependencyFactory:
                 node = None
         elif dependency_data.dependency_type == DependencyType.ASSEMBLY or dependency_data.dependency_type == DependencyType.DISASSEMBLY:
             try:
-                primitive = self.product_factory.get_product_init(dependency_data.required_entity)
+                required_entity = self.product_factory.get_product_init(dependency_data.required_entity)
             except Exception as e:
                 pass
-            if(primitive == None):
+            if(required_entity == None):
                 try:
-                    primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
+                    required_entity = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
+                except Exception as e:
+                    raise ValueError(f"Primitive with ID {dependency_data.required_entity} not found.") from e  
+        
+        elif dependency_data.dependency_type == DependencyType.DISASSEMBLY:
+            try:
+                required_entity = self.product_factory.get_product_init(dependency_data.required_entity)
+            except Exception as e:
+                raise ValueError(f"Product with ID {dependency_data.required_entity} not found.") from e  
+            if required_entity == None:
+                try:
+                    required_entity = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
                 except Exception as e:
                     raise ValueError(f"Primitive with ID {dependency_data.required_entity} not found.") from e  
         elif dependency_data.dependency_type == DependencyType.TOOL:
             try:
-                primitive = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
+                required_entity = self.primitive_factory.get_primitive_with_type(dependency_data.required_entity)
             except Exception as e:
                 raise ValueError(f"Primitive with ID {dependency_data.required_entity} not found.") from e  
         elif dependency_data.dependency_type == DependencyType.LOT:
@@ -94,7 +105,7 @@ class DependencyFactory:
             env=self.resource_factory.env,
             data=dependency_data,
             required_process=process,
-            required_primitive=primitive,
+            required_entity=required_entity,
             required_resource=resource,
             interaction_node=node,
         )

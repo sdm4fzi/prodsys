@@ -122,8 +122,8 @@ class LotDependency(Dependency):
             min_lot_size=self.min_lot_size,
             max_lot_size=self.max_lot_size,
         )
-
 from prodsys.express.primitive import Primitive
-from prodsys.express.process import PROCESS_UNION, Process
+from prodsys.express.process import PROCESS_UNION
 from prodsys.express.product import Product
 from prodsys.express.resources import Resource
+

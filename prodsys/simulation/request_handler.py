@@ -496,7 +496,7 @@ class RequestHandler:
             request_info_key = self.pending_primitive_requests[request_info_index]
             request_info = self.request_infos[request_info_key]
             possible_primitives = free_primitives.get(
-                request_info.dependency.required_primitive.data.type, []
+                request_info.dependency.required_entity.data.type, []
             )
             possible_primitive_requests = []
             for possible_primitive in possible_primitives:

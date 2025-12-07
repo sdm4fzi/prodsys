@@ -1,7 +1,7 @@
 import pytest
 from prodsys.models.production_system_data import ProductionSystemData
-import prodsys.express as psx
 from prodsys import runner
+from prodsys.models.dependency_data import DisassemblyDependencyData
 
 
 @pytest.fixture
@@ -137,13 +137,32 @@ def simulation_adapter() -> ProductionSystemData:
     transport_process=transport_process.ID,
     routing_heuristic=prodsys.source_data.RoutingHeuristic.random,
     )
+
+
+        # product_disassembly_dict= {"mutterprodukt": [mutterprodukt,product, product2] },
+    disassembly_dependency = prodsys.dependency_data.DisassemblyDependencyData(
+        ID="disassembly_dependency_mutterprodukt",
+        description="Disassembly dependency for mutterprodukt",
+        required_entity=mutterprodukt.ID,
+    )
+    disassembly_dependency2 = prodsys.dependency_data.DisassemblyDependencyData(
+        ID="disassembly_dependency_product",
+        description="Disassembly dependency for product",
+        required_entity=product.ID,
+    )
+    disassembly_dependency3 = prodsys.dependency_data.DisassemblyDependencyData(
+        ID="disassembly_dependency_product2",
+        description="Disassembly dependency for product2",
+        required_entity=product2.ID,
+    )
+
     
     disassembly_process = prodsys.processes_data.ProductionProcessData(
     ID="disassembly_process",
     description="disassembly_process",
     time_model_id=welding_time_model.ID,
     type=prodsys.processes_data.ProcessTypeEnum.ProductionProcesses,
-    product_disassembly_dict= {"mutterprodukt": [mutterprodukt,product, product2] },
+    dependency_ids=[disassembly_dependency.ID, disassembly_dependency2.ID, disassembly_dependency3.ID],
     )
 
     disassemblymachine = prodsys.resource_data.ResourceData(
@@ -168,6 +187,7 @@ def simulation_adapter() -> ProductionSystemData:
 
     adapter = prodsys.production_system_data.ProductionSystemData(
     time_model_data=[welding_time_model, transport_time_model, arrival_time_model, arrival_time_model1],
+    dependency_data=[disassembly_dependency, disassembly_dependency2, disassembly_dependency3],
     process_data=[transport_process,production_process, disassembly_process],
     resource_data=[machine, transport_resource, disassemblymachine],
     product_data=[product, mutterprodukt, product2],
@@ -187,7 +207,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "69d06579cba88c55a9f9f2dc77acdf80"
+    assert hash_str == "65388bc54ce7f43e053e5cb005937d8a"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

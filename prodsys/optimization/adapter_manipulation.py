@@ -121,11 +121,11 @@ def _get_resource_dependency_ids(
     """
     Return the set of resource IDs referenced by resource dependencies.
     """
-    if not adapter_object.depdendency_data:
+    if not adapter_object.dependency_data:
         return set()
     return {
         dependency.required_resource
-        for dependency in adapter_object.depdendency_data
+        for dependency in adapter_object.dependency_data
         if getattr(dependency, "dependency_type", None) == DependencyType.RESOURCE
     }
 
@@ -135,7 +135,7 @@ def sync_resource_dependencies(adapter_object: adapters.ProductionSystemData) ->
     Ensure that resource dependencies always reference existing resources.
     If the original resource is missing, reassign the dependency to a suitable fallback.
     """
-    if not adapter_object.depdendency_data:
+    if not adapter_object.dependency_data:
         return
 
     available_resources = {resource.ID: resource for resource in adapter_object.resource_data}
@@ -157,7 +157,7 @@ def sync_resource_dependencies(adapter_object: adapters.ProductionSystemData) ->
         # As a last resort, return any available resource ID.
         return next(iter(available_resources.keys()))
 
-    for dependency in adapter_object.depdendency_data:
+    for dependency in adapter_object.dependency_data:
         if getattr(dependency, "dependency_type", None) != DependencyType.RESOURCE:
             continue
         if dependency.required_resource in available_resources:

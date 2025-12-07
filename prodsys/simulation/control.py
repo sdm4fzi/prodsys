@@ -131,7 +131,7 @@ class Controller:
                             # Check if all required primitives are available
                             all_primitives_available = True
                             for dependency in primitive_dependencies:
-                                required_primitive = dependency.required_primitive
+                                required_primitive = dependency.required_entity
                                 if required_primitive is None:
                                     all_primitives_available = False
                                     break
@@ -297,10 +297,8 @@ def get_requets_handler(
     """
     if (
         request.request_type == request_module.RequestType.PRODUCTION
-        and hasattr(request.process, "data")
-        and getattr(request.process.data, "product_disassembly_dict", None) 
+        and any(dependency.data.dependency_type == DependencyType.DISASSEMBLY for dependency in request.required_dependencies)
     ):
-        # TODO: resolve this dependency type to dependency type DISASSEMBLY
         return DisassemblyProcessHandler(request.requesting_item.env) 
     elif (
         request.request_type == request_module.RequestType.PRODUCTION

@@ -15,6 +15,7 @@ from prodsys.simulation.request import Request
 from prodsys.simulation.entities.product import Product
 from prodsys.models.port_data import PortInterfaceType
 from prodsys.models.processes_data import ProcessTypeEnum
+from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.product_processor import ProductProcessor
 
 
@@ -237,20 +238,17 @@ class DisassemblyProcessHandler:
         target_queue: port.Queue,
         product: Product
     ) -> Generator:
-        resource = process_request.get_resource()
-        process = process_request.get_process()
 
         disassembled_products: List[Product] = []
-        disassembly_list = [ProductData]
-        if hasattr(process, "data") and hasattr(process.data, "product_disassembly_dict"):
-            disassembly_list = process.data.product_disassembly_dict.get(product.data.type, [])
+        disassembly_dependencies = [dependency for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.DISASSEMBLY]
        
-        for dis_product_data in disassembly_list:
-            if(dis_product_data.type.__eq__(product.data.type) ):
+        for dis_product_data in disassembly_dependencies:
+            if(dis_product_data.required_entity.data.type.__eq__(product.data.type) ):
                 disassembled_products.append(product)
                 continue
             new_product = product.router.product_factory.create_product(
-            dis_product_data  , dis_product_data.routing_heuristic
+                # TODO: add routing heuristic to get from source in the future
+            dis_product_data.required_entity.data  , "FIFO"
             )
             disassembled_products.append(new_product)
         if target_queue is None:

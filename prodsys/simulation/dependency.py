@@ -119,7 +119,7 @@ class Dependency:
         env: sim.Environment,
         data: dependency_data.DependencyData,
         required_process: Optional[process.Process],
-        required_primitive: Optional[primitive.Primitive],
+        required_entity: Optional[primitive.Primitive],
         required_resource: Optional[resources.Resource],
         interaction_node: Optional[node.Node],
     ):
@@ -137,7 +137,7 @@ class Dependency:
         self.env = env
         self.data = data
         self.required_process = required_process
-        self.required_primitive = required_primitive
+        self.required_entity = required_entity
         self.required_resource = required_resource
         self.interaction_node = interaction_node
 
