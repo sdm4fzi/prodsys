@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 from prodsys.simulation import resources
 from prodsys.simulation.entities import primitive
 from prodsys.simulation import request
+from prodsys.models.processes_data import ProcessTypeEnum
 
 
 if TYPE_CHECKING:
@@ -396,6 +397,12 @@ class RequestHandler:
             request.Request: The created request.
         """
         dependencies = resource.dependencies + process.dependencies
+        if not hasattr(process.data, "type"):
+            raise ValueError(f"Process {process.data.ID} has no type")
+        if process.data.type == ProcessTypeEnum.ProcessModels:
+            # also consider dependencies of contained processes with lots!
+            for contained_process in process.contained_processes:
+                dependencies.extend(contained_process.dependencies)
         request_instance = request.Request(
             requesting_item=request_info.item,
             entity=request_info.item,

@@ -99,7 +99,6 @@ class Controller:
         queue_get_events = [queue.on_space for queue in output_queues]
         yield simpy.AnyOf(self.env, queue_get_events)
         if not self.state_changed.triggered:
-            print("state changed trigger from queue check")
             self.state_changed.succeed()
 
     def control_loop(self) -> Generator:
@@ -200,7 +199,6 @@ class Controller:
                 # If there are requests waiting on full output queues, wait for space
                 self.env.process(self.free_up_queue_check())
                 continue
-                            
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
                 if not lot_request:

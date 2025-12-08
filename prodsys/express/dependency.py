@@ -21,6 +21,7 @@ class ResourceDependency(Dependency):
     required_resource: Resource
     interaction_node: Optional[Node]
     position_type: Literal["relative", "absolute"] = "absolute"
+    per_lot: bool = True
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self):
@@ -49,6 +50,7 @@ class ResourceDependency(Dependency):
             required_resource=self.required_resource.ID,
             interaction_node=self.interaction_node.ID if self.interaction_node else None,
             position_type=self.position_type,
+            per_lot=self.per_lot,
         )
 
 
@@ -57,6 +59,7 @@ class ProcessDependency(Dependency):
     required_process: PROCESS_UNION
     interaction_node: Optional[Node]
     position_type: Literal["relative", "absolute"] = "absolute"
+    per_lot: bool = True
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
     def to_model(self):
@@ -66,6 +69,7 @@ class ProcessDependency(Dependency):
             required_process=self.required_process.ID,
             interaction_node=self.interaction_node.ID if self.interaction_node else None,
             position_type=self.position_type,
+            per_lot=self.per_lot,
         )
 
 

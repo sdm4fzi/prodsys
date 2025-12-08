@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
 import typing
 
-
+from prodsys.models.processes_data import ProcessTypeEnum
 if TYPE_CHECKING:
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.source import Source
@@ -104,10 +104,13 @@ class DependencyProcess:
             data (processes_data.DependencyProcessData): The process data.
             time_model (Optional[time_model.TimeModel], optional): The time model. Defaults to None.
         """
-        self.data = processes_data.ProcessData(
+        self.data = processes_data.ProductionProcessData(
             ID="DependencyProcess",
             description="",
             time_model_id="",
+            dependency_ids=[],
+            type=ProcessTypeEnum.ProductionProcesses,
+            failure_rate=0.0,
         )
         self.dependencies = []
 

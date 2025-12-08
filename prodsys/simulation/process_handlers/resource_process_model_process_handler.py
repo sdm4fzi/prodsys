@@ -127,9 +127,6 @@ class ResourceProcessModelHandler:
         
         entity = process_request.get_entity()
         origin_queue = process_request.origin_queue
-
-        assert entity._current_locatable == origin_queue, f"Product {entity.data.ID} is not at the origin queue {origin_queue.data.ID}"
-        
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
         
@@ -165,7 +162,7 @@ class ResourceProcessModelHandler:
                 dependency_release_event = self.env.event()
                 dependency_ready_events = router.get_dependencies_for_execution(
                     resource=resource,
-                    process=next_process,
+                    relevant_dependencies=resource_dependencies + process_dependencies,
                     requesting_item=process_request.requesting_item or process_request.entity,
                     dependency_release_event=dependency_release_event,
                 )
