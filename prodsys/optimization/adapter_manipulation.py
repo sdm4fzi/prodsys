@@ -211,6 +211,7 @@ def crossover(ind1, ind2):
     adjust_process_capacities(adapter2)
     if any(isinstance(process, LinkTransportProcessData) for process in adapter1.process_data):
         node_link_generation.generate_and_apply_network(adapter1, simple_connection=True)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter2.process_data):
         node_link_generation.generate_and_apply_network(adapter2, simple_connection=True)
     sync_resource_dependencies(adapter1)
     sync_resource_dependencies(adapter2)
