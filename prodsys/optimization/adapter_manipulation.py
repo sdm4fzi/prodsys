@@ -322,10 +322,10 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     ]
     if not possible_processes:
         return False
-    transport_resource_id = f"resource_{uuid1().hex}"
     transport_process = random.choice(possible_processes)
     transport_process_data = next(process for process in adapter_object.process_data if process.ID == transport_process)
     if transport_process_data.can_move:
+        transport_resource_id = f"AGV_{uuid1().hex}"
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
@@ -353,7 +353,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             process_sequence = product.processes[idx:idx+2]
         else:
             process_sequence = product.processes
-        for src, tgt in node_link_generation.get_new_links(adapter_object):
+        for src, tgt in node_link_generation.get_new_links(adapter_object, simple_connection=True):
                 G.add_edge(src, tgt)
         new_links = []
         if len(process_sequence) > 1:
@@ -440,9 +440,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         new_links.append((path[i], path[i+1]))
         
         new_transport_process = transport_process_data.model_copy(deep=True)
-        new_tp_id = f"ConveyorProcess_{uuid1().hex}"
-        new_transport_process.ID = new_tp_id
-        new_transport_process.capability = transport_process_data.capability
+        new_transport_process.ID = f"conveyor_process_{uuid1().hex}"
         new_transport_process.links = new_links
         adapter_object.process_data.append(new_transport_process)
 
@@ -450,7 +448,6 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
         for resource in adapter_object.resource_data:
             if transport_process in resource.process_ids:
                 possible_transport_resources.append(resource)
-
         new_object_capacities = []
         try:
             for tr in possible_transport_resources:
@@ -462,7 +459,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             new_object_capacity = random.choice(new_object_capacities)
         else:
             new_object_capacity = 1
-
+        transport_resource_id = f"conveyor_{uuid1().hex}"
         new_transport_resource = resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
@@ -474,8 +471,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                 can_move=False,
             )
         adapter_object.resource_data.append(new_transport_resource)
-        if not new_transport_process.ID == adapter_object.process_data[-1].ID:
-            print("Transport process and resource are not correctly linked.")
+        if not new_transport_process.ID == adapter_object.process_data[-1].ID or not new_transport_process.ID == adapter_object.resource_data[-1].process_ids[0]:
+            print("Transport process and resource are not correctly linked.") #DEBUG
     add_default_queues_to_resources(adapter_object, reset=False)
     return True
 
@@ -540,8 +537,6 @@ def remove_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         return False
     machine = random.choice(possible_machines)
     adapter_object.resource_data.remove(machine)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -565,8 +560,6 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
         return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -818,8 +811,6 @@ def mutation(individual):
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     sync_resource_dependencies(adapter_object)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
 
     return (individual,)
 
@@ -863,8 +854,6 @@ def get_random_production_capacity(
         add_machine(adapter_object)
 
     sync_resource_dependencies(adapter_object)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):    
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return adapter_object
 
 
@@ -900,8 +889,6 @@ def get_random_transport_capacity(
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
     sync_resource_dependencies(adapter_object)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):    
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return adapter_object
 
 

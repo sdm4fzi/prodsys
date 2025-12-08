@@ -346,7 +346,7 @@ def generate_and_apply_network(adapter: production_system_data, xml_path = None,
     nodes, links = convert_nx_to_prodsys(adapter, G)
     apply_nodes_links(adapter, nodes, links)
 
-def get_new_links(adapter: production_system_data, style="grid") -> List[Tuple[str, str]]:
-    G = generator(adapter, style=style)
+def get_new_links(adapter: production_system_data, style="grid", simple_connection=True) -> List[Tuple[str, str]]:
+    G = generator(adapter, style=style, simple_connection=simple_connection)
     _, new_links = convert_nx_to_prodsys(adapter, G)
     return new_links
