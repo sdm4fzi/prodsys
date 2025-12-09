@@ -507,9 +507,6 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
         if not new_transport_process.ID == adapter_object.process_data[-1].ID or not new_transport_process.ID == adapter_object.resource_data[-1].process_ids[0]:
             print("Transport process and resource are not correctly linked.") #DEBUG
     add_default_queues_to_resources(adapter_object, reset=False)
-    delete_unused_conveyor_processes
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -930,9 +927,6 @@ def get_random_transport_capacity(
         add_transport_resource(adapter_object)
     sync_resource_dependencies(adapter_object)
     delete_unused_conveyor_processes(adapter_object)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
-        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
-
     return adapter_object
 
 
