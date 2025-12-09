@@ -21,6 +21,7 @@ from prodsys.models.production_system_data import (
     get_available_production_processes,
     get_available_transport_processes,
     get_available_capability_processes,
+    get_conveyor_processes,
 )
 
 # Re-export the main ProductionSystemData class as the primary adapter
@@ -40,4 +41,5 @@ __all__ = [
     "get_available_production_processes",
     "get_available_transport_processes",
     "get_available_capability_processes",
+    "get_conveyor_processes"
 ]

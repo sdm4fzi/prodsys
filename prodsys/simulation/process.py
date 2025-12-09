@@ -13,11 +13,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import request as request_module
     from prodsys.simulation.dependency import Dependency
     from prodsys.simulation import route_finder, time_model
-    from prodsys.simulation.resources import Resource
-    from prodsys.simulation.source import Source
-    from prodsys.simulation.sink import Sink
-    from prodsys.simulation.node import Node
-    from prodsys.simulation import request as request_module
+from prodsys.simulation import request as request_module
     
 
 from prodsys.models import processes_data

@@ -40,7 +40,7 @@ from prodsys.models import scenario_data as scenario_data_module
 from prodsys.models import dependency_data as dependency_data_module
 from prodsys.models import primitives_data as primitives_data_module
 from prodsys.util import util
-
+from prodsys.models.processes_data import LinkTransportProcessData
 
 def get_production_resources(
     adapter: ProductionSystemData,
@@ -1755,6 +1755,25 @@ def get_required_transport_processes(
     )
     return required_transport_processes
 
+def get_conveyor_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all required transport processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of required transport processes
+    """
+    required_transport_processes=[]
+    for process in configuration.process_data:
+        if isinstance(process, LinkTransportProcessData):
+            if not process.can_move:
+                required_transport_processes.append(process)
+
+    return required_transport_processes 
 
 def get_required_capability_processes(
     configuration: ProductionSystemData,

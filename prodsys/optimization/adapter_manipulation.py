@@ -93,6 +93,26 @@ def _collect_leaf_process_ids(
             contained_ids.add(node_id)
     return contained_ids
 
+def delete_unused_conveyor_processes(
+    adapter_object: adapters.ProductionSystemData
+) -> None:
+    if adapters.get_conveyor_processes(adapter_object):
+        unused_processes = []
+        for process in adapter_object.process_data:
+            unused = True
+            if isinstance(process, LinkTransportProcessData):
+                if not process.can_move:
+                    for resource in adapter_object.resource_data:
+                        if process.ID in resource.process_ids:
+                            unused = False
+            else: 
+                unused=False
+            if unused:
+                unused_processes.append(process)
+
+        for process in unused_processes:
+            adapter_object.process_data.remove(process)
+
 
 def expand_process_ids_with_models(
     adapter_object: adapters.ProductionSystemData, process_ids: List[str]
@@ -202,17 +222,29 @@ def crossover(ind1, ind2):
     if crossover_type == "transport_resource":
         adapter1.resource_data = machines_1 + transport_resources_2
         adapter2.resource_data = machines_2 + transport_resources_1
+        
+        transport_processes2 = adapters.get_conveyor_processes(adapter2)
+        transport_processes1 = adapters.get_conveyor_processes(adapter1)
+        if (transport_processes1 or transport_processes2):
+            for tp in transport_processes2:
+                if not any(tp.ID == atp.ID for atp in adapter1.process_data):
+                    adapter1.process_data.append(tp.model_copy(deep=True))
+            for tp in transport_processes1:
+                if not any(tp.ID == atp.ID for atp in adapter2.process_data):
+                    adapter2.process_data.append(tp.model_copy(deep=True))        
+            delete_unused_conveyor_processes(adapter1)
+            delete_unused_conveyor_processes(adapter2)
 
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter1.process_data):
+        node_link_generation.generate_and_apply_network(adapter1, simple_connection=True)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter2.process_data):
+        node_link_generation.generate_and_apply_network(adapter2, simple_connection=True)
     add_default_queues_to_resources(adapter1, reset=False)
     add_default_queues_to_resources(adapter2, reset=False)
     clean_out_breakdown_states_of_resources(adapter1)
     clean_out_breakdown_states_of_resources(adapter2)
     adjust_process_capacities(adapter1)
     adjust_process_capacities(adapter2)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter1.process_data):
-        node_link_generation.generate_and_apply_network(adapter1, simple_connection=True)
-    if any(isinstance(process, LinkTransportProcessData) for process in adapter2.process_data):
-        node_link_generation.generate_and_apply_network(adapter2, simple_connection=True)
     sync_resource_dependencies(adapter1)
     sync_resource_dependencies(adapter2)
 
@@ -475,6 +507,9 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
         if not new_transport_process.ID == adapter_object.process_data[-1].ID or not new_transport_process.ID == adapter_object.resource_data[-1].process_ids[0]:
             print("Transport process and resource are not correctly linked.") #DEBUG
     add_default_queues_to_resources(adapter_object, reset=False)
+    delete_unused_conveyor_processes
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -561,6 +596,10 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
         return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
+    delete_unused_conveyor_processes(adapter_object)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
+
     return True
 
 
@@ -686,7 +725,7 @@ def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     if not possible_positions:
         return False
     new_location = random.choice(possible_positions)
-    update_production_resource_location(moved_machine, new_location, adapter_object)
+    update_production_resource_location(moved_machine, new_location)
     if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
         node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
@@ -890,6 +929,10 @@ def get_random_transport_capacity(
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
     sync_resource_dependencies(adapter_object)
+    delete_unused_conveyor_processes(adapter_object)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
+
     return adapter_object
 
 
@@ -929,7 +972,7 @@ def get_random_layout(
     possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
     for machine in adapters.get_production_resources(adapter_object):
         new_location = random.choice(possible_positions)
-        update_production_resource_location(machine, new_location, adapter_object)
+        update_production_resource_location(machine, new_location)
         possible_positions.remove(new_location)
     if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):    
         node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)

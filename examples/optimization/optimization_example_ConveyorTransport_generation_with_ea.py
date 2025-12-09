@@ -13,12 +13,12 @@ from prodsys.util.node_link_generation import node_link_generation
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=0,
-        number_of_generations=64,
-        population_size=4,
-        mutation_rate=0,
-        crossover_rate=1,
+        number_of_generations=128,
+        population_size=16,
+        mutation_rate=0.6,
+        crossover_rate=0.4,
         number_of_seeds=2,
-        number_of_processes=1
+        number_of_processes=4
     )
 
     def new_transformation(adapter: ProductionSystemData) -> bool:

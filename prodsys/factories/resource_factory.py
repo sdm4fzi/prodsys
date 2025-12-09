@@ -16,7 +16,7 @@ from prodsys.models.resource_data import (
     SystemResourceData,
     TransportControlPolicy,
 )
-from prodsys.models import performance_data
+from prodsys.models import performance_data, processes_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
@@ -279,7 +279,10 @@ class ResourceFactory:
         ports = []
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
-        elif resource_data.control_policy not in TransportControlPolicy:
+        elif any(
+            isinstance(tp, processes_data.TransportProcessData) and tp.ID in resource_data.process_ids
+            for tp in self.process_factory.processes
+        ):
             raise ValueError("Ports not found for resource " + resource_data.ID)
 
         return ports

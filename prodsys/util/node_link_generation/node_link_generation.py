@@ -336,6 +336,8 @@ def apply_nodes_links(adapter: production_system_data, nodes, links) -> None:
     for LinkTransportProcess in adapter.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
             LinkTransportProcess.links = links
+            if not LinkTransportProcess.can_move:
+                break  # Stop after the first one
 
 def generate_and_apply_network(adapter: production_system_data, xml_path = None, visualize=False, style="grid", simple_connection=True) -> None:
     if xml_path:

@@ -4,6 +4,7 @@ from prodsys.models.production_system_data import ProductionSystemData, add_defa
 import prodsys.express as psx
 from prodsys import runner
 from prodsys.util.node_link_generation import node_link_generation
+from prodsys.models import resource_data
 import prodsys
 
 
@@ -63,6 +64,7 @@ def simulation_adapter() -> ProductionSystemData:
         location=[0, 0],
         ID="agv01",
         processes=[ltp01],
+        control_policy=resource_data.TransportControlPolicy.FIFO
     )
 
     # All products
@@ -128,7 +130,7 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "8c42a80ccbf5489f275088dac94a1ef3"
+    assert hash_str == "ddeeaeb715319754daa6eddab0f938fb"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
