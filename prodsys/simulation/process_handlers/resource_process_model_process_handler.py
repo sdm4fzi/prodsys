@@ -94,6 +94,8 @@ class ResourceProcessModelHandler:
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
         for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity in process_request.get_atomic_entities():
+                continue
             if dependant_entity.data.type not in required_assembly_types:
                 continue
             dependant_entity.info.log_start_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
@@ -101,6 +103,8 @@ class ResourceProcessModelHandler:
             dependant_entity.info.log_end_unloading(process_request.resource, dependant_entity, self.env.now, process_request.target_queue)
         required_tool_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL]
         for dependant_entity in process_request.entity.depended_entities:
+            if dependant_entity in process_request.get_atomic_entities():
+                continue
             if dependant_entity.data.type not in required_tool_types:
                 continue
             dependant_entity.current_locatable = process_request.entity._current_locatable
@@ -214,10 +218,6 @@ class ResourceProcessModelHandler:
         for entity in process_request.get_atomic_entities():
             entity.current_process = proc
         process_request.entity.current_process = proc
-
-        # Release resource capacity requests (must be after marking finished)
-        for resource_request in resource_requests:
-            resource.release(resource_request)
         
         # Put product back to target queue after all processes are finished
         yield from self.put_entities_of_request(process_request)
@@ -226,8 +226,13 @@ class ResourceProcessModelHandler:
         if process_request.entity.type == EntityType.LOT:
             process_request.entity.clear()
 
-        process_request.entity.router.mark_finished_request(process_request)
+        # Release resource capacity requests (must be after marking finished)
+        for resource_request in resource_requests:
+            resource.release(resource_request)
+
         self.resource.controller.mark_finished_process(process_request.capacity_required)
+        process_request.entity.router.mark_finished_request(process_request)
+
         
 
 

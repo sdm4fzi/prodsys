@@ -174,8 +174,8 @@ class ProductionProcessHandler:
         for buffer_placement_event in buffer_placement_events:
             yield buffer_placement_event
 
-        process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
+        process_request.entity.router.mark_finished_request(process_request)
 
     def run_process(
         self,

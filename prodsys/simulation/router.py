@@ -130,20 +130,23 @@ class Router:
             request.completed.succeed()
         if not self.resource_got_free.triggered:
             self.resource_got_free.succeed()
+        self.trigger_resources()
 
     def mark_resource_free(self, resource: resources.Resource) -> None:
         """
         Marks a resource as free in the router.
         """
-        if resource.data.ID not in self.free_resources:
-            self.free_resources[resource.data.ID] = resource
+        pass
+        # if resource.data.ID not in self.free_resources:
+        #     self.free_resources[resource.data.ID] = resource
 
     def mark_resource_not_free(self, resource: resources.Resource) -> None:
         """
         Marks a resource as not free in the router.
         """
-        if resource.data.ID in self.free_resources:
-            self.free_resources.pop(resource.data.ID)
+        pass
+        # if resource.data.ID in self.free_resources:
+        #     self.free_resources.pop(resource.data.ID)
 
     def update_free_resources(self) -> None:
         """
@@ -151,34 +154,41 @@ class Router:
         For INPUT_OUTPUT queues, we need special handling: a resource should be considered
         free if it has items in INPUT_OUTPUT queues that can be processed (removed and put back).
         """
-        for resource in self.resources:
-            if resource.full:
-                self.mark_resource_not_free(resource)
-            else:
-                # Check OUTPUT and INPUT_OUTPUT ports
-                output_ports = [port for port in resource.ports if port.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]]
-                if output_ports:
-                    # For INPUT_OUTPUT queues: if there are items in the queue, the resource can still process them
-                    # even if the queue appears full (because items will be removed then put back)
-                    all_ports_full_with_no_items = True
-                    for port in output_ports:
-                        if port.data.interface_type == port_data.PortInterfaceType.INPUT_OUTPUT:
-                            # INPUT_OUTPUT queue: if it has items, resource can process (items will be removed)
-                            if len(port.items) > 0:
-                                all_ports_full_with_no_items = False
-                                break
-                        # For OUTPUT or full INPUT_OUTPUT with no items: check if full
-                        if not port.is_full:
-                            all_ports_full_with_no_items = False
-                            break
+        pass
+        # for resource in self.resources:
+        #     if resource.full:
+        #         self.mark_resource_not_free(resource)
+        #     else:
+        #         # Check OUTPUT and INPUT_OUTPUT ports
+        #         output_ports = [port for port in resource.ports if port.data.interface_type in [port_data.PortInterfaceType.OUTPUT, port_data.PortInterfaceType.INPUT_OUTPUT]]
+        #         if output_ports:
+        #             # For INPUT_OUTPUT queues: if there are items in the queue, the resource can still process them
+        #             # even if the queue appears full (because items will be removed then put back)
+        #             all_ports_full_with_no_items = True
+        #             for port in output_ports:
+        #                 if port.data.interface_type == port_data.PortInterfaceType.INPUT_OUTPUT:
+        #                     # INPUT_OUTPUT queue: if it has items, resource can process (items will be removed)
+        #                     if len(port.items) > 0:
+        #                         all_ports_full_with_no_items = False
+        #                         break
+        #                 # For OUTPUT or full INPUT_OUTPUT with no items: check if full
+        #                 if not port.is_full:
+        #                     all_ports_full_with_no_items = False
+        #                     break
                     
-                    if all_ports_full_with_no_items:
-                        self.mark_resource_not_free(resource)
-                    else:
-                        self.mark_resource_free(resource)
-                else:
-                    # No output ports, just check if resource is full
-                    self.mark_resource_free(resource)
+        #             if all_ports_full_with_no_items:
+        #                 self.mark_resource_not_free(resource)
+        #             else:
+        #                 self.mark_resource_free(resource)
+        #         else:
+        #             # No output ports, just check if resource is full
+        #             self.mark_resource_free(resource)
+
+    
+    def trigger_resources(self) -> None:
+        for resource in self.resources:
+            if not resource.controller.state_changed.triggered:
+                resource.controller.state_changed.succeed()
 
     def resource_routing_loop(self) -> Generator[None, None, None]:
         """
@@ -194,6 +204,7 @@ class Router:
             if self.resource_got_free.triggered:
                 self.resource_got_free = events.Event(self.env)
             while True:
+                logger.debug(f"Resource routing loop")
                 self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
                     list(self.free_resources.values())
@@ -575,6 +586,8 @@ class Router:
         # Handle dependencies for process model requests
         if processing_request.required_dependencies:
             self.env.process(self._handle_process_model_dependencies(processing_request))
+        if not self.got_requested.triggered:
+            self.got_requested.succeed()
         return processing_request
     
     def _handle_process_model_dependencies(self, processing_request: request.Request) -> Generator:
@@ -616,6 +629,7 @@ class Router:
             product, next_possible_processes
         ).request_completion_event
         if not self.got_requested.triggered:
+            logger.debug(f"Got requested for product {product.data.ID}")
             self.got_requested.succeed()
         return process_event
 

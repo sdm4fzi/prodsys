@@ -11,6 +11,7 @@ from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.dependency import DependedEntity, Dependency
 from prodsys.simulation.process import DependencyProcess, ProcessModelProcess
 from prodsys.simulation.process_matcher import ProcessMatcher
+from prodsys.simulation.entities.entity import EntityType
 
 logger = logging.getLogger(__name__)
 
@@ -378,6 +379,28 @@ class RequestHandler:
                 f"Request info not found for completed request {completed_request.completed}"
             )
         request_info.request_state = "completed"
+
+                # If this was a lot request, clean up RequestInfo objects for all individual requests
+        # that were combined into the lot. These were never cleaned up when the lot was formed.
+        if completed_request.entity.type == EntityType.LOT:
+            lot = completed_request.entity
+            # The lot stores all_completed_events from the individual requests
+            # We need to clean up their RequestInfo objects from routed_requests
+            for completed_event in lot.all_completed_events:
+                # Skip the lot's own completed event (already cleaned up above)
+                if completed_event is completed_request.completed:
+                    continue
+                # Remove RequestInfo for this individual request
+                individual_request_info = self.routed_requests.pop(id(completed_event), None)
+                if individual_request_info:
+                    logger.debug(f"{completed_request.resource.env.now}: Cleaning up RequestInfo for individual request {id(completed_event)} from lot {lot.data.ID}")
+                    individual_request_info.request_state = "completed"
+
+                else:
+                    raise ValueError(f"Request info not found for completed event {completed_event} from lot {lot.data.ID}")
+                # If not found, it might have been cleaned up already or never existed
+                # (e.g., if the request was never routed, or was already cleaned up)
+
 
     def create_resource_request(
         self,

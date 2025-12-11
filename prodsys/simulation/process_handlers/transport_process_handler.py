@@ -117,12 +117,12 @@ class TransportProcessHandler:
 
     def block_other_transports(self, transport_resource: resources.Resource):
         free_capacity = transport_resource.get_free_capacity()
-        transport_resource.controller.reserved_requests_count += free_capacity
+        transport_resource.controller.reserve_resource_capacity(free_capacity)
         self.blocked_capacity += free_capacity
         transport_resource.update_full()
 
     def unblock_other_transports(self, transport_resource: resources.Resource):
-        transport_resource.controller.reserved_requests_count -= self.blocked_capacity
+        transport_resource.controller.unreserve_resource_capacity(self.blocked_capacity)
         self.blocked_capacity = 0
         transport_resource.update_full()
 
@@ -213,11 +213,11 @@ class TransportProcessHandler:
         if process_request.entity.type == EntityType.LOT:
             process_request.entity.clear()
 
-        process_request.entity.router.mark_finished_request(process_request)
-        self.resource.controller.mark_finished_process(process_request.capacity_required)
         for resource_request in resource_requests:
             resource.release(resource_request)
         self.unblock_other_transports(resource)
+        self.resource.controller.mark_finished_process(process_request.capacity_required)
+        process_request.entity.router.mark_finished_request(process_request)
 
     def run_transport(
         self,

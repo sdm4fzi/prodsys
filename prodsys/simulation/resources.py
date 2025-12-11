@@ -605,6 +605,8 @@ class SystemResource(Resource):
         Returns:
             int: The free capacity of the resource.
         """
+        if self._actual_capacity == 0:
+            return float("inf")
         return self._actual_capacity - (
             self.controller.num_running_processes
             + self.controller.reserved_requests_count
