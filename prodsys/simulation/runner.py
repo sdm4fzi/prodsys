@@ -108,8 +108,8 @@ class Runner:
         ]] = None,
     ):
         """"""
-        self.adapter = production_system_data
-        self.env = sim.Environment(seed=self.adapter.seed)
+        self.production_system_data = production_system_data
+        self.env = sim.Environment(seed=self.production_system_data.seed)
         self.time_model_factory: time_model_factory.TimeModelFactory = None
         self.state_factory: state_factory.StateFactory = None
         self.process_factory: process_factory.ProcessFactory = None
@@ -124,6 +124,7 @@ class Runner:
         self.router_factory: router_factory.RouterFactory = None
         self.event_logger: logger.Logger = None
         self.time_stamp: str = ""
+        self.time_range: float = None
         self.post_processor: PostProcessor = None
         self.warm_up_cutoff = warm_up_cutoff
         self.cut_off_method = cut_off_method
@@ -132,25 +133,25 @@ class Runner:
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
-        self.adapter.validate_configuration()
-        with temp_seed(self.adapter.seed):
+        self.production_system_data.validate_configuration()
+        with temp_seed(self.production_system_data.seed):
             self.time_model_factory = time_model_factory.TimeModelFactory()
-            self.time_model_factory.create_time_models(self.adapter)
+            self.time_model_factory.create_time_models(self.production_system_data)
 
-            self.env = sim.Environment(seed=self.adapter.seed)
+            self.env = sim.Environment(seed=self.production_system_data.seed)
 
             self.state_factory = state_factory.StateFactory(
                 env=self.env, time_model_factory=self.time_model_factory
             )
-            self.state_factory.create_states(self.adapter)
+            self.state_factory.create_states(self.production_system_data)
 
             self.process_factory = process_factory.ProcessFactory(
                 time_model_factory=self.time_model_factory
             )
-            self.process_factory.create_processes(self.adapter)
+            self.process_factory.create_processes(self.production_system_data)
 
             self.queue_factory = port_factory.QueueFactory(env=self.env)
-            self.queue_factory.create_queues(self.adapter)
+            self.queue_factory.create_queues(self.production_system_data)
 
             self.resource_factory = resource_factory.ResourceFactory(
                 env=self.env,
@@ -158,15 +159,15 @@ class Runner:
                 queue_factory=self.queue_factory,
                 process_factory=self.process_factory,
             )
-            self.resource_factory.create_resources(self.adapter)
+            self.resource_factory.create_resources(self.production_system_data)
 
             self.node_factory = node_factory.NodeFactory(env=self.env)
-            self.node_factory.create_nodes(self.adapter)
+            self.node_factory.create_nodes(self.production_system_data)
 
             self.product_factory = product_factory.ProductFactory(
                 env=self.env,
                 process_factory=self.process_factory,
-                adapter=self.adapter,
+                adapter=self.production_system_data,
             )
 
             self.sink_factory = sink_factory.SinkFactory(
@@ -174,8 +175,8 @@ class Runner:
                 product_factory=self.product_factory,
                 queue_factory=self.queue_factory,
             )
-            self.product_factory.create_product_mockup(self.adapter)
-            self.sink_factory.create_sinks(self.adapter)
+            self.product_factory.create_product_mockup(self.production_system_data)
+            self.sink_factory.create_sinks(self.production_system_data)
 
             self.event_logger = logger.EventLogger()
             self.event_logger.observe_resource_states(self.resource_factory)
@@ -189,9 +190,9 @@ class Runner:
                 queue_factory=self.queue_factory,
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
-                conwip=self.adapter.conwip_number,
+                conwip=self.production_system_data.conwip_number,
             )
-            self.source_factory.create_sources(self.adapter)
+            self.source_factory.create_sources(self.production_system_data)
             self.primitive_factory = primitive_factory.PrimitiveFactory(
                 env=self.env,
                 process_factory=self.process_factory,
@@ -200,7 +201,7 @@ class Runner:
                 sink_factory=self.sink_factory,
                 event_logger=self.event_logger,
             )
-            self.primitive_factory.create_primitives(self.adapter)
+            self.primitive_factory.create_primitives(self.production_system_data)
 
             self.dependency_factory = dependency_factory.DependencyFactory(
                 process_factory=self.process_factory,
@@ -209,7 +210,7 @@ class Runner:
                 primitive_factory=self.primitive_factory,
                 node_factory=self.node_factory,
             )
-            self.dependency_factory.create_dependencies(self.adapter.dependency_data, self.adapter.product_data)
+            self.dependency_factory.create_dependencies(self.production_system_data.dependency_data, self.production_system_data.product_data)
             self.dependency_factory.inject_dependencies()
             self.event_logger.observe_resource_dependency_states(self.resource_factory)
 
@@ -233,7 +234,7 @@ class Runner:
                 source_factory=self.source_factory,
                 primitive_factory=self.primitive_factory,
                 dependency_factory=self.dependency_factory,
-                production_system_data=self.adapter,
+                production_system_data=self.production_system_data,
             )
             self.router_factory.create_routers()
             global_router = self.router_factory.global_system_router
@@ -252,6 +253,7 @@ class Runner:
         Args:
             time_range (int): The time range to run the simulation for.
         """
+        self.time_range = time_range
         self.env.run(time_range)
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
@@ -264,7 +266,9 @@ class Runner:
         """
         if not self.post_processor:
             self.post_processor = PostProcessor(
+                production_system_data=self.production_system_data,
                 df_raw=self.event_logger.get_data_as_dataframe(),
+                time_range=self.time_range,
                 warm_up_cutoff=self.warm_up_cutoff,
                 cut_off_method=self.cut_off_method,
             )
@@ -288,7 +292,7 @@ class Runner:
         kpi_visualization.plot_output_over_time(p)
         kpi_visualization.plot_throughput_time_over_time(p)
         kpi_visualization.plot_WIP(p)
-        if self.adapter.primitive_data:
+        if self.production_system_data.primitive_data:
             kpi_visualization.plot_primitive_WIP(p)
         kpi_visualization.plot_WIP_per_resource(p)
         kpi_visualization.plot_throughput_time_distribution(p)
@@ -307,7 +311,7 @@ class Runner:
         transport_resource_ids = [
             resource_data.ID
             for resource_data in production_system_data.get_transport_resources(
-                self.adapter
+                self.production_system_data
             )
         ]
         kpi_visualization.plot_transport_utilization_over_time(
@@ -402,8 +406,8 @@ class Runner:
         """
         util.prepare_save_folder(save_folder + "/")
         save_name = ""
-        if self.adapter.ID:
-            save_name = f"{self.adapter.ID}_"
+        if self.production_system_data.ID:
+            save_name = f"{self.production_system_data.ID}_"
         save_name += self.time_stamp
         self.event_logger.log_data_to_csv(filepath=f"{save_folder}/{save_name}.csv")
 
@@ -416,7 +420,7 @@ class Runner:
         """
         util.prepare_save_folder(save_folder + "/")
         save_name = ""
-        if self.adapter.ID:
-            save_name = f"{self.adapter.ID}_"
+        if self.production_system_data.ID:
+            save_name = f"{self.production_system_data.ID}_"
         save_name += self.time_stamp
         self.event_logger.log_data_to_json(filepath=f"{save_folder}/{save_name}.json")

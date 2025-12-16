@@ -391,12 +391,12 @@ def test_system_resource_with_robot_simulation():
     # Validate WIP KPIs (from terminal: WIP=10.180611)
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product":
-            assert kpi.value > 15.0 and kpi.value < 20.0, f"WIP {kpi.value} out of expected range"
+            assert kpi.value > 7.5 and kpi.value < 12.5, f"WIP {kpi.value} out of expected range"
     
     # Validate throughput time (from terminal: 22.857539)
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 35.0 and kpi.value < 45.0, f"Throughput time {kpi.value} out of expected range"
+            assert kpi.value > 20.0 and kpi.value < 25.0, f"Throughput time {kpi.value} out of expected range"
     
     # Validate resource states (from terminal output)
     for kpi in post_processor.machine_state_KPIS:

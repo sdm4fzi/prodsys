@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from functools import cached_property
 
+from prodsys.models.production_system_data import ProductionSystemData
+from prodsys.models.resource_data import SystemResourceData
 from prodsys.simulation import state
 from prodsys.models import performance_indicators
 
@@ -41,7 +43,9 @@ class PostProcessor:
     """
 
     filepath: str = field(default="")
+    production_system_data: ProductionSystemData = field(default=None)
     df_raw: pd.DataFrame = field(default=None)
+    time_range: float = field(default=None)
     warm_up_cutoff: bool = field(default=False)
     cut_off_method: Optional[Literal["mser5", "threshold_stabilization", "static_ratio"]] = field(
         default=None
@@ -50,6 +54,48 @@ class PostProcessor:
     def __post_init__(self):
         if self.filepath:
             self.read_df_from_csv()
+
+    def _get_system_resource_mapping(self) -> dict:
+        """
+        Get mapping of system resource IDs to their subresource IDs.
+        
+        Returns:
+            dict: Mapping from system resource ID to list of subresource IDs
+        """
+        if self.production_system_data is None:
+            raise ValueError("Production system data is not set")
+        
+        system_resource_mapping = {}
+        for resource_data in self.production_system_data.resource_data:
+            if isinstance(resource_data, SystemResourceData):
+                system_resource_mapping[resource_data.ID] = resource_data.subresource_ids
+        
+        return system_resource_mapping
+    
+    def _get_sink_source_queue_names(self) -> tuple[set, set]:
+        """
+        Get names of sink input queues and source output queues.
+        
+        Returns:
+            tuple[set, set]: (sink_input_queues, source_output_queues)
+        """
+        sink_input_queues = set()
+        source_output_queues = set()
+        
+        if self.production_system_data is None:
+            return sink_input_queues, source_output_queues
+        
+        # Get sink input queues
+        for sink_data in self.production_system_data.sink_data:
+            if sink_data.ports:
+                sink_input_queues.update(sink_data.ports)
+        
+        # Get source output queues
+        for source_data in self.production_system_data.source_data:
+            if source_data.ports:
+                source_output_queues.update(source_data.ports)
+        
+        return sink_input_queues, source_output_queues
 
     def read_df_from_csv(self, filepath_input: str = None):
         """
@@ -436,6 +482,44 @@ class PostProcessor:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
         """
         df = self.df_prepared.copy()
+        # Get the global simulation end time - use time_range if provided, otherwise use max Time
+        if self.time_range is not None:
+            simulation_end_time = self.time_range
+        else:
+            simulation_end_time = df["Time"].max()
+        
+        # Exclude loading and unloading states from resource states calculation
+        df = df.loc[
+            (df["State Type"] != state.StateTypeEnum.loading)
+            & (df["State Type"] != state.StateTypeEnum.unloading)
+        ]
+        
+        # Get sink input queues and source output queues from production_system_data if available
+        sink_input_queues, source_output_queues = self._get_sink_source_queue_names()
+        
+        # Identify source and sink resources and exclude all their events
+        source_sink_resources = df.loc[
+            (df["State Type"] == state.StateTypeEnum.source)
+            | (df["State Type"] == state.StateTypeEnum.sink),
+            "Resource"
+        ].unique()
+        
+        # Combine sink/source resources and their queues (from production_system_data)
+        # Fallback to pattern matching if production_system_data not available
+        if len(sink_input_queues) == 0 and len(source_output_queues) == 0:
+            # Also exclude sink input queues and source output queues by name pattern
+            queue_resources_to_exclude = df.loc[
+                df["Resource"].str.contains("Sink.*input.*queue|source.*output.*queue", case=False, na=False, regex=True),
+                "Resource"
+            ].unique()
+            resources_to_exclude = set(source_sink_resources) | set(queue_resources_to_exclude)
+        else:
+            resources_to_exclude = set(source_sink_resources) | sink_input_queues | source_output_queues
+        
+        # Exclude all events for source, sink, and their associated queue resources
+        if len(resources_to_exclude) > 0:
+            df = df.loc[~df["Resource"].isin(resources_to_exclude)]
+        
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -455,48 +539,113 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
-        df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
-
+        # Insert Time=0.0 start events BEFORE calculating Used_Capacity
         df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
         resource_types_dict = pd.Series(
             df_resource_types["State Type"].values,
             index=df_resource_types["Resource"].values,
         ).to_dict()
+        
+        rows_to_insert = []
         for resource in df["Resource"].unique():
             if resource_types_dict[resource] in {
                 state.StateTypeEnum.source,
                 state.StateTypeEnum.sink,
             }:
                 continue
-            example_row = (
-                df.loc[
-                    (df["Resource"] == resource)
-                    & (
-                        ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0))
-                        | (df["State_sorting_Index"] == 3)
-                    )
-                ]
-                .copy()
-                .head(1)
-            )
+            
+            # Find any row for this resource to use as template
+            resource_rows = df.loc[df["Resource"] == resource]
+            if resource_rows.empty:
+                continue
+            
+            example_row = resource_rows.head(1).copy()
+            # Set properties for standby state at time 0
             example_row["Time"] = 0.0
-            df = pd.concat([example_row, df]).reset_index(drop=True)
+            example_row["Increment"] = 0
+            example_row["State_sorting_Index"] = 3  # Interface State, end state -> standby
+            example_row["State_type"] = "Interface State"
+            example_row["Activity"] = "end state"
+            rows_to_insert.append(example_row)
+        
+        # Insert all start events at once
+        if rows_to_insert:
+            df_start_events = pd.concat(rows_to_insert, ignore_index=True)
+            df = pd.concat([df_start_events, df]).reset_index(drop=True)
+            # Sort by Resource and Time to ensure Time=0.0 events come first
+            df = df.sort_values(by=["Resource", "Time"]).reset_index(drop=True)
+
+        df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
+
+        # Use the global simulation end time (all resources should end at this time)
+        
+        # Insert end events at simulation end time for each resource
+        # This ensures all resources have the same resource_time (0 to simulation_end_time)
+        df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
+        resource_types_dict = pd.Series(
+            df_resource_types["State Type"].values,
+            index=df_resource_types["Resource"].values,
+        ).to_dict()
+        
+        end_rows_to_insert = []
+        for resource in df["Resource"].unique():
+            if resource_types_dict[resource] in {
+                state.StateTypeEnum.source,
+                state.StateTypeEnum.sink,
+            }:
+                continue
+            
+            resource_df = df[df["Resource"] == resource]
+            if resource_df.empty:
+                continue
+            
+            # Check if there's already an event at simulation_end_time
+            events_at_end = resource_df[resource_df["Time"] == simulation_end_time]
+            
+            # Only insert if there's no event at simulation_end_time
+            if len(events_at_end) == 0:
+                # Use the last event as template to maintain the status of the last event
+                example_row = resource_df.iloc[-1:].copy()
+                
+                # Set properties for end event at simulation end time
+                # Maintain the state of the last event (don't force to standby)
+                example_row["Time"] = simulation_end_time
+                example_row["Increment"] = 0  # No change in capacity at end
+                # Keep the same State_sorting_Index, State_type, Activity, and Used_Capacity
+                # from the last event to maintain the resource's status
+                end_rows_to_insert.append(example_row)
+        
+        # Insert all end events
+        if end_rows_to_insert:
+            df_end_events = pd.concat(end_rows_to_insert, ignore_index=True)
+            df = pd.concat([df, df_end_events]).reset_index(drop=True)
+            # Sort by Resource and Time to ensure proper order
+            df = df.sort_values(by=["Resource", "Time"]).reset_index(drop=True)
+            # Recalculate Used_Capacity after inserting end events
+            df["Used_Capacity"] = df.groupby(by="Resource")["Increment"].cumsum()
 
         df["next_Time"] = df.groupby("Resource")["Time"].shift(-1)
-        df["next_Time"] = df["next_Time"].fillna(df["Time"].max())
+        # For the last event of each resource, next_Time should equal its own Time
+        # Fill NaN with the resource's own Time (since we inserted end events at simulation_end_time)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
         df["time_increment"] = df["next_Time"] - df["Time"]
+
+        # Initialize Time_type column
+        df["Time_type"] = "na"
 
         STANDBY_CONDITION = (
             (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
         ) | (df["State_sorting_Index"] == 3)
         PRODUCTIVE_CONDITION = (
-            (df["State_sorting_Index"] == 6)
-            | (df["State_sorting_Index"] == 4)
-            | ((df["State_sorting_Index"] == 5) & df["Used_Capacity"] != 0)
+            (
+                (df["State_sorting_Index"] == 6)
+                | (df["State_sorting_Index"] == 4)
+                | ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] != 0))
+            )
+            & (df["State Type"] != state.StateTypeEnum.dependency)
         )
         DEPENDENCY_CONDITION = (
-            (df["State_sorting_Index"] == 6)
-            & (df["State Type"] == state.StateTypeEnum.dependency)
+            (df["State Type"] == state.StateTypeEnum.dependency)
         )
         DOWN_CONDITION = (
             (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
@@ -508,14 +657,231 @@ class PostProcessor:
             df["State Type"] == state.StateTypeEnum.charging
         )
 
-        df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
-        df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
+        # Apply conditions in order of specificity (most specific first)
+        # DEPENDENCY is most specific (requires State_sorting_Index == 6 AND State Type == dependency)
+        df.loc[DEPENDENCY_CONDITION, "Time_type"] = "DP"
+        # Then apply other specific conditions
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
-        df.loc[DEPENDENCY_CONDITION, "Time_type"] = "DP"
+        # Then apply general conditions
+        df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
+        df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
+        
+        # Fallback: if any events still don't have a Time_type, assign based on Used_Capacity
+        # Events with Used_Capacity != 0 should be PR, others should be SB
+        unassigned = df["Time_type"] == "na"
+        df.loc[unassigned & (df["Used_Capacity"] != 0), "Time_type"] = "PR"
+        df.loc[unassigned & (df["Used_Capacity"] == 0), "Time_type"] = "SB"
+
+        # Add system resource states by aggregating subresource states
+        system_resource_mapping = self._get_system_resource_mapping()
+        if system_resource_mapping:
+            # Use df_prepared to get raw productive process events, not the processed df_resource_states
+            df_prepared_for_system = self.df_prepared.copy()
+            # Exclude loading/unloading and source/sink events for system resource calculation
+            df_prepared_for_system = df_prepared_for_system.loc[
+                (df_prepared_for_system["State Type"] != state.StateTypeEnum.loading)
+                & (df_prepared_for_system["State Type"] != state.StateTypeEnum.unloading)
+            ]
+            sink_input_queues, source_output_queues = self._get_sink_source_queue_names()
+            source_sink_resources = df_prepared_for_system.loc[
+                (df_prepared_for_system["State Type"] == state.StateTypeEnum.source)
+                | (df_prepared_for_system["State Type"] == state.StateTypeEnum.sink),
+                "Resource"
+            ].unique()
+            resources_to_exclude = set(source_sink_resources) | sink_input_queues | source_output_queues
+            if len(resources_to_exclude) > 0:
+                df_prepared_for_system = df_prepared_for_system.loc[~df_prepared_for_system["Resource"].isin(resources_to_exclude)]
+            
+            # Ensure State_type column exists (it should from df_prepared, but double-check)
+            if "State_type" not in df_prepared_for_system.columns:
+                df_prepared_for_system.loc[
+                    self.get_conditions_for_interface_state(df_prepared_for_system),
+                    "State_type",
+                ] = "Interface State"
+                df_prepared_for_system.loc[
+                    self.get_conditions_for_process_state(df_prepared_for_system),
+                    "State_type",
+                ] = "Process State"
+            
+            df_system_resources = self._calculate_system_resource_states(df_prepared_for_system, system_resource_mapping, simulation_end_time)
+            if len(df_system_resources) > 0:
+                df = pd.concat([df, df_system_resources], ignore_index=True)
+                df = df.sort_values(by=["Resource", "Time"]).reset_index(drop=True)
 
         return df
+    
+    def _calculate_system_resource_states(self, df_subresources: pd.DataFrame, system_resource_mapping: dict, simulation_end_time: float) -> pd.DataFrame:
+        """
+        Calculate resource states for system resources based on running processes in subresources.
+        
+        Each started productive process increases the counter by 1, each ended decreases by 1.
+        System resource is productive if counter > 0, otherwise standby.
+        
+        Args:
+            df_subresources: DataFrame with subresource states
+            system_resource_mapping: Dict mapping system resource ID to list of subresource IDs
+            simulation_end_time: End time of simulation
+            
+        Returns:
+            DataFrame with system resource states
+        """
+        system_resource_dfs = []
+        
+        for system_resource_id, subresource_ids in system_resource_mapping.items():
+            # Filter to only include subresources of this system resource
+            subresource_df = df_subresources[df_subresources["Resource"].isin(subresource_ids)].copy()
+            
+            if len(subresource_df) == 0:
+                continue
+            
+            # Get a template row to copy all necessary columns
+            system_template = subresource_df.iloc[0].copy()
+            
+            # Get only productive process start/end events from subresources
+            # These are the events that change the running process count
+            # Count only Production and Transport states (exclude dependency, setup, breakdown, charging)
+            productive_start = (
+                (subresource_df["State_type"] == "Process State")
+                & (subresource_df["Activity"] == "start state")
+                & (subresource_df["State Type"] != state.StateTypeEnum.setup)
+                & (subresource_df["State Type"] != state.StateTypeEnum.breakdown)
+                & (subresource_df["State Type"] != state.StateTypeEnum.charging)
+                & (subresource_df["State Type"] != state.StateTypeEnum.dependency)
+            )
+            productive_end = (
+                (subresource_df["State_type"] == "Process State")
+                & (subresource_df["Activity"] == "end state")
+                & (subresource_df["State Type"] != state.StateTypeEnum.setup)
+                & (subresource_df["State Type"] != state.StateTypeEnum.breakdown)
+                & (subresource_df["State Type"] != state.StateTypeEnum.charging)
+                & (subresource_df["State Type"] != state.StateTypeEnum.dependency)
+            )
+            
+            # Create events for system resource based on subresource productive process events
+            system_events = []
+            
+            # Add start events (+1 increment)
+            start_events = subresource_df[productive_start].copy()
+            if len(start_events) > 0:
+                # Copy all columns and update specific ones
+                start_events["Increment"] = 1
+                start_events["Resource"] = system_resource_id
+                system_events.append(start_events)
+            
+            # Add end events (-1 increment)
+            end_events = subresource_df[productive_end].copy()
+            if len(end_events) > 0:
+                # Copy all columns and update specific ones
+                end_events["Increment"] = -1
+                end_events["Resource"] = system_resource_id
+                system_events.append(end_events)
+            
+            # Combine all events for this system resource
+            if system_events:
+                df_system = pd.concat(system_events, ignore_index=True)
+                # Sort by time, then by increment (start events before end events at same time)
+                # This ensures we process +1 before -1 when events happen simultaneously
+                df_system = df_system.sort_values(by=["Time", "Increment"], ascending=[True, False]).reset_index(drop=True)
+            else:
+                # No productive events, create empty dataframe with correct structure
+                df_system = pd.DataFrame([system_template])
+            
+            # Add initial event at time 0 (standby, increment = 0)
+            initial_row = system_template.copy()
+            initial_row["Time"] = 0.0
+            initial_row["Increment"] = 0
+            initial_row["State_sorting_Index"] = 3  # Interface State, end state -> standby
+            initial_row["State_type"] = "Interface State"
+            initial_row["Resource"] = system_resource_id
+            initial_row["Activity"] = "end state"
+            
+            # Check if we already have a time 0 event
+            if len(df_system) == 0 or df_system["Time"].min() > 0.0:
+                # Prepend initial event
+                df_system = pd.concat([pd.DataFrame([initial_row]), df_system], ignore_index=True)
+            else:
+                # Update existing time 0 event(s) - there might be multiple
+                time_0_mask = df_system["Time"] == 0.0
+                if time_0_mask.any():
+                    # Set first time 0 event to initial state, remove others
+                    first_idx = df_system[time_0_mask].index[0]
+                    df_system.loc[first_idx, "Increment"] = 0
+                    df_system.loc[first_idx, "State_sorting_Index"] = 3
+                    df_system.loc[first_idx, "State_type"] = "Interface State"
+                    df_system.loc[first_idx, "Activity"] = "end state"
+                    # Remove other time 0 events
+                    other_time_0 = df_system[time_0_mask].index[1:]
+                    if len(other_time_0) > 0:
+                        df_system = df_system.drop(other_time_0).reset_index(drop=True)
+            
+            # Sort by time, then by increment after all modifications
+            df_system = df_system.sort_values(by=["Time", "Increment"], ascending=[True, False]).reset_index(drop=True)
+            
+            # Calculate cumulative Used_Capacity (running process count)
+            # Start from 0, then apply increments
+            df_system["Used_Capacity"] = df_system["Increment"].cumsum()
+            
+            # If we have more ends than starts (net_imbalance > 0), processes were already running at time 0
+            # Adjust the capacity: shift up by the maximum negative value (if any)
+            min_capacity = df_system["Used_Capacity"].min()
+            if min_capacity < 0:
+                # Processes were already running at start - shift all values up
+                adjustment = -min_capacity
+                df_system["Used_Capacity"] = df_system["Used_Capacity"] + adjustment
+                # Also adjust the initial time 0 event
+                time_0_mask = df_system["Time"] == 0.0
+                if time_0_mask.any():
+                    df_system.loc[time_0_mask, "Used_Capacity"] = adjustment
+            
+            # Add end event at simulation_end_time if needed
+            last_time = df_system["Time"].max()
+            if last_time < simulation_end_time:
+                end_row = df_system.iloc[-1].copy()
+                end_row["Time"] = simulation_end_time
+                end_row["Increment"] = 0
+                # Keep the state from the last event
+                df_system = pd.concat([df_system, pd.DataFrame([end_row])], ignore_index=True)
+            
+            # Sort again after adding end event
+            df_system = df_system.sort_values(by=["Time", "Increment"], ascending=[True, False]).reset_index(drop=True)
+            
+            # Recalculate Used_Capacity after adding end event
+            # If we had an adjustment, we need to maintain it
+            if min_capacity < 0:
+                # Recalculate with adjustment
+                df_system["Used_Capacity"] = df_system["Increment"].cumsum() + adjustment
+                # Ensure time 0 has the adjusted value
+                time_0_mask = df_system["Time"] == 0.0
+                if time_0_mask.any():
+                    df_system.loc[time_0_mask, "Used_Capacity"] = adjustment
+            else:
+                df_system["Used_Capacity"] = df_system["Increment"].cumsum()
+            
+            # Final safety check: ensure never negative
+            df_system["Used_Capacity"] = df_system["Used_Capacity"].clip(lower=0)
+            
+            # Calculate next_Time
+            df_system["next_Time"] = df_system["Time"].shift(-1)
+            df_system["next_Time"] = df_system["next_Time"].fillna(df_system["Time"])
+            df_system["time_increment"] = df_system["next_Time"] - df_system["Time"]
+            
+            # Determine Time_type: PR if Used_Capacity > 0, SB otherwise
+            df_system["Time_type"] = "SB"
+            df_system.loc[df_system["Used_Capacity"] > 0, "Time_type"] = "PR"
+            
+            # Set other required columns
+            df_system["State Type"] = "Production"  # System resources are production resources
+            df_system["Activity"] = "end state"  # Default activity
+            df_system.loc[df_system["Increment"] == 1, "Activity"] = "start state"
+            
+            system_resource_dfs.append(df_system)
+        
+        if system_resource_dfs:
+            return pd.concat(system_resource_dfs, ignore_index=True)
+        else:
+            return pd.DataFrame()
 
     @cached_property
     def df_resource_states_buckets(self) -> pd.DataFrame:
@@ -532,6 +898,39 @@ class PostProcessor:
             pd.DataFrame: Data frame with the machine states and the time spent in each state.
         """
         df = self.df_prepared.copy()
+        # Get the global simulation end time - use time_range if provided, otherwise use max Time
+        if self.time_range is not None:
+            simulation_end_time = self.time_range
+        else:
+            simulation_end_time = df["Time"].max()
+        
+        # Exclude loading and unloading states from resource states calculation
+        df = df.loc[
+            (df["State Type"] != state.StateTypeEnum.loading)
+            & (df["State Type"] != state.StateTypeEnum.unloading)
+        ]
+        
+        # Identify source and sink resources and exclude all their events
+        source_sink_resources = df.loc[
+            (df["State Type"] == state.StateTypeEnum.source)
+            | (df["State Type"] == state.StateTypeEnum.sink),
+            "Resource"
+        ].unique()
+        
+        # Also exclude sink input queues and source output queues by name pattern
+        # These are queue resources associated with sinks and sources
+        queue_resources_to_exclude = df.loc[
+            df["Resource"].str.contains("Sink.*input.*queue|source.*output.*queue", case=False, na=False, regex=True),
+            "Resource"
+        ].unique()
+        
+        # Combine all resources to exclude
+        resources_to_exclude = set(source_sink_resources) | set(queue_resources_to_exclude)
+        
+        # Exclude all events for source, sink, and their associated queue resources
+        if len(resources_to_exclude) > 0:
+            df = df.loc[~df["Resource"].isin(resources_to_exclude)]
+        
         positive_condition = (
             (df["State_type"] == "Process State")
             & (df["Activity"] == "start state")
@@ -551,6 +950,42 @@ class PostProcessor:
         df.loc[positive_condition, "Increment"] = 1
         df.loc[negative_condition, "Increment"] = -1
 
+        # Insert Time=0.0 start events BEFORE calculating Buckets and Used_Capacity
+        df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
+        resource_types_dict = pd.Series(
+            df_resource_types["State Type"].values,
+            index=df_resource_types["Resource"].values,
+        ).to_dict()
+        
+        rows_to_insert = []
+        for resource in df["Resource"].unique():
+            if resource_types_dict[resource] in {
+                state.StateTypeEnum.source,
+                state.StateTypeEnum.sink,
+            }:
+                continue
+            
+            # Find any row for this resource to use as template
+            resource_rows = df.loc[df["Resource"] == resource]
+            if resource_rows.empty:
+                continue
+            
+            example_row = resource_rows.head(1).copy()
+            # Set properties for standby state at time 0
+            example_row["Time"] = 0.0
+            example_row["Increment"] = 0
+            example_row["State_sorting_Index"] = 3  # Interface State, end state -> standby
+            example_row["State_type"] = "Interface State"
+            example_row["Activity"] = "end state"
+            rows_to_insert.append(example_row)
+        
+        # Insert all start events at once
+        if rows_to_insert:
+            df_start_events = pd.concat(rows_to_insert, ignore_index=True)
+            df = pd.concat([df_start_events, df]).reset_index(drop=True)
+            # Sort by Resource and Time to ensure Time=0.0 events come first
+            df = df.sort_values(by=["Resource", "Time"]).reset_index(drop=True)
+
         df["Bucket"] = 0
         for resource, group in df.groupby("Resource"):
             n = len(group)
@@ -562,35 +997,62 @@ class PostProcessor:
 
         df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
 
+        # Use the global simulation end time (all resources should end at this time)
+        
+        # Insert end events at simulation end time for each resource/bucket
+        # This ensures all resources have the same resource_time (0 to simulation_end_time)
         df_resource_types = df[["Resource", "State Type"]].drop_duplicates().copy()
         resource_types_dict = pd.Series(
             df_resource_types["State Type"].values,
             index=df_resource_types["Resource"].values,
         ).to_dict()
+        
+        end_rows_to_insert = []
         for resource in df["Resource"].unique():
             if resource_types_dict[resource] in {
                 state.StateTypeEnum.source,
                 state.StateTypeEnum.sink,
             }:
                 continue
-            example_row = (
-                df.loc[
-                    (df["Resource"] == resource)
-                    & (
-                        ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0))
-                        | (df["State_sorting_Index"] == 3)
-                    )
-                ]
-                .copy()
-                .head(1)
-            )
-            example_row["Time"] = 0.0
-            df = pd.concat([example_row, df]).reset_index(drop=True)
+            
+            resource_df = df[df["Resource"] == resource]
+            if resource_df.empty:
+                continue
+            
+            # Insert end event for each bucket of this resource
+            for bucket in resource_df["Bucket"].unique():
+                bucket_df = resource_df[resource_df["Bucket"] == bucket]
+                if bucket_df.empty:
+                    continue
+                
+                # Check if there's already an event at simulation_end_time
+                events_at_end = bucket_df[bucket_df["Time"] == simulation_end_time]
+                
+                # Only insert if there's no event at simulation_end_time
+                if len(events_at_end) == 0:
+                    # Use the last event as template to maintain the status of the last event
+                    example_row = bucket_df.iloc[-1:].copy()
+                    
+                    # Set properties for end event at simulation end time
+                    # Maintain the state of the last event (don't force to standby)
+                    example_row["Time"] = simulation_end_time
+                    example_row["Increment"] = 0  # No change in capacity at end
+                    # Keep the same State_sorting_Index, State_type, Activity, and Used_Capacity
+                    # from the last event to maintain the resource's status
+                    end_rows_to_insert.append(example_row)
+        
+        # Insert all end events
+        if end_rows_to_insert:
+            df_end_events = pd.concat(end_rows_to_insert, ignore_index=True)
+            df = pd.concat([df, df_end_events]).reset_index(drop=True)
+            # Sort by Resource, Bucket, and Time to ensure proper order
+            df = df.sort_values(by=["Resource", "Bucket", "Time"]).reset_index(drop=True)
+            # Recalculate Used_Capacity after inserting end events
+            df["Used_Capacity"] = df.groupby(["Resource", "Bucket"])["Increment"].cumsum()
 
         df["next_Time"] = df.groupby(["Resource", "Bucket"])["Time"].shift(-1)
-        df["next_Time"] = df["next_Time"].fillna(
-            df.groupby(["Resource", "Bucket"])["Time"].transform("max")
-        )
+        # For the last event of each resource/bucket, next_Time should equal its own Time
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         STANDBY_CONDITION = (
@@ -846,11 +1308,9 @@ class PostProcessor:
         ].sum()
         df_time_per_state = df_time_per_state.to_frame().reset_index()
 
-        df_resource_time = (
-            df_time_per_state.groupby(by="Resource")
-            .sum(numeric_only=True)
-            .reset_index()
-        )
+        # Calculate resource_time as the total time span for each resource
+        # This should be from 0 to simulation_end_time for all resources
+        df_resource_time = df.groupby(by="Resource")["time_increment"].sum().reset_index()
         df_resource_time.rename(
             columns={"time_increment": "resource_time"}, inplace=True
         )
@@ -1049,19 +1509,49 @@ class PostProcessor:
         return KPIs
 
     def get_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate WIP over time based on created and finished products.
+        This tracks total system WIP and includes finished products at sinks.
+        
+        Args:
+            df: DataFrame with simulation events
+            
+        Returns:
+            pd.DataFrame: DataFrame with WIP tracking over time
+        """
         CREATED_CONDITION = df["Activity"] == "created product"
         FINISHED_CONDITION = df["Activity"] == "finished product"
         CONSUMED_CONDITION = df["Activity"] == "consumed product"
 
         df["WIP_Increment"] = 0
         df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
+        # Track finished products (including at sinks) to decrease total WIP
         df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-        # df.loc[CONSUMED_CONDITION, "WIP_Increment"] = -1
+        # Also track consumed products to decrease WIP
+        df.loc[CONSUMED_CONDITION, "WIP_Increment"] = -1
+        
         df = df.loc[
             df["WIP_Increment"] != 0
         ].copy()  # Remove rows where WIP_Increment is 0
 
-        df["WIP"] = df["WIP_Increment"].cumsum()
+        # If no rows with WIP changes, return empty dataframe with WIP column as float
+        if len(df) == 0:
+            # Add WIP column as float type for consistency
+            df = df.copy()
+            df["WIP"] = pd.Series(dtype=float)
+            return df
+
+        # Sort by time to ensure correct cumulative sum
+        df = df.sort_values(by="Time").reset_index(drop=True)
+        
+        # Calculate WIP as float to handle potential NaN values
+        df["WIP"] = df["WIP_Increment"].cumsum().astype(float)
+        
+        # Ensure WIP never goes negative (clip at 0)
+        # This handles edge cases where finished products might be logged before created products
+        # or other timing issues
+        df["WIP"] = df["WIP"].clip(lower=0.0)
+        
         return df
 
     def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1137,7 +1627,9 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time in the total production system.
         """
-        df = self.df_resource_states.copy()
+        # Use df_prepared because it contains created/finished product activities
+        # that are needed for WIP calculation
+        df = self.df_prepared.copy()
         return self.get_WIP_KPI(df)
         """
         Calculate the mean Work-in-Progress (WIP) per station.
@@ -1303,18 +1795,37 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time for each product type.
         """
-        df = self.df_resource_states.copy()
-        df = self.get_df_with_product_entries(df).copy()
-        df = df.reset_index()
-        for product_type in df["Product_type"].unique():
-            if product_type != product_type:
+        # Use df_prepared because it contains created/finished product activities
+        # that are needed for WIP calculation
+        df_base = self.df_prepared.copy()
+        df_base = self.get_df_with_product_entries(df_base).copy()
+        df_base = df_base.reset_index()
+        
+        # Collect results for each product type
+        result_dfs = []
+        for product_type in df_base["Product_type"].unique():
+            if product_type != product_type:  # Skip NaN
                 continue
-            df_temp = df.loc[df["Product_type"] == product_type].copy()
+            df_temp = df_base.loc[df_base["Product_type"] == product_type].copy()
             df_temp = self.get_WIP_KPI(df_temp)
-
-            df = df.combine_first(df_temp)
-
-        return df
+            
+            # Ensure WIP column is float to handle NaN values properly
+            if "WIP" in df_temp.columns:
+                df_temp["WIP"] = df_temp["WIP"].astype(float)
+            
+            if len(df_temp) > 0:
+                result_dfs.append(df_temp)
+        
+        # Combine all product type dataframes
+        if result_dfs:
+            df = pd.concat(result_dfs, ignore_index=True)
+            # Ensure WIP is float type and handle any NaN values
+            if "WIP" in df.columns:
+                df["WIP"] = pd.to_numeric(df["WIP"], errors='coerce').fillna(0.0)
+            return df
+        else:
+            # Return empty dataframe with expected structure
+            return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
 
     def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -1327,6 +1838,7 @@ class PostProcessor:
         - End unloading: -1 at resource (the resource doing the unloading), +1 at queue (Target location)
         - Production states: No WIP changes
         - Transport states: No WIP changes
+        - Sink resources and sink input queues are excluded from WIP calculation
         
         Args:
             df: DataFrame with resource states
@@ -1338,57 +1850,123 @@ class PostProcessor:
         df["WIP_Increment"] = 0
         df["WIP_resource"] = None
 
-        # Rule 1: Create product -> +1 at source
+        # Identify sink resources and sink input queues to exclude from WIP
+        sink_resources = df[df["State Type"] == state.StateTypeEnum.sink]["Resource"].unique()
+        sink_resources_set = set(sink_resources)
+        
+        # Find sink input queues by looking for queues that receive products from unloading events targeting sinks
+        # and queues that are associated with sink resources
+        sink_queues = set()
+        # Check for queues that are unloaded to when Resource is a sink
+        unloading_to_sinks = df[
+            (df["State Type"].isin([state.StateTypeEnum.unloading, "Unloading"])) &
+            (df["Resource"].isin(sink_resources_set)) &
+            (df["Target location"].notna())
+        ]["Target location"].unique()
+        sink_queues.update(unloading_to_sinks)
+        
+        # Also check for queues that might be sink input queues (could be identified by naming pattern)
+        # If there are any queues that appear only in unloading events targeting sinks, they're likely sink input queues
+        all_unloading_targets = df[
+            (df["State Type"].isin([state.StateTypeEnum.unloading, "Unloading"])) &
+            (df["Target location"].notna())
+        ]["Target location"].unique()
+        for queue_id in all_unloading_targets:
+            # If this queue is only ever the target of unloading to sink resources, it's a sink input queue
+            unloading_events_to_queue = df[
+                (df["State Type"].isin([state.StateTypeEnum.unloading, "Unloading"])) &
+                (df["Target location"] == queue_id)
+            ]
+            if len(unloading_events_to_queue) > 0:
+                # Check if all unloading events to this queue are from sink resources
+                resources_unloading_to_queue = unloading_events_to_queue["Resource"].unique()
+                if all(resource in sink_resources_set for resource in resources_unloading_to_queue):
+                    sink_queues.add(queue_id)
+
+        # Rule 1: Create product -> +1 at source (but exclude if source is a sink, which shouldn't happen)
         CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
-        df.loc[CREATED_CONDITION, "WIP_Increment"] = 1
-        df.loc[CREATED_CONDITION, "WIP_resource"] = df.loc[CREATED_CONDITION, "Resource"]
+        created_mask = CREATED_CONDITION & ~df["Resource"].isin(sink_resources_set)
+        df.loc[created_mask, "WIP_Increment"] = 1
+        df.loc[created_mask, "WIP_resource"] = df.loc[created_mask, "Resource"]
 
-        # # Rule 2: Finish product -> -1 at sink
-        # FINISHED_CONDITION = df["Activity"] == state.StateEnum.finished_product
-        # df.loc[FINISHED_CONDITION, "WIP_Increment"] = -1
-        # df.loc[FINISHED_CONDITION, "WIP_resource"] = df.loc[FINISHED_CONDITION, "Resource"]
-
-        # Rule 2: Consume product -> -1 at resource
+        # Rule 2: Consume product -> -1 at resource (but exclude sinks)
         CONSUMED_CONDITION = df["Activity"] == state.StateEnum.consumed_product
-        df.loc[CONSUMED_CONDITION, "WIP_Increment"] = -1
-        df.loc[CONSUMED_CONDITION, "WIP_resource"] = df.loc[CONSUMED_CONDITION, "Resource"]
+        consumed_mask = CONSUMED_CONDITION & ~df["Resource"].isin(sink_resources_set)
+        df.loc[consumed_mask, "WIP_Increment"] = -1
+        df.loc[consumed_mask, "WIP_resource"] = df.loc[consumed_mask, "Resource"]
 
         # Rule 3: End loading -> +1 at resource, -1 at Origin location (queue)
+        # Exclude if resource is a sink or origin location is a sink queue
         loading_condition = (df["State Type"] == state.StateTypeEnum.loading) | (df["State Type"] == "Loading")
         end_loading = loading_condition & (df["Activity"] == "end state")
+        # Exclude loading events from sink resources
+        end_loading_valid = end_loading & ~df["Resource"].isin(sink_resources_set)
         
-        # Create rows for end loading: +1 at resource
-        end_loading_resource_df = df[end_loading].copy()
-        end_loading_resource_df["WIP_Increment"] = 1
-        end_loading_resource_df["WIP_resource"] = end_loading_resource_df["Resource"]
+        # Create rows for end loading: +1 at resource (exclude sinks)
+        if end_loading_valid.any():
+            end_loading_resource_df = df[end_loading_valid].copy()
+            end_loading_resource_df["WIP_Increment"] = 1
+            end_loading_resource_df["WIP_resource"] = end_loading_resource_df["Resource"]
+        else:
+            end_loading_resource_df = pd.DataFrame()
         
-        # Create rows for end loading: -1 at Origin location (queue)
-        end_loading_queue_df = df[end_loading].copy()
-        end_loading_queue_df["WIP_Increment"] = -1
-        end_loading_queue_df["WIP_resource"] = end_loading_queue_df["Origin location"]
+        # Create rows for end loading: -1 at Origin location (queue) - exclude sink queues
+        if end_loading_valid.any():
+            end_loading_queue_df = df[end_loading_valid].copy()
+            # Filter out sink queues
+            end_loading_queue_df = end_loading_queue_df[
+                ~end_loading_queue_df["Origin location"].isin(sink_queues)
+            ]
+            if len(end_loading_queue_df) > 0:
+                end_loading_queue_df["WIP_Increment"] = -1
+                end_loading_queue_df["WIP_resource"] = end_loading_queue_df["Origin location"]
+            else:
+                end_loading_queue_df = pd.DataFrame()
+        else:
+            end_loading_queue_df = pd.DataFrame()
 
         # Rule 4: End unloading -> -1 at resource, +1 at Target location (queue)
+        # Exclude if resource is a sink or target location is a sink queue
         unloading_condition = (df["State Type"] == state.StateTypeEnum.unloading) | (df["State Type"] == "Unloading")
         end_unloading = unloading_condition & (df["Activity"] == "end state")
+        # Exclude unloading events from sink resources
+        end_unloading_valid = end_unloading & ~df["Resource"].isin(sink_resources_set)
         
-        # Create rows for end unloading: -1 at resource
-        end_unloading_resource_df = df[end_unloading].copy()
-        end_unloading_resource_df["WIP_Increment"] = -1
-        end_unloading_resource_df["WIP_resource"] = end_unloading_resource_df["Resource"]
+        # Create rows for end unloading: -1 at resource (exclude sinks)
+        if end_unloading_valid.any():
+            end_unloading_resource_df = df[end_unloading_valid].copy()
+            end_unloading_resource_df["WIP_Increment"] = -1
+            end_unloading_resource_df["WIP_resource"] = end_unloading_resource_df["Resource"]
+        else:
+            end_unloading_resource_df = pd.DataFrame()
         
-        # Create rows for end unloading: +1 at Target location (queue)
-        end_unloading_queue_df = df[end_unloading].copy()
-        end_unloading_queue_df["WIP_Increment"] = 1
-        end_unloading_queue_df["WIP_resource"] = end_unloading_queue_df["Target location"]
+        # Create rows for end unloading: +1 at Target location (queue) - EXCLUDE SINK QUEUES
+        if end_unloading_valid.any():
+            end_unloading_queue_df = df[end_unloading_valid].copy()
+            # Filter out sink input queues from WIP calculation
+            end_unloading_queue_df = end_unloading_queue_df[
+                ~end_unloading_queue_df["Target location"].isin(sink_queues)
+            ]
+            if len(end_unloading_queue_df) > 0:
+                end_unloading_queue_df["WIP_Increment"] = 1
+                end_unloading_queue_df["WIP_resource"] = end_unloading_queue_df["Target location"]
+            else:
+                end_unloading_queue_df = pd.DataFrame()
+        else:
+            end_unloading_queue_df = pd.DataFrame()
 
-        # Combine all dataframes
-        df = pd.concat([
-            df, 
-            end_loading_resource_df, 
-            end_loading_queue_df,
-            end_unloading_resource_df,
-            end_unloading_queue_df
-        ])
+        # Combine all dataframes (only non-empty ones)
+        dfs_to_concat = [df]
+        if len(end_loading_resource_df) > 0:
+            dfs_to_concat.append(end_loading_resource_df)
+        if len(end_loading_queue_df) > 0:
+            dfs_to_concat.append(end_loading_queue_df)
+        if len(end_unloading_resource_df) > 0:
+            dfs_to_concat.append(end_unloading_resource_df)
+        if len(end_unloading_queue_df) > 0:
+            dfs_to_concat.append(end_unloading_queue_df)
+        
+        df = pd.concat(dfs_to_concat, ignore_index=True)
 
         df = df.sort_values(
             by=["Time", "WIP_Increment"], 
@@ -1399,8 +1977,19 @@ class PostProcessor:
         # Filter out rows with no WIP_resource
         df = df[df["WIP_resource"].notna()]
         
+        # Filter out sink resources and sink queues from final results
+        df = df[~df["WIP_resource"].isin(sink_resources_set)]
+        df = df[~df["WIP_resource"].isin(sink_queues)]
+        
+        # Sort by resource and time before calculating cumulative WIP
+        df = df.sort_values(by=["WIP_resource", "Time"]).reset_index(drop=True)
+        
         # Calculate cumulative WIP per resource
         df["WIP"] = df.groupby(by="WIP_resource")["WIP_Increment"].cumsum()
+        
+        # Ensure WIP never goes negative (clip at 0) to handle edge cases
+        # This prevents negative values that could occur due to timing issues or data inconsistencies
+        df["WIP"] = df["WIP"].clip(lower=0)
 
         return df
 
@@ -1412,7 +2001,9 @@ class PostProcessor:
         Returns:
             pd.DataFrame: Data frame with the WIP over time for each resource.
         """
-        df = self.df_resource_states.copy()
+        # Use df_prepared instead of df_resource_states because WIP calculation
+        # needs loading/unloading events that are filtered out of df_resource_states
+        df = self.df_prepared.copy()
         # df = self.get_df_with_product_entries(df).copy()
         df = self.get_WIP_per_resource_KPI(df)
 

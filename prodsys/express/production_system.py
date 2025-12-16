@@ -399,7 +399,7 @@ class ProductionSystem(core.ExpressObject):
             seed (int, optional): The seed of the simulation. Defaults to 0.
         """
         self._runner = runner.Runner(production_system_data=self.to_model())
-        self._runner.adapter.seed = seed
+        self._runner.production_system_data.seed = seed
         self._runner.initialize_simulation()
         self._runner.run(time_range)
 

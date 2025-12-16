@@ -523,6 +523,9 @@ def plot_time_per_state_of_resources(
             "CR": "grey",
             "DP": "lightgreen",
         },
+        category_orders={
+            "Time_type": ["UD", "PR", "DP", "ST", "SB", "CR"]
+        },
     )
     fig.update_traces(name="Productive", selector=dict(name="PR"))
     fig.update_traces(name="Standby", selector=dict(name="SB"))
