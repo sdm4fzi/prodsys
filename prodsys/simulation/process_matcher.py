@@ -300,6 +300,7 @@ class ProcessMatcher:
             List[Tuple[resources.Resource, process.PROCESS_UNION]]: List of compatible resources and their processes.
         """
         compatible_resources = []
+        # FIXME: if dependencies require transport process, this cannot find it!
 
         for requested_process in requested_processes:
             if isinstance(

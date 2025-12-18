@@ -390,10 +390,9 @@ def SPT_transport_control_policy(
     #         raise ValueError(f"Origin queue or target queue is None for request {request.completed}")
 
     def get_expected_time(request: request_module.Request) -> float:
-        if request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+        if request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
             #  TODO: calculate time based on dependency process time
             return 0.1
-        
         return request.process.get_expected_process_time(
             get_location(request.origin_queue), get_location(request.target_queue)
         )
