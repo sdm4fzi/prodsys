@@ -4,12 +4,10 @@ from __future__ import annotations
 from typing import Generator, TYPE_CHECKING, Optional
 
 import logging
-import numpy as np
 
 from prodsys.simulation import (
     sim,
     process,
-    sink,
 )
 
 from prodsys.simulation.process import (
@@ -119,11 +117,17 @@ class SystemProcessModelHandler:
         while self.next_possible_processes:
             executed_process_event = system_router.request_process_step(entity, self.next_possible_processes)
             yield executed_process_event
-            if self.is_rework_required(entity.current_process):
-                self.add_needed_rework(entity.current_process, system_router)
-            if isinstance(entity.current_process, ReworkProcess):
+            # Check if rework is required based on the state's failure determination
+            # The state has already determined and logged if the process failed
+            if not isinstance(entity.current_process, ReworkProcess):
+                # Check if the process failed (determined by the state)
+                if entity.last_process_failed:
+                    self.add_needed_rework(entity.current_process, system_router)
+            elif isinstance(entity.current_process, ReworkProcess):
                 self.register_rework(entity.current_process)
             self.update_executed_process(entity.current_process)
+            # Reset failure status for next process
+            entity.last_process_failed = None
             self.set_next_possible_production_processes()
         
         # After all internal processes are complete, set the entity's current_process to this ProcessModelProcess
@@ -142,30 +146,6 @@ class SystemProcessModelHandler:
         process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
 
-    def is_rework_required(self, executed_process: process.PROCESS_UNION) -> bool:
-        """
-        Determine if rework is needed based on the process's failure rate.
-
-        Args:
-            executed_process (process.PROCESS_UNION): The process to check for failure rate.
-        
-        Returns:
-            bool: True if rework is required, False otherwise.
-        """
-        if isinstance(executed_process, ReworkProcess):
-            return False
-        
-        if not hasattr(executed_process.data, 'failure_rate'):
-            return False
-            
-        failure_rate = executed_process.data.failure_rate
-        if not failure_rate or failure_rate == 0:
-            return False
-        
-        rework_needed = np.random.choice(
-            [True, False], p=[failure_rate, 1 - failure_rate]
-        )
-        return rework_needed
 
     def add_needed_rework(self, failed_process: process.PROCESS_UNION, router: Router) -> None:
         """

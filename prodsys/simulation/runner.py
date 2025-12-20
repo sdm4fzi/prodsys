@@ -277,11 +277,51 @@ class Runner:
     def print_results(self):
         """
         Prints the aggregated simulation results, comprising the average throughput, WIP, throughput time and the time per state of the resources.
+        Also prints scrap rates per product type and per resource if there were process failures.
+        Also prints OEE (Overall Equipment Effectiveness) for the system and per resource.
         """
         p = self.get_post_processor()
         from prodsys.util.kpi_visualization import print_aggregated_data
 
         print_aggregated_data(p)
+        
+        # Print scrap information if there were failures
+        df_scrap_product = p.df_scrap_per_product_type
+        df_scrap_resource = p.df_scrap_per_resource
+        
+        # Check if there were any failures
+        has_product_scrap = len(df_scrap_product) > 0 and df_scrap_product["Scrap_count"].sum() > 0
+        has_resource_scrap = len(df_scrap_resource) > 0 and df_scrap_resource["Scrap_count"].sum() > 0
+        
+        if has_product_scrap:
+            print("\n------------- Scrap Rate per Product Type -------------\n")
+            print(df_scrap_product.set_index("Product_type"))
+        
+        if has_resource_scrap:
+            print("\n------------- Scrap Rate per Resource -------------\n")
+            print(df_scrap_resource.set_index("Resource"))
+        
+        # Print OEE information - combine system and resources into one table
+        print("\n------------- OEE (Overall Equipment Effectiveness) -------------\n")
+        
+        # Get system-level OEE and convert to resource format
+        df_oee_system = p.df_oee_production_system
+        system_oee_row = {
+            "Resource": "Global System",
+            "Availability": df_oee_system[df_oee_system["KPI"] == "Availability"]["Value"].iloc[0],
+            "Performance": df_oee_system[df_oee_system["KPI"] == "Performance"]["Value"].iloc[0],
+            "Quality": df_oee_system[df_oee_system["KPI"] == "Quality"]["Value"].iloc[0],
+            "OEE": df_oee_system[df_oee_system["KPI"] == "OEE"]["Value"].iloc[0],
+        }
+        
+        # Get resource-level OEE (includes system resources)
+        df_oee_resources = p.df_oee_per_resource
+        
+        # Combine system and resources (Global System first, then all resources)
+        df_oee_combined = pd.DataFrame([system_oee_row])
+        if len(df_oee_resources) > 0:
+            df_oee_combined = pd.concat([df_oee_combined, df_oee_resources], ignore_index=True)
+        print(df_oee_combined.set_index("Resource"))
 
     def plot_results(self):
         """

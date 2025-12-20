@@ -105,6 +105,9 @@ def register_production_state_for_process(
         or isinstance(process_instance, process.CapabilityProcess)
         or isinstance(process_instance, process.ReworkProcess)
     ) and not existence_condition:
+        # Copy failure_rate from process data to state data if available
+        if hasattr(process_instance.data, 'failure_rate'):
+            state_data_dict["new_state"]["failure_rate"] = process_instance.data.failure_rate
         state_factory.create_states_from_configuration_data(
             {"ProductionState": state_data_dict}
         )

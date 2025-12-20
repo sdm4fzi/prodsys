@@ -194,6 +194,10 @@ class ResourceProcessModelHandler:
             
             for process_event, production_state in process_state_events:
                 yield process_event
+                # Store failure status on entity if available
+                if hasattr(production_state.state_info, '_process_ok'):
+                    for entity in process_request.get_atomic_entities():
+                        entity.last_process_failed = not production_state.state_info._process_ok
                 production_state.process = None
 
             if dependency_release_event and not dependency_release_event.triggered:

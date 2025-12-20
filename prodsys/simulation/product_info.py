@@ -28,6 +28,7 @@ class ProductInfo:
         state_type: StateTypeEnum = None,
         origin_ID: str = None,
         target_ID: str = None,
+        process_ID: str = None,
     ):
         self.resource_ID = resource_ID
         self.state_ID = state_ID

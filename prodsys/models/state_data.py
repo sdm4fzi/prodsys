@@ -42,6 +42,7 @@ class StateTypeEnum(str, Enum):
     SetupState = "SetupState"
     ProcessBreakDownState = "ProcessBreakDownState"
     ChargingState = "ChargingState"
+    NonScheduled = "NonScheduled"
 
 
 class StateData(CoreAsset):
@@ -268,10 +269,12 @@ class ProductionStateData(StateData):
         description (str): Description of the state.
         time_model_id (str): Time model ID of the state.
         type (StateTypeEnum): Type of the state.
+        failure_rate (Optional[float], optional): Failure rate of the production state. Defaults to 0.0.
 
     """
 
     type: Literal[StateTypeEnum.ProductionState]
+    failure_rate: Optional[float] = 0.0
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -281,6 +284,7 @@ class ProductionStateData(StateData):
                     "description": "Production state machine 1",
                     "time_model_id": "function_time_model_1",
                     "type": "ProductionState",
+                    "failure_rate": 0.0,
                 }
             ]
         }

@@ -20,7 +20,11 @@ rework_process = psx.ReworkProcess(rework_time_model, [p1], True, "rework_proces
 rework_process2 = psx.ReworkProcess(rework_time_model2, [p2], False, "rework_process2")
 rework_process3 = psx.ReworkProcess(rework_time_model3, [p1], False, "rework_process3")
 
-machine = psx.Resource([p1], [5, 0], 1, ID="machine")
+breakdown_time_model = psx.FunctionTimeModel("constant", 10, ID="breakdown_time_model")
+repair_time_model = psx.FunctionTimeModel("constant", 5, ID="repair_time_model")
+breakdown_state = psx.BreakDownState(breakdown_time_model, repair_time_model, ID="breakdown_state")
+
+machine = psx.Resource([p1], [5, 0], 1, states=[breakdown_state], ID="machine")
 machine2 = psx.Resource([p2], [10, 0], 1, ID="machine2")
 machine3 = psx.Resource([p3], [5, 5], 1, ID="machine3")
 

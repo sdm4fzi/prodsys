@@ -137,6 +137,7 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Requesting Item": None,
         "Dependency": state_info._dependency_ID,
         "process": None,
+        "process_ok": getattr(state_info, '_process_ok', True),  # Default to True if not set
     }
     data.append(item)
 

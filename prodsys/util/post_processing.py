@@ -43,27 +43,97 @@ class PostProcessor:
     """
 
     filepath: str = field(default="")
-    production_system_data: ProductionSystemData = field(default=None)
+    production_system_data: Optional[ProductionSystemData] = field(default=None)
     df_raw: pd.DataFrame = field(default=None)
     time_range: float = field(default=None)
     warm_up_cutoff: bool = field(default=False)
     cut_off_method: Optional[Literal["mser5", "threshold_stabilization", "static_ratio"]] = field(
         default=None
     )
+    _system_resource_mapping: Optional[dict] = field(default=None, init=False, repr=False)
+    _sink_input_queues: Optional[set] = field(default=None, init=False, repr=False)
+    _source_output_queues: Optional[set] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         if self.filepath:
             self.read_df_from_csv()
+    
+    def set_production_system_data(self, production_system_data: ProductionSystemData):
+        """
+        Set the production system data after initialization.
+        
+        This data is used to determine system resource / subresources mapping 
+        and sink / source IDs. It is optional and only needed for advanced features.
+        
+        Args:
+            production_system_data (ProductionSystemData): The production system data to set.
+        """
+        self.production_system_data = production_system_data
+        # Clear manually set mappings when production_system_data is set
+        self._system_resource_mapping = None
+        self._sink_input_queues = None
+        self._source_output_queues = None
+        # Clear cached properties that depend on production_system_data
+        if hasattr(self, '__dict__'):
+            # Clear cached properties that might depend on production_system_data
+            cached_props = ['df_resource_states']
+            for prop in cached_props:
+                if prop in self.__dict__:
+                    delattr(self, prop)
+    
+    def set_system_resource_mapping(self, mapping: dict):
+        """
+        Set the system resource mapping directly.
+        
+        This mapping is used to aggregate subresource states into system resource states.
+        The mapping should be a dictionary where keys are system resource IDs and values 
+        are lists of subresource IDs.
+        
+        Args:
+            mapping (dict): Mapping from system resource ID to list of subresource IDs.
+        """
+        self._system_resource_mapping = mapping
+        # Clear cached properties that depend on system resource mapping
+        if hasattr(self, '__dict__'):
+            cached_props = ['df_resource_states']
+            for prop in cached_props:
+                if prop in self.__dict__:
+                    delattr(self, prop)
+    
+    def set_sink_source_queue_names(self, sink_input_queues: set, source_output_queues: set):
+        """
+        Set sink input queue names and source output queue names directly.
+        
+        These queue names are used to exclude sink/source queues from resource states calculation.
+        
+        Args:
+            sink_input_queues (set): Set of sink input queue names to exclude.
+            source_output_queues (set): Set of source output queue names to exclude.
+        """
+        self._sink_input_queues = sink_input_queues
+        self._source_output_queues = source_output_queues
+        # Clear cached properties that depend on sink/source queue names
+        if hasattr(self, '__dict__'):
+            cached_props = ['df_resource_states']
+            for prop in cached_props:
+                if prop in self.__dict__:
+                    delattr(self, prop)
 
     def _get_system_resource_mapping(self) -> dict:
         """
         Get mapping of system resource IDs to their subresource IDs.
         
         Returns:
-            dict: Mapping from system resource ID to list of subresource IDs
+            dict: Mapping from system resource ID to list of subresource IDs.
+                  Returns empty dict if neither production_system_data nor manual mapping is set.
         """
+        # Check if manual mapping is set
+        if self._system_resource_mapping is not None:
+            return self._system_resource_mapping
+        
+        # Otherwise, derive from production_system_data if available
         if self.production_system_data is None:
-            raise ValueError("Production system data is not set")
+            return {}
         
         system_resource_mapping = {}
         for resource_data in self.production_system_data.resource_data:
@@ -79,9 +149,14 @@ class PostProcessor:
         Returns:
             tuple[set, set]: (sink_input_queues, source_output_queues)
         """
+        # Check if manual queue names are set
+        if self._sink_input_queues is not None and self._source_output_queues is not None:
+            return self._sink_input_queues, self._source_output_queues
+        
         sink_input_queues = set()
         source_output_queues = set()
         
+        # Otherwise, derive from production_system_data if available
         if self.production_system_data is None:
             return sink_input_queues, source_output_queues
         
@@ -131,6 +206,7 @@ class PostProcessor:
                 state.StateTypeEnum.loading,
                 state.StateTypeEnum.unloading,
                 state.StateTypeEnum.assembly,
+                state.StateTypeEnum.non_scheduled,
             ]
         )
 
@@ -628,6 +704,54 @@ class PostProcessor:
         # For the last event of each resource, next_Time should equal its own Time
         # Fill NaN with the resource's own Time (since we inserted end events at simulation_end_time)
         df["next_Time"] = df["next_Time"].fillna(df["Time"])
+        
+        # For breakdown start events, use the breakdown end event time instead of next chronological event
+        # This ensures breakdown downtime is calculated correctly even when there are other events at the same time
+        breakdown_start_mask = (
+            (df["State Type"] == state.StateTypeEnum.breakdown) 
+            & (df["Activity"] == "start state")
+        )
+        if breakdown_start_mask.any():
+            # Store original next_Time for comparison
+            original_next_time = df["next_Time"].copy()
+            
+            # First, try to use Expected End Time if available
+            if "Expected End Time" in df.columns:
+                expected_end_times = df.loc[breakdown_start_mask, "Expected End Time"]
+                valid_expected = expected_end_times.notna() & (expected_end_times > df.loc[breakdown_start_mask, "Time"])
+                if valid_expected.any():
+                    df.loc[valid_expected.index, "next_Time"] = expected_end_times[valid_expected]
+            
+            # For any remaining breakdown starts without valid Expected End Time, find the corresponding end event
+            # Check which breakdown starts still have the original next_Time (meaning Expected End Time wasn't used)
+            remaining_breakdown_starts = df[breakdown_start_mask].copy()
+            if len(remaining_breakdown_starts) > 0:
+                # Find breakdown starts that still need matching (those where next_Time wasn't updated)
+                needs_matching = remaining_breakdown_starts[
+                    df.loc[remaining_breakdown_starts.index, "next_Time"] == original_next_time[remaining_breakdown_starts.index]
+                ]
+                
+                if len(needs_matching) > 0:
+                    breakdown_ends = df[
+                        (df["State Type"] == state.StateTypeEnum.breakdown) 
+                        & (df["Activity"] == "end state")
+                    ].copy()
+                    
+                    # Match breakdown start and end events by Resource and State
+                    for idx in needs_matching.index:
+                        resource = df.loc[idx, "Resource"]
+                        state_id = df.loc[idx, "State"]
+                        # Find the corresponding end event
+                        matching_end = breakdown_ends[
+                            (breakdown_ends["Resource"] == resource) 
+                            & (breakdown_ends["State"] == state_id)
+                            & (breakdown_ends["Time"] >= df.loc[idx, "Time"])
+                        ]
+                        if len(matching_end) > 0:
+                            # Use the earliest matching end event
+                            end_time = matching_end["Time"].min()
+                            df.loc[idx, "next_Time"] = end_time
+        
         df["time_increment"] = df["next_Time"] - df["Time"]
 
         # Initialize Time_type column
@@ -635,7 +759,12 @@ class PostProcessor:
 
         STANDBY_CONDITION = (
             (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-        ) | (df["State_sorting_Index"] == 3)
+        ) | (
+            (df["State_sorting_Index"] == 3) 
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+            & (df["State Type"] != state.StateTypeEnum.setup)
+            & (df["State Type"] != state.StateTypeEnum.charging)
+        )
         PRODUCTIVE_CONDITION = (
             (
                 (df["State_sorting_Index"] == 6)
@@ -656,11 +785,15 @@ class PostProcessor:
         CHARGING_CONDITION = ((df["State_sorting_Index"] == 8)) & (
             df["State Type"] == state.StateTypeEnum.charging
         )
+        NON_SCHEDULED_CONDITION = (
+            (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+        ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
         # Apply conditions in order of specificity (most specific first)
         # DEPENDENCY is most specific (requires State_sorting_Index == 6 AND State Type == dependency)
         df.loc[DEPENDENCY_CONDITION, "Time_type"] = "DP"
         # Then apply other specific conditions
+        df.loc[NON_SCHEDULED_CONDITION, "Time_type"] = "NS"  # Non Scheduled
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
@@ -1057,7 +1190,10 @@ class PostProcessor:
 
         STANDBY_CONDITION = (
             (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-        ) | (df["State_sorting_Index"] == 3)
+        ) | (
+            (df["State_sorting_Index"] == 3) 
+            & (df["State Type"] != state.StateTypeEnum.breakdown)
+        )
         PRODUCTIVE_CONDITION = (
             (df["State_sorting_Index"] == 6)
             | (df["State_sorting_Index"] == 4)
@@ -1072,9 +1208,13 @@ class PostProcessor:
         CHARGING_CONDITION = ((df["State_sorting_Index"] == 8)) & (
             df["State Type"] == state.StateTypeEnum.charging
         )
+        NON_SCHEDULED_CONDITION = (
+            (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+        ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
         df.loc[PRODUCTIVE_CONDITION, "Time_type"] = "PR"
+        df.loc[NON_SCHEDULED_CONDITION, "Time_type"] = "NS"  # Non Scheduled
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
         df.loc[CHARGING_CONDITION, "Time_type"] = "CR"
@@ -1209,7 +1349,12 @@ class PostProcessor:
 
             standby_condition = (
                 (df["State_sorting_Index"] == 5) & (df["Used_Capacity"] == 0)
-            ) | (df["State_sorting_Index"] == 3)
+            ) | (
+                (df["State_sorting_Index"] == 3) 
+                & (df["State Type"] != state.StateTypeEnum.breakdown)
+                & (df["State Type"] != state.StateTypeEnum.setup)
+                & (df["State Type"] != state.StateTypeEnum.charging)
+            )
             productive_condition = (
                 (df["State_sorting_Index"] == 6)
                 | (df["State_sorting_Index"] == 4)
@@ -1224,9 +1369,13 @@ class PostProcessor:
             charging_condition = ((df["State_sorting_Index"] == 8)) & (
                 df["State Type"] == state.StateTypeEnum.charging
             )
+            non_scheduled_condition = (
+                (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+            ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
             df.loc[standby_condition, "Time_type"] = "SB"
             df.loc[productive_condition, "Time_type"] = "PR"
+            df.loc[non_scheduled_condition, "Time_type"] = "NS"  # Non Scheduled
             df.loc[downtime_condition, "Time_type"] = "UD"
             df.loc[setup_condition, "Time_type"] = "ST"
             df.loc[charging_condition, "Time_type"] = "CR"
@@ -1324,29 +1473,430 @@ class PostProcessor:
     @cached_property
     def df_oee_production_system(self) -> pd.DataFrame:
         """
-        Calculate the Overall Equipment Efficiency (OEE) of the production system.
-
+        Calculate the Overall Equipment Effectiveness (OEE) of the production system.
+        
+        OEE = Availability × Performance × Quality
+        
+        Following formal OEE definitions (standard OEE/TPM view):
+        - Availability = Operating Time / Planned Production Time
+          Where Planned Production Time = Total Time - Non Scheduled Time (all time where production is expected)
+          And Operating Time = PR (Productive) + DP (Dependency)
+          Availability losses (UD, ST, SB, CR) are in Planned Production Time but reduce Operating Time
+        
+        - Performance = (Ideal Cycle Time × Total Units Produced) / Operating Time
+          Operating Time includes PR (productive) and DP (dependency)
+        
+        - Quality = Good Units / Total Units Produced
+        
         Returns:
-            pd.DataFrame: A DataFrame containing the calculated OEE values for Availability, Performance, Quality, and OEE.
+            pd.DataFrame: A DataFrame containing the calculated OEE values for 
+                         Availability, Performance, Quality, and OEE.
         """
-        df_resource_states = self.df_aggregated_resource_states.copy()
-        df_resource_states = df_resource_states.reset_index()
-        average_kpis = df_resource_states.groupby("Time_type")["percentage"].mean()
-        unplanned_downtime = average_kpis.get("UD", 0)
-        availibility = (100 - unplanned_downtime) / 100
-        # TODO: also calculate performance based on arrival rates, available time and output of the system
-        # TODO: calculate scrap rate based on number of failed processes?
-
-        # Create new DataFrame
+        # For system-level OEE, calculate as weighted average of resource-level OEEs
+        # This avoids double-counting parallel resource time
+        df_oee_resources = self.df_oee_per_resource.copy()
+        
+        if len(df_oee_resources) == 0:
+            logger.warning(
+                "No resource-level OEE data available. System OEE will default to 100%."
+            )
+            availability = 1.0
+            performance = 1.0
+            quality = 1.0
+        else:
+            # Get resource states to calculate weights (planned production time per resource)
+            df_resource_states = self.df_aggregated_resource_states.copy()
+            df_resource_states = df_resource_states.reset_index()
+            
+            # Calculate planned production time per resource for weighting
+            resource_weights = {}
+            for resource in df_resource_states["Resource"].unique():
+                df_resource = df_resource_states[df_resource_states["Resource"] == resource]
+                resource_time = df_resource["resource_time"].iloc[0]
+                time_per_state = df_resource.set_index("Time_type")["time_increment"]
+                non_scheduled_time = time_per_state.get("NS", 0)
+                planned_production_time = resource_time - non_scheduled_time
+                resource_weights[resource] = planned_production_time
+            
+            # Calculate total weight (sum of all planned production times)
+            total_weight = sum(resource_weights.values())
+            
+            if total_weight > 0:
+                # Calculate weighted average availability
+                availability_sum = 0.0
+                
+                for _, row in df_oee_resources.iterrows():
+                    resource = row["Resource"]
+                    weight = resource_weights.get(resource, 0)
+                    if weight > 0:
+                        # Convert percentages back to ratios
+                        availability_sum += (row["Availability"] / 100.0) * weight
+                
+                availability = availability_sum / total_weight
+            else:
+                # Fallback: simple average if no weights available
+                availability = df_oee_resources["Availability"].mean() / 100.0
+        
+        # Performance: Actual Output / Expected Output (system-level calculation)
+        # Expected output is based on source arrival time models, schedules, or order data
+        if self.production_system_data is None:
+            logger.warning(
+                "production_system_data not available. Cannot calculate expected output. "
+                "Performance will default to 100%."
+            )
+            performance = 1.0
+        else:
+            # Get simulation time range
+            if self.time_range is not None:
+                total_time = self.time_range
+            else:
+                total_time = self.get_total_simulation_time()
+            
+            # Calculate expected output from sources
+            from prodsys.factories.time_model_factory import TimeModelFactory
+            
+            time_model_factory = TimeModelFactory()
+            time_model_factory.create_time_models(self.production_system_data)
+            
+            expected_output = 0.0
+            
+            # Check for order data or schedule first
+            # Note: order_data might not be a direct attribute, check if it exists
+            order_data = getattr(self.production_system_data, 'order_data', None)
+            if order_data and len(order_data) > 0:
+                # If order data exists, sum up the quantities from all orders
+                from prodsys.models.order_data import OrderData
+                expected_output = sum(
+                    sum(product.quantity for product in order.ordered_products)
+                    for order in order_data
+                    if isinstance(order, OrderData)
+                )
+            elif hasattr(self.production_system_data, 'schedule') and self.production_system_data.schedule:
+                # If schedule exists, count scheduled products within simulation time
+                schedule_products = [
+                    event for event in self.production_system_data.schedule
+                    if hasattr(event, 'time') and event.time <= total_time
+                ]
+                expected_output = len(schedule_products)
+            else:
+                # Calculate expected output from source arrival time models
+                for source_data in self.production_system_data.source_data:
+                    try:
+                        time_model = time_model_factory.get_time_model(source_data.time_model_id)
+                        
+                        # Check if it's a ScheduledTimeModel
+                        from prodsys.simulation.time_model import ScheduledTimeModel
+                        if isinstance(time_model, ScheduledTimeModel):
+                            # For scheduled time models, count how many arrivals are expected
+                            schedule = time_model.data.schedule
+                            if time_model.data.absolute:
+                                # Absolute schedule: count entries <= total_time
+                                expected_output += len([t for t in schedule if t <= total_time])
+                            else:
+                                # Relative schedule: calculate cumulative times and count
+                                cumulative_time = 0.0
+                                count = 0
+                                for interval in schedule:
+                                    cumulative_time += interval
+                                    if cumulative_time <= total_time:
+                                        count += 1
+                                    else:
+                                        break
+                                expected_output += count
+                        else:
+                            # For other time models, use expected interarrival time
+                            expected_interarrival_time = time_model.get_expected_time()
+                            
+                            if expected_interarrival_time > 0:
+                                # Expected output = Total Time / Expected Interarrival Time
+                                source_expected_output = total_time / expected_interarrival_time
+                                expected_output += source_expected_output
+                    except (ValueError, TypeError, AttributeError) as e:
+                        # Time model not found or doesn't support get_expected_time
+                        logger.warning(
+                            f"Could not get expected time for source {source_data.ID}: {e}. "
+                            "Skipping this source for expected output calculation."
+                        )
+                        continue
+            
+            # Get actual output
+            df_output = self.df_aggregated_output_and_throughput.copy()
+            if len(df_output) > 0:
+                actual_output = df_output["Output"].sum()
+            else:
+                actual_output = 0
+            
+            # Performance = Actual Output / Expected Output
+            if expected_output > 0:
+                performance = actual_output / expected_output
+            else:
+                if actual_output > 0:
+                    # If we have actual output but no expected output, performance is undefined
+                    # Default to 100% but log a warning
+                    performance = 1.0
+                    logger.warning(
+                        "Could not calculate expected output. Performance will default to 100%."
+                    )
+                else:
+                    performance = 1.0
+        
+        # Quality: Good Units / Total Units Produced (system-level calculation)
+        df_output = self.df_aggregated_output_and_throughput.copy()
+        if len(df_output) > 0:
+            total_units_produced = df_output["Output"].sum()
+        else:
+            total_units_produced = 0
+        
+        if total_units_produced > 0:
+            # Get scrap data to calculate good units
+            df_scrap = self.df_scrap_per_product_type.copy()
+            if len(df_scrap) > 0:
+                # Calculate weighted average scrap rate based on output
+                df_output_for_quality = self.df_aggregated_output.copy()
+                if len(df_output_for_quality) > 0:
+                    # Merge scrap data with output data
+                    df_quality = pd.merge(
+                        df_output_for_quality.reset_index(),
+                        df_scrap[["Product_type", "Scrap_rate"]],
+                        on="Product_type",
+                        how="left"
+                    )
+                    df_quality["Scrap_rate"] = df_quality["Scrap_rate"].fillna(0)
+                    
+                    # Calculate total scrap units
+                    total_scrap_units = (
+                        (df_quality["Product"] * df_quality["Scrap_rate"] / 100).sum()
+                    )
+                    
+                    # Good units = Total units - Scrap units
+                    good_units = total_units_produced - total_scrap_units
+                    quality = good_units / total_units_produced
+                else:
+                    # No output data - assume 100% quality
+                    quality = 1.0
+            else:
+                # No scrap data - assume all units are good
+                quality = 1.0
+        else:
+            # No units produced - assume 100% quality
+            quality = 1.0
+            logger.info(
+                "No units produced. Quality will default to 100%."
+            )
+        
+        # Calculate OEE
+        oee = availability * performance * quality
+        
+        # Create DataFrame
         oee_df = pd.DataFrame(
             {
                 "KPI": ["Availability", "Performance", "Quality", "OEE"],
-                "Value": [availibility * 100, 1 * 100, 1 * 100, availibility * 100],
+                "Value": [
+                    availability * 100,
+                    performance * 100,
+                    quality * 100,
+                    oee * 100,
+                ],
             }
         )
         oee_df["Value"] = oee_df["Value"].round(2)
-
+        
         return oee_df
+
+    @cached_property
+    def df_oee_per_resource(self) -> pd.DataFrame:
+        """
+        Calculate OEE for each resource individually.
+        
+        OEE = Availability × Performance × Quality
+        
+        Following formal OEE definitions (standard OEE/TPM view):
+        - Availability = Operating Time / Planned Production Time
+          Where Planned Production Time = Resource Time - Non Scheduled Time (all time where production is expected)
+          And Operating Time = PR (Productive) + DP (Dependency)
+          Availability losses (UD, ST, SB, CR) are in Planned Production Time but reduce Operating Time
+        
+        - Performance = (Ideal Cycle Time × Total Units Produced) / Operating Time
+          Operating Time includes PR (productive) and DP (dependency)
+        
+        - Quality = Good Units / Total Units Produced
+        
+        Returns:
+            pd.DataFrame: DataFrame with OEE components per resource.
+        """
+        if self.production_system_data is None:
+            logger.warning(
+                "production_system_data not available. Cannot calculate resource-level OEE."
+            )
+            return pd.DataFrame(columns=["Resource", "Availability", "Performance", "Quality", "OEE"])
+        
+        # Get resource states
+        df_resource_states = self.df_aggregated_resource_states.copy()
+        df_resource_states = df_resource_states.reset_index()
+        
+        # Get time model factory
+        from prodsys.factories.time_model_factory import TimeModelFactory
+        time_model_factory = TimeModelFactory()
+        time_model_factory.create_time_models(self.production_system_data)
+        
+        # Get processes per resource
+        resource_to_processes = {}
+        for resource_data in self.production_system_data.resource_data:
+            if hasattr(resource_data, 'process_ids'):
+                resource_to_processes[resource_data.ID] = resource_data.process_ids
+        
+        # Calculate OEE per resource
+        oee_results = []
+        
+        for resource in df_resource_states["Resource"].unique():
+            df_resource = df_resource_states[df_resource_states["Resource"] == resource]
+            
+            # Get resource time
+            resource_time = df_resource["resource_time"].iloc[0]
+            
+            # Calculate time per state (time_increment is already in absolute time)
+            time_per_state = df_resource.set_index("Time_type")["time_increment"]
+            
+            # Availability: Operating Time / Planned Production Time
+            # Get productive time (PR) - time actually producing parts
+            productive_time = time_per_state.get("PR", 0)
+            
+            # Get dependency time (DP) - time waiting for dependencies
+            dependency_time = time_per_state.get("DP", 0)
+
+            standby_time = time_per_state.get("SB", 0)
+            
+            # Operating Time = PR + DP (time available for production)
+            # Note: SB (standby) is an availability loss, not part of operating time
+            operating_time = productive_time + dependency_time + standby_time
+            
+            # Get non-scheduled time (NS) - excluded from planned production time
+            non_scheduled_time = time_per_state.get("NS", 0)
+            
+            # Planned Production Time = Resource Time - Non Scheduled Time
+            # This represents all time where production is expected (excluding breaks, maintenance, etc.)
+            planned_production_time = resource_time - non_scheduled_time
+            
+            # Availability losses (UD, ST, SB, CR) are in Planned Production Time but reduce Operating Time
+            if planned_production_time > 0:
+                availability = operating_time / planned_production_time
+            else:
+                availability = 0.0
+            
+            # Performance: (Ideal Cycle Time × Total Units Produced) / Operating Time
+            # Get actual production end events for this resource to count process occurrences
+            df_prepared = self.df_prepared.copy()
+            resource_production_ends = df_prepared[
+                (df_prepared["Resource"] == resource) &
+                (df_prepared["State Type"] == state.StateTypeEnum.production) &
+                (df_prepared["Activity"] == "end state")
+            ]
+            total_units_produced = len(resource_production_ends)
+            
+            # Get resource capacity
+            resource_capacity = 1  # Default capacity
+            process_capacities = {}  # Map process_id -> capacity
+            for resource_data in self.production_system_data.resource_data:
+                if resource_data.ID == resource:
+                    resource_capacity = resource_data.capacity if hasattr(resource_data, 'capacity') else 1
+                    # Get process-specific capacities if available
+                    if hasattr(resource_data, 'process_capacities') and resource_data.process_capacities:
+                        for i, process_id in enumerate(resource_data.process_ids):
+                            if i < len(resource_data.process_capacities):
+                                process_capacities[process_id] = resource_data.process_capacities[i]
+                    break
+            
+            if total_units_produced > 0 and operating_time > 0:
+                # Count how many times each process was performed
+                process_counts = resource_production_ends["State"].value_counts()
+                
+                # Calculate weighted average ideal cycle time based on process counts and capacities
+                weighted_cycle_time_sum = 0.0
+                total_count = 0
+                
+                for process_id, count in process_counts.items():
+                    # Find the process data for this process ID
+                    for process_data in self.production_system_data.process_data:
+                        if process_data.ID == process_id:
+                            # Only consider production processes
+                            if hasattr(process_data, 'type'):
+                                from prodsys.models.processes_data import ProcessTypeEnum
+                                if process_data.type != ProcessTypeEnum.ProductionProcesses:
+                                    continue
+                            
+                            if hasattr(process_data, 'time_model_id'):
+                                try:
+                                    time_model = time_model_factory.get_time_model(process_data.time_model_id)
+                                    # Skip distance models for resource-level OEE
+                                    from prodsys.simulation.time_model import DistanceTimeModel
+                                    if isinstance(time_model, DistanceTimeModel):
+                                        break
+                                    
+                                    expected_time = time_model.get_expected_time()
+                                    if expected_time > 0:
+                                        # Get process-specific capacity, or use resource capacity as fallback
+                                        process_capacity = process_capacities.get(process_id, resource_capacity)
+                                        
+                                        # Effective cycle time = cycle time / capacity
+                                        # If capacity is 2, the resource can process 2 items simultaneously,
+                                        # so the effective cycle time is halved
+                                        effective_cycle_time = expected_time / process_capacity if process_capacity > 0 else expected_time
+                                        
+                                        # Weight by count: if P1 performed 1000x and P2 performed 2000x,
+                                        # P2's cycle time gets 2x weight
+                                        weighted_cycle_time_sum += effective_cycle_time * count
+                                        total_count += count
+                                except (ValueError, TypeError):
+                                    pass
+                            break
+                
+                if total_count > 0:
+                    # Calculate weighted average effective ideal cycle time (already adjusted for capacity)
+                    avg_ideal_cycle_time = weighted_cycle_time_sum / total_count
+                    
+                    # Performance = (Effective Ideal Cycle Time × Total Units Produced) / Operating Time
+                    # Operating Time includes PR (productive) and DP (dependency)
+                    # Effective cycle time already accounts for resource capacity
+                    performance = (avg_ideal_cycle_time * total_units_produced) / operating_time
+                else:
+                    # No valid cycle times found - default to 100%
+                    performance = 1.0
+                    logger.info(
+                        f"No valid ideal cycle times found for resource {resource}. "
+                        "Performance will default to 100%."
+                    )
+            else:
+                if total_units_produced == 0:
+                    performance = 0.0
+                else:
+                    performance = 1.0
+                    logger.info(
+                        f"No operating time or units produced for resource {resource}. "
+                        "Performance will default to 100%."
+                    )
+            
+            # Quality - get scrap rate for this resource
+            df_scrap_resource = self.df_scrap_per_resource.copy()
+            resource_scrap = df_scrap_resource[df_scrap_resource["Resource"] == resource]
+            
+            if len(resource_scrap) > 0:
+                scrap_rate = resource_scrap["Scrap_rate"].iloc[0]
+                quality = 1 - (scrap_rate / 100)
+            else:
+                quality = 1.0
+            
+            # Calculate OEE
+            oee = availability * performance * quality
+            
+            oee_results.append({
+                "Resource": resource,
+                "Availability": round(availability * 100, 2),
+                "Performance": round(performance * 100, 2),
+                "Quality": round(quality * 100, 2),
+                "OEE": round(oee * 100, 2),
+            })
+        
+        return pd.DataFrame(oee_results)
 
     @cached_property
     def df_production_flow_ratio(self) -> pd.DataFrame:
@@ -2222,3 +2772,115 @@ class PostProcessor:
         s = self.df_aggregated_WIP.copy()
         s = s.drop(labels=["Total"])
         return list(s.values)
+
+    @cached_property
+    def df_scrap_per_product_type(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the scrap rate for each product type.
+        Scrap rate is calculated as: (Number of failed processes) / (Total number of processes) * 100
+        
+        Returns:
+            pd.DataFrame: Data frame with scrap rate per product type. Columns: Product_type, Scrap_count, Total_count, Scrap_rate
+        """
+        df = self.df_prepared.copy()
+        
+        # Filter for production process end states only (where process_ok is relevant)
+        production_end_condition = (
+            (df["State Type"] == state.StateTypeEnum.production)
+            & (df["Activity"] == "end state")
+            & (df["Product"].notna())
+        )
+        df_production = df[production_end_condition].copy()
+        
+        if len(df_production) == 0:
+            # Return empty dataframe with expected structure
+            return pd.DataFrame(columns=["Product_type", "Scrap_count", "Total_count", "Scrap_rate"])
+        
+        # Get product types (filter out primitives)
+        primitive_types = self.get_primitive_types()
+        df_production = df_production[
+            ~df_production["Product_type"].isin(primitive_types)
+        ]
+        
+        if len(df_production) == 0:
+            return pd.DataFrame(columns=["Product_type", "Scrap_count", "Total_count", "Scrap_rate"])
+        
+        # Handle process_ok column - default to True if not present or NaN
+        if "process_ok" not in df_production.columns:
+            df_production["process_ok"] = True
+        else:
+            # Convert to boolean, handling NaN values without triggering downcast warning
+            # Use mask-based assignment to avoid fillna downcast warning
+            mask = df_production["process_ok"].isna()
+            df_production.loc[mask, "process_ok"] = True
+            df_production["process_ok"] = df_production["process_ok"].astype(bool)
+        
+        # Count failed processes (process_ok == False) per product type
+        df_failed = df_production[~df_production["process_ok"]].groupby("Product_type").size().reset_index(name="Scrap_count")
+        
+        # Count total processes per product type
+        df_total = df_production.groupby("Product_type").size().reset_index(name="Total_count")
+        
+        # Merge and calculate scrap rate
+        df_scrap = pd.merge(df_total, df_failed, on="Product_type", how="left")
+        df_scrap["Scrap_count"] = df_scrap["Scrap_count"].fillna(0).astype(int)
+        df_scrap["Scrap_rate"] = (df_scrap["Scrap_count"] / df_scrap["Total_count"] * 100).round(2)
+        
+        return df_scrap[["Product_type", "Scrap_count", "Total_count", "Scrap_rate"]]
+
+    @cached_property
+    def df_scrap_per_resource(self) -> pd.DataFrame:
+        """
+        Returns a data frame with the scrap rate for each resource.
+        Scrap rate is calculated as: (Number of failed processes) / (Total number of processes) * 100
+        
+        Returns:
+            pd.DataFrame: Data frame with scrap rate per resource. Columns: Resource, Scrap_count, Total_count, Scrap_rate
+        """
+        df = self.df_prepared.copy()
+        
+        # Filter for production process end states only (where process_ok is relevant)
+        production_end_condition = (
+            (df["State Type"] == state.StateTypeEnum.production)
+            & (df["Activity"] == "end state")
+            & (df["Resource"].notna())
+        )
+        df_production = df[production_end_condition].copy()
+        
+        if len(df_production) == 0:
+            # Return empty dataframe with expected structure
+            return pd.DataFrame(columns=["Resource", "Scrap_count", "Total_count", "Scrap_rate"])
+        
+        # Exclude sink and source resources
+        sink_source_resources = df.loc[
+            (df["State Type"] == state.StateTypeEnum.source)
+            | (df["State Type"] == state.StateTypeEnum.sink),
+            "Resource"
+        ].unique()
+        df_production = df_production[~df_production["Resource"].isin(sink_source_resources)]
+        
+        if len(df_production) == 0:
+            return pd.DataFrame(columns=["Resource", "Scrap_count", "Total_count", "Scrap_rate"])
+        
+        # Handle process_ok column - default to True if not present or NaN
+        if "process_ok" not in df_production.columns:
+            df_production["process_ok"] = True
+        else:
+            # Convert to boolean, handling NaN values without triggering downcast warning
+            # Use mask-based assignment to avoid fillna downcast warning
+            mask = df_production["process_ok"].isna()
+            df_production.loc[mask, "process_ok"] = True
+            df_production["process_ok"] = df_production["process_ok"].astype(bool)
+        
+        # Count failed processes (process_ok == False) per resource
+        df_failed = df_production[~df_production["process_ok"]].groupby("Resource").size().reset_index(name="Scrap_count")
+        
+        # Count total processes per resource
+        df_total = df_production.groupby("Resource").size().reset_index(name="Total_count")
+        
+        # Merge and calculate scrap rate
+        df_scrap = pd.merge(df_total, df_failed, on="Resource", how="left")
+        df_scrap["Scrap_count"] = df_scrap["Scrap_count"].fillna(0).astype(int)
+        df_scrap["Scrap_rate"] = (df_scrap["Scrap_count"] / df_scrap["Total_count"] * 100).round(2)
+        
+        return df_scrap[["Resource", "Scrap_count", "Total_count", "Scrap_rate"]]

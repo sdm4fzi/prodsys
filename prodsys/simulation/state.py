@@ -65,6 +65,7 @@ class StateTypeEnum(str, Enum):
     dependency = "Dependency"
     loading = "Loading"
     unloading = "Unloading"
+    non_scheduled = "NonScheduled"
 
 
 class StateInfo:
@@ -111,6 +112,7 @@ class StateInfo:
         self._empty_transport = _empty_transport
         self._initial_transport_step = _initial_transport_step
         self._last_transport_step = _last_transport_step
+        self._process_ok: bool = True  # Track if process was successful (True) or failed (False)
         
     def log_transport(
         self,
@@ -206,17 +208,19 @@ class StateInfo:
         self._activity = StateEnum.end_interrupt
         self._state_type = state_type
 
-    def log_end_state(self, end_time: float, state_type: StateTypeEnum):
+    def log_end_state(self, end_time: float, state_type: StateTypeEnum, process_ok: bool = True):
         """
         Logs the end of a state.
 
         Args:
             end_time (float): The end time of the state.
             state_type (StateTypeEnum): The type of the state.
+            process_ok (bool): Whether the process was successful. Defaults to True.
         """
         self._event_time = end_time
         self._activity = StateEnum.end_state
         self._state_type = state_type
+        self._process_ok = process_ok
 
 
 class State(ABC):
@@ -329,6 +333,10 @@ class ProductionState(State):
             time = self.time_model.get_next_time()
         self.done_in = time
         self.resource.consider_battery_usage(self.done_in)
+        
+        # Determine if the process will fail BEFORE execution
+        process_failed = self._determine_process_failure()
+        
         while True:
             try:
                 if self.interrupted:
@@ -367,7 +375,29 @@ class ProductionState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
-        self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
+        # Log end state with success/failure status (process_ok is True if not failed, False if failed)
+        process_ok = not process_failed if process_failed is not None else True
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.production, process_ok=process_ok)
+    
+    def _determine_process_failure(self) -> Optional[bool]:
+        """
+        Determine if the process will fail based on the state's failure_rate.
+        
+        Returns:
+            Optional[bool]: True if the process will fail, False if it will succeed, None if failure_rate is not applicable.
+        """
+        if not hasattr(self.data, 'failure_rate'):
+            return None
+            
+        failure_rate = self.data.failure_rate
+        if not failure_rate or failure_rate == 0:
+            return False
+        
+        import numpy as np  # noqa: E402
+        will_fail = bool(np.random.choice(
+            [True, False], p=[failure_rate, 1 - failure_rate]
+        ))
+        return will_fail
 
     def update_done_in(self):
         if self.start == 0:
