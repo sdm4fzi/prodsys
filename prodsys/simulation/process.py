@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING, Union, List, Optional, Dict
 import typing
 
 from prodsys.models.processes_data import ProcessTypeEnum
+from prodsys.simulation import request as request_module
+
 if TYPE_CHECKING:
     from prodsys.simulation.resources import Resource
     from prodsys.simulation.source import Source
     from prodsys.simulation.sink import Sink
     from prodsys.simulation.node import Node
-    from prodsys.simulation import request as request_module
     from prodsys.simulation.dependency import Dependency
     from prodsys.simulation import route_finder, time_model
     
