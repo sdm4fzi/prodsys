@@ -1784,14 +1784,14 @@ class PostProcessor:
                 availability = 0.0
             
             # Performance: (Ideal Cycle Time × Total Units Produced) / Operating Time
-            # Get actual production end events for this resource to count process occurrences
+            # Get actual process end events for this resource (both production and transport) to count process occurrences
             df_prepared = self.df_prepared.copy()
-            resource_production_ends = df_prepared[
+            resource_process_ends = df_prepared[
                 (df_prepared["Resource"] == resource) &
-                (df_prepared["State Type"] == state.StateTypeEnum.production) &
+                (df_prepared["State Type"].isin([state.StateTypeEnum.production, state.StateTypeEnum.transport])) &
                 (df_prepared["Activity"] == "end state")
             ]
-            total_units_produced = len(resource_production_ends)
+            total_units_produced = len(resource_process_ends)
             
             # Get resource capacity
             resource_capacity = 1  # Default capacity
@@ -1808,7 +1808,7 @@ class PostProcessor:
             
             if total_units_produced > 0 and operating_time > 0:
                 # Count how many times each process was performed
-                process_counts = resource_production_ends["State"].value_counts()
+                process_counts = resource_process_ends["State"].value_counts()
                 
                 # Calculate weighted average ideal cycle time based on process counts and capacities
                 weighted_cycle_time_sum = 0.0
@@ -1818,18 +1818,21 @@ class PostProcessor:
                     # Find the process data for this process ID
                     for process_data in self.production_system_data.process_data:
                         if process_data.ID == process_id:
-                            # Only consider production processes
+                            # Consider both production and transport processes
                             if hasattr(process_data, 'type'):
                                 from prodsys.models.processes_data import ProcessTypeEnum
-                                if process_data.type != ProcessTypeEnum.ProductionProcesses:
+                                # Skip non-production and non-transport processes
+                                if process_data.type not in [ProcessTypeEnum.ProductionProcesses, ProcessTypeEnum.TransportProcesses]:
                                     continue
                             
                             if hasattr(process_data, 'time_model_id'):
                                 try:
                                     time_model = time_model_factory.get_time_model(process_data.time_model_id)
-                                    # Skip distance models for resource-level OEE
+                                    # Skip distance models for resource-level OEE (they need origin/target)
                                     from prodsys.simulation.time_model import DistanceTimeModel
                                     if isinstance(time_model, DistanceTimeModel):
+                                        # For transport with distance models, we can't get expected time without origin/target
+                                        # This will fall through to the PR/Operating Time fallback
                                         break
                                     
                                     expected_time = time_model.get_expected_time()
@@ -1859,12 +1862,20 @@ class PostProcessor:
                     # Effective cycle time already accounts for resource capacity
                     performance = (avg_ideal_cycle_time * total_units_produced) / operating_time
                 else:
-                    # No valid cycle times found - default to 100%
-                    performance = 1.0
-                    logger.info(
-                        f"No valid ideal cycle times found for resource {resource}. "
-                        "Performance will default to 100%."
-                    )
+                    # No valid cycle times found - use fallback: PR / Operating Time
+                    # This measures what fraction of operating time was actually productive
+                    if operating_time > 0:
+                        performance = productive_time / operating_time
+                        logger.info(
+                            f"No valid ideal cycle times found for resource {resource}. "
+                            f"Performance calculated as PR/Operating Time ratio: {performance:.2%}"
+                        )
+                    else:
+                        performance = 1.0
+                        logger.info(
+                            f"No valid ideal cycle times and no operating time for resource {resource}. "
+                            "Performance will default to 100%."
+                        )
             else:
                 if total_units_produced == 0:
                     performance = 0.0
