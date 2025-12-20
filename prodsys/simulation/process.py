@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union, List, Optional, Dict, Set, Tuple
+from typing import TYPE_CHECKING, Union, List, Optional, Dict
 import typing
 
 from prodsys.models.processes_data import ProcessTypeEnum
@@ -13,11 +13,6 @@ if TYPE_CHECKING:
     from prodsys.simulation import request as request_module
     from prodsys.simulation.dependency import Dependency
     from prodsys.simulation import route_finder, time_model
-    from prodsys.simulation.resources import Resource
-    from prodsys.simulation.source import Source
-    from prodsys.simulation.sink import Sink
-    from prodsys.simulation.node import Node
-    from prodsys.simulation import request as request_module
     
 
 from prodsys.models import processes_data
@@ -251,7 +246,7 @@ class TransportProcess(Process):
             return False
         if (
             isinstance(requested_process, CompoundProcess)
-            and not self.data.ID in requested_process.data.process_ids
+            and self.data.ID not in requested_process.data.process_ids
         ):
             return False
         request.set_route(route=[request.origin, request.target])
@@ -426,7 +421,7 @@ class ReworkProcess(Process):
 
     def matches_request(self, request: request_module.Request) -> bool:
         requested_process = request.process
-        if not isinstance(request, request_module.ReworkRequest):
+        if request.request_type != request_module.RequestType.REWORK:
             if not isinstance(requested_process, ReworkProcess):
                 return False
             return requested_process.data.ID == self.data.ID
