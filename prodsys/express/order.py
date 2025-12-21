@@ -45,6 +45,7 @@ class Order(core.ExpressObject):
     Args:
         ordered_products (List[OrderedProduct]): List of products to order.
         order_time (float): Time when the order was placed.
+        due_time (Optional[float]): Time when the order should be due. If not specified, uses order_time.
         release_time (Optional[float]): Time when the order should be released. If not specified, uses order_time.
         priority (int): Priority of the order.
         ID (str): ID of the order.
@@ -52,6 +53,7 @@ class Order(core.ExpressObject):
 
     ordered_products: List[OrderedProduct]
     order_time: float
+    due_time: Optional[float] = None
     release_time: Optional[float] = None
     priority: int = 1
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
@@ -67,6 +69,7 @@ class Order(core.ExpressObject):
             ID=self.ID,
             ordered_products=[op.to_model() for op in self.ordered_products],
             order_time=self.order_time,
+            due_time=self.due_time,
             release_time=self.release_time,
             priority=self.priority,
         )
