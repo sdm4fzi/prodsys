@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import logging
 
-from prodsys.simulation import port, sim, time_model
+from prodsys.simulation import sim, time_model
 from prodsys.models import source_data, product_data, order_data
 from prodsys.simulation.source import Source
 
@@ -139,8 +139,17 @@ class OrderSource(Source):
                         yield from queue.put(product.data)
                         product.update_location(queue)
                     
-                    # Process the product
-                    self.env.process(self.product_processor.process_product(product))
+                    # Track product instance in order
+                    if order.products is None:
+                        order.products = []
+                    from prodsys.models.order_data import OrderProductInstance
+                    order.products.append(OrderProductInstance(
+                        product_type=product_type,
+                        product_id=product.data.ID
+                    ))
+                    
+                    # Process the product with order_id
+                    self.env.process(self.product_processor.process_product(product, order_ID=order.ID))
                     
                     # Track released products
                     self.released_products[order.ID] += 1

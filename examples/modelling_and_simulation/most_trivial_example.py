@@ -57,7 +57,7 @@ model = system.to_model()
 
 runner_instance = prodsys.runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-system.run(10000)
+system.run(1000)
 
 runner_instance = system.runner
 

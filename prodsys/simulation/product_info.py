@@ -1,3 +1,5 @@
+from typing import Optional
+
 from prodsys.simulation.entities.product import Product
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
@@ -29,6 +31,7 @@ class ProductInfo:
         origin_ID: str = None,
         target_ID: str = None,
         process_ID: str = None,
+        order_ID: str = None,
     ):
         self.resource_ID = resource_ID
         self.state_ID = state_ID
@@ -38,6 +41,7 @@ class ProductInfo:
         self.state_type = state_type
         self.origin_ID = origin_ID
         self.target_ID = target_ID
+        self.order_ID = order_ID
 
     def log_finish_product(
         self,
@@ -64,6 +68,7 @@ class ProductInfo:
         resource: Locatable,
         _product: Product,
         event_time: float,
+        order_ID: Optional[str] = None,
     ) -> None:
         """
         Logs the creation of a product.
@@ -72,12 +77,14 @@ class ProductInfo:
             resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
             _product (Product): Product that is created.
             event_time (float): Time of the event.
+            order_ID (Optional[str]): ID of the order that this product belongs to. Defaults to None.
         """
         self.resource_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
         self.activity = StateEnum.created_product
         self.state_type = StateTypeEnum.source
+        self.order_ID = order_ID
 
     def log_start_loading(
         self,

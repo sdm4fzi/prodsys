@@ -165,6 +165,7 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
         "Requesting Item": product_info.product_ID,
         "Dependency": None,
         "process": None,
+        "Order ID": getattr(product_info, 'order_ID', None),
     }
     data.append(item)
 

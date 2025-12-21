@@ -1559,6 +1559,156 @@ class PostProcessor:
         if self.warm_up_cutoff:
             df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
 
+        # Fix overlapping time periods with proper state hierarchy:
+        # 1. NS periods are from NS start to NS end events
+        # 2. UD (breakdown) during NS: UD takes precedence, NS time excluded during UD
+        # 3. PR/SB/ST during NS: excluded from their time_increment
+        # 4. UD events are always counted (they take precedence over NS)
+        
+        # Get raw events to identify NS and UD periods properly
+        df_raw = self.df_resource_states.copy()
+        if self.warm_up_cutoff:
+            df_raw = df_raw.loc[df_raw["Time"] >= self.warm_up_cutoff_time]
+        
+        # Identify NS periods per resource (from NS start to NS end events)
+        ns_periods_by_resource = {}
+        ud_periods_by_resource = {}
+        
+        for resource in df["Resource"].unique():
+            resource_events = df_raw[df_raw["Resource"] == resource].copy()
+            
+            # Identify NS periods: find NS start and end events
+            ns_starts = resource_events[
+                (resource_events["State Type"] == state.StateTypeEnum.non_scheduled) &
+                (resource_events["Activity"] == "start state")
+            ].copy()
+            ns_ends = resource_events[
+                (resource_events["State Type"] == state.StateTypeEnum.non_scheduled) &
+                (resource_events["Activity"] == "end state")
+            ].copy()
+            
+            # Match NS start and end events to create periods
+            ns_periods = []
+            for _, start_row in ns_starts.iterrows():
+                start_time = start_row["Time"]
+                # Find corresponding end event (same State ID, after start)
+                state_id = start_row["State"]
+                matching_ends = ns_ends[
+                    (ns_ends["State"] == state_id) &
+                    (ns_ends["Time"] >= start_time)
+                ]
+                if len(matching_ends) > 0:
+                    end_time = matching_ends["Time"].min()
+                    if end_time > start_time:
+                        ns_periods.append((start_time, end_time))
+            
+            # Merge overlapping NS periods
+            if ns_periods:
+                ns_periods.sort()
+                merged_ns = []
+                current_start, current_end = ns_periods[0]
+                for start, end in ns_periods[1:]:
+                    if start <= current_end:
+                        current_end = max(current_end, end)
+                    else:
+                        merged_ns.append((current_start, current_end))
+                        current_start, current_end = start, end
+                merged_ns.append((current_start, current_end))
+                ns_periods_by_resource[resource] = merged_ns
+            else:
+                ns_periods_by_resource[resource] = []
+            
+            # Identify UD periods: find breakdown start and end events
+            ud_starts = resource_events[
+                (resource_events["State Type"] == state.StateTypeEnum.breakdown) &
+                (resource_events["Activity"] == "start state")
+            ].copy()
+            ud_ends = resource_events[
+                (resource_events["State Type"] == state.StateTypeEnum.breakdown) &
+                (resource_events["Activity"] == "end state")
+            ].copy()
+            
+            # Match UD start and end events
+            ud_periods = []
+            for _, start_row in ud_starts.iterrows():
+                start_time = start_row["Time"]
+                state_id = start_row["State"]
+                matching_ends = ud_ends[
+                    (ud_ends["State"] == state_id) &
+                    (ud_ends["Time"] >= start_time)
+                ]
+                if len(matching_ends) > 0:
+                    end_time = matching_ends["Time"].min()
+                    if end_time > start_time:
+                        ud_periods.append((start_time, end_time))
+            
+            ud_periods_by_resource[resource] = ud_periods
+        
+        # Adjust NS time: subtract UD periods that occur during NS
+        df_ns = df[df["Time_type"] == "NS"].copy()
+        if len(df_ns) > 0:
+            def adjust_ns_time(row):
+                resource = row["Resource"]
+                event_start = row["Time"]
+                event_end = row["next_Time"]
+                original_time = row["time_increment"]
+                
+                if event_end <= event_start:
+                    return 0
+                
+                # Find which NS period this event belongs to
+                ns_periods = ns_periods_by_resource.get(resource, [])
+                ud_periods = ud_periods_by_resource.get(resource, [])
+                
+                # Check if this event overlaps with any NS period
+                for ns_start, ns_end in ns_periods:
+                    if event_start >= ns_start and event_end <= ns_end:
+                        # This event is within an NS period
+                        # Subtract any UD periods that overlap with this event's time
+                        total_ud_overlap = 0
+                        for ud_start, ud_end in ud_periods:
+                            overlap_start = max(event_start, ud_start)
+                            overlap_end = min(event_end, ud_end)
+                            if overlap_start < overlap_end:
+                                total_ud_overlap += overlap_end - overlap_start
+                        return max(0, original_time - total_ud_overlap)
+                
+                return original_time
+            
+            df_ns["time_increment"] = df_ns.apply(adjust_ns_time, axis=1)
+        
+        # For PR/SB/ST events, exclude time that overlaps with NS periods
+        df_non_ns_non_ud = df[~df["Time_type"].isin(["NS", "UD"])].copy()
+        if len(df_non_ns_non_ud) > 0:
+            def exclude_ns_overlap(row):
+                resource = row["Resource"]
+                event_start = row["Time"]
+                event_end = row["next_Time"]
+                original_time = row["time_increment"]
+                
+                if event_end <= event_start:
+                    return 0
+                
+                ns_periods = ns_periods_by_resource.get(resource, [])
+                if not ns_periods:
+                    return original_time
+                
+                # Calculate total overlap with NS periods
+                total_overlap = 0
+                for ns_start, ns_end in ns_periods:
+                    overlap_start = max(event_start, ns_start)
+                    overlap_end = min(event_end, ns_end)
+                    if overlap_start < overlap_end:
+                        total_overlap += overlap_end - overlap_start
+                
+                return max(0, original_time - total_overlap)
+            
+            df_non_ns_non_ud["time_increment"] = df_non_ns_non_ud.apply(exclude_ns_overlap, axis=1)
+        
+        # Combine all events back together
+        df_ud = df[df["Time_type"] == "UD"].copy()  # UD events are unchanged
+        df = pd.concat([df_ns, df_ud, df_non_ns_non_ud], ignore_index=True)
+        
         df_time_per_state = df.groupby(["Resource", "Time_type"])[
             "time_increment"
         ].sum()
@@ -1581,9 +1731,15 @@ class PostProcessor:
             df_resource_time = df.groupby(by="Resource")["Time"].max().reset_index()
             df_resource_time.rename(columns={"Time": "resource_time"}, inplace=True)
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time)
+        
+        # Calculate percentages: all states use resource_time (total time) as denominator
+        # This ensures percentages represent the proportion of total time spent in each state
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]
         ) * 100
+        
+        # Handle division by zero (shouldn't happen, but safety check)
+        df_time_per_state.loc[df_time_per_state["resource_time"] == 0, "percentage"] = 0
 
         return df_time_per_state
 
@@ -1862,6 +2018,11 @@ class PostProcessor:
             if hasattr(resource_data, 'process_ids'):
                 resource_to_processes[resource_data.ID] = resource_data.process_ids
         
+        # Identify transport resources
+        from prodsys.models.production_system_data import get_transport_resources
+        transport_resources = get_transport_resources(self.production_system_data)
+        transport_resource_ids = {r.ID for r in transport_resources}
+        
         # Calculate OEE per resource
         oee_results = []
         
@@ -1874,134 +2035,134 @@ class PostProcessor:
             # Calculate time per state (time_increment is already in absolute time)
             time_per_state = df_resource.set_index("Time_type")["time_increment"]
             
-            # Availability: Operating Time / Planned Production Time
-            # Get productive time (PR) - time actually producing parts
-            productive_time = time_per_state.get("PR", 0)
-            
-            # Get dependency time (DP) - time waiting for dependencies
-            dependency_time = time_per_state.get("DP", 0)
-
-            standby_time = time_per_state.get("SB", 0)
-            
-            # Operating Time = PR + DP (time available for production)
-            # Note: SB (standby) is an availability loss, not part of operating time
-            operating_time = productive_time + dependency_time + standby_time
-            
-            # Get non-scheduled time (NS) - excluded from planned production time
+            # Get time components
             non_scheduled_time = time_per_state.get("NS", 0)
+            setup_time = time_per_state.get("ST", 0)
+            productive_time = time_per_state.get("PR", 0)
+            dependency_time = time_per_state.get("DP", 0)
             
-            # Planned Production Time = Resource Time - Non Scheduled Time
-            # This represents all time where production is expected (excluding breaks, maintenance, etc.)
-            planned_production_time = resource_time - non_scheduled_time
+            # Availability: (PR + ST + DP) / (Total Time - Non-scheduled Time)
+            # Scheduled Time = Total Time - Non-scheduled Time (NS)
+            scheduled_time = resource_time - non_scheduled_time
             
-            # Availability losses (UD, ST, SB, CR) are in Planned Production Time but reduce Operating Time
-            if planned_production_time > 0:
-                availability = operating_time / planned_production_time
+            # Availability = (Productive + Setup + Dependency) / Scheduled Time
+            # This measures how much of scheduled time was used for production-related activities
+            # Excludes standby (SB) and breakdowns (UD) as availability losses
+            if scheduled_time > 0:
+                availability = (productive_time + setup_time + dependency_time) / scheduled_time
             else:
                 availability = 0.0
             
-            # Performance: (Ideal Cycle Time × Total Units Produced) / Operating Time
-            # Get actual process end events for this resource (both production and transport) to count process occurrences
-            df_prepared = self.df_prepared.copy()
-            resource_process_ends = df_prepared[
-                (df_prepared["Resource"] == resource) &
-                (df_prepared["State Type"].isin([state.StateTypeEnum.production, state.StateTypeEnum.transport])) &
-                (df_prepared["Activity"] == "end state")
-            ]
-            total_units_produced = len(resource_process_ends)
+            # Run Time = time actually producing (PR time) - this is used for performance calculation
+            # Standby time is NOT included in run time
+            run_time = productive_time
             
-            # Get resource capacity
-            resource_capacity = 1  # Default capacity
-            process_capacities = {}  # Map process_id -> capacity
-            for resource_data in self.production_system_data.resource_data:
-                if resource_data.ID == resource:
-                    resource_capacity = resource_data.capacity if hasattr(resource_data, 'capacity') else 1
-                    # Get process-specific capacities if available
-                    if hasattr(resource_data, 'process_capacities') and resource_data.process_capacities:
-                        for i, process_id in enumerate(resource_data.process_ids):
-                            if i < len(resource_data.process_capacities):
-                                process_capacities[process_id] = resource_data.process_capacities[i]
-                    break
+            # Performance calculation depends on resource type
+            is_transport_resource = resource in transport_resource_ids
             
-            if total_units_produced > 0 and operating_time > 0:
-                # Count how many times each process was performed
-                process_counts = resource_process_ends["State"].value_counts()
-                
-                # Calculate weighted average ideal cycle time based on process counts and capacities
-                weighted_cycle_time_sum = 0.0
-                total_count = 0
-                
-                for process_id, count in process_counts.items():
-                    # Find the process data for this process ID
-                    for process_data in self.production_system_data.process_data:
-                        if process_data.ID == process_id:
-                            # Consider both production and transport processes
-                            if hasattr(process_data, 'type'):
-                                from prodsys.models.processes_data import ProcessTypeEnum
-                                # Skip non-production and non-transport processes
-                                if process_data.type not in [ProcessTypeEnum.ProductionProcesses, ProcessTypeEnum.TransportProcesses]:
-                                    continue
-                            
-                            if hasattr(process_data, 'time_model_id'):
-                                try:
-                                    time_model = time_model_factory.get_time_model(process_data.time_model_id)
-                                    # Skip distance models for resource-level OEE (they need origin/target)
-                                    from prodsys.simulation.time_model import DistanceTimeModel
-                                    if isinstance(time_model, DistanceTimeModel):
-                                        # For transport with distance models, we can't get expected time without origin/target
-                                        # This will fall through to the PR/Operating Time fallback
-                                        break
-                                    
-                                    expected_time = time_model.get_expected_time()
-                                    if expected_time > 0:
-                                        # Get process-specific capacity, or use resource capacity as fallback
-                                        process_capacity = process_capacities.get(process_id, resource_capacity)
-                                        
-                                        # Effective cycle time = cycle time / capacity
-                                        # If capacity is 2, the resource can process 2 items simultaneously,
-                                        # so the effective cycle time is halved
-                                        effective_cycle_time = expected_time / process_capacity if process_capacity > 0 else expected_time
-                                        
-                                        # Weight by count: if P1 performed 1000x and P2 performed 2000x,
-                                        # P2's cycle time gets 2x weight
-                                        weighted_cycle_time_sum += effective_cycle_time * count
-                                        total_count += count
-                                except (ValueError, TypeError):
-                                    pass
-                            break
-                
-                if total_count > 0:
-                    # Calculate weighted average effective ideal cycle time (already adjusted for capacity)
-                    avg_ideal_cycle_time = weighted_cycle_time_sum / total_count
-                    
-                    # Performance = (Effective Ideal Cycle Time × Total Units Produced) / Operating Time
-                    # Operating Time includes PR (productive) and DP (dependency)
-                    # Effective cycle time already accounts for resource capacity
-                    performance = (avg_ideal_cycle_time * total_units_produced) / operating_time
-                else:
-                    # No valid cycle times found - use fallback: PR / Operating Time
-                    # This measures what fraction of operating time was actually productive
-                    if operating_time > 0:
-                        performance = productive_time / operating_time
-                        logger.info(
-                            f"No valid ideal cycle times found for resource {resource}. "
-                            f"Performance calculated as PR/Operating Time ratio: {performance:.2%}"
-                        )
-                    else:
-                        performance = 1.0
-                        logger.info(
-                            f"No valid ideal cycle times and no operating time for resource {resource}. "
-                            "Performance will default to 100%."
-                        )
+            if is_transport_resource:
+                # For transport resources: Performance defaults to 100%
+                # Transport performance is typically not measured the same way as production resources
+                performance = 1.0
             else:
-                if total_units_produced == 0:
-                    performance = 0.0
+                # For production resources: Performance = (Ideal Cycle Time × Total Units Produced) / Operating Time
+                # Get actual process end events for this resource (production only) to count process occurrences
+                df_prepared = self.df_prepared.copy()
+                resource_process_ends = df_prepared[
+                    (df_prepared["Resource"] == resource) &
+                    (df_prepared["State Type"] == state.StateTypeEnum.production) &
+                    (df_prepared["Activity"] == "end state")
+                ]
+                total_units_produced = len(resource_process_ends)
+                
+                # Get resource capacity
+                resource_capacity = 1  # Default capacity
+                process_capacities = {}  # Map process_id -> capacity
+                for resource_data in self.production_system_data.resource_data:
+                    if resource_data.ID == resource:
+                        resource_capacity = resource_data.capacity if hasattr(resource_data, 'capacity') else 1
+                        # Get process-specific capacities if available
+                        if hasattr(resource_data, 'process_capacities') and resource_data.process_capacities:
+                            for i, process_id in enumerate(resource_data.process_ids):
+                                if i < len(resource_data.process_capacities):
+                                    process_capacities[process_id] = resource_data.process_capacities[i]
+                        break
+                
+                if total_units_produced > 0:
+                    # Get actual process execution times from event log (start to end)
+                    # This gives us the actual time spent on each process execution
+                    resource_process_starts = df_prepared[
+                        (df_prepared["Resource"] == resource) &
+                        (df_prepared["State Type"] == state.StateTypeEnum.production) &
+                        (df_prepared["Activity"] == "start state")
+                    ].copy()
+                    
+                    # Match start and end events to get actual process execution times
+                    actual_process_times = []
+                    for _, end_row in resource_process_ends.iterrows():
+                        process_id = end_row["State"]
+                        end_time = end_row["Time"]
+                        
+                        # Find corresponding start event (same process, same resource, before end time)
+                        matching_starts = resource_process_starts[
+                            (resource_process_starts["State"] == process_id) &
+                            (resource_process_starts["Time"] <= end_time)
+                        ]
+                        
+                        if len(matching_starts) > 0:
+                            # Use the most recent start event before this end event
+                            start_time = matching_starts["Time"].max()
+                            actual_time = end_time - start_time
+                            if actual_time > 0:
+                                actual_process_times.append((process_id, actual_time))
+                    
+                    # Calculate total ideal time and total actual time
+                    total_ideal_time = 0.0
+                    total_actual_time = 0.0
+                    process_ideal_times = {}  # Cache ideal times per process
+                    
+                    # Get ideal cycle times for each process
+                    for process_data in self.production_system_data.process_data:
+                        if hasattr(process_data, 'time_model_id'):
+                            try:
+                                time_model = time_model_factory.get_time_model(process_data.time_model_id)
+                                ideal_cycle_time = time_model.get_expected_time()
+                                if ideal_cycle_time > 0:
+                                    process_capacity = process_capacities.get(process_data.ID, resource_capacity)
+                                    ideal_cycle_time_per_unit = ideal_cycle_time / process_capacity if process_capacity > 0 else ideal_cycle_time
+                                    process_ideal_times[process_data.ID] = ideal_cycle_time_per_unit
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    # Sum up ideal and actual times
+                    for process_id, actual_time in actual_process_times:
+                        total_actual_time += actual_time
+                        if process_id in process_ideal_times:
+                            total_ideal_time += process_ideal_times[process_id]
+                    
+                    # Performance = Total Ideal Time / Total Actual Time
+                    # This compares the ideal time needed vs actual time spent
+                    # Should be ~100% if the machine runs at ideal speed
+                    if total_actual_time > 0 and total_ideal_time > 0:
+                        performance = total_ideal_time / total_actual_time
+                    elif run_time > 0 and total_ideal_time > 0:
+                        # Fallback: use PR time if we can't get actual process times
+                        performance = total_ideal_time / run_time
+                    else:
+                        performance = 0.0
+                        logger.warning(
+                            f"Could not calculate performance for resource {resource}. "
+                            f"Total actual time: {total_actual_time}, Total ideal time: {total_ideal_time}, Run time: {run_time}"
+                        )
                 else:
-                    performance = 1.0
-                    logger.info(
-                        f"No operating time or units produced for resource {resource}. "
-                        "Performance will default to 100%."
-                    )
+                    if total_units_produced == 0:
+                        performance = 0.0
+                    else:
+                        performance = 0.0
+                        logger.warning(
+                            f"No run time for resource {resource} with units produced. "
+                            "Performance set to 0%."
+                        )
             
             # Quality - get scrap rate for this resource
             df_scrap_resource = self.df_scrap_per_resource.copy()
