@@ -136,7 +136,7 @@ class SystemProcessModelHandler:
         entity.current_process = proc
         
         if(entity.no_transport_to_sink):
-            sink = entity.router.route_disassembled_product_to_sink(entity)
+            entity.router.route_disassembled_product_to_sink(entity)
         else:
             arrived_at_queue = system_router.request_transport(entity, target_queue)
             yield arrived_at_queue

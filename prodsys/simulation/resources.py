@@ -440,13 +440,21 @@ class Resource(resource.Resource):
 
     def activate(self):
         """
-        Activates the resource after a breakdwon.
+        Activates the resource after a breakdwon or non-scheduled period.
         """
         if any(
             [
                 state_instance.active_breakdown
                 for state_instance in self.states
                 if isinstance(state_instance, state.BreakDownState)
+            ]
+        ):
+            return
+        if any(
+            [
+                state_instance.active_non_scheduled
+                for state_instance in self.states
+                if isinstance(state_instance, state.NonScheduledState)
             ]
         ):
             return

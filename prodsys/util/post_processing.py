@@ -752,7 +752,101 @@ class PostProcessor:
                             end_time = matching_end["Time"].min()
                             df.loc[idx, "next_Time"] = end_time
         
+        # For non-scheduled start events, use the non-scheduled end event time instead of next chronological event
+        # This ensures non-scheduled downtime is calculated correctly even when there are other events at the same time
+        non_scheduled_start_mask = (
+            (df["State Type"] == state.StateTypeEnum.non_scheduled) 
+            & (df["Activity"] == "start state")
+        )
+        if non_scheduled_start_mask.any():
+            # Store original next_Time for comparison
+            original_next_time = df["next_Time"].copy()
+            
+            # First, try to use Expected End Time if available
+            if "Expected End Time" in df.columns:
+                expected_end_times = df.loc[non_scheduled_start_mask, "Expected End Time"]
+                valid_expected = expected_end_times.notna() & (expected_end_times > df.loc[non_scheduled_start_mask, "Time"])
+                if valid_expected.any():
+                    df.loc[valid_expected.index, "next_Time"] = expected_end_times[valid_expected]
+            
+            # For any remaining non-scheduled starts without valid Expected End Time, find the corresponding end event
+            # Check which non-scheduled starts still have the original next_Time (meaning Expected End Time wasn't used)
+            remaining_non_scheduled_starts = df[non_scheduled_start_mask].copy()
+            if len(remaining_non_scheduled_starts) > 0:
+                # Find non-scheduled starts that still need matching (those where next_Time wasn't updated)
+                needs_matching = remaining_non_scheduled_starts[
+                    df.loc[remaining_non_scheduled_starts.index, "next_Time"] == original_next_time[remaining_non_scheduled_starts.index]
+                ]
+                
+                if len(needs_matching) > 0:
+                    non_scheduled_ends = df[
+                        (df["State Type"] == state.StateTypeEnum.non_scheduled) 
+                        & (df["Activity"] == "end state")
+                    ].copy()
+                    
+                    # Match non-scheduled start and end events by Resource and State
+                    for idx in needs_matching.index:
+                        resource = df.loc[idx, "Resource"]
+                        state_id = df.loc[idx, "State"]
+                        # Find the corresponding end event
+                        matching_end = non_scheduled_ends[
+                            (non_scheduled_ends["Resource"] == resource) 
+                            & (non_scheduled_ends["State"] == state_id)
+                            & (non_scheduled_ends["Time"] >= df.loc[idx, "Time"])
+                        ]
+                        if len(matching_end) > 0:
+                            # Use the earliest matching end event
+                            end_time = matching_end["Time"].min()
+                            df.loc[idx, "next_Time"] = end_time
+        
+        # For production/transport/setup states that are interrupted, match start state to start interrupt
+        # This ensures the time_increment stops at the interruption, not at the end of the state
+        # Only match if there's actually a start interrupt event (not for resumed states after interruption)
+        for state_type in [state.StateTypeEnum.production, state.StateTypeEnum.transport, state.StateTypeEnum.setup]:
+            interrupted_start_mask = (
+                (df["State Type"] == state_type)
+                & (df["Activity"] == "start state")
+            )
+            if interrupted_start_mask.any():
+                # Find corresponding start interrupt events for these states
+                for idx in df[interrupted_start_mask].index:
+                    resource = df.loc[idx, "Resource"]
+                    state_id = df.loc[idx, "State"]
+                    # Find the corresponding start interrupt event that happens after this start state
+                    start_interrupt = df[
+                        (df["Resource"] == resource)
+                        & (df["State"] == state_id)
+                        & (df["State Type"] == state_type)
+                        & (df["Activity"] == "start interrupt")
+                        & (df["Time"] > df.loc[idx, "Time"])  # Must be after the start state
+                    ]
+                    if len(start_interrupt) > 0:
+                        # Use the earliest start interrupt as the next_Time
+                        interrupt_time = start_interrupt["Time"].min()
+                        # Only update if the interrupt happens before the current next_Time
+                        # and if there's no end interrupt between start state and start interrupt
+                        # (which would indicate this is a resumed state, not an original start)
+                        end_interrupt_between = df[
+                            (df["Resource"] == resource)
+                            & (df["State"] == state_id)
+                            & (df["State Type"] == state_type)
+                            & (df["Activity"] == "end interrupt")
+                            & (df["Time"] > df.loc[idx, "Time"])
+                            & (df["Time"] < interrupt_time)
+                        ]
+                        # Only update if there's no end interrupt between (meaning this is an original start, not a resumed one)
+                        if len(end_interrupt_between) == 0 and interrupt_time < df.loc[idx, "next_Time"]:
+                            df.loc[idx, "next_Time"] = interrupt_time
+        
         df["time_increment"] = df["next_Time"] - df["Time"]
+        
+        # Set time_increment to 0 for interrupt events - they are just markers, not actual time periods
+        # Interrupt events should not contribute to time calculations
+        interrupt_mask = (
+            (df["State_sorting_Index"] == 4)  # end interrupt
+            | (df["State_sorting_Index"] == 7)  # start interrupt
+        )
+        df.loc[interrupt_mask, "time_increment"] = 0
 
         # Initialize Time_type column
         df["Time_type"] = "na"
@@ -764,14 +858,17 @@ class PostProcessor:
             & (df["State Type"] != state.StateTypeEnum.breakdown)
             & (df["State Type"] != state.StateTypeEnum.setup)
             & (df["State Type"] != state.StateTypeEnum.charging)
+            & (df["State Type"] != state.StateTypeEnum.non_scheduled)
         )
+        # Exclude interrupt events from PRODUCTIVE_CONDITION - they are just markers, not productive time
         PRODUCTIVE_CONDITION = (
             (
-                (df["State_sorting_Index"] == 6)
-                | (df["State_sorting_Index"] == 4)
-                | ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] != 0))
+                (df["State_sorting_Index"] == 6)  # start state
+                | ((df["State_sorting_Index"] == 5) & (df["Used_Capacity"] != 0))  # end state with capacity
             )
             & (df["State Type"] != state.StateTypeEnum.dependency)
+            & (df["State_sorting_Index"] != 4)  # exclude end interrupt
+            & (df["State_sorting_Index"] != 7)  # exclude start interrupt
         )
         DEPENDENCY_CONDITION = (
             (df["State Type"] == state.StateTypeEnum.dependency)
@@ -786,13 +883,22 @@ class PostProcessor:
             df["State Type"] == state.StateTypeEnum.charging
         )
         NON_SCHEDULED_CONDITION = (
-            (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+            (df["State_sorting_Index"] == 3) | (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
         ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
+        # First, exclude interrupt events from time calculations - they are just markers
+        # Interrupt events should not be classified as any time type and should have 0 time_increment
+        interrupt_events_mask = (
+            (df["State_sorting_Index"] == 4)  # end interrupt
+            | (df["State_sorting_Index"] == 7)  # start interrupt
+        )
+        df.loc[interrupt_events_mask, "Time_type"] = "na"  # Keep as "na" so they're excluded
+        
         # Apply conditions in order of specificity (most specific first)
         # DEPENDENCY is most specific (requires State_sorting_Index == 6 AND State Type == dependency)
         df.loc[DEPENDENCY_CONDITION, "Time_type"] = "DP"
         # Then apply other specific conditions
+        # Apply NON_SCHEDULED before DOWN_CONDITION to ensure it's not overwritten
         df.loc[NON_SCHEDULED_CONDITION, "Time_type"] = "NS"  # Non Scheduled
         df.loc[DOWN_CONDITION, "Time_type"] = "UD"
         df.loc[SETUP_CONDITION, "Time_type"] = "ST"
@@ -803,7 +909,8 @@ class PostProcessor:
         
         # Fallback: if any events still don't have a Time_type, assign based on Used_Capacity
         # Events with Used_Capacity != 0 should be PR, others should be SB
-        unassigned = df["Time_type"] == "na"
+        # But exclude interrupt events from this fallback
+        unassigned = (df["Time_type"] == "na") & ~interrupt_events_mask
         df.loc[unassigned & (df["Used_Capacity"] != 0), "Time_type"] = "PR"
         df.loc[unassigned & (df["Used_Capacity"] == 0), "Time_type"] = "SB"
 
@@ -1209,7 +1316,7 @@ class PostProcessor:
             df["State Type"] == state.StateTypeEnum.charging
         )
         NON_SCHEDULED_CONDITION = (
-            (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+            (df["State_sorting_Index"] == 3) | (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
         ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
         df.loc[STANDBY_CONDITION, "Time_type"] = "SB"
@@ -1370,7 +1477,7 @@ class PostProcessor:
                 df["State Type"] == state.StateTypeEnum.charging
             )
             non_scheduled_condition = (
-                (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
+                (df["State_sorting_Index"] == 3) | (df["State_sorting_Index"] == 7) | (df["State_sorting_Index"] == 8)
             ) & (df["State Type"] == state.StateTypeEnum.non_scheduled)
 
             df.loc[standby_condition, "Time_type"] = "SB"
@@ -1459,10 +1566,20 @@ class PostProcessor:
 
         # Calculate resource_time as the total time span for each resource
         # This should be from 0 to simulation_end_time for all resources
-        df_resource_time = df.groupby(by="Resource")["time_increment"].sum().reset_index()
-        df_resource_time.rename(
-            columns={"time_increment": "resource_time"}, inplace=True
-        )
+        # Use time_range if available, otherwise use max Time (which should be simulation_end_time
+        # since end events are inserted at simulation_end_time in df_resource_states)
+        if self.time_range is not None:
+            # Use the provided time_range for all resources
+            resources = df["Resource"].unique()
+            df_resource_time = pd.DataFrame({
+                "Resource": resources,
+                "resource_time": [self.time_range] * len(resources)
+            })
+        else:
+            # Use the actual time range (max Time) for each resource
+            # Since end events are inserted at simulation_end_time, max Time should be correct
+            df_resource_time = df.groupby(by="Resource")["Time"].max().reset_index()
+            df_resource_time.rename(columns={"Time": "resource_time"}, inplace=True)
         df_time_per_state = pd.merge(df_time_per_state, df_resource_time)
         df_time_per_state["percentage"] = (
             df_time_per_state["time_increment"] / df_time_per_state["resource_time"]

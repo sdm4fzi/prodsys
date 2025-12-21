@@ -1,5 +1,4 @@
 import prodsys.express as psx
-import prodsys
 from prodsys.simulation.runner import Runner
 
 t1 = psx.FunctionTimeModel("exponential", 0.8, 0, "t1")

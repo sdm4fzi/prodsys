@@ -19,6 +19,7 @@ STATE_MAP = {
     state_data.StateTypeEnum.ProductionState: state.ProductionState,
     state_data.StateTypeEnum.ProcessBreakDownState: state.ProcessBreakDownState,
     state_data.StateTypeEnum.ChargingState: state.ChargingState,
+    state_data.StateTypeEnum.NonScheduled: state.NonScheduledState,
 }
 
 
@@ -100,6 +101,21 @@ class StateFactory:
             }
         return battery_time_model_dict
 
+    def get_non_scheduled_time_model_data(
+        self, state_data: state_data.STATE_DATA_UNION
+    ) -> dict:
+        non_scheduled_time_model_dict = {}
+        if (
+            "non_scheduled_time_model_id" in state_data.model_dump()
+            and state_data.model_dump()["non_scheduled_time_model_id"] is not None
+        ):
+            return {
+                "non_scheduled_time_model": self.time_model_factory.get_time_model(
+                    state_data.non_scheduled_time_model_id
+                )
+            }
+        return non_scheduled_time_model_dict
+
     def add_state(self, state_data: state_data.STATE_DATA_UNION):
         values = {
             "data": state_data,
@@ -111,6 +127,7 @@ class StateFactory:
         values.update(self.get_loading_time_models_data(state_data))
         values.update(self.get_repair_time_model_data(state_data))
         values.update(self.get_battery_time_model_data(state_data))
+        values.update(self.get_non_scheduled_time_model_data(state_data))
 
         state_class = STATE_MAP.get(state_data.type)
         if state_class is None:

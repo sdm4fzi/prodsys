@@ -73,7 +73,7 @@ class ProductionSystem(core.ExpressObject):
     """
 
     resources: List[Union[resources.Resource]]
-    sources: List[source.Source]
+    sources: List[Union[source.Source, source.OrderSource]]
     sinks: List[sink.Sink]
     primitives: List[Primitive] = Field(default_factory=list)
 
@@ -87,9 +87,20 @@ class ProductionSystem(core.ExpressObject):
         Returns:
             prodsys.adapters.Adapter: An instance of the data object.
         """
-        products = [source.product for source in self.sources] + [
+        # Collect products from regular sources (OrderSource doesn't have a product attribute)
+        from prodsys.express.source import Source, OrderSource
+        products = [
+            src.product for src in self.sources 
+            if isinstance(src, Source) and hasattr(src, 'product')
+        ] + [
             sink.product for sink in self.sinks
         ]
+        # Collect products from OrderSource orders
+        for src in self.sources:
+            if isinstance(src, OrderSource):
+                for order in src.orders:
+                    for ordered_product in order.ordered_products:
+                        products.append(ordered_product.product)
         products = remove_duplicate_items(products)
         dependencies = list(
             util.flatten_object([product.dependencies for product in products])
@@ -292,7 +303,7 @@ class ProductionSystem(core.ExpressObject):
                 if not isinstance(process_instance, (process.RequiredCapabilityProcess, process.ProcessModel))
             ]
             + [state_instance.time_model for state_instance in states]
-            + [source.time_model for source in self.sources]
+            + [src.time_model for src in self.sources if isinstance(src, Source) and hasattr(src, 'time_model')]
         )
         time_models += [
             process_instance.loading_time_model
@@ -314,6 +325,9 @@ class ProductionSystem(core.ExpressObject):
         ]
         time_models += [
             s.battery_time_model for s in states if isinstance(s, state.ChargingState)
+        ]
+        time_models += [
+            s.non_scheduled_time_model for s in states if isinstance(s, state.NonScheduledState)
         ]
 
         time_models = remove_duplicate_items(time_models)
@@ -358,6 +372,29 @@ class ProductionSystem(core.ExpressObject):
         resource_data = resource_model_data
         source_data = [source.to_model() for source in self.sources]
         sink_data = [sink.to_model() for sink in self.sinks]
+        
+        # Collect orders from OrderSource
+        from prodsys.express.source import OrderSource
+        order_data_list = []
+        for src in self.sources:
+            if isinstance(src, OrderSource):
+                # Use the stored order models from to_model()
+                if hasattr(src, '_order_models'):
+                    order_data_list.extend(src._order_models)
+                else:
+                    # Fallback: convert orders to models
+                    order_data_list.extend([order.to_model() for order in src.orders])
+        # Remove duplicate orders by ID
+        if order_data_list:
+            seen_order_ids = set()
+            unique_orders = []
+            for order in order_data_list:
+                if order.ID not in seen_order_ids:
+                    seen_order_ids.add(order.ID)
+                    unique_orders.append(order)
+            order_data_list = unique_orders if unique_orders else None
+        else:
+            order_data_list = None
         dependencies = remove_duplicate_items(dependencies)
         dependency_data = [dependency.to_model() for dependency in dependencies]
         primitive_data = [
@@ -388,6 +425,7 @@ class ProductionSystem(core.ExpressObject):
             port_data=port_data + primitive_storage_data,
             dependency_data=dependency_data,
             primitive_data=primitive_data,
+            order_data=order_data_list,
         )
 
     def run(self, time_range: float = 2880, seed: int = 0):

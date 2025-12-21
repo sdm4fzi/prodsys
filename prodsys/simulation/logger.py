@@ -6,7 +6,6 @@ from enum import Enum
 from abc import ABC, abstractmethod
 
 
-warnings.simplefilter(action="ignore", category=RuntimeWarning)
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import product
     from prodsys.factories import resource_factory
     from prodsys.simulation.dependency import DependencyInfo
+warnings.simplefilter(action="ignore", category=RuntimeWarning)
 
 
 class Logger(ABC):

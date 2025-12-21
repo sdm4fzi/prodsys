@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING, Union
 
 from prodsys.simulation import sim, source
+from prodsys.simulation.order_source import OrderSource
 from prodsys.simulation import router as router_module
 from prodsys.models.product_data import ProductData
-from prodsys.models.source_data import SourceData
-from prodsys.models import performance_data
+from prodsys.models.source_data import SourceData, OrderSourceData
+from prodsys.models import performance_data, order_data
 
 
 if TYPE_CHECKING:
@@ -62,9 +63,21 @@ class SourceFactory:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the source data.
         """
         for values in adapter.source_data:
-            for product_d in adapter.product_data:
-                if product_d.type == values.product_type:
-                    self.add_source(values, product_d)
+            if isinstance(values, OrderSourceData):
+                # Handle OrderSource
+                if adapter.order_data:
+                    # Filter orders that belong to this order source
+                    relevant_orders = [
+                        order for order in adapter.order_data
+                        if order.ID in values.order_ids
+                    ]
+                    if relevant_orders:
+                        self.add_order_source(values, relevant_orders, adapter)
+            else:
+                # Handle regular Source
+                for product_d in adapter.product_data:
+                    if product_d.type == values.product_type:
+                        self.add_source(values, product_d)
 
     def add_source(
         self,
@@ -89,6 +102,43 @@ class SourceFactory:
         ports = self.queue_factory.get_queues(values)
         source.add_ports(ports)
 
+    def add_order_source(
+        self,
+        order_source_data: OrderSourceData,
+        orders: List[order_data.OrderData],
+        adapter: production_system_data.ProductionSystemData,
+    ):
+        """
+        Adds an order source to the factory.
+
+        Args:
+            order_source_data (OrderSourceData): The order source data.
+            orders (List[OrderData]): List of orders for this source.
+            adapter (ProductionSystemData): The production system data adapter.
+        """
+        # Create mapping from product type to ProductData
+        product_type_to_data: Dict[str, ProductData] = {}
+        for order in orders:
+            for ordered_product in order.ordered_products:
+                product_type = ordered_product.product_type
+                if product_type not in product_type_to_data:
+                    # Find ProductData for this product type
+                    for product_d in adapter.product_data:
+                        if product_d.type == product_type:
+                            product_type_to_data[product_type] = product_d
+                            break
+        
+        order_source_object = OrderSource(
+            env=self.env,
+            data=order_source_data,
+            product_factory=self.product_factory,
+            orders=orders,
+            conwip=self.conwip,
+        )
+        order_source_object.set_product_type_mapping(product_type_to_data)
+        self.add_ports_to_source(order_source_object, order_source_data.ports)
+        self.sources[order_source_data.ID] = order_source_object
+
     def start_sources(self):
         """
         Starts the processes of all source objects, i.e. initializes the simulation.
@@ -106,9 +156,9 @@ class SourceFactory:
         Returns:
             source.Source: Source object with the given ID.
         """
-        if not ID in self.sources:
-            raise ValueError(f"Source with ID {ID} not found.")
-        return self.sources[ID]
+        if ID in self.sources:
+            return self.sources[ID]
+        raise ValueError(f"Source with ID {ID} not found.")
 
     def get_sources(self, IDs: List[str]) -> List[source.Source]:
         """
@@ -138,9 +188,24 @@ class SourceFactory:
         Returns:
             List[source.Source]: List of source objects with the given product type.
         """
-        return [
-            s for s in self.sources.values() if __product_type == s.data.product_type
+        from prodsys.simulation.order_source import OrderSource
+        regular_sources = [
+            s for s in self.sources.values() 
+            if hasattr(s.data, 'product_type') and __product_type == s.data.product_type
         ]
+        # Check order sources for this product type
+        order_sources_with_type = []
+        for src in self.sources.values():
+            if isinstance(src, OrderSource):
+                # Check if any order in this order source has the product type
+                for order in src.orders:
+                    for ordered_product in order.ordered_products:
+                        if ordered_product.product_type == __product_type:
+                            order_sources_with_type.append(src)
+                            break
+                    if src in order_sources_with_type:
+                        break
+        return regular_sources + order_sources_with_type
 
 
 from prodsys.factories import (

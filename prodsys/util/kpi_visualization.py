@@ -522,14 +522,16 @@ def plot_time_per_state_of_resources(
             "ST": "blue",
             "CR": "grey",
             "DP": "lightgreen",
+            "NS": "grey",
         },
         category_orders={
-            "Time_type": ["UD", "PR", "DP", "ST", "SB", "CR"]
+            "Time_type": ["UD", "NS", "PR", "DP", "ST", "SB", "CR"]
         },
     )
     fig.update_traces(name="Productive", selector=dict(name="PR"))
     fig.update_traces(name="Standby", selector=dict(name="SB"))
     fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
+    fig.update_traces(name="Non-Scheduled", selector=dict(name="NS"))
     fig.update_traces(name="Setup", selector=dict(name="ST"))
     fig.update_traces(name="Charging", selector=dict(name="CR"))
     fig.update_traces(name="Dependency", selector=dict(name="DP"))

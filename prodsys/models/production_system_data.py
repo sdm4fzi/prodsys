@@ -376,7 +376,7 @@ class ProductionSystemData(BaseModel):
         resource_data (List[resource_data_module.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
         product_data (List[product_data_module.ProductData], optional): List of products in the production system. Defaults to []
         sink_data (List[sink_data_module.SinkData], optional): List of sinks in the production system. Defaults to [].
-        source_data (List[source_data_module.SourceData], optional): List of sources in the production system. Defaults to [].
+        source_data (List[source_data_module.SOURCE_DATA_UNION], optional): List of sources in the production system. Defaults to [].
         scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
         schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
         order_data (Optional[List[order_data_module.OrderData]], optional): List of orders in the production system. Defaults to None.
@@ -398,7 +398,7 @@ class ProductionSystemData(BaseModel):
     resource_data: List[resource_data_module.ResourceData] = []
     product_data: List[product_data_module.ProductData] = []
     sink_data: List[sink_data_module.SinkData] = []
-    source_data: List[source_data_module.SourceData] = []
+    source_data: List[source_data_module.SOURCE_DATA_UNION] = []
     scenario_data: Optional[scenario_data_module.ScenarioData] = None
     dependency_data: Optional[List[dependency_data_module.DEPENDENCY_TYPES]] = []
     primitive_data: Optional[List[primitives_data_module.StoredPrimitive]] = []
@@ -1122,23 +1122,36 @@ class ProductionSystemData(BaseModel):
 
     @field_validator("source_data")
     def check_sources(
-        cls, sources: List[source_data_module.SourceData], info: ValidationInfo
+        cls, sources: List[source_data_module.SOURCE_DATA_UNION], info: ValidationInfo
     ):
         values = info.data
+        from prodsys.models.source_data import OrderSourceData
         for source in sources:
-            time_models = get_set_of_IDs(values["time_model_data"])
-            if source.time_model_id not in time_models:
-                raise ValueError(
-                    f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
-                )
-            try:
-                product_types = set([product.type for product in values["product_data"]])
-            except KeyError:
-                raise ValueError("Product data is missing or faulty.")
-            if source.product_type not in product_types:
-                raise ValueError(
-                    f"The product type {source.product_type} of source {source.ID} is not a valid product type of {product_types}."
-                )
+            # OrderSourceData doesn't have time_model_id or product_type
+            if isinstance(source, OrderSourceData):
+                # Validate order_ids exist in order_data
+                if values.get("order_data"):
+                    order_ids = set([order.ID for order in values["order_data"]])
+                    for order_id in source.order_ids:
+                        if order_id not in order_ids:
+                            raise ValueError(
+                                f"The order {order_id} of order source {source.ID} is not a valid order ID of {order_ids}."
+                            )
+            else:
+                # Regular SourceData validation
+                time_models = get_set_of_IDs(values["time_model_data"])
+                if source.time_model_id not in time_models:
+                    raise ValueError(
+                        f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
+                    )
+                try:
+                    product_types = set([product.type for product in values["product_data"]])
+                except KeyError:
+                    raise ValueError("Product data is missing or faulty.")
+                if source.product_type not in product_types:
+                    raise ValueError(
+                        f"The product type {source.product_type} of source {source.ID} is not a valid product type of {product_types}."
+                    )
             if not source.ports:
                 output_queue = get_default_queue_for_source(source)
                 source.ports = list(get_set_of_IDs([output_queue]))

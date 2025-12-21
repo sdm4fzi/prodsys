@@ -9,6 +9,7 @@ The following states are possible:
 - `SetupStateData`: A state that represents the time needed to change the process of a resource.
 - `ProductionStateData`: A state that represents the time needed to process a product.
 - `TransportStateData`: A state that represents the time needed to transport a product.
+- `NonScheduledStateData`: A state that models shift availability by alternating between scheduled (available) and non-scheduled (unavailable) time intervals.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ class StateTypeEnum(str, Enum):
     - TransportState: A state that represents the time needed to transport a product.
     - SetupState: A state that represents the time needed to change the process of a resource.
     - ProcessBreakDownState: A state that makes a process unavailable for a certain time but other processes can still be performed.
+    - NonScheduled: A state that models shift availability by alternating between scheduled (available) and non-scheduled (unavailable) time intervals.
     """
 
     BreakDownState = "BreakDownState"
@@ -467,6 +469,79 @@ class ChargingStateData(StateData):
     )
 
 
+class NonScheduledStateData(StateData):
+    """
+    Class that represents a non-scheduled state. This state models shift availability by alternating between
+    scheduled (when the resource is available) and non-scheduled (when the resource is unavailable/shift is off)
+    time intervals. During non-scheduled intervals, all operations are blocked similar to a breakdown state.
+
+    Args:
+        ID (str): ID of the state.
+        description (str): Description of the state.
+        time_model_id (str): Time model ID for scheduled intervals (when resource is available).
+        type (StateTypeEnum): Type of the state.
+        non_scheduled_time_model_id (str): Time model ID for non-scheduled intervals (when resource is unavailable/shift is off).
+
+    Examples:
+        Non-scheduled state with function time models for shift modeling:
+        ``` py
+        import prodsys
+        prodsys.state_data.NonScheduledStateData(
+            ID="NonScheduledState_1",
+            description="Non-scheduled state for shift modeling",
+            time_model_id="scheduled_time_model_1",
+            non_scheduled_time_model_id="non_scheduled_time_model_1",
+        )
+        ```
+    """
+
+    type: Literal[StateTypeEnum.NonScheduled]
+    non_scheduled_time_model_id: str
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash of the state considering the time model and the non-scheduled time model. Can be used to compare states for equal functionality.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the non-scheduled time model is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        non_scheduled_time_model_hash = ""
+
+        for non_scheduled_time_model in adapter.time_model_data:
+            if non_scheduled_time_model.ID == self.non_scheduled_time_model_id:
+                non_scheduled_time_model_hash = non_scheduled_time_model.hash()
+                break
+        else:
+            raise ValueError(
+                f"Non-scheduled time model with ID {self.non_scheduled_time_model_id} not found for state {self.ID}."
+            )
+
+        return md5(
+            ("".join([base_class_hash, non_scheduled_time_model_hash])).encode("utf-8")
+        ).hexdigest()
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "NonScheduledState_1",
+                    "description": "Non-scheduled state for shift modeling",
+                    "time_model_id": "scheduled_time_model_1",
+                    "type": "NonScheduled",
+                    "non_scheduled_time_model_id": "non_scheduled_time_model_1",
+                }
+            ]
+        }
+    )
+
+
 STATE_DATA_UNION = Union[
     BreakDownStateData,
     ChargingStateData,
@@ -474,4 +549,5 @@ STATE_DATA_UNION = Union[
     TransportStateData,
     SetupStateData,
     ProcessBreakDownStateData,
+    NonScheduledStateData,
 ]

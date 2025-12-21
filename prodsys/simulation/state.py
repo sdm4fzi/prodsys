@@ -6,7 +6,6 @@ from typing import Literal, Optional, Union, TYPE_CHECKING, Generator, List
 
 import logging
 
-logger = logging.getLogger(__name__)
 
 from simpy import events
 from simpy import exceptions
@@ -19,12 +18,16 @@ from prodsys.models.state_data import (
     SetupStateData,
     ProcessBreakDownStateData,
     ChargingStateData,
+    NonScheduledStateData,
 )
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, resources
-    from prodsys.simulation import primitive, sim, time_model
+    from prodsys.simulation import resources
+    from prodsys.simulation import sim, time_model
+    from prodsys.simulation.entities import product, primitive
     from prodsys.simulation.locatable import Locatable
+
+logger = logging.getLogger(__name__)
 
 
 class StateEnum(str, Enum):
@@ -279,7 +282,7 @@ class State(ABC):
         """
         try:
             self.active.succeed()
-        except:
+        except RuntimeError:
             raise RuntimeError(f"state {self.data.ID} is allready succeded!!")
 
     @abstractmethod
@@ -574,6 +577,58 @@ class BreakDownState(State):
 
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())
+
+    def interrupt_process(self):
+        pass
+
+
+class NonScheduledState(State):
+    """
+    Represents a non-scheduled state of a resource in the simulation. This state models shift availability
+    by alternating between scheduled (when the resource is available) and non-scheduled (when the resource
+    is unavailable/shift is off) time intervals. During non-scheduled intervals, all operations are blocked
+    similar to a breakdown state.
+
+    Args:
+        data (NonScheduledStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model for scheduled intervals (when resource is available).
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indicates if the state is active. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        non_scheduled_time_model (time_model.TimeModel, optional): The time model for non-scheduled intervals (when resource is unavailable). Defaults to None.
+    """
+
+    def __init__(
+        self,
+        data: NonScheduledStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        non_scheduled_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(data, time_model, env)
+        self.non_scheduled_time_model = non_scheduled_time_model
+        self.active_non_scheduled = False
+        self.active = events.Event(self.env)
+
+    def process_state(self) -> Generator:
+        while True:
+            # Scheduled period: resource is available (wait for scheduled time)
+            scheduled_time = self.time_model.get_next_time()
+            yield self.env.timeout(scheduled_time)
+            
+            # Non-scheduled period: resource is unavailable (blocks all operations)
+            self.active_non_scheduled = True
+            self.resource.interrupt_states()
+            non_scheduled_time = self.non_scheduled_time_model.get_next_time()
+            self.state_info.log_start_state(
+                self.env.now, self.env.now + non_scheduled_time, StateTypeEnum.non_scheduled
+            )
+            yield self.env.timeout(non_scheduled_time)
+            self.active_non_scheduled = False
+            self.resource.activate()
+            self.state_info.log_end_state(self.env.now, StateTypeEnum.non_scheduled)
 
     def interrupt_process(self):
         pass
