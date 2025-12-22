@@ -742,6 +742,7 @@ class PostProcessor:
                         # Prepare start events for merging
                         starts = needs_matching[["Resource", "State", "Time"]].copy()
                         starts.index = needs_matching.index
+                        starts = starts.reset_index()  # Reset to have a clean index for merge
                         
                         # Prepare end events for merging
                         ends = breakdown_ends[["Resource", "State", "Time"]].copy()
@@ -753,11 +754,12 @@ class PostProcessor:
                             on=["Resource", "State"],
                             how="left"
                         )
+                        # Filter to only end events that occur after or at the start time
                         merged = merged[merged["end_Time"] >= merged["Time"]]
                         
                         # For each start event, find the minimum matching end time
                         if len(merged) > 0:
-                            min_end_times = merged.groupby(merged.index)["end_Time"].min()
+                            min_end_times = merged.groupby("index")["end_Time"].min()
                             # Update next_Time for rows that have a matching end event
                             df.loc[min_end_times.index, "next_Time"] = min_end_times.values
         
@@ -798,6 +800,7 @@ class PostProcessor:
                         # Prepare start events for merging
                         starts = needs_matching[["Resource", "State", "Time"]].copy()
                         starts.index = needs_matching.index
+                        starts = starts.reset_index()  # Reset to have a clean index for merge
                         
                         # Prepare end events for merging
                         ends = non_scheduled_ends[["Resource", "State", "Time"]].copy()
@@ -809,11 +812,12 @@ class PostProcessor:
                             on=["Resource", "State"],
                             how="left"
                         )
+                        # Filter to only end events that occur after or at the start time
                         merged = merged[merged["end_Time"] >= merged["Time"]]
                         
                         # For each start event, find the minimum matching end time
                         if len(merged) > 0:
-                            min_end_times = merged.groupby(merged.index)["end_Time"].min()
+                            min_end_times = merged.groupby("index")["end_Time"].min()
                             # Update next_Time for rows that have a matching end event
                             df.loc[min_end_times.index, "next_Time"] = min_end_times.values
         
@@ -845,6 +849,7 @@ class PostProcessor:
                     # Prepare start events for merging
                     starts = interrupted_starts[["Resource", "State", "Time", "next_Time"]].copy()
                     starts.index = interrupted_starts.index
+                    starts = starts.reset_index()  # Reset to have a clean index for merge
                     
                     # Prepare start interrupt events for merging
                     interrupts = start_interrupts[["Resource", "State", "Time"]].copy()
@@ -860,7 +865,7 @@ class PostProcessor:
                     
                     # For each start event, find the earliest matching interrupt time
                     if len(merged) > 0:
-                        min_interrupt_times = merged.groupby(merged.index)["interrupt_Time"].min()
+                        min_interrupt_times = merged.groupby("index")["interrupt_Time"].min()
                         
                         # Vectorized check for end interrupts between start and interrupt
                         if len(end_interrupts) > 0:
@@ -868,39 +873,48 @@ class PostProcessor:
                             end_ints = end_ints.rename(columns={"Time": "end_int_Time"})
                             
                             # Prepare starts with their interrupt times for merging
-                            starts_with_interrupts = starts.loc[min_interrupt_times.index].copy()
-                            starts_with_interrupts["interrupt_Time"] = min_interrupt_times.values
-                            
-                            # Merge with end interrupts to find any that fall between start and interrupt
-                            end_int_check = starts_with_interrupts.merge(
-                                end_ints,
-                                on=["Resource", "State"],
-                                how="left"
-                            )
-                            # Filter to only end interrupts between start and interrupt
-                            end_int_between = end_int_check[
-                                (end_int_check["end_int_Time"] > end_int_check["Time"])
-                                & (end_int_check["end_int_Time"] < end_int_check["interrupt_Time"])
-                            ]
-                            
-                            # Find which start events have an end interrupt between start and interrupt
-                            indices_with_end_int = end_int_between.index.unique()
-                            
-                            # Filter out indices that have end interrupts between
-                            valid_indices = min_interrupt_times.index.difference(indices_with_end_int)
-                            
-                            # Update next_Time for valid indices where interrupt is before next_Time
-                            if len(valid_indices) > 0:
-                                valid_mask = min_interrupt_times.loc[valid_indices] < starts.loc[valid_indices, "next_Time"]
-                                update_indices = valid_indices[valid_mask]
-                                if len(update_indices) > 0:
-                                    df.loc[update_indices, "next_Time"] = min_interrupt_times.loc[update_indices].values
+                            # min_interrupt_times.index contains the original indices from interrupted_starts
+                            # Map back to the original starts dataframe using the "index" column
+                            starts_with_interrupts = starts[starts["index"].isin(min_interrupt_times.index)].copy()
+                            if len(starts_with_interrupts) > 0:
+                                # Map interrupt times back using the index column
+                                starts_with_interrupts["interrupt_Time"] = starts_with_interrupts["index"].map(min_interrupt_times)
+                                
+                                # Merge with end interrupts to find any that fall between start and interrupt
+                                end_int_check = starts_with_interrupts.merge(
+                                    end_ints,
+                                    on=["Resource", "State"],
+                                    how="left"
+                                )
+                                # Filter to only end interrupts between start and interrupt
+                                end_int_between = end_int_check[
+                                    (end_int_check["end_int_Time"] > end_int_check["Time"])
+                                    & (end_int_check["end_int_Time"] < end_int_check["interrupt_Time"])
+                                ]
+                                
+                                # Find which start events have an end interrupt between start and interrupt
+                                indices_with_end_int = end_int_between["index"].unique()
+                                
+                                # Filter out indices that have end interrupts between
+                                valid_indices = min_interrupt_times.index.difference(indices_with_end_int)
+                                
+                                # Update next_Time for valid indices where interrupt is before next_Time
+                                if len(valid_indices) > 0:
+                                    # Get the original next_Time values for these indices
+                                    original_next_times = df.loc[valid_indices, "next_Time"]
+                                    valid_mask = min_interrupt_times.loc[valid_indices] < original_next_times
+                                    update_indices = valid_indices[valid_mask]
+                                    if len(update_indices) > 0:
+                                        df.loc[update_indices, "next_Time"] = min_interrupt_times.loc[update_indices].values
                         else:
                             # No end interrupts exist, so just check if interrupt is before next_Time
-                            valid_mask = min_interrupt_times < starts.loc[min_interrupt_times.index, "next_Time"]
-                            update_indices = min_interrupt_times.index[valid_mask]
-                            if len(update_indices) > 0:
-                                df.loc[update_indices, "next_Time"] = min_interrupt_times.loc[update_indices].values
+                            # min_interrupt_times.index contains the original indices from interrupted_starts
+                            if len(min_interrupt_times) > 0:
+                                original_next_times = df.loc[min_interrupt_times.index, "next_Time"]
+                                valid_mask = min_interrupt_times < original_next_times
+                                update_indices = min_interrupt_times.index[valid_mask]
+                                if len(update_indices) > 0:
+                                    df.loc[update_indices, "next_Time"] = min_interrupt_times.loc[update_indices].values
         
         df["time_increment"] = df["next_Time"] - df["Time"]
         
