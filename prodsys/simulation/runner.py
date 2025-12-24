@@ -359,6 +359,10 @@ class Runner:
         )
         kpi_visualization.plot_WIP_resource_boxplots(p)
         kpi_visualization.plot_oee(p)
+        # Plot OEE and resource states over time
+        kpi_visualization.plot_oee_over_time(p)
+        kpi_visualization.plot_oee_system_over_time(p)
+        kpi_visualization.plot_resource_states_over_time(p)
 
     def get_event_data_of_simulation(self) -> List[performance_data.Event]:
         """
