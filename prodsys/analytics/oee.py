@@ -691,59 +691,120 @@ class OEEAnalytics:
         else:
             df_matched = pd.DataFrame(columns=["Resource", "State", "Time", "actual_time"])
         
-        # Calculate performance per interval using vectorized operations where possible
-        # Group intervals by resource for efficient processing
-        performance_list = []
-        
-        for (resource, interval_start, interval_end), interval_group in df_states_pivot.groupby(
-            ["Resource", "Interval_start", "Interval_end"]
-        ):
-            productive_time = interval_group["productive_time"].iloc[0]
-            is_transport_resource = resource in transport_resource_ids
+        # Calculate performance per interval using fully vectorized operations
+        # Use efficient interval assignment with merge_asof (much faster than loops)
+        if len(df_matched) > 0:
+            # Get unique intervals per resource (sorted by start time)
+            intervals_lookup = df_states_pivot[["Resource", "Interval_start", "Interval_end"]].drop_duplicates()
+            intervals_lookup = intervals_lookup.sort_values(["Resource", "Interval_start"]).reset_index(drop=True)
             
-            if is_transport_resource:
-                performance_list.append(1.0)
-                continue
+            # Use merge_asof to assign each process to its interval (vectorized, very fast)
+            # merge_asof requires both dataframes to be sorted by the merge key
+            # Sort by Resource first, then by the merge key (Time for left, Interval_start for right)
+            df_matched_sorted = df_matched.sort_values(["Resource", "Time"], kind='mergesort').reset_index(drop=True)
+            intervals_sorted = intervals_lookup.sort_values(["Resource", "Interval_start"], kind='mergesort').reset_index(drop=True)
             
-            # Filter matched processes in this interval (vectorized)
-            processes_in_interval = df_matched[
-                (df_matched["Resource"] == resource) &
-                (df_matched["Time"] >= interval_start) &
-                (df_matched["Time"] < interval_end)
-            ]
+            # Merge_asof finds the last interval where Interval_start <= Time
+            # Group by resource and merge within each group
+            matched_list = []
+            for resource in df_matched_sorted["Resource"].unique():
+                resource_matched = df_matched_sorted[df_matched_sorted["Resource"] == resource].copy()
+                resource_intervals = intervals_sorted[intervals_sorted["Resource"] == resource].copy()
+                
+                if len(resource_intervals) == 0:
+                    continue
+                
+                # Merge_asof within this resource group
+                resource_merged = pd.merge_asof(
+                    resource_matched,
+                    resource_intervals,
+                    left_on="Time",
+                    right_on="Interval_start",
+                    direction="backward",
+                    allow_exact_matches=True
+                )
+                
+                # Ensure Resource column is present (merge_asof might drop it if it's in both)
+                if "Resource" not in resource_merged.columns:
+                    resource_merged["Resource"] = resource
+                
+                # Filter to only processes within their interval (Time < Interval_end)
+                resource_merged = resource_merged[
+                    (resource_merged["Time"] >= resource_merged["Interval_start"]) &
+                    (resource_merged["Time"] < resource_merged["Interval_end"])
+                ]
+                
+                if len(resource_merged) > 0:
+                    matched_list.append(resource_merged)
             
-            if len(processes_in_interval) == 0:
-                performance_list.append(0.0)
-                continue
-            
-            # Calculate performance using vectorized operations
-            resource_capacity = resource_capacities.get(resource, 1)
-            process_caps = resource_process_capacities.get(resource, {})
-            
-            total_actual_time = processes_in_interval["actual_time"].sum()
-            
-            # Calculate ideal time (vectorized)
-            process_counts = processes_in_interval.groupby("State").size().reset_index(name="count")
-            
-            # Vectorized calculation using map
-            process_counts["ideal_base"] = process_counts["State"].map(process_ideal_times_cache).fillna(0)
-            process_counts["process_cap"] = process_counts["State"].map(process_caps).fillna(resource_capacity)
-            process_counts["ideal_per_unit"] = np.where(
-                process_counts["process_cap"] > 0,
-                process_counts["ideal_base"] / process_counts["process_cap"],
-                process_counts["ideal_base"]
-            )
-            process_counts["ideal_time"] = process_counts["ideal_per_unit"] * process_counts["count"]
-            total_ideal_time = process_counts["ideal_time"].sum()
-            
-            if total_actual_time > 0 and total_ideal_time > 0:
-                performance_list.append(total_ideal_time / total_actual_time)
-            elif productive_time > 0 and total_ideal_time > 0:
-                performance_list.append(total_ideal_time / productive_time)
+            if matched_list:
+                df_matched_with_intervals = pd.concat(matched_list, ignore_index=True)
             else:
-                performance_list.append(0.0)
+                df_matched_with_intervals = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "State", "Time", "actual_time"])
+            
+            # Calculate performance for all intervals at once using groupby
+            if len(df_matched_with_intervals) > 0:
+                # Add resource capacity and process capacity info
+                df_matched_with_intervals["resource_capacity"] = df_matched_with_intervals["Resource"].map(
+                    lambda r: resource_capacities.get(r, 1)
+                )
+                df_matched_with_intervals["process_cap"] = df_matched_with_intervals.apply(
+                    lambda row: resource_process_capacities.get(row["Resource"], {}).get(row["State"], row["resource_capacity"]),
+                    axis=1
+                )
+                
+                # Calculate ideal time per process
+                df_matched_with_intervals["ideal_base"] = df_matched_with_intervals["State"].map(
+                    process_ideal_times_cache
+                ).fillna(0)
+                df_matched_with_intervals["ideal_per_unit"] = np.where(
+                    df_matched_with_intervals["process_cap"] > 0,
+                    df_matched_with_intervals["ideal_base"] / df_matched_with_intervals["process_cap"],
+                    df_matched_with_intervals["ideal_base"]
+                )
+                
+                # Aggregate by interval to get total actual and ideal time
+                performance_by_interval = df_matched_with_intervals.groupby(
+                    ["Resource", "Interval_start", "Interval_end"]
+                ).agg({
+                    "actual_time": "sum",
+                    "ideal_per_unit": "sum"
+                }).reset_index()
+                performance_by_interval = performance_by_interval.rename(columns={"ideal_per_unit": "total_ideal_time"})
+            else:
+                performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
+        else:
+            performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
         
-        df_states_pivot["performance"] = performance_list
+        # Merge performance data with df_states_pivot
+        df_states_pivot = df_states_pivot.merge(
+            performance_by_interval,
+            on=["Resource", "Interval_start", "Interval_end"],
+            how="left"
+        )
+        df_states_pivot["actual_time"] = df_states_pivot["actual_time"].fillna(0)
+        df_states_pivot["total_ideal_time"] = df_states_pivot["total_ideal_time"].fillna(0)
+        
+        # Calculate performance vectorized
+        # Handle transport resources
+        is_transport = df_states_pivot["Resource"].isin(transport_resource_ids)
+        
+        # For non-transport resources: performance = total_ideal_time / actual_time (or productive_time as fallback)
+        performance = np.where(
+            is_transport,
+            1.0,  # Transport resources default to 100%
+            np.where(
+                (df_states_pivot["actual_time"] > 0) & (df_states_pivot["total_ideal_time"] > 0),
+                df_states_pivot["total_ideal_time"] / df_states_pivot["actual_time"],
+                np.where(
+                    (df_states_pivot["productive_time"] > 0) & (df_states_pivot["total_ideal_time"] > 0),
+                    df_states_pivot["total_ideal_time"] / df_states_pivot["productive_time"],
+                    0.0
+                )
+            )
+        )
+        
+        df_states_pivot["performance"] = performance
         
         # Calculate quality (vectorized using cached scrap rates)
         df_states_pivot["scrap_rate"] = df_states_pivot["Resource"].map(scrap_rates).fillna(0)

@@ -930,6 +930,7 @@ class ResourceStatesAnalytics:
         by time intervals (e.g., 10 minutes, 1000 minutes).
         
         Optimized version using vectorized operations for better performance.
+        Avoids cross-product merge by calculating interval overlaps per event.
         
         Args:
             interval_minutes: Time interval in minutes for aggregation.
@@ -957,67 +958,77 @@ class ResourceStatesAnalytics:
         else:
             min_time = df["Time"].min() if len(df) > 0 else 0.0
         
-        # Create intervals starting from min_time - use numpy for efficiency
-        interval_starts = np.arange(min_time, simulation_end_time, interval_minutes)
-        interval_ends = np.minimum(interval_starts + interval_minutes, simulation_end_time)
-        intervals_df = pd.DataFrame({
-            'Interval_start': interval_starts,
-            'Interval_end': interval_ends
-        })
-        
-        # Get unique resources
-        resources = df["Resource"].unique()
-        
-        # Create cross-product of resources and intervals for efficient processing
-        intervals_df['key'] = 1
-        resources_df = pd.DataFrame({'Resource': resources, 'key': 1})
-        resource_intervals = intervals_df.merge(resources_df, on='key').drop('key', axis=1)
-        
-        # Prepare event data with vectorized columns
+        # Prepare event data - fully vectorized approach using pandas explode
         df_events = df[["Resource", "Time", "next_Time", "time_increment", "Time_type"]].copy()
-        df_events['event_start'] = df_events['Time']
-        df_events['event_end'] = df_events['next_Time']
+        df_events['event_start'] = df_events['Time'].values
+        df_events['event_end'] = df_events['next_Time'].values
+        df_events['event_duration'] = np.maximum(df_events['event_end'] - df_events['event_start'], 1e-10)
         
-        # Perform efficient merge-asof-like operation using cross join and filtering
-        # This is much faster than nested loops
-        resource_intervals_expanded = resource_intervals.reset_index()
-        df_events_expanded = df_events.reset_index()
+        # Calculate interval indices for all events at once (fully vectorized)
+        event_starts = df_events['event_start'].values
+        event_ends = df_events['event_end'].values
         
-        # Merge to find all event-interval pairs that overlap
-        # An event overlaps if: event_start < interval_end AND event_end > interval_start
-        merged = resource_intervals_expanded.merge(
-            df_events_expanded,
-            on='Resource',
-            how='inner'
-        )
+        # Calculate first and last interval index for each event (vectorized)
+        first_interval_indices = np.maximum(0, np.floor((event_starts - min_time) / interval_minutes).astype(int))
+        last_interval_indices = np.ceil((event_ends - min_time) / interval_minutes).astype(int)
         
-        # Filter to only overlapping events (vectorized)
-        mask = (merged['event_start'] < merged['Interval_end']) & (merged['event_end'] > merged['Interval_start'])
-        merged = merged[mask].copy()
+        # Create interval index ranges for each event (vectorized)
+        # Use list comprehension with numpy for efficiency
+        interval_ranges = [
+            np.arange(first_idx, last_idx) if last_idx > first_idx else np.array([], dtype=int)
+            for first_idx, last_idx in zip(first_interval_indices, last_interval_indices)
+        ]
         
-        if len(merged) == 0:
+        # Add interval ranges to dataframe for explode
+        df_events['interval_indices'] = interval_ranges
+        
+        # Explode to create one row per event-interval pair
+        df_expanded = df_events.explode('interval_indices', ignore_index=True)
+        
+        # Filter out rows where interval_indices is NaN (no overlapping intervals)
+        df_expanded = df_expanded[df_expanded['interval_indices'].notna()].copy()
+        
+        if len(df_expanded) == 0:
             return pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "Time_type",
                                         "time_increment", "interval_time", "percentage"])
         
-        # Calculate overlap times using vectorized operations
-        overlap_start = np.maximum(merged['event_start'], merged['Interval_start'])
-        overlap_end = np.minimum(merged['event_end'], merged['Interval_end'])
-        overlap_duration = np.maximum(overlap_end - overlap_start, 0)
-        event_duration = np.maximum(merged['event_end'] - merged['event_start'], 1e-10)  # Avoid division by zero
+        # Calculate interval boundaries (vectorized)
+        df_expanded['Interval_start'] = min_time + df_expanded['interval_indices'].astype(int) * interval_minutes
+        df_expanded['Interval_end'] = np.minimum(
+            df_expanded['Interval_start'] + interval_minutes,
+            simulation_end_time
+        )
         
-        # Calculate proportional time in interval (vectorized)
-        proportion = overlap_duration / event_duration
-        scaled_time = merged['time_increment'].values * proportion
-        interval_time = np.minimum(scaled_time, overlap_duration)  # Cap at overlap duration
+        # Filter to only overlapping intervals (vectorized)
+        overlap_mask = (
+            (df_expanded['Interval_end'] > df_expanded['event_start']) &
+            (df_expanded['Interval_start'] < df_expanded['event_end'])
+        )
+        df_expanded = df_expanded[overlap_mask].copy()
+        
+        if len(df_expanded) == 0:
+            return pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "Time_type",
+                                        "time_increment", "interval_time", "percentage"])
+        
+        # Calculate overlaps (vectorized)
+        df_expanded['overlap_start'] = np.maximum(df_expanded['event_start'], df_expanded['Interval_start'])
+        df_expanded['overlap_end'] = np.minimum(df_expanded['event_end'], df_expanded['Interval_end'])
+        df_expanded['overlap_duration'] = np.maximum(df_expanded['overlap_end'] - df_expanded['overlap_start'], 0)
+        
+        # Filter to non-zero overlaps
+        df_expanded = df_expanded[df_expanded['overlap_duration'] > 0].copy()
+        
+        if len(df_expanded) == 0:
+            return pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "Time_type",
+                                        "time_increment", "interval_time", "percentage"])
+        
+        # Calculate proportional time (vectorized)
+        df_expanded['proportion'] = df_expanded['overlap_duration'] / df_expanded['event_duration']
+        df_expanded['scaled_time'] = df_expanded['time_increment'] * df_expanded['proportion']
+        df_expanded['time_increment'] = np.minimum(df_expanded['scaled_time'], df_expanded['overlap_duration'])
         
         # Create result dataframe
-        result_df = pd.DataFrame({
-            'Resource': merged['Resource'],
-            'Interval_start': merged['Interval_start'],
-            'Interval_end': merged['Interval_end'],
-            'Time_type': merged['Time_type'],
-            'time_increment': interval_time
-        })
+        result_df = df_expanded[['Resource', 'Interval_start', 'Interval_end', 'Time_type', 'time_increment']].copy()
         
         # Aggregate by Resource, Interval, and Time_type
         aggregated = result_df.groupby(
