@@ -468,17 +468,17 @@ class PostProcessor:
 
     @cached_property
     def dynamic_WIP_per_resource_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
+        """Delegate to WIPAnalytics module."""
+        if self._wip_analytics is None:
             self._initialize_analytics()
-        return self._kpi_generator.dynamic_WIP_per_resource_KPIs
+        return self._wip_analytics.dynamic_WIP_per_resource_KPIs
 
     @cached_property
     def dynamic_system_WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
+        """Delegate to WIPAnalytics module."""
+        if self._wip_analytics is None:
             self._initialize_analytics()
-        return self._kpi_generator.dynamic_system_WIP_KPIs
+        return self._wip_analytics.dynamic_system_WIP_KPIs
 
     @cached_property
     def df_aggregated_WIP(self) -> pd.DataFrame:
@@ -489,17 +489,17 @@ class PostProcessor:
 
     @cached_property
     def WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
+        """Delegate to WIPAnalytics module."""
+        if self._wip_analytics is None:
             self._initialize_analytics()
-        return self._kpi_generator.WIP_KPIs
+        return self._wip_analytics.WIP_KPIs
 
     @cached_property
     def primitive_WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
+        """Delegate to WIPAnalytics module."""
+        if self._wip_analytics is None:
             self._initialize_analytics()
-        return self._kpi_generator.primitive_WIP_KPIs
+        return self._wip_analytics.primitive_WIP_KPIs
 
     def get_aggregated_data(self) -> dict:
         """
