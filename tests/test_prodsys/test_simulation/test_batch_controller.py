@@ -114,7 +114,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     # Check machine utilization - with batching (lot size 2-3), utilization is lower
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 55 and kpi.value > 45
+            assert kpi.value < 75 and kpi.value > 65
         
         # Transport should have moderate utilization
         if kpi.name == "productive_time" and kpi.resource == "transport":

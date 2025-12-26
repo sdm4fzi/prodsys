@@ -463,10 +463,15 @@ class RequestHandler:
             requests = []
             for free_resource_index, free_resource_id in free_resources_set:
                 if free_resource_id in possible_resources_and_processes:
+                    free_resource = free_resources[free_resource_index]
+                    # For process dependencies, skip resources that are already bound to another entity
+                    # This ensures that resources with ResourceDependency are not used for ProcessDependency
+                    if (request_info.request_type == request.RequestType.PROCESS_DEPENDENCY 
+                        and hasattr(free_resource, 'bound') and free_resource.bound):
+                        continue
                     for process_instance in possible_resources_and_processes[
                         free_resource_id
                     ]:
-                        free_resource = free_resources[free_resource_index]
                         new_request = self.create_resource_request(
                             request_info,
                             free_resource,

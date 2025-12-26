@@ -141,10 +141,10 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
     post_processor = runner_instance.get_post_processor()
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "assemblymachine_1":
-            assert 92 < kpi.value < 96
+            assert 75 < kpi.value < 85
 
         if kpi.name == "productive_time" and kpi.resource == "assemblymachine_2":
-            assert 92 < kpi.value < 96
+            assert 75 < kpi.value < 85
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "tank":

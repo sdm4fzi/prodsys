@@ -411,8 +411,8 @@ def test_system_resource_with_robot_simulation():
                 # Expected: ~80.3%
                 assert kpi.value > 75 and kpi.value < 86, f"Machine3 productive time {kpi.value} out of expected range"
             elif kpi.resource == "agv":
-                # Expected: ~64.3%
-                assert kpi.value > 58 and kpi.value < 70, f"AGV productive time {kpi.value} out of expected range"
+                # Expected: ~32.3%
+                assert kpi.value > 30 and kpi.value < 38, f"AGV productive time {kpi.value} out of expected range"
             elif kpi.resource == "robot":
-                # Expected: ~27.6%
-                assert kpi.value > 32 and kpi.value < 38, f"Robot productive time {kpi.value} out of expected range"
+                # Expected: ~64.0%
+                assert kpi.value > 60 and kpi.value < 68, f"Robot productive time {kpi.value} out of expected range"

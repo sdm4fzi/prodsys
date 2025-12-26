@@ -397,6 +397,7 @@ def test_run_simulation_both_dependencies(
     runner_instance.initialize_simulation()
     runner_instance.run(1000)
     runner_instance.print_results()
+    runner_instance.save_results_as_csv()
     assert runner_instance.env.now == 1000
     post_processor = runner_instance.get_post_processor()
 
@@ -406,38 +407,38 @@ def test_run_simulation_both_dependencies(
     for kpi in post_processor.throughput_and_output_KPIs:
         if kpi.name == "output" and kpi.product_type == "product1":
             product1_output = kpi.value
-            assert kpi.value > 750 and kpi.value < 900
+            assert kpi.value > 800 and kpi.value < 950
         if kpi.name == "output" and kpi.product_type == "product2":
             product2_output = kpi.value
-            assert kpi.value > 300 and kpi.value < 400
+            assert kpi.value > 350 and kpi.value < 450
 
     # Verify outputs are reasonable
     assert product1_output > 0
     assert product2_output > 0
 
     # Check machine state KPIs for both workers
-    worker_pr_found = False
+    worker_dp_found = False
     worker2_dp_found = False
     machine_pr_found = False
     machine2_pr_found = False
 
     for kpi in post_processor.machine_state_KPIS:
-        if kpi.name == "productive_time" and kpi.resource == "worker":
-            worker_pr_found = True
-            # Worker should have some productive time from the assembly process
-            assert kpi.value > 0 and kpi.value < 100
+        if kpi.name == "dependency_time" and kpi.resource == "worker":
+            worker_dp_found = True
+            # Worker should have significant dependency time (handling process dependencies from machine)
+            assert kpi.value > 95 and kpi.value <= 100
         if kpi.name == "dependency_time" and kpi.resource == "worker2":
             worker2_dp_found = True
-            # Worker2 should have significant dependency time
+            # Worker2 should have significant dependency time (handling resource dependencies from machine2)
             assert kpi.value > 95 and kpi.value <= 100
         if kpi.name == "productive_time" and kpi.resource == "machine":
             machine_pr_found = True
-            assert kpi.value > 75 and kpi.value < 90
+            assert kpi.value > 80 and kpi.value < 95
         if kpi.name == "productive_time" and kpi.resource == "machine2":
             machine2_pr_found = True
-            assert kpi.value > 75 and kpi.value < 90
+            assert kpi.value > 80 and kpi.value < 95
 
-    assert worker_pr_found, "Worker productive time KPI not found"
+    assert worker_dp_found, "Worker dependency time KPI not found"
     assert worker2_dp_found, "Worker2 dependency time KPI not found"
     assert machine_pr_found, "Machine productive time KPI not found"
     assert machine2_pr_found, "Machine2 productive time KPI not found"
@@ -449,10 +450,10 @@ def test_run_simulation_both_dependencies(
             total_wip += kpi.value
             assert kpi.value > 0
 
-    assert total_wip > 200 and total_wip < 300
+    assert total_wip > 150 and total_wip < 250
 
     # Check throughput time
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value > 60 and kpi.value < 100
+            assert kpi.value > 50 and kpi.value < 80
 
