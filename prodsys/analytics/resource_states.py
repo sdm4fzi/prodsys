@@ -929,6 +929,8 @@ class ResourceStatesAnalytics:
         Calculates resource states on the complete event log, then aggregates
         by time intervals (e.g., 10 minutes, 1000 minutes).
         
+        Optimized version using vectorized operations for better performance.
+        
         Args:
             interval_minutes: Time interval in minutes for aggregation.
             
@@ -943,110 +945,112 @@ class ResourceStatesAnalytics:
         if self.context.warm_up_cutoff:
             df = df.loc[df["Time"] >= self.throughput_analytics.warm_up_cutoff_time]
         
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "Time_type",
+                                        "time_increment", "interval_time", "percentage"])
+        
         simulation_end_time = self._get_simulation_end_time()
         
         # Determine the start time for intervals
-        # If warm_up_cutoff is used, start from warm_up_cutoff_time, otherwise from 0 or min time
         if self.context.warm_up_cutoff:
             min_time = self.throughput_analytics.warm_up_cutoff_time
         else:
             min_time = df["Time"].min() if len(df) > 0 else 0.0
         
-        # Create intervals starting from min_time
-        intervals = []
-        current_start = min_time
-        while current_start < simulation_end_time:
-            interval_end = min(current_start + interval_minutes, simulation_end_time)
-            intervals.append((current_start, interval_end))
-            current_start = interval_end
+        # Create intervals starting from min_time - use numpy for efficiency
+        interval_starts = np.arange(min_time, simulation_end_time, interval_minutes)
+        interval_ends = np.minimum(interval_starts + interval_minutes, simulation_end_time)
+        intervals_df = pd.DataFrame({
+            'Interval_start': interval_starts,
+            'Interval_end': interval_ends
+        })
         
-        # For each resource and interval, aggregate time_increment by Time_type
-        results = []
+        # Get unique resources
+        resources = df["Resource"].unique()
         
-        for resource in df["Resource"].unique():
-            df_resource = df[df["Resource"] == resource].copy()
-            
-            for interval_start, interval_end in intervals:
-                # Filter events that overlap with this interval
-                # An event overlaps if: event_start < interval_end AND event_end > interval_start
-                overlapping = df_resource[
-                    (df_resource["Time"] < interval_end) &
-                    (df_resource["next_Time"] > interval_start)
-                ].copy()
-                
-                if len(overlapping) == 0:
-                    continue
-                
-                # Calculate the time spent in each state during this interval
-                # For events that overlap with the interval, we clip to the interval boundaries
-                # and proportionally scale the time_increment based on the overlap
-                def calculate_interval_time(row):
-                    event_start = row["Time"]
-                    event_end = row["next_Time"]
-                    
-                    # Calculate overlap with interval - clip event to interval boundaries
-                    overlap_start = max(event_start, interval_start)
-                    overlap_end = min(event_end, interval_end)
-                    
-                    if overlap_end <= overlap_start:
-                        return 0.0
-                    
-                    # Calculate the proportion of the event that falls within this interval
-                    event_duration = event_end - event_start
-                    overlap_duration = overlap_end - overlap_start
-                    
-                    if event_duration <= 0:
-                        return 0.0
-                    
-                    # Scale time_increment proportionally to the overlap
-                    # time_increment represents the actual time in this state during the event
-                    # We scale it by the proportion of the event that falls in this interval
-                    proportion = overlap_duration / event_duration
-                    scaled_time = row["time_increment"] * proportion
-                    
-                    # However, we also need to ensure we don't exceed the overlap duration
-                    # This handles cases where time_increment might be adjusted (e.g., NS minus UD)
-                    return min(scaled_time, overlap_duration)
-                
-                overlapping["interval_time"] = overlapping.apply(calculate_interval_time, axis=1)
-                
-                # Aggregate by Time_type
-                interval_aggregated = overlapping.groupby("Time_type")["interval_time"].sum().reset_index()
-                interval_aggregated.columns = ["Time_type", "time_increment"]
-                
-                # Add metadata
-                interval_aggregated["Resource"] = resource
-                interval_aggregated["Interval_start"] = interval_start
-                interval_aggregated["Interval_end"] = interval_end
-                interval_time_total = interval_end - interval_start
-                interval_aggregated["interval_time"] = interval_time_total
-                
-                # Calculate percentage and ensure it doesn't exceed 100%
-                # Normalize if the sum exceeds the interval time
-                total_time = interval_aggregated["time_increment"].sum()
-                if total_time > interval_time_total:
-                    # Normalize: scale down proportionally
-                    scale_factor = interval_time_total / total_time
-                    interval_aggregated["time_increment"] = interval_aggregated["time_increment"] * scale_factor
-                
-                interval_aggregated["percentage"] = (
-                    interval_aggregated["time_increment"] / interval_time_total
-                ) * 100
-                
-                # Clip percentages to 0-100% range as a safety measure
-                interval_aggregated["percentage"] = interval_aggregated["percentage"].clip(0, 100)
-                
-                results.append(interval_aggregated)
+        # Create cross-product of resources and intervals for efficient processing
+        intervals_df['key'] = 1
+        resources_df = pd.DataFrame({'Resource': resources, 'key': 1})
+        resource_intervals = intervals_df.merge(resources_df, on='key').drop('key', axis=1)
         
-        if results:
-            df_result = pd.concat(results, ignore_index=True)
-            # Reorder columns
-            df_result = df_result[["Resource", "Interval_start", "Interval_end", "Time_type", 
-                                  "time_increment", "interval_time", "percentage"]]
-            return df_result
-        else:
+        # Prepare event data with vectorized columns
+        df_events = df[["Resource", "Time", "next_Time", "time_increment", "Time_type"]].copy()
+        df_events['event_start'] = df_events['Time']
+        df_events['event_end'] = df_events['next_Time']
+        
+        # Perform efficient merge-asof-like operation using cross join and filtering
+        # This is much faster than nested loops
+        resource_intervals_expanded = resource_intervals.reset_index()
+        df_events_expanded = df_events.reset_index()
+        
+        # Merge to find all event-interval pairs that overlap
+        # An event overlaps if: event_start < interval_end AND event_end > interval_start
+        merged = resource_intervals_expanded.merge(
+            df_events_expanded,
+            on='Resource',
+            how='inner'
+        )
+        
+        # Filter to only overlapping events (vectorized)
+        mask = (merged['event_start'] < merged['Interval_end']) & (merged['event_end'] > merged['Interval_start'])
+        merged = merged[mask].copy()
+        
+        if len(merged) == 0:
             return pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "Time_type",
                                         "time_increment", "interval_time", "percentage"])
+        
+        # Calculate overlap times using vectorized operations
+        overlap_start = np.maximum(merged['event_start'], merged['Interval_start'])
+        overlap_end = np.minimum(merged['event_end'], merged['Interval_end'])
+        overlap_duration = np.maximum(overlap_end - overlap_start, 0)
+        event_duration = np.maximum(merged['event_end'] - merged['event_start'], 1e-10)  # Avoid division by zero
+        
+        # Calculate proportional time in interval (vectorized)
+        proportion = overlap_duration / event_duration
+        scaled_time = merged['time_increment'].values * proportion
+        interval_time = np.minimum(scaled_time, overlap_duration)  # Cap at overlap duration
+        
+        # Create result dataframe
+        result_df = pd.DataFrame({
+            'Resource': merged['Resource'],
+            'Interval_start': merged['Interval_start'],
+            'Interval_end': merged['Interval_end'],
+            'Time_type': merged['Time_type'],
+            'time_increment': interval_time
+        })
+        
+        # Aggregate by Resource, Interval, and Time_type
+        aggregated = result_df.groupby(
+            ['Resource', 'Interval_start', 'Interval_end', 'Time_type'],
+            as_index=False
+        )['time_increment'].sum()
+        
+        # Calculate interval_time and percentage
+        aggregated['interval_time'] = aggregated['Interval_end'] - aggregated['Interval_start']
+        
+        # Normalize if total exceeds interval_time (group by Resource + Interval)
+        interval_totals = aggregated.groupby(['Resource', 'Interval_start', 'Interval_end'])['time_increment'].transform('sum')
+        scale_mask = interval_totals > aggregated['interval_time']
+        scale_factor = np.where(
+            scale_mask,
+            aggregated['interval_time'] / interval_totals,
+            1.0
+        )
+        aggregated['time_increment'] = aggregated['time_increment'] * scale_factor
+        
+        # Calculate percentage
+        aggregated['percentage'] = (
+            aggregated['time_increment'] / aggregated['interval_time']
+        ) * 100
+        
+        # Clip percentages to 0-100% range
+        aggregated['percentage'] = aggregated['percentage'].clip(0, 100)
+        
+        # Reorder columns
+        aggregated = aggregated[["Resource", "Interval_start", "Interval_end", "Time_type", 
+                                "time_increment", "interval_time", "percentage"]]
+        
+        return aggregated.reset_index(drop=True)
     
     def get_aggregated_resource_states_by_interval(self, interval_minutes: float) -> pd.DataFrame:
         """

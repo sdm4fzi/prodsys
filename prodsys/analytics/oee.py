@@ -9,6 +9,7 @@ from __future__ import annotations
 from functools import cached_property
 
 import pandas as pd
+import numpy as np
 
 from prodsys.simulation import state
 from prodsys.analytics.base import AnalyticsContext
@@ -504,6 +505,8 @@ class OEEAnalytics:
         
         Calculates OEE on the complete event log, then aggregates by intervals.
         
+        Optimized version using vectorized operations and pre-computed lookups.
+        
         Args:
             interval_minutes: Time interval in minutes for aggregation.
             
@@ -531,158 +534,237 @@ class OEEAnalytics:
         time_model_factory = TimeModelFactory()
         time_model_factory.create_time_models(self.context.production_system_data)
         
-        # Get processes per resource
-        resource_to_processes = {}
+        # Pre-compute resource capacities and process ideal times (cache for all resources)
+        resource_capacities = {}
+        resource_process_capacities = {}
+        process_ideal_times_cache = {}
+        
         for resource_data in self.context.production_system_data.resource_data:
-            if hasattr(resource_data, 'process_ids'):
-                resource_to_processes[resource_data.ID] = resource_data.process_ids
+            resource_id = resource_data.ID
+            resource_capacities[resource_id] = resource_data.capacity if hasattr(resource_data, 'capacity') else 1
+            if hasattr(resource_data, 'process_capacities') and resource_data.process_capacities:
+                resource_process_capacities[resource_id] = {}
+                if hasattr(resource_data, 'process_ids'):
+                    for i, process_id in enumerate(resource_data.process_ids):
+                        if i < len(resource_data.process_capacities):
+                            resource_process_capacities[resource_id][process_id] = resource_data.process_capacities[i]
+        
+        # Pre-compute ideal cycle times for all processes
+        for process_data in self.context.production_system_data.process_data:
+            if hasattr(process_data, 'time_model_id'):
+                try:
+                    time_model = time_model_factory.get_time_model(process_data.time_model_id)
+                    ideal_cycle_time = time_model.get_expected_time()
+                    if ideal_cycle_time > 0:
+                        process_ideal_times_cache[process_data.ID] = ideal_cycle_time
+                except (ValueError, TypeError):
+                    pass
         
         # Identify transport resources
         from prodsys.models.production_system_data import get_transport_resources
         transport_resources = get_transport_resources(self.context.production_system_data)
         transport_resource_ids = {r.ID for r in transport_resources}
         
-        # Get prepared data for process counting
+        # Pre-filter and prepare process events data once (not per interval)
         df_prepared = self.data_prep.df_prepared.copy()
         if self.context.warm_up_cutoff:
             warm_up_time = self.throughput_analytics.warm_up_cutoff_time
             df_prepared = df_prepared[df_prepared["Time"] >= warm_up_time]
         
-        # Calculate OEE per resource per interval
-        oee_results = []
+        # Filter production events once
+        production_mask = (
+            (df_prepared["State Type"] == state.StateTypeEnum.production) &
+            (df_prepared["Resource"].notna())
+        )
+        df_production = df_prepared[production_mask].copy()
         
-        # Group by resource and interval
-        for (resource, interval_start, interval_end), df_interval in df_resource_states_interval.groupby(
+        # Separate start and end events
+        df_process_starts = df_production[
+            df_production["Activity"] == "start state"
+        ][["Resource", "State", "Time"]].copy()
+        df_process_ends = df_production[
+            df_production["Activity"] == "end state"
+        ][["Resource", "State", "Time"]].copy()
+        
+        # Sort for efficient merge_asof operations
+        df_process_starts = df_process_starts.sort_values(["Resource", "State", "Time"])
+        df_process_ends = df_process_ends.sort_values(["Resource", "State", "Time"])
+        
+        # Create index on Resource for faster lookups
+        # Keep sorted by State and Time for merge_asof
+        df_process_starts_by_resource = {
+            resource: group.sort_values(["State", "Time"]).reset_index(drop=True)
+            for resource, group in df_process_starts.groupby("Resource")
+        }
+        
+        # Pre-compute scrap rates per resource (cache)
+        df_scrap_resource = self.scrap_analytics.df_scrap_per_resource.copy()
+        scrap_rates = df_scrap_resource.set_index("Resource")["Scrap_rate"].to_dict()
+        
+        # Pivot resource states to get time per state per interval efficiently
+        df_states_pivot = df_resource_states_interval.pivot_table(
+            index=["Resource", "Interval_start", "Interval_end"],
+            columns="Time_type",
+            values="time_increment",
+            fill_value=0
+        ).reset_index()
+        
+        # Calculate availability for all intervals at once (vectorized)
+        df_states_pivot["interval_time"] = (
+            df_states_pivot["Interval_end"] - df_states_pivot["Interval_start"]
+        )
+        df_states_pivot["non_scheduled_time"] = df_states_pivot.get("NS", 0)
+        df_states_pivot["productive_time"] = df_states_pivot.get("PR", 0)
+        df_states_pivot["setup_time"] = df_states_pivot.get("ST", 0)
+        df_states_pivot["dependency_time"] = df_states_pivot.get("DP", 0)
+        
+        df_states_pivot["scheduled_time"] = (
+            df_states_pivot["interval_time"] - df_states_pivot["non_scheduled_time"]
+        )
+        
+        # Vectorized availability calculation
+        availability = (
+            df_states_pivot["productive_time"] + 
+            df_states_pivot["setup_time"] + 
+            df_states_pivot["dependency_time"]
+        ) / df_states_pivot["scheduled_time"].replace(0, np.nan)
+        availability = availability.fillna(0).clip(0, 1)
+        df_states_pivot["availability"] = availability
+        
+        # Pre-match all process starts and ends efficiently using merge_asof
+        # This creates a lookup table of all matched processes
+        matched_processes_list = []
+        
+        for resource in df_process_ends["Resource"].unique():
+            # Filter and copy, ensuring we have a clean dataframe
+            resource_ends = df_process_ends[df_process_ends["Resource"] == resource].copy()
+            resource_starts = df_process_starts_by_resource.get(resource, pd.DataFrame())
+            
+            if len(resource_starts) == 0 or len(resource_ends) == 0:
+                continue
+            
+            # Process by State to ensure proper sorting for merge_asof
+            # merge_asof with by="State" requires sorting by [State, time] within each State group
+            for state_id in resource_ends["State"].unique():
+                state_ends = resource_ends[resource_ends["State"] == state_id].copy()
+                state_starts = resource_starts[resource_starts["State"] == state_id].copy()
+                
+                if len(state_starts) == 0 or len(state_ends) == 0:
+                    continue
+                
+                # Rename columns - keep Resource and State columns
+                state_ends = state_ends.rename(columns={"Time": "end_time"})
+                state_starts = state_starts.rename(columns={"Time": "start_time"})
+                
+                # Ensure Resource and State columns are present
+                if "Resource" not in state_ends.columns:
+                    state_ends["Resource"] = resource
+                if "State" not in state_ends.columns:
+                    state_ends["State"] = state_id
+                
+                # Sort by time only (since we're already filtered by State)
+                state_ends = state_ends.sort_values("end_time", kind='mergesort').reset_index(drop=True)
+                state_starts = state_starts.sort_values("start_time", kind='mergesort').reset_index(drop=True)
+                
+                # Use merge_asof - it will keep all columns from left (state_ends)
+                # and add start_time from right (state_starts)
+                matched = pd.merge_asof(
+                    state_ends,
+                    state_starts[["start_time"]].reset_index(drop=True),
+                    left_on="end_time",
+                    right_on="start_time",
+                    direction="backward",
+                    allow_exact_matches=True
+                )
+                
+                # Calculate actual time and filter valid matches
+                matched = matched[matched["start_time"].notna()]
+                matched["actual_time"] = matched["end_time"] - matched["start_time"]
+                matched = matched[matched["actual_time"] > 0]
+                
+                if len(matched) > 0:
+                    matched_processes_list.append(matched[["Resource", "State", "end_time", "actual_time"]])
+        
+        if matched_processes_list:
+            df_matched = pd.concat(matched_processes_list, ignore_index=True)
+            df_matched = df_matched.rename(columns={"end_time": "Time"})
+        else:
+            df_matched = pd.DataFrame(columns=["Resource", "State", "Time", "actual_time"])
+        
+        # Calculate performance per interval using vectorized operations where possible
+        # Group intervals by resource for efficient processing
+        performance_list = []
+        
+        for (resource, interval_start, interval_end), interval_group in df_states_pivot.groupby(
             ["Resource", "Interval_start", "Interval_end"]
         ):
-            # Get time per state for this interval
-            time_per_state = df_interval.set_index("Time_type")["time_increment"]
-            
-            # Get time components
-            non_scheduled_time = time_per_state.get("NS", 0)
-            setup_time = time_per_state.get("ST", 0)
-            productive_time = time_per_state.get("PR", 0)
-            dependency_time = time_per_state.get("DP", 0)
-            
-            # Interval time
-            interval_time = interval_end - interval_start
-            
-            # Availability: (PR + ST + DP) / (Interval Time - Non-scheduled Time)
-            scheduled_time = interval_time - non_scheduled_time
-            
-            if scheduled_time > 0:
-                # Calculate availability, but ensure it doesn't exceed 100%
-                # This can happen if resource states sum to more than 100% due to rounding/aggregation issues
-                availability = (productive_time + setup_time + dependency_time) / scheduled_time
-                # Clip to 0-1 range (0-100%)
-                availability = min(availability, 1.0)
-            else:
-                availability = 0.0
-            
-            # Performance calculation
+            productive_time = interval_group["productive_time"].iloc[0]
             is_transport_resource = resource in transport_resource_ids
             
             if is_transport_resource:
-                performance = 1.0
+                performance_list.append(1.0)
+                continue
+            
+            # Filter matched processes in this interval (vectorized)
+            processes_in_interval = df_matched[
+                (df_matched["Resource"] == resource) &
+                (df_matched["Time"] >= interval_start) &
+                (df_matched["Time"] < interval_end)
+            ]
+            
+            if len(processes_in_interval) == 0:
+                performance_list.append(0.0)
+                continue
+            
+            # Calculate performance using vectorized operations
+            resource_capacity = resource_capacities.get(resource, 1)
+            process_caps = resource_process_capacities.get(resource, {})
+            
+            total_actual_time = processes_in_interval["actual_time"].sum()
+            
+            # Calculate ideal time (vectorized)
+            process_counts = processes_in_interval.groupby("State").size().reset_index(name="count")
+            
+            # Vectorized calculation using map
+            process_counts["ideal_base"] = process_counts["State"].map(process_ideal_times_cache).fillna(0)
+            process_counts["process_cap"] = process_counts["State"].map(process_caps).fillna(resource_capacity)
+            process_counts["ideal_per_unit"] = np.where(
+                process_counts["process_cap"] > 0,
+                process_counts["ideal_base"] / process_counts["process_cap"],
+                process_counts["ideal_base"]
+            )
+            process_counts["ideal_time"] = process_counts["ideal_per_unit"] * process_counts["count"]
+            total_ideal_time = process_counts["ideal_time"].sum()
+            
+            if total_actual_time > 0 and total_ideal_time > 0:
+                performance_list.append(total_ideal_time / total_actual_time)
+            elif productive_time > 0 and total_ideal_time > 0:
+                performance_list.append(total_ideal_time / productive_time)
             else:
-                # Count process end events in this interval
-                resource_process_ends = df_prepared[
-                    (df_prepared["Resource"] == resource) &
-                    (df_prepared["State Type"] == state.StateTypeEnum.production) &
-                    (df_prepared["Activity"] == "end state") &
-                    (df_prepared["Time"] >= interval_start) &
-                    (df_prepared["Time"] < interval_end)
-                ]
-                total_units_produced = len(resource_process_ends)
-                
-                if total_units_produced > 0:
-                    # Get resource capacity
-                    resource_capacity = 1
-                    process_capacities = {}
-                    for resource_data in self.context.production_system_data.resource_data:
-                        if resource_data.ID == resource:
-                            resource_capacity = resource_data.capacity if hasattr(resource_data, 'capacity') else 1
-                            if hasattr(resource_data, 'process_capacities') and resource_data.process_capacities:
-                                for i, process_id in enumerate(resource_data.process_ids):
-                                    if i < len(resource_data.process_capacities):
-                                        process_capacities[process_id] = resource_data.process_capacities[i]
-                            break
-                    
-                    # Get actual process execution times
-                    resource_process_starts = df_prepared[
-                        (df_prepared["Resource"] == resource) &
-                        (df_prepared["State Type"] == state.StateTypeEnum.production) &
-                        (df_prepared["Activity"] == "start state")
-                    ].copy()
-                    
-                    actual_process_times = []
-                    for _, end_row in resource_process_ends.iterrows():
-                        process_id = end_row["State"]
-                        end_time = end_row["Time"]
-                        
-                        matching_starts = resource_process_starts[
-                            (resource_process_starts["State"] == process_id) &
-                            (resource_process_starts["Time"] <= end_time)
-                        ]
-                        
-                        if len(matching_starts) > 0:
-                            start_time = matching_starts["Time"].max()
-                            actual_time = end_time - start_time
-                            if actual_time > 0:
-                                actual_process_times.append((process_id, actual_time))
-                    
-                    # Calculate total ideal time and total actual time
-                    total_ideal_time = 0.0
-                    total_actual_time = 0.0
-                    process_ideal_times = {}
-                    
-                    for process_data in self.context.production_system_data.process_data:
-                        if hasattr(process_data, 'time_model_id'):
-                            try:
-                                time_model = time_model_factory.get_time_model(process_data.time_model_id)
-                                ideal_cycle_time = time_model.get_expected_time()
-                                if ideal_cycle_time > 0:
-                                    process_capacity = process_capacities.get(process_data.ID, resource_capacity)
-                                    ideal_cycle_time_per_unit = ideal_cycle_time / process_capacity if process_capacity > 0 else ideal_cycle_time
-                                    process_ideal_times[process_data.ID] = ideal_cycle_time_per_unit
-                            except (ValueError, TypeError):
-                                pass
-                    
-                    for process_id, actual_time in actual_process_times:
-                        total_actual_time += actual_time
-                        if process_id in process_ideal_times:
-                            total_ideal_time += process_ideal_times[process_id]
-                    
-                    if total_actual_time > 0 and total_ideal_time > 0:
-                        performance = total_ideal_time / total_actual_time
-                    elif productive_time > 0 and total_ideal_time > 0:
-                        performance = total_ideal_time / productive_time
-                    else:
-                        performance = 0.0
-                else:
-                    performance = 0.0
-            
-            # Quality - get scrap rate for this resource
-            df_scrap_resource = self.scrap_analytics.df_scrap_per_resource.copy()
-            resource_scrap = df_scrap_resource[df_scrap_resource["Resource"] == resource]
-            
-            if len(resource_scrap) > 0:
-                scrap_rate = resource_scrap["Scrap_rate"].iloc[0]
-                quality = 1 - (scrap_rate / 100)
-            else:
-                quality = 1.0
-            
-            # Calculate OEE
-            oee = availability * performance * quality
-            
-            oee_results.append({
-                "Resource": resource,
-                "Interval_start": interval_start,
-                "Interval_end": interval_end,
-                "Availability": round(availability * 100, 2),
-                "Performance": round(performance * 100, 2),
-                "Quality": round(quality * 100, 2),
-                "OEE": round(oee * 100, 2),
-            })
+                performance_list.append(0.0)
         
-        return pd.DataFrame(oee_results)
+        df_states_pivot["performance"] = performance_list
+        
+        # Calculate quality (vectorized using cached scrap rates)
+        df_states_pivot["scrap_rate"] = df_states_pivot["Resource"].map(scrap_rates).fillna(0)
+        df_states_pivot["quality"] = 1 - (df_states_pivot["scrap_rate"] / 100)
+        
+        # Calculate OEE
+        df_states_pivot["oee"] = (
+            df_states_pivot["availability"] * 
+            df_states_pivot["performance"] * 
+            df_states_pivot["quality"]
+        )
+        
+        # Create result dataframe
+        result_df = pd.DataFrame({
+            "Resource": df_states_pivot["Resource"],
+            "Interval_start": df_states_pivot["Interval_start"],
+            "Interval_end": df_states_pivot["Interval_end"],
+            "Availability": (df_states_pivot["availability"] * 100).round(2),
+            "Performance": (df_states_pivot["performance"] * 100).round(2),
+            "Quality": (df_states_pivot["quality"] * 100).round(2),
+            "OEE": (df_states_pivot["oee"] * 100).round(2),
+        })
+        
+        return result_df
