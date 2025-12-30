@@ -191,6 +191,7 @@ class Runner:
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
                 conwip=self.production_system_data.conwip_number,
+                schedule=self.production_system_data.schedule,
             )
             self.source_factory.create_sources(self.production_system_data)
             self.primitive_factory = primitive_factory.PrimitiveFactory(
