@@ -352,25 +352,31 @@ class OEEAnalytics:
             setup_time = time_per_state.get("ST", 0)
             productive_time = time_per_state.get("PR", 0)
             dependency_time = time_per_state.get("DP", 0)
+            standby_time = time_per_state.get("SB", 0)
+            
+            # Performance calculation depends on resource type
+            is_transport_resource = resource in transport_resource_ids
             
             # Availability: (PR + ST + DP) / (Total Time - Non-scheduled Time)
             # Scheduled Time = Total Time - Non-scheduled Time (NS)
             scheduled_time = resource_time - non_scheduled_time
             
             # Availability = (Productive + Setup + Dependency) / Scheduled Time
-            # This measures how much of scheduled time was used for production-related activities
-            # Excludes standby (SB) and breakdowns (UD) as availability losses
+            # For transport resources: also include standby time (SB) since standby is normal for transport
+            # For other resources: excludes standby (SB) and breakdowns (UD) as availability losses
             if scheduled_time > 0:
-                availability = (productive_time + setup_time + dependency_time) / scheduled_time
+                if is_transport_resource:
+                    # For transport: include standby time in availability
+                    availability = (productive_time + setup_time + dependency_time + standby_time) / scheduled_time
+                else:
+                    # For production resources: exclude standby
+                    availability = (productive_time + setup_time + dependency_time) / scheduled_time
             else:
                 availability = 0.0
             
             # Run Time = time actually producing (PR time) - this is used for performance calculation
             # Standby time is NOT included in run time
             run_time = productive_time
-            
-            # Performance calculation depends on resource type
-            is_transport_resource = resource in transport_resource_ids
             
             if is_transport_resource:
                 # For transport resources: Performance defaults to 100%
@@ -450,7 +456,12 @@ class OEEAnalytics:
                     for process_id, actual_time in actual_process_times:
                         total_actual_time += actual_time
                         if process_id in process_ideal_times:
-                            total_ideal_time += process_ideal_times[process_id]
+                            # Get the process capacity for this process
+                            process_cap = process_capacities.get(process_id, resource_capacity)
+                            # Multiply ideal time by capacity to account for all units processed in parallel
+                            # ideal_cycle_time_per_unit was already divided by capacity, so multiply back
+                            # to get the total ideal time for all units in this execution
+                            total_ideal_time += process_ideal_times[process_id] * process_cap
                     
                     # Performance = Total Ideal Time / Total Actual Time
                     # This compares the ideal time needed vs actual time spent
@@ -617,18 +628,31 @@ class OEEAnalytics:
         df_states_pivot["productive_time"] = df_states_pivot.get("PR", 0)
         df_states_pivot["setup_time"] = df_states_pivot.get("ST", 0)
         df_states_pivot["dependency_time"] = df_states_pivot.get("DP", 0)
+        df_states_pivot["standby_time"] = df_states_pivot.get("SB", 0)
         
         df_states_pivot["scheduled_time"] = (
             df_states_pivot["interval_time"] - df_states_pivot["non_scheduled_time"]
         )
         
+        # Identify transport resources for availability calculation
+        is_transport = df_states_pivot["Resource"].isin(transport_resource_ids)
+        
         # Vectorized availability calculation
-        availability = (
-            df_states_pivot["productive_time"] + 
-            df_states_pivot["setup_time"] + 
-            df_states_pivot["dependency_time"]
-        ) / df_states_pivot["scheduled_time"].replace(0, np.nan)
-        availability = availability.fillna(0).clip(0, 1)
+        # For transport resources: include standby time (SB) since standby is normal for transport
+        # For production resources: exclude standby (SB) as availability loss
+        availability = np.where(
+            is_transport,
+            # Transport: include standby time
+            (df_states_pivot["productive_time"] + 
+             df_states_pivot["setup_time"] + 
+             df_states_pivot["dependency_time"] +
+             df_states_pivot["standby_time"]) / df_states_pivot["scheduled_time"].replace(0, np.nan),
+            # Production: exclude standby
+            (df_states_pivot["productive_time"] + 
+             df_states_pivot["setup_time"] + 
+             df_states_pivot["dependency_time"]) / df_states_pivot["scheduled_time"].replace(0, np.nan)
+        )
+        availability = pd.Series(availability).fillna(0).clip(0, 1)
         df_states_pivot["availability"] = availability
         
         # Pre-match all process starts and ends efficiently using merge_asof
@@ -764,12 +788,22 @@ class OEEAnalytics:
                     if len(df_expanded) == 0:
                         performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
                     else:
-                        # Calculate proportional time (vectorized)
-                        # Only count the portion of actual_time that falls within each interval
-                        df_expanded['proportion'] = df_expanded['overlap_duration'] / df_expanded['process_duration']
-                        df_expanded['scaled_actual_time'] = df_expanded['actual_time'] * df_expanded['proportion']
-                        # Use overlap_duration as the actual time for this interval (not the full process time)
-                        df_expanded['actual_time'] = df_expanded['overlap_duration']
+                        # Check if process is completely contained within the interval
+                        # Process is completely contained if: process_start >= Interval_start AND process_end <= Interval_end
+                        df_expanded['is_completely_contained'] = (
+                            (df_expanded['process_start'] >= df_expanded['Interval_start']) &
+                            (df_expanded['process_end'] <= df_expanded['Interval_end'])
+                        )
+                        
+                        # For contained processes: use full process execution time (from original actual_time column)
+                        # For non-contained processes: use overlap_duration (portion within interval)
+                        # The original actual_time is the full process execution time (end_time - start_time)
+                        df_expanded['actual_time_for_interval'] = np.where(
+                            df_expanded['is_completely_contained'],
+                            df_expanded['actual_time'],  # Use original full process execution time
+                            df_expanded['overlap_duration']  # Use only the portion within interval
+                        )
+                        df_expanded['actual_time'] = df_expanded['actual_time_for_interval']
                         
                         # Add resource capacity and process capacity info
                         df_expanded["resource_capacity"] = df_expanded["Resource"].map(
@@ -790,8 +824,19 @@ class OEEAnalytics:
                             df_expanded["ideal_base"]
                         )
                         
-                        # Scale ideal time proportionally (same proportion as actual time)
-                        df_expanded["scaled_ideal_time"] = df_expanded["ideal_per_unit"] * df_expanded["proportion"]
+                        # For completely contained processes: calculate ideal time normally
+                        # For processes spanning boundaries: set ideal_time = actual_time (100% performance)
+                        df_expanded['proportion'] = df_expanded['overlap_duration'] / df_expanded['process_duration']
+                        
+                        # Calculate ideal time for contained processes
+                        contained_ideal_time = df_expanded["ideal_per_unit"] * df_expanded["proportion"] * df_expanded["process_cap"]
+                        
+                        # For non-contained processes, set ideal_time = actual_time (100% performance)
+                        df_expanded["scaled_ideal_time"] = np.where(
+                            df_expanded['is_completely_contained'],
+                            contained_ideal_time,
+                            df_expanded['actual_time']  # Set ideal = actual for 100% performance
+                        )
                         
                         # Aggregate by interval to get total actual and ideal time
                         performance_by_interval = df_expanded.groupby(
@@ -818,6 +863,7 @@ class OEEAnalytics:
         is_transport = df_states_pivot["Resource"].isin(transport_resource_ids)
         
         # For non-transport resources: performance = total_ideal_time / actual_time (or productive_time as fallback)
+        # If there's no production in the interval, set performance to 100% (can't measure performance without production)
         performance = np.where(
             is_transport,
             1.0,  # Transport resources default to 100%
@@ -827,7 +873,7 @@ class OEEAnalytics:
                 np.where(
                     (df_states_pivot["productive_time"] > 0) & (df_states_pivot["total_ideal_time"] > 0),
                     df_states_pivot["total_ideal_time"] / df_states_pivot["productive_time"],
-                    0.0
+                    1.0  # Default to 100% when there's no production to measure
                 )
             )
         )
