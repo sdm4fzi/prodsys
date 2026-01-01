@@ -1,0 +1,121 @@
+from operator import add
+from prodsys import express as psx
+import prodsys
+from prodsys.util.node_link_generation import node_link_generation
+from prodsys.models.production_system_data import ProductionSystemData, add_default_queues_to_production_system
+
+
+# all time models
+time_model_agv = psx.DistanceTimeModel(speed=360, reaction_time=0, ID="time_model_x")
+time_model_machine1 = psx.FunctionTimeModel(
+    distribution_function="constant", location=3, ID="time_model_ap23"
+)
+time_model_machine2 = psx.FunctionTimeModel(
+    distribution_function="constant", location=3, ID="time_model_ap23"
+)
+time_model_machine3 = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_ap23"
+)
+time_model_machine4 = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_ap23"
+)
+time_model_machine5 = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_ap23"
+)
+time_model_machine6 = psx.FunctionTimeModel(
+    distribution_function="constant", location=3, ID="time_model_ap23"
+)
+timer_model_interarrival_time = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_source01"
+)
+timer_model_interarrival_time2 = psx.FunctionTimeModel(
+    distribution_function="constant", location=6, ID="time_model_source02"
+)
+
+# All processes
+ltp01 = psx.LinkTransportProcess(time_model=time_model_agv, ID="ltp01")
+productionprocess01 = psx.ProductionProcess(time_model=time_model_machine1, ID="pp01")
+productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="pp02")
+productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
+
+# All resources
+machine01 = psx.Resource(
+    ID="resource01",
+    processes=[productionprocess01],
+    location=[100, 100],
+)
+machine02 = psx.Resource(
+    ID="resource02",
+    processes=[productionprocess02],
+    location=[200, 10],
+)
+machine03 = psx.Resource(
+    ID="resource03",
+    processes=[productionprocess03],
+    location=[100, 200],
+)
+
+agv01 = psx.Resource(
+    location=[0, 0],
+    ID="agv01",
+    processes=[ltp01],
+)
+
+# All products
+product01 = psx.Product(
+    process=[
+        productionprocess01,
+        productionprocess02,
+        productionprocess03,
+    ],
+    transport_process=ltp01,
+    ID="product01",
+)
+
+product02 = psx.Product(
+    process=[
+        productionprocess03,
+        productionprocess02,
+        productionprocess01,
+    ],
+    transport_process=ltp01,
+    ID="product02",
+)
+
+source01 = psx.Source(
+    product=product01,
+    ID="source01",
+    time_model=timer_model_interarrival_time,
+    location=[0, 0],
+)
+source02 = psx.Source(
+    product=product02,
+    ID="source02",
+    time_model=timer_model_interarrival_time2,
+    location=[0, 0],
+)
+
+sink01 = psx.Sink(product=product01, ID="sink01", location=[200, 205])
+sink02 = psx.Sink(product=product02, ID="sink02", location=[200, 205])
+
+# Add production system
+productionsystem = psx.ProductionSystem(
+    resources=[
+        agv01,
+        machine01,
+        machine02,
+        machine03,
+    ],
+    sources=[source01, source02],
+    sinks=[sink01, sink02],
+    ID="productionsystem01",
+)
+
+adapter = productionsystem.to_model()
+
+#add_default_queues_to_production_system(adapter, reset=False)
+node_link_generation.generate_and_apply_network(adapter)
+runner = prodsys.runner.Runner(production_system_data=adapter)
+runner.initialize_simulation()
+runner.run(1000)
+runner.print_results()

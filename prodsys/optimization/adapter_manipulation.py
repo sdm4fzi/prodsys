@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 import logging
 from typing import Callable, List
-
+import networkx as nx
 import pandas as pd
 from prodsys import adapters
 from prodsys.models.production_system_data import (
@@ -18,6 +18,7 @@ from prodsys.models.production_system_data import (
 from prodsys.models import resource_data, scenario_data
 from prodsys.models.processes_data import (
     CompoundProcessData,
+    LinkTransportProcessData,
     ProcessModelData,
     TransportProcessData,
 )
@@ -31,6 +32,17 @@ from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_required_primitives,
 )
+from prodsys.util.node_link_generation import node_link_generation
+from prodsys.models.primitives_data import StoredPrimitive
+from prodsys.simulation.route_finder import find_route
+from prodsys.simulation import request
+import random
+from uuid import uuid1
+
+from prodsys.simulation import process, request, runner
+from prodsys.util.util import flatten
+
+
 
 from prodsys.models.primitives_data import StoredPrimitive
 import random
@@ -80,6 +92,26 @@ def _collect_leaf_process_ids(
         elif node_obj is not None and node_id in required_ids:
             contained_ids.add(node_id)
     return contained_ids
+
+def delete_unused_conveyor_processes(
+    adapter_object: adapters.ProductionSystemData
+) -> None:
+    if adapters.get_conveyor_processes(adapter_object):
+        unused_processes = []
+        for process in adapter_object.process_data:
+            unused = True
+            if isinstance(process, LinkTransportProcessData):
+                if not process.can_move:
+                    for resource in adapter_object.resource_data:
+                        if process.ID in resource.process_ids:
+                            unused = False
+            else: 
+                unused=False
+            if unused:
+                unused_processes.append(process)
+
+        for process in unused_processes:
+            adapter_object.process_data.remove(process)
 
 
 def expand_process_ids_with_models(
@@ -190,9 +222,25 @@ def crossover(ind1, ind2):
     if crossover_type == "transport_resource":
         adapter1.resource_data = machines_1 + transport_resources_2
         adapter2.resource_data = machines_2 + transport_resources_1
+        
+        transport_processes2 = adapters.get_conveyor_processes(adapter2)
+        transport_processes1 = adapters.get_conveyor_processes(adapter1)
+        if (transport_processes1 or transport_processes2):
+            for tp in transport_processes2:
+                if not any(tp.ID == atp.ID for atp in adapter1.process_data):
+                    adapter1.process_data.append(tp.model_copy(deep=True))
+            for tp in transport_processes1:
+                if not any(tp.ID == atp.ID for atp in adapter2.process_data):
+                    adapter2.process_data.append(tp.model_copy(deep=True))        
+            delete_unused_conveyor_processes(adapter1)
+            delete_unused_conveyor_processes(adapter2)
 
-    add_default_queues_to_resources(adapter1)
-    add_default_queues_to_resources(adapter2)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter1.process_data):
+        node_link_generation.generate_and_apply_network(adapter1, simple_connection=True)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter2.process_data):
+        node_link_generation.generate_and_apply_network(adapter2, simple_connection=True)
+    add_default_queues_to_resources(adapter1, reset=False)
+    add_default_queues_to_resources(adapter2, reset=False)
     clean_out_breakdown_states_of_resources(adapter1)
     clean_out_breakdown_states_of_resources(adapter2)
     adjust_process_capacities(adapter1)
@@ -268,8 +316,10 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
             process_ids=process_module_list,
         )
     )
-    add_default_queues_to_resources(adapter_object)
+    add_default_queues_to_resources(adapter_object, reset=False)
     add_setup_states_to_machine(adapter_object, machine_id)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -289,30 +339,174 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     else:
         control_policy = random.choice(transport_controllers)
 
+    possible_positions = deepcopy(adapter_object.scenario_data.options.positions)
+    for resource in adapters.get_production_resources(adapter_object):
+        if resource.location in possible_positions:
+            possible_positions.remove(resource.location)
+    if not possible_positions:
+        return False
     required_ids = set(get_required_process_ids(adapter_object))
     possible_processes = [
         process_id
         for process_id in get_possible_transport_processes_IDs(adapter_object)
-        if process_id in required_ids
+        if process_id in required_ids or (
+            process.capability in required_ids for process in adapter_object.process_data if process.ID == process_id
+        )
     ]
     if not possible_processes:
         return False
     transport_process = random.choice(possible_processes)
-
-    transport_resource_id = f"resource_{uuid1().hex}"
-    adapter_object.resource_data.append(
-        resource_data.ResourceData(
-            ID=transport_resource_id,
-            description="",
-            capacity=1,
-            location=(0.0, 0.0),
-            can_move=True,
-            controller=resource_data.ControllerEnum.PipelineController,
-            control_policy=control_policy,
-            process_ids=[transport_process],
+    transport_process_data = next(process for process in adapter_object.process_data if process.ID == transport_process)
+    if transport_process_data.can_move:
+        transport_resource_id = f"AGV_{uuid1().hex}"
+        adapter_object.resource_data.append(
+            resource_data.ResourceData(
+                ID=transport_resource_id,
+                description="",
+                capacity=1,
+                location=[0,0],
+                controller=resource_data.ControllerEnum.PipelineController,
+                control_policy=control_policy,
+                process_ids=[transport_process],
+                can_move=True, 
+            )
         )
-    )
-    add_default_queues_to_resources(adapter_object)
+    else: #case like Conveyor that cannot move: place links on a path neccessary for a random product and process
+        new_links = []
+        G = nx.Graph()
+        if transport_process_data.capability:
+            key=transport_process_data.capability
+        else:
+            key=transport_process
+        possible_products = [product for product in adapter_object.product_data
+            if product.transport_process == key]
+        product = random.choice(possible_products)
+        if len(product.processes) >= 2:
+            idx = random.randint(0, len(product.processes) - 2)
+            process_sequence = product.processes[idx:idx+2]
+        else:
+            process_sequence = product.processes
+        for src, tgt in node_link_generation.get_new_links(adapter_object, simple_connection=True):
+                G.add_edge(src, tgt)
+        new_links = []
+        if len(process_sequence) > 1:
+            for i in range(len(process_sequence)-1): 
+                if i == 0 and product.processes.index(process_sequence[i]) == 0:
+                    next_process = process_sequence[0]
+                    possible_current_resources = [
+                        source for source in adapter_object.source_data
+                        if source.product_type == product.ID
+                    ]
+                    possible_next_resources = [
+                        resource for resource in adapter_object.resource_data
+                        if next_process in resource.process_ids
+                    ]
+                    for next_resource in possible_next_resources:
+                        for source in possible_current_resources:
+                            try: #TODO: use pathfinding algorithm that considers distances
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
+                            except nx.NetworkXNoPath:
+                                path = []  # No path found
+                            for i in range(len(path)-1):
+                                new_links.append((path[i], path[i+1]))
+                current_process = process_sequence[i]
+                next_process = process_sequence[i+1]
+                possible_next_resources = [
+                    resource for resource in adapter_object.resource_data
+                    if next_process in resource.process_ids
+                ]
+                possible_current_resources = [
+                    resource for resource in adapter_object.resource_data
+                    if current_process in resource.process_ids
+                ]
+                for next_resource in possible_next_resources:
+                    for source in possible_current_resources:
+                        for next_resource in possible_next_resources:
+                            try:
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
+                            except nx.NetworkXNoPath:
+                                return []  # No path found
+                            for i in range(len(path)-1):
+                                new_links.append((path[i], path[i+1]))
+                if i==len(process_sequence)-1 and product.processes.index(process_sequence[i+1]) == len(product.processes)-1:
+                    possible_current_resources = possible_next_resources
+                    possible_next_resources = [
+                        sink for sink in adapter_object.sink_data
+                        if sink.product_type == product.ID
+                    ]
+                    for next_resource in possible_next_resources:
+                        for source in possible_current_resources:
+                            try:
+                                path = nx.shortest_path(G, source=source.ID, target=next_resource.ID)
+                            except nx.NetworkXNoPath:
+                                path = []  # No path found
+                            for i in range(len(path)-1):
+                                new_links.append((path[i], path[i+1]))
+        else: #only one process in sequence
+            possible_sources = [
+                source for source in adapter_object.source_data
+                if source.product_type == product.ID
+            ]
+            possible_resources = [
+                resource for resource in adapter_object.resource_data
+                if process_sequence in resource.process_ids
+            ]
+            possible_sinks = [
+                sink for sink in adapter_object.sink_data
+                if sink.product_type == product.ID
+            ]
+            for resource in possible_resources: #from source to resource
+                for source in possible_sources:
+                    try: #TODO: use pathfinding algorithm that considers distances
+                        path = nx.shortest_path(G, source=source.ID, target=resource.ID)
+                    except nx.NetworkXNoPath:
+                        path = []  # No path found
+                    for i in range(len(path)-1):
+                        new_links.append((path[i], path[i+1]))
+            for resource in possible_resources: #from resource to sink
+                for sink in possible_sinks:
+                    try:
+                        path = nx.shortest_path(G, source=resource.ID, target=sink.ID)
+                    except nx.NetworkXNoPath:
+                        path = []  # No path found
+                    for i in range(len(path)-1):
+                        new_links.append((path[i], path[i+1]))
+        
+        new_transport_process = transport_process_data.model_copy(deep=True)
+        new_transport_process.ID = f"conveyor_process_{uuid1().hex}"
+        new_transport_process.links = new_links
+        adapter_object.process_data.append(new_transport_process)
+
+        possible_transport_resources = []
+        for resource in adapter_object.resource_data:
+            if transport_process in resource.process_ids:
+                possible_transport_resources.append(resource)
+        new_object_capacities = []
+        try:
+            for tr in possible_transport_resources:
+                if tr.capacity<24:
+                    new_object_capacities.append(tr.capacity)
+        except IndexError:
+            new_object_capacity = 1
+        if new_object_capacities:
+            new_object_capacity = random.choice(new_object_capacities)
+        else:
+            new_object_capacity = 1
+        transport_resource_id = f"conveyor_{uuid1().hex}"
+        new_transport_resource = resource_data.ResourceData(
+                ID=transport_resource_id,
+                description="",
+                capacity=1,
+                location=(0,0),
+                controller=resource_data.ControllerEnum.PipelineController,
+                control_policy=control_policy,
+                process_ids=[new_transport_process.ID],
+                can_move=False,
+            )
+        adapter_object.resource_data.append(new_transport_resource)
+        if not new_transport_process.ID == adapter_object.process_data[-1].ID or not new_transport_process.ID == adapter_object.resource_data[-1].process_ids[0]:
+            print("Transport process and resource are not correctly linked.") #DEBUG
+    add_default_queues_to_resources(adapter_object, reset=False)
     return True
 
 
@@ -399,6 +593,10 @@ def remove_transport_resource(adapter_object: adapters.ProductionSystemData) -> 
         return False
     transport_resource = random.choice(transport_resources)
     adapter_object.resource_data.remove(transport_resource)
+    delete_unused_conveyor_processes(adapter_object)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
+
     return True
 
 
@@ -525,6 +723,8 @@ def move_machine(adapter_object: adapters.ProductionSystemData) -> bool:
         return False
     new_location = random.choice(possible_positions)
     update_production_resource_location(moved_machine, new_location)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return True
 
 
@@ -644,7 +844,7 @@ def mutation(individual):
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
         individual[0].ID = str(uuid1())
-    add_default_queues_to_resources(adapter_object)
+    add_default_queues_to_resources(adapter_object, reset=False)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     sync_resource_dependencies(adapter_object)
@@ -725,8 +925,8 @@ def get_random_transport_capacity(
 
     for _ in range(num_transport_resources):
         add_transport_resource(adapter_object)
-
     sync_resource_dependencies(adapter_object)
+    delete_unused_conveyor_processes(adapter_object)
     return adapter_object
 
 
@@ -768,6 +968,8 @@ def get_random_layout(
         new_location = random.choice(possible_positions)
         update_production_resource_location(machine, new_location)
         possible_positions.remove(new_location)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):    
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     return adapter_object
 
 
@@ -835,7 +1037,6 @@ def random_configuration(
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
-
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
     if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
@@ -854,11 +1055,14 @@ def random_configuration(
         get_random_control_policies(adapter_object)
     if scenario_data.ReconfigurationEnum.ROUTING_LOGIC in transformations:
         get_random_routing_logic(adapter_object)
-
-    add_default_queues_to_resources(adapter_object)
+    
+    add_default_queues_to_resources(adapter_object, reset=False)
+    if any(isinstance(process, LinkTransportProcessData) for process in adapter_object.process_data):    
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     sync_resource_dependencies(adapter_object)
+
     if not check_valid_configuration(adapter_object, baseline):
         return
     return adapter_object
@@ -882,7 +1086,7 @@ def get_random_configuration_asserted(
         if adapter_object:
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1000 == 0:
+        if invalid_configuration_counter % 50 == 0: 
             logging.info(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )
@@ -932,7 +1136,7 @@ def random_configuration_with_initial_solution(
             if not mutation_op(adapter_object):
                 break
             successful_mutations += 1
-            add_default_queues_to_resources(adapter_object)
+            add_default_queues_to_resources(adapter_object, reset=False)
             clean_out_breakdown_states_of_resources(adapter_object)
             adjust_process_capacities(adapter_object)
             sync_resource_dependencies(adapter_object)
@@ -947,7 +1151,7 @@ def random_configuration_with_initial_solution(
             sync_resource_dependencies(adapter_object)
             return adapter_object
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 1000 == 0:
+        if invalid_configuration_counter % 50 == 0:
             logging.warning(
                 f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
             )
@@ -1309,7 +1513,7 @@ def configuration_capacity_based(
                 ID=str(uuid1()),
                 description="",
                 capacity=1,
-                can_move=True,
+                can_move=True, #TODO: adapt to the given production system
                 control_policy="FIFO",
                 controller=resource_data.ControllerEnum.PipelineController,
                 process_ids=process_data,
@@ -1374,7 +1578,7 @@ def configuration_capacity_based(
                     ID=str(uuid1()),
                     description="",
                     capacity=1,
-                    can_move=True,
+                    can_move=True, #TODO: adapt to the given production system
                     control_policy="FIFO",
                     controller=resource_data.ControllerEnum.PipelineController,
                     process_ids=process_data,

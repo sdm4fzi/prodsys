@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 from functools import partial
-from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
 from prodsys.simulation import sim
 from prodsys.simulation import process, state
@@ -16,7 +16,7 @@ from prodsys.models.resource_data import (
     SystemResourceData,
     TransportControlPolicy,
 )
-from prodsys.models import performance_data
+from prodsys.models import performance_data, processes_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
@@ -207,7 +207,7 @@ class ResourceFactory:
         self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
         self.system_resources: Dict[str, resources.SystemResource] = {}
-        self.resources_can_move: Dict[str, resources.Resource] = {}
+        self.transport_resources: Dict[str, resources.Resource] = {}
         self.resources_can_process: Dict[str, resources.Resource] = {}
         self.controllers: List[
             Union[
@@ -288,6 +288,12 @@ class ResourceFactory:
         ports = []
         if resource_data.ports:
             ports = self.queue_factory.get_queues(resource_data.ports)
+        elif any(
+            isinstance(tp, processes_data.TransportProcessData) and tp.ID in resource_data.process_ids
+            for tp in self.process_factory.processes
+        ):
+            raise ValueError("Ports not found for resource " + resource_data.ID)
+
         return ports
 
     def get_buffers_for_resource(
@@ -353,10 +359,11 @@ class ResourceFactory:
         )
         adjust_process_breakdown_states(resource_object, self.state_factory, self.env)
         self.all_resources[resource_object.data.ID] = resource_object
-        if resource_object.can_move:
-            self.resources_can_move[resource_object.data.ID] = resource_object
         if resource_object.can_process:
             self.resources_can_process[resource_object.data.ID] = resource_object
+        else:
+            self.transport_resources[resource_object.data.ID] = resource_object
+
 
     def start_resources(self):
         """
@@ -439,7 +446,7 @@ class ResourceFactory:
         Returns:
             List[resources.ResourceData]: List of transport resource objects.
         """
-        return self.resources_can_move.values()
+        return self.transport_resources.values()
 
     def get_production_resources(self) -> List[resources.Resource]:
         """

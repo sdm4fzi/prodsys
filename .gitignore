@@ -1,5 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 *.xml
+!*.drawio.xml
 *.png
 *.prof
 *.csv

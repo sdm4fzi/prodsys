@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import logging
 from prodsys import adapters, runner
 from prodsys.models.production_system_data import (
-    assert_no_redudant_locations,
+    assert_no_redundant_locations,
     assert_required_processes_in_resources_available,
     get_possible_production_processes_IDs,
 )
@@ -50,7 +50,7 @@ def get_reconfiguration_cost(
     baseline: adapters.ProductionSystemData = None,
 ) -> float:
     num_machines = len(adapters.get_production_resources(adapter_object))
-    num_transport_resources = len(adapters.get_transport_resources(adapter_object))
+    num_transport_resources = len(adapters.get_transport_resources(adapter_object)) #TODO: add more complex cost calculation for conveyors/can_move=False: calculate based on costs per meter or cost per link
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
         num_machines_before = 0
@@ -144,7 +144,7 @@ def valid_num_process_modules(configuration: adapters.ProductionSystemData) -> b
 
 def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
     try:
-        assert_no_redudant_locations(configuration)
+        assert_no_redundant_locations(configuration)
     except ValueError as e:
         return False
 

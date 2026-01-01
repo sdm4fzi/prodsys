@@ -237,7 +237,7 @@ def test_run_simulation(simulation_adapter: ProductionSystemData):
             if kpi.product_type == "product 2":
                 product2 = kpi.value 
             if kpi.product_type == "product 1":
-               product1 = kpi.value
+                product1 = kpi.value
     assert mutterproduct == product1 and mutterproduct == product2
     assert product1 == product2
     

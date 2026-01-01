@@ -30,8 +30,8 @@ def find_route(
     Returns:
         List[Locatable]: The route as a list of locatable objects.
     """
-    if request.get_route() and not find_route_to_origin:
-        return request.get_route()
+    if request.route and not find_route_to_origin:
+        return request.route
     route_finder = RouteFinder()
     route = route_finder.find_route(
         request=request, process=process, find_route_to_origin=find_route_to_origin
@@ -90,7 +90,7 @@ class RouteFinder:
             origin=origin,
         )  # finding route to origin is always an empty transport, since material is picked up at the origin
 
-        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possibly.
+        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possible.
         origin_node, target_node = self.get_route_origin_and_target(
             request=request, route_to_origin=find_route_to_origin
         )

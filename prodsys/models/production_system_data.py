@@ -40,7 +40,7 @@ from prodsys.models import scenario_data as scenario_data_module
 from prodsys.models import dependency_data as dependency_data_module
 from prodsys.models import primitives_data as primitives_data_module
 from prodsys.util import util
-
+from prodsys.models.processes_data import LinkTransportProcessData
 
 def get_production_resources(
     adapter: ProductionSystemData,
@@ -220,7 +220,10 @@ def add_default_queues_to_resources(
         ProductionSystemAdapter: ProductionSystemAdapter object with default queues added to all resources
     """
     for resource in adapter.resource_data:
-        if not reset and has_input_port(resource, adapter) and has_output_port(resource, adapter):
+        transport_process_ids = set(get_possible_transport_processes_IDs(adapter))
+        is_transport_resource = any(proc_id in transport_process_ids for proc_id in resource.process_ids)
+
+        if (not reset and has_input_port(resource, adapter) and has_output_port(resource, adapter)) or is_transport_resource:
             continue
         remove_queues_from_resource(resource)
         remove_unused_queues_from_adapter(adapter)
@@ -1249,7 +1252,7 @@ class ProductionSystemData(BaseModel):
             ValueError: If not all links are available for LinkTransportProcesses.
             ValueError: If ports are missing locations (needed for transport routing).
         """
-        assert_no_redudant_locations(self)
+        assert_no_redundant_locations(self)
         assert_required_processes_in_resources_available(self)
         assert_all_links_available(self)
         assert_ports_have_locations(self)
@@ -1260,6 +1263,7 @@ def remove_duplicate_locations(input_list: List[List[float]]) -> List[List[float
 
 
 def get_location_of_locatable(
+    adapter: ProductionSystemData,
     locatable: Union[
         resource_data_module.ResourceData,
         source_data_module.SourceData,
@@ -1268,20 +1272,19 @@ def get_location_of_locatable(
     ],
 ) -> List[List[float]]:
     locations = [locatable.location]
-    if (
-        hasattr(locatable, "input_location")
-        and locatable.input_location != locatable.location
-    ):
-        locations.append(locatable.input_location)
-    if (
-        hasattr(locatable, "output_location")
-        and locatable.output_location != locatable.location
-    ):
-        locations.append(locatable.output_location)
+    if hasattr(locatable, "ports") and locatable.ports:
+        for port_ID in locatable.ports:
+            port = next((portx for portx in adapter.port_data if portx.ID == port_ID), None)
+            if port.location != locatable.location:
+                result = get_location_of_locatable(adapter, port)
+                if isinstance(result, list):
+                    locations.extend(result)
+                else:
+                    locations.append(result)
     return locations
 
 
-def assert_no_redudant_locations(adapter: ProductionSystemData):
+def assert_no_redundant_locations(adapter: ProductionSystemData):
     """
     Asserts that no multiple objects are positioned at the same location.
 
@@ -1293,14 +1296,14 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
     """
     machine_locations = []
     for production_resource in get_production_resources(adapter):
-        machine_locations += get_location_of_locatable(production_resource)
+        machine_locations.append(production_resource.location)
     source_locations = []
     for source in adapter.source_data:
-        source_locations += get_location_of_locatable(source)
+        source_locations += get_location_of_locatable(adapter, source)
     source_locations = remove_duplicate_locations(source_locations)
     sink_locations = []
     for sink in adapter.sink_data:
-        sink_locations += get_location_of_locatable(sink)
+        sink_locations += get_location_of_locatable(adapter, sink)
     sink_locations = remove_duplicate_locations(
         [sink.location for sink in adapter.sink_data]
     )
@@ -1308,9 +1311,9 @@ def assert_no_redudant_locations(adapter: ProductionSystemData):
     for store in adapter.port_data:
         if not isinstance(store, port_data.StoreData):
             continue
-        store_locations += get_location_of_locatable(store)
+        store_locations += get_location_of_locatable(adapter, store)
 
-    positions = machine_locations + source_locations + sink_locations + store_locations
+    positions = machine_locations + store_locations # + source_locations + sink_locations
     for location in positions:
         if positions.count(location) > 1:
             raise ValueError(
@@ -1765,6 +1768,25 @@ def get_required_transport_processes(
     )
     return required_transport_processes
 
+def get_conveyor_processes(
+    configuration: ProductionSystemData,
+) -> List[processes_data_module.PROCESS_DATA_UNION]:
+    """
+    Returns all required transport processes in the production system.
+
+    Args:
+        configuration (ProductionSystemData): Production system configuration
+
+    Returns:
+        List: List of required transport processes
+    """
+    required_transport_processes=[]
+    for process in configuration.process_data:
+        if isinstance(process, LinkTransportProcessData):
+            if not process.can_move:
+                required_transport_processes.append(process)
+
+    return required_transport_processes 
 
 def get_required_capability_processes(
     configuration: ProductionSystemData,

@@ -126,6 +126,7 @@ class TransportProcessHandler:
         self.blocked_capacity = 0
         transport_resource.update_full()
 
+
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """
         Start the next process.
@@ -170,7 +171,6 @@ class TransportProcessHandler:
             yield resource_request
             resource_requests.append(resource_request)
         resource.controller.mark_started_process(process_request.capacity_required)
-        # TODO: consider conveyor must not go to origin to pickup material, only agv -> differntiate by can_move attribute of resource
         if origin_queue.get_location() != resource.get_location():
             route_to_origin = self.find_route_to_origin(process_request)
             transport_state_events = []
@@ -184,7 +184,6 @@ class TransportProcessHandler:
             for transport_event, transport_state in transport_state_events:
                 yield transport_event
                 transport_state.process = None
-        self.update_location(process_request.get_origin())
         yield from self.get_entities_of_request(process_request)
         process_request.entity.update_location(self.resource)
 
@@ -320,7 +319,8 @@ class TransportProcessHandler:
             input_state.process_state(target=target_location, empty_transport=empty_transport, initial_transport_step=initial_transport_step, last_transport_step=last_transport_step)  # type: ignore False
         )
         yield input_state.process
-        self.update_location(target)
+        if self.resource.can_move:
+            self.update_location(target)
 
     def find_route_to_origin(
         self, process_request: request_module.Request
@@ -347,3 +347,73 @@ class TransportProcessHandler:
             return route_to_origin
         else:
             return [self.resource.current_locatable, process_request.origin_queue]
+
+
+class ConveyorTransportProcessHandler(TransportProcessHandler):
+    """
+    Controller for conveyor transport resources.
+    """
+
+    def handle_request(self, process_request: request_module.Request) -> Generator:
+        """
+        Start the next process.
+
+        The logic is the following:
+
+        1. Get the next request.
+        2. Get the resource, process, product, origin and target from the request.
+        3. Setup the resource for the process.
+        4. Wait until the resource is free.
+        5. Get the product from the origin.
+        6. Move transport resource to the target.
+        7. Put the product to the target.
+        8. Go to 1.
+
+
+        Yields:
+            Generator: The generator yields when the transport is over.
+        """
+        resource = process_request.get_resource()
+        self.resource = resource
+        process = process_request.get_process()
+        origin = process_request.get_origin()
+        origin_queue = process_request.origin_queue
+        self.block_other_transports(resource)
+        # Take only route and dependencies of the main request of the lot
+        route_to_target = process_request.get_route()
+        if process_request.required_dependencies:
+            yield process_request.request_dependencies()
+        yield from resource.setup(process)
+        if not resource.current_locatable: 
+            resource.set_location(origin)
+        resource_requests = []
+        for _ in range(process_request.capacity_required):
+            resource_request = resource.request()
+            yield resource_request
+            resource_requests.append(resource_request)
+        resource.controller.mark_started_process(process_request.capacity_required)
+
+        transport_state_events = []
+        for entity in process_request.get_atomic_entities():
+            transport_state: state.State = yield from resource.wait_for_free_process(
+                process
+            )
+            transport_state.reserved = True
+            transport_event = self.env.process(self.run_transport(
+                transport_state, entity, route_to_target, empty_transport=False
+            ))
+            transport_state_events.append((transport_event, transport_state))
+        for transport_event, transport_state in transport_state_events:
+            yield transport_event
+            transport_state.process = None
+
+
+        yield from self.put_entities_of_request(process_request)
+        for entity in process_request.get_atomic_entities():
+            entity.update_location(process_request.target_queue)
+
+        process_request.entity.router.mark_finished_request(process_request)
+        self.resource.controller.mark_finished_process(process_request.capacity_required)
+        for resource_request in resource_requests:
+            resource.release(resource_request)
+        self.unblock_other_transports(resource)
