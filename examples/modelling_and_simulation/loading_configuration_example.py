@@ -1,8 +1,4 @@
-import json
 import prodsys
-from prodsys.models.production_system_data import (
-    add_default_queues_to_production_system,
-)
 
 
 if __name__ == "__main__":
