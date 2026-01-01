@@ -111,79 +111,7 @@
                 0.0,
                 10.0
             ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "robot_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                12.0,
-                10.0
-            ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "machine1_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                12.0,
-                8.0
-            ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "machine2_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                12.0,
-                12.0
-            ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "machine3_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                12.0,
-                16.0
-            ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "manufacturing_cell_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                10.0,
-                10.0
-            ],
-            "interface_type": "input_output",
-            "port_type": "queue",
-            "dependency_ids": []
-        },
-        {
-            "ID": "agv_default_input_queue",
-            "description": "",
-            "capacity": 0,
-            "location": [
-                0.0,
-                10.0
-            ],
-            "interface_type": "input_output",
+            "interface_type": "output",
             "port_type": "queue",
             "dependency_ids": []
         },
@@ -193,6 +121,54 @@
             "capacity": 0.0,
             "location": [
                 20.0,
+                10.0
+            ],
+            "interface_type": "input",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine1_default_queue",
+            "description": "Default queue of machine1",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                8.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine2_default_queue",
+            "description": "Default queue of machine2",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                12.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine3_default_queue",
+            "description": "Default queue of machine3",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                16.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "manufacturing_cell_default_queue",
+            "description": "Default queue of manufacturing_cell",
+            "capacity": 0.0,
+            "location": [
+                10.0,
                 10.0
             ],
             "interface_type": "input_output",
@@ -209,6 +185,7 @@
             ],
             "ID": "robot",
             "description": "",
+            "resource_type": "resource",
             "process_ids": [
                 "agv_transport"
             ],
@@ -219,9 +196,7 @@
             ],
             "state_ids": [],
             "controller": "PipelineController",
-            "ports": [
-                "robot_default_input_queue"
-            ],
+            "ports": [],
             "buffers": [],
             "can_move": null,
             "dependency_ids": []
@@ -233,6 +208,7 @@
             ],
             "ID": "machine1",
             "description": "",
+            "resource_type": "resource",
             "process_ids": [
                 "machine1_process"
             ],
@@ -244,7 +220,7 @@
             "state_ids": [],
             "controller": "PipelineController",
             "ports": [
-                "machine1_default_input_queue"
+                "machine1_default_queue"
             ],
             "buffers": [],
             "can_move": null,
@@ -257,6 +233,7 @@
             ],
             "ID": "machine2",
             "description": "",
+            "resource_type": "resource",
             "process_ids": [
                 "machine2_process"
             ],
@@ -268,7 +245,7 @@
             "state_ids": [],
             "controller": "PipelineController",
             "ports": [
-                "machine2_default_input_queue"
+                "machine2_default_queue"
             ],
             "buffers": [],
             "can_move": null,
@@ -281,6 +258,7 @@
             ],
             "ID": "machine3",
             "description": "",
+            "resource_type": "resource",
             "process_ids": [
                 "machine3_process"
             ],
@@ -292,7 +270,7 @@
             "state_ids": [],
             "controller": "PipelineController",
             "ports": [
-                "machine3_default_input_queue"
+                "machine3_default_queue"
             ],
             "buffers": [],
             "can_move": null,
@@ -305,6 +283,7 @@
             ],
             "ID": "manufacturing_cell",
             "description": "",
+            "resource_type": "system",
             "process_ids": [
                 "cell_process_model"
             ],
@@ -316,7 +295,7 @@
             "state_ids": [],
             "controller": "PipelineController",
             "ports": [
-                "manufacturing_cell_default_input_queue"
+                "manufacturing_cell_default_queue"
             ],
             "buffers": [],
             "can_move": null,
@@ -329,6 +308,7 @@
             ],
             "ID": "agv",
             "description": "",
+            "resource_type": "resource",
             "process_ids": [
                 "agv_transport"
             ],
@@ -339,9 +319,7 @@
             ],
             "state_ids": [],
             "controller": "PipelineController",
-            "ports": [
-                "agv_default_input_queue"
-            ],
+            "ports": [],
             "buffers": [],
             "can_move": null,
             "dependency_ids": []
@@ -359,7 +337,9 @@
                 ],
                 "cell_process_model": []
             },
-            "dependency_ids": []
+            "dependency_ids": [],
+            "routing_heuristic": null,
+            "becomes_consumable": false
         }
     ],
     "sink_data": [
@@ -393,8 +373,13 @@
         }
     ],
     "scenario_data": null,
-    "depdendency_data": [],
+    "dependency_data": [],
     "primitive_data": [],
+    "schedule": null,
+    "order_data": null,
+    "conwip_number": null,
+    "reference_time": null,
+    "time_unit": "min",
     "valid_configuration": true,
     "reconfiguration_cost": 0.0
 }

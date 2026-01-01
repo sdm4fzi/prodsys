@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from prodsys.simulation.port import Queue
-from prodsys.simulation.source import Source
-from prodsys.simulation.sink import Sink
-from prodsys.simulation.resources import Resource
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import logging
-import time
 
 from prodsys.factories import primitive_factory
 from prodsys.models.source_data import RoutingHeuristic
-from prodsys.models.dependency_data import DependencyType
-from prodsys.simulation import request, process, route_finder
+from prodsys.simulation import request, process
 
 
 if TYPE_CHECKING:
@@ -136,12 +130,24 @@ class ProcessMatcher:
         Returns:
             dict[str, product.Product]: Dictionary mapping product types to dummy products.
         """
+        from prodsys.simulation.order_source import OrderSource
         dummy_products: dict[str, product.Product] = {}
         for source in self.source_factory.sources.values():
-            product_type = source.product_data.type
-            dummy_products[product_type] = self._create_dummy_product(
-                source.product_data
-            )
+            # Handle OrderSource differently - it doesn't have a real product_data
+            if isinstance(source, OrderSource):
+                # Use product_type_to_data mapping from OrderSource
+                for product_type, product_data_obj in source.product_type_to_data.items():
+                    if product_type not in dummy_products:
+                        dummy_products[product_type] = self._create_dummy_product(
+                            product_data_obj
+                        )
+            else:
+                # Regular Source - use product_data
+                product_type = source.product_data.type
+                if product_type not in dummy_products:
+                    dummy_products[product_type] = self._create_dummy_product(
+                        source.product_data
+                    )
         return dummy_products
 
     def _remove_dummy_products(self, dummy_products: dict[str, product.Product]):
@@ -206,8 +212,6 @@ class ProcessMatcher:
         This method runs at initialization time to create lookup tables
         that will speed up resource selection during simulation.
         """
-        start_time = time.time()
-
         # Get dummy products for testing
         dummy_products = self._create_dummy_products()
 
@@ -300,6 +304,7 @@ class ProcessMatcher:
             List[Tuple[resources.Resource, process.PROCESS_UNION]]: List of compatible resources and their processes.
         """
         compatible_resources = []
+        # FIXME: if dependencies require transport process, this cannot find it!
 
         for requested_process in requested_processes:
             if isinstance(

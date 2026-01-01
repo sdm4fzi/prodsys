@@ -34,6 +34,7 @@ from prodsys.express.state import (
     BreakDownState,
     ProcessBreakdownState,
     ChargingState,
+    NonScheduledState,
 )
 from prodsys.express.node import Node
 from prodsys.express.process import (
@@ -49,7 +50,8 @@ from prodsys.express.process import (
 )
 from prodsys.express.resources import Resource, SystemResource
 from prodsys.express.product import Product
-from prodsys.express.source import Source
+from prodsys.express.source import Source, OrderSource
+from prodsys.express.order import Order, OrderedProduct
 from prodsys.express.sink import Sink
 from prodsys.express.primitive import Primitive
 from prodsys.express.dependency import ResourceDependency, ToolDependency, ProcessDependency, LotDependency, AssemblyDependency, DisassemblyDependency

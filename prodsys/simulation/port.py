@@ -14,6 +14,15 @@ from prodsys.simulation import sim
 from simpy import events
 
 
+class Port:
+    def __init__(self, env: sim.Environment, data: port_data.PortData):
+        self.env: sim.Environment = env
+        self.data = data
+        self.location = data.location
+        self.input_location = data.input_location
+        self.output_location = data.output_location
+
+
 
 class Queue:
     """

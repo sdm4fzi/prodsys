@@ -11,6 +11,7 @@ from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.dependency import DependedEntity, Dependency
 from prodsys.simulation.process import DependencyProcess, ProcessModelProcess
 from prodsys.simulation.process_matcher import ProcessMatcher
+from prodsys.simulation.entities.entity import EntityType
 
 logger = logging.getLogger(__name__)
 
@@ -379,6 +380,28 @@ class RequestHandler:
             )
         request_info.request_state = "completed"
 
+                # If this was a lot request, clean up RequestInfo objects for all individual requests
+        # that were combined into the lot. These were never cleaned up when the lot was formed.
+        if completed_request.entity.type == EntityType.LOT:
+            lot = completed_request.entity
+            # The lot stores all_completed_events from the individual requests
+            # We need to clean up their RequestInfo objects from routed_requests
+            for completed_event in lot.all_completed_events:
+                # Skip the lot's own completed event (already cleaned up above)
+                if completed_event is completed_request.completed:
+                    continue
+                # Remove RequestInfo for this individual request
+                individual_request_info = self.routed_requests.pop(id(completed_event), None)
+                if individual_request_info:
+                    logger.debug(f"{completed_request.resource.env.now}: Cleaning up RequestInfo for individual request {id(completed_event)} from lot {lot.data.ID}")
+                    individual_request_info.request_state = "completed"
+
+                else:
+                    raise ValueError(f"Request info not found for completed event {completed_event} from lot {lot.data.ID}")
+                # If not found, it might have been cleaned up already or never existed
+                # (e.g., if the request was never routed, or was already cleaned up)
+
+
     def create_resource_request(
         self,
         request_info: RequestInfo,
@@ -440,10 +463,15 @@ class RequestHandler:
             requests = []
             for free_resource_index, free_resource_id in free_resources_set:
                 if free_resource_id in possible_resources_and_processes:
+                    free_resource = free_resources[free_resource_index]
+                    # For process dependencies, skip resources that are already bound to another entity
+                    # This ensures that resources with ResourceDependency are not used for ProcessDependency
+                    if (request_info.request_type == request.RequestType.PROCESS_DEPENDENCY 
+                        and hasattr(free_resource, 'bound') and free_resource.bound):
+                        continue
                     for process_instance in possible_resources_and_processes[
                         free_resource_id
                     ]:
-                        free_resource = free_resources[free_resource_index]
                         new_request = self.create_resource_request(
                             request_info,
                             free_resource,

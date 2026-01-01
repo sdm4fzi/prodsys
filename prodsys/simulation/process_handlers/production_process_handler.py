@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Generator, TYPE_CHECKING
-import numpy as np
 
 import logging
 
@@ -9,10 +8,6 @@ from prodsys.simulation import (
     sim,
     state,
     process,
-)
-
-from prodsys.simulation.process import (
-    ReworkProcess,
 )
 from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.entities.entity import EntityType
@@ -156,6 +151,10 @@ class ProductionProcessHandler:
             process_state_events.append((process_event, production_state))
         for process_event, production_state in process_state_events:
             yield process_event
+            # Store failure status on entity if available
+            if hasattr(production_state.state_info, '_process_ok'):
+                for entity in process_request.get_atomic_entities():
+                    entity.last_process_failed = not production_state.state_info._process_ok
             production_state.process = None
 
         for resource_request in resource_requests:
@@ -174,8 +173,8 @@ class ProductionProcessHandler:
         for buffer_placement_event in buffer_placement_events:
             yield buffer_placement_event
 
-        process_request.entity.router.mark_finished_request(process_request)
         self.resource.controller.mark_finished_process(process_request.capacity_required)
+        process_request.entity.router.mark_finished_request(process_request)
 
     def run_process(
         self,

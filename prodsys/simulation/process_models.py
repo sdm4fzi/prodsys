@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional, Dict
+from typing import List, Optional, Dict
 import random
 
 from prodsys.util.util import flatten
@@ -296,7 +296,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
             successors (List[PROCESS_UNION]): List of successor processes.
             predecessors (List[PROCESS_UNION]): List of predecessor processes.
         """
-        if not process.data.ID in self.get_node_process_ids():
+        if process.data.ID not in self.get_node_process_ids():
             node = PrecendeGraphNode(process=process, successors=[], predecessors=[])
             self.nodes.append(node)
         else:

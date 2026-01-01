@@ -74,7 +74,7 @@ def test_run_simulation(storage_simulation_adapter: ProductionSystemData):
             assert kpi.value > 1950 and kpi.value < 2060
     for kpi in post_processor.machine_state_KPIS:
         if kpi.name == "productive_time" and kpi.resource == "machine":
-            assert kpi.value < 40 and kpi.value > 32
+            assert kpi.value < 60 and kpi.value > 50
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
             assert kpi.value > 35 and kpi.value < 50

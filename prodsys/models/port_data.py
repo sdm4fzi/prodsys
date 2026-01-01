@@ -21,7 +21,6 @@ class PortType(str, Enum):
     QUEUE = "queue"
     STORE = "store"
 
-
 class QueueData(CoreAsset):
     """
     Class that represents a queue for products at a resource / sink / source. If capacity is 0, the queue is considered infinite. Otherwise, the queue can hold a finite number of products cooresponding to the capacity.

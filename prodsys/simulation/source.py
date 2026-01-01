@@ -127,6 +127,7 @@ class Source:
                 product = self.product_factory.create_product(
                     self.product_data, self.data.routing_heuristic
                 )
+            product.update_location(self)
             # TODO: this logic should be moved to the interaction handler!
             for queue in self.ports:
                 yield from queue.put(product.data)

@@ -440,13 +440,21 @@ class Resource(resource.Resource):
 
     def activate(self):
         """
-        Activates the resource after a breakdwon.
+        Activates the resource after a breakdwon or non-scheduled period.
         """
         if any(
             [
                 state_instance.active_breakdown
                 for state_instance in self.states
                 if isinstance(state_instance, state.BreakDownState)
+            ]
+        ):
+            return
+        if any(
+            [
+                state_instance.active_non_scheduled
+                for state_instance in self.states
+                if isinstance(state_instance, state.NonScheduledState)
             ]
         ):
             return
@@ -605,6 +613,8 @@ class SystemResource(Resource):
         Returns:
             int: The free capacity of the resource.
         """
+        if self._actual_capacity == 0:
+            return float("inf")
         return self._actual_capacity - (
             self.controller.num_running_processes
             + self.controller.reserved_requests_count

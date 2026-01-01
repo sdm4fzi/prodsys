@@ -289,6 +289,418 @@ def plot_oee(
         return image_path
 
 
+def plot_oee_over_time(
+    post_processor: post_processing.PostProcessor,
+    resource_names: List[str] = None,
+    interval_minutes: float = 10.0,
+    return_html: bool = False,
+    return_image: bool = False,
+):
+    """
+    Plots OEE (Overall Equipment Effectiveness) over time for specified resources.
+    
+    Shows Availability, Performance, Quality, and OEE as separate lines for each resource.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        resource_names (List[str], optional): List of resource names to plot. If None, plots all resources.
+        interval_minutes (float): Time interval in minutes for aggregation. Defaults to 10.0.
+        return_html (bool): If True, returns HTML string instead of saving file.
+        return_image (bool): If True, saves as image and returns path.
+    """
+    df_oee = post_processor.get_oee_per_resource_by_interval(interval_minutes)
+    
+    if len(df_oee) == 0:
+        print("No OEE data available for plotting.")
+        return None
+    
+    if resource_names is not None:
+        resource_names = set(resource_names)
+        df_oee = df_oee[df_oee["Resource"].isin(resource_names)]
+    
+    if len(df_oee) == 0:
+        print("No OEE data available for specified resources.")
+        return None
+    
+    # Create subplots for each OEE component
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=("Availability", "Performance", "Quality", "OEE"),
+        vertical_spacing=0.12,
+        horizontal_spacing=0.1,
+    )
+    
+    resources = df_oee["Resource"].unique()
+    colors = px.colors.qualitative.Set3[:len(resources)] if len(resources) <= 12 else px.colors.qualitative.Dark24
+    
+    for idx, resource in enumerate(resources):
+        df_resource = df_oee[df_oee["Resource"] == resource].sort_values("Interval_start")
+        color = colors[idx % len(colors)]
+        
+        # Availability
+        fig.add_trace(
+            go.Scatter(
+                x=df_resource["Interval_start"],
+                y=df_resource["Availability"],
+                mode="lines+markers",
+                name=f"{resource}",
+                line=dict(color=color),
+                showlegend=True,
+            ),
+            row=1,
+            col=1,
+        )
+        
+        # Performance
+        fig.add_trace(
+            go.Scatter(
+                x=df_resource["Interval_start"],
+                y=df_resource["Performance"],
+                mode="lines+markers",
+                name=f"{resource}",
+                line=dict(color=color),
+                showlegend=False,
+            ),
+            row=1,
+            col=2,
+        )
+        
+        # Quality
+        fig.add_trace(
+            go.Scatter(
+                x=df_resource["Interval_start"],
+                y=df_resource["Quality"],
+                mode="lines+markers",
+                name=f"{resource}",
+                line=dict(color=color),
+                showlegend=False,
+            ),
+            row=2,
+            col=1,
+        )
+        
+        # OEE
+        fig.add_trace(
+            go.Scatter(
+                x=df_resource["Interval_start"],
+                y=df_resource["OEE"],
+                mode="lines+markers",
+                name=f"{resource}",
+                line=dict(color=color),
+                showlegend=False,
+            ),
+            row=2,
+            col=2,
+        )
+    
+    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=1)
+    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=2)
+    fig.update_yaxes(title_text="Percentage [%]", row=1, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=1, col=2)
+    fig.update_yaxes(title_text="Percentage [%]", row=2, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=2, col=2)
+    fig.update_yaxes(range=[0, 100])
+    
+    fig.update_layout(
+        title_text="OEE Over Time",
+        height=800,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.1,
+            xanchor="center",
+            x=0.5,
+        ),
+    )
+    
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))
+    fig.write_html(
+        os.path.join(os.getcwd(), "plots", "oee_over_time.html"),
+        auto_open=not return_html,
+    )
+    
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "oee_over_time.png")
+        fig.write_image(image_path)
+        return image_path
+
+
+def plot_resource_states_over_time(
+    post_processor: post_processing.PostProcessor,
+    resource_names: List[str] = None,
+    time_types: List[str] = None,
+    interval_minutes: float = 10.0,
+    return_html: bool = False,
+    return_image: bool = False,
+):
+    """
+    Plots resource states over time for specified resources.
+    
+    Shows the percentage of time spent in each state (PR, SB, UD, ST, CR, etc.) over time.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        resource_names (List[str], optional): List of resource names to plot. If None, plots all resources.
+        time_types (List[str], optional): List of time types to plot (e.g., ["PR", "SB", "UD"]). 
+                                         If None, plots all time types.
+        interval_minutes (float): Time interval in minutes for aggregation. Defaults to 10.0.
+        return_html (bool): If True, returns HTML string instead of saving file.
+        return_image (bool): If True, saves as image and returns path.
+    """
+    df_states = post_processor.get_aggregated_resource_states_by_interval(interval_minutes)
+    
+    if len(df_states) == 0:
+        print("No resource states data available for plotting.")
+        return None
+    
+    if resource_names is not None:
+        resource_names = set(resource_names)
+        df_states = df_states[df_states["Resource"].isin(resource_names)]
+    
+    if time_types is not None:
+        time_types = set(time_types)
+        df_states = df_states[df_states["Time_type"].isin(time_types)]
+    
+    if len(df_states) == 0:
+        print("No resource states data available for specified filters.")
+        return None
+    
+    # Color mapping for time types
+    color_map = {
+        "PR": "green",
+        "SB": "yellow",
+        "UD": "red",
+        "ST": "blue",
+        "CR": "grey",
+        "DP": "lightgreen",
+        "NS": "darkgrey",
+    }
+    
+    fig = go.Figure()
+    
+    # Group by resource and time type
+    for resource in df_states["Resource"].unique():
+        df_resource = df_states[df_states["Resource"] == resource].sort_values("Interval_start")
+        
+        for time_type in df_resource["Time_type"].unique():
+            df_type = df_resource[df_resource["Time_type"] == time_type].sort_values("Interval_start")
+            
+            color = color_map.get(time_type, "black")
+            name = f"{resource} - {time_type}"
+            
+            fig.add_trace(
+                go.Scatter(
+                    x=df_type["Interval_start"],
+                    y=df_type["percentage"],
+                    mode="lines+markers",
+                    name=name,
+                    line=dict(color=color),
+                    legendgroup=resource,
+                )
+            )
+    
+    fig.update_layout(
+        title="Resource States Over Time",
+        xaxis_title="Time [Minutes]",
+        yaxis_title="Percentage [%]",
+        height=600,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02,
+        ),
+    )
+    fig.update_yaxes(range=[0, 100])
+    
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))
+    fig.write_html(
+        os.path.join(os.getcwd(), "plots", "resource_states_over_time.html"),
+        auto_open=not return_html,
+    )
+    
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(
+            os.getcwd(), "plots", "resource_states_over_time.png"
+        )
+        fig.write_image(image_path)
+        return image_path
+
+
+def plot_oee_system_over_time(
+    post_processor: post_processing.PostProcessor,
+    interval_minutes: float = 10.0,
+    return_html: bool = False,
+    return_image: bool = False,
+):
+    """
+    Plots system-level OEE over time.
+    
+    Calculates system OEE as weighted average of resource OEEs for each interval.
+
+    Args:
+        post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        interval_minutes (float): Time interval in minutes for aggregation. Defaults to 10.0.
+        return_html (bool): If True, returns HTML string instead of saving file.
+        return_image (bool): If True, saves as image and returns path.
+    """
+    df_oee = post_processor.get_oee_per_resource_by_interval(interval_minutes)
+    df_states = post_processor.get_aggregated_resource_states_by_interval(interval_minutes)
+    
+    if len(df_oee) == 0 or len(df_states) == 0:
+        print("No OEE or resource states data available for system-level calculation.")
+        return None
+    
+    # Calculate system-level OEE per interval as weighted average
+    intervals = sorted(df_oee["Interval_start"].unique())
+    system_oee_data = []
+    
+    for interval_start in intervals:
+        interval_oee = df_oee[df_oee["Interval_start"] == interval_start]
+        interval_states = df_states[df_states["Interval_start"] == interval_start]
+        
+        if len(interval_oee) == 0:
+            continue
+        
+        # Calculate weights based on planned production time (resource_time - NS time)
+        resource_weights = {}
+        for resource in interval_states["Resource"].unique():
+            df_resource = interval_states[interval_states["Resource"] == resource]
+            interval_time = df_resource["interval_time"].iloc[0] if len(df_resource) > 0 else 0
+            ns_time = df_resource[df_resource["Time_type"] == "NS"]["time_increment"].sum()
+            planned_time = interval_time - ns_time
+            resource_weights[resource] = max(0, planned_time)
+        
+        total_weight = sum(resource_weights.values())
+        
+        if total_weight > 0:
+            # Calculate weighted averages
+            availability_sum = 0.0
+            performance_sum = 0.0
+            quality_sum = 0.0
+            oee_sum = 0.0
+            
+            for _, row in interval_oee.iterrows():
+                resource = row["Resource"]
+                weight = resource_weights.get(resource, 0)
+                if weight > 0:
+                    availability_sum += (row["Availability"] / 100.0) * weight
+                    performance_sum += (row["Performance"] / 100.0) * weight
+                    quality_sum += (row["Quality"] / 100.0) * weight
+                    oee_sum += (row["OEE"] / 100.0) * weight
+            
+            system_oee_data.append({
+                "Interval_start": interval_start,
+                "Availability": (availability_sum / total_weight) * 100,
+                "Performance": (performance_sum / total_weight) * 100,
+                "Quality": (quality_sum / total_weight) * 100,
+                "OEE": (oee_sum / total_weight) * 100,
+            })
+    
+    if len(system_oee_data) == 0:
+        print("No system-level OEE data calculated.")
+        return None
+    
+    df_system_oee = pd.DataFrame(system_oee_data).sort_values("Interval_start")
+    
+    # Create subplots
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=("Availability", "Performance", "Quality", "OEE"),
+        vertical_spacing=0.12,
+        horizontal_spacing=0.1,
+    )
+    
+    # Availability
+    fig.add_trace(
+        go.Scatter(
+            x=df_system_oee["Interval_start"],
+            y=df_system_oee["Availability"],
+            mode="lines+markers",
+            name="System Availability",
+            line=dict(color="blue"),
+        ),
+        row=1,
+        col=1,
+    )
+    
+    # Performance
+    fig.add_trace(
+        go.Scatter(
+            x=df_system_oee["Interval_start"],
+            y=df_system_oee["Performance"],
+            mode="lines+markers",
+            name="System Performance",
+            line=dict(color="green"),
+        ),
+        row=1,
+        col=2,
+    )
+    
+    # Quality
+    fig.add_trace(
+        go.Scatter(
+            x=df_system_oee["Interval_start"],
+            y=df_system_oee["Quality"],
+            mode="lines+markers",
+            name="System Quality",
+            line=dict(color="orange"),
+        ),
+        row=2,
+        col=1,
+    )
+    
+    # OEE
+    fig.add_trace(
+        go.Scatter(
+            x=df_system_oee["Interval_start"],
+            y=df_system_oee["OEE"],
+            mode="lines+markers",
+            name="System OEE",
+            line=dict(color="red"),
+        ),
+        row=2,
+        col=2,
+    )
+    
+    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=1)
+    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=2)
+    fig.update_yaxes(title_text="Percentage [%]", row=1, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=1, col=2)
+    fig.update_yaxes(title_text="Percentage [%]", row=2, col=1)
+    fig.update_yaxes(title_text="Percentage [%]", row=2, col=2)
+    fig.update_yaxes(range=[0, 100])
+    
+    fig.update_layout(
+        title_text="System OEE Over Time",
+        height=800,
+        showlegend=True,
+    )
+    
+    if not os.path.exists(os.path.join(os.getcwd(), "plots")):
+        os.makedirs(os.path.join(os.getcwd(), "plots"))
+    fig.write_html(
+        os.path.join(os.getcwd(), "plots", "oee_system_over_time.html"),
+        auto_open=not return_html,
+    )
+    
+    if return_html:
+        return pio.to_html(fig, full_html=True)
+    if return_image:
+        image_path = os.path.join(os.getcwd(), "plots", "oee_system_over_time.png")
+        fig.write_image(image_path)
+        return image_path
+
+
 def plot_production_flow_rate_per_product(
     post_processor: post_processing.PostProcessor,
     return_html: bool = False,
@@ -371,6 +783,7 @@ def plot_production_flow_rate_per_product(
 
 def plot_boxplot_resource_utilization(
     post_processor: post_processing.PostProcessor,
+    interval_minutes: float = 100.0,
     return_html: bool = False,
     return_image: bool = False,
 ):
@@ -379,8 +792,9 @@ def plot_boxplot_resource_utilization(
 
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
+        interval_minutes (float): Time interval in minutes for aggregation. Defaults to 100.0.
     """
-    df_time_per_state = post_processor.df_aggregated_resource_bucket_states_boxplot
+    df_time_per_state = post_processor.get_aggregated_resource_states_by_interval(interval_minutes)
     resources = df_time_per_state["Resource"].unique()
     df_productive_time = df_time_per_state.loc[df_time_per_state["Time_type"] == "PR"]
     fig = go.Figure()
@@ -522,11 +936,16 @@ def plot_time_per_state_of_resources(
             "ST": "blue",
             "CR": "grey",
             "DP": "lightgreen",
+            "NS": "grey",
+        },
+        category_orders={
+            "Time_type": ["UD", "NS", "PR", "DP", "ST", "SB", "CR"]
         },
     )
     fig.update_traces(name="Productive", selector=dict(name="PR"))
     fig.update_traces(name="Standby", selector=dict(name="SB"))
     fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
+    fig.update_traces(name="Non-Scheduled", selector=dict(name="NS"))
     fig.update_traces(name="Setup", selector=dict(name="ST"))
     fig.update_traces(name="Charging", selector=dict(name="CR"))
     fig.update_traces(name="Dependency", selector=dict(name="DP"))
@@ -554,11 +973,13 @@ def plot_WIP_resource_boxplots(
     return_image: bool = False,
 ):
     """
-    Plots the time per state of the resources of the simulation.
+    Plots the WIP per resource as boxplots.
 
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
-        normalized (bool, optional): If True, the time per state is normalized with the total time of the simulation. Defaults to True.
+        normalized (bool, optional): Not used, kept for compatibility. Defaults to True.
+        return_html (bool): If True, returns HTML string instead of saving file.
+        return_image (bool): If True, saves as image and returns path.
     """
     df_time_per_state = post_processor.df_WIP_per_resource
     fig1 = go.Figure()
@@ -567,7 +988,7 @@ def plot_WIP_resource_boxplots(
         df_resource = df_time_per_state.loc[df_time_per_state["WIP_resource"] == resource_id]
         fig1.add_trace(
             go.Box(
-                y=df_resource["percentage"],
+                y=df_resource["WIP"],
                 name=f"{resource_id}",
                 boxmean=True,  # mean and standard deviation
             )
@@ -605,6 +1026,7 @@ def plot_WIP_resource_boxplots(
 def plot_transport_utilization_over_time(
     post_processor: post_processing.PostProcessor,
     transport_resource_names: List[str],
+    interval_minutes: float = 10.0,
     return_html: bool = False,
     return_image: bool = False,
 ):
@@ -614,8 +1036,9 @@ def plot_transport_utilization_over_time(
     Args:
         post_processor (post_processing.PostProcessor): The post processor object containing the data.
         transport_resource_names (List[str]): List of names of the transport resources.
+        interval_minutes (float): Time interval in minutes for aggregation. Defaults to 10.0.
     """
-    df_time_per_state = post_processor.df_aggregated_resource_bucket_states
+    df_time_per_state = post_processor.get_aggregated_resource_states_by_interval(interval_minutes)
     transport_resource_names = set(transport_resource_names)
     df_agv_pr = df_time_per_state.loc[
         (df_time_per_state["Time_type"] == "PR")
@@ -626,7 +1049,7 @@ def plot_transport_utilization_over_time(
         df_agv_pr_resource = df_agv_pr.loc[df_agv_pr["Resource"] == resource]
         fig.add_trace(
             go.Scatter(
-                x=df_agv_pr_resource["Time"],
+                x=df_agv_pr_resource["Interval_start"],
                 y=df_agv_pr_resource["percentage"],
                 mode="lines",
                 name=resource,

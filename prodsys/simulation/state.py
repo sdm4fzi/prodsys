@@ -6,7 +6,6 @@ from typing import Literal, Optional, Union, TYPE_CHECKING, Generator, List
 
 import logging
 
-logger = logging.getLogger(__name__)
 
 from simpy import events
 from simpy import exceptions
@@ -19,12 +18,16 @@ from prodsys.models.state_data import (
     SetupStateData,
     ProcessBreakDownStateData,
     ChargingStateData,
+    NonScheduledStateData,
 )
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, resources
-    from prodsys.simulation import primitive, sim, time_model
+    from prodsys.simulation import resources
+    from prodsys.simulation import sim, time_model
+    from prodsys.simulation.entities import product, primitive
     from prodsys.simulation.locatable import Locatable
+
+logger = logging.getLogger(__name__)
 
 
 class StateEnum(str, Enum):
@@ -65,6 +68,7 @@ class StateTypeEnum(str, Enum):
     dependency = "Dependency"
     loading = "Loading"
     unloading = "Unloading"
+    non_scheduled = "NonScheduled"
 
 
 class StateInfo:
@@ -111,6 +115,7 @@ class StateInfo:
         self._empty_transport = _empty_transport
         self._initial_transport_step = _initial_transport_step
         self._last_transport_step = _last_transport_step
+        self._process_ok: bool = True  # Track if process was successful (True) or failed (False)
         
     def log_transport(
         self,
@@ -206,17 +211,19 @@ class StateInfo:
         self._activity = StateEnum.end_interrupt
         self._state_type = state_type
 
-    def log_end_state(self, end_time: float, state_type: StateTypeEnum):
+    def log_end_state(self, end_time: float, state_type: StateTypeEnum, process_ok: bool = True):
         """
         Logs the end of a state.
 
         Args:
             end_time (float): The end time of the state.
             state_type (StateTypeEnum): The type of the state.
+            process_ok (bool): Whether the process was successful. Defaults to True.
         """
         self._event_time = end_time
         self._activity = StateEnum.end_state
         self._state_type = state_type
+        self._process_ok = process_ok
 
 
 class State(ABC):
@@ -275,7 +282,7 @@ class State(ABC):
         """
         try:
             self.active.succeed()
-        except:
+        except RuntimeError:
             raise RuntimeError(f"state {self.data.ID} is allready succeded!!")
 
     @abstractmethod
@@ -329,6 +336,10 @@ class ProductionState(State):
             time = self.time_model.get_next_time()
         self.done_in = time
         self.resource.consider_battery_usage(self.done_in)
+        
+        # Determine if the process will fail BEFORE execution
+        process_failed = self._determine_process_failure()
+        
         while True:
             try:
                 if self.interrupted:
@@ -367,7 +378,29 @@ class ProductionState(State):
                     raise RuntimeError(
                         f"Simpy interrupt occured at {self.data.ID} although process is not interrupted"
                     )
-        self.state_info.log_end_state(self.env.now, StateTypeEnum.production)
+        # Log end state with success/failure status (process_ok is True if not failed, False if failed)
+        process_ok = not process_failed if process_failed is not None else True
+        self.state_info.log_end_state(self.env.now, StateTypeEnum.production, process_ok=process_ok)
+    
+    def _determine_process_failure(self) -> Optional[bool]:
+        """
+        Determine if the process will fail based on the state's failure_rate.
+        
+        Returns:
+            Optional[bool]: True if the process will fail, False if it will succeed, None if failure_rate is not applicable.
+        """
+        if not hasattr(self.data, 'failure_rate'):
+            return None
+            
+        failure_rate = self.data.failure_rate
+        if not failure_rate or failure_rate == 0:
+            return False
+        
+        import numpy as np  # noqa: E402
+        will_fail = bool(np.random.choice(
+            [True, False], p=[failure_rate, 1 - failure_rate]
+        ))
+        return will_fail
 
     def update_done_in(self):
         if self.start == 0:
@@ -544,6 +577,58 @@ class BreakDownState(State):
 
     def wait_for_breakdown(self):
         yield self.env.timeout(self.time_model.get_next_time())
+
+    def interrupt_process(self):
+        pass
+
+
+class NonScheduledState(State):
+    """
+    Represents a non-scheduled state of a resource in the simulation. This state models shift availability
+    by alternating between scheduled (when the resource is available) and non-scheduled (when the resource
+    is unavailable/shift is off) time intervals. During non-scheduled intervals, all operations are blocked
+    similar to a breakdown state.
+
+    Args:
+        data (NonScheduledStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model for scheduled intervals (when resource is available).
+        env (sim.Environment): The simulation environment.
+        active (events.Event, optional): Event that indicates if the state is active. Defaults to None.
+        resource (resources.Resource, optional): The resource the state belongs to. Defaults to None.
+        process (Optional[events.Process], optional): The process of the state. Defaults to None.
+        state_info (StateInfo, optional): The state information of the state. Defaults to None.
+        non_scheduled_time_model (time_model.TimeModel, optional): The time model for non-scheduled intervals (when resource is unavailable). Defaults to None.
+    """
+
+    def __init__(
+        self,
+        data: NonScheduledStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        non_scheduled_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(data, time_model, env)
+        self.non_scheduled_time_model = non_scheduled_time_model
+        self.active_non_scheduled = False
+        self.active = events.Event(self.env)
+
+    def process_state(self) -> Generator:
+        while True:
+            # Scheduled period: resource is available (wait for scheduled time)
+            scheduled_time = self.time_model.get_next_time()
+            yield self.env.timeout(scheduled_time)
+            
+            # Non-scheduled period: resource is unavailable (blocks all operations)
+            self.active_non_scheduled = True
+            self.resource.interrupt_states()
+            non_scheduled_time = self.non_scheduled_time_model.get_next_time()
+            self.state_info.log_start_state(
+                self.env.now, self.env.now + non_scheduled_time, StateTypeEnum.non_scheduled
+            )
+            yield self.env.timeout(non_scheduled_time)
+            self.active_non_scheduled = False
+            self.resource.activate()
+            self.state_info.log_end_state(self.env.now, StateTypeEnum.non_scheduled)
 
     def interrupt_process(self):
         pass

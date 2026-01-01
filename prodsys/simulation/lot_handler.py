@@ -1,6 +1,7 @@
 from prodsys.simulation import request
 from prodsys.models.dependency_data import DependencyType, LotDependencyData
 from prodsys.simulation.dependency import Dependency
+from prodsys.models.resource_data import ResourceType
 from prodsys.simulation.entities.lot import Lot
 
 class LotHandler:
@@ -33,6 +34,9 @@ class LotHandler:
     def lot_required(self, process_request: request.Request) -> bool:
         if process_request.request_type not in [request.RequestType.PRODUCTION, request.RequestType.TRANSPORT, request.RequestType.PROCESS_MODEL]:
             return False
+
+        if process_request.request_type == request.RequestType.PROCESS_MODEL and process_request.resource.data.resource_type == ResourceType.SYSTEM:
+            return False
         
         if not self._get_lot_dependency_data(process_request):
             return False
@@ -63,21 +67,20 @@ class LotHandler:
             raise ValueError(f"The capacity of the resource {process_request.resource.data.ID} is smaller than the min lot size {lot_dependency.min_lot_size}")
         if process_request.resource.get_free_capacity() < lot_dependency.min_lot_size:
             return False
-        if process_request.target_queue.is_full or process_request.target_queue.free_space() < lot_dependency.min_lot_size: # avoids that reservations don't go through
-            return False
+        # if process_request.target_queue.is_full or process_request.target_queue.free_space() < lot_dependency.min_lot_size: # avoids that reservations don't go through
+        #     return False
+        if process_request.request_type == request.RequestType.TRANSPORT:
+            if process_request.target_queue.is_full or process_request.target_queue.free_space() < lot_dependency.min_lot_size:
+                return False
         possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
         num_possible = len(possible_requests_for_lot)
-        # When min = max lot size, we need exactly that many items
-        if lot_dependency.min_lot_size == lot_dependency.max_lot_size:
-            return num_possible == lot_dependency.min_lot_size - 1
-        # Otherwise, we need at least min_lot_size - 1 additional requests
         return num_possible >= lot_dependency.min_lot_size - 1
 
 
     def _get_requests_to_fill_lot(self, process_request: request.Request, lot_dependency: LotDependencyData, possible_requests_for_lot: list[request.Request]) -> list[request.Request]:
         if process_request.resource.get_free_capacity() < lot_dependency.max_lot_size:
             max_requests_to_fill_lot = process_request.resource.get_free_capacity() - 1
-        elif process_request.target_queue.free_space() < lot_dependency.max_lot_size:
+        elif process_request.request_type == request.RequestType.TRANSPORT and process_request.target_queue.free_space() < lot_dependency.max_lot_size:
             max_requests_to_fill_lot = process_request.target_queue.free_space() - 1
         else:
             max_requests_to_fill_lot = lot_dependency.max_lot_size - 1
@@ -86,6 +89,8 @@ class LotHandler:
             num_requests_to_fill_lot = len(possible_requests_for_lot)
         else:
             num_requests_to_fill_lot = max_requests_to_fill_lot
+        if num_requests_to_fill_lot < 0:
+            raise ValueError(f"The number of requests to fill the lot is negative: {num_requests_to_fill_lot}")
         return possible_requests_for_lot[:num_requests_to_fill_lot]
 
     def get_lot_request(self, process_request: request.Request) -> request.Request:
@@ -96,11 +101,11 @@ class LotHandler:
         # use control policy to sort the requests
         process_request.resource.controller.control_policy(possible_requests_for_lot)
         requests_to_fill_lot = self._get_requests_to_fill_lot(process_request, lot_dependency, possible_requests_for_lot)
-        all_completed_events = [request.completed for request in requests_to_fill_lot] + [process_request.completed]
         for lot_request in requests_to_fill_lot:
             process_request.resource.controller.requests.remove(lot_request)
         lot_requests = [process_request] + requests_to_fill_lot
         lot_entities = [request.entity for request in lot_requests]
+        all_completed_events = [request.completed for request in lot_requests]
 
         lot = Lot(
             all_completed_events=all_completed_events,

@@ -174,31 +174,31 @@ class Controller:
                         if not is_in_origin:
                             raise ValueError(f"Item {item_id} not in origin queue {request.origin_queue.data.ID}")
                         # Item is in origin queue - check if target has space
-                        if request.target_queue.is_full:
-                            return False
+                        # if request.target_queue.is_full:
+                        #     return False
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
                 for i, request in enumerate(requests):
                     if is_request_feasible(request):
-                        self.requests.remove(request)
                         return request # If request becomes infeasible (queue full), reroute it back to router
                     # This allows it to be retried later when space becomes available
                     # Only reroute transport requests - production requests should have been validated
                     # before routing and if item is in INPUT_OUTPUT queue, it should be processable
-                    if request.request_type == request_module.RequestType.TRANSPORT:
-                        self.requests.remove(request)
-                        request.requesting_item.router.request_handler.reroute_request(request)
-                        # Trigger router to check for new routing opportunities
-                        if not request.requesting_item.router.got_requested.triggered:
-                            request.requesting_item.router.got_requested.succeed()
+                    # if request.request_type == request_module.RequestType.TRANSPORT:
+                    #     self.requests.remove(request)
+                    #     request.requesting_item.router.request_handler.reroute_request(request)
+                    #     # Trigger router to check for new routing opportunities
+                    #     if not request.requesting_item.router.got_requested.triggered:
+                    #         request.requesting_item.router.got_requested.succeed()
                 return None
             
             selected_request = get_feasible_request(possible_requests)
             if not selected_request:
                 # If there are requests waiting on full output queues, wait for space
-                self.env.process(self.free_up_queue_check())
+                # self.env.process(self.free_up_queue_check())
                 continue
+            self.requests.remove(selected_request)
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
                 if not lot_request:
@@ -211,14 +211,14 @@ class Controller:
             if selected_request.request_type == request_module.RequestType.TRANSPORT:
                 self.reserve_output_queue(selected_request)
             
-            self.reserved_requests_count += selected_request.capacity_required
+            self.reserve_resource_capacity(selected_request.capacity_required)
             # For dependency requests, immediately bind the resource to block other processes
             if selected_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
                 self.resource.bind_to_dependant(selected_request.requesting_item)
             self.resource.update_full()
             process_handler = get_requets_handler(selected_request)
             self.env.process(process_handler.handle_request(selected_request))
-            if not self.resource.full and self.requests:
+            if not self.resource.full and self.requests and not self.state_changed.triggered:
                 self.state_changed.succeed()
 
     def reserve_output_queue(self, process_request: request_module.Request) -> Generator:
@@ -228,8 +228,6 @@ class Controller:
         Args:
             process_request (request_module.Request): The request to reserve the output queue for.
         """
-        if process_request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
-            return
         for entity in process_request.get_atomic_entities():
             if process_request.target_queue.is_full:
                 raise ValueError(f"Target queue {process_request.target_queue.data.ID} is full for request {process_request.completed}")
@@ -244,6 +242,28 @@ class Controller:
         lot_requests = self.lot_handler.get_lot_request(process_request)
         return lot_requests
 
+    def reserve_resource_capacity(self, capacity: int) -> None:
+        """
+        Reserve the resource capacity for the process.
+
+        Args:
+            process_request (request_module.Request): The request to reserve the resource capacity for.
+        """
+        if capacity > self.resource.get_free_capacity():
+            raise ValueError(f"Resource {self.resource.data.ID} has not enough capacity to reserve {capacity}, current capacity: {self.resource.get_free_capacity()}, requested capacity: {capacity}")
+        self.reserved_requests_count += capacity
+
+    def unreserve_resource_capacity(self, capacity: int) -> None:
+        """
+        Unreserve the resource capacity for the process.
+
+        Args:
+            process_request (request_module.Request): The request to unreserve the resource capacity for.
+        """
+        self.reserved_requests_count -= capacity
+        if self.reserved_requests_count < 0:
+            raise ValueError(f"Resource {self.resource.data.ID} has not enough reserved to unreserve {capacity}, current capacity: {self.resource.get_free_capacity()}, requested capacity: {capacity}")
+
     def mark_started_process(self, num_processes: int = 1) -> None:
         """
         Mark the process as started.
@@ -251,7 +271,7 @@ class Controller:
         Args:
             num_processes (int): The number of processes that are being started.
         """
-        self.reserved_requests_count -= num_processes
+        self.unreserve_resource_capacity(num_processes)
         self.num_running_processes += num_processes
 
     def mark_finished_process(self, num_processes: int = 1) -> None:
@@ -373,10 +393,9 @@ def SPT_transport_control_policy(
     #         raise ValueError(f"Origin queue or target queue is None for request {request.completed}")
 
     def get_expected_time(request: request_module.Request) -> float:
-        if request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY:
+        if request.request_type in (request_module.RequestType.PROCESS_DEPENDENCY, request_module.RequestType.RESOURCE_DEPENDENCY):
             #  TODO: calculate time based on dependency process time
             return 0.1
-        
         return request.process.get_expected_process_time(
             get_location(request.origin_queue), get_location(request.target_queue)
         )

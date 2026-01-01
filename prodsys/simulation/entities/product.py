@@ -78,6 +78,7 @@ class Product(Entity):
         self.got_free = events.Event(self.env)
         self.dependency_info = DependencyInfo(primitive_id=self.data.ID)
         self.bound = False
+        self.last_process_failed: Optional[bool] = None  # Track if the last executed process failed
 
     @property
     def type(self) -> EntityType:

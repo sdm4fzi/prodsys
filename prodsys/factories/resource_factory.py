@@ -105,6 +105,9 @@ def register_production_state_for_process(
         or isinstance(process_instance, process.CapabilityProcess)
         or isinstance(process_instance, process.ReworkProcess)
     ) and not existence_condition:
+        # Copy failure_rate from process data to state data if available
+        if hasattr(process_instance.data, 'failure_rate'):
+            state_data_dict["new_state"]["failure_rate"] = process_instance.data.failure_rate
         state_factory.create_states_from_configuration_data(
             {"ProductionState": state_data_dict}
         )
@@ -220,7 +223,11 @@ class ResourceFactory:
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the resource data.
         """
-        for resource_data in adapter.resource_data:
+        system_resources = [resource_data for resource_data in adapter.resource_data if isinstance(resource_data, SystemResourceData)]
+        normal_resources = [resource_data for resource_data in adapter.resource_data if not isinstance(resource_data, SystemResourceData)]
+        for resource_data in normal_resources:
+            self.add_resource(resource_data.model_copy(deep=True))
+        for resource_data in system_resources:
             self.add_resource(resource_data.model_copy(deep=True))
         self.create_global_system_resource()
 
@@ -235,8 +242,10 @@ class ResourceFactory:
     def create_global_system_resource(self):
         """
         Creates the global system resource.
+        Includes all resources, even if they are subresources of other SystemResources.
+        This allows resources to be available both in their parent SystemResource and globally.
         """
-        all_resources = [resource for resource in self.all_resources.values() if not self.is_resource_a_subresource(resource)]
+        all_resources = list(self.all_resources.values())
 
         resource_data = SystemResourceData(
             ID="GlobalSystemResource",

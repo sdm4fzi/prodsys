@@ -54,11 +54,10 @@ system = psx.ProductionSystem(
     [machine, machine2, transport], [source1, source2], [sink1, sink2]
 )
 model = system.to_model()
-from prodsys import runner
 
-runner_instance = runner.Runner(production_system_data=model)
+runner_instance = prodsys.runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-system.run(10000)
+system.run(1000)
 
 runner_instance = system.runner
 

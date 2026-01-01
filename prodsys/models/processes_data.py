@@ -11,9 +11,8 @@ from __future__ import annotations
 from typing import Dict
 from hashlib import md5
 from enum import Enum
-from typing import Literal, Union, List, TYPE_CHECKING, Optional, Dict
+from typing import Literal, Union, List, TYPE_CHECKING, Optional
 from pydantic import ConfigDict, Field
-from prodsys.models.product_data import ProductData
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:

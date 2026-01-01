@@ -25,6 +25,7 @@ class Event(BaseModel):
         empty_transport (Optional[bool], optional): Whether the transport is empty. Defaults to None.
         requesting_item (Optional[str], optional): ID of the item requesting a dependency. Defaults to None.
         dependency (Optional[str], optional): ID of the dependency. Defaults to None.
+        order_id (Optional[str], optional): ID of the order that this product belongs to. Defaults to None.
     """
 
     time: float = Field(alias="Time")
@@ -40,6 +41,7 @@ class Event(BaseModel):
     requesting_item: Optional[str] = Field(default=None, alias="Requesting Item")
     dependency: Optional[str] = Field(default=None, alias="Dependency")
     process: Optional[str] = Field(default=None, alias="process")
+    order_id: Optional[str] = Field(default=None, alias="Order ID")
 
     model_config = ConfigDict(
         populate_by_name=True,

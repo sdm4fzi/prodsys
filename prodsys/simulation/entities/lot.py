@@ -22,7 +22,7 @@ class Lot(Entity):
         self.all_completed_events = all_completed_events
         self.env = entities[0].env
         self.data = entities[0].data
-        self._current_locatable = None
+        self._current_locatable = entities[0].current_locatable
         self.router = entities[0].router
         self.no_transport_to_sink = False
         # Initialize depended_entities with custom list that handles lot's own + constituent entities

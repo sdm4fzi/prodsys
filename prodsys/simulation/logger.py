@@ -6,7 +6,6 @@ from enum import Enum
 from abc import ABC, abstractmethod
 
 
-warnings.simplefilter(action="ignore", category=RuntimeWarning)
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from prodsys.simulation import product
     from prodsys.factories import resource_factory
     from prodsys.simulation.dependency import DependencyInfo
+warnings.simplefilter(action="ignore", category=RuntimeWarning)
 
 
 class Logger(ABC):
@@ -137,6 +137,7 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Requesting Item": None,
         "Dependency": state_info._dependency_ID,
         "process": None,
+        "process_ok": getattr(state_info, '_process_ok', True),  # Default to True if not set
     }
     data.append(item)
 
@@ -164,6 +165,7 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
         "Requesting Item": product_info.product_ID,
         "Dependency": None,
         "process": None,
+        "Order ID": getattr(product_info, 'order_ID', None),
     }
     data.append(item)
 

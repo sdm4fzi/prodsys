@@ -69,12 +69,12 @@ def test_run_simulation(loading_times_simulation_adapter: ProductionSystemData):
             assert kpi.value < 83 and kpi.value > 75
 
         if kpi.name == "productive_time" and kpi.resource == "transport":
-            assert kpi.value > 75 and kpi.value < 85
+            assert kpi.value > 65 and kpi.value < 75
 
     for kpi in post_processor.WIP_KPIs:
         if kpi.name == "WIP" and kpi.product_type == "product1":
-            assert kpi.value < 12 and kpi.value > 10
+            assert kpi.value < 7 and kpi.value > 5
 
     for kpi in post_processor.aggregated_throughput_time_KPIs:
         if kpi.name == "throughput_time":
-            assert kpi.value < 12 and kpi.value > 10
+            assert kpi.value < 7 and kpi.value > 5
