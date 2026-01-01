@@ -60,10 +60,9 @@ class SourceFactory:
         return product_id.split("_")[0]
 
     def _schedule_per_product(self, schedule: Optional[List[performance_data.Event]]) -> Optional[Dict[str, List[performance_data.Event]]]:
-        if schedule is None:
-            return None
         schedule_per_product = {}
-
+        if not schedule:
+            return schedule_per_product
 
         for event in schedule:
             product_type = self._get_product_type(event.product)
@@ -110,7 +109,7 @@ class SourceFactory:
             product_factory=self.product_factory,
             time_model=time_model,
             conwip=self.conwip,
-            schedule=self.schedule_per_product[product_data_of_source.type],
+            schedule=self.schedule_per_product.get(product_data_of_source.type, None),
         )
         self.add_ports_to_source(source_object, source_data.ports)
         self.sources[source_data.ID] = source_object
