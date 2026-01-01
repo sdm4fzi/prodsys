@@ -1023,9 +1023,9 @@ class ResourceStatesAnalytics:
                                         "time_increment", "interval_time", "percentage"])
         
         # Calculate proportional time (vectorized)
-        df_expanded['proportion'] = df_expanded['overlap_duration'] / df_expanded['event_duration']
-        df_expanded['scaled_time'] = df_expanded['time_increment'] * df_expanded['proportion']
-        df_expanded['time_increment'] = np.minimum(df_expanded['scaled_time'], df_expanded['overlap_duration'])
+        # For each interval, count only the portion of the event that falls within that interval
+        # Use overlap_duration directly as the time_increment for this interval
+        df_expanded['time_increment'] = df_expanded['overlap_duration']
         
         # Create result dataframe
         result_df = df_expanded[['Resource', 'Interval_start', 'Interval_end', 'Time_type', 'time_increment']].copy()

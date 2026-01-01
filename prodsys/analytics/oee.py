@@ -683,96 +683,124 @@ class OEEAnalytics:
                 matched = matched[matched["actual_time"] > 0]
                 
                 if len(matched) > 0:
-                    matched_processes_list.append(matched[["Resource", "State", "end_time", "actual_time"]])
+                    matched_processes_list.append(matched[["Resource", "State", "start_time", "end_time", "actual_time"]])
         
         if matched_processes_list:
             df_matched = pd.concat(matched_processes_list, ignore_index=True)
-            df_matched = df_matched.rename(columns={"end_time": "Time"})
         else:
-            df_matched = pd.DataFrame(columns=["Resource", "State", "Time", "actual_time"])
+            df_matched = pd.DataFrame(columns=["Resource", "State", "start_time", "end_time", "actual_time"])
         
         # Calculate performance per interval using fully vectorized operations
-        # Use efficient interval assignment with merge_asof (much faster than loops)
+        # Split processes that span multiple intervals proportionally
         if len(df_matched) > 0:
             # Get unique intervals per resource (sorted by start time)
             intervals_lookup = df_states_pivot[["Resource", "Interval_start", "Interval_end"]].drop_duplicates()
             intervals_lookup = intervals_lookup.sort_values(["Resource", "Interval_start"]).reset_index(drop=True)
             
-            # Use merge_asof to assign each process to its interval (vectorized, very fast)
-            # merge_asof requires both dataframes to be sorted by the merge key
-            # Sort by Resource first, then by the merge key (Time for left, Interval_start for right)
-            df_matched_sorted = df_matched.sort_values(["Resource", "Time"], kind='mergesort').reset_index(drop=True)
-            intervals_sorted = intervals_lookup.sort_values(["Resource", "Interval_start"], kind='mergesort').reset_index(drop=True)
-            
-            # Merge_asof finds the last interval where Interval_start <= Time
-            # Group by resource and merge within each group
-            matched_list = []
-            for resource in df_matched_sorted["Resource"].unique():
-                resource_matched = df_matched_sorted[df_matched_sorted["Resource"] == resource].copy()
-                resource_intervals = intervals_sorted[intervals_sorted["Resource"] == resource].copy()
-                
-                if len(resource_intervals) == 0:
-                    continue
-                
-                # Merge_asof within this resource group
-                resource_merged = pd.merge_asof(
-                    resource_matched,
-                    resource_intervals,
-                    left_on="Time",
-                    right_on="Interval_start",
-                    direction="backward",
-                    allow_exact_matches=True
-                )
-                
-                # Ensure Resource column is present (merge_asof might drop it if it's in both)
-                if "Resource" not in resource_merged.columns:
-                    resource_merged["Resource"] = resource
-                
-                # Filter to only processes within their interval (Time < Interval_end)
-                resource_merged = resource_merged[
-                    (resource_merged["Time"] >= resource_merged["Interval_start"]) &
-                    (resource_merged["Time"] < resource_merged["Interval_end"])
-                ]
-                
-                if len(resource_merged) > 0:
-                    matched_list.append(resource_merged)
-            
-            if matched_list:
-                df_matched_with_intervals = pd.concat(matched_list, ignore_index=True)
+            # Get simulation end time for interval boundary calculation
+            simulation_end_time = self._get_total_simulation_time()
+            if self.context.warm_up_cutoff:
+                min_time = self.throughput_analytics.warm_up_cutoff_time
             else:
-                df_matched_with_intervals = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "State", "Time", "actual_time"])
+                min_time = df_matched["start_time"].min() if len(df_matched) > 0 else 0.0
             
-            # Calculate performance for all intervals at once using groupby
-            if len(df_matched_with_intervals) > 0:
-                # Add resource capacity and process capacity info
-                df_matched_with_intervals["resource_capacity"] = df_matched_with_intervals["Resource"].map(
-                    lambda r: resource_capacities.get(r, 1)
-                )
-                df_matched_with_intervals["process_cap"] = df_matched_with_intervals.apply(
-                    lambda row: resource_process_capacities.get(row["Resource"], {}).get(row["State"], row["resource_capacity"]),
-                    axis=1
-                )
-                
-                # Calculate ideal time per process
-                df_matched_with_intervals["ideal_base"] = df_matched_with_intervals["State"].map(
-                    process_ideal_times_cache
-                ).fillna(0)
-                df_matched_with_intervals["ideal_per_unit"] = np.where(
-                    df_matched_with_intervals["process_cap"] > 0,
-                    df_matched_with_intervals["ideal_base"] / df_matched_with_intervals["process_cap"],
-                    df_matched_with_intervals["ideal_base"]
-                )
-                
-                # Aggregate by interval to get total actual and ideal time
-                performance_by_interval = df_matched_with_intervals.groupby(
-                    ["Resource", "Interval_start", "Interval_end"]
-                ).agg({
-                    "actual_time": "sum",
-                    "ideal_per_unit": "sum"
-                }).reset_index()
-                performance_by_interval = performance_by_interval.rename(columns={"ideal_per_unit": "total_ideal_time"})
-            else:
+            # Prepare process data for interval overlap calculation
+            df_processes = df_matched[["Resource", "State", "start_time", "end_time", "actual_time"]].copy()
+            df_processes['process_start'] = df_processes['start_time'].values
+            df_processes['process_end'] = df_processes['end_time'].values
+            df_processes['process_duration'] = np.maximum(df_processes['process_end'] - df_processes['process_start'], 1e-10)
+            
+            # Calculate interval indices for all processes at once (fully vectorized)
+            process_starts = df_processes['process_start'].values
+            process_ends = df_processes['process_end'].values
+            
+            # Calculate first and last interval index for each process (vectorized)
+            first_interval_indices = np.maximum(0, np.floor((process_starts - min_time) / interval_minutes).astype(int))
+            last_interval_indices = np.ceil((process_ends - min_time) / interval_minutes).astype(int)
+            
+            # Create interval index ranges for each process (vectorized)
+            interval_ranges = [
+                np.arange(first_idx, last_idx) if last_idx > first_idx else np.array([], dtype=int)
+                for first_idx, last_idx in zip(first_interval_indices, last_interval_indices)
+            ]
+            
+            # Add interval ranges to dataframe for explode
+            df_processes['interval_indices'] = interval_ranges
+            
+            # Explode to create one row per process-interval pair
+            df_expanded = df_processes.explode('interval_indices', ignore_index=True)
+            
+            # Filter out rows where interval_indices is NaN (no overlapping intervals)
+            df_expanded = df_expanded[df_expanded['interval_indices'].notna()].copy()
+            
+            if len(df_expanded) == 0:
                 performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
+            else:
+                # Calculate interval boundaries (vectorized)
+                df_expanded['Interval_start'] = min_time + df_expanded['interval_indices'].astype(int) * interval_minutes
+                df_expanded['Interval_end'] = np.minimum(
+                    df_expanded['Interval_start'] + interval_minutes,
+                    simulation_end_time
+                )
+                
+                # Filter to only overlapping intervals (vectorized)
+                overlap_mask = (
+                    (df_expanded['Interval_end'] > df_expanded['process_start']) &
+                    (df_expanded['Interval_start'] < df_expanded['process_end'])
+                )
+                df_expanded = df_expanded[overlap_mask].copy()
+                
+                if len(df_expanded) == 0:
+                    performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
+                else:
+                    # Calculate overlaps (vectorized)
+                    df_expanded['overlap_start'] = np.maximum(df_expanded['process_start'], df_expanded['Interval_start'])
+                    df_expanded['overlap_end'] = np.minimum(df_expanded['process_end'], df_expanded['Interval_end'])
+                    df_expanded['overlap_duration'] = np.maximum(df_expanded['overlap_end'] - df_expanded['overlap_start'], 0)
+                    
+                    # Filter to non-zero overlaps
+                    df_expanded = df_expanded[df_expanded['overlap_duration'] > 0].copy()
+                    
+                    if len(df_expanded) == 0:
+                        performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
+                    else:
+                        # Calculate proportional time (vectorized)
+                        # Only count the portion of actual_time that falls within each interval
+                        df_expanded['proportion'] = df_expanded['overlap_duration'] / df_expanded['process_duration']
+                        df_expanded['scaled_actual_time'] = df_expanded['actual_time'] * df_expanded['proportion']
+                        # Use overlap_duration as the actual time for this interval (not the full process time)
+                        df_expanded['actual_time'] = df_expanded['overlap_duration']
+                        
+                        # Add resource capacity and process capacity info
+                        df_expanded["resource_capacity"] = df_expanded["Resource"].map(
+                            lambda r: resource_capacities.get(r, 1)
+                        )
+                        df_expanded["process_cap"] = df_expanded.apply(
+                            lambda row: resource_process_capacities.get(row["Resource"], {}).get(row["State"], row["resource_capacity"]),
+                            axis=1
+                        )
+                        
+                        # Calculate ideal time per process
+                        df_expanded["ideal_base"] = df_expanded["State"].map(
+                            process_ideal_times_cache
+                        ).fillna(0)
+                        df_expanded["ideal_per_unit"] = np.where(
+                            df_expanded["process_cap"] > 0,
+                            df_expanded["ideal_base"] / df_expanded["process_cap"],
+                            df_expanded["ideal_base"]
+                        )
+                        
+                        # Scale ideal time proportionally (same proportion as actual time)
+                        df_expanded["scaled_ideal_time"] = df_expanded["ideal_per_unit"] * df_expanded["proportion"]
+                        
+                        # Aggregate by interval to get total actual and ideal time
+                        performance_by_interval = df_expanded.groupby(
+                            ["Resource", "Interval_start", "Interval_end"]
+                        ).agg({
+                            "actual_time": "sum",
+                            "scaled_ideal_time": "sum"
+                        }).reset_index()
+                        performance_by_interval = performance_by_interval.rename(columns={"scaled_ideal_time": "total_ideal_time"})
         else:
             performance_by_interval = pd.DataFrame(columns=["Resource", "Interval_start", "Interval_end", "actual_time", "total_ideal_time"])
         
