@@ -51,9 +51,26 @@ class SourceFactory:
         self.resource_factory = resource_factory
         self.sink_factory = sink_factory
         self.conwip = conwip
-        self.schedule = schedule
+        self.schedule_per_product = self._schedule_per_product(schedule)
 
         self.sources: Dict[str, source.Source] = {}
+
+
+    def _get_product_type(self, product_id: str) -> str:
+        return product_id.split("_")[0]
+
+    def _schedule_per_product(self, schedule: Optional[List[performance_data.Event]]) -> Optional[Dict[str, List[performance_data.Event]]]:
+        if schedule is None:
+            return None
+        schedule_per_product = {}
+
+
+        for event in schedule:
+            product_type = self._get_product_type(event.product)
+            if product_type not in schedule_per_product:
+                schedule_per_product[product_type] = []
+            schedule_per_product[product_type].append(event)
+        return schedule_per_product
 
     def create_sources(self, adapter: production_system_data.ProductionSystemData):
         """
@@ -93,7 +110,7 @@ class SourceFactory:
             product_factory=self.product_factory,
             time_model=time_model,
             conwip=self.conwip,
-            schedule=self.schedule,
+            schedule=self.schedule_per_product[product_data_of_source.type],
         )
         self.add_ports_to_source(source_object, source_data.ports)
         self.sources[source_data.ID] = source_object
