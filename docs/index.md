@@ -12,10 +12,16 @@ prodsys is a python package for modeling, simulating and optimizing production s
 
 ## Installation
 
-To install the package, run the following command in the terminal:
+To install the package, run one of the following commands in the terminal:
 
+Using `pip`:
 ```bash
 pip install prodsys
+```
+
+Using `uv`:
+```bash
+uv pip install prodsys
 ```
 
 Please note that prodsys is currently only fully compatible with Python 3.11. Other versions might cause some errors.
@@ -124,6 +130,24 @@ The API documentation is then available at `http://localhost:8000/docs`.
 ## Contributing
 
 `prodsys` is a new project and has therefore much room for improvement. Therefore, it would be a pleasure to get feedback or support! If you want to contribute to the package, either create issues on [prodsys' github page](https://github.com/sdm4fzi/prodsys) for discussing new features or contact me directly via [github](https://github.com/SebBehrendt) or [email](mailto:sebastian.behrendt@kit.edu).
+
+### Development setup
+
+For setting up a development environment, we recommend using `uv`. First, install `uv` using `pipx`:
+```bash
+pipx install uv
+```
+
+Then, create a virtual environment and install the project with its development dependencies:
+```bash
+uv venv
+uv pip install -e ".[dev]"
+```
+
+To run the tests, use the following command:
+```bash
+uv run pytest
+```
 
 ## License
 

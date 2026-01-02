@@ -70,7 +70,7 @@ def main():
     system_resource = psx.SystemResource(
         processes=[sequential_process],
         location=[20, 5],
-        subresource_ids=["machine1", "machine2"],
+        sub_resources=[machine1, machine2],
         ID="system_resource"
     )
     print("   ✓ SystemResource created")
