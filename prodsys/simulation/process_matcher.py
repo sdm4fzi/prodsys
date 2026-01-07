@@ -156,6 +156,7 @@ class ProcessMatcher:
         """
         for product_type, dummy_product in dummy_products.items():
             self.product_factory.products.pop(dummy_product.data.ID)
+        self.product_factory.product_counter = 0
 
     def _reset_primitives_in_queues(self):
         """

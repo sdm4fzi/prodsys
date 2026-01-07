@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Dict
+from typing import TYPE_CHECKING, List, Dict, Optional
 
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import RoutingHeuristic
@@ -136,7 +136,7 @@ class ProductFactory:
         raise ValueError(f"Product with ID {ID} not found.")
     
     def create_product(
-        self, product_data: ProductData, routing_heuristic: RoutingHeuristic
+        self, product_data: ProductData, routing_heuristic: RoutingHeuristic, product_id: Optional[str] = None
     ) -> product.Product:
         """
         Creates a product object based on the given product data and router.
@@ -152,9 +152,12 @@ class ProductFactory:
             product.Product: Created product object.
         """
         product_data = product_data.model_copy()
-        product_data.ID = (
-            str(product_data.type) + "_" + str(self.product_counter)
-        )
+        if not product_id:
+            product_id = (
+                str(product_data.type) + "_" + str(self.product_counter)
+            )
+        self.product_counter += 1
+        product_data.ID = product_id
         process_model = self.create_process_model(product_data)
         transport_processes = self.process_factory.get_process(
             product_data.transport_process

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, TYPE_CHECKING, Union
+import logging
 
 from prodsys.simulation import sim, source
 from prodsys.simulation.order_source import OrderSource
@@ -9,6 +10,8 @@ from prodsys.simulation import router as router_module
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import SourceData, OrderSourceData
 from prodsys.models import performance_data, order_data
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -57,7 +60,16 @@ class SourceFactory:
 
 
     def _get_product_type(self, product_id: str) -> str:
-        return product_id.split("_")[0]
+        """
+        Extracts product type from product ID.
+        Product IDs are in format: ProductType_index (e.g., "Product_A_1" -> "Product_A")
+        We need to get everything except the last part (the index).
+        """
+        parts = product_id.split("_")
+        if len(parts) > 1:
+            # Return all parts except the last one (which is the index)
+            return "_".join(parts[:-1])
+        return parts[0]
 
     def _schedule_per_product(self, schedule: Optional[List[performance_data.Event]]) -> Optional[Dict[str, List[performance_data.Event]]]:
         schedule_per_product = {}
@@ -144,12 +156,50 @@ class SourceFactory:
                             product_type_to_data[product_type] = product_d
                             break
         
+        # Get schedule filtered for products in these orders
+        schedule_for_orders = None
+        if self.schedule_per_product:
+            # Collect all product types from orders
+            order_product_types = set()
+            for order in orders:
+                for ordered_product in order.ordered_products:
+                    order_product_types.add(ordered_product.product_type)
+            logger.debug(
+                f"OrderSource {order_source_data.ID}: Order product types: {order_product_types}, "
+                f"Schedule per product keys: {list(self.schedule_per_product.keys())}"
+            )
+            # Get schedule events for these product types
+            schedule_events = []
+            for product_type in order_product_types:
+                if product_type in self.schedule_per_product:
+                    schedule_events.extend(self.schedule_per_product[product_type])
+                    logger.debug(
+                        f"OrderSource {order_source_data.ID}: Added {len(self.schedule_per_product[product_type])} "
+                        f"schedule events for product type {product_type}"
+                    )
+            if schedule_events:
+                schedule_for_orders = schedule_events
+                logger.info(
+                    f"OrderSource {order_source_data.ID}: Using {len(schedule_events)} schedule events"
+                )
+            else:
+                logger.warning(
+                    f"OrderSource {order_source_data.ID}: No schedule events found for order product types"
+                )
+        else:
+            logger.debug(f"OrderSource {order_source_data.ID}: No schedule_per_product available")
+        
         order_source_object = OrderSource(
             env=self.env,
             data=order_source_data,
             product_factory=self.product_factory,
             orders=orders,
             conwip=self.conwip,
+            schedule=schedule_for_orders,
+        )
+        logger.debug(
+            f"Created OrderSource {order_source_data.ID} with {len(orders)} orders and "
+            f"{len(schedule_for_orders) if schedule_for_orders else 0} schedule events"
         )
         order_source_object.set_product_type_mapping(product_type_to_data)
         self.add_ports_to_source(order_source_object, order_source_data.ports)

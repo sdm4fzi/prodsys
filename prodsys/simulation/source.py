@@ -114,15 +114,12 @@ class Source:
             if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
                 continue
             if self.schedule:
-                product_index = int(self.schedule[self.release_index].product.split("_")[-1])
-                self.released_product_ids.add(self.schedule[self.release_index].product)
-                # Temporarily override the product_counter to use the scheduled product index
-                saved_counter = self.product_factory.product_counter
-                self.product_factory.product_counter = product_index
+                scheduled_product_id = self.schedule[self.release_index].product
+                self.released_product_ids.add(scheduled_product_id)
+                # Pass the scheduled product ID directly to create_product
                 product = self.product_factory.create_product(
-                    self.product_data, self.data.routing_heuristic
+                    self.product_data, self.data.routing_heuristic, product_id=scheduled_product_id
                 )
-                # Don't restore counter - let it continue from here
             else:
                 product = self.product_factory.create_product(
                     self.product_data, self.data.routing_heuristic

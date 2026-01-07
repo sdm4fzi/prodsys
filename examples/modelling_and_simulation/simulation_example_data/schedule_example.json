@@ -91,6 +91,51 @@
             "dependency_ids": []
         },
         {
+            "ID": "R3_input_queue",
+            "description": "",
+            "capacity": 10,
+            "location": [10.0, 20.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "R4_input_queue",
+            "description": "",
+            "capacity": 10,
+            "location": [20.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "R5_input_queue",
+            "description": "",
+            "capacity": 10,
+            "location": [20.0, 10.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "R6_input_queue",
+            "description": "",
+            "capacity": 10,
+            "location": [20.0, 20.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "R7_input_queue",
+            "description": "",
+            "capacity": 10,
+            "location": [20.0, 30.0],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
             "ID": "transport_queue",
             "description": "",
             "capacity": 0,
@@ -142,6 +187,81 @@
             "dependency_ids": []
         },
         {
+            "location": [10.0, 20.0],
+            "ID": "R3",
+            "description": "Resource 3",
+            "process_ids": ["P2"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["R3_input_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [20.0, 0.0],
+            "ID": "R4",
+            "description": "Resource 4",
+            "process_ids": ["P1"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["R4_input_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [20.0, 10.0],
+            "ID": "R5",
+            "description": "Resource 5",
+            "process_ids": ["P1"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["R5_input_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [20.0, 20.0],
+            "ID": "R6",
+            "description": "Resource 6",
+            "process_ids": ["P2"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["R6_input_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [20.0, 30.0],
+            "ID": "R7",
+            "description": "Resource 7",
+            "process_ids": ["P2"],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [1],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": ["R7_input_queue"],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
             "location": [5.0, 5.0],
             "ID": "AGV1",
             "description": "Transport Resource",
@@ -177,6 +297,17 @@
                 "P2": []
             },
             "dependency_ids": []
+        },
+        {
+            "ID": "Product_C",
+            "description": "Product Type C (requires P1 then P2)",
+            "type": "Product_C",
+            "transport_process": "TP",
+            "processes": {
+                "P1": ["P2"],
+                "P2": []
+            },
+            "dependency_ids": []
         }
     ],
     "sink_data": [
@@ -186,83 +317,223 @@
             "description": "Sink for all products",
             "product_type": "Product_A",
             "ports": ["sink_input_queue"]
+        },
+        {
+            "location": [20.0, 5.0],
+            "ID": "Sink_B",
+            "description": "Sink for Product_B",
+            "product_type": "Product_B",
+            "ports": ["sink_input_queue"]
+        },
+        {
+            "location": [20.0, 5.0],
+            "ID": "Sink_C",
+            "description": "Sink for Product_C",
+            "product_type": "Product_C",
+            "ports": ["sink_input_queue"]
         }
     ],
     "source_data": [
         {
             "location": [0.0, 0.0],
-            "ID": "Source",
-            "description": "Main source with schedule",
-            "product_type": "Product_A",
-            "time_model_id": "arrival_time",
+            "ID": "OrderSource",
+            "description": "Order source with schedule",
+            "order_ids": ["Order_1", "Order_2", "Order_3", "Order_4", "Order_5", "Order_6", "Order_7", "Order_8", "Order_9", "Order_10", "Order_11", "Order_12", "Order_13", "Order_14", "Order_15", "Order_16", "Order_17", "Order_18", "Order_19", "Order_20"],
             "routing_heuristic": "shortest_queue",
             "ports": ["source_output_queue"]
+        }
+    ],
+    "order_data": [
+        {
+            "ID": "Order_1",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 0.0,
+            "release_time": 0.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_2",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 5.0,
+            "release_time": 5.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_3",
+            "ordered_products": [{"product_type": "Product_C", "quantity": 1}],
+            "order_time": 8.0,
+            "release_time": 8.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_4",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 10.0,
+            "release_time": 10.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_5",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 13.0,
+            "release_time": 13.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_6",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 15.0,
+            "release_time": 15.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_7",
+            "ordered_products": [{"product_type": "Product_C", "quantity": 1}],
+            "order_time": 18.0,
+            "release_time": 18.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_8",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 20.0,
+            "release_time": 20.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_9",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 25.0,
+            "release_time": 25.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_10",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 28.0,
+            "release_time": 28.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_11",
+            "ordered_products": [{"product_type": "Product_C", "quantity": 1}],
+            "order_time": 30.0,
+            "release_time": 30.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_12",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 35.0,
+            "release_time": 35.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_13",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 38.0,
+            "release_time": 38.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_14",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 40.0,
+            "release_time": 40.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_15",
+            "ordered_products": [{"product_type": "Product_C", "quantity": 1}],
+            "order_time": 43.0,
+            "release_time": 43.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_16",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 48.0,
+            "release_time": 48.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_17",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 50.0,
+            "release_time": 50.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_18",
+            "ordered_products": [{"product_type": "Product_B", "quantity": 1}],
+            "order_time": 53.0,
+            "release_time": 53.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_19",
+            "ordered_products": [{"product_type": "Product_C", "quantity": 1}],
+            "order_time": 55.0,
+            "release_time": 55.0,
+            "due_time": null,
+            "priority": 1
+        },
+        {
+            "ID": "Order_20",
+            "ordered_products": [{"product_type": "Product_A", "quantity": 1}],
+            "order_time": 60.0,
+            "release_time": 60.0,
+            "due_time": null,
+            "priority": 1
         }
     ],
     "scenario_data": null,
     "depdendency_data": [],
     "primitive_data": [],
     "schedule": [
-        {
-            "Time": 0.0,
-            "Resource": "R1",
-            "State": "P1",
-            "State Type": "Production",
-            "Activity": "start state",
-            "Product": "Product_A_1",
-            "Expected End Time": 5.0,
-            "Origin location": null,
-            "Target location": null,
-            "Empty Transport": null,
-            "Requesting Item": null,
-            "Dependency": null,
-            "process": "P1"
-        },
-        {
-            "Time": 10.0,
-            "Resource": "R2",
-            "State": "P2",
-            "State Type": "Production",
-            "Activity": "start state",
-            "Product": "Product_B_1",
-            "Expected End Time": 13.0,
-            "Origin location": null,
-            "Target location": null,
-            "Empty Transport": null,
-            "Requesting Item": null,
-            "Dependency": null,
-            "process": "P2"
-        },
-        {
-            "Time": 20.0,
-            "Resource": "R1",
-            "State": "P1",
-            "State Type": "Production",
-            "Activity": "start state",
-            "Product": "Product_A_2",
-            "Expected End Time": 25.0,
-            "Origin location": null,
-            "Target location": null,
-            "Empty Transport": null,
-            "Requesting Item": null,
-            "Dependency": null,
-            "process": "P1"
-        },
-        {
-            "Time": 30.0,
-            "Resource": "R2",
-            "State": "P2",
-            "State Type": "Production",
-            "Activity": "start state",
-            "Product": "Product_B_2",
-            "Expected End Time": 33.0,
-            "Origin location": null,
-            "Target location": null,
-            "Empty Transport": null,
-            "Requesting Item": null,
-            "Dependency": null,
-            "process": "P2"
-        }
+        {"Time": 0.0, "Resource": "R1", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_1", "Expected End Time": 5.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 5.0, "Resource": "R2", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_1", "Expected End Time": 8.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 8.0, "Resource": "R4", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_C_1", "Expected End Time": 13.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 10.0, "Resource": "R5", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_2", "Expected End Time": 15.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 13.0, "Resource": "R3", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_C_1", "Expected End Time": 16.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 13.0, "Resource": "R6", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_2", "Expected End Time": 16.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 15.0, "Resource": "R1", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_3", "Expected End Time": 20.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 18.0, "Resource": "R4", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_C_2", "Expected End Time": 23.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 20.0, "Resource": "R7", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_3", "Expected End Time": 23.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 23.0, "Resource": "R2", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_C_2", "Expected End Time": 26.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 25.0, "Resource": "R5", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_4", "Expected End Time": 30.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 28.0, "Resource": "R3", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_4", "Expected End Time": 31.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 30.0, "Resource": "R1", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_C_3", "Expected End Time": 35.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 35.0, "Resource": "R4", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_5", "Expected End Time": 40.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 35.0, "Resource": "R6", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_C_3", "Expected End Time": 38.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 38.0, "Resource": "R7", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_5", "Expected End Time": 41.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 40.0, "Resource": "R5", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_6", "Expected End Time": 45.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 43.0, "Resource": "R1", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_C_4", "Expected End Time": 48.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 48.0, "Resource": "R2", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_6", "Expected End Time": 51.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 48.0, "Resource": "R3", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_C_4", "Expected End Time": 51.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 50.0, "Resource": "R4", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_7", "Expected End Time": 55.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 53.0, "Resource": "R6", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_B_7", "Expected End Time": 56.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"},
+        {"Time": 55.0, "Resource": "R5", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_C_5", "Expected End Time": 60.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 60.0, "Resource": "R1", "State": "P1", "State Type": "Production", "Activity": "start state", "Product": "Product_A_8", "Expected End Time": 65.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P1"},
+        {"Time": 60.0, "Resource": "R7", "State": "P2", "State Type": "Production", "Activity": "start state", "Product": "Product_C_5", "Expected End Time": 63.0, "Origin location": null, "Target location": null, "Empty Transport": null, "Requesting Item": null, "Dependency": null, "process": "P2"}
     ],
     "conwip_number": null,
     "valid_configuration": true,

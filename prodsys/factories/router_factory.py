@@ -6,8 +6,6 @@ from prodsys.simulation import sim
 from prodsys.simulation import router as router_module
 from prodsys.simulation.process_matcher import ProcessMatcher
 
-from prodsys.simulation import request
-
 
 if TYPE_CHECKING:
     from prodsys.simulation import sim
@@ -57,7 +55,7 @@ class RouterFactory:
 
     def create_routers(self):
         for system_sources in self.resource_factory.system_resources.values():
-            system_sources.router = router_module.Router(
+            router = router_module.Router(
                 env=self.env,
                 resource_factory=self.resource_factory,
                 sink_factory=self.sink_factory,
@@ -68,8 +66,9 @@ class RouterFactory:
                 resources=system_sources.subresources,
                 process_matcher=self.process_matcher,
             )
-            self.system_routers[system_sources.data.ID] = system_sources.router
-            system_sources.set_router(system_sources.router)
+            system_sources.router = router
+            self.system_routers[system_sources.data.ID] = router
+            system_sources.set_router(router)
 
         global_system_router = router_module.Router(
             env=self.env,

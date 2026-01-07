@@ -8,6 +8,8 @@ from typing import (
     Optional,
     Union,
     Dict,
+    Tuple,
+    Callable,
 )
 
 import logging
@@ -113,6 +115,20 @@ class Router:
         self.request_handler = RequestHandler(self.process_matcher)
         self.interaction_handler = InteractionHandler()
 
+        # Initialize schedule-based routing if schedule exists
+        self.schedule_routing_map: Dict[Tuple[str, str], str] = {}
+        self.schedule_routing_heuristic: Optional[Callable] = None
+        if self.production_system_data and self.production_system_data.schedule:
+            self._build_schedule_routing_map()
+            if self.schedule_routing_map:
+                self.schedule_routing_heuristic = self._create_schedule_based_routing_heuristic(
+                    shortest_queue_routing_heuristic
+                )
+                logger.info(
+                    f"Initialized schedule-based routing heuristic with {len(self.schedule_routing_map)} "
+                    f"schedule entries"
+                )
+
         # Initialize compatibility tables
 
     def mark_finished_request(self, request: request.Request) -> None:
@@ -204,7 +220,7 @@ class Router:
             if self.resource_got_free.triggered:
                 self.resource_got_free = events.Event(self.env)
             while True:
-                logger.debug(f"Resource routing loop")
+                logger.debug("Resource routing loop")
                 self.update_free_resources()
                 free_requests = self.request_handler.get_next_resource_request_to_route(
                     list(self.free_resources.values())
@@ -480,6 +496,123 @@ class Router:
         return possible_storages[0] if possible_storages else primitive.storage
     
     
+    def _build_schedule_routing_map(self):
+        """
+        Pre-processes the schedule into a fast lookup dictionary.
+        Creates mapping: (product_id, process_id) -> resource_id
+        """
+        if not self.production_system_data or not self.production_system_data.schedule:
+            return
+        
+        for event in self.production_system_data.schedule:
+            if event.activity == "start state" and event.process:
+                schedule_key = (event.product, event.process)
+                self.schedule_routing_map[schedule_key] = event.resource
+        
+        logger.debug(f"Built schedule routing map with {len(self.schedule_routing_map)} entries")
+        if logger.isEnabledFor(logging.DEBUG):
+            for key, resource in list(self.schedule_routing_map.items())[:5]:
+                logger.debug(f"  Schedule routing: {key} -> {resource}")
+    
+    def _create_schedule_based_routing_heuristic(
+        self, fallback_heuristic: Callable
+    ) -> Callable:
+        """
+        Creates a schedule-based routing heuristic that routes products according to the schedule.
+        Falls back to the provided heuristic if product is not in schedule or scheduled resource is not available.
+        
+        Args:
+            fallback_heuristic: The fallback routing heuristic to use when schedule doesn't apply.
+            
+        Returns:
+            A routing heuristic function that can be used by the router.
+        """
+        schedule_map = self.schedule_routing_map
+        
+        def schedule_based_routing_heuristic(possible_requests: list[request.Request]):
+            """
+            Routing heuristic that routes products to resources according to the schedule.
+            """
+            if not schedule_map or not possible_requests:
+                # No schedule or no requests, use fallback
+                fallback_heuristic(possible_requests)
+                return
+            
+            # Get the requesting product and process
+            requesting_item = possible_requests[0].requesting_item
+            process_id = (
+                possible_requests[0].process.data.ID
+                if hasattr(possible_requests[0].process, "data")
+                else None
+            )
+            
+            if not requesting_item or not process_id:
+                logger.debug("Schedule routing: No requesting item or process ID, using fallback")
+                fallback_heuristic(possible_requests)
+                return
+            
+            product_id = requesting_item.data.ID
+            schedule_key = (product_id, process_id)
+            
+            logger.debug(
+                "Schedule routing: Product %s, Process %s, Schedule key: %s",
+                product_id, process_id, schedule_key
+            )
+            
+            # Check if this product+process combination is in the schedule
+            if schedule_key in schedule_map:
+                scheduled_resource_id = schedule_map[schedule_key]
+                logger.debug(
+                    f"Schedule routing: Found schedule match for {schedule_key} -> "
+                    f"Resource {scheduled_resource_id}"
+                )
+                
+                # Find requests for the scheduled resource
+                scheduled_requests = [
+                    r
+                    for r in possible_requests
+                    if r.resource.data.ID == scheduled_resource_id
+                ]
+                other_requests = [
+                    r
+                    for r in possible_requests
+                    if r.resource.data.ID != scheduled_resource_id
+                ]
+                
+                if scheduled_requests:
+                    # Put scheduled resource first, then others sorted by fallback heuristic
+                    possible_requests.clear()
+                    possible_requests.extend(scheduled_requests)
+                    # Sort others by fallback heuristic
+                    if other_requests:
+                        fallback_heuristic(other_requests)
+                        possible_requests.extend(other_requests)
+                    logger.debug(
+                        f"Schedule routing: Routed {product_id} to scheduled resource "
+                        f"{scheduled_resource_id}"
+                    )
+                    return
+                else:
+                    # Scheduled resource not available in possible requests
+                    logger.warning(
+                        f"Schedule routing: Product {product_id} scheduled for resource "
+                        f"{scheduled_resource_id} (process {process_id}), but resource not "
+                        f"available. Available resources: "
+                        f"{[r.resource.data.ID for r in possible_requests]}. "
+                        f"Using fallback heuristic."
+                    )
+                    fallback_heuristic(possible_requests)
+                    return
+            else:
+                # Product not in schedule, use fallback
+                logger.debug(
+                    f"Schedule routing: No schedule match for {schedule_key}, using fallback"
+                )
+                fallback_heuristic(possible_requests)
+                return
+        
+        return schedule_based_routing_heuristic
+
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
         Allocates a resource to a request.
@@ -495,7 +628,11 @@ class Router:
                 routing_heuristic = random_routing_heuristic
             else:
                 routing_heuristic = free_requests[0].requesting_item.routing_heuristic
-            routing_heuristic(free_requests)
+                # If schedule-based routing heuristic is available, use it instead
+                if self.schedule_routing_heuristic:
+                    self.schedule_routing_heuristic(free_requests)
+                else:
+                    routing_heuristic(free_requests)
         except Exception:
             def fallback_heuristic(x):
                 return x[0]
