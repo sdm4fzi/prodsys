@@ -40,6 +40,7 @@ dev = [
     "ipywidgets>=8.0.0",
     "snakeviz>=2.0.0",
     "mkdocstrings>=0.24.0",
+    "mkdocstrings-python>=2.0.0",
     "mkdocs-include-dir-to-nav>=0.0.1",
 ]
 RL-control = [
@@ -51,4 +52,9 @@ RL-control = [
 [build-system]
 requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mkdocstrings[python]>=1.0.0",
+]
 

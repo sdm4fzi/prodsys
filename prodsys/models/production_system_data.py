@@ -372,26 +372,28 @@ class ProductionSystemData(BaseModel):
     The adapter targets easy integration of algorithms with each other in different environments.
     Therefore, the adapter can even be used for integration of new algorithms by serving as a defined data interface.
 
-    Args:
-        ID (str, optional): ID of the production system. Defaults to "".
-        seed (int, optional): Seed for the random number generator used in simulation. Defaults to 0.
-        time_model_data (List[time_model_data_module.TIME_MODEL_DATA], optional): List of time models used by the entities in the production system. Defaults to [].
-        state_data (List[state_data_module.STATE_DATA_UNION], optional): List of states used by the resources in the production system. Defaults to [].
-        process_data (List[processes_data_module.PROCESS_DATA_UNION], optional): List of processes required by products and provided by resources in the production system. Defaults to [].
-        port_data (List[queue_data_module.QueueData], optional): List of ports used by the resources, sources and sinks in the production system. Defaults to [].
-        node_data (List[resource_data_module.NodeData], optional): List of nodes in the production system. Defaults to [].
-        resource_data (List[resource_data_module.RESOURCE_DATA_UNION], optional): List of resources in the production system. Defaults to [].
-        product_data (List[product_data_module.ProductData], optional): List of products in the production system. Defaults to []
-        sink_data (List[sink_data_module.SinkData], optional): List of sinks in the production system. Defaults to [].
-        source_data (List[source_data_module.SOURCE_DATA_UNION], optional): List of sources in the production system. Defaults to [].
-        scenario_data (Optional[scenario_data_module.ScenarioData], optional): Scenario data of the production system used for optimization. Defaults to None.
-        schedule (Optional[List[performance_data.Event]], optional): List of scheduled Events of the production system. Defaults to None.
-        order_data (Optional[List[order_data_module.OrderData]], optional): List of orders in the production system. Defaults to None.
-        conwip_number (Optional[int], optional): Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
-        reference_time (Optional[datetime.datetime], optional): Reference time of the production system. Defaults to None.
-        time_unit (Literal["s", "min", "h", "d"], optional): Time unit of the production system. Defaults to "min".
-        valid_configuration (bool, optional): Indicates if the configuration is valid. Defaults to True.
-        reconfiguration_cost (float, optional): Cost of reconfiguration in a optimization scenario. Defaults to 0.
+    Attributes:
+        ID: ID of the production system. Defaults to "".
+        seed: Seed for the random number generator used in simulation. Defaults to 0.
+        time_model_data: List of time models used by the entities in the production system. Defaults to [].
+        state_data: List of states used by the resources in the production system. Defaults to [].
+        process_data: List of processes required by products and provided by resources in the production system. Defaults to [].
+        port_data: List of ports used by the resources, sources and sinks in the production system. Defaults to [].
+        node_data: List of nodes in the production system. Defaults to [].
+        resource_data: List of resources in the production system. Defaults to [].
+        product_data: List of products in the production system. Defaults to [].
+        sink_data: List of sinks in the production system. Defaults to [].
+        source_data: List of sources in the production system. Defaults to [].
+        scenario_data: Scenario data of the production system used for optimization. Defaults to None.
+        dependency_data: List of dependencies in the production system. Defaults to [].
+        primitive_data: List of stored primitives in the production system. Defaults to [].
+        schedule: List of scheduled Events of the production system. Defaults to None.
+        order_data: List of orders in the production system. Defaults to None.
+        conwip_number: Number of allowed WIP (Work in Progress - number of released products) in the production system. Defaults to None.
+        reference_time: Reference time of the production system. Defaults to None.
+        time_unit: Time unit of the production system. Defaults to "min".
+        valid_configuration: Indicates if the configuration is valid. Defaults to True.
+        reconfiguration_cost: Cost of reconfiguration in a optimization scenario. Defaults to 0.
     """
 
     # TODO: add check, that throws an error, if items have the same ID!
