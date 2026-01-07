@@ -10,11 +10,11 @@ from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 from gymnasium import spaces
 
-import prodsys
+from prodsys.adapters import ProductionSystemData
 from prodsys.control import routing_control_env
 
 
-clprodsys.adaptersductionCadapterv(routing_control_env.AbstractRoutingControlEnv):
+class RoutingControlEnv(routing_control_env.AbstractRoutingControlEnv):
     def get_observation(self) -> np.ndarray:
         """
         Function that utilizes the ResourceObserver of the environment class to get an array of observations concerning the availability of resources.
@@ -71,8 +71,7 @@ class TensorboardCallback(BaseCallback):
 
 
 if __name__ == "__main__":
-    adapter_object = adapter.ProductionSystemData()
-    adapter_object.read_data(
+    adapter_object = ProductionSystemData.read(
         "examples/control/control_example_data/control_configuration.json"
     )
 
@@ -81,15 +80,15 @@ if __name__ == "__main__":
     observation_space = spaces.Box(0, 1, shape=(num_of_resources,), dtype=float)
     action_space = spaces.Box(0, 1, shape=(num_of_resources,), dtype=float)
 
-    env = ProductionControlEnv(
+    env = RoutingControlEnv(
         adapter_object,
         observation_space=observation_space,
         action_space=action_space,
         render_mode="human",
     )
 
-    tmp_path = (
-        os.getcwd() + "\\tensorboard_log\\routing\\" + time.strftime("%Y%m%d-%H%M%S")
+    tmp_path = os.path.join(
+        os.getcwd(), "tensorboard_log", "routing", time.strftime("%Y%m%d-%H%M%S")
     )
     new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 

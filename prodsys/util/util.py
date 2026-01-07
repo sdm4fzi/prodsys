@@ -7,6 +7,7 @@ import os
 import numpy as np
 from typing import Any, List, Generator
 import warnings
+from enum import Enum
 
 import prodsys.models.production_system_data
 
@@ -22,12 +23,12 @@ if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
 
 
-def get_class_from_str(name: str, cls_dict: dict):
+def get_class_from_str(name: Any, cls_dict: dict):
     """
     Returns the class for a given name from a dictionary containing classes.
 
     Args:
-        name (str): Name of the class.
+        name (str): Name of the class. Enum values are supported (their `.value` is used).
         cls_dict (dict): Dictionary containing classes.
 
     Raises:
@@ -36,7 +37,15 @@ def get_class_from_str(name: str, cls_dict: dict):
     Returns:
         _type_: The class.
     """
-    if name not in cls_dict.keys():
+    # Support both Enum keys (common in v1) and string keys
+    if isinstance(name, Enum):
+        if name in cls_dict:
+            return cls_dict[name]
+        name_value = name.value
+        if name_value in cls_dict:
+            return cls_dict[name_value]
+        name = name_value
+    if name not in cls_dict:
         raise ValueError(f"Class '{name}' is not implemented.")
     return cls_dict[name]
 

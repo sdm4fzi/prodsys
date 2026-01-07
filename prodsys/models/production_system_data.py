@@ -233,8 +233,12 @@ def add_default_queues_to_resources(
             resource, adapter, queue_capacity
         )
         if default_queue is not None:
-            # Add queues to adapter
-            adapter.port_data.append(default_queue)
+            # Check if queue with this ID already exists before adding
+            existing_queue_ids = {queue.ID for queue in adapter.port_data}
+            if default_queue.ID not in existing_queue_ids:
+                # Add queues to adapter only if it doesn't already exist
+                adapter.port_data.append(default_queue)
+            # Always set the resource's ports reference, even if queue already exists
             resource.ports = [default_queue.ID]
     return adapter
 

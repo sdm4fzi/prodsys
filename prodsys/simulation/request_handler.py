@@ -232,12 +232,46 @@ class RequestHandler:
             origin,
             target,
         )
+        
+        transport_process_signature = item.transport_process.get_process_signature()
+        logger.debug(
+            f"Looking for transport: {origin.data.ID} -> {target.data.ID} "
+            f"for item {item.data.ID} with process signature {transport_process_signature}"
+        )
+        
         possible_resources_and_processes = (
             self.process_matcher.get_transport_compatible(
-                origin, target, item.transport_process.get_process_signature()
+                origin, target, transport_process_signature
             )
         )
         if not possible_resources_and_processes:
+            # Get more details for debugging
+            movable_resources = self.process_matcher.resource_factory.get_movable_resources()
+            available_process_signatures = set()
+            resource_processes_detail = []
+            for resource in movable_resources:
+                for proc in resource.processes:
+                    if hasattr(proc, 'get_process_signature'):
+                        sig = proc.get_process_signature()
+                        available_process_signatures.add(sig)
+                        proc_id = proc.data.ID if hasattr(proc, 'data') and hasattr(proc.data, 'ID') else "unknown"
+                        proc_type = type(proc).__name__
+                        resource_processes_detail.append(f"{resource.data.ID}:{proc_id}({proc_type})")
+            
+            logger.error(
+                f"No resource available for transport of item {item.data.ID} "
+                f"with process {item.data.transport_process} (signature: {transport_process_signature}) "
+                f"from {origin.data.ID} to {target.data.ID}."
+            )
+            logger.error(
+                f"  Available transport process signatures: {available_process_signatures}"
+            )
+            logger.error(
+                f"  Transport resources and their processes: {resource_processes_detail}"
+            )
+            logger.error(
+                f"  Transport compatibility table size: {len(self.process_matcher.transport_compatibility)}"
+            )
             raise ValueError(f"No resource available for transport of item {item.data.ID} with process {item.data.transport_process} from {origin.data.ID} to {target.data.ID}")
         resources = {}
         for resource, process_instance in possible_resources_and_processes:

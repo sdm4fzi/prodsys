@@ -1,6 +1,6 @@
 # Optimizing a production system
 
-This tutorial will guide you through the optimization functionalities of `prodsys` to optimize the configuration of a production system. With the `prodsys.optimization` package, we can utilize meta-heuristics and mathematical optimization for this task. All algorithms can be conviently used with the `prodsys.models` API.
+This tutorial will guide you through the optimization functionalities of `prodsys` to optimize the configuration of a production system. With the `prodsys.optimization` package, we can utilize meta-heuristics and mathematical optimization for this task. All algorithms can be conveniently used with the `prodsys.models` API.
 
 For this example, we will use a production system which we will load from a json-file (base_configuration.json), which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys/tree/main/examples/tutorials). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
 
@@ -20,7 +20,7 @@ runner.run(2880)
 runner.print_results()
 ```
 
-As already concluded in the seccond tutorial, production system configurations can be suboptimal for a certain load of products. In this example, we also see that resoures M2, M3, M4 are very heavily utilized, whereas resource M1 has only a productivy of 34.4%. In order to satify the product needs of our customers and to balance the load on the resources more evenly, we want to find a more suitable configuration with the `prodsys.optimization` package. However, for starting optimization, we also need to provide an optimization scenario, that models constraints, options, information and the objectives. Let's start by creating the constraints of the scenario with the `prodsys.models` API:
+As already concluded in the second tutorial, production system configurations can be suboptimal for a certain load of products. In this example, we also see that resources M2, M3, M4 are very heavily utilized, whereas resource M1 has only a productivity of 34.4%. In order to satisfy the product needs of our customers and to balance the load on the resources more evenly, we want to find a more suitable configuration with the `prodsys.optimization` package. However, for starting optimization, we also need to provide an optimization scenario, that models constraints, options, information and the objectives. Let's start by creating the constraints of the scenario with the `prodsys.models` API:
 
 ```python
 from prodsys.models import scenario_data
@@ -33,7 +33,7 @@ constraints = scenario_data.ScenarioConstrainsData(
 )
 ```
 
-As you can see, the constraints consist of the maximum cost for reconfigruation and the maximumm number of machines, processes per machine and transport resources. Next, we define the options of our scenario for optimization:
+As you can see, the constraints consist of the maximum cost for reconfiguration and the maximum number of machines, processes per machine and transport resources. Next, we define the options of our scenario for optimization:
 
 ```python
 positions = [[x*4, y*4] for x in range(4) for y in range(10)]
@@ -59,7 +59,7 @@ info = scenario_data.ScenarioInfoData(
 )
 ```
 
-The scenario info contains information about the cost for machines, transport resources and process modules. Additionally, we specify a time range. This value is the time used for evalutation of created configurations during simulation. Since many evaluations are performed during optimization, this parameter can significantly influence the optimmization Time. For now, we specified it to one day. Lastly we can define the objectives used for optimization:
+The scenario info contains information about the cost for machines, transport resources and process modules. Additionally, we specify a time range. This value is the time used for evaluation of created configurations during simulation. Since many evaluations are performed during optimization, this parameter can significantly influence the optimization time. For now, we specified it to one day. Lastly we can define the objectives used for optimization:
 
 ```python
 from prodsys.models.performance_indicators import KPIEnum
@@ -80,7 +80,7 @@ scenario = scenario_data.ScenarioData(
 production_system.scenario_data = scenario
 ```
 
-Instead of calling the optimization algorithms directly, we use the Optimizer class to manage the optimization process. This allows us to run different optimization algorithms within a unified interface while tracking optimization progress in real-time. Next, we define the hyper parameters for our optimization. At first, we will use evolutionary algorithm for our optimization, because it allows parallelization. The hyper parameters for optimization are strongly problem dependant and need to be adjusted accordingly. For this example, we will use the following parameters and run the optimization for 10 generations. Note, that this can take some time...
+Instead of calling the optimization algorithms directly, we use the Optimizer class to manage the optimization process. This allows us to run different optimization algorithms within a unified interface while tracking optimization progress in real-time. Next, we define the hyper parameters for our optimization. At first, we will use evolutionary algorithm for our optimization, because it allows parallelization. The hyper parameters for optimization are strongly problem dependent and need to be adjusted accordingly. For this example, we will use the following parameters and run the optimization for 10 generations. Note, that this can take some time...
 
 ```python
 from prodsys.optimization.evolutionary_algorithm import EvolutionaryAlgorithmHyperparameters
@@ -120,7 +120,7 @@ df = optimization_analysis.read_optimization_results_file_to_df("results/optimiz
 df.sort_values(by=["agg_fitness"], ascending=False).head()
 ```
 
-`prodsys` allows us to load the optimization results as a data frame and analyze them. For validation purposes, we simuate the best solution again and compare it to the initial solutions:
+`prodsys` allows us to load the optimization results as a data frame and analyze them. For validation purposes, we simulate the best solution again and compare it to the initial solutions:
 
 ```python
 import os 

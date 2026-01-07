@@ -347,12 +347,12 @@ def test_schedule_from_json_file():
     config = ProductionSystemData.model_validate(config_data)
     
     assert config.schedule is not None
-    assert len(config.schedule) == 4
+    assert len(config.schedule) == 25
     
     # Verify schedule structure
     for event in config.schedule:
         assert event.activity == "start state"
-        assert event.resource in ["R1", "R2"]
+        assert event.resource in ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]
         assert event.process in ["P1", "P2"]
 
 

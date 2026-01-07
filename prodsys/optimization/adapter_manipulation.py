@@ -14,6 +14,7 @@ from prodsys.models.production_system_data import (
     get_possible_transport_processes_IDs,
     get_required_process_ids,
     remove_queues_from_resources,
+    remove_unused_queues_from_adapter,
 )
 from prodsys.models import resource_data, scenario_data
 from prodsys.models.processes_data import (
@@ -114,6 +115,119 @@ def delete_unused_conveyor_processes(
             adapter_object.process_data.remove(process)
 
 
+def sync_resource_process_ids_for_adapter(
+    resource: resource_data.ResourceData,
+    target_adapter: adapters.ProductionSystemData
+) -> None:
+    """
+    Update a resource's process IDs to match processes that exist in the target adapter.
+    This is needed when moving resources between adapters during crossover.
+    """
+    if not resource.process_ids:
+        return
+    
+    # Get all existing process IDs in target adapter
+    existing_process_ids = {p.ID for p in target_adapter.process_data}
+    
+    # Get transport process IDs
+    transport_process_ids = set(get_possible_transport_processes_IDs(target_adapter))
+    
+    # Get all conveyor processes in target adapter, grouped by capability
+    conveyor_processes_by_capability = {}
+    all_conveyor_processes = []
+    for process in target_adapter.process_data:
+        if isinstance(process, LinkTransportProcessData):
+            all_conveyor_processes.append(process)
+            capability = process.capability or process.ID
+            if capability not in conveyor_processes_by_capability:
+                conveyor_processes_by_capability[capability] = process
+    
+    # Update resource process IDs
+    updated_process_ids = []
+    for proc_id in resource.process_ids:
+        if proc_id in existing_process_ids:
+            # Process exists in target adapter, keep it
+            updated_process_ids.append(proc_id)
+        elif proc_id in transport_process_ids:
+            # This is a transport process that doesn't exist in target adapter
+            # Find a matching conveyor process - prefer by capability, otherwise use any available
+            matching_process = None
+            if all_conveyor_processes:
+                # Use the first available conveyor process as fallback
+                # (The processes should have been copied already, so this is a fallback)
+                matching_process = all_conveyor_processes[0]
+            
+            if matching_process:
+                updated_process_ids.append(matching_process.ID)
+            else:
+                # No matching process found, this will cause validation error but that's better than silent failure
+                updated_process_ids.append(proc_id)
+        else:
+            # Not a transport process, keep as is (will fail validation if it doesn't exist)
+            updated_process_ids.append(proc_id)
+    
+    resource.process_ids = updated_process_ids
+
+
+def sync_resource_conveyor_process_ids(
+    adapter_object: adapters.ProductionSystemData
+) -> None:
+    """
+    Update resource process IDs to match existing conveyor processes in the adapter.
+    This is needed after network regeneration when process IDs might have changed.
+    """
+    # Get all existing conveyor process IDs
+    existing_conveyor_process_ids = {
+        p.ID for p in adapter_object.process_data 
+        if isinstance(p, LinkTransportProcessData)
+    }
+    
+    # Get conveyor processes by capability for matching
+    conveyor_processes_by_capability = {}
+    for process in adapter_object.process_data:
+        if isinstance(process, LinkTransportProcessData):
+            capability = process.capability or process.ID
+            if capability not in conveyor_processes_by_capability:
+                conveyor_processes_by_capability[capability] = process
+    
+    # Update resource process IDs to reference existing conveyor processes
+    transport_process_ids = set(get_possible_transport_processes_IDs(adapter_object))
+    for resource in adapter_object.resource_data:
+        if any(proc_id in transport_process_ids for proc_id in (resource.process_ids or [])):
+            # This is a transport resource, update its process IDs
+            updated_process_ids = []
+            for proc_id in resource.process_ids:
+                if proc_id in transport_process_ids:
+                    # Check if this process ID exists in process_data
+                    if proc_id not in existing_conveyor_process_ids:
+                        # Find a matching conveyor process by capability
+                        # Try to find any conveyor process with matching capability
+                        matching_process = None
+                        for process in adapter_object.process_data:
+                            if isinstance(process, LinkTransportProcessData):
+                                capability = process.capability or process.ID
+                                # Use the first matching process we find
+                                if capability in conveyor_processes_by_capability:
+                                    matching_process = conveyor_processes_by_capability[capability]
+                                    break
+                        
+                        if matching_process:
+                            updated_process_ids.append(matching_process.ID)
+                        else:
+                            # If no match, try to use any available conveyor process
+                            if existing_conveyor_process_ids:
+                                updated_process_ids.append(next(iter(existing_conveyor_process_ids)))
+                            else:
+                                # Keep original - will fail validation but that's better than silent failure
+                                updated_process_ids.append(proc_id)
+                    else:
+                        updated_process_ids.append(proc_id)
+                else:
+                    # Not a transport process, keep as is
+                    updated_process_ids.append(proc_id)
+            resource.process_ids = updated_process_ids
+
+
 def expand_process_ids_with_models(
     adapter_object: adapters.ProductionSystemData, process_ids: List[str]
 ) -> List[str]:
@@ -206,9 +320,34 @@ def crossover(ind1, ind2):
     adapter2: adapters.ProductionSystemData = ind2[0]
     machines_1 = adapters.get_production_resources(adapter1)
     machines_2 = adapters.get_production_resources(adapter2)
+    # Remove queues from resources and clean up orphaned queues before swapping
     remove_queues_from_resources(machines_1 + machines_2)
     transport_resources_1 = adapters.get_transport_resources(adapter1)
     transport_resources_2 = adapters.get_transport_resources(adapter2)
+    # Clean up all orphaned queues before swapping resources
+    remove_unused_queues_from_adapter(adapter1)
+    remove_unused_queues_from_adapter(adapter2)
+    
+    # Synchronize conveyor processes BEFORE swapping resources to ensure process IDs exist
+    # This is needed because transport resources might reference processes from the other adapter
+    # and validation happens immediately when we assign resources
+    transport_processes2 = adapters.get_conveyor_processes(adapter2)
+    transport_processes1 = adapters.get_conveyor_processes(adapter1)
+    if (transport_processes1 or transport_processes2):
+        for tp in transport_processes2:
+            if not any(tp.ID == atp.ID for atp in adapter1.process_data):
+                adapter1.process_data.append(tp.model_copy(deep=True))
+        for tp in transport_processes1:
+            if not any(tp.ID == atp.ID for atp in adapter2.process_data):
+                adapter2.process_data.append(tp.model_copy(deep=True))
+    
+    # Sync resource process IDs to match processes in target adapter BEFORE swapping
+    # This ensures resources reference process IDs that exist in the target adapter
+    for resource in transport_resources_2:
+        sync_resource_process_ids_for_adapter(resource, adapter1)
+    for resource in transport_resources_1:
+        sync_resource_process_ids_for_adapter(resource, adapter2)
+    
     if "machine" in crossover_type:
         adapter1.resource_data = transport_resources_1
         adapter2.resource_data = transport_resources_2
@@ -223,22 +362,22 @@ def crossover(ind1, ind2):
         adapter1.resource_data = machines_1 + transport_resources_2
         adapter2.resource_data = machines_2 + transport_resources_1
         
-        transport_processes2 = adapters.get_conveyor_processes(adapter2)
-        transport_processes1 = adapters.get_conveyor_processes(adapter1)
-        if (transport_processes1 or transport_processes2):
-            for tp in transport_processes2:
-                if not any(tp.ID == atp.ID for atp in adapter1.process_data):
-                    adapter1.process_data.append(tp.model_copy(deep=True))
-            for tp in transport_processes1:
-                if not any(tp.ID == atp.ID for atp in adapter2.process_data):
-                    adapter2.process_data.append(tp.model_copy(deep=True))        
-            delete_unused_conveyor_processes(adapter1)
-            delete_unused_conveyor_processes(adapter2)
+        # Clean up unused processes after swapping
+        delete_unused_conveyor_processes(adapter1)
+        delete_unused_conveyor_processes(adapter2)
+
+    # Clean up orphaned queues after swapping resources and before regenerating network
+    remove_unused_queues_from_adapter(adapter1)
+    remove_unused_queues_from_adapter(adapter2)
 
     if any(isinstance(process, LinkTransportProcessData) for process in adapter1.process_data):
         node_link_generation.generate_and_apply_network(adapter1, simple_connection=True)
+        # Sync resource process IDs after network generation
+        sync_resource_conveyor_process_ids(adapter1)
     if any(isinstance(process, LinkTransportProcessData) for process in adapter2.process_data):
         node_link_generation.generate_and_apply_network(adapter2, simple_connection=True)
+        # Sync resource process IDs after network generation
+        sync_resource_conveyor_process_ids(adapter2)
     add_default_queues_to_resources(adapter1, reset=False)
     add_default_queues_to_resources(adapter2, reset=False)
     clean_out_breakdown_states_of_resources(adapter1)
@@ -1724,6 +1863,11 @@ TRANSFORMATIONS = {
     scenario_data.ReconfigurationEnum.ROUTING_LOGIC: [change_routing_policy],
 }
 
+# Save initial state for cleanup
+_INITIAL_TRANSFORMATIONS = {
+    key: value.copy() for key, value in TRANSFORMATIONS.items()
+}
+
 
 def add_transformation_operation(
     transformation: scenario_data.ReconfigurationEnum,
@@ -1738,3 +1882,14 @@ def add_transformation_operation(
     """
     if transformation in TRANSFORMATIONS:
         TRANSFORMATIONS[transformation].append(operation)
+
+
+def reset_transformations() -> None:
+    """
+    Reset TRANSFORMATIONS to its initial state, removing any operations added via add_transformation_operation.
+    This is useful for test cleanup to avoid test pollution.
+    """
+    global TRANSFORMATIONS
+    TRANSFORMATIONS = {
+        key: value.copy() for key, value in _INITIAL_TRANSFORMATIONS.items()
+    }

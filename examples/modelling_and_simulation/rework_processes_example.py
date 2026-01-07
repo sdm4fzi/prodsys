@@ -33,7 +33,7 @@ reworker = psx.Resource(
 
 transport = psx.Resource([tp], [0, 0], 1, ID="transport")
 
-product1 = psx.Product([p1, p2, p3], tp, "product1")
+product1 = psx.Product(process=[p1, p2, p3], transport_process=tp, ID="product1")
 
 sink1 = psx.Sink(product1, [15, 0], "sink1")
 

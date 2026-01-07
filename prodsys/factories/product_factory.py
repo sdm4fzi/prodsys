@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Dict, Optional
+from typing import TYPE_CHECKING, List, Dict, Optional, Callable
 
 from prodsys.models.product_data import ProductData
 from prodsys.models.source_data import RoutingHeuristic
@@ -34,12 +34,15 @@ class ProductFactory:
     ):
         self.env = env
         self.process_factory = process_factory
-        self.adapter: production_system_data.ProductionSystemData = None
+        self.adapter: production_system_data.ProductionSystemData = adapter
         self.products: Dict[str, product.Product] = {}
         self.finished_products = []
         self.event_logger: logger.EventLogger = None
         self.product_counter = 0
         self.router: router_module.Router = None
+        # Optional hook for control/experiments (e.g. RL): when set, overrides the routing heuristic
+        # passed in from SourceData and is assigned to all newly created products.
+        self.routing_heuristic_override: Optional[Callable] = None
         self.dependency_factory: DependencyFactory = None
         self.products_init: Dict[str, product.Product] = {}
         
@@ -166,11 +169,14 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
-        routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
-            routing_heuristic, None
-        )
-        if routing_heuristic_callable is None:
-            raise ValueError(f"Routing heuristic {routing_heuristic} not found.")
+        if self.routing_heuristic_override is not None:
+            routing_heuristic_callable = self.routing_heuristic_override
+        else:
+            routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
+                routing_heuristic, None
+            )
+            if routing_heuristic_callable is None:
+                raise ValueError(f"Routing heuristic {routing_heuristic} not found.")
         
         if product_data.dependency_ids:
             dependencies = []

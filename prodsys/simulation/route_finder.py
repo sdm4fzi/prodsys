@@ -56,6 +56,14 @@ class RouteFinder:
         """
         self.nodes: Dict[str, GraphNode] = {}
         self.dijkstra_finder = DijkstraAllPaths()
+    
+    @classmethod
+    def clear_cache(cls):
+        """
+        Clears the route cache. Should be called at the start of each simulation run
+        to prevent route pollution from previous simulations.
+        """
+        cls._route_cache.clear()
 
     def find_route(
         self,

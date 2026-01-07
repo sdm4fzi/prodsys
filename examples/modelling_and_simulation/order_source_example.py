@@ -39,8 +39,8 @@ machine2 = psx.Resource(
 transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
 # Create products
-product1 = psx.Product([p1, p2], tp, "product1")
-product2 = psx.Product([p2, p1], tp, "product2")
+product1 = psx.Product(process=[p1, p2], transport_process=tp, ID="product1")
+product2 = psx.Product(process=[p2, p1], transport_process=tp, ID="product2")
 
 # Create sinks
 sink1 = psx.Sink(product1, [10, 0], "sink1")

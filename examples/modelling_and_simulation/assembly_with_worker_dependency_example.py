@@ -24,9 +24,9 @@ t_transport = psx.DistanceTimeModel(speed=100, reaction_time=0.1, ID="t_transpor
 tp = psx.TransportProcess(t_transport, "tp")
 
 # Create primitive products
-screw = psx.Product([p_screw], tp, "screw")
-bolt = psx.Product([p_bolt], tp, "bolt")
-washer = psx.Product([p_washer], tp, "washer")
+screw = psx.Product(process=[p_screw], transport_process=tp, ID="screw")
+bolt = psx.Product(process=[p_bolt], transport_process=tp, ID="bolt")
+washer = psx.Product(process=[p_washer], transport_process=tp, ID="washer")
 
 # Time models for assembly processes
 t_subassembly = psx.FunctionTimeModel("normal", 5, 0.5, "t_subassembly")
@@ -44,7 +44,7 @@ p_subassembly = psx.ProductionProcess(
 )
 
 # Create subassembly product
-subassembly = psx.Product([p_subassembly], tp, "subassembly")
+subassembly = psx.Product(process=[p_subassembly], transport_process=tp, ID="subassembly")
 
 # Create dependency for main assembly (requires subassembly and washer)
 subassembly_dependency = psx.AssemblyDependency(required_entity=subassembly)
@@ -58,7 +58,7 @@ p_main_assembly = psx.ProductionProcess(
 )
 
 # Create main assembly product
-main_assembly = psx.Product([p_main_assembly], tp, "main_assembly")
+main_assembly = psx.Product(process=[p_main_assembly], transport_process=tp, ID="main_assembly")
 
 # Create worker resource (required for assembly operations)
 worker_process = psx.ProductionProcess(

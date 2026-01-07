@@ -162,7 +162,18 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
         """
         queue_index = np.argmax(action)
 
-        if queue_index >= len(self.resource_controller.requests):
+        if len(self.resource_controller.requests) == 0:
+            # No requests to process, just continue simulation
+            self.runner.env.run_until(until=self.interrupt_simulation_event)
+            self.step_count += 1
+            self.interrupt_simulation_event = events.Event(self.runner.env)
+            observation = self.get_observation()
+            terminated = self.get_termination_condition()
+            reward = 0.0
+            truncated = False
+            info = self.get_info()
+            return observation, reward, terminated, truncated, info
+        elif queue_index >= len(self.resource_controller.requests):
             queue_index = np.random.choice(
                 [i for i in range(len(self.resource_controller.requests))]
             )
@@ -172,12 +183,38 @@ class AbstractSequencingControlEnv(gym.Env, ABC):
             to_process = self.resource_controller.requests.pop(queue_index)
             invalid_action = False
 
-        self.resource_controller.requests.insert(0, to_process)
-        self.runner.env.run_until(until=self.interrupt_simulation_event)
+        # Check if resource has capacity to process this request before reordering
+        capacity_available = self.resource.get_free_capacity()
+        if to_process.capacity_required > capacity_available:
+            # Resource doesn't have capacity - treat as invalid action
+            self.resource_controller.requests.append(to_process)  # Put back at end
+            invalid_action = True
+            processed_request = None  # No request was actually processed
+        else:
+            # Resource has capacity - reorder and let controller process it
+            self.resource_controller.requests.insert(0, to_process)
+            processed_request = to_process
+            try:
+                self.runner.env.run_until(until=self.interrupt_simulation_event)
+            except ValueError as e:
+                # Handle capacity errors that might occur during processing
+                # (e.g., if capacity changed between check and reservation)
+                if "not enough capacity" in str(e):
+                    # Put request back and continue
+                    if to_process in self.resource_controller.requests:
+                        self.resource_controller.requests.remove(to_process)
+                    self.resource_controller.requests.append(to_process)
+                    invalid_action = True
+                    processed_request = None
+                else:
+                    # Re-raise other ValueErrors
+                    raise
+        
         self.step_count += 1
         self.interrupt_simulation_event = events.Event(self.runner.env)
 
         terminated = self.get_termination_condition()
+        # Use to_process for reward (the request we selected, even if not processed due to capacity)
         self.reward = self.get_reward(to_process, invalid_action)
         observation = self.get_observation()
         info = self.get_info()

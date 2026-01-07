@@ -34,6 +34,7 @@ class ControllerEnum(str, Enum):
     """
 
     PipelineController = "PipelineController"
+    TransportController = "TransportController"
 
 
 class ResourceControlPolicy(str, Enum):

@@ -1,6 +1,6 @@
 # Modelling a production system
 
-In this example we explore the modeling functionalities of `prodsys`. In `prodsys` we model production systems be specifying the attributes of the following components:
+In this example we explore the modeling functionalities of `prodsys`. In `prodsys` we model production systems by specifying the attributes of the following components:
 
 - **Time model**: All relevant timely features of the production system.
 - **Processes**: Processes give resources the capabilities to perform certain production or transport processes.
@@ -28,12 +28,12 @@ sim.VERBOSE = 0
 
 ## Time models
 
-`prodsys` provides different types of time models to use, the are:
+`prodsys` provides different types of time models to use, they are:
 
 - **FunctionTimeModel**: A time model that is based on a distribution function. Either constant, normal, lognormal or exponential.
 - **SampleTimeModel**: A time model that is based on a sequence of time values that are randomly sampled.
-- **ScheduledTimeModel**: A time model that is based on a schedule of time values. The schedule can contain relative or absulte time values. Also the schedule can be executed once or multiple times in a cycle.
-- **DistanceTimeMOdel**: A time model that is based on th distance between two locations and a constant speed and reaction time. Manhattan distance or Euclidian distance can be used as distance metrics between the points.
+- **ScheduledTimeModel**: A time model that is based on a schedule of time values. The schedule can contain relative or absolute time values. Also the schedule can be executed once or multiple times in a cycle.
+- **DistanceTimeModel**: A time model that is based on the distance between two locations and a constant speed and reaction time. Manhattan distance or Euclidian distance can be used as distance metrics between the points.
 
 We will use the `FunctionTimeModel` to model the time required for milling and turning processes and model the time needed for transport with the `DistanceTimeModel`. We will also model the arrival of housings with the `ScheduledTimeModel`, which could, e.g. be observed inter-arrival times:
 
@@ -70,11 +70,11 @@ worker = psx.TransportResource([transport_process], location=[0, 0], ID="worker"
 
 ## Product
 
-Now, with specified resources, we can model our product, the housing. In fact, we don't have only one housing but two different variants for this example. The first product requires milling and afterwards turning, and the second requries turning and afterwards milling:
+Now, with specified resources, we can model our product, the housing. In fact, we don't have only one housing but two different variants for this example. The first product requires milling and afterwards turning, and the second requires turning and afterwards milling:
 
 ```python
-housing_1 = psx.Product([milling_process, turning_process], transport_process, ID="housing_1")
-housing_2 = psx.Product([turning_process, milling_process], transport_process, ID="housing_2")
+housing_1 = psx.Product(process=[milling_process, turning_process], transport_process=transport_process, ID="housing_1")
+housing_2 = psx.Product(process=[turning_process, milling_process], transport_process=transport_process, ID="housing_2")
 ```
 
 ## Sources and sinks
@@ -82,11 +82,11 @@ housing_2 = psx.Product([turning_process, milling_process], transport_process, I
 At last, we need to model the sources and sinks. The source creates housings and places them in the production system. The sink stores finished housings:
 
 ```python
-source_1 = psx.Source(housing_1, arrival_time_of_housing_1, location=[0,0], ID="source_1")
-source_2 = psx.Source(housing_2, arrival_time_of_housing_2, location=[0, 1], ID="source_2")
+source_1 = psx.Source(product=housing_1, time_model=arrival_time_of_housing_1, location=[0,0], ID="source_1")
+source_2 = psx.Source(product=housing_2, time_model=arrival_time_of_housing_2, location=[0, 1], ID="source_2")
 
-sink_1 = psx.Sink(housing_1, location=[20, 20], ID="sink_1")
-sink_2 = psx.Sink(housing_2, location=[20, 21], ID="sink_2")
+sink_1 = psx.Sink(product=housing_1, location=[20, 20], ID="sink_1")
+sink_2 = psx.Sink(product=housing_2, location=[20, 21], ID="sink_2")
 ```
 
 ## Production System creation
@@ -100,19 +100,19 @@ production_system.run(60)
 production_system.runner.print_results()
 ```
 
-By validating the production system, we can check if all components are valid and if the production system is consistent in a logical or physical sende. If the production system is not valid, the validation will raise an exception and the simulation cannot be run. However, it easily let's you identify where you made some modelling mistakes.
+By validating the production system, we can check if all components are valid and if the production system is consistent in a logical or physical sense. If the production system is not valid, the validation will raise an exception and the simulation cannot be run. However, it easily lets you identify where you made some modelling mistakes.
 
 ## States
 
-We can also add different states, such as setups and breakdowns, to resources to model their behavior more accurately. For example, we can add a setup and breakdown to the work center by specifying the time models for breakdown an setup, create states and add them to the work center:
+We can also add different states, such as setups and breakdowns, to resources to model their behavior more accurately. For example, we can add a setup and breakdown to the work center by specifying the time models for breakdown and setup, create states and add them to the work center:
 
 ```python
-breakdwon_time_model = psx.FunctionTimeModel(distribution_function="exponential", location=200, ID="breakdown_time_model")
+breakdown_time_model = psx.FunctionTimeModel(distribution_function="exponential", location=200, ID="breakdown_time_model")
 repair_time_model = psx.FunctionTimeModel(distribution_function="exponential", location=10, ID="repair_time_model")
 setup_time_model_1 = psx.FunctionTimeModel(distribution_function="exponential", location=0.2, ID="setup_time_model")
 setup_time_model_2 = psx.FunctionTimeModel(distribution_function="exponential", location=0.3, ID="setup_time_model")
 
-breakdown_state = psx.BreakDownState(breakdwon_time_model, repair_time_model, ID="breakdown_state")
+breakdown_state = psx.BreakDownState(breakdown_time_model, repair_time_model, ID="breakdown_state")
 setup_state_1 = psx.SetupState(setup_time_model_1, milling_process, turning_process, ID="setup_state_1")
 setup_state_2 = psx.SetupState(setup_time_model_2, turning_process, milling_process, ID="setup_state_2")
 
@@ -139,7 +139,7 @@ Now we see, that the work center is 6.1% of the time unavailable due to unschedu
 
 ## Changing the logic of the production system
 
-`prodsys` does not only allow to change the physical configuration of a production system but also the logic. For example, we can change the logic of the work center by changing it's control policy from `FIFO` (first in first out) to `SPT` (shortes process time first). BY changing this, the work center will now get products from the queue with bias on the short process, which is in our case the turning process:
+`prodsys` does not only allow to change the physical configuration of a production system but also the logic. For example, we can change the logic of the work center by changing its control policy from `FIFO` (first in first out) to `SPT` (shortest process time first). By changing this, the work center will now get products from the queue with bias on the short process, which is in our case the turning process:
 
 ```python
 from prodsys.models.resource_data import ResourceControlPolicy
@@ -151,7 +151,7 @@ production_system.run(1000)
 production_system.runner.print_results()
 ```
 
-Additionally, we can change the routing policy in the production system. A routing policy is not used for heuristically solving a sequencing problem as the control policy but for solving the routing problem for parallel redundant resources. In our example, bot milling machine and work center provide the milling process. While simulating, we need to have some logic how to decide which product is processed on which resource. By default, the routing policy is `random`, which means that the routing is randomly chosen. However, we can also change the routing policy to `shortest_queue`, which means that the product is always routed to the resource with the shortest queue:
+Additionally, we can change the routing policy in the production system. A routing policy is not used for heuristically solving a sequencing problem as the control policy but for solving the routing problem for parallel redundant resources. In our example, both milling machine and work center provide the milling process. While simulating, we need to have some logic how to decide which product is processed on which resource. By default, the routing policy is `random`, which means that the routing is randomly chosen. However, we can also change the routing policy to `shortest_queue`, which means that the product is always routed to the resource with the shortest queue:
 
 ```python
 from prodsys.models.source_data import RoutingHeuristic
@@ -165,7 +165,7 @@ production_system.runner.print_results()
 
 ## prodsys.models API
 
-So far, we only studied the express API of `prodsys`. However, `prodsys` also provides a more detailed API that allows to model more complex production systems with `prodsys.models`. The models API uses ID references for connecting the different entities (processes, products, resources etc.) that results in a flat data structure instead of nested hierarchical relationsship, as the express API. Whilst the hierarchical structure is easy for programmatically creating production systems, the flat data structure is more convenient for serializing the data, i.e. saving and loading production systems. All algorithms in `prodsys` use the models API. For luck, all express API objects can be converted to models API objects and vice versa.
+So far, we only studied the express API of `prodsys`. However, `prodsys` also provides a more detailed API that allows to model more complex production systems with `prodsys.models`. The models API uses ID references for connecting the different entities (processes, products, resources etc.) that results in a flat data structure instead of nested hierarchical relationship, as the express API. Whilst the hierarchical structure is easy for programmatically creating production systems, the flat data structure is more convenient for serializing the data, i.e. saving and loading production systems. All algorithms in `prodsys` use the models API. For luck, all express API objects can be converted to models API objects and vice versa.
 
 ```python
 model_production_system = production_system.to_model()
@@ -186,7 +186,7 @@ The capabilities extends the typical PPR modeling principle (Product, Process an
 
 One typical use case where this capability-based modeling is useful is when a product requires a certain process but multiple resources can perform this process with different speeds or capacity.
 
-In prodsys, we can realize this by specifying with a `RequiredCapabilityProcess` for a product which kind of capabilities are required for its production. Additionally, we define multiple different `CapabilityProcess` for resources that satisfy the capability and therefore can perform the process on the prodct. During simulation, processes of resources are matchedto the required processes based on a comparison of the capability attribute. 
+In prodsys, we can realize this by specifying with a `RequiredCapabilityProcess` for a product which kind of capabilities are required for its production. Additionally, we define multiple different `CapabilityProcess` for resources that satisfy the capability and therefore can perform the process on the product. During simulation, processes of resources are matched to the required processes based on a comparison of the capability attribute. 
 
 For example, we could define the following case, where a turning process is required by a product and two machines are available that can perform this process, but with different speeds:
 
@@ -228,21 +228,21 @@ required_capability_process_turning = psx.RequiredCapabilityProcess(
 product = psx.Product(
     process=[required_capability_process_turning],
     transport_process=transport_process,
-    ID="product",
+    ID="product"
 )
 
 source = psx.Source(
+    product=product,
     time_model=psx.FunctionTimeModel(
         distribution_function="constant", location=6, ID="interarrival_time_model"
     ),
-    ID="source",
-    product=product,
     location=[0, 5],
+    ID="source"
 )
 
-sink = psx.Sink(ID="sink", product=product, location=[10, 5])
+sink = psx.Sink(product=product, location=[10, 5], ID="sink")
 
-system = production_system.ProductionSystem(
+system = psx.ProductionSystem(
     resources=[resource_fast, resource_slow, agv], sources=[source], sinks=[sink]
 )
 
@@ -260,7 +260,7 @@ required_capability_process_turning = psx.RequiredCapabilityProcess(
 product = psx.Product(
     process=[required_capability_process_turning],
     transport_process=transport_process,
-    ID="product",
+    ID="product"
 )
 ```
 

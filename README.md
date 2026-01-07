@@ -46,14 +46,14 @@ transport_process = psx.TransportProcess(transport_time, ID="transport_process")
 With the processes defined, we can now create the production and transport resources:
 
 ```python
-milling_machine = psx.ProductionResource([milling_process], location=[5, 5], ID="milling_machine")
+milling_machine = psx.Resource([milling_process], location=[5, 5], ID="milling_machine")
 worker = psx.Resource([transport_process], location=[0, 0], ID="worker")
 ```
 
 Now we define our product, the housing, that is produced in the system. For this example it requires only a single processsing step:
 
 ```python
-housing = psx.Product([milling_process], transport_process, ID="housing")
+housing = psx.Product(process=[milling_process], transport_process=transport_process, ID="housing")
 ```
 
 Only the sources and sinks that are responsible for creating the housing and storing finished housing are misssing:
@@ -102,24 +102,6 @@ print(wip)
 ```
 
 These examples only cover the most basic functionalities of `prodsys`. For more elaborate guides that guide you through more of the package's features, please see the [tutorials](https://sdm4fzi.github.io/prodsys/Tutorials/tutorial_0_overview). For a complete overview of the package's functionality, please see the [API reference](https://sdm4fzi.github.io/prodsys/API_reference/API_reference_0_overview/).
-
-## Run prodsys as a webserver with REST API
-
-prodsys cannot only be used as a python package, but can also be used as a webserver by interacting with its REST API. All features of prodsys are also available in the API and allow easy integration of prodsys in operative IT architectures. 
-
-The API is based on the [FastAPI](https://fastapi.tiangolo.com/) framework and utilizes the models API of prodsys. To use prodsys as a webserver, you can use the official docker image which can be obtained from dockerhub:
-
-```bash
-docker pull sebbehrendt/prodsys
-```
-
-To start the API, run the following command:
-
-```bash
-docker run -p 8000:8000 sebbehrendt/prodsys
-```
-
-The API documentation is then available at `http://localhost:8000/docs`. 
 
 ## Contributing
 

@@ -373,7 +373,21 @@ class ProcessMatcher:
             target_id=target.data.ID,
             process_signature=process_signature,
         )
-        return self.transport_compatibility.get(key, [])
+        result = self.transport_compatibility.get(key, [])
+        if not result:
+            logger.warning(
+                f"No transport compatible resources found for {origin.data.ID} -> {target.data.ID} "
+                f"with signature {process_signature}. "
+                f"Available keys in compatibility table: {len(self.transport_compatibility)}"
+            )
+            # Log similar keys for debugging
+            similar_keys = [
+                k for k in self.transport_compatibility.keys()
+                if k.origin_id == origin.data.ID or k.target_id == target.data.ID or k.process_signature == process_signature
+            ]
+            if similar_keys:
+                logger.debug(f"Similar compatibility keys found: {[(k.origin_id, k.target_id, k.process_signature) for k in similar_keys[:5]]}")
+        return result
 
     def get_rework_compatible(
             self, failed_process: process.PROCESS_UNION
@@ -544,22 +558,25 @@ class ProcessMatcher:
     def _handle_link_transport_process(
         self,
         transport_request: request.Request,
-        requested_process: process.LinkTransportProcess,
+        requested_process: process.RequiredCapabilityProcess | process.LinkTransportProcess,
         resource: resources.Resource,
         offered_process: process.LinkTransportProcess,
         origin: Locatable,
         target: Locatable,
-    ):
+    ) -> bool:
         """
         Handle compatibility checking for link transport processes.
         
         Args:
             transport_request: The transport request.
-            requested_process: The requested link transport process.
+            requested_process: The requested transport process (can be RequiredCapabilityProcess or LinkTransportProcess).
             resource: The transport resource.
             offered_process: The offered link transport process.
             origin: The origin location.
             target: The target location.
+            
+        Returns:
+            bool: True if route was found and compatibility entry was created, False otherwise.
         """
         try:
             from prodsys.simulation.route_finder import find_route
@@ -574,29 +591,91 @@ class ProcessMatcher:
                 request_type=request.RequestType.TRANSPORT,
             )
             
+            # Check if links are available
+            links = getattr(offered_process, 'links', None)
+            if not links:
+                process_id = getattr(getattr(offered_process, 'data', None), 'ID', 'unknown')
+                resource_id = getattr(getattr(resource, 'data', None), 'ID', 'unknown')
+                logger.warning(
+                    f"LinkTransportProcess {process_id} on resource {resource_id} "
+                    f"has no links configured"
+                )
+                return False
+            
+            process_id = getattr(getattr(offered_process, 'data', None), 'ID', 'unknown')
+            resource_id = getattr(getattr(resource, 'data', None), 'ID', 'unknown')
+            origin_id = getattr(getattr(origin, 'data', None), 'ID', 'unknown')
+            target_id = getattr(getattr(target, 'data', None), 'ID', 'unknown')
+            links_count = len(offered_process.links) if hasattr(offered_process, 'links') and offered_process.links else 0
+            
+            logger.debug(
+                f"Finding route: {origin_id} -> {target_id} "
+                f"(process: {process_id}, resource: {resource_id}, "
+                f"links: {links_count})"
+            )
+            
             # Use the route finder to check if a valid route exists
             # The route finder will handle the link connectivity checking internally
-            if (origin.data.ID, target.data.ID, offered_process.get_process_signature()) in self.route_cache:
-                route = self.route_cache[(origin.data.ID, target.data.ID, offered_process.get_process_signature())].get_route()
+            origin_id = getattr(getattr(origin, 'data', None), 'ID', 'unknown')
+            target_id = getattr(getattr(target, 'data', None), 'ID', 'unknown')
+            process_sig = offered_process.get_process_signature() if hasattr(offered_process, 'get_process_signature') else 'unknown'
+            
+            route_cache_key = (origin_id, target_id, process_sig)
+            if route_cache_key in self.route_cache:
+                route = self.route_cache[route_cache_key].get_route()
+                logger.debug(f"Using cached route for {origin_id} -> {target_id}")
             else:
                 route = find_route(route_request, offered_process)
+                if route:
+                    route_ids = [getattr(getattr(loc, 'data', None), 'ID', 'unknown') for loc in route] if route else []
+                    logger.debug(
+                        f"Found route from {origin_id} to {target_id}: "
+                        f"{len(route)} steps via {route_ids}"
+                    )
+                else:
+                    process_id = getattr(getattr(offered_process, 'data', None), 'ID', 'unknown')
+                    resource_id = getattr(getattr(resource, 'data', None), 'ID', 'unknown')
+                    logger.debug(
+                        f"No route found from {origin_id} to {target_id} "
+                        f"(process: {process_id}, resource: {resource_id})"
+                    )
             
             if route:
+                origin_id = getattr(getattr(origin, 'data', None), 'ID', 'unknown')
+                target_id = getattr(getattr(target, 'data', None), 'ID', 'unknown')
+                requested_sig = requested_process.get_process_signature() if hasattr(requested_process, 'get_process_signature') else 'unknown'
+                
                 key = TransportCompatibilityKey(
-                    origin_id=origin.data.ID,
-                    target_id=target.data.ID,
-                    process_signature=requested_process.get_process_signature(),
+                    origin_id=origin_id,
+                    target_id=target_id,
+                    process_signature=requested_sig,
                 )
                 self._add_to_transport_compatibility(key, resource, offered_process)
                 
                 # Cache reachability
-                self.reachability_cache[(origin.data.ID, target.data.ID)] = True
+                self.reachability_cache[(origin_id, target_id)] = True
 
                 # Cache the route
                 self._cache_route(route_request, origin, target, offered_process, route)
+                return True
+            else:
+                return False
         except ImportError:
             # If route finder is not available, skip this process
-            pass
+            logger.error("Route finder module not available")
+            return False
+        except Exception as e:
+            # Log other exceptions but don't fail precomputation
+            # This helps debug route finding issues
+            origin_id = getattr(getattr(origin, 'data', None), 'ID', 'unknown')
+            target_id = getattr(getattr(target, 'data', None), 'ID', 'unknown')
+            process_id = getattr(getattr(offered_process, 'data', None), 'ID', 'unknown')
+            resource_id = getattr(getattr(resource, 'data', None), 'ID', 'unknown')
+            logger.exception(
+                f"Route finding exception for transport from {origin_id} to {target_id} "
+                f"with process {process_id} on resource {resource_id}: {e}"
+            )
+            return False
 
 
     def _cache_route(
@@ -617,10 +696,14 @@ class ProcessMatcher:
             process: The transport process.
             route: The route to cache.
         """
+        origin_id = getattr(getattr(origin, 'data', None), 'ID', 'unknown')
+        target_id = getattr(getattr(target, 'data', None), 'ID', 'unknown')
+        process_sig = process.get_process_signature() if hasattr(process, 'get_process_signature') else 'unknown'
+        
         route_key = (
-            origin.data.ID,
-            target.data.ID,
-            process.get_process_signature(),
+            origin_id,
+            target_id,
+            process_sig,
         )
         if route_key not in self.route_cache:
             self.route_cache[route_key] = request_instance
@@ -641,15 +724,49 @@ class ProcessMatcher:
             dummy_products: Dictionary of dummy products for testing.
         """
         all_locations = self.get_all_transport_locations()
+        logger.info(f"Precomputing transport compatibility for {len(all_locations)} locations")
+        logger.debug(f"Transport locations: {[loc.data.ID for loc in all_locations]}")
 
         # TODO: maybe add caching to avoid symmetric keys (origin -> target and target -> origin)        
         required_transport_processes = self.get_required_transport_processes(dummy_products)
+        logger.info(f"Found {len(required_transport_processes)} required transport processes")
+        
+        movable_resources = self.resource_factory.get_movable_resources()
+        logger.info(f"Found {len(movable_resources)} movable transport resources")
+        
+        compatibility_count = 0
+        route_failure_count = 0
 
         for item, requested_process in required_transport_processes:
             original_locatable = item.current_locatable
-            for transport_resource in self.resource_factory.get_movable_resources():
-                for offered_process in transport_resource.processes:
+            requested_process_id = requested_process.data.ID if hasattr(requested_process, 'data') else str(requested_process)
+            requested_process_sig = requested_process.get_process_signature() if hasattr(requested_process, 'get_process_signature') else "unknown"
+            logger.info(f"Processing transport compatibility for item {item.data.ID} with requested process {requested_process_id} (signature: {requested_process_sig})")
+            
+            for transport_resource in movable_resources:
+                resource_processes = transport_resource.processes
+                logger.debug(f"  Checking resource {transport_resource.data.ID} with {len(resource_processes)} processes")
+                
+                for offered_process in resource_processes:
+                    offered_process_id = offered_process.data.ID if hasattr(offered_process, 'data') else str(offered_process)
+                    offered_process_type = type(offered_process).__name__
+                    offered_process_sig = offered_process.get_process_signature() if hasattr(offered_process, 'get_process_signature') else "no_signature"
+                    
+                    # Check capability if applicable
+                    offered_capability = None
+                    if hasattr(offered_process, 'data') and hasattr(offered_process.data, 'capability'):
+                        offered_capability = offered_process.data.capability
+                    if hasattr(offered_process, 'data') and hasattr(offered_process.data, 'links'):
+                        has_links = bool(offered_process.data.links if hasattr(offered_process, 'links') else None)
+                        logger.debug(f"    Checking offered process {offered_process_id} (type: {offered_process_type}, signature: {offered_process_sig}, capability: {offered_capability}, has_links: {has_links})")
+                    else:
+                        logger.debug(f"    Checking offered process {offered_process_id} (type: {offered_process_type}, signature: {offered_process_sig}, capability: {offered_capability})")
+                    
                     # For each possible origin-target pair (including queues)
+                    matches_found = 0
+                    routes_checked = 0
+                    match_failures = 0
+                    
                     for origin in all_locations:
                         for target in all_locations:
                             item.update_location(origin)
@@ -661,20 +778,44 @@ class ProcessMatcher:
                                 target=target,
                                 request_type=request.RequestType.TRANSPORT,
                             )
-                            if not offered_process.matches_request(dummy_transport_request):
+                            
+                            try:
+                                matches = offered_process.matches_request(dummy_transport_request)
+                                if not matches:
+                                    match_failures += 1
+                                    continue
+                            except Exception as e:
+                                logger.warning(f"      Exception in matches_request for {origin.data.ID} -> {target.data.ID}: {e}")
+                                match_failures += 1
                                 continue
+                            
+                            matches_found += 1
+                            routes_checked += 1
+                            
                             # Handle different types of transport processes
                             if isinstance(offered_process, process.RequiredCapabilityProcess):
+                                logger.debug(f"      Match found: RequiredCapabilityProcess for {origin.data.ID} -> {target.data.ID}")
                                 self._handle_required_capability_process(
                                     dummy_transport_request, requested_process, 
                                     transport_resource, offered_process, origin, target
                                 )
+                                compatibility_count += 1
                             elif isinstance(offered_process, process.LinkTransportProcess):
-                                self._handle_link_transport_process(
+                                logger.debug(f"      Match found: LinkTransportProcess for {origin.data.ID} -> {target.data.ID}")
+                                if self._handle_link_transport_process(
                                     dummy_transport_request, requested_process,
                                     transport_resource, offered_process, origin, target
-                                )
+                                ):
+                                    compatibility_count += 1
+                                else:
+                                    route_failure_count += 1
+                                    logger.debug(
+                                        f"      Route not found: {origin.data.ID} -> {target.data.ID} "
+                                        f"(requested: {requested_process_id}, "
+                                        f"offered: {offered_process_id}, resource: {transport_resource.data.ID})"
+                                    )
                             else:
+                                logger.debug(f"      Match found: Regular transport process for {origin.data.ID} -> {target.data.ID}")
                                 # Regular transport process
                                 key = TransportCompatibilityKey(
                                     origin_id=origin.data.ID,
@@ -686,7 +827,21 @@ class ProcessMatcher:
                                 
                                 # Cache the route
                                 self._cache_route(dummy_transport_request, origin, target, offered_process, [])
+                                compatibility_count += 1
+                    
+                    if matches_found > 0:
+                        logger.info(f"    Process {offered_process_id}: {matches_found} matches found, {routes_checked} routes checked")
+                    else:
+                        total_combinations = len(all_locations) * (len(all_locations) - 1)  # excluding self-transports
+                        logger.warning(
+                            f"    Process {offered_process_id} (type: {offered_process_type}, sig: {offered_process_sig}): "
+                            f"No matches with requested process {requested_process_id} (sig: {requested_process_sig}). "
+                            f"Tried {total_combinations} origin-target combinations, {match_failures} match failures"
+                        )
             item.update_location(original_locatable)
+        
+        logger.info(f"Transport compatibility precomputation complete: {compatibility_count} entries created, {route_failure_count} route finding failures")
+        logger.debug(f"Transport compatibility table has {len(self.transport_compatibility)} keys")
 
     def _precompute_rework_compatibility(self):
         """

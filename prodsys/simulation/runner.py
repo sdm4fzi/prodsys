@@ -133,6 +133,10 @@ class Runner:
         """
         Initializes the simulation by creating the factories and all simulation objects. Needs to be done before running the simulation.
         """
+        # Clear route cache at start of each simulation run to prevent pollution from previous runs
+        from prodsys.simulation.route_finder import RouteFinder
+        RouteFinder.clear_cache()
+        
         self.production_system_data.validate_configuration()
         with temp_seed(self.production_system_data.seed):
             self.time_model_factory = time_model_factory.TimeModelFactory()

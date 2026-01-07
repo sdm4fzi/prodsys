@@ -44,13 +44,16 @@ def observe_input_queue(
 ) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.ports:
-        for product_data in queue.items:
+        # `queue.items` is a dict keyed by item.ID (v1); iterate over stored objects.
+        for product_data in queue.items.values():
             product = product_factory.get_product(product_data.ID)
+            next_possible = product.process_model.precedence_graph.get_next_possible_processes() or []
+            next_process_id = next_possible[0].data.ID if next_possible else ""
 
             production_process_info = QueueObservation(
                 product=product_data.ID,
                 activity="waiting",
-                process=product.next_possible_processes.process_data.ID,
+                process=next_process_id,
                 next_resource=product.current_locatable.data.ID,
                 waiting_since=product.info.event_time,
             )
@@ -64,14 +67,17 @@ def observe_output_queue(
 ) -> List[QueueObservation]:
     queue_observation = []
     for queue in resource.output_queues:
-        for product_data in queue.items:
+        # `queue.items` is a dict keyed by item.ID (v1); iterate over stored objects.
+        for product_data in queue.items.values():
             product = product_factory.get_product(product_data.ID)
+            next_possible = product.process_model.precedence_graph.get_next_possible_processes() or []
+            next_process_id = next_possible[0].data.ID if next_possible else ""
 
             production_process_info = QueueObservation(
                 product=product_data.ID,
                 activity="waiting",
-                process=product.next_possible_processes,
-                next_resource=product.current_locatable,
+                process=next_process_id,
+                next_resource=product.current_locatable.data.ID,
                 waiting_since=product.info.event_time,
             )
             queue_observation.append(production_process_info)

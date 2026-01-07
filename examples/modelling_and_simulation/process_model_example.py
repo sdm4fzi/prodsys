@@ -62,7 +62,7 @@ machine.ports = [machine_input_queue, machine_output_queue]
 
 
 
-product1 = psx.Product([process_model], tp, "product1")
+product1 = psx.Product(process=process_model, transport_process=tp, ID="product1")
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 

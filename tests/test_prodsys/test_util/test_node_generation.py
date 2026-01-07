@@ -6,6 +6,7 @@ from prodsys import runner
 from prodsys.util.node_link_generation import node_link_generation
 from prodsys.models import resource_data
 import prodsys
+from prodsys.util.util import set_seed
 
 
 @pytest.fixture
@@ -118,6 +119,10 @@ def simulation_adapter() -> ProductionSystemData:
     )
 
     adapter = productionsystem.to_model()
+    # Set seed to ensure deterministic behavior and avoid test pollution
+    adapter.seed = 0
+    # Ensure seed is set before network generation (which may use random state)
+    set_seed(adapter.seed)
     node_link_generation.generate_and_apply_network(adapter)
 
     return adapter
@@ -134,6 +139,9 @@ def test_hashing(simulation_adapter: ProductionSystemData):
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):
+    # Explicitly set seed before running simulation to ensure deterministic behavior
+    # This prevents test pollution from random state changes in previous tests
+    set_seed(simulation_adapter.seed)
     runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(1000)

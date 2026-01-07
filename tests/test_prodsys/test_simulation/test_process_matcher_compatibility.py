@@ -651,14 +651,16 @@ class TestProcessMatcherCompatibility:
         )
 
         mock_resource = Mock(spec=resources.Resource)
-        mock_offered_process = Mock(spec=process.LinkTransportProcess)
-
         mock_origin = Mock()
         mock_origin.data = Mock()
         mock_origin.data.ID = "source01"
         mock_target = Mock()
         mock_target.data = Mock()
         mock_target.data.ID = "sink01"
+        
+        mock_offered_process = Mock(spec=process.LinkTransportProcess)
+        mock_offered_process.get_process_signature.return_value = "LinkTransportProcess:ConveyorProcess_1"
+        mock_offered_process.links = [[mock_origin, mock_target]]  # Set up links for the mock
 
         # Clear existing compatibility tables
         process_matcher_link_transport_without_capabilities.transport_compatibility = {}
@@ -704,14 +706,16 @@ class TestProcessMatcherCompatibility:
         )
 
         mock_resource = Mock(spec=resources.Resource)
-        mock_offered_process = Mock(spec=process.LinkTransportProcess)
-
         mock_origin = Mock()
         mock_origin.data = Mock()
         mock_origin.data.ID = "source01"
         mock_target = Mock()
         mock_target.data = Mock()
         mock_target.data.ID = "sink01"
+        
+        mock_offered_process = Mock(spec=process.LinkTransportProcess)
+        mock_offered_process.get_process_signature.return_value = "LinkTransportProcess:ConveyorProcess_1"
+        mock_offered_process.links = [[mock_origin, mock_target]]  # Set up links for the mock
 
         # Clear existing compatibility tables
         process_matcher_link_transport_without_capabilities.transport_compatibility = {}

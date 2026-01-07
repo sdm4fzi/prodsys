@@ -25,8 +25,8 @@ move_p = psx.TransportProcess(t3, "move")
 
 s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 
-product1 = psx.Product([p6], tp, "pump",)
-product2 = psx.Product([p3, p5], move_p, "valve block",)
+product1 = psx.Product(process=[p6], transport_process=tp, ID="pump")
+product2 = psx.Product(process=[p3, p5], transport_process=move_p, ID="valve block")
 
 
 primitive_dependency1 = psx.AssemblyDependency(
@@ -91,7 +91,7 @@ machine5 = psx.Resource(
 
 transport = psx.Resource([tp], [2, 2], 3, ID="transport")
 transport2 = psx.Resource([move_p], [2, 2], 3, ID="transporta")
-mutterproduct = psx.Product([p2,p5,p1], tp, "tank")
+mutterproduct = psx.Product(process=[p2,p5,p1], transport_process=tp, ID="tank")
 
 sink1 = psx.Sink(product1, [5,20], "sink1")
 sink2 = psx.Sink(product2, [6,10], "sink2")

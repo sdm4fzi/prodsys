@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 CONTROLLER_DICT: Dict = {
     ControllerEnum.PipelineController: control.Controller,
+    ControllerEnum.TransportController: control.Controller,
 }
 
 CONTROL_POLICY_DICT: Dict = {
@@ -361,7 +362,9 @@ class ResourceFactory:
         self.all_resources[resource_object.data.ID] = resource_object
         if resource_object.can_process:
             self.resources_can_process[resource_object.data.ID] = resource_object
-        else:
+        # Resources with transport processes should be in transport_resources
+        # regardless of whether they can_move (fixed conveyors) or also have production capability
+        if any(isinstance(p, process.TransportProcess) for p in resource_object.processes):
             self.transport_resources[resource_object.data.ID] = resource_object
 
 

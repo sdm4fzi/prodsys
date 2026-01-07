@@ -51,7 +51,7 @@ tp = psx.TransportProcess(t3, "tp", dependencies=[lot_dependency_with_carrier, w
 transport = psx.Resource([tp], [0, 0], 4, ID="transport")
 carrier_transport = psx.Resource([carrier_tp], [0, 0], 1, ID="carrier_transport")
 
-product1 = psx.Product([p1], tp, "product1")
+product1 = psx.Product(process=[p1], transport_process=tp, ID="product1")
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 

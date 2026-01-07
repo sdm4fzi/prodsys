@@ -31,7 +31,7 @@ In this tutorial, we will focus on the sequencing task. The routing task is simi
 ## The training environment API
 
 When utilizing reinforcement learning for production control, we need to define a training environment for the RL agent. This environment is responsible for providing the agent with the current state of the production system and for executing the agent's actions. The environment is also responsible for providing the agent with a reward for each action.
-The [gymnasium]("https://gymnasium.farama.org/) package is used as a basis for these environments to be compatible with most RL-frameworks available. For more detailed information on the gym-environment API, please read their documentation. Here, we will use [stable-baselines3]("https://stable-baselines3.readthedocs.io/en/master/") as RL-framework. The environments provided by `prodsys.control` are implemented as abstract base classes, specifying the methods that need to be implemented by the user for soving the associated control tasks. To realize a control environment, we need to implement a class that inherits from the abstract base classes and implements it's abstract methods:
+The [gymnasium](https://gymnasium.farama.org/) package is used as a basis for these environments to be compatible with most RL-frameworks available. For more detailed information on the gym-environment API, please read their documentation. Here, we will use [stable-baselines3](https://stable-baselines3.readthedocs.io/en/master/) as RL-framework. The environments provided by `prodsys.control` are implemented as abstract base classes, specifying the methods that need to be implemented by the user for solving the associated control tasks. To realize a control environment, we need to implement a class that inherits from the abstract base classes and implements its abstract methods:
 
 ```python
 
@@ -86,7 +86,7 @@ The following code shows the implementation of the environment:
 class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
     def get_observation(self) -> np.ndarray:
         """
-        Function that utilizes the ResourceObserver of the environment class to get an array of observations of processes performed by the resource and in the queue of the resource. The observatino has a dimension CxP, where c is the capacity of resource and queue and P the number of processes.
+        Function that utilizes the ResourceObserver of the environment class to get an array of observations of processes performed by the resource and in the queue of the resource. The observation has a dimension CxP, where C is the capacity of resource and queue and P the number of processes.
 
         Returns:
             np.ndarray: The observation.
@@ -142,9 +142,9 @@ class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
 
 ```
 
-Note that we utillize the observer, which is an attribute of the environment. The observer brings handy functions to observe the current state of a resource in the simulation.
+Note that we utilize the observer, which is an attribute of the environment. The observer brings handy functions to observe the current state of a resource in the simulation.
 
-In order to validate that this environment works, we will at first use just random samping as a agent and step through it. At first, we we define the observation and action space since these are required by the environment and need to fit to our get_observation function:
+In order to validate that this environment works, we will at first use just random sampling as an agent and step through it. At first, we define the observation and action space since these are required by the environment and need to fit to our get_observation function:
 
 ```python
 
