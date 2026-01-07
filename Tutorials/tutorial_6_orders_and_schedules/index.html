@@ -1,0 +1,1519 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../tutorial_5_advanced_dependencies/">
+      
+      
+        <link rel="next" href="../tutorial_7_system_resources/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Orders and Schedules - prodsys Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#orders-and-schedules" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="prodsys Documentation" class="md-header__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            prodsys Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Orders and Schedules
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="prodsys Documentation" class="md-nav__button md-logo" aria-label="prodsys Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    prodsys Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_0_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_1_modelling_and_simulating_a_production_system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelling a production system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_2_analyzing_simulation_results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing simulation results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_3_optimizing_a_production_system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimizing a production system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_4_optimizing_production_control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimizing production control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_5_advanced_dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orders and Schedules
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orders and Schedules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#order-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Order-Based Production
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Order-Based Production">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-orders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Orders
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-ordersource" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using OrderSource
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-orders-with-conwip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Orders with ConWIP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schedule-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule-Based Production
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schedule-Based Production">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Schedule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schedule-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-schedule-based-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Schedule-Based Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-schedule-adherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validating Schedule Adherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-order-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Example: Order-Based Production
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Points
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial_7_system_resources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Resources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Api Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Api Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_0_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_1_Models_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    prodsys Models API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_2_Adapter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_3_Express_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    prodsys Express API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_4_factories/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Factories
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_5_Simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_6_Optimization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_7_Control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_reference/API_reference_8_util/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Util
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#order-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Order-Based Production
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Order-Based Production">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-orders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Orders
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-ordersource" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using OrderSource
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-orders-with-conwip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Orders with ConWIP
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schedule-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule-Based Production
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schedule-Based Production">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-schedule" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a Schedule
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schedule-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schedule Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running-schedule-based-simulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Schedule-Based Simulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validating-schedule-adherence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validating Schedule Adherence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-example-order-based-production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Example: Order-Based Production
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Points
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="orders-and-schedules">Orders and Schedules</h1>
+<p>This tutorial explores order-based production and schedule-based production control in <code>prodsys</code>. These features allow you to model production systems where products are released based on customer orders or predefined schedules.</p>
+<h2 id="order-based-production">Order-Based Production</h2>
+<p>Order-based production allows you to model production systems where products are created based on customer orders rather than continuous arrival processes. This is useful for make-to-order scenarios.</p>
+<h3 id="creating-orders">Creating Orders</h3>
+<p>An <code>Order</code> specifies what products should be produced, in what quantities, and when they should be released into the production system.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">prodsys.express</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psx</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Create time models and processes</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">t1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">FunctionTimeModel</span><span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;t1&quot;</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">t2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">FunctionTimeModel</span><span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">&quot;t2&quot;</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">p1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionProcess</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="s2">&quot;p1&quot;</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">p2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionProcess</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="s2">&quot;p2&quot;</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">t3</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">DistanceTimeModel</span><span class="p">(</span><span class="n">speed</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">reaction_time</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;t3&quot;</span><span class="p">)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">tp</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">TransportProcess</span><span class="p">(</span><span class="n">t3</span><span class="p">,</span> <span class="s2">&quot;tp&quot;</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Create products</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">product1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Product</span><span class="p">(</span><span class="n">process</span><span class="o">=</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">],</span> <span class="n">transport_process</span><span class="o">=</span><span class="n">tp</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;product1&quot;</span><span class="p">)</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">product2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Product</span><span class="p">(</span><span class="n">process</span><span class="o">=</span><span class="p">[</span><span class="n">p2</span><span class="p">,</span> <span class="n">p1</span><span class="p">],</span> <span class="n">transport_process</span><span class="o">=</span><span class="n">tp</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;product2&quot;</span><span class="p">)</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="c1"># Create an order with a single product type</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="n">order1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Order</span><span class="p">(</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="n">ordered_products</span><span class="o">=</span><span class="p">[</span><span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product1</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">2</span><span class="p">)],</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="n">order_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>      <span class="c1"># When the order was placed</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="n">release_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>   <span class="c1"># When products should be released into the system</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="p">)</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="c1"># Create an order with multiple product types</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="n">order2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Order</span><span class="p">(</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order2&quot;</span><span class="p">,</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="n">ordered_products</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product1</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>        <span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product2</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="p">],</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">order_time</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>    <span class="n">release_time</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="using-ordersource">Using OrderSource</h3>
+<p>An <code>OrderSource</code> creates products based on orders rather than a continuous arrival process. Products are released at the times specified in the orders.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Create order source with multiple orders</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">order_source</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">OrderSource</span><span class="p">(</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">orders</span><span class="o">=</span><span class="p">[</span><span class="n">order1</span><span class="p">,</span> <span class="n">order2</span><span class="p">],</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order_source&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Create resources</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">machine</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionResource</span><span class="p">(</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">],</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;machine&quot;</span><span class="p">,</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">transport</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">TransportResource</span><span class="p">(</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="n">tp</span><span class="p">],</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;transport&quot;</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="p">)</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Create sinks</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">sink1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Sink</span><span class="p">(</span><span class="n">product1</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;sink1&quot;</span><span class="p">)</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="n">sink2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Sink</span><span class="p">(</span><span class="n">product2</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;sink2&quot;</span><span class="p">)</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="c1"># Create production system with order source</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="n">system</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionSystem</span><span class="p">(</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    <span class="n">resources</span><span class="o">=</span><span class="p">[</span><span class="n">machine</span><span class="p">,</span> <span class="n">transport</span><span class="p">],</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    <span class="n">sources</span><span class="o">=</span><span class="p">[</span><span class="n">order_source</span><span class="p">],</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    <span class="n">sinks</span><span class="o">=</span><span class="p">[</span><span class="n">sink1</span><span class="p">,</span> <span class="n">sink2</span><span class="p">]</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="combining-orders-with-conwip">Combining Orders with ConWIP</h3>
+<p>You can combine order-based production with ConWIP (Constant Work in Progress) control to limit the number of products in the system:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Convert to model and set ConWIP limit</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">model</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">to_model</span><span class="p">()</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">model</span><span class="o">.</span><span class="n">conwip_number</span> <span class="o">=</span> <span class="mi">5</span>  <span class="c1"># Maximum 5 products in the system</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Run simulation</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">prodsys.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">runner</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">runner_instance</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">Runner</span><span class="p">(</span><span class="n">production_system_data</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">runner_instance</span><span class="o">.</span><span class="n">initialize_simulation</span><span class="p">()</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">system</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">system</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">print_results</span><span class="p">()</span>
+</span></code></pre></div>
+<h2 id="schedule-based-production">Schedule-Based Production</h2>
+<p>Schedule-based production allows you to define exactly when specific products should be released and which resources should process them. This is useful for production planning and scheduling scenarios.</p>
+<h3 id="creating-a-schedule">Creating a Schedule</h3>
+<p>A schedule is a list of schedule events that specify:
+- <strong>Time</strong>: When the event should occur
+- <strong>Product</strong>: Which product should be created/processed
+- <strong>Resource</strong>: Which resource should process the product
+- <strong>Process</strong>: Which process should be performed</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">prodsys.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">production_system_data</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Load a configuration with schedule</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">config</span> <span class="o">=</span> <span class="n">production_system_data</span><span class="o">.</span><span class="n">ProductionSystemData</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="s2">&quot;examples/modelling_and_simulation/simulation_example_data/schedule_example.json&quot;</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">)</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># The schedule is defined in the configuration file</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Each schedule event specifies:</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># - time: When the event occurs</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># - product: Product ID to create</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># - resource: Resource ID that should process it</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># - process: Process ID to perform</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of scheduled events: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">schedule</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">config</span><span class="o">.</span><span class="n">schedule</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="mi">0</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="schedule-structure">Schedule Structure</h3>
+<p>A schedule event typically looks like this:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nt">&quot;time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">10.5</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;product&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Product_A_1&quot;</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">&quot;resource&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">&quot;process&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;P1&quot;</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>This means: "At time 10.5, create Product_A_1 and route it to resource R1 to perform process P1."</p>
+<h3 id="running-schedule-based-simulation">Running Schedule-Based Simulation</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">prodsys.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">runner</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Create and run the simulation</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">sim_runner</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">Runner</span><span class="p">(</span><span class="n">production_system_data</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">sim_runner</span><span class="o">.</span><span class="n">initialize_simulation</span><span class="p">()</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Calculate simulation time based on schedule</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">schedule</span><span class="p">:</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="n">max_schedule_time</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">time</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">schedule</span><span class="p">)</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="n">simulation_time</span> <span class="o">=</span> <span class="n">max_schedule_time</span> <span class="o">+</span> <span class="mi">100</span>  <span class="c1"># Add buffer for processing</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="k">else</span><span class="p">:</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="n">simulation_time</span> <span class="o">=</span> <span class="mi">2000</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="n">sim_runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">simulation_time</span><span class="p">)</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c1"># Analyze results</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="n">performance</span> <span class="o">=</span> <span class="n">sim_runner</span><span class="o">.</span><span class="n">get_performance_data</span><span class="p">()</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of events in event log: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">performance</span><span class="o">.</span><span class="n">event_log</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="validating-schedule-adherence">Validating Schedule Adherence</h3>
+<p>You can validate that the simulation followed the schedule:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Get scheduled production starts</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">scheduled_releases</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">performance</span><span class="o">.</span><span class="n">event_log</span> 
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">activity</span> <span class="o">==</span> <span class="s2">&quot;start state&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">state_type</span> <span class="o">==</span> <span class="s2">&quot;Production&quot;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">]</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Validate routing</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="k">for</span> <span class="n">scheduled_event</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">schedule</span><span class="p">:</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="n">actual_events</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>        <span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">scheduled_releases</span> 
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">product</span> <span class="o">==</span> <span class="n">scheduled_event</span><span class="o">.</span><span class="n">product</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>        <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s1">&#39;state&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="n">scheduled_event</span><span class="o">.</span><span class="n">process</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="p">]</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>    <span class="k">if</span> <span class="n">actual_events</span><span class="p">:</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>        <span class="n">actual_event</span> <span class="o">=</span> <span class="n">actual_events</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>        <span class="n">scheduled_time</span> <span class="o">=</span> <span class="n">scheduled_event</span><span class="o">.</span><span class="n">time</span>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>        <span class="n">actual_time</span> <span class="o">=</span> <span class="n">actual_event</span><span class="o">.</span><span class="n">time</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>        <span class="n">delay</span> <span class="o">=</span> <span class="n">actual_time</span> <span class="o">-</span> <span class="n">scheduled_time</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Product </span><span class="si">{</span><span class="n">scheduled_event</span><span class="o">.</span><span class="n">product</span><span class="si">}</span><span class="s2">: &quot;</span>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>              <span class="sa">f</span><span class="s2">&quot;Scheduled=</span><span class="si">{</span><span class="n">scheduled_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, &quot;</span>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>              <span class="sa">f</span><span class="s2">&quot;Actual=</span><span class="si">{</span><span class="n">actual_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, &quot;</span>
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>              <span class="sa">f</span><span class="s2">&quot;Delay=</span><span class="si">{</span><span class="n">delay</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="complete-example-order-based-production">Complete Example: Order-Based Production</h2>
+<p>Here's a complete example of order-based production:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">prodsys.express</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">psx</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">prodsys</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Create time models</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">t1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">FunctionTimeModel</span><span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">&quot;t1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="n">t2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">FunctionTimeModel</span><span class="p">(</span><span class="s2">&quot;normal&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="s2">&quot;t2&quot;</span><span class="p">)</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1"># Create processes</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="n">p1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionProcess</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="s2">&quot;p1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="n">p2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionProcess</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span> <span class="s2">&quot;p2&quot;</span><span class="p">)</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">t3</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">DistanceTimeModel</span><span class="p">(</span><span class="n">speed</span><span class="o">=</span><span class="mi">180</span><span class="p">,</span> <span class="n">reaction_time</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;t3&quot;</span><span class="p">)</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="n">tp</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">TransportProcess</span><span class="p">(</span><span class="n">t3</span><span class="p">,</span> <span class="s2">&quot;tp&quot;</span><span class="p">)</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1"># Create setup states</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="n">s1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">FunctionTimeModel</span><span class="p">(</span><span class="s2">&quot;exponential&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;s1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="n">setup_state_1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">SetupState</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="s2">&quot;S1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="n">setup_state_2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">SetupState</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">p2</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="s2">&quot;S2&quot;</span><span class="p">)</span>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="c1"># Create resources</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="n">machine</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionResource</span><span class="p">(</span>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">],</span>
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>    <span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="n">setup_state_1</span><span class="p">,</span> <span class="n">setup_state_2</span><span class="p">],</span>
+</span><span id="__span-7-26"><a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;machine&quot;</span><span class="p">,</span>
+</span><span id="__span-7-27"><a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a><span class="p">)</span>
+</span><span id="__span-7-28"><a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a><span class="n">machine2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionResource</span><span class="p">(</span>
+</span><span id="__span-7-29"><a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">],</span>
+</span><span id="__span-7-30"><a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-7-31"><a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-7-32"><a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>    <span class="n">states</span><span class="o">=</span><span class="p">[</span><span class="n">setup_state_1</span><span class="p">,</span> <span class="n">setup_state_2</span><span class="p">],</span>
+</span><span id="__span-7-33"><a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;machine2&quot;</span><span class="p">,</span>
+</span><span id="__span-7-34"><a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a><span class="p">)</span>
+</span><span id="__span-7-35"><a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a><span class="n">transport</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">TransportResource</span><span class="p">(</span>
+</span><span id="__span-7-36"><a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>    <span class="n">processes</span><span class="o">=</span><span class="p">[</span><span class="n">tp</span><span class="p">],</span>
+</span><span id="__span-7-37"><a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-7-38"><a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>    <span class="n">capacity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-7-39"><a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;transport&quot;</span><span class="p">,</span>
+</span><span id="__span-7-40"><a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a><span class="p">)</span>
+</span><span id="__span-7-41"><a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>
+</span><span id="__span-7-42"><a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a><span class="c1"># Create products</span>
+</span><span id="__span-7-43"><a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a><span class="n">product1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Product</span><span class="p">(</span><span class="n">process</span><span class="o">=</span><span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">],</span> <span class="n">transport_process</span><span class="o">=</span><span class="n">tp</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;product1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-44"><a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a><span class="n">product2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Product</span><span class="p">(</span><span class="n">process</span><span class="o">=</span><span class="p">[</span><span class="n">p2</span><span class="p">,</span> <span class="n">p1</span><span class="p">],</span> <span class="n">transport_process</span><span class="o">=</span><span class="n">tp</span><span class="p">,</span> <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;product2&quot;</span><span class="p">)</span>
+</span><span id="__span-7-45"><a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>
+</span><span id="__span-7-46"><a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a><span class="c1"># Create sinks</span>
+</span><span id="__span-7-47"><a id="__codelineno-7-47" name="__codelineno-7-47" href="#__codelineno-7-47"></a><span class="n">sink1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Sink</span><span class="p">(</span><span class="n">product1</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;sink1&quot;</span><span class="p">)</span>
+</span><span id="__span-7-48"><a id="__codelineno-7-48" name="__codelineno-7-48" href="#__codelineno-7-48"></a><span class="n">sink2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Sink</span><span class="p">(</span><span class="n">product2</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;sink2&quot;</span><span class="p">)</span>
+</span><span id="__span-7-49"><a id="__codelineno-7-49" name="__codelineno-7-49" href="#__codelineno-7-49"></a>
+</span><span id="__span-7-50"><a id="__codelineno-7-50" name="__codelineno-7-50" href="#__codelineno-7-50"></a><span class="c1"># Create orders with different release times</span>
+</span><span id="__span-7-51"><a id="__codelineno-7-51" name="__codelineno-7-51" href="#__codelineno-7-51"></a><span class="n">order1</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Order</span><span class="p">(</span>
+</span><span id="__span-7-52"><a id="__codelineno-7-52" name="__codelineno-7-52" href="#__codelineno-7-52"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order1&quot;</span><span class="p">,</span>
+</span><span id="__span-7-53"><a id="__codelineno-7-53" name="__codelineno-7-53" href="#__codelineno-7-53"></a>    <span class="n">ordered_products</span><span class="o">=</span><span class="p">[</span><span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product1</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">2</span><span class="p">)],</span>
+</span><span id="__span-7-54"><a id="__codelineno-7-54" name="__codelineno-7-54" href="#__codelineno-7-54"></a>    <span class="n">order_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__span-7-55"><a id="__codelineno-7-55" name="__codelineno-7-55" href="#__codelineno-7-55"></a>    <span class="n">release_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+</span><span id="__span-7-56"><a id="__codelineno-7-56" name="__codelineno-7-56" href="#__codelineno-7-56"></a>    <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-7-57"><a id="__codelineno-7-57" name="__codelineno-7-57" href="#__codelineno-7-57"></a><span class="p">)</span>
+</span><span id="__span-7-58"><a id="__codelineno-7-58" name="__codelineno-7-58" href="#__codelineno-7-58"></a>
+</span><span id="__span-7-59"><a id="__codelineno-7-59" name="__codelineno-7-59" href="#__codelineno-7-59"></a><span class="n">order2</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Order</span><span class="p">(</span>
+</span><span id="__span-7-60"><a id="__codelineno-7-60" name="__codelineno-7-60" href="#__codelineno-7-60"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order2&quot;</span><span class="p">,</span>
+</span><span id="__span-7-61"><a id="__codelineno-7-61" name="__codelineno-7-61" href="#__codelineno-7-61"></a>    <span class="n">ordered_products</span><span class="o">=</span><span class="p">[</span><span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product2</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">1</span><span class="p">)],</span>
+</span><span id="__span-7-62"><a id="__codelineno-7-62" name="__codelineno-7-62" href="#__codelineno-7-62"></a>    <span class="n">order_time</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span>
+</span><span id="__span-7-63"><a id="__codelineno-7-63" name="__codelineno-7-63" href="#__codelineno-7-63"></a>    <span class="n">release_time</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+</span><span id="__span-7-64"><a id="__codelineno-7-64" name="__codelineno-7-64" href="#__codelineno-7-64"></a>    <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-7-65"><a id="__codelineno-7-65" name="__codelineno-7-65" href="#__codelineno-7-65"></a><span class="p">)</span>
+</span><span id="__span-7-66"><a id="__codelineno-7-66" name="__codelineno-7-66" href="#__codelineno-7-66"></a>
+</span><span id="__span-7-67"><a id="__codelineno-7-67" name="__codelineno-7-67" href="#__codelineno-7-67"></a><span class="c1"># Order with multiple product types</span>
+</span><span id="__span-7-68"><a id="__codelineno-7-68" name="__codelineno-7-68" href="#__codelineno-7-68"></a><span class="n">order3</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">Order</span><span class="p">(</span>
+</span><span id="__span-7-69"><a id="__codelineno-7-69" name="__codelineno-7-69" href="#__codelineno-7-69"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order3&quot;</span><span class="p">,</span>
+</span><span id="__span-7-70"><a id="__codelineno-7-70" name="__codelineno-7-70" href="#__codelineno-7-70"></a>    <span class="n">ordered_products</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-7-71"><a id="__codelineno-7-71" name="__codelineno-7-71" href="#__codelineno-7-71"></a>        <span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product1</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+</span><span id="__span-7-72"><a id="__codelineno-7-72" name="__codelineno-7-72" href="#__codelineno-7-72"></a>        <span class="n">psx</span><span class="o">.</span><span class="n">OrderedProduct</span><span class="p">(</span><span class="n">product</span><span class="o">=</span><span class="n">product2</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+</span><span id="__span-7-73"><a id="__codelineno-7-73" name="__codelineno-7-73" href="#__codelineno-7-73"></a>    <span class="p">],</span>
+</span><span id="__span-7-74"><a id="__codelineno-7-74" name="__codelineno-7-74" href="#__codelineno-7-74"></a>    <span class="n">order_time</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+</span><span id="__span-7-75"><a id="__codelineno-7-75" name="__codelineno-7-75" href="#__codelineno-7-75"></a>    <span class="n">release_time</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span>
+</span><span id="__span-7-76"><a id="__codelineno-7-76" name="__codelineno-7-76" href="#__codelineno-7-76"></a>    <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="__span-7-77"><a id="__codelineno-7-77" name="__codelineno-7-77" href="#__codelineno-7-77"></a><span class="p">)</span>
+</span><span id="__span-7-78"><a id="__codelineno-7-78" name="__codelineno-7-78" href="#__codelineno-7-78"></a>
+</span><span id="__span-7-79"><a id="__codelineno-7-79" name="__codelineno-7-79" href="#__codelineno-7-79"></a><span class="c1"># Create order source</span>
+</span><span id="__span-7-80"><a id="__codelineno-7-80" name="__codelineno-7-80" href="#__codelineno-7-80"></a><span class="n">order_source</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">OrderSource</span><span class="p">(</span>
+</span><span id="__span-7-81"><a id="__codelineno-7-81" name="__codelineno-7-81" href="#__codelineno-7-81"></a>    <span class="n">orders</span><span class="o">=</span><span class="p">[</span><span class="n">order1</span><span class="p">,</span> <span class="n">order2</span><span class="p">,</span> <span class="n">order3</span><span class="p">],</span>
+</span><span id="__span-7-82"><a id="__codelineno-7-82" name="__codelineno-7-82" href="#__codelineno-7-82"></a>    <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-7-83"><a id="__codelineno-7-83" name="__codelineno-7-83" href="#__codelineno-7-83"></a>    <span class="n">ID</span><span class="o">=</span><span class="s2">&quot;order_source&quot;</span><span class="p">,</span>
+</span><span id="__span-7-84"><a id="__codelineno-7-84" name="__codelineno-7-84" href="#__codelineno-7-84"></a><span class="p">)</span>
+</span><span id="__span-7-85"><a id="__codelineno-7-85" name="__codelineno-7-85" href="#__codelineno-7-85"></a>
+</span><span id="__span-7-86"><a id="__codelineno-7-86" name="__codelineno-7-86" href="#__codelineno-7-86"></a><span class="c1"># Create production system</span>
+</span><span id="__span-7-87"><a id="__codelineno-7-87" name="__codelineno-7-87" href="#__codelineno-7-87"></a><span class="n">system</span> <span class="o">=</span> <span class="n">psx</span><span class="o">.</span><span class="n">ProductionSystem</span><span class="p">(</span>
+</span><span id="__span-7-88"><a id="__codelineno-7-88" name="__codelineno-7-88" href="#__codelineno-7-88"></a>    <span class="n">resources</span><span class="o">=</span><span class="p">[</span><span class="n">machine</span><span class="p">,</span> <span class="n">machine2</span><span class="p">,</span> <span class="n">transport</span><span class="p">],</span>
+</span><span id="__span-7-89"><a id="__codelineno-7-89" name="__codelineno-7-89" href="#__codelineno-7-89"></a>    <span class="n">sources</span><span class="o">=</span><span class="p">[</span><span class="n">order_source</span><span class="p">],</span>
+</span><span id="__span-7-90"><a id="__codelineno-7-90" name="__codelineno-7-90" href="#__codelineno-7-90"></a>    <span class="n">sinks</span><span class="o">=</span><span class="p">[</span><span class="n">sink1</span><span class="p">,</span> <span class="n">sink2</span><span class="p">]</span>
+</span><span id="__span-7-91"><a id="__codelineno-7-91" name="__codelineno-7-91" href="#__codelineno-7-91"></a><span class="p">)</span>
+</span><span id="__span-7-92"><a id="__codelineno-7-92" name="__codelineno-7-92" href="#__codelineno-7-92"></a>
+</span><span id="__span-7-93"><a id="__codelineno-7-93" name="__codelineno-7-93" href="#__codelineno-7-93"></a><span class="c1"># Set ConWip limit</span>
+</span><span id="__span-7-94"><a id="__codelineno-7-94" name="__codelineno-7-94" href="#__codelineno-7-94"></a><span class="n">model</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">to_model</span><span class="p">()</span>
+</span><span id="__span-7-95"><a id="__codelineno-7-95" name="__codelineno-7-95" href="#__codelineno-7-95"></a><span class="n">model</span><span class="o">.</span><span class="n">conwip_number</span> <span class="o">=</span> <span class="mi">5</span>
+</span><span id="__span-7-96"><a id="__codelineno-7-96" name="__codelineno-7-96" href="#__codelineno-7-96"></a>
+</span><span id="__span-7-97"><a id="__codelineno-7-97" name="__codelineno-7-97" href="#__codelineno-7-97"></a><span class="c1"># Run simulation</span>
+</span><span id="__span-7-98"><a id="__codelineno-7-98" name="__codelineno-7-98" href="#__codelineno-7-98"></a><span class="kn">from</span><span class="w"> </span><span class="nn">prodsys.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">runner</span>
+</span><span id="__span-7-99"><a id="__codelineno-7-99" name="__codelineno-7-99" href="#__codelineno-7-99"></a><span class="n">runner_instance</span> <span class="o">=</span> <span class="n">runner</span><span class="o">.</span><span class="n">Runner</span><span class="p">(</span><span class="n">production_system_data</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+</span><span id="__span-7-100"><a id="__codelineno-7-100" name="__codelineno-7-100" href="#__codelineno-7-100"></a><span class="n">runner_instance</span><span class="o">.</span><span class="n">initialize_simulation</span><span class="p">()</span>
+</span><span id="__span-7-101"><a id="__codelineno-7-101" name="__codelineno-7-101" href="#__codelineno-7-101"></a><span class="n">system</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-7-102"><a id="__codelineno-7-102" name="__codelineno-7-102" href="#__codelineno-7-102"></a><span class="n">system</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">print_results</span><span class="p">()</span>
+</span></code></pre></div>
+<h2 id="key-points">Key Points</h2>
+<ol>
+<li>
+<p><strong>Order-based production</strong>: Use <code>OrderSource</code> with <code>Order</code> objects to model make-to-order scenarios where products are created based on customer orders.</p>
+</li>
+<li>
+<p><strong>Schedule-based production</strong>: Use schedules to define exactly when and where products should be processed, useful for production planning and scheduling.</p>
+</li>
+<li>
+<p><strong>Order properties</strong>:</p>
+</li>
+<li><code>order_time</code>: When the order was placed</li>
+<li><code>release_time</code>: When products should be released into the system</li>
+<li><code>priority</code>: Order priority (higher values = higher priority)</li>
+<li>
+<p><code>ordered_products</code>: List of products and quantities</p>
+</li>
+<li>
+<p><strong>ConWIP control</strong>: Combine orders with ConWIP to limit work in progress.</p>
+</li>
+<li>
+<p><strong>Schedule validation</strong>: You can validate that the simulation followed the schedule by comparing scheduled events with actual events in the event log.</p>
+</li>
+</ol>
+<p>For more information about orders and schedules, please see the <a href="../../API_reference/API_reference_0_overview/">API reference</a> or check out the examples in the <a href="https://github.com/sdm4fzi/prodsys/tree/main/examples/modelling_and_simulation">modelling and simulation examples folder</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
