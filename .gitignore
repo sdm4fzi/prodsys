@@ -1,5 +1,6 @@
 # Created by .ignore support plugin (hsz.mobi)
 *.xml
+!*.drawio.xml
 *.png
 *.prof
 *.csv
@@ -31,3 +32,8 @@ logs/*
 plots/*
 
 examples/tutorials/plots/
+Refactorings.md
+
+.DS_Store
+example.py
+buggy_example.py

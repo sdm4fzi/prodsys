@@ -1,0 +1,611 @@
+from __future__ import annotations
+
+from typing import Deque, List, TYPE_CHECKING, Literal, Optional, Union, Dict, Set
+from dataclasses import dataclass, field
+
+import logging
+
+import simpy
+
+from prodsys.models.dependency_data import DependencyType
+from prodsys.simulation.dependency import DependedEntity, Dependency
+from prodsys.simulation.process import DependencyProcess, ProcessModelProcess
+from prodsys.simulation.process_matcher import ProcessMatcher
+from prodsys.simulation.entities.entity import EntityType
+
+logger = logging.getLogger(__name__)
+
+
+from prodsys.simulation import resources
+from prodsys.simulation.entities import primitive
+from prodsys.simulation import request
+from prodsys.models.processes_data import ProcessTypeEnum
+
+
+if TYPE_CHECKING:
+    from prodsys.simulation import resources, process
+    from prodsys.simulation.locatable import Locatable
+    from prodsys.simulation.entities import product
+
+    # from prodsys.factories.source_factory import SourceFactory
+
+RequestInfoKey = str
+ResourceIdentifier = str
+
+
+@dataclass()
+class RequestInfo:
+    """
+    Represents a key for mapping requests to resources.
+
+    Attributes:
+        request_id (str): Unique identifier for the request.
+        resource_id (str): Unique identifier for the resource.
+    """
+
+    key: str
+    item: Union[product.Product, primitive.Primitive]
+    resource_mappings: dict[ResourceIdentifier, list[process.PROCESS_UNION]]
+    request_type: request.RequestType
+
+    origin: Optional[Locatable]
+    target: Optional[Locatable]
+    request_completion_event: simpy.Event
+    request_state: Literal["pending", "routed", "completed"]
+
+    dependency: Optional[Dependency] = None
+
+    dependency_release_event: Optional[simpy.Event] = None
+
+
+def get_request_info_key(item: Union[product.Product, primitive.Primitive]):
+    item_id = item.data.ID
+    if hasattr(item, "next_possible_processes"):
+        process_id = hash(
+            tuple(process.data.ID for process in item.next_possible_processes)
+        )
+    else:
+        process_id = ""
+    return f"{item_id}:{process_id}"
+
+
+def get_transport_request_info_key(
+    item: Union[product.Product, primitive.Primitive],
+    origin: Locatable,
+    target: Locatable,
+):
+    item_id = item.data.ID
+    origin_id = origin.data.ID
+    target_id = target.data.ID
+    return f"{item_id}:{origin_id}:{target_id}"
+
+
+def get_dependency_request_info_key(
+    dependency_item: Union[product.Product, resources.Resource],
+    dependency: Dependency,
+    requesting_item: Union[product.Product, resources.Resource] = None,
+):
+    item_id = dependency_item.data.ID
+    dependency_id = dependency.data.ID
+    if requesting_item is not None:
+        item_id = requesting_item.data.ID
+    else:
+        item_id = dependency_item.data.ID
+    # TODO: consider here product or so, double item_id makes no sense
+    return f"{item_id}:{dependency_id}:{item_id}"
+
+
+@dataclass
+class RequestHandler:
+    """
+    Handles requests, determines additional required requests, and manages request allocation efficiently.
+    """
+
+    process_matcher: ProcessMatcher
+
+    request_infos: dict[RequestInfoKey, RequestInfo] = field(default_factory=dict)
+    pending_resource_requests: list[RequestInfoKey] = field(default_factory=list)
+    pending_primitive_requests: list[RequestInfoKey] = field(default_factory=list)
+
+    pending_requests: dict[str, RequestInfo] = field(default_factory=dict)
+    routed_requests: dict[str, RequestInfo] = field(default_factory=dict)
+
+    
+    def add_process_model_request(
+        self, entity: Union[product.Product, primitive.Primitive], 
+        process_model: process.ProcessModelProcess,
+        system_resource: resources.Resource,
+        origin: Locatable,
+        origin_queue: Locatable,
+        target: Locatable,
+        target_queue: Locatable,
+    ) -> tuple[request.Request, RequestInfo]:
+        """
+        Adds a new request to the pending requests.
+        """
+        dependencies = []
+        if entity.dependencies:
+            dependencies.extend(entity.dependencies)
+        if process_model.dependencies:
+            dependencies.extend(process_model.dependencies)
+        if system_resource.dependencies:
+            dependencies.extend(system_resource.dependencies)
+        request_info_key = get_request_info_key(entity)
+        request_completion_event = simpy.Event(entity.env)
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=entity,
+            resource_mappings={process_model.data.ID: [process_model]},
+            request_type=request.RequestType.PROCESS_MODEL,
+            origin=origin,
+            target=target,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+        )
+        # Add to pending requests
+        self.request_infos[request_info_key] = request_info
+        self.pending_requests[request_info_key] = request_info
+        processing_request = request.Request(
+            requesting_item=entity,
+            entity=entity,
+            request_type=request.RequestType.PROCESS_MODEL,
+            process=entity.process_model,
+            resource=system_resource,
+            origin=origin,
+            target=target,
+            origin_queue=origin_queue,
+            target_queue=target_queue,
+            completed=request_completion_event,
+            required_dependencies=dependencies,
+        )
+        self.pending_requests[id(processing_request.completed)] = request_info
+        self.request_infos[request_info_key] = request_info
+        return processing_request, request_info
+
+    def add_product_requests(
+        self, entity: Union[product.Product, primitive.Primitive], 
+        next_possible_processes: List[process.PROCESS_UNION],
+    ) -> RequestInfo:
+        """
+        Adds a new request to the pending requests.
+
+        Args:
+            item (Union[product.Product, primitive.Primitive]): The item making the request.
+            possible_resources_and_processes (List[Tuple[resources.Resource, process.PROCESS_UNION]]):
+                List of possible resources and processes that can handle the request.
+            process (Optional[process.PROCESS_UNION]): The process to be executed, defaults to item's next_possible_processes.
+        """
+        request_info_key = get_request_info_key(entity)
+        possible_resources_and_processes = self.process_matcher.get_compatible(
+            next_possible_processes
+        )
+        resources = {}
+        for resource, process_instance in possible_resources_and_processes:
+            resource_id = resource.data.ID
+            if resource_id not in resources:
+                resources[resource_id] = []
+            resources[resource_id].append(process_instance)
+
+        # Determine request type based on the process type
+        # If any of the next_possible_processes is a ProcessModelProcess, use PROCESS_MODEL request type
+        if any(isinstance(p, ProcessModelProcess) for p in next_possible_processes):
+            request_type = request.RequestType.PROCESS_MODEL
+        elif hasattr(entity, "process_model"):
+            request_type = request.RequestType.PRODUCTION
+        else:
+            request_type = request.RequestType.ENTITY_DEPENDENCY
+
+        request_completion_event = simpy.Event(entity.env)
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=entity,
+            resource_mappings=resources,
+            request_type=request_type,
+            origin=None,
+            target=None,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+        )
+        # Add to pending requests
+        self.request_infos[request_info_key] = request_info
+        self.pending_resource_requests.append(request_info_key)
+        return request_info
+
+    def add_transport_request(
+        self,
+        item: Union[product.Product, primitive.Primitive],
+        target: Locatable,
+    ) -> RequestInfo:
+        """
+        Adds a new transport request to the pending requests.
+
+        Args:
+            item (Union[product.Product, primitive.Primitive]): The item to transport.
+            origin (Locatable): The origin location.
+            target (Locatable): The target location.
+            possible_resources_and_processes (List[Tuple[resources.Resource, process.PROCESS_UNION]]):
+                List of possible transport resources and processes.
+        """
+        origin = item._current_locatable
+        request_info_key = get_transport_request_info_key(
+            item,
+            origin,
+            target,
+        )
+        
+        transport_process_signature = item.transport_process.get_process_signature()
+        logger.debug(
+            f"Looking for transport: {origin.data.ID} -> {target.data.ID} "
+            f"for item {item.data.ID} with process signature {transport_process_signature}"
+        )
+        
+        possible_resources_and_processes = (
+            self.process_matcher.get_transport_compatible(
+                origin, target, transport_process_signature
+            )
+        )
+        if not possible_resources_and_processes:
+            # Get more details for debugging
+            movable_resources = self.process_matcher.resource_factory.get_movable_resources()
+            available_process_signatures = set()
+            resource_processes_detail = []
+            for resource in movable_resources:
+                for proc in resource.processes:
+                    if hasattr(proc, 'get_process_signature'):
+                        sig = proc.get_process_signature()
+                        available_process_signatures.add(sig)
+                        proc_id = proc.data.ID if hasattr(proc, 'data') and hasattr(proc.data, 'ID') else "unknown"
+                        proc_type = type(proc).__name__
+                        resource_processes_detail.append(f"{resource.data.ID}:{proc_id}({proc_type})")
+            
+            logger.error(
+                f"No resource available for transport of item {item.data.ID} "
+                f"with process {item.data.transport_process} (signature: {transport_process_signature}) "
+                f"from {origin.data.ID} to {target.data.ID}."
+            )
+            logger.error(
+                f"  Available transport process signatures: {available_process_signatures}"
+            )
+            logger.error(
+                f"  Transport resources and their processes: {resource_processes_detail}"
+            )
+            logger.error(
+                f"  Transport compatibility table size: {len(self.process_matcher.transport_compatibility)}"
+            )
+            raise ValueError(f"No resource available for transport of item {item.data.ID} with process {item.data.transport_process} from {origin.data.ID} to {target.data.ID}")
+        resources = {}
+        for resource, process_instance in possible_resources_and_processes:
+            resource_id = resource.data.ID
+            if resource_id not in resources:
+                resources[resource_id] = []
+            resources[resource_id].append(process_instance)
+
+        request_completion_event = simpy.Event(item.env)
+
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=item,
+            resource_mappings=resources,
+            request_type=request.RequestType.TRANSPORT,
+            origin=origin,
+            target=target,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+        )
+        # Add to pending requests
+        self.request_infos[request_info_key] = request_info
+        self.pending_resource_requests.append(request_info_key)
+        return request_info
+
+    def add_dependency_request(
+        self,
+        requiring_dependency: Union[product.Product, resources.Resource],
+        requesting_item: Union[product.Product, resources.Resource],
+        dependency: Dependency,
+        dependency_release_event: Optional[simpy.Event] = None,
+        parent_origin_queue: Optional[Locatable] = None,
+        parent_target_queue: Optional[Locatable] = None,
+    ) -> RequestInfo:
+        """
+        Adds a new dependency request to the pending requests.
+
+        Args:
+            requesting_item (Union[product.Product, resources.Resource]): The item making the request.
+            dependency (DependedEntity): The dependency to be fulfilled.
+        """
+        if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
+            request_type = request.RequestType.ENTITY_DEPENDENCY
+            resource_mappings = {}
+            requiring_dependency = requesting_item
+        elif dependency.data.dependency_type == DependencyType.RESOURCE:
+            request_type = request.RequestType.RESOURCE_DEPENDENCY
+            resource_mappings = {
+                dependency.required_resource.data.ID: [DependencyProcess()]
+            }
+        elif dependency.data.dependency_type == DependencyType.PROCESS:
+            request_type = request.RequestType.PROCESS_DEPENDENCY
+            possible_resourcs = self.process_matcher.get_compatible(
+                [dependency.required_process]
+            )
+            resource_mappings = {}
+            for resource, process_instance in possible_resourcs:
+                resource_id = resource.data.ID
+                if resource_id in resource_mappings:
+                    continue
+                resource_mappings[resource_id] = [DependencyProcess()]
+        elif dependency.data.dependency_type == DependencyType.LOT:
+            return
+        else:
+            raise ValueError(
+                f"Unknown dependency type: {dependency.data.dependency_type}"
+            )
+
+        request_completion_event = simpy.Event(requiring_dependency.env)
+        request_info_key = get_dependency_request_info_key(
+            requiring_dependency, dependency, requesting_item
+        )
+
+        request_info = RequestInfo(
+            key=request_info_key,
+            item=requiring_dependency,
+            resource_mappings=resource_mappings,
+            request_type=request_type,
+            request_state="pending",
+            request_completion_event=request_completion_event,
+            dependency=dependency,
+            dependency_release_event=dependency_release_event,
+            origin=None,
+            target=parent_origin_queue,  # Store parent origin_queue as target for dependency routing (where to transport dependency to)
+        )
+        # Store parent_target_queue separately so we can access it later
+        request_info.parent_target_queue = parent_target_queue
+        self.request_infos[request_info_key] = request_info
+        if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY:
+            self.pending_primitive_requests.append(request_info_key)
+        else:
+            self.pending_resource_requests.append(request_info_key)
+        return request_info
+
+    def mark_routing(self, allocated_request: request.Request, setting_current_process: bool = True) -> None:
+        """
+        Marks a request as allocated to a resource.
+
+        Args:
+            allocated_request (request.Request): The request that has been allocated.
+        """
+
+        if setting_current_process and allocated_request.request_type in [request.RequestType.PRODUCTION, request.RequestType.PROCESS_MODEL]:
+            allocated_request.requesting_item.current_process = (
+                allocated_request.process
+            )
+
+        request_info = self.pending_requests.pop(id(allocated_request.completed), None)
+        if not request_info:
+            raise ValueError(
+                f"Request info not found for completed request {allocated_request.completed}"
+            )
+        request_info.request_state = "routed"
+        self.routed_requests[id(allocated_request.completed)] = request_info
+
+
+    def reroute_request(self, rerouted_request: request.Request) -> None:
+        """
+        Reroutes a request to the router.
+        """
+        routed_request_info = self.routed_requests.pop(id(rerouted_request.completed), None)
+        if not routed_request_info:
+            raise ValueError(
+                f"Request info not found for rerouted request {rerouted_request.completed}"
+            )
+        routed_request_info.request_state = "pending"
+        self.pending_requests[id(rerouted_request.completed)] = routed_request_info
+
+    def mark_completion(self, completed_request: request.Request) -> None:
+        """
+        Marks a request as completed.
+
+        Args:
+            completed_request (request.Request): The request that has been completed.
+        """
+        request_info = self.routed_requests.pop(id(completed_request.completed), None)
+        if not request_info:
+            raise ValueError(
+                f"Request info not found for completed request {completed_request.completed}"
+            )
+        request_info.request_state = "completed"
+
+                # If this was a lot request, clean up RequestInfo objects for all individual requests
+        # that were combined into the lot. These were never cleaned up when the lot was formed.
+        if completed_request.entity.type == EntityType.LOT:
+            lot = completed_request.entity
+            # The lot stores all_completed_events from the individual requests
+            # We need to clean up their RequestInfo objects from routed_requests
+            for completed_event in lot.all_completed_events:
+                # Skip the lot's own completed event (already cleaned up above)
+                if completed_event is completed_request.completed:
+                    continue
+                # Remove RequestInfo for this individual request
+                individual_request_info = self.routed_requests.pop(id(completed_event), None)
+                if individual_request_info:
+                    logger.debug(f"{completed_request.resource.env.now}: Cleaning up RequestInfo for individual request {id(completed_event)} from lot {lot.data.ID}")
+                    individual_request_info.request_state = "completed"
+
+                else:
+                    raise ValueError(f"Request info not found for completed event {completed_event} from lot {lot.data.ID}")
+                # If not found, it might have been cleaned up already or never existed
+                # (e.g., if the request was never routed, or was already cleaned up)
+
+
+    def create_resource_request(
+        self,
+        request_info: RequestInfo,
+        resource: resources.Resource,
+        process: process.PROCESS_UNION,
+    ) -> request.Request:
+        """
+        Creates a new request for the given resource and process.
+
+        Args:
+            request_info (RequestInfo): The request information.
+            resource (resources.Resource): The resource to handle the request.
+            process (process.PROCESS_UNION): The process to be executed.
+
+        Returns:
+            request.Request: The created request.
+        """
+        dependencies = resource.dependencies + process.dependencies
+        if not hasattr(process.data, "type"):
+            raise ValueError(f"Process {process.data.ID} has no type")
+        if process.data.type == ProcessTypeEnum.ProcessModels:
+            # also consider dependencies of contained processes with lots!
+            for contained_process in process.contained_processes:
+                dependencies.extend(contained_process.dependencies)
+        request_instance = request.Request(
+            requesting_item=request_info.item,
+            entity=request_info.item,
+            resource=resource,
+            process=process,
+            origin=request_info.origin,
+            target=request_info.target,
+            request_type=request_info.request_type,
+            completed=request_info.request_completion_event,
+            resolved_dependency=request_info.dependency,
+            dependency_release_event=request_info.dependency_release_event,
+            required_dependencies=dependencies,
+        )
+        return request_instance
+
+    def get_next_resource_request_to_route(
+        self, free_resources: list[resources.Resource]
+    ) -> Optional[List[request.Request]]:
+        """
+        Returns a list of all pending requests that can be allocated.
+
+        Returns:
+            List[request.Request]: List of free requests ready for allocation.
+        """
+        free_resources_set = set(
+            (index, resource.data.ID) for index, resource in enumerate(free_resources)
+        )
+        self.current_resource_request_index = 0
+        for request_info_index in range(
+            self.current_resource_request_index, len(self.pending_resource_requests)
+        ):
+            request_info_key = self.pending_resource_requests[request_info_index]
+            request_info = self.request_infos[request_info_key]
+            possible_resources_and_processes = request_info.resource_mappings
+            requests = []
+            for free_resource_index, free_resource_id in free_resources_set:
+                if free_resource_id in possible_resources_and_processes:
+                    free_resource = free_resources[free_resource_index]
+                    # For process dependencies, skip resources that are already bound to another entity
+                    # This ensures that resources with ResourceDependency are not used for ProcessDependency
+                    if (request_info.request_type == request.RequestType.PROCESS_DEPENDENCY 
+                        and hasattr(free_resource, 'bound') and free_resource.bound):
+                        continue
+                    for process_instance in possible_resources_and_processes[
+                        free_resource_id
+                    ]:
+                        new_request = self.create_resource_request(
+                            request_info,
+                            free_resource,
+                            process_instance,
+                        )
+                        requests.append(new_request)
+
+            if requests:
+                self.pending_requests[id(requests[0].completed)] = request_info
+                self.pending_resource_requests.remove(request_info_key)
+                return requests
+
+    def create_primitive_request(
+        self,
+        request_info: RequestInfo,
+        primitive: primitive.Primitive,
+    ) -> request.Request:
+        """
+        Creates a new request for the given primitive and process.
+
+        Args:
+            request_info (RequestInfo): The request information.
+            primitive (primitive.Primitive): The primitive to handle the request.
+            process (process.PROCESS_UNION): The process to be executed.
+
+        Returns:
+            request.Request: The created request.
+        """
+        dependency_request = request.Request(
+            requesting_item=request_info.item,
+            entity=primitive,
+            process=DependencyProcess(),
+            request_type=request_info.request_type,
+            completed=request_info.request_completion_event,
+            resolved_dependency=request_info.dependency,
+            dependency_release_event=request_info.dependency_release_event,
+            origin_queue=request_info.target,  # Use target (parent origin_queue) as origin_queue for dependency request
+            target_queue=getattr(request_info, 'parent_target_queue', None),  # Store parent target_queue for when dependency is released
+        )
+        return dependency_request
+
+    def get_next_primitive_request_to_route(
+        self, free_primitives: dict[str, list[primitive.Primitive]]
+    ) -> Optional[List[request.Request]]:
+        """
+        Returns a list of all pending requests that can be allocated.
+
+        Returns:
+            List[request.Request]: List of free requests ready for allocation.
+        """
+        if not self.pending_primitive_requests:
+            return None
+        self.current_primitive_request_index = 0
+        for request_info_index in range(
+            self.current_primitive_request_index, len(self.pending_primitive_requests)
+        ):
+            request_info_key = self.pending_primitive_requests[request_info_index]
+            request_info = self.request_infos[request_info_key]
+            possible_primitives = free_primitives.get(
+                request_info.dependency.required_entity.data.type, []
+            )
+            possible_primitive_requests = []
+            for possible_primitive in possible_primitives:
+                # Check if primitive is available (not bound to another entity)
+                if possible_primitive.bound:
+                    continue
+                # Check if primitive is in a queue and available for routing
+                # Only route if primitive is in its storage or current locatable queue
+                if possible_primitive._current_locatable is None:
+                    continue
+                # Verify the primitive is actually in the queue at its current location
+                if hasattr(possible_primitive._current_locatable, 'items'):
+                    if possible_primitive.data.ID not in possible_primitive._current_locatable.items:
+                        # Primitive is not in the queue at its current location - skip it
+                        continue
+                new_request = self.create_primitive_request(
+                    request_info,
+                    possible_primitive,
+                )
+                possible_primitive_requests.append(new_request)
+            if possible_primitive_requests:
+                self.pending_primitive_requests.remove(request_info_key)
+                # self.request_infos.pop(request_info_key, None)
+                self.pending_requests[id(possible_primitive_requests[0].completed)] = (
+                    request_info
+                )
+                return possible_primitive_requests
+
+    def get_rework_processes(
+        self, failed_process: process.PROCESS_UNION
+    ) -> List[process.PROCESS_UNION]:
+        """
+        Returns a list of rework processes for the given item.
+
+        Args:
+            item (Union[product.Product, primitive.Primitive]): The item to get rework processes for.
+
+        Returns:
+            List[process.PROCESS_UNION]: List of rework processes.
+        """
+        return self.process_matcher.get_rework_compatible(
+            failed_process
+        )

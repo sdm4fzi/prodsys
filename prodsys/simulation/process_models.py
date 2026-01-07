@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional, Dict
+from typing import List, Optional, Dict
 import random
-from pydantic import BaseModel, Field
 
 from prodsys.util.util import flatten
 
-class ProcessModel(ABC, BaseModel):
+
+class ProcessModel(ABC):
     """
     Abstract process model base class that defines the interface for all process models.
     """
@@ -41,8 +41,16 @@ class ListProcessModel(ProcessModel):
         process_list (List[PROCESS_UNION]): List of processes that are executed sequentially.
     """
 
-    process_list: List[PROCESS_UNION]
-    current_marking: int = Field(default=0, init=False)
+    def __init__(self, process_list: List[PROCESS_UNION]):
+        """
+        Initializes the ListProcessModel with the given list of processes.
+
+        Args:
+            process_list (List[PROCESS_UNION]): List of processes that are executed sequentially.
+        """
+        super().__init__()
+        self.process_list = process_list
+        self.current_marking = 0
 
     def get_next_possible_processes(self) -> Optional[List[PROCESS_UNION]]:
         if self.current_marking == len(self.process_list):
@@ -53,7 +61,7 @@ class ListProcessModel(ProcessModel):
         self.current_marking += 1
 
 
-class PrecendeGraphNode(BaseModel):
+class PrecendeGraphNode:
     """
     Class that represents a node in a precedence graph.
 
@@ -66,10 +74,26 @@ class PrecendeGraphNode(BaseModel):
         marking (bool): Indicates if the node is marked.
     """
 
-    process: PROCESS_UNION
-    successors: Optional[List[PrecendeGraphNode]] = []
-    predecessors: Optional[List[PrecendeGraphNode]] = []
-    marking: bool = Field(default=False, init=False)
+    def __init__(
+        self,
+        process: PROCESS_UNION,
+        successors: Optional[List[PrecendeGraphNode]] = None,
+        predecessors: Optional[List[PrecendeGraphNode]] = None,
+    ):
+        """
+        Initializes the PrecendeGraphNode with the given process, successors and predecessors.
+
+        Args:
+            process (PROCESS_UNION): The process that is represented by the node.
+            successors (Optional[List[PrecendeGraphNode]]): List of successor nodes.
+            predecessors (Optional[List[PrecendeGraphNode]]): List of predecessor nodes.
+        """
+        self.process = process
+        if successors is not None:
+            self.successors = successors
+        if predecessors is not None:
+            self.predecessors = predecessors
+        self.marking = False
 
     def update_marking(self):
         """
@@ -99,7 +123,7 @@ def get_predecessor_processes(
 
 
 def get_predecessors_adjacency_matrix(
-    adjacency_matrix: Dict[str, List[str]]
+    adjacency_matrix: Dict[str, List[str]],
 ) -> Dict[str, List[str]]:
     """
     Returns the predecessing processes' IDs of all processes in a process model.
@@ -145,8 +169,23 @@ class PrecedenceGraphProcessModel(ProcessModel):
         current_marking (Optional[PrecendeGraphNode]): The current marking, i.e. the node that represents the previously executed process, of the process model.
     """
 
-    nodes: List[PrecendeGraphNode] = Field(default_factory=list, init=False)
-    current_marking: Optional[PrecendeGraphNode] = Field(init=False, default=None)
+    def __init__(self):
+        """
+        Initializes the PrecedenceGraphProcessModel with an empty list of nodes and no current marking.
+        """
+        super().__init__()
+        self.nodes = []
+        self.current_marking = None
+
+    @property
+    def process_list(self) -> List[PROCESS_UNION]:
+        """
+        Returns a list of all processes in the precedence graph.
+        
+        Returns:
+            List[PROCESS_UNION]: List of all processes in the precedence graph.
+        """
+        return [node.process for node in self.nodes]
 
     def __str__(self) -> str:
         """
@@ -157,10 +196,49 @@ class PrecedenceGraphProcessModel(ProcessModel):
         """
         adjacency_matrix = {}
         for node in self.nodes:
-            adjacency_matrix[node.process.process_data.ID] = [
-                successor.process.process_data.ID for successor in node.successors
+            adjacency_matrix[node.process.data.ID] = [
+                successor.process.data.ID for successor in node.successors
             ]
         return str(adjacency_matrix)
+
+    def clear(self):
+        """
+        Clears the marking of all nodes in the process model.
+        """
+        for node in self.nodes:
+            node.marking = False
+        self.current_marking = None
+        self.set_initial_marking()
+    
+    def create_instance(self) -> "PrecedenceGraphProcessModel":
+        """
+        Creates a fresh instance of the precedence graph with the same structure
+        but independent marking state. This is necessary for concurrent processing
+        of multiple products in systems with capacity > 1.
+        
+        Returns:
+            PrecedenceGraphProcessModel: A new instance with the same structure.
+        """
+        new_graph = PrecedenceGraphProcessModel()
+        
+        # Create new nodes for each process
+        node_map = {}  # Map old nodes to new nodes
+        for old_node in self.nodes:
+            new_node = PrecendeGraphNode(
+                process=old_node.process,
+                successors=[],
+                predecessors=[]
+            )
+            new_graph.nodes.append(new_node)
+            node_map[old_node] = new_node
+        
+        # Copy the successor and predecessor relationships
+        for old_node in self.nodes:
+            new_node = node_map[old_node]
+            new_node.successors = [node_map[succ] for succ in old_node.successors]
+            new_node.predecessors = [node_map[pred] for pred in old_node.predecessors]
+        
+        return new_graph
 
     def set_initial_marking(self):
         """
@@ -202,7 +280,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
         Returns:
             List[str]: List of process IDs of all nodes in the process model.
         """
-        return [node.process.process_data.ID for node in self.nodes]
+        return [node.process.data.ID for node in self.nodes]
 
     def add_node(
         self,
@@ -218,7 +296,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
             successors (List[PROCESS_UNION]): List of successor processes.
             predecessors (List[PROCESS_UNION]): List of predecessor processes.
         """
-        if not process.process_data.ID in self.get_node_process_ids():
+        if process.data.ID not in self.get_node_process_ids():
             node = PrecendeGraphNode(process=process, successors=[], predecessors=[])
             self.nodes.append(node)
         else:
@@ -226,7 +304,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
 
         successor_nodes: List[PrecendeGraphNode] = []
         for successor in successors:
-            if successor.process_data.ID not in self.get_node_process_ids():
+            if successor.data.ID not in self.get_node_process_ids():
                 self.add_node(successor, [], [])
 
             successor_nodes.append(
@@ -236,7 +314,7 @@ class PrecedenceGraphProcessModel(ProcessModel):
 
         predecessor_nodes: List[PrecendeGraphNode] = []
         for predecessor in predecessors:
-            if predecessor.process_data.ID not in self.get_node_process_ids():
+            if predecessor.data.ID not in self.get_node_process_ids():
                 self.add_node(predecessor, [], [])
             predecessor_nodes.append(
                 [node for node in self.nodes if node.process == predecessor].pop()

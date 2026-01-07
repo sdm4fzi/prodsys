@@ -1,0 +1,215 @@
+{
+    "ID": "",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "t1",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 0.8,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "t3",
+            "description": "",
+            "speed": 60.0,
+            "reaction_time": 0.05,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "arrival_model_1",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 0.82,
+            "scale": 0.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [],
+    "process_data": [
+        {
+            "ID": "p1",
+            "description": "",
+            "time_model_id": "t1",
+            "type": "ProductionProcesses"
+        },
+        {
+            "ID": "tp",
+            "description": "",
+            "time_model_id": "t3",
+            "type": "TransportProcesses"
+        }
+    ],
+    "queue_data": [
+        {
+            "ID": "source_1_default_output_queue",
+            "description": "Default output queue of source_1",
+            "capacity": 0.0,
+            "location": null
+        },
+        {
+            "ID": "machine_default_input_queue",
+            "description": "Default input queue of machine",
+            "capacity": 0,
+            "location": null
+        },
+        {
+            "ID": "machine_default_output_queue",
+            "description": "Default output queue of machine",
+            "capacity": 0,
+            "location": null
+        },
+        {
+            "ID": "sink1_default_input_queue",
+            "description": "Default input queue of sink1",
+            "capacity": 0.0,
+            "location": null
+        },
+        {
+            "ID": "storage1",
+            "description": "",
+            "capacity": 30,
+            "location": [
+                5.0,
+                10.0
+            ]
+        },
+        {
+            "ID": "storage2",
+            "description": "",
+            "capacity": 20,
+            "location": [
+                10.0,
+                5.0
+            ]
+        }
+    ],
+    "node_data": [],
+    "resource_data": [
+        {
+            "ID": "machine",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                0.0
+            ],
+            "controller": "PipelineController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "p1"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "input_queues": [
+                "machine_default_input_queue"
+            ],
+            "output_queues": [
+                "machine_default_output_queue"
+            ]
+        },
+        {
+            "ID": "transport",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                5.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "tp"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        },
+        {
+            "ID": "transport2",
+            "description": "",
+            "capacity": 1,
+            "location": [
+                5.0,
+                5.0
+            ],
+            "controller": "TransportController",
+            "control_policy": "FIFO",
+            "process_ids": [
+                "tp"
+            ],
+            "process_capacities": [
+                1
+            ],
+            "state_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "product1",
+            "description": "",
+            "product_type": "product1",
+            "processes": [
+                "p1"
+            ],
+            "transport_process": "tp"
+        }
+    ],
+    "sink_data": [
+        {
+            "ID": "sink1",
+            "description": "",
+            "location": [
+                10.0,
+                0.0
+            ],
+            "product_type": "product1",
+            "input_queues": [
+                "sink1_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "ID": "source_1",
+            "description": "",
+            "location": [
+                0.0,
+                0.0
+            ],
+            "product_type": "product1",
+            "time_model_id": "arrival_model_1",
+            "routing_heuristic": "random",
+            "output_queues": [
+                "source_1_default_output_queue"
+            ]
+        }
+    ],
+    "scenario_data": null,
+    "primitive_data": [
+        {
+            "ID": "primitive1",
+            "description": "",
+            "primitive_type": "primitive1",
+            "transport_process": "tp",
+            "storages": [
+                "storage1",
+                "storage2"
+            ],
+            "quantity_in_storages": [
+                0,
+                0
+            ],
+            "relevant_processes": [],
+            "relevant_transport_processes": [
+                "tp"
+            ]
+        }
+    ],
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
+}

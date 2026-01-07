@@ -182,56 +182,94 @@
             "type": "TransportProcesses"
         }
     ],
-    "queue_data": [
+    "port_data": [
         {
             "ID": "SourceQueue",
             "description": "Output-Queue for all sources",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 0.0],
+            "interface_type": "input_output",
+            "port_type": "queue"
         },
         {
             "ID": "SinkQueue",
             "description": "Input-Queue for all sinks",
-            "capacity": 0
+            "capacity": 0,
+            "location": [30.0, 30.0],
+            "interface_type": "input_output",
+            "port_type": "queue"
         },
         {
             "ID": "M1_default_input_queue",
             "description": "Default input queue of M1",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 0.0],
+            "interface_type": "input",
+            "port_type": "queue"
         },
         {
             "ID": "M1_default_output_queue",
             "description": "Default output queue of M1",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 1.0],
+            "interface_type": "output",
+            "port_type": "queue"
         },
         {
             "ID": "M2_default_input_queue",
             "description": "Default input queue of M2",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 5.0],
+            "interface_type": "input",
+            "port_type": "queue"
         },
         {
             "ID": "M2_default_output_queue",
             "description": "Default output queue of M2",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 6.0],
+            "interface_type": "output",
+            "port_type": "queue"
         },
         {
             "ID": "M3_default_input_queue",
             "description": "Default input queue of M3",
-            "capacity": 0
+            "capacity": 0,
+            "location": [5.0, 0.0],
+            "interface_type": "input",
+            "port_type": "queue"
         },
         {
             "ID": "M3_default_output_queue",
             "description": "Default output queue of M3",
-            "capacity": 0
+            "capacity": 0,
+            "location": [4.0, 1.0],
+            "interface_type": "output",
+            "port_type": "queue"
         },
         {
             "ID": "M4_default_input_queue",
             "description": "Default input queue of M4",
-            "capacity": 0
+            "capacity": 0,
+            "location": [5.0, 5.0],
+            "interface_type": "input",
+            "port_type": "queue"
         },
         {
             "ID": "M4_default_output_queue",
             "description": "Default output queue of M4",
-            "capacity": 0
+            "capacity": 0,
+            "location": [6.0, 6.0],
+            "interface_type": "output",
+            "port_type": "queue"
+        },
+        {
+            "ID": "TR1_default_queue",
+            "description": "Default queue for transport resource TR1",
+            "capacity": 0,
+            "location": [0.0, 10.0],
+            "interface_type": "input_output",
+            "port_type": "queue"
         }
     ],
     "node_data": [],
@@ -243,14 +281,6 @@
             "location": [
                 0.0,
                 0.0
-            ],
-            "input_location": [
-                0.0,
-                0.0
-            ],
-            "output_location": [
-                0.0,
-                1.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -265,10 +295,8 @@
             "state_ids": [
                 "BSM"
             ],
-            "input_queues": [
-                "M1_default_input_queue"
-            ],
-            "output_queues": [
+            "ports": [
+                "M1_default_input_queue",
                 "M1_default_output_queue"
             ]
         },
@@ -279,14 +307,6 @@
             "location": [
                 0.0,
                 5.0
-            ],
-            "input_location": [
-                0.0,
-                5.0
-            ],
-            "output_location": [
-                0.0,
-                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "SPT",
@@ -301,10 +321,8 @@
             "state_ids": [
                 "BSM"
             ],
-            "input_queues": [
-                "M2_default_input_queue"
-            ],
-            "output_queues": [
+            "ports": [
+                "M2_default_input_queue",
                 "M2_default_output_queue"
             ]
         },
@@ -315,14 +333,6 @@
             "location": [
                 5.0,
                 0.0
-            ],
-            "input_location": [
-                5.0,
-                0.0
-            ],
-            "output_location": [
-                4.0,
-                1.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -335,10 +345,8 @@
             "state_ids": [
                 "BSM"
             ],
-            "input_queues": [
-                "M3_default_input_queue"
-            ],
-            "output_queues": [
+            "ports": [
+                "M3_default_input_queue",
                 "M3_default_output_queue"
             ]
         },
@@ -349,14 +357,6 @@
             "location": [
                 5.0,
                 5.0
-            ],
-            "input_location": [
-                5.0,
-                5.0
-            ],
-            "output_location": [
-                6.0,
-                6.0
             ],
             "controller": "PipelineController",
             "control_policy": "FIFO",
@@ -369,10 +369,8 @@
             "state_ids": [
                 "BSM"
             ],
-            "input_queues": [
-                "M4_default_input_queue"
-            ],
-            "output_queues": [
+            "ports": [
+                "M4_default_input_queue",
                 "M4_default_output_queue"
             ]
         },
@@ -384,7 +382,8 @@
                 0.0,
                 10.0
             ],
-            "controller": "TransportController",
+            "can_move": true,
+            "controller": "PipelineController",
             "control_policy": "FIFO",
             "process_ids": [
                 "TP1"
@@ -394,6 +393,9 @@
             ],
             "state_ids": [
                 "BST"
+            ],
+            "ports": [
+                "TR1_default_queue"
             ]
         }
     ],
@@ -401,7 +403,7 @@
         {
             "ID": "Product_1",
             "description": "Product 1",
-            "product_type": "Product_1",
+            "type": "Product_1",
             "processes": [
                 "P1",
                 "P2",
@@ -414,7 +416,7 @@
         {
             "ID": "Product_2",
             "description": "Product 2",
-            "product_type": "Product_2",
+            "type": "Product_2",
             "processes": [
                 "P4",
                 "P6",
@@ -432,7 +434,7 @@
                 30.0
             ],
             "product_type": "Product_1",
-            "input_queues": [
+            "ports": [
                 "SinkQueue"
             ]
         },
@@ -444,7 +446,7 @@
                 30.0
             ],
             "product_type": "Product_2",
-            "input_queues": [
+            "ports": [
                 "SinkQueue"
             ]
         }
@@ -460,7 +462,7 @@
             "product_type": "Product_1",
             "time_model_id": "ftm1",
             "routing_heuristic": "shortest_queue",
-            "output_queues": [
+            "ports": [
                 "SourceQueue"
             ]
         },
@@ -474,12 +476,70 @@
             "product_type": "Product_2",
             "time_model_id": "ftm2",
             "routing_heuristic": "shortest_queue",
-            "output_queues": [
+            "ports": [
                 "SourceQueue"
             ]
         }
     ],
-    "scenario_data": null,
+    "scenario_data": {
+        "constraints": {
+          "max_reconfiguration_cost": 100000,
+          "max_num_machines": 6,
+          "max_num_processes_per_machine": 3,
+          "max_num_transport_resources": 3,
+          "target_product_count": { "Product_1": 400, "Product_2": 350 }
+        },
+        "options": {
+          "transformations": [
+            "production_capacity",
+            "transport_capacity",
+            "layout",
+            "sequencing_logic",
+            "routing_logic"
+          ],
+          "positions": [
+            [0, 0],
+            [0, 5],
+            [5, 0],
+            [5, 5],
+            [10, 5],
+            [5, 10],
+            [20, 20],
+            [25, 20],
+            [15, 20],
+            [20, 15],
+            [25, 25]
+          ],
+          "machine_controllers": ["FIFO", "SPT", "LIFO"],
+          "transport_controllers": ["FIFO", "SPT_transport"],
+          "routing_heuristics": ["shortest_queue", "random", "FIFO"]
+        },
+        "info": {
+          "machine_cost": 30000,
+          "transport_resource_cost": 15000,
+          "process_module_cost": 5000,
+          "selling_machines": true,
+          "selling_transport_resources": false,
+          "breakdown_cost": 0.11,
+          "time_range": 2880 ,
+          "maximum_breakdown_time": 180
+        },
+        "objectives": [
+          {
+            "name": "throughput",
+            "weight": 0.025
+          },
+          {
+            "name": "cost",
+            "weight": 0.001
+          },
+          {
+            "name": "WIP",
+            "weight": 1
+          }
+        ]
+      }
+      ,
     "valid_configuration": true,
     "reconfiguration_cost": 0.0
 }

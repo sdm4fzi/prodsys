@@ -4,17 +4,19 @@ import importlib_metadata
 import toml
 from prodsys.conf.logging_config import set_logging
 from prodsys.models import (
+    dependency_data,
+    port_data,
     processes_data,
     product_data,
-    queue_data,
-    auxiliary_data,
     resource_data,
     scenario_data,
     sink_data,
     source_data,
     state_data,
     time_model_data,
+    production_system_data
 )
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys import adapters
 from prodsys.util import post_processing  # , optimization_util
 from prodsys.simulation import runner

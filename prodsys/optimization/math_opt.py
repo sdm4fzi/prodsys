@@ -1,9 +1,11 @@
 from typing import Any, Dict, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from prodsys.optimization.optimizer import Optimizer
 from prodsys.optimization.util import (
-    check_breakdown_states_available, create_default_breakdown_states
-    )
+    check_breakdown_states_available,
+    create_default_breakdown_states,
+)
 from uuid import uuid1
 import scipy.stats
 import datetime
@@ -34,7 +36,7 @@ from gurobipy import GRB
 
 
 def adjust_number_of_transport_resources(
-    adapter_object: adapters.ProductionSystemAdapter, number_of_transport_resources: int
+    adapter_object: adapters.ProductionSystemData, number_of_transport_resources: int
 ) -> None:
     """Adjusts the number of transport resources in the adapter object.
 
@@ -50,14 +52,14 @@ def adjust_number_of_transport_resources(
         adapter_object.resource_data.append(new_transport_resource)
 
 
-def get_modul_counts(adapter: adapters.ProductionSystemAdapter) -> Dict[str, int]:
+def get_modul_counts(adapter: adapters.ProductionSystemData) -> Dict[str, int]:
     modul_count_dict = {}
     # Fall Prozessmodul noch nicht vorhanden fehlt
     for process in adapter.process_data:
         if isinstance(process, processes_data.ProductionProcessData):
             modul_count_dict[process.ID] = 0
     for resource in adapter.resource_data:
-        if not isinstance(resource, resource_data.ProductionResourceData):
+        if not isinstance(resource, resource_data.ResourceData):
             continue
         for process in resource.process_ids:
             modul_count_dict[process] += 1
@@ -74,7 +76,7 @@ class MathOptimizer(BaseModel):
         optimization_time_portion (float): Portion of the total time that is used for optimization. Can reduce computation time significantly.
     """
 
-    adapter: adapters.ProductionSystemAdapter
+    adapter: adapters.ProductionSystemData
     optimization_time_portion: float = 1.0
 
     model: Any = None
@@ -129,13 +131,13 @@ class MathOptimizer(BaseModel):
                     for station in range(
                         self.adapter.scenario_data.constraints.max_num_machines
                     ):
-                        x[product_type.ID][work_piece_index][step][
-                            station
-                        ] = self.model.addVar(
-                            vtype=GRB.BINARY,
-                            name="x[{},{},{},{}]".format(
-                                product_type.ID, work_piece_index, step, station
-                            ),
+                        x[product_type.ID][work_piece_index][step][station] = (
+                            self.model.addVar(
+                                vtype=GRB.BINARY,
+                                name="x[{},{},{},{}]".format(
+                                    product_type.ID, work_piece_index, step, station
+                                ),
+                            )
                         )
         return x
 
@@ -349,9 +351,9 @@ class MathOptimizer(BaseModel):
                 )
                 # Adjust processing times with safety factor (0,85-Quantil of the normal distribution)
                 quantil = scipy.stats.norm.ppf(0.85, loc=0, scale=1)
-                processing_times_per_product_and_step[product.ID][
-                    step
-                ] = time_model.location + (time_model.scale * quantil)
+                processing_times_per_product_and_step[product.ID][step] = (
+                    time_model.location + (time_model.scale * quantil)
+                )
         return processing_times_per_product_and_step
 
     def check_extended_time_per_station(self):
@@ -453,7 +455,7 @@ class MathOptimizer(BaseModel):
         number_of_seeds: int = 1,
     ):
         """
-        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.JsonProductionSystemAdapter`) and performance of the found configuration in a simulation run.
+        Saves the results of the optimization, i.e. system configuration (`prodsys.adapters.ProductionSystemData`) and performance of the found configuration in a simulation run.
 
         For saving the configuration, some defaults attributes are used for non-found degrees of freedom in the optimization:
 
@@ -476,7 +478,7 @@ class MathOptimizer(BaseModel):
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data
-                if not isinstance(resource, resource_data.ProductionResourceData)
+                if not isinstance(resource, resource_data.ResourceData)
             ]
             adjust_number_of_transport_resources(
                 new_adapter, adjusted_number_of_transport_resources
@@ -501,7 +503,7 @@ class MathOptimizer(BaseModel):
                     continue
                 location = random.choice(possible_positions)
                 possible_positions.remove(location)
-                new_resource = resource_data.ProductionResourceData(
+                new_resource = resource_data.ResourceData(
                     ID="M" + str(resource_counter),
                     description="",
                     capacity=1,
@@ -525,11 +527,12 @@ class MathOptimizer(BaseModel):
                 solution_dict,
                 number_of_seeds,
                 new_adapter,
-                optimizer.full_save
+                optimizer.full_save,
             )
             optimizer.save_optimization_step(
                 fintess_values, new_adapter, event_log_dict
             )
+
 
 class MathOptHyperparameters(BaseModel):
     """
@@ -561,12 +564,13 @@ class MathOptHyperparameters(BaseModel):
         }
     )
 
+
 def mathematical_optimization(
     optimizer: "Optimizer",
-    #base_configuration: adapters.ProductionSystemAdapter,
-    #hyper_parameters: MathOptHyperparameters,
-    #save_folder: str = "results",
-    #full_save: bool = False,
+    # base_configuration: adapters.ProductionSystemAdapter,
+    # hyper_parameters: MathOptHyperparameters,
+    # save_folder: str = "results",
+    # full_save: bool = False,
 ):
     """
     Optimize the configuration of the production system with mathematical optimization.
@@ -578,11 +582,13 @@ def mathematical_optimization(
         save_folder (str, optional): Folder to save the results in. Defaults to "results".
         full_save (bool, optional): Indicates if the full results are saved. Defaults to False.
     """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    adapters.ProductionSystemData.model_config["validate_assignment"] = False
 
     base_configuration = optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
-        raise ValueError("Compound processes are not supported in the current configuration.")
+        raise ValueError(
+            "Compound processes are not supported in the current configuration."
+        )
     if not check_breakdown_states_available(base_configuration):
         create_default_breakdown_states(base_configuration)
 
@@ -598,4 +604,3 @@ def mathematical_optimization(
         adjusted_number_of_transport_resources=optimizer.hyperparameters.adjusted_number_of_transport_resources,
         number_of_seeds=optimizer.hyperparameters.number_of_seeds,
     )
-

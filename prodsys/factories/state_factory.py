@@ -1,9 +1,6 @@
-from __future__ import annotations
+from typing import Dict, List, TYPE_CHECKING, List
 
-from dataclasses import field
-from typing import List, TYPE_CHECKING, Optional, List
-
-from pydantic import ConfigDict, BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
 from prodsys.simulation import sim
 from prodsys.factories import time_model_factory
@@ -12,7 +9,18 @@ from prodsys.simulation import state
 
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
+
+
+STATE_MAP = {
+    state_data.StateTypeEnum.SetupState: state.SetupState,
+    state_data.StateTypeEnum.BreakDownState: state.BreakDownState,
+    state_data.StateTypeEnum.TransportState: state.TransportState,
+    state_data.StateTypeEnum.ProductionState: state.ProductionState,
+    state_data.StateTypeEnum.ProcessBreakDownState: state.ProcessBreakDownState,
+    state_data.StateTypeEnum.ChargingState: state.ChargingState,
+    state_data.StateTypeEnum.NonScheduled: state.NonScheduledState,
+}
 
 
 class StateFactory:
@@ -32,7 +40,7 @@ class StateFactory:
         self.env = env
         self.time_model_factory = time_model_factory
         self.state_data: List[state_data.STATE_DATA_UNION] = []
-        self.states: List[state.STATE_UNION] = []
+        self.states: Dict[str, state.STATE_UNION] = {}
 
     def create_states_from_configuration_data(self, configuration_data: dict):
         for cls_name, items in configuration_data.items():
@@ -50,16 +58,16 @@ class StateFactory:
             return {}
         loading_time_model_dict = {}
         if transport_state.loading_time_model_id is not None:
-            loading_time_model_dict[
-                "loading_time_model"
-            ] = self.time_model_factory.get_time_model(
-                transport_state.loading_time_model_id
+            loading_time_model_dict["loading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.loading_time_model_id
+                )
             )
         if transport_state.unloading_time_model_id is not None:
-            loading_time_model_dict[
-                "unloading_time_model"
-            ] = self.time_model_factory.get_time_model(
-                transport_state.unloading_time_model_id
+            loading_time_model_dict["unloading_time_model"] = (
+                self.time_model_factory.get_time_model(
+                    transport_state.unloading_time_model_id
+                )
             )
         return loading_time_model_dict
 
@@ -93,9 +101,24 @@ class StateFactory:
             }
         return battery_time_model_dict
 
+    def get_non_scheduled_time_model_data(
+        self, state_data: state_data.STATE_DATA_UNION
+    ) -> dict:
+        non_scheduled_time_model_dict = {}
+        if (
+            "non_scheduled_time_model_id" in state_data.model_dump()
+            and state_data.model_dump()["non_scheduled_time_model_id"] is not None
+        ):
+            return {
+                "non_scheduled_time_model": self.time_model_factory.get_time_model(
+                    state_data.non_scheduled_time_model_id
+                )
+            }
+        return non_scheduled_time_model_dict
+
     def add_state(self, state_data: state_data.STATE_DATA_UNION):
         values = {
-            "state_data": state_data,
+            "data": state_data,
             "time_model": self.time_model_factory.get_time_model(
                 state_data.time_model_id
             ),
@@ -104,9 +127,15 @@ class StateFactory:
         values.update(self.get_loading_time_models_data(state_data))
         values.update(self.get_repair_time_model_data(state_data))
         values.update(self.get_battery_time_model_data(state_data))
-        self.states.append(TypeAdapter(state.STATE_UNION).validate_python(values))
+        values.update(self.get_non_scheduled_time_model_data(state_data))
 
-    def create_states(self, adapter: adapter.ProductionSystemAdapter):
+        state_class = STATE_MAP.get(state_data.type)
+        if state_class is None:
+            raise ValueError(f"Unknown state type: {state_data.type}")
+        new_state = state_class(**values)
+        self.states[state_data.ID] = new_state
+
+    def create_states(self, adapter: "production_system_data.ProductionSystemData"):
         """
         Creates state objects based on the given adapter.
 
@@ -126,4 +155,4 @@ class StateFactory:
         Returns:
             List[state.STATE_UNION]: List of state objects with the given IDs.
         """
-        return [st for st in self.states if st.state_data.ID in IDs]
+        return [self.states[ID] for ID in IDs if ID in self.states]

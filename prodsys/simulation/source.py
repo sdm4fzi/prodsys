@@ -1,19 +1,25 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Tuple, Generator
+from typing import List, TYPE_CHECKING, Literal, Optional, Set, Tuple, Generator
 
-from pydantic import BaseModel, ConfigDict, Field
 from simpy import events
 
 import logging
 
+
+from prodsys.simulation import port, sim, time_model
+from prodsys.simulation import router as router_module
+from prodsys.models import source_data, product_data, performance_data
+
+from prodsys.simulation import product_processor
+
+if TYPE_CHECKING:
+    from prodsys.factories import product_factory
+
 logger = logging.getLogger(__name__)
 
-from prodsys.simulation import router, sim, store, time_model
-from prodsys.models import source_data, product_data
 
-
-class Source(BaseModel):
+class Source:
     """
     Class that represents a source.
 
@@ -27,25 +33,37 @@ class Source(BaseModel):
         output_queues (List[store.Queue], optional): The output queues. Defaults to [].
     """
 
-    env: sim.Environment
-    data: source_data.SourceData
-    product_data: product_data.ProductData
-    product_factory: product_factory.ProductFactory
-    time_model: time_model.TimeModel
-    router: router.Router
-    # TODO: add a release policy...
-    output_queues: List[store.Queue] = Field(default_factory=list, init=False)
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: source_data.SourceData,
+        product_data: product_data.ProductData,
+        product_factory: product_factory.ProductFactory,
+        time_model: time_model.TimeModel,
+        conwip: Optional[int] = None,
+        schedule: Optional[List[performance_data.Event]] = None,
+    ):
+        self.env = env
+        self.data = data
+        self.product_data = product_data
+        self.product_factory = product_factory
+        self.time_model = time_model
+        self.conwip = conwip
+        self.schedule = schedule
+        self.release_index = 0
+        self.released_product_ids: Set[str] = set()
+        self.ports: List[port.Queue] = []
+        self.can_move = False
+        self.product_processor = product_processor.ProductProcessor(env)
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def add_output_queues(self, output_queues: List[store.Queue]):
+    def add_ports(self, ports: List[port.Queue]):
         """
         Adds output queues to the source.
 
         Args:
-            output_queues (List[store.Queue]): The output queues.
+            ports (List[store.Queue]): The source ports.
         """
-        self.output_queues.extend(output_queues)
+        self.ports.extend(ports)
 
     def start_source(self):
         """
@@ -60,7 +78,7 @@ class Source(BaseModel):
         Returns:
             int: Sum of items in the source output-queues.
         """
-        return sum([len(q.items) for q in self.output_queues])
+        return sum([len(q.items) for q in self.ports])
 
     def get_input_queue_length(self) -> int:
         """
@@ -79,57 +97,40 @@ class Source(BaseModel):
             Generator: Yields when a product is created or when a product is put in an output queue.
         """
         while True:
-            inter_arrival_time = self.time_model.get_next_time()
-            if inter_arrival_time <= 0:
-                logger.debug(
-                    {
-                        "ID": self.data.ID,
-                        "sim_time": self.env.now,
-                        "resource": self.data.ID,
-                        "event": f"Inter arrival time is less than or equal to 0. Stopping source.",
-                    }
-                )
-                break
+            if self.schedule:
+                if self.release_index >= len(self.schedule):
+                    return
+                if self.schedule[self.release_index].product in self.released_product_ids:
+                    self.release_index += 1
+                    continue
+                inter_arrival_time = self.schedule[self.release_index].time - self.env.now
+                if inter_arrival_time <= 0:
+                    inter_arrival_time = 1
+            else:
+                inter_arrival_time = self.time_model.get_next_time()
+                if inter_arrival_time <= 0:
+                    break
             yield self.env.timeout(inter_arrival_time)
-            product = self.product_factory.create_product(
-                self.product_data, self.router
-            )
-            logger.debug(
-                {
-                    "ID": self.data.ID,
-                    "sim_time": self.env.now,
-                    "resource": self.data.ID,
-                    "product": product.product_data.ID,
-                    "event": f"Created product",
-                }
-            )
-            available_events_events = []
-            for queue in self.output_queues:
-                queue.reserve()
-                available_events_events.append(queue.put(product.product_data))
-            yield events.AllOf(self.env, available_events_events)
-            logger.debug(
-                {
-                    "ID": self.data.ID,
-                    "sim_time": self.env.now,
-                    "resource": self.data.ID,
-                    "product": product.product_data.ID,
-                    "event": f"Put product in output queue",
-                }
-            )
+            if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
+                continue
+            if self.schedule:
+                scheduled_product_id = self.schedule[self.release_index].product
+                self.released_product_ids.add(scheduled_product_id)
+                # Pass the scheduled product ID directly to create_product
+                product = self.product_factory.create_product(
+                    self.product_data, self.data.routing_heuristic, product_id=scheduled_product_id
+                )
+            else:
+                product = self.product_factory.create_product(
+                    self.product_data, self.data.routing_heuristic
+                )
             product.update_location(self)
-            product.process = self.env.process(product.process_product())
+            # TODO: this logic should be moved to the interaction handler!
+            for queue in self.ports:
+                yield from queue.put(product.data)
+                product.update_location(queue)
+            self.env.process(self.product_processor.process_product(product))
+            self.release_index += 1
 
     def get_location(self) -> List[float]:
-        """
-        Returns the location of the source.
-
-        Returns:
-            List[float]: The location. Has to be a list of length 2.
-        """
         return self.data.location
-
-
-from prodsys.factories import product_factory
-
-# Source.model_rebuild()

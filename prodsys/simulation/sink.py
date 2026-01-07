@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from prodsys.simulation import sim, store
+from prodsys.simulation import port, sim
 from prodsys.models import sink_data
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product
+    from prodsys.simulation.entities import product
 
 
-class Sink(BaseModel):
+class Sink:
     """
     Class that represents a sink.
 
@@ -22,29 +20,28 @@ class Sink(BaseModel):
         input_queues (List[store.Queue], optional): The input queues. Defaults to [].
     """
 
-    env: sim.Environment
-    data: sink_data.SinkData
-    product_factory: product_factory.ProductFactory
-    input_queues: List[store.Queue] = Field(default_factory=list, init=False)
+    def __init__(
+        self,
+        env: sim.Environment,
+        data: sink_data.SinkData,
+        product_factory: product_factory.ProductFactory,
+    ):
+        self.env = env
+        self.data = data
+        self.product_factory = product_factory
+        self.ports: List[port.Queue] = []
+        self.can_move = False
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def add_input_queues(self, input_queues: List[store.Queue]):
+    def add_ports(self, ports: List[port.Queue]):
         """
         Adds input queues to the sink.
 
         Args:
-            input_queues (List[store.Queue]): The input queues.
+            ports (List[store.Queue]): The input ports.
         """
-        self.input_queues.extend(input_queues)
+        self.ports.extend(ports)
 
     def get_location(self) -> List[float]:
-        """
-        Returns the location of the sink.
-
-        Returns:
-            List[float]: The location. Has to be a list of length 2.
-        """
         return self.data.location
 
     def get_input_queue_length(self) -> int:
@@ -71,6 +68,22 @@ class Sink(BaseModel):
         Args:
             product (product.Product): The finished product.
         """
+        router = self.product_factory.router
+
+        self.product_factory.router.primitive_factory.primitives.append(product)
+        if(product.data.becomes_consumable):    
+            if self.product_factory.router:
+                if product.data.type not in router.free_primitives_by_type:
+                    router.free_primitives_by_type[product.data.type] = []
+                router.free_primitives_by_type[product.data.type].append(product)
+                # Notify all resources that might be waiting for this primitive type
+                # This allows controllers to recheck feasibility of pending requests
+                for resource in router.resources:
+                    if resource.controller and not resource.controller.state_changed.triggered:
+                        resource.controller.state_changed.succeed()
+                if not router.got_primitive_request.triggered:
+                    router.got_primitive_request.succeed()
+                    
         self.product_factory.register_finished_product(product)
 
 

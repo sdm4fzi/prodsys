@@ -1,8 +1,6 @@
-import json
 import time
 from copy import deepcopy
 from typing import TYPE_CHECKING
-from prodsys.util import util
 from pydantic import BaseModel, ConfigDict
 import logging
 import signal
@@ -12,14 +10,11 @@ from prodsys.optimization.adapter_manipulation import mutation
 from prodsys.optimization.optimization import check_valid_configuration
 # from prodsys.optimization.util import document_individual
 
-logger = logging.getLogger(__name__)
 
 from simanneal import Annealer
 
-from prodsys.simulation import sim
 from prodsys import adapters
 from prodsys.optimization.util import (
-    get_weights,
     check_breakdown_states_available,
     create_default_breakdown_states,
 )
@@ -27,6 +22,9 @@ from prodsys.util.util import set_seed
 
 if TYPE_CHECKING:
     from prodsys.optimization.optimizer import Optimizer
+
+
+logger = logging.getLogger(__name__)
 
 
 class ThreadSafeAnnealer(Annealer):
@@ -48,13 +46,13 @@ class ProductionSystemOptimization(ThreadSafeAnnealer):
     def __init__(
         self,
         optimizer: "Optimizer",
-        base_configuration: adapters.ProductionSystemAdapter,
+        base_configuration: adapters.ProductionSystemData,
         performances: dict,
         solutions_dict: dict,
         start: float,
         weights: tuple,
         number_of_seeds: int = 1,
-        initial_solution: adapters.ProductionSystemAdapter = None,
+        initial_solution: adapters.ProductionSystemData = None,
         full_save: bool = False,
     ):
         super().__init__(initial_solution, None)
@@ -80,7 +78,7 @@ class ProductionSystemOptimization(ThreadSafeAnnealer):
                 configuration=configuration,
                 base_configuration=self.base_configuration,
             ):
-                self.state: adapters.ProductionSystemAdapter = configuration
+                self.state: adapters.ProductionSystemData = configuration
                 break
 
     def energy(self):
@@ -151,7 +149,7 @@ def simulated_annealing_optimization(optimizer: "Optimizer"):
         save_folder (str): Folder to save the results in. Defaults to "results".
         initial_solution (adapters.ProductionSystemAdapter, optional): Initial solution for optimization. Defaults to None.
     """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    adapters.ProductionSystemData.model_config["validate_assignment"] = False
     base_configuration = optimizer.adapter.model_copy(deep=True)
 
     if not adapters.check_for_clean_compound_processes(base_configuration):

@@ -2,7 +2,7 @@ import prodsys.express as psx
 import prodsys
 
 print("version used:", prodsys.VERSION)
-# prodsys.set_logging("DEBUG")
+prodsys.set_logging("CRITICAL")
 
 t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
 t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
@@ -18,27 +18,25 @@ s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
 setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
-machine = psx.ProductionResource(
+machine = psx.Resource(
     [p1, p2],
     [5, 0],
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine",
-    output_location=[5, 1],
 )
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     [p1, p2],
     [7, 0],
     2,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
-    output_location=[7, 1],
 )
 
-transport = psx.TransportResource([tp], [0, 0], 1, ID="transport")
+transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
-product1 = psx.Product([p1], tp, "product1")
-product2 = psx.Product([p2], tp, "product2")
+product1 = psx.Product(process=[p1, p2], transport_process=tp, ID="product1")
+product2 = psx.Product(process=[p2, p1], transport_process=tp, ID="product2")
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 sink2 = psx.Sink(product2, [10, 0], "sink2")
@@ -56,19 +54,13 @@ system = psx.ProductionSystem(
     [machine, machine2, transport], [source1, source2], [sink1, sink2]
 )
 model = system.to_model()
-from prodsys import runner
 
-runner_instance = runner.Runner(adapter=model)
+runner_instance = prodsys.runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-simulation_source = runner_instance.source_factory.sources[0]
-product_example_1 = runner_instance.product_factory.create_product(
-    simulation_source.product_data, simulation_source.router
-)
-print(product_example_1.product_data.ID)
 system.run(1000)
 
 runner_instance = system.runner
 
 runner_instance.print_results()
-# runner_instance.plot_results()
+runner_instance.plot_results()
 # runner_instance.save_results_as_csv("examples")

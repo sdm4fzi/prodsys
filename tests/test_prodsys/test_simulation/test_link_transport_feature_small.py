@@ -1,12 +1,12 @@
 import pytest
-from prodsys.adapters import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 import prodsys.express as psx
 from prodsys import runner
 
 
 # Define the path to your test configuration file. This should be similar to example_simulation.py.
 @pytest.fixture
-def simulation_adapter() -> JsonProductionSystemAdapter:
+def simulation_adapter() -> ProductionSystemData:
     time_model_agv = psx.DistanceTimeModel(
         speed=360, reaction_time=0, ID="time_model_x"
     )
@@ -54,23 +54,23 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     )
 
     # All resources
-    machine01 = psx.ProductionResource(
+    machine01 = psx.Resource(
         ID="resource01",
         processes=[productionprocess01],
         location=[10, 10],
     )
-    machine02 = psx.ProductionResource(
+    machine02 = psx.Resource(
         ID="resource02",
         processes=[productionprocess02],
         location=[20, 10],
     )
-    machine03 = psx.ProductionResource(
+    machine03 = psx.Resource(
         ID="resource03",
         processes=[productionprocess03],
         location=[10, 20],
     )
 
-    agv01 = psx.TransportResource(
+    agv01 = psx.Resource(
         location=[0, 0],
         ID="agv01",
         processes=[ltp01],
@@ -78,7 +78,7 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     # All products
     product01 = psx.Product(
-        processes=[
+        process=[
             productionprocess01,
             productionprocess02,
             productionprocess03,
@@ -88,7 +88,7 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
     )
 
     product02 = psx.Product(
-        processes=[
+        process=[
             productionprocess03,
             productionprocess02,
             productionprocess01,
@@ -136,26 +136,28 @@ def simulation_adapter() -> JsonProductionSystemAdapter:
 
     # Add production system
     productionsystem = psx.ProductionSystem(
-    resources=[
-        agv01,
-        machine01,
-        machine02,
-        machine03,
-    ],
-    sources=[source01, source02],
-    sinks=[sink01, sink02],
-    ID="productionsystem01",)
+        resources=[
+            agv01,
+            machine01,
+            machine02,
+            machine03,
+        ],
+        sources=[source01, source02],
+        sinks=[sink01, sink02],
+        ID="productionsystem01",
+    )
 
     adapter = productionsystem.to_model()
     return adapter
 
 
-def test_initialize_simulation(simulation_adapter: JsonProductionSystemAdapter):
-    runner_instance = runner.Runner(adapter=simulation_adapter)   
+def test_initialize_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
 
-def test_run_simulation(simulation_adapter: JsonProductionSystemAdapter):
-    runner_instance = runner.Runner(adapter=simulation_adapter)   
+
+def test_run_simulation(simulation_adapter: ProductionSystemData):
+    runner_instance = runner.Runner(production_system_data=simulation_adapter)
     runner_instance.initialize_simulation()
     runner_instance.run(480)
     assert runner_instance.env.now == 480

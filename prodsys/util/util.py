@@ -7,6 +7,9 @@ import os
 import numpy as np
 from typing import Any, List, Generator
 import warnings
+from enum import Enum
+
+import prodsys.models.production_system_data
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -14,15 +17,18 @@ from os import listdir
 from os.path import isfile, join
 
 import simpy
-from prodsys import adapters
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
-def get_class_from_str(name: str, cls_dict: dict):
+def get_class_from_str(name: Any, cls_dict: dict):
     """
     Returns the class for a given name from a dictionary containing classes.
 
     Args:
-        name (str): Name of the class.
+        name (str): Name of the class. Enum values are supported (their `.value` is used).
         cls_dict (dict): Dictionary containing classes.
 
     Raises:
@@ -31,7 +37,15 @@ def get_class_from_str(name: str, cls_dict: dict):
     Returns:
         _type_: The class.
     """
-    if name not in cls_dict.keys():
+    # Support both Enum keys (common in v1) and string keys
+    if isinstance(name, Enum):
+        if name in cls_dict:
+            return cls_dict[name]
+        name_value = name.value
+        if name_value in cls_dict:
+            return cls_dict[name_value]
+        name = name_value
+    if name not in cls_dict:
         raise ValueError(f"Class '{name}' is not implemented.")
     return cls_dict[name]
 
@@ -61,25 +75,25 @@ def trivial_process(env: simpy.Environment) -> Generator:
 
 
 def read_initial_solutions(
-    folder_path: str, base_configuration: adapters.ProductionSystemAdapter
-) -> List[adapters.ProductionSystemAdapter]:
+    folder_path: str, base_configuration: "ProductionSystemData"
+) -> List["ProductionSystemData"]:
     """
     Reads all initial solutions from a folder and returns them as a list of adapters.
 
     Args:
         folder_path (str): The folder path where the initial solutions are stored.
-        base_configuration (adapters.ProductionSystemAdapter): The base configuration for optimization containing the scenario data.
+        base_configuration (ProductionSystemData): The base configuration for optimization containing the scenario data.
 
     Returns:
-        List[adapters.ProductionSystemAdapter]: List of adapters of the initial solutions.
+        List[ProductionSystemData]: List of adapters of the initial solutions.
     """
     file_paths = [f for f in listdir(folder_path) if isfile(join(folder_path, f))]
     adapter_objects = []
     for counter, file_path in enumerate(file_paths):
         if ".json" not in file_path or file_path == "optimization_results.json":
             continue
-        adapter = adapters.JsonProductionSystemAdapter()
-        adapter.read_data(join(folder_path, file_path))
+        adapter = prodsys.models.production_system_data.ProductionSystemData()
+        adapter.read(join(folder_path, file_path))
         adapter.scenario_data = base_configuration.scenario_data.model_copy()
         if not adapter.ID:
             adapter.ID = f"initial_solution_{counter}"

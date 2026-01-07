@@ -46,7 +46,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
 
     def __init__(
         self,
-        adapter: adapters.ProductionSystemAdapter,
+        adapter: adapters.ProductionSystemData,
         observation_space: Optional[spaces.Space] = None,
         action_space: Optional[spaces.Space] = None,
         render_mode: Optional[str] = None,
@@ -56,7 +56,7 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.action_space = action_space
         self.render_mode = render_mode
 
-        self.runner = runner.Runner(adapter=self.adapter)
+        self.runner = runner.Runner(production_system_data=self.adapter)
 
         self.router: router.Router = None
         self.possible_requests: List[request.Request] = []
@@ -122,19 +122,18 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         self.runner.initialize_simulation()
         self.interrupt_simulation_event = events.Event(self.runner.env)
         self.chose_resource_event = events.Event(self.runner.env)
+        # v1 runner creates and starts routers via RouterFactory.
+        # For RL routing control, we keep the global router but override the routing heuristic
+        # used when creating products so that routing decisions trigger agent interaction.
+        self.router = self.runner.router_factory.global_system_router
         agent_routing_heuristic = partial(router.agent_routing_heuristic, self)
-        self.router = router.Router(
-            self.runner.resource_factory,
-            self.runner.sink_factory,
-            agent_routing_heuristic,
-        )
-
-        sources = self.runner.source_factory.sources
-        for source in sources:
-            source.router = self.router
+        self.runner.product_factory.routing_heuristic_override = agent_routing_heuristic
+        # Also update already-created products (if any)
+        for product in self.runner.product_factory.products.values():
+            product.routing_heuristic = agent_routing_heuristic
 
         self.observers = []
-        for resource in self.runner.resource_factory.resources:
+        for resource in self.runner.resource_factory.all_resources.values():
             obs = observer.ResourceObserver(
                 resource_factory=self.runner.resource_factory,
                 product_factory=self.runner.product_factory,
@@ -183,7 +182,9 @@ class AbstractRoutingControlEnv(gym.Env, ABC):
         """
         resource_index = np.argmax(action)
 
-        self.chosen_resource = self.runner.resource_factory.resources[resource_index]
+        self.chosen_resource = list(self.runner.resource_factory.all_resources.values())[
+            resource_index
+        ]
         if not self.chosen_resource.data.ID in [
             r.resource.data.ID for r in self.possible_requests
         ]:

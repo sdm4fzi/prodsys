@@ -1,73 +1,54 @@
-[tool.poetry]
+[project]
 name = "prodsys"
-version = "0.9.10"
+version = "1.0.0"
 description = "A useful module for production system simulation and optimization"
-authors = ["Sebastian Behrendt <sebastian.behrendt@kit.edu>"]
-license = "MIT"
-readme = ["README.md", "LICENSE"]
+authors = [
+    {name = "Sebastian Behrendt", email = "sebastian.behrendt@kit.edu"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "deap>=1.4.3",
+    "email-validator>=2.3.0",
+    "gurobipy>=12.0.3",
+    "importlib-metadata>=8.7.0",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.2",
+    "pathfinding>=1.0.17",
+    "plotly>=6.3.0",
+    "pydantic>=2.11.9",
+    "scipy>=1.15.3",
+    "simanneal>=0.5.0",
+    "simpy>=4.1.1",
+    "toml>=0.10.2",
+    "tqdm>=4.67.1",
+    "matplotlib (>=3.7.2,<4.0.0)",
+    "scikit-image (>=0.25.2,<0.26.0)",
+    "shapely (==2.0.2)",
+    "pygeoops (==0.3.0)",
+    "numpy (<2)",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10, <3.13"
-pydantic = "^2.7.1"
-simpy = "^4.0.1"
-fastapi = "^0.111.0"
-uvicorn = {extras = ["standard"], version = "^0.29.0"}
-deap = "^1.3.3"
-simanneal = "^0.5.0"
-gurobipy = "^11.0.0"
-hydra-core = "^1.3.2"
-pandas = "^2.0.0"
-openpyxl = "^3.1.2"
-plotly = "^5.14.1"
-scipy = "^1.11.1"
-tqdm = "^4.65"
-email-validator = "^2.1.1"
-pathfinding = "^1.0.9"
-importlib-metadata = "^8.5.0"
-toml = "^0.10.2"
-
-[tool.poetry.extras]
-ai = ["torch", "torchvision", "torchaudio", "tensorboard", "gymnasium", "stable-baselines3"]
-
-
-[tool.poetry.group.ai]
-optional = true
-
-[tool.poetry.group.ai.dependencies]
-torch = "^2.0.1"
-torchvision = "^0.15.2"
-torchaudio = "^2.0.2"
-tensorboard = "^2.13.0"
-gymnasium = ">=0.26.3"
-stable-baselines3 = "^2.0.0"
-
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.test.dependencies]
-pytest = "^7.3.1"
-
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
-mkdocs-material = "^9.1.13"
-mkdocs-include-dir-to-nav = "^1.2.0"
-ipykernel = "^6.23.1"
-nbformat = "^5.8.0"
-ipywidgets = "^8.0.6"
-snakeviz = "^2.2.0"
-mkdocstrings = {extras = ["python-legacy"], version = "^0.27.0"}
-
-
-[tool.poetry.group.build]
-optional = true
-
-[tool.poetry.group.build.dependencies]
-setuptools = "^67.7.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "mkdocs-material>=9.0.0",
+    "ipykernel>=6.0.0",
+    "nbformat>=5.0.0",
+    "ipywidgets>=8.0.0",
+    "snakeviz>=2.0.0",
+    "mkdocstrings>=0.24.0",
+    "mkdocs-include-dir-to-nav>=0.0.1",
+]
+RL-control = [
+    "stable-baselines3>=2.0.0",
+    "gymnasium>=0.29.0",
+    "tensorboard>=2.11.0",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+

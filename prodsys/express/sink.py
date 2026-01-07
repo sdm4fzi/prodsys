@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from uuid import uuid1
 
 
 from pydantic import Field, conlist
 from pydantic.dataclasses import dataclass
 
-from prodsys.express import core
+from prodsys.express import core, port
 
-from prodsys.models import sink_data, queue_data
+from prodsys.models import port_data, sink_data
 import prodsys
+import prodsys.models
+from prodsys.models.core_asset import Location2D
+import prodsys.models.production_system_data
+
+from prodsys.express.product import Product
 
 
 @dataclass
@@ -59,11 +64,11 @@ class Sink(core.ExpressObject):
         ```
     """
 
-    product: product.Product
-    location: list[float] = Field(..., min_length=2, max_length=2)
+    product: Product
+    location: Location2D
     ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
 
-    _input_queues: List[queue_data.QueueData] = Field(default_factory=list, init=False)
+    ports: List[port.Queue] = Field(default_factory=list, init=False)
 
     def to_model(self) -> sink_data.SinkData:
         """
@@ -78,8 +83,12 @@ class Sink(core.ExpressObject):
             location=self.location,
             product_type=self.product.ID,
         )
-        self._input_queues = [prodsys.adapters.get_default_queue_for_sink(sink)]
-        sink.input_queues = [q.ID for q in self._input_queues]
+        if not self.ports:
+            port_data = [
+                prodsys.models.production_system_data.get_default_queue_for_sink(sink)
+            ]
+            self.ports = [port.Queue(ID=q.ID, capacity=q.capacity, location=q.location, interface_type=q.interface_type) for q in port_data]
+        sink.ports = [q.ID for q in self.ports]
         return sink
 
 

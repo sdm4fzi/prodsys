@@ -2,14 +2,11 @@ from __future__ import annotations
 
 from typing import List, TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
-
-
 from prodsys.models.node_data import NodeData
 from prodsys.simulation import node
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
+    from prodsys.models import production_system_data
     from prodsys.simulation import sim
 
 
@@ -25,7 +22,7 @@ class NodeFactory:
         self.env = env
         self.nodes = []
 
-    def create_nodes(self, adapter: adapter.ProductionSystemAdapter):
+    def create_nodes(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates node objects based on the given adapter.
 
@@ -43,8 +40,8 @@ class NodeFactory:
             node_data (NodeData): Node data that is used to create the node object.
         """
         values = {}
-        values.update({"data": node_data})
-        self.nodes.append(TypeAdapter(node.Node).validate_python(values))
+        values.update({"data": node_data, "env": self.env})
+        self.nodes.append(node.Node(**values))
 
     def get_node(self, ID: str) -> node.Node:
         """

@@ -1,11 +1,11 @@
 import datetime
-from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.models.scenario_data import ReconfigurationEnum
 from prodsys.optimization.adapter_manipulation import add_transformation_operation
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
 )
-from prodsys.optimization.optimizer import FileSystemSaveOptimizer, InMemoryOptimizer
+from prodsys.optimization.optimizer import FileSystemSaveOptimizer
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
         number_of_processes=4,
     )
 
-    def new_transformation(adapter: JsonProductionSystemAdapter) -> bool:
+    def new_transformation(adapter: ProductionSystemData) -> bool:
         print("Mutation function called.")
 
     add_transformation_operation(
@@ -27,11 +27,11 @@ def main():
         operation=new_transformation,
     )
 
-    base_configuration = JsonProductionSystemAdapter()
-
-    base_configuration.read_data(
+    base_configuration = ProductionSystemData.read(
         "examples/optimization/optimization_example/base_scenario.json",
-        "examples/optimization/optimization_example/scenario.json",
+    )
+    base_configuration.read_scenario(
+                "examples/optimization/optimization_example/scenario.json",
     )
 
     optimizer = FileSystemSaveOptimizer(
@@ -39,7 +39,8 @@ def main():
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=True,
-        # initial_solutions=[base_configuration]    
+        smart_initial_solutions=True,
+        # initial_solutions=[base_configuration]
     )
     # optimizer = InMemoryOptimizer(
     #     adapter=base_configuration,

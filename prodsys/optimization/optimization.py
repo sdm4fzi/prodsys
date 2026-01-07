@@ -1,16 +1,20 @@
 from typing import Dict, List, Optional, Tuple, Union
+import logging
 from prodsys import adapters, runner
-from prodsys.adapters.adapter import (
-    assert_no_redudant_locations,
+from prodsys.models.production_system_data import (
+    assert_no_redundant_locations,
     assert_required_processes_in_resources_available,
     get_possible_production_processes_IDs,
 )
 from prodsys.models import performance_indicators
-from prodsys.optimization.optimization_data import OptimizationResults, OptimizationSolutions
+from prodsys.optimization.optimization_data import (
+    OptimizationResults,
+    OptimizationSolutions,
+)
 from prodsys.optimization.util import (
     get_grouped_processes_of_machine,
     get_num_of_process_modules,
-    get_required_auxiliaries,
+    get_required_primitives,
     get_weights,
 )
 from prodsys.simulation import sim
@@ -19,7 +23,7 @@ from prodsys.util.post_processing import PostProcessor
 
 
 def get_process_module_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
     num_process_modules: Dict[Tuple[str], int],
     num_process_modules_before: Dict[Tuple[str], int],
 ) -> float:
@@ -35,18 +39,18 @@ def get_process_module_cost(
         else:
             process_cost = process_module_cost
         sum_process_module_cost += (
-                num_process_modules[process_tuple]
-                - num_process_modules_before.get(process_tuple, 0)
-            )* process_cost
+            num_process_modules[process_tuple]
+            - num_process_modules_before.get(process_tuple, 0)
+        ) * process_cost
     return sum_process_module_cost
 
 
 def get_reconfiguration_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
-    baseline: adapters.ProductionSystemAdapter = None,
+    adapter_object: adapters.ProductionSystemData,
+    baseline: adapters.ProductionSystemData = None,
 ) -> float:
     num_machines = len(adapters.get_production_resources(adapter_object))
-    num_transport_resources = len(adapters.get_transport_resources(adapter_object))
+    num_transport_resources = len(adapters.get_transport_resources(adapter_object)) #TODO: add more complex cost calculation for conveyors/can_move=False: calculate based on costs per meter or cost per link
     num_process_modules = get_num_of_process_modules(adapter_object)
     if not baseline:
         num_machines_before = 0
@@ -63,13 +67,17 @@ def get_reconfiguration_cost(
         num_transport_resources_before = len(adapters.get_transport_resources(baseline))
         num_process_modules_before = get_num_of_process_modules(baseline)
 
-    if adapter_object.auxiliary_data:
-        auxiliary_cost = get_auxiliary_cost(adapter_object, baseline)
+    if adapter_object.dependency_data:
+        primitive_cost = get_primitive_cost(adapter_object, baseline)
     else:
-        auxiliary_cost = 0
+        primitive_cost = 0
 
-    machine_cost = (num_machines - num_machines_before)* adapter_object.scenario_data.info.machine_cost
-    transport_resource_cost = (num_transport_resources - num_transport_resources_before) * adapter_object.scenario_data.info.transport_resource_cost
+    machine_cost = (
+        num_machines - num_machines_before
+    ) * adapter_object.scenario_data.info.machine_cost
+    transport_resource_cost = (
+        num_transport_resources - num_transport_resources_before
+    ) * adapter_object.scenario_data.info.transport_resource_cost
     process_module_cost = get_process_module_cost(
         adapter_object, num_process_modules, num_process_modules_before
     )
@@ -79,30 +87,30 @@ def get_reconfiguration_cost(
         transport_resource_cost = max(0, transport_resource_cost)
     if not adapter_object.scenario_data.info.selling_process_modules:
         process_module_cost = max(0, process_module_cost)
-    if not adapter_object.scenario_data.info.selling_auxiliaries:
-        auxiliary_cost = max(0, auxiliary_cost)
-    return machine_cost + transport_resource_cost + process_module_cost + auxiliary_cost
+    if not adapter_object.scenario_data.info.selling_primitives:
+        primitive_cost = max(0, primitive_cost)
+    return machine_cost + transport_resource_cost + process_module_cost + primitive_cost
 
 
-def get_auxiliary_cost(
-    adapter_object: adapters.ProductionSystemAdapter,
-    baseline: adapters.ProductionSystemAdapter,
+def get_primitive_cost(
+    adapter_object: adapters.ProductionSystemData,
+    baseline: adapters.ProductionSystemData,
 ) -> float:
-    auxiliary_cost = 0
-    for new_auxiliary, auxiliary_before in zip(
-        adapter_object.auxiliary_data, baseline.auxiliary_data
+    primitive_cost = 0
+    for new_primitive, before_primitive in zip(
+        adapter_object.primitive_data, baseline.primitive_data
     ):
-        for i, storage in enumerate(new_auxiliary.quantity_in_storages):
-            storage_before = auxiliary_before.quantity_in_storages[i]
-            auxiliary_cost += max(
+        for i, storage in enumerate(new_primitive.quantity_in_storages):
+            storage_before = before_primitive.quantity_in_storages[i]
+            primitive_cost += max(
                 0,
                 (storage - storage_before)
-                * adapter_object.scenario_data.info.auxiliary_cost,
+                * adapter_object.scenario_data.info.primitive_cost,
             )
-    return auxiliary_cost
+    return primitive_cost
 
 
-def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_num_machines(configuration: adapters.ProductionSystemData) -> bool:
     if (
         len(adapters.get_production_resources(configuration))
         > configuration.scenario_data.constraints.max_num_machines
@@ -111,7 +119,7 @@ def valid_num_machines(configuration: adapters.ProductionSystemAdapter) -> bool:
     return True
 
 
-def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_transport_capacity(configuration: adapters.ProductionSystemData) -> bool:
     if (
         len(adapters.get_transport_resources(configuration))
         > configuration.scenario_data.constraints.max_num_transport_resources
@@ -120,7 +128,7 @@ def valid_transport_capacity(configuration: adapters.ProductionSystemAdapter) ->
     return True
 
 
-def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_num_process_modules(configuration: adapters.ProductionSystemData) -> bool:
     for resource in configuration.resource_data:
         if (
             len(
@@ -134,25 +142,26 @@ def valid_num_process_modules(configuration: adapters.ProductionSystemAdapter) -
     return True
 
 
-def valid_positions(configuration: adapters.ProductionSystemAdapter) -> bool:
+def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
     try:
-        assert_no_redudant_locations(configuration)
+        assert_no_redundant_locations(configuration)
     except ValueError as e:
         return False
 
     positions = [
-        machine.input_location
+        machine.location
         for machine in adapters.get_production_resources(configuration)
     ]
     possible_positions = configuration.scenario_data.options.positions
-    if any(position not in possible_positions for position in positions):
+    # If no positions are specified, any position is valid
+    if possible_positions and any(position not in possible_positions for position in positions):
         return False
     return True
 
 
 def valid_reconfiguration_cost(
-    configuration: adapters.ProductionSystemAdapter,
-    base_configuration: adapters.ProductionSystemAdapter,
+    configuration: adapters.ProductionSystemData,
+    base_configuration: adapters.ProductionSystemData,
 ) -> bool:
     reconfiguration_cost = get_reconfiguration_cost(
         adapter_object=configuration,
@@ -169,8 +178,9 @@ def valid_reconfiguration_cost(
 
 
 def check_valid_configuration(
-    configuration: adapters.ProductionSystemAdapter,
-    base_configuration: adapters.ProductionSystemAdapter,
+    configuration: adapters.ProductionSystemData,
+    base_configuration: adapters.ProductionSystemData,
+    verbose: bool = False,
 ) -> bool:
     """
     Function that checks if a configuration is valid.
@@ -178,39 +188,51 @@ def check_valid_configuration(
     Args:
         configuration (adapters.ProductionSystemAdapter): Configuration to be checked.
         base_configuration (adapters.ProductionSystemAdapter): Baseline configuration.
+        verbose (bool): If True, use warning-level logging instead of debug-level.
 
     Returns:
         bool: True if the configuration is valid, False otherwise.
     """
+    log_func = logging.warning if verbose else logging.debug
+    
     if not valid_num_machines(configuration):
+        log_func("Failed valid_num_machines")
         return False
     if not valid_transport_capacity(configuration):
+        log_func("Failed valid_transport_capacity")
         return False
     if not valid_num_process_modules(configuration):
+        log_func("Failed valid_num_process_modules")
         return False
     try:
-        assert_required_auxiliaries_available(configuration)
+        # assert_required_primitives_available(configuration)
+        # FIXME: this has to be resolved by asserting dependencies and primitives
+        pass
     except ValueError as e:
+        log_func(f"Failed assert_required_primitives_available: {e}")
         return False
     try:
         assert_required_processes_in_resources_available(configuration)
     except ValueError as e:
+        log_func(f"Failed assert_required_processes_in_resources_available: {e}")
         return False
     if not valid_positions(configuration):
+        log_func("Failed valid_positions")
         # TODO: raise error if the positions cannot be changed (no production capacity or layout in transformations of scenario)
         return False
     if not valid_reconfiguration_cost(configuration, base_configuration):
+        log_func("Failed valid_reconfiguration_cost")
         return False
     return True
 
 
-def assert_required_auxiliaries_available(
-    configuration: adapters.ProductionSystemAdapter,
+def assert_required_primitives_available(
+    configuration: adapters.ProductionSystemData,
 ) -> bool:
-    required_auxiliaries = get_required_auxiliaries(configuration)
-    for auxiliary in required_auxiliaries:
-        if not sum(auxiliary.quantity_in_storages) > 0:
-            raise ValueError(f"Required auxiliary {auxiliary.ID} is not available.")
+    required_primitives = get_required_primitives(configuration)
+    for primitive in required_primitives:
+        if not sum(primitive.quantity_in_storages) > 0:
+            raise ValueError(f"Required primitive {primitive.ID} is not available.")
 
 
 def get_throughput_time(pp: PostProcessor) -> float:
@@ -240,7 +262,7 @@ KPI_function_dict = {
 
 
 def evaluate_ea_wrapper(
-    base_scenario: adapters.ProductionSystemAdapter,
+    base_scenario: adapters.ProductionSystemData,
     solution_dict: Dict[str, Union[list, str]],
     number_of_seeds: int,
     full_save: bool,
@@ -256,10 +278,10 @@ def evaluate_ea_wrapper(
 
 
 def evaluate(
-    base_scenario: adapters.ProductionSystemAdapter,
+    base_scenario: adapters.ProductionSystemData,
     solution_dict: OptimizationSolutions,
     number_of_seeds: int,
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
     full_save: bool,
 ) -> tuple[Optional[list[float]], Optional[dict]]:
     """
@@ -281,14 +303,17 @@ def evaluate(
     sim.VERBOSE = 0
     adapter_object_hash = adapter_object.hash()
     if adapter_object_hash in solution_dict.hashes:
-        return None, None # fitness and event log dict is obtained in optimizer from cache
+        return (
+            None,
+            None,
+        )  # fitness and event log dict is obtained in optimizer from cache
     if not check_valid_configuration(adapter_object, base_scenario):
         return [-100000 / weight for weight in get_weights(base_scenario, "max")], None
 
     fitness_values = []
 
     for seed in range(number_of_seeds):
-        runner_object = runner.Runner(adapter=adapter_object)
+        runner_object = runner.Runner(production_system_data=adapter_object)
         if not adapter_object.scenario_data.info.time_range:
             raise ValueError("time_range is not defined in scenario_data")
         adapter_object.seed = seed
@@ -306,4 +331,8 @@ def evaluate(
 
     mean_fitness = [sum(fitness) / len(fitness) for fitness in zip(*fitness_values)]
     # TODO: allow to return multiple runner objects in the future
-    return mean_fitness, runner_object.event_logger.get_data_as_dataframe().to_dict()  if full_save else None
+    return mean_fitness, (
+        runner_object.event_logger.get_data_as_dataframe().to_dict()
+        if full_save
+        else None
+    )

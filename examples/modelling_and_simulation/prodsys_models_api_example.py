@@ -1,4 +1,8 @@
 import prodsys
+from prodsys.models.production_system_data import (
+    add_default_queues_to_production_system,
+)
+from prodsys.util import post_processing
 
 # Create a time model for a production process and a transport process
 
@@ -9,6 +13,7 @@ welding_time_model = prodsys.time_model_data.FunctionTimeModelData(
     location=25.0,
     scale=0.0,
 )
+
 
 transport_time_model = prodsys.time_model_data.DistanceTimeModelData(
     ID="time model 2",
@@ -36,7 +41,7 @@ transport_process = prodsys.processes_data.TransportProcessData(
 
 # Create a production resource
 
-machine = prodsys.resource_data.ProductionResourceData(
+machine = prodsys.resource_data.ResourceData(
     ID="machine 1",
     description="Machine 1 data description",
     capacity=2,
@@ -48,12 +53,12 @@ machine = prodsys.resource_data.ProductionResourceData(
 
 # create a transport resource
 
-transport_resource = prodsys.resource_data.TransportResourceData(
+transport_resource = prodsys.resource_data.ResourceData(
     ID="Forklift1",
     description="Forklift 1 data description",
     capacity=1,
     location=[5.0, 0.0],
-    controller=prodsys.resource_data.ControllerEnum.TransportController,
+    controller=prodsys.resource_data.ControllerEnum.PipelineController,
     control_policy=prodsys.resource_data.TransportControlPolicy.SPT_transport,
     process_ids=[transport_process.ID],
 )
@@ -64,6 +69,7 @@ transport_resource = prodsys.resource_data.TransportResourceData(
 product = prodsys.product_data.ProductData(
     ID="product 1",
     description="Product 1 data description",
+    type="product 1",
     processes=[welding_process.ID],
     transport_process=transport_process.ID,
 )
@@ -97,7 +103,7 @@ sink = prodsys.sink_data.SinkData(
     product_type="product 1",
 )
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter(
+production_system_instance = prodsys.production_system_data.ProductionSystemData(
     time_model_data=[welding_time_model, transport_time_model, arrival_time_model],
     process_data=[welding_process, transport_process],
     resource_data=[machine, transport_resource],
@@ -106,15 +112,11 @@ production_system = prodsys.adapters.JsonProductionSystemAdapter(
     sink_data=[sink],
 )
 
+add_default_queues_to_production_system(production_system_instance)
+production_system_instance.validate_configuration()
 
-production_system.validate_configuration()
-
-runner = prodsys.runner.Runner(adapter=production_system)
+runner = prodsys.runner.Runner(production_system_data=production_system_instance)
 runner.initialize_simulation()
 runner.run(100000)
-
-from prodsys.util import post_processing
-
-post_processing.WARM_UP_CUT_OFF = 0
 
 runner.print_results()

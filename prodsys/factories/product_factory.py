@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Dict
-
-from pydantic import BaseModel, ConfigDict, Field
-
+from typing import TYPE_CHECKING, List, Dict, Optional, Callable
 
 from prodsys.models.product_data import ProductData
+from prodsys.models.source_data import RoutingHeuristic
+from prodsys.models import processes_data
 from prodsys.simulation import process_models
 from prodsys.simulation import process
+from prodsys.simulation import router as router_module
+from prodsys.simulation import product_info
+from prodsys.models import production_system_data
 
 if TYPE_CHECKING:
+    from prodsys.models import production_system_data
     from prodsys.factories import process_factory
-    from prodsys.simulation import sim, router, product
+    from prodsys.simulation import sim
+    from prodsys.simulation.entities import product
+    from prodsys.simulation import logger
+    from prodsys.factories.dependency_factory import DependencyFactory
 
 
 class ProductFactory:
@@ -24,17 +30,116 @@ class ProductFactory:
     """
 
     def __init__(
-        self, env: sim.Environment, process_factory: process_factory.ProcessFactory
+        self, env: sim.Environment, process_factory: process_factory.ProcessFactory, adapter: production_system_data.ProductionSystemData
     ):
         self.env = env
         self.process_factory = process_factory
-        self.products = []
+        self.adapter: production_system_data.ProductionSystemData = adapter
+        self.products: Dict[str, product.Product] = {}
         self.finished_products = []
-        self.event_logger = False
+        self.event_logger: logger.EventLogger = None
         self.product_counter = 0
+        self.router: router_module.Router = None
+        # Optional hook for control/experiments (e.g. RL): when set, overrides the routing heuristic
+        # passed in from SourceData and is assigned to all newly created products.
+        self.routing_heuristic_override: Optional[Callable] = None
+        self.dependency_factory: DependencyFactory = None
+        self.products_init: Dict[str, product.Product] = {}
+        
+    def set_router(self, router: router_module.Router) -> None:
+        """
+        Set the router for the factory.
 
+        Args:
+            router (router_module.Router): The router to be set.
+        """
+        self.router = router
+        
+    def create_product_mockup(
+            self, adapter: production_system_data.ProductionSystemData
+        ) -> product.Product:
+            """
+            Creates a product object based on the given product data and router.
+
+            Args:
+                product_data (ProductData): Product data that is used to create the product object.
+                router (router.Router): Router that is used to route the product object.
+
+            Raises:
+                ValueError: If the transport process is not found.
+
+            Returns:
+                product.Product: Created product object.
+            """
+            
+            if not getattr(adapter, "product_data", None):
+                return None  
+
+            last_product = None
+            for product_data in adapter.product_data:
+            
+            
+                product_data = product_data.model_copy()
+                product_data.ID = (
+                    str(product_data.type) 
+                )
+                process_model = self.create_process_model(product_data)
+                transport_processes = self.process_factory.get_process(
+                    product_data.transport_process
+                )
+                if not transport_processes or isinstance(
+                    transport_processes, process.ProductionProcess
+                ):
+                    raise ValueError("Transport process not found.")
+                
+                routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get("FIFO")
+                
+                if (
+                    product_data.dependency_ids 
+                    and getattr(self, "dependency_factory", None) is not None
+                ):
+                    dependencies = []
+                    for dependency_id in product_data.dependency_ids:
+                        dependency = self.dependency_factory.get_dependency(dependency_id)
+                        dependencies.append(dependency)
+                else:
+                    dependencies = None
+
+                product_info_instance = product_info.ProductInfo()
+
+                product_object = product.Product(
+                    env=self.env,
+                    data=product_data,
+                    product_router=self.router,
+                    routing_heuristic=routing_heuristic_callable,
+                    process_model=process_model,
+                    transport_process=transport_processes,
+                    dependencies=dependencies,
+                    info=product_info_instance,
+                    
+                )
+                
+                self.products_init[product_data.ID] = product_object
+                
+                last_product = product_object
+            return last_product
+        
+    def get_product_init(self, ID: str) -> product.Product:
+        """
+        Returns the product object with the given ID.
+
+        Args:
+            ID (str): ID of the product object.
+
+        Returns:
+            product.Product: Product object with the given ID.
+        """
+        if ID in self.products_init:
+            return self.products_init[ID]
+        raise ValueError(f"Product with ID {ID} not found.")
+    
     def create_product(
-        self, product_data: ProductData, router: router.Router
+        self, product_data: ProductData, routing_heuristic: RoutingHeuristic, product_id: Optional[str] = None
     ) -> product.Product:
         """
         Creates a product object based on the given product data and router.
@@ -50,9 +155,12 @@ class ProductFactory:
             product.Product: Created product object.
         """
         product_data = product_data.model_copy()
-        product_data.ID = (
-            str(product_data.product_type) + "_" + str(self.product_counter)
-        )
+        if not product_id:
+            product_id = (
+                str(product_data.type) + "_" + str(self.product_counter)
+            )
+        self.product_counter += 1
+        product_data.ID = product_id
         process_model = self.create_process_model(product_data)
         transport_processes = self.process_factory.get_process(
             product_data.transport_process
@@ -61,19 +169,40 @@ class ProductFactory:
             transport_processes, process.ProductionProcess
         ):
             raise ValueError("Transport process not found.")
+        if self.routing_heuristic_override is not None:
+            routing_heuristic_callable = self.routing_heuristic_override
+        else:
+            routing_heuristic_callable = router_module.ROUTING_HEURISTIC.get(
+                routing_heuristic, None
+            )
+            if routing_heuristic_callable is None:
+                raise ValueError(f"Routing heuristic {routing_heuristic} not found.")
+        
+        if product_data.dependency_ids:
+            dependencies = []
+            for dependency_id in product_data.dependency_ids:
+                dependency = self.dependency_factory.get_dependency(dependency_id)
+                dependencies.append(dependency)
+        else:
+            dependencies = None
+
+        product_info_instance = product_info.ProductInfo()
 
         product_object = product.Product(
             env=self.env,
-            product_data=product_data,
-            product_router=router,
+            data=product_data,
+            product_router=self.router,
+            routing_heuristic=routing_heuristic_callable,
             process_model=process_model,
             transport_process=transport_processes,
+            dependencies=dependencies,
+            info=product_info_instance,
         )
         if self.event_logger:
             self.event_logger.observe_terminal_product_states(product_object)
 
         self.product_counter += 1
-        self.products.append(product_object)
+        self.products[product_data.ID] = product_object
         return product_object
 
     def get_precendece_graph_from_id_adjacency_matrix(
@@ -112,29 +241,17 @@ class ProductFactory:
 
         Returns:
             proces_models.ProcessModel: Created process model.
-        """
-        if isinstance(product_data.processes, list) and isinstance(
-            product_data.processes[0], str
-        ):
-            process_list = self.process_factory.get_processes_in_order(
-                product_data.processes
-            )
-            return process_models.ListProcessModel(process_list=process_list)
-        elif isinstance(product_data.processes, dict):
-            return self.get_precendece_graph_from_id_adjacency_matrix(
-                product_data.processes
-            )
-        elif isinstance(product_data.processes, list) and isinstance(
-            product_data.processes[0], list
-        ):
-            id_adjacency_matrix = process_models.get_adjacency_matrix_from_edges(
-                product_data.processes
-            )
-            return self.get_precendece_graph_from_id_adjacency_matrix(
-                id_adjacency_matrix
-            )
-        else:
-            raise ValueError("Process model not recognized.")
+        """ 
+        process_model_data = processes_data.ProcessModelData(
+            ID=product_data.ID,
+            description="",
+            type=processes_data.ProcessTypeEnum.ProcessModels,
+            adjacency_matrix=product_data.processes,
+            # TODO: maybe use the dependencies of the product here... -> only resources and processes have dependencies
+        )
+        self.process_factory.add_processes(process_model_data, self.adapter)
+        process_model_process = self.process_factory.get_process(process_model_data.ID)
+        return process_model_process
 
     def get_product(self, ID: str) -> product.Product:
         """
@@ -146,7 +263,9 @@ class ProductFactory:
         Returns:
             product.Product: Product object with the given ID.
         """
-        return [m for m in self.products if m.product_data.ID == ID].pop()
+        if ID in self.products:
+            return self.products[ID]
+        raise ValueError(f"Product with ID {ID} not found.")
 
     def remove_product(self, product: product.Product):
         """
@@ -155,9 +274,10 @@ class ProductFactory:
         Args:
             product (product.Product): Product object that is removed.
         """
-        self.products = [
-            m for m in self.products if m.product_data.ID != product.product_data.ID
-        ]
+        if product.data.ID in self.products:
+            del self.products[product.data.ID]
+        else:
+            raise ValueError(f"Product with ID {product.data.ID} not found.")
 
     def register_finished_product(self, product: product.Product):
         """
@@ -170,4 +290,4 @@ class ProductFactory:
         self.remove_product(product)
 
 
-from prodsys.simulation import product
+from prodsys.simulation.entities import product

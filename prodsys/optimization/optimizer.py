@@ -1,12 +1,13 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
+import os
 import time
 from typing import Any, Callable, Optional
 
 import pandas as pd
-from pydantic import BaseModel, TypeAdapter
-from prodsys.adapters.json_adapter import JsonProductionSystemAdapter
+from pydantic import TypeAdapter
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.optimization.optimization_data import (
     FitnessData,
     OptimizationProgress,
@@ -23,7 +24,6 @@ if util.run_from_ipython():
 else:
     from tqdm import tqdm
 
-from prodsys.adapters import ProductionSystemAdapter
 from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
     evolutionary_algorithm_optimization,
@@ -40,25 +40,18 @@ from prodsys.optimization.tabu_search import (
     TabuSearchHyperparameters,
     tabu_search_optimization,
 )
+from prodsys.optimization.capacity_based_optimization import (
+    CapacityBasedHyperparameters,
+    capacity_based_optimization,
+)
 
 HyperParameters = (
     EvolutionaryAlgorithmHyperparameters
     | SimulatedAnnealingHyperparameters
     | TabuSearchHyperparameters
     | MathOptHyperparameters
+    | CapacityBasedHyperparameters
 )
-
-
-class OptimizerData(BaseModel):
-    """
-    Base class for optimizer data.
-    This class is not intended to be used directly.
-    It serves as a base for other classes that require optimization data.
-    """
-    adapter: ProductionSystemAdapter
-    hyperparameters: HyperParameters
-    initial_solutions: Optional[list[ProductionSystemAdapter]] = None
-    full_save: bool = False  # Determines whether event logs are saved
 
 class Optimizer(ABC):
     """
@@ -71,14 +64,20 @@ class Optimizer(ABC):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
+        if initial_solutions and smart_initial_solutions:
+            raise ValueError(
+                "Cannot use both initial_solutions and smart_initial_solutions at the same time."
+            )
         self.adapter = adapter
         self.hyperparameters = hyperparameters
         self.initial_solutions = initial_solutions
+        self.smart_initial_solutions = smart_initial_solutions
         self.full_save = full_save  # Determines whether event logs are saved
 
         # Do not cache configurations here; caching is implemented only in the concrete subclasses.
@@ -89,18 +88,6 @@ class Optimizer(ABC):
         self.performances_cache: OptimizationResults = get_empty_optimization_results()
         self.progress = OptimizationProgress()
         self.start_time = None
-
-
-    def get_model(self) -> OptimizerData:
-        """
-        Dumps the model data to a dictionary.
-        """
-        return OptimizerData(
-            adapter=self.adapter,
-            hyperparameters=self.hyperparameters,
-            initial_solutions=self.initial_solutions,
-            full_save=self.full_save,
-        )
 
     def get_algorithm_and_steps(self) -> tuple[Callable, int]:
         if isinstance(self.hyperparameters, EvolutionaryAlgorithmHyperparameters):
@@ -122,6 +109,10 @@ class Optimizer(ABC):
         elif isinstance(self.hyperparameters, MathOptHyperparameters):
             self.weights = get_weights(self.adapter, "min")
             return mathematical_optimization, 1
+        elif isinstance(self.hyperparameters, CapacityBasedHyperparameters):
+            updates = self.hyperparameters.num_solutions
+            self.weights = get_weights(self.adapter, "max")
+            return capacity_based_optimization, updates
         else:
             raise ValueError("No algorithm provided for the optimization.")
 
@@ -148,7 +139,7 @@ class Optimizer(ABC):
     def save_optimization_step(
         self,
         fitness_values: Optional[list[float]],
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
         event_log_dict: Optional[dict] = None,
     ) -> tuple[list[float], dict]:
         """
@@ -170,7 +161,7 @@ class Optimizer(ABC):
 
     def get_fitness_data_entry(
         self,
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
         fitness_values: list[float],
         event_log_dict: Optional[dict],
     ) -> FitnessData:
@@ -223,7 +214,7 @@ class Optimizer(ABC):
         self,
         fitness_data: FitnessData,
         generation: str,
-        configuration: JsonProductionSystemAdapter,
+        configuration: ProductionSystemData,
     ) -> None:
         """
         Caches the fitness data in memory.
@@ -237,9 +228,7 @@ class Optimizer(ABC):
         self.performances_cache[generation][configuration.ID] = fitness_data
 
     @abstractmethod
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         """
         Caches the configuration. Must be implemented by concrete subclasses.
         """
@@ -275,8 +264,8 @@ class Optimizer(ABC):
                         copied_fitness_data.production_system = None
                     if not event_log_data:
                         copied_fitness_data.event_log_dict = None
-                    copied_fitness_data.production_system = self.get_configuration_by_hash(
-                        fitness_data.hash
+                    copied_fitness_data.production_system = (
+                        self.get_configuration_by_hash(fitness_data.hash)
                     )
                     results[generation][adapter_id] = copied_fitness_data
         else:
@@ -287,7 +276,7 @@ class Optimizer(ABC):
 
     def get_optimization_result_configuration(
         self, solution_id: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Returns the configuration of the solution identified by solution_id.
         Retrieval is based on adapter id and generation.
@@ -301,7 +290,7 @@ class Optimizer(ABC):
 
     def get_configuration_by_adapter_id_and_generation(
         self, generation: str, adapter_id: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Returns the configuration for a given generation and adapter id.
         """
@@ -311,7 +300,7 @@ class Optimizer(ABC):
     @abstractmethod
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         """
         Retrieves the configuration based on its hash.
         Must be implemented by concrete subclasses.
@@ -369,18 +358,6 @@ class Optimizer(ABC):
     def get_progress(self) -> OptimizationProgress:
         return self.progress
 
-    @abstractmethod
-    def save_configuration(
-        self, configuration_hash: str, configuration: ProductionSystemAdapter
-    ) -> None:
-        """
-        Caches the configuration.
-        The base class does not implement caching.
-        Subclasses with caching enabled should override this method.
-        """
-        ...
-
-
 class InMemoryOptimizer(Optimizer):
     """
     Optimizer implementation that holds all data in memory (cache).
@@ -389,17 +366,16 @@ class InMemoryOptimizer(Optimizer):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
-        super().__init__(adapter, hyperparameters, initial_solutions, full_save)
-        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
+        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save)
+        self.configuration_cache: dict[str, ProductionSystemData] = {}
 
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         configuration_hash = configuration.hash()
         self.configuration_cache[configuration_hash] = configuration
 
@@ -414,7 +390,7 @@ class InMemoryOptimizer(Optimizer):
 
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
+    ) -> ProductionSystemData:
         if configuration_hash not in self.configuration_cache:
             raise ValueError("Configuration not found in cache.")
         return self.configuration_cache[configuration_hash]
@@ -448,22 +424,21 @@ class FileSystemSaveOptimizer(Optimizer):
 
     def __init__(
         self,
-        adapter: ProductionSystemAdapter,
+        adapter: ProductionSystemData,
         hyperparameters: HyperParameters,
         save_folder: str,
-        initial_solutions: Optional[list[ProductionSystemAdapter]] = None,
+        initial_solutions: Optional[list[ProductionSystemData]] = None,
+        smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
     ) -> None:
-        super().__init__(adapter, hyperparameters, initial_solutions, full_save)
+        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save)
         self.save_folder = save_folder
-        self.configuration_cache: dict[str, ProductionSystemAdapter] = {}
+        self.configuration_cache: dict[str, ProductionSystemData] = {}
         util.prepare_save_folder(self.save_folder + "/")
 
-    def save_configuration(
-        self, configuration: ProductionSystemAdapter
-    ) -> None:
+    def save_configuration(self, configuration: ProductionSystemData) -> None:
         configuration_hash = configuration.hash()
-        JsonProductionSystemAdapter.model_validate(configuration).write_data(
+        ProductionSystemData.model_validate(configuration).write(
             f"{self.save_folder}/hash_{configuration_hash}.json"
         )
 
@@ -474,9 +449,10 @@ class FileSystemSaveOptimizer(Optimizer):
         """
         if self.full_save and fitness_data.event_log_dict:
             df = pd.DataFrame.from_dict(fitness_data.event_log_dict)
-            df.to_json(
-                f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json", indent=4
+            event_log_path = os.path.join(
+                self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
             )
+            df.to_json(event_log_path, indent=4)
             fitness_data.event_log_dict = None  # Free up memory
         # Update the aggregated optimization results on disk.
         optimization_results = {}
@@ -492,11 +468,14 @@ class FileSystemSaveOptimizer(Optimizer):
 
     def get_configuration_by_hash(
         self, configuration_hash: str
-    ) -> ProductionSystemAdapter:
-        config = JsonProductionSystemAdapter()
-        config.read_data(
-            f"{self.save_folder}/hash_{configuration_hash}.json"
+    ) -> ProductionSystemData:
+        config_path = f"{self.save_folder}/hash_{configuration_hash}.json"
+        config = ProductionSystemData.read(config_path)
+        metadata = self.optimization_cache_first_found_hashes.hashes.get(
+            configuration_hash
         )
+        if metadata:
+            config.ID = metadata.ID
         return config
 
     def get_fitness_data_from_persistence(
@@ -512,10 +491,14 @@ class FileSystemSaveOptimizer(Optimizer):
         # In this design, the configuration is loaded separately.
         fitness_data.production_system = None
         if self.full_save:
-            df = pd.read_json(
-                f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json"
+            event_log_path = os.path.join(
+                self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
             )
-            fitness_data.event_log_dict = df.to_dict()
+            if os.path.exists(event_log_path):
+                df = pd.read_json(event_log_path)
+                fitness_data.event_log_dict = df.to_dict()
+            else:
+                fitness_data.event_log_dict = None
         else:
             fitness_data.event_log_dict = None
         return fitness_data
@@ -546,8 +529,12 @@ class FileSystemSaveOptimizer(Optimizer):
                 for adapter_id, fitness_data in optimization_results[
                     generation
                 ].items():
-                    df = pd.read_json(
-                        f"{self.save_folder}/event_log_dict_{fitness_data.hash}.json"
+                    event_log_path = os.path.join(
+                        self.save_folder, f"event_log_dict_{fitness_data.hash}.json"
                     )
-                    fitness_data.event_log_dict = df.to_dict()
+                    if os.path.exists(event_log_path):
+                        df = pd.read_json(event_log_path)
+                        fitness_data.event_log_dict = df.to_dict()
+                    else:
+                        fitness_data.event_log_dict = None
         return optimization_results

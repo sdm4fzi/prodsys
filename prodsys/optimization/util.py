@@ -9,14 +9,14 @@ from enum import Enum
 import logging
 
 from prodsys.express.state import ProcessBreakdownState
-from prodsys.models.auxiliary_data import AuxiliaryData
-
+from prodsys.models.primitives_data import PrimitiveData
+from prodsys.models.dependency_data import DependencyType
 
 logger = logging.getLogger(__name__)
 from pydantic import TypeAdapter
 
 from prodsys import adapters
-from prodsys.adapters.adapter import get_possible_production_processes_IDs
+from prodsys.models.production_system_data import get_possible_production_processes_IDs
 from prodsys.models import (
     processes_data,
     resource_data,
@@ -33,7 +33,7 @@ class BreakdownStateNamingConvention(str, Enum):
 
 
 def get_breakdown_state_ids_of_machine_with_processes(
-    processes: List[str], adapter_object: adapters.ProductionSystemAdapter
+    processes: List[str], adapter_object: adapters.ProductionSystemData
 ) -> List[str]:
     state_ids = []
     if check_breakdown_state_available(
@@ -47,32 +47,34 @@ def get_breakdown_state_ids_of_machine_with_processes(
     return state_ids
 
 
-def get_required_auxiliaries(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> List[AuxiliaryData]:
+def get_required_primitives(
+    adapter_object: adapters.ProductionSystemData,
+) -> List[PrimitiveData]:
     """
-    Function that returns the required auxiliaries for the production system.
+    Function that returns the required primitives for the production system.
 
     Args:
         adapter_object (adapters.ProductionSystemAdapter): Production system configuration with specified scenario data.
 
     Returns:
-        List[AuxiliaryData]: List of required auxiliaries
+        List[PrimitiveData]: List of required primitives
     """
-    auxiliary_ids = set()
+    dependency_ids = set()
     for product in adapter_object.product_data:
-        auxiliary_ids.update(product.auxiliaries)
-    if not auxiliary_ids:
+        dependency_ids.update(product.dependency_ids)
+    if not dependency_ids:
         return []
-    return [
-        auxiliary
-        for auxiliary in adapter_object.auxiliary_data
-        if auxiliary.ID in auxiliary_ids or auxiliary.auxiliary_type in auxiliary_ids
+    primitive_dependencies = [
+        dependency.required_entity for dependency in adapter_object.dependency_data if dependency.dependency_type == DependencyType.TOOL
     ]
+    primitives = [
+        primitive for primitive in adapter_object.primitive_data if primitive.ID in primitive_dependencies
+    ]
+    return primitives
 
 
 def check_breakdown_state_available(
-    adapter_object: adapters.ProductionSystemAdapter, breakdown_state_id: str
+    adapter_object: adapters.ProductionSystemData, breakdown_state_id: str
 ) -> bool:
     """
     Function that checks if breakdown states are available in the production system.
@@ -97,7 +99,7 @@ def check_breakdown_state_available(
 
 
 def check_process_breakdown_state_available(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
 ) -> bool:
     """
     Function that checks if process breakdown states are available in the production system.
@@ -123,7 +125,7 @@ def check_process_breakdown_state_available(
 
 
 def check_breakdown_states_available(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
 ) -> bool:
     """
     Function that checks if breakdown states are available in the production system.
@@ -176,24 +178,24 @@ def check_heterogenous_time_models(
             )
         if len(set(parameters)) == 1:
             return True
-    elif all(
-        isinstance(time_model, time_model_data.SequentialTimeModelData)
-        for time_model in time_models
-    ):
-        sequences = []
-        for time_model in time_models:
-            sequences.append(tuple(time_model.sequence))
-        if len(set(sequences)) == 1:
-            return True
-    elif all(
-        isinstance(time_model, time_model_data.ManhattanDistanceTimeModelData)
-        for time_model in time_models
-    ):
-        parameters = []
-        for time_model in time_models:
-            parameters.append((time_model.speed, time_model.reaction_time))
-        if len(set(parameters)) == 1:
-            return True
+    # elif all(
+    #     isinstance(time_model, time_model_data.SequentialTimeModelData)
+    #     for time_model in time_models
+    # ):
+    #     sequences = []
+    #     for time_model in time_models:
+    #         sequences.append(tuple(time_model.sequence))
+    #     if len(set(sequences)) == 1:
+    #         return True
+    # elif all(
+    #     isinstance(time_model, time_model_data.ManhattanDistanceTimeModelData)
+    #     for time_model in time_models
+    # ):
+    #     parameters = []
+    #     for time_model in time_models:
+    #         parameters.append((time_model.speed, time_model.reaction_time))
+    #     if len(set(parameters)) == 1:
+    #         return True
     return False
 
 
@@ -201,7 +203,7 @@ def check_states_for_heterogenous_time_models(
     states: List[
         Union[state_data.BreakDownStateData, state_data.ProcessBreakDownStateData]
     ],
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
 ) -> bool:
     """
     Function that checks if the states have heterogenous time models.
@@ -235,7 +237,7 @@ def check_states_for_heterogenous_time_models(
     ) and check_heterogenous_time_models(repair_time_models)
 
 
-def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAdapter):
+def create_default_breakdown_states(adapter_object: adapters.ProductionSystemData):
     logger.info(f"Trying to create default breakdown states.")
     breakdown_states = [
         state
@@ -310,11 +312,10 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
     if process_breakdown_states:
         process_breakdown_states_by_process_id = {}
         for state in process_breakdown_states:
-            process_breakdown_states_by_process_id[
-                state.process_id
-            ] = process_breakdown_states_by_process_id.get(state.process_id, []) + [
-                state
-            ]
+            process_breakdown_states_by_process_id[state.process_id] = (
+                process_breakdown_states_by_process_id.get(state.process_id, [])
+                + [state]
+            )
         for (
             process_id,
             process_breakdown_states_for_process,
@@ -341,10 +342,10 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemAda
 
 
 def clean_out_breakdown_states_of_resources(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
 ):
     for resource in adapter_object.resource_data:
-        if isinstance(resource, resource_data.ProductionResourceData) and any(
+        if isinstance(resource, resource_data.ResourceData) and any(
             True
             for state in adapter_object.state_data
             if state.ID == BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value
@@ -354,7 +355,7 @@ def clean_out_breakdown_states_of_resources(
             resource.state_ids = get_breakdown_state_ids_of_machine_with_processes(
                 resource.process_ids, adapter_object
             )
-        elif isinstance(resource, resource_data.TransportResourceData) and any(
+        elif isinstance(resource, resource_data.ResourceData) and any(
             True
             for state in adapter_object.state_data
             if state.ID
@@ -366,7 +367,7 @@ def clean_out_breakdown_states_of_resources(
 
 
 def get_weights(
-    adapter: adapters.ProductionSystemAdapter, direction: Literal["min", "max"]
+    adapter: adapters.ProductionSystemData, direction: Literal["min", "max"]
 ) -> Tuple[float, ...]:
     """
     Get the weights for the objectives of the optimization from an adapter.
@@ -391,7 +392,7 @@ def get_weights(
 
 
 def add_setup_states_to_machine(
-    adapter_object: adapters.ProductionSystemAdapter, machine_id: str
+    adapter_object: adapters.ProductionSystemData, machine_id: str
 ):
     machine = next(
         resource
@@ -422,7 +423,7 @@ def add_setup_states_to_machine(
 
 
 def get_grouped_processes_of_machine(
-    machine: resource_data.ProductionResourceData,
+    machine: resource_data.ResourceData,
     possible_processes: List[Union[str, Tuple[str, ...]]],
 ) -> List[Tuple[str]]:
     grouped_processes = []
@@ -437,7 +438,7 @@ def get_grouped_processes_of_machine(
 
 
 def get_num_of_process_modules(
-    adapter_object: adapters.ProductionSystemAdapter,
+    adapter_object: adapters.ProductionSystemData,
 ) -> Dict[Tuple[str], int]:
     possible_processes = get_possible_production_processes_IDs(adapter_object)
     num_of_process_modules = {}
@@ -455,8 +456,8 @@ def get_num_of_process_modules(
 
 
 def adjust_process_capacities(
-    adapter_object: adapters.ProductionSystemAdapter,
-) -> adapters.ProductionSystemAdapter:
+    adapter_object: adapters.ProductionSystemData,
+) -> adapters.ProductionSystemData:
     """
     Function that adjusts the process capacities of the production system.
 
@@ -484,6 +485,6 @@ def adjust_process_capacities(
 #             "ID": adapter_object.ID,
 #         }
 #     if save_folder:
-#         adapters.JsonProductionSystemAdapter.model_validate(adapter_object).write_data(
+#         adapters.ProductionSystemData.model_validate(adapter_object).write_data(
 #             f"{save_folder}/generation_{current_generation}_{adapter_object.ID}.json"
 #         )

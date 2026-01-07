@@ -24,19 +24,17 @@ charging_state = psx.ChargingState(
     ID="charging_state",
 )
 
-machine = psx.ProductionResource(
+machine = psx.Resource(
     [p1, p2], [5, 0], 2, states=[setup_state_1, setup_state_2], ID="machine"
 )
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     [p1, p2], [7, 0], 2, states=[setup_state_1, setup_state_2], ID="machine2"
 )
 
-transport = psx.TransportResource(
-    [tp], [0, 0], 1, states=[charging_state], ID="transport"
-)
+transport = psx.Resource([tp], [0, 0], 1, states=[charging_state], ID="transport")
 
-product1 = psx.Product([p1], tp, "product1")
-product2 = psx.Product([p2], tp, "product2")
+product1 = psx.Product(process=[p1], transport_process=tp, ID="product1")
+product2 = psx.Product(process=[p2], transport_process=tp, ID="product2")
 
 sink1 = psx.Sink(product1, [10, 0], "sink1")
 sink2 = psx.Sink(product2, [10, 0], "sink2")
@@ -56,13 +54,8 @@ system = psx.ProductionSystem(
 model = system.to_model()
 from prodsys import runner
 
-runner_instance = runner.Runner(adapter=model)
+runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
-simulation_source = runner_instance.source_factory.sources[0]
-product_example_1 = runner_instance.product_factory.create_product(
-    simulation_source.product_data, simulation_source.router
-)
-print(product_example_1.product_data.ID)
 system.run(4000)
 
 runner_instance = system.runner

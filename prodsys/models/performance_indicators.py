@@ -13,7 +13,7 @@ class KPIEnum(str, Enum):
     THROUGHPUT = "throughput"
     COST = "cost"
     WIP = "WIP"
-    AUXILIARY_WIP = "auxiliary_WIP"
+    PRIMITIVE_WIP = "primitive_WIP"
 
     TRHOUGHPUT_TIME = "throughput_time"
     PROCESSING_TIME = "processing_time"
@@ -23,6 +23,7 @@ class KPIEnum(str, Enum):
     SETUP_TIME = "setup_time"
     CHARGING_TIME = "charging_time"
     UNSCHEDULED_DOWNTIME = "unscheduled_downtime"
+    DEPENDENCY_TIME = "dependency_time"
 
     DYNAMIC_WIP = "dynamic_WIP"
     DYNAMIC_THROUGHPUT_TIME = "dynamic_throughput_time"
@@ -158,20 +159,20 @@ class WIP(KPI):
     )
 
 
-class AuxiliaryWIP(KPI):
-    name: Literal[KPIEnum.AUXILIARY_WIP]
+class PrimitiveWIP(KPI):
+    name: Literal[KPIEnum.PRIMITIVE_WIP]
     target: Literal["min"] = "min"
 
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
                 {
-                    "name": "AUXILIARY_WIP",
+                    "name": "PRIMITIVE_WIP",
                     "target": "min",
                     "weight": 1,
                     "value": 121,
                     "context": ["system", "product_type"],
-                    "product_type": "Auxiliary_1",
+                    "product_type": "Primitive_1",
                 }
             ]
         }
@@ -364,6 +365,26 @@ class UnscheduledDowntime(KPI):
     )
 
 
+class DependencyTime(KPI):
+    name: Literal[KPIEnum.DEPENDENCY_TIME]
+    target: Literal["min"] = "min"
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "dependency_time",
+                    "target": "min",
+                    "weight": 1,
+                    "value": 0.15,
+                    "context": ["resource"],
+                    "resource": "Resource_1",
+                }
+            ]
+        }
+    )
+
+
 KPI_UNION = Union[
     Output,
     Throughput,
@@ -376,6 +397,7 @@ KPI_UNION = Union[
     SetupTime,
     ChargingTime,
     UnscheduledDowntime,
+    DependencyTime,
     DynamicWIP,
     DynamicThroughputTime,
 ]

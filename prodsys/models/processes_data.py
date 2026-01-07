@@ -1,5 +1,5 @@
 """
-The `processes_data` module contains the `prodsys.models` classes to represent the processes that can 
+The `processes_data` module contains the `prodsys.models` classes to represent the processes that can
 be performed on products by resources.
 
 The following processes are possible:
@@ -7,17 +7,16 @@ The following processes are possible:
 - `CapabilityProcessData`: A process that can be performed on a product by a resource, based on the capability of the resource.
 - `TransportProcessData`: A process that can be performed on a product by a transport resource.
 """
-
 from __future__ import annotations
+from typing import Dict
 from hashlib import md5
 from enum import Enum
 from typing import Literal, Union, List, TYPE_CHECKING, Optional
 from pydantic import ConfigDict, Field
-
 from prodsys.models.core_asset import CoreAsset
 
 if TYPE_CHECKING:
-    from prodsys.adapters.adapter import ProductionSystemAdapter
+    from prodsys.models.production_system_data import ProductionSystemData
 
 
 class ProcessTypeEnum(str, Enum):
@@ -36,6 +35,9 @@ class ProcessTypeEnum(str, Enum):
     RequiredCapabilityProcesses = "RequiredCapabilityProcesses"
     LinkTransportProcesses = "LinkTransportProcesses"
     ReworkProcesses = "ReworkProcesses"
+    ProcessModels = "ProcessModels"
+    SequentialProcesses = "SequentialProcesses"
+    LoadingProcesses = "LoadingProcesses"
 
 
 class ProcessData(CoreAsset):
@@ -49,6 +51,7 @@ class ProcessData(CoreAsset):
     """
 
     time_model_id: str
+    dependency_ids: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -62,7 +65,7 @@ class ProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the process data considering the time model data. Can be used to compare two process data objects for equal functionality.
 
@@ -111,7 +114,7 @@ class ProductionProcessData(ProcessData):
 
     type: Literal[ProcessTypeEnum.ProductionProcesses]
     failure_rate: Optional[float] = 0.0
-
+    
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -125,7 +128,7 @@ class ProductionProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the production process data considering the time model data. Can be used to compare two process data objects for equal functionality.
 
@@ -184,7 +187,7 @@ class CapabilityProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the capability process data considering the capability, time model and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -230,6 +233,7 @@ class TransportProcessData(ProcessData):
     type: Literal[ProcessTypeEnum.TransportProcesses]
     loading_time_model_id: Optional[str] = None
     unloading_time_model_id: Optional[str] = None
+    can_move: Optional[bool] = True #TODO: automatically adapt this to the resources can_move property
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -246,7 +250,7 @@ class TransportProcessData(ProcessData):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -325,6 +329,15 @@ class ReworkProcessData(ProcessData):
         }
     )
 
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the rework process data considering the reworked process ids and type of the process. Can be used to compare two process data objects for equal functionality.
+        """
+        base_class_hash = super().hash(adapter)
+        reworked_process_ids_hash = "".join(sorted(self.reworked_process_ids))
+        blocking_hash = str(self.blocking)
+        return md5((base_class_hash + reworked_process_ids_hash + blocking_hash).encode("utf-8")).hexdigest()   
+
 
 class CompoundProcessData(CoreAsset):
     """
@@ -352,7 +365,7 @@ class CompoundProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the compound process data considering the proces ids. Can be used to compare two process data objects for equal functionality.
 
@@ -417,7 +430,7 @@ class RequiredCapabilityProcessData(CoreAsset):
         }
     )
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -464,7 +477,7 @@ class LinkTransportProcessData(TransportProcessData):
     links: List[List[str]]
     capability: Optional[str] = Field(default_factory=str)
 
-    def hash(self, adapter: ProductionSystemAdapter) -> str:
+    def hash(self, adapter: ProductionSystemData) -> str:
         """
         Returns a unique hash for the required capability process data considering the capability and type of the process. Can be used to compare two process data objects for equal functionality.
 
@@ -497,6 +510,100 @@ class LinkTransportProcessData(TransportProcessData):
     )
 
 
+class ProcessModelData(CoreAsset):
+    """
+    Class that represents process model data. A process model can model sequences of processes as a directed acyclic graph (DAG).
+
+    Args:
+        ID (str): ID of the process model.
+        description (str): Description of the process model.
+        type (Literal[ProcessTypeEnum.ProcessModels]): Type of the process.
+        process_ids (List[str]): List of process IDs that are part of this process model.
+        adjacency_matrix (Dict[str, List[str]]): Adjacency matrix representing the DAG structure.
+    """
+    type: Literal[ProcessTypeEnum.ProcessModels]
+    adjacency_matrix: Dict[str, List[str]]
+    dependency_ids: list[str] = Field(default_factory=list)
+
+    @property
+    def process_ids(self) -> List[str]:
+        """Returns the list of process IDs from the adjacency matrix keys."""
+        return list(self.adjacency_matrix.keys())
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "PM1",
+                    "description": "Process Model 1",
+                    "type": "ProcessModels",
+                    "adjacency_matrix": {"P1": ["P2"], "P2": ["P3"], "P3": []},
+                    "dependency_ids": ["P1", "P2"],
+                }
+            ]
+        }
+    )
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the process model data considering the process IDs and adjacency matrix.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the process data.
+
+        Returns:
+            str: hash of the process model data.
+        """
+        adjacency_hash = "".join([f"{k}:{','.join(sorted(v))}" for k, v in sorted(self.adjacency_matrix.items())])
+        return md5((adjacency_hash).encode("utf-8")).hexdigest()
+
+class LoadingProcessData(ProcessData):
+    """
+    Class that represents loading process data. Loading processes can be chained in sequential processes or be mandatory dependencies.
+
+    Args:
+        ID (str): ID of the loading process.
+        description (str): Description of the loading process.
+        time_model_id (str): ID of the time model of the loading process.
+        type (Literal[ProcessTypeEnum.LoadingProcesses]): Type of the process.
+        dependency_type (Literal["before", "after", "parallel"]): Type of dependency relationship.
+        can_be_chained (bool): Whether this loading process can be chained with others.
+    """
+
+    type: Literal[ProcessTypeEnum.LoadingProcesses]
+    dependency_type: Literal["before", "after", "parallel"]
+    can_be_chained: bool = True
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "LP1",
+                    "description": "Loading Process 1",
+                    "time_model_id": "function_time_model_1",
+                    "type": "LoadingProcesses",
+                    "dependency_type": "before",
+                    "can_be_chained": True,
+                }
+            ]
+        }
+    )
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash for the loading process data considering the dependency type and chaining capability.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the time model data.
+
+        Returns:
+            str: hash of the loading process data.
+        """
+        base_class_hash = super().hash(adapter)
+        dependency_info = f"{self.dependency_type}_{self.can_be_chained}"
+        return md5((base_class_hash + dependency_info).encode("utf-8")).hexdigest()
+
+
 PROCESS_DATA_UNION = Union[
     CompoundProcessData,
     RequiredCapabilityProcessData,
@@ -505,4 +612,6 @@ PROCESS_DATA_UNION = Union[
     CapabilityProcessData,
     LinkTransportProcessData,
     ReworkProcessData,
+    ProcessModelData,
+    LoadingProcessData,
 ]

@@ -1,13 +1,13 @@
 # Analyzing simulation results
 
-In the following tutorial, we will explore the analysis capabilities of `prodsys` for examining simulation results. In `prodsys`, every single of a simulation run get's tracked and logged, thus allowing to review the complete event log of a simulation run, as in the real world. Similarly, all KPIs can be calculated in the post processing. This allows for a very flexible analysis of the simulation results. `prodsys` allready provides many utility functions for calculating KPIs and plotting the results. In this tutorial, we will explore some of them.
+In the following tutorial, we will explore the analysis capabilities of `prodsys` for examining simulation results. In `prodsys`, every single event of a simulation run gets tracked and logged, thus allowing to review the complete event log of a simulation run, as in the real world. Similarly, all KPIs can be calculated in the post processing. This allows for a very flexible analysis of the simulation results. `prodsys` already provides many utility functions for calculating KPIs and plotting the results. In this tutorial, we will explore some of them.
 
 For this example, we will use another production system which we will load from a json-file (example_configuration.json), which can be found in the examples folder of [prodsys' github page](https://github.com/sdm4fzi/prodsys/tree/main/examples/tutorials). Download it and store it in the same folder as this notebook. Load the configuration and run a simulation with the following commands:
 
 ```python
 import prodsys
 
-production_system = prodsys.adapters.JsonProductionSystemAdapter()
+production_system = prodsys.adapters.ProductionSystemData()
 production_system.read_data('example_configuration.json')
 
 runner = prodsys.runner.Runner(adapter=production_system)
@@ -16,7 +16,7 @@ runner.run(20000)
 runner.print_results()
 ```
 
-When reviewing the simulation results, we will see that the production system consists of 4 prudction resources (R1, R2, R3, R4) and two transport resources (TR1, TR2). Additionally, we see that three different kind of products are produced (product_1, product_2, product_3). When reviewing the KPIs, there doesn't seem to be any problems with the production system. However, this is hard to tell without knowing something about the production system and we will see that there are some problems with the production system, which we will explore in the following.
+When reviewing the simulation results, we will see that the production system consists of 4 production resources (R1, R2, R3, R4) and two transport resources (TR1, TR2). Additionally, we see that three different kind of products are produced (product_1, product_2, product_3). When reviewing the KPIs, there doesn't seem to be any problems with the production system. However, this is hard to tell without knowing something about the production system and we will see that there are some problems with the production system, which we will explore in the following.
 
 The basic data structure used for logging all events can be accessed by the `EventLogger` class, which is an attribute of the runner. The logger stores this data in form of dictionaries but we can transform it to a pandas dataframe for more convenient analysis:
 
@@ -28,15 +28,15 @@ df.head(10)
 If we have a look at the dataframe, we will see that it contains 8 columns to describe each event:
 
 - Time: The time of the event
-- Resource: The resource on which the event occured
+- Resource: The resource on which the event occurred
 - State: The state of the resource that changed
-- State Type: The type of the state that changed (e.g. source, transport, breakdwon, etc.)
+- State Type: The type of the state that changed (e.g. source, transport, breakdown, etc.)
 - Activity: The activity that was performed
 - Product: The product that was processed or transported (only for Production or Transport states)
 - Expected End Time: The expected end time of the state
 - Target location: The target location of a transport (only for Transport states)
 
-Writing scripts that analysis these event logs can be tydious. We can use powerfull process mining tools to automate the analysis of these event logs to analysis all processes, event durations and so on. However, in this tutorial, we will focus on the analysis of the KPIs. For this, we will use the `PostProcessor` class, which can be obtained from runner. The `PostProcessor` class provides many utility functions for calculating KPIs and plotting the results. In this tutorial, we will explore some of them.
+Writing scripts that analyze these event logs can be tedious. We can use powerful process mining tools to automate the analysis of these event logs to analyze all processes, event durations and so on. However, in this tutorial, we will focus on the analysis of the KPIs. For this, we will use the `PostProcessor` class, which can be obtained from runner. The `PostProcessor` class provides many utility functions for calculating KPIs and plotting the results. In this tutorial, we will explore some of them.
 Let's get a `PostProcessor` from the runner and have a look at the KPIs:
 
 ```python
@@ -60,7 +60,7 @@ The `PostProcessor` has some pre-processed data frames, which can be used for cu
 post_processor.df_finished_product.head()
 ```
 
-However, most easiest or fastest method for analysing simulation results is using the plotting functionalities of `prodsys`. These can be accesses through the `kpi_visualization` and only require a `PostProcessor` for instantiation. For example, we can plot the time percentages of resources in different states:
+However, the easiest or fastest method for analyzing simulation results is using the plotting functionalities of `prodsys`. These can be accessed through the `kpi_visualization` and only require a `PostProcessor` for instantiation. For example, we can plot the time percentages of resources in different states:
 
 ```python
 from prodsys.util import kpi_visualization
@@ -88,7 +88,7 @@ When observing the WIP per resource, we can observe that WIP at the resources in
 kpi_visualization.plot_throughput_time_over_time(post_processor)
 ```
 
-Again, we see a divergence of throughput time over simualted time. Here, the Start_time relates to the start of production of a product, i.e. the creation at it's source. These observations suggest, that the system is running to a WIP level which cannot be processed efficiently, similar to a crowded parking space after an event. If we take a look at the queue's of the system and the capacity of production resources, we can determine the maximal number of products in the system:
+Again, we see a divergence of throughput time over simulated time. Here, the Start_time relates to the start of production of a product, i.e. the creation at its source. These observations suggest, that the system is running to a WIP level which cannot be processed efficiently, similar to a crowded parking space after an event. If we take a look at the queues of the system and the capacity of production resources, we can determine the maximal number of products in the system:
 
 ```python
 capacity = 0
@@ -124,4 +124,4 @@ new_post_processor = runner.get_post_processor()
 kpi_visualization.plot_WIP(new_post_processor)
 ```
 
-If we look at the results again, we see that the production system WIP increases not as strong as without limited queues. This suggests that both cases were True. At first, the production system got fuller without limited queues which suggest that some queues overflowed when limited causing some blocking. Additionally, we see that the WIP still increases over time, thus the production system requires more resources or another configuration to satisfy the arrival processes. `prodsys` provides also some functionality to optimize production system configuration. See the optimization example for more detailed information. For a complete overview of the package's ies for simulation analysis, please see the [API reference](../API_reference/API_reference_0_overview.md).
+If we look at the results again, we see that the production system WIP increases not as strong as without limited queues. This suggests that both cases were True. At first, the production system got fuller without limited queues which suggest that some queues overflowed when limited causing some blocking. Additionally, we see that the WIP still increases over time, thus the production system requires more resources or another configuration to satisfy the arrival processes. `prodsys` provides also some functionality to optimize production system configuration. See the optimization example for more detailed information. For a complete overview of the package's functionalities for simulation analysis, please see the [API reference](../API_reference/API_reference_0_overview.md).

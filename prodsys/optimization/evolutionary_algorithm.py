@@ -6,11 +6,13 @@ from typing import TYPE_CHECKING, Annotated
 import warnings
 import logging
 
+import prodsys.models.production_system_data
 from prodsys.optimization.optimization import evaluate_ea_wrapper
 from prodsys.optimization.adapter_manipulation import (
     crossover,
     get_random_configuration_asserted,
     mutation,
+    random_configuration_capacity_based,
     random_configuration_with_initial_solution,
 )
 
@@ -102,10 +104,11 @@ class EvolutionaryAlgorithmHyperparameters(BaseModel):
 
 
 def register_functions_in_toolbox(
-    base_configuration: adapters.JsonProductionSystemAdapter,
+    base_configuration: prodsys.models.production_system_data.ProductionSystemData,
     solutions_dict: dict,
     weights: tuple,
-    initial_solutions: list[adapters.JsonProductionSystemAdapter],
+    initial_solutions: list[prodsys.models.production_system_data.ProductionSystemData],
+    smart_initial_solutions: bool,
     hyper_parameters: EvolutionaryAlgorithmHyperparameters,
     full_save: bool,
 ):
@@ -117,6 +120,12 @@ def register_functions_in_toolbox(
             "random_configuration",
             random_configuration_with_initial_solution,
             initial_solutions,
+        )
+    elif smart_initial_solutions:
+        toolbox.register(
+            "random_configuration",
+            random_configuration_capacity_based,
+            base_configuration,
         )
     else:
         toolbox.register(
@@ -140,7 +149,7 @@ def register_functions_in_toolbox(
         base_configuration,
         solutions_dict,
         hyper_parameters.number_of_seeds,
-        full_save
+        full_save,
     )
     toolbox.register("mate", crossover)
     toolbox.register("mutate", mutation)
@@ -162,7 +171,7 @@ def evolutionary_algorithm_optimization(
     Args:
         optimizer (Optimizer): The optimizer that contains the adapter, hyperparameters, and initial solutions.
     """
-    adapters.ProductionSystemAdapter.model_config["validate_assignment"] = False
+    adapters.ProductionSystemData.model_config["validate_assignment"] = False
 
     base_configuration = optimizer.adapter.model_copy(deep=True)
     if not adapters.check_for_clean_compound_processes(base_configuration):
@@ -182,6 +191,7 @@ def evolutionary_algorithm_optimization(
         solutions_dict=optimizer.optimization_cache_first_found_hashes,
         weights=optimizer.weights,
         initial_solutions=optimizer.initial_solutions,
+        smart_initial_solutions=optimizer.smart_initial_solutions,
         hyper_parameters=hyper_parameters,
         full_save=optimizer.full_save,
     )

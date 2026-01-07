@@ -42,23 +42,23 @@ productionprocess02 = psx.ProductionProcess(time_model=time_model_machine2, ID="
 productionprocess03 = psx.ProductionProcess(time_model=time_model_machine3, ID="pp03")
 
 # All resources
-machine01 = psx.ProductionResource(
+machine01 = psx.Resource(
     ID="resource01",
     processes=[productionprocess01],
     location=[10, 10],
 )
-machine02 = psx.ProductionResource(
+machine02 = psx.Resource(
     ID="resource02",
     processes=[productionprocess02],
     location=[20, 10],
 )
-machine03 = psx.ProductionResource(
+machine03 = psx.Resource(
     ID="resource03",
     processes=[productionprocess03],
     location=[10, 20],
 )
 
-agv01 = psx.TransportResource(
+agv01 = psx.Resource(
     location=[0, 0],
     ID="agv01",
     processes=[ltp01],
@@ -66,7 +66,7 @@ agv01 = psx.TransportResource(
 
 # All products
 product01 = psx.Product(
-    processes=[
+    process=[
         productionprocess01,
         productionprocess02,
         productionprocess03,
@@ -76,7 +76,7 @@ product01 = psx.Product(
 )
 
 product02 = psx.Product(
-    processes=[
+    process=[
         productionprocess03,
         productionprocess02,
         productionprocess01,
@@ -137,7 +137,7 @@ productionsystem = psx.ProductionSystem(
 )
 
 adapter = productionsystem.to_model()
-runner = prodsys.runner.Runner(adapter=adapter)
+runner = prodsys.runner.Runner(production_system_data=adapter)
 runner.initialize_simulation()
 runner.run(1000)
 runner.print_results()

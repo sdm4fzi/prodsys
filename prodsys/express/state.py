@@ -6,7 +6,8 @@ The following states are possible:
 
 - `Breakdown`: A state that makes a resource unavailable for a certain time.
 - `ProcessBreakdown`: A state that makes a process unavailable for a certain time but other processes can still be performed.
-- `Setup`: A state that represents the time needed to change the process of a resource.	    
+- `Setup`: A state that represents the time needed to change the process of a resource.
+- `NonScheduled`: A state that models shift availability by alternating between scheduled (available) and non-scheduled (unavailable) time intervals.	    
 
 """
 from __future__ import annotations
@@ -260,5 +261,63 @@ class ChargingState(State, core.ExpressObject):
         )
 
 
-STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState, ChargingState]
+@dataclass
+class NonScheduledState(State, core.ExpressObject):
+    """
+    Class that represents a non-scheduled state. This state models shift availability by alternating
+    between scheduled (when the resource is available) and non-scheduled (when the resource is unavailable/shift is off)
+    time intervals. During non-scheduled intervals, all operations are blocked similar to a breakdown state.
+
+    Args:
+        time_model (time_model.TIME_MODEL_UNION): Time model for scheduled intervals (when resource is available).
+        non_scheduled_time_model (time_model.TIME_MODEL_UNION): Time model for non-scheduled intervals (when resource is unavailable/shift is off).
+        ID (str): ID of the state.
+
+    Attributes:
+        type (state_data.StateTypeEnum): Type of the state. Equals to state_data.StateTypeEnum.NonScheduled.
+
+    Examples:
+        Non-scheduled state for shift modeling (8-hour shifts with 16-hour breaks):
+        ``` py
+        import prodsys.express as psx
+        scheduled_time_model = psx.FunctionTimeModel(
+            distribution_function="constant",
+            location=8.0,  # 8 hours scheduled
+            scale=0.0,
+        )
+        non_scheduled_time_model = psx.FunctionTimeModel(
+            distribution_function="constant",
+            location=16.0,  # 16 hours non-scheduled
+            scale=0.0,
+        )
+        psx.NonScheduledState(
+            time_model=scheduled_time_model,
+            non_scheduled_time_model=non_scheduled_time_model
+        )
+        ```
+    """
+
+    non_scheduled_time_model: time_model.TIME_MODEL_UNION
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.NonScheduled, init=False
+    )
+
+    def to_model(self) -> state_data.NonScheduledStateData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            state_data.NonScheduledStateData: Data object of the express object.
+        """
+        return state_data.NonScheduledStateData(
+            ID=self.ID,
+            description="",
+            time_model_id=self.time_model.ID,
+            type=self.type,
+            non_scheduled_time_model_id=self.non_scheduled_time_model.ID,
+        )
+
+
+STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState, ChargingState, NonScheduledState]
 from prodsys.express import process

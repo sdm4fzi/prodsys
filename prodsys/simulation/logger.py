@@ -5,25 +5,29 @@ import warnings
 from enum import Enum
 from abc import ABC, abstractmethod
 
-warnings.simplefilter(action="ignore", category=RuntimeWarning)
+
 from functools import partial, wraps
 from typing import Callable, List, Union, TYPE_CHECKING, Dict, Any, Optional
 
 import pandas as pd
-from pydantic import BaseModel
 
 from prodsys.simulation import state
-
+from prodsys.simulation.entities import primitive, product
 
 if TYPE_CHECKING:
-    from prodsys.simulation import product, auxiliary
+    from prodsys.simulation import product
     from prodsys.factories import resource_factory
+    from prodsys.simulation.dependency import DependencyInfo
+warnings.simplefilter(action="ignore", category=RuntimeWarning)
 
 
-class Logger(BaseModel, ABC):
+class Logger(ABC):
     """
     Base class for all loggers.
     """
+
+    def __init__(self):
+        pass
 
     @abstractmethod
     def get_data_as_dataframe(self) -> pd.DataFrame:
@@ -106,7 +110,7 @@ class Logger(BaseModel, ABC):
             filepath (str): The path to the json file.
         """
         df = self.get_data_as_dataframe()
-        df.to_json(filepath)
+        df.to_json(filepath, orient="records")
 
 
 def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
@@ -128,6 +132,12 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Origin location": state_info._origin_ID,
         "Target location": state_info._target_ID,
         "Empty Transport": state_info._empty_transport,
+        "Initial Transport Step": state_info._initial_transport_step,
+        "Last Transport Step": state_info._last_transport_step,
+        "Requesting Item": None,
+        "Dependency": state_info._dependency_ID,
+        "process": None,
+        "process_ok": getattr(state_info, '_process_ok', True),  # Default to True if not set
     }
     data.append(item)
 
@@ -148,15 +158,73 @@ def post_monitor_product_info(data: List[dict], product_info: product.ProductInf
         "State Type": product_info.state_type,
         "Activity": product_info.activity,
         "Product": product_info.product_ID,
+        "Expected End Time": None,
+        "Origin location": product_info.origin_ID,
+        "Target location": product_info.target_ID,
+        "Empty Transport": False,
+        "Requesting Item": product_info.product_ID,
+        "Dependency": None,
+        "process": None,
+        "Order ID": getattr(product_info, 'order_ID', None),
     }
     data.append(item)
 
 
-def post_monitor_auxiliary_info(
-    data: List[dict], auxiliary_info: auxiliary.AuxiliaryInfo
+def post_monitor_primitive_movement(data: List[dict], primitive_info: product.ProductInfo):
+    """
+    Post function for monitoring primitive movement. With this post monitor, every primitive movement is logged.
+    """
+    item = {
+        "Time": primitive_info.event_time,
+        "Resource": primitive_info.resource_ID,
+        "State": primitive_info.state_ID,
+        "State Type": primitive_info.state_type,
+        "Activity": primitive_info.activity,
+        "Product": primitive_info.product_ID,
+        "Expected End Time": None,
+        "Origin location": primitive_info.origin_ID,
+        "Target location": primitive_info.target_ID,
+        "Empty Transport": False,
+        "Requesting Item": primitive_info.product_ID,
+        "Dependency": None,
+        "process": None
+    }
+    data.append(item)
+
+def post_monitor_primitive_dependency(
+    data: List[dict], dependency_info: DependencyInfo
 ):
     """
-    Post function for monitoring auxiliary info. With this post monitor, every auxiliary creation and finish is logged.
+    Post function for monitoring primitive dependency info. With this post monitor, every primitive dependency creation and finish is logged.
+    Args:
+        data (List[dict]): The data to log to.
+        dependency_info (DependencyInfo): The dependency info object.
+    """
+
+    item = {
+        "Time": dependency_info.event_time,
+        "Resource": None,
+        "Primitive": dependency_info.primitive_ID,
+        "State": dependency_info.state_ID,
+        "State Type": dependency_info.state_type,
+        "Activity": dependency_info.activity,
+        "Product": None,
+        "Expected End Time": None,
+        "Origin location": None,
+        "Target location": None,
+        "Empty Transport": None,
+        "Requesting Item": dependency_info.requesting_item_ID,
+        "Dependency": dependency_info.dependency_ID,
+        "process": None,
+    }
+    data.append(item)
+
+
+def post_monitor_resource_dependency(
+    data: List[dict], dependency_info: DependencyInfo
+):
+    """
+    Post function for monitoring resource dependency info. With this post monitor, every resource dependency creation and finish is logged.
 
     Args:
         data (List[dict]): The data to log to.
@@ -164,12 +232,19 @@ def post_monitor_auxiliary_info(
     """
 
     item = {
-        "Time": auxiliary_info.event_time,
-        "Resource": auxiliary_info.resource_ID,
-        "State": auxiliary_info.state_ID,
-        "State Type": auxiliary_info.state_type,
-        "Activity": auxiliary_info.activity,
-        "Product": auxiliary_info.product_ID,
+        "Time": dependency_info.event_time,
+        "Resource": dependency_info.resource_ID,
+        "State": dependency_info.state_ID,
+        "State Type": dependency_info.state_type,
+        "Activity": dependency_info.activity,
+        "Product": None,
+        "Expected End Time": None,
+        "Origin location": None,
+        "Target location": None,
+        "Empty Transport": None,
+        "Requesting Item": dependency_info.requesting_item_ID,
+        "Dependency": dependency_info.dependency_ID,
+        "process": None,
     }
     data.append(item)
 
@@ -179,7 +254,12 @@ class EventLogger(Logger):
     Logger for logging events.
     """
 
-    event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
+    def __init__(self):
+        """
+        Initialize the EventLogger.
+        """
+        super().__init__()
+        self.event_data: List[Dict[str, Union[str, int, float, Enum]]] = []
 
     def get_data_as_dataframe(self) -> pd.DataFrame:
         """
@@ -206,7 +286,7 @@ class EventLogger(Logger):
         Args:
             resource_factory (resource_factory.ResourceFactory): The resource factory.
         """
-        for r in resource_factory.resources:
+        for r in resource_factory.all_resources.values():
             all_states = (
                 r.states + r.production_states + r.setup_states + r.charging_states
             )
@@ -232,25 +312,48 @@ class EventLogger(Logger):
         """
         self.register_patch(
             self.event_data,
-            product.product_info,
-            attr=["log_create_product", "log_finish_product"],
+            product.info,
+            attr=["log_create_product", "log_finish_product", "log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading", "log_consumption"],
             post=post_monitor_product_info,
         )
 
-    def observe_terminal_auxiliary_states(self, auxiliary: auxiliary.Auxiliary):
+    def observe_terminal_primitive_states(self, primitive: primitive.Primitive):
         """
-        Create path to observe the terminal auxiliary states.
+        Create path to observe the terminal primitive states.
 
         Args:
-            auxiliary (auxiliary.Auxiliary): The auxiliary.
+            primitive (primitive.Primitive): The primitive.
         """
         self.register_patch(
             self.event_data,
-            auxiliary.auxiliary_info,
-            attr=[
-                "log_create_auxiliary",
-                "log_start_auxiliary_usage",
-                "log_end_auxiliary_usage",
-            ],
-            post=post_monitor_auxiliary_info,
+            primitive.dependency_info,
+            attr=["log_start_dependency", "log_end_dependency"],
+            post=post_monitor_primitive_dependency,
         )
+
+    def observe_primitive_movement(self, primitive: primitive.Primitive):
+        """
+        Create path to observe the primitive movement.
+        """
+        self.register_patch(
+            self.event_data,
+            primitive.info,
+            attr=["log_start_loading", "log_end_loading", "log_start_unloading", "log_end_unloading"],
+            post=post_monitor_primitive_movement,
+        )
+
+    def observe_resource_dependency_states(
+        self, resource_factory: resource_factory.ResourceFactory
+    ):
+        """
+        Create path to observe the resource dependency states.
+        Args:
+            resource_factory (resource_factory.ResourceFactory): The resource factory.
+        """
+        for r in resource_factory.all_resources.values():
+            self.register_patch(
+                self.event_data,
+                r.dependency_info,
+                attr=["log_start_dependency", "log_end_dependency"],
+                post=post_monitor_resource_dependency,
+            )

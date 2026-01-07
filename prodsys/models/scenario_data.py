@@ -23,7 +23,7 @@ class ReconfigurationEnum(str, Enum):
 
     - ProductionCapacity: Reconfiguration of production capacity (number of machines and their configuration)
     - TransportCapacity: Reconfiguration of transport capacity (number of transport resources and their configuration)
-    - AuxiliaryCapacity: Reconfiguration of auxiliary capacity (number of auxiliaries in the system)
+    - PrimitiveCapacity: Reconfiguration of primitive capacity (number of primitives in the system)
     - Layout: Reconfiguration of layout (only position of resources)
     - Setup: Reconfiguration of setup of the machines considering the process modules
     - SequencingLogic: Reconfiguration of sequencing logic (only the control policy of resources)
@@ -32,7 +32,7 @@ class ReconfigurationEnum(str, Enum):
 
     PRODUCTION_CAPACITY = "production_capacity"
     TRANSPORT_CAPACITY = "transport_capacity"
-    AUXILIARY_CAPACITY = "auxiliary_capacity"
+    PRIMITIVE_CAPACITY = "primitive_capacity"
     LAYOUT = "layout"
     SETUP = "setup"
     SEQUENCING_LOGIC = "sequencing_logic"
@@ -137,11 +137,11 @@ class ScenarioInfoData(BaseModel):
         machine_cost (float): Cost of a machine.
         transport_resource_cost (float): Cost of a transport resource.
         process_module_cost (Optional[float | Dict[str, float]]): Cost of a process module. Either a const value or a mapping of process ID to cost.
-        auxiliary_cost (Optional[float], optional): Cost of an auxiliary. Defaults to None.
+        primitive_cost (Optional[float], optional): Cost of an primitive. Defaults to None.
         selling_machines (Optional[bool], optional): Flag that indicates if machines can be sold. Defaults to None.
         selling_transport_resources (Optional[bool], optional): Flag that indicates if transport resources can be sold. Defaults to None.
         selling_process_modules (Optional[bool], optional): Flag that indicates if process modules can be sold. Defaults to None.
-        selling_auxiliaries (Optional[bool], optional): Flag that indicates if auxiliaries can be sold. Defaults to None.
+        selling_primitives (Optional[bool], optional): Flag that indicates if primtives can be sold. Defaults to None.
         breakdown_cost (Optional[float], optional): Cost of a breakdown. Defaults to None.
         time_range (Optional[int], optional): Time range of the scenario in minutes to be considered. Defaults to None.
         maximum_breakdown_time (Optional[int], optional): Maximum allowable breakdown time in the scenario in minutes. Defaults to None.
@@ -150,11 +150,11 @@ class ScenarioInfoData(BaseModel):
     machine_cost: float
     transport_resource_cost: float
     process_module_cost: Optional[float | Dict[str, float]] = None
-    auxiliary_cost: Optional[float] = None
+    primitive_cost: Optional[float] = None
     selling_machines: bool = False
     selling_transport_resources: bool = False
     selling_process_modules: bool = False
-    selling_auxiliaries: bool = False
+    selling_primitives: bool = False
     breakdown_cost: Optional[float] = None
     time_range: Optional[int]
     maximum_breakdown_time: Optional[int] = None
@@ -166,7 +166,7 @@ class ScenarioInfoData(BaseModel):
                     "machine_cost": 30000,
                     "transport_resource_cost": 20000,
                     "process_module_cost": {"Process_1": 2300, "Process_2": 3300},
-                    "auxiliary_cost": 1000,
+                    "primitive_cost": 1000,
                     "breakdown_cost": 1000,
                     "time_range": 2600,
                     "maximum_breakdown_time": 10,

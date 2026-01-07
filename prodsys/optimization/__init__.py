@@ -20,6 +20,7 @@ The following algorithms are supported:
 - Simulated Annealing
 - Tabu Search
 - Mathematical optimization (Gurobi, only a restricted set of degrees of freedom is supported)
+- Capacity-based optimization (fast random search with capacity analysis)
 
 Whilst the mathematical optimization uses a mathematical model for evalutation of production system performance, the other algorithms use `prodsys.simulation` for evaluation. This allows these algorithms to consider more degrees of freedom and optimize according to multiple objectives.
 

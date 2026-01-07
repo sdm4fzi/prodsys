@@ -1,18 +1,29 @@
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
-
-from pydantic import BaseModel, TypeAdapter
+from typing import Dict, List, Optional, TYPE_CHECKING
 
 from prodsys.factories import time_model_factory
 from prodsys.models import processes_data
+from prodsys.simulation import process
+
 
 if TYPE_CHECKING:
-    from prodsys.adapters import adapter
-    from prodsys.simulation import process
+    from prodsys.models import production_system_data
+
+PROCESS_MAP = {
+    processes_data.ProcessTypeEnum.ProductionProcesses: process.ProductionProcess,
+    processes_data.ProcessTypeEnum.TransportProcesses: process.TransportProcess,
+    processes_data.ProcessTypeEnum.ReworkProcesses: process.ReworkProcess,
+    processes_data.ProcessTypeEnum.CapabilityProcesses: process.CapabilityProcess,
+    processes_data.ProcessTypeEnum.CompoundProcesses: process.CompoundProcess,
+    processes_data.ProcessTypeEnum.LinkTransportProcesses: process.LinkTransportProcess,
+    processes_data.ProcessTypeEnum.RequiredCapabilityProcesses: process.RequiredCapabilityProcess,
+    processes_data.ProcessTypeEnum.ProcessModels: process.ProcessModelProcess,
+    processes_data.ProcessTypeEnum.LoadingProcesses: process.LoadingProcess,
+}
 
 
-class ProcessFactory(BaseModel):
+class ProcessFactory:
     """
     Factory class that creates and stores `prodsys.simulation` process objects based on the given process data according to `prodsys.models.processes_data.PROCESS_UNION`.
 
@@ -21,28 +32,82 @@ class ProcessFactory(BaseModel):
         processes (List[process.PROCESS_UNION], optional): List of process objects. Defaults to [] and is filled by the `create_processes` method.
     """
 
-    time_model_factory: time_model_factory.TimeModelFactory
-    processes: List[process.PROCESS_UNION] = []
+    def __init__(self, time_model_factory: time_model_factory.TimeModelFactory):
+        """
+        Initializes the ProcessFactory with the given time model factory.
 
-    def create_processes(self, adapter: adapter.ProductionSystemAdapter):
+        Args:
+            time_model_factory (time_model_factory.TimeModelFactory): Factory that creates time model objects.
+        """
+        self.time_model_factory = time_model_factory
+        self.processes: Dict[str, process.PROCESS_UNION] = {}
+
+    def create_processes(self, adapter: production_system_data.ProductionSystemData):
         """
         Creates process objects based on the given adapter.
+        Uses multiple passes to handle ProcessModels that reference other processes:
+        1. First pass: Create all non-ProcessModel processes
+        2. Subsequent passes: Create ProcessModel processes in dependency order (handling nested ProcessModels)
 
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the process data.
         """
+        # First pass: Create all non-ProcessModel processes
         for process_data in adapter.process_data:
+            if isinstance(process_data, processes_data.ProcessModelData):
+                continue
             self.add_processes(process_data, adapter)
+        
+        # Subsequent passes: Create ProcessModel processes iteratively
+        # ProcessModels may reference other ProcessModels, so we need to create them in dependency order
+        process_models_to_create = [
+            pd for pd in adapter.process_data 
+            if isinstance(pd, processes_data.ProcessModelData)
+        ]
+        
+        max_iterations = len(process_models_to_create) + 1  # Prevent infinite loops
+        iteration = 0
+        
+        while process_models_to_create and iteration < max_iterations:
+            created_in_this_iteration = []
+            
+            for process_data in process_models_to_create:
+                # Check if all referenced processes exist
+                all_process_ids = set()
+                for key_process_id in process_data.adjacency_matrix.keys():
+                    all_process_ids.add(key_process_id)
+                for value_process_ids in process_data.adjacency_matrix.values():
+                    all_process_ids.update(value_process_ids)
+                
+                # Check if all referenced processes have been created
+                all_exist = all(process_id in self.processes for process_id in all_process_ids)
+                
+                if all_exist:
+                    self.add_processes(process_data, adapter)
+                    created_in_this_iteration.append(process_data)
+            
+            # Remove created ProcessModels from the to-do list
+            for created in created_in_this_iteration:
+                process_models_to_create.remove(created)
+            
+            iteration += 1
+        
+        # If we still have uncreated ProcessModels, there might be a circular dependency or missing processes
+        if process_models_to_create:
+            missing_ids = [pm.ID for pm in process_models_to_create]
+            raise ValueError(f"Could not create ProcessModels: {missing_ids}. Check for circular dependencies or missing process references.")
 
     def add_processes(
         self,
         process_data: processes_data.PROCESS_DATA_UNION,
-        adapter: adapter.ProductionSystemAdapter,
+        adapter: production_system_data.ProductionSystemData,
     ):
-        values = {"process_data": process_data}
+        values = {"data": process_data}
         if not (
             isinstance(process_data, processes_data.CompoundProcessData)
             or isinstance(process_data, processes_data.RequiredCapabilityProcessData)
+            or isinstance(process_data, processes_data.ProcessModelData)
+            or isinstance(process_data, processes_data.ProcessModelData)
         ):
             time_model = self.time_model_factory.get_time_model(
                 process_data.time_model_id
@@ -50,9 +115,6 @@ class ProcessFactory(BaseModel):
             values.update({"time_model": time_model})
         else:
             values.update({"time_model": None})
-        if "failure_rate" in process_data:
-            # TODO: fix this in simulation process to use parameter of process data
-            values.update({"failure_rate": process_data.failure_rate})
         if isinstance(process_data, processes_data.TransportProcessData):
             if process_data.loading_time_model_id is not None:
                 values.update(
@@ -79,21 +141,32 @@ class ProcessFactory(BaseModel):
             values.update({"contained_processes_data": contained_processes_data})
         if isinstance(process_data, processes_data.LinkTransportProcessData):
             values.update({"links": [[]]})
-            self.processes.append(
-                TypeAdapter(process.LinkTransportProcess).validate_python(values)
-            )
-        elif isinstance(process_data, processes_data.ReworkProcessData):
+        if isinstance(process_data, processes_data.ReworkProcessData):
             # TODO: think about getting here the processes and not only ids...
             values.update({"reworked_process_ids": process_data.reworked_process_ids})
-            # TODO: fix this in simulation process to use parameter of process data
             values.update({"blocking": process_data.blocking})
-            self.processes.append(
-                TypeAdapter(process.ReworkProcess).validate_python(values)
-            )
-        else:
-            self.processes.append(
-                TypeAdapter(process.PROCESS_UNION).validate_python(values)
-            )
+        if isinstance(process_data, (processes_data.ProcessModelData)):
+            # For ProcessModelData, we don't need contained_processes at creation time
+            # as the processes are referenced by ID in the adjacency matrix
+            def get_contained_processes(process_data: processes_data.ProcessModelData) -> List[process.PROCESS_UNION]:
+                contained_process_ids = [process_id for process_id in process_data.adjacency_matrix.keys()]
+                for processes in process_data.adjacency_matrix.values():
+                    for process_id in processes:
+                        if process_id not in contained_process_ids:
+                            contained_process_ids.append(process_id)
+                contained_processes = [self.get_process(process_id) for process_id in contained_process_ids]
+                return contained_processes
+
+            values.update({
+                "contained_processes": get_contained_processes(process_data),
+                "adjacency_matrix": process_data.adjacency_matrix
+            })
+
+        process_class = PROCESS_MAP.get(process_data.type)
+        if process_class is None:
+            raise ValueError(f"Unknown process type: {process_data.type}")
+        new_process = process_class(**values)
+        self.processes[process_data.ID] = new_process
 
     def get_processes_in_order(self, IDs: List[str]) -> List[process.PROCESS_UNION]:
         """
@@ -107,10 +180,10 @@ class ProcessFactory(BaseModel):
         """
         processes = []
         for ID in IDs:
-            for _process in self.processes:
-                if _process.process_data.ID == ID:
-                    processes.append(_process)
-
+            if ID in self.processes:
+                processes.append(self.processes[ID])
+            else:
+                raise ValueError(f"Process with ID {ID} not found")
         return processes
 
     def get_process(self, ID: str) -> Optional[process.PROCESS_UNION]:
@@ -126,10 +199,10 @@ class ProcessFactory(BaseModel):
         Returns:
             Optional[process.PROCESS_UNION]: Process object based on the given ID.
         """
-        pr = [pr for pr in self.processes if pr.process_data.ID in ID]
-        if not pr:
+        if ID in self.processes:
+            return self.processes[ID]
+        else:
             raise ValueError(f"Process with ID {ID} not found")
-        return pr.pop()
 
 
 from prodsys.simulation import process

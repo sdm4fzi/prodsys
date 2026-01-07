@@ -12,7 +12,8 @@ import numpy as np
 
 from gymnasium import spaces
 
-import prodsys
+from prodsys.adapters import ProductionSystemData
+from prodsys.adapters import get_production_resources
 from prodsys.control import sequencing_control_env
 from prodsys.simulation import request
 
@@ -46,7 +47,8 @@ class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
             encoded_processes.append(encoded_process)
 
         encoded_process = [0 for _ in range(len(processes))]
-        queue_capacity = self.resource.input_queues[0].capacity
+        # v1 resources expose unified `ports` (queues); in this example we treat the first port as input.
+        queue_capacity = self.resource.ports[0].capacity
 
         encoded_processes += [encoded_process] * (
             queue_capacity - len(queue_observations)
@@ -72,7 +74,7 @@ class ProductionControlEnv(sequencing_control_env.AbstractSequencingControlEnv):
                 == self.resource.current_setup.process_data.ID
             )
         if self.step_count % 10 == 0:
-            reward += self.resource.input_queues[0].capacity - len(
+            reward += self.resource.ports[0].capacity - len(
                 self.resource_controller.requests
             )
 
@@ -94,26 +96,30 @@ class TensorboardCallback(BaseCallback):
 
 
 if __name__ == "__main__":
-    resource_id = "R2"
-    adapter = prodsys.adapters.JsonProductionSystemAdapter()
-    adapter.read_data(
+    adapter = ProductionSystemData.read(
         "examples/control/control_example_data/control_configuration.json"
     )
-    resource_data = [r for r in adapter.resource_data if r.ID == resource_id][0]
-    queue = [q for q in adapter.queue_data if q.ID == resource_data.input_queues[0]][0]
-    shape = (queue.capacity + resource_data.capacity, len(resource_data.process_ids))
+    # Pick a production resource robustly (first with any production process)
+    production_resources = get_production_resources(adapter)
+    if not production_resources:
+        raise RuntimeError("No production resources found in configuration.")
+    resource_data = production_resources[0]
+    # Use the first declared port of the resource (validator ensures at least one)
+    first_port_id = resource_data.ports[0]
+    queue = [q for q in adapter.port_data if q.ID == first_port_id][0]
+    shape = (int(queue.capacity) + resource_data.capacity, len(resource_data.process_ids))
     observation_space = spaces.Box(0, 1, shape=shape, dtype=int)
-    action_space = spaces.Box(0, 1, shape=(queue.capacity,), dtype=float)
+    action_space = spaces.Box(0, 1, shape=(int(queue.capacity),), dtype=float)
     env = ProductionControlEnv(
         adapter,
-        "R2",
+        resource_data.ID,
         observation_space=observation_space,
         action_space=action_space,
         render_mode="human",
     )
 
-    tmp_path = (
-        os.getcwd() + "\\tensorboard_log\\sequencing\\" + time.strftime("%Y%m%d-%H%M%S")
+    tmp_path = os.path.join(
+        os.getcwd(), "tensorboard_log", "sequencing", time.strftime("%Y%m%d-%H%M%S")
     )
     new_logger = configure(tmp_path, ["stdout", "csv", "tensorboard"])
 

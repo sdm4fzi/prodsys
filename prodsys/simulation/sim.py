@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import random
+import time
 from typing import Any, TYPE_CHECKING
 
 import numpy as np
@@ -65,6 +66,7 @@ class Environment(core.Environment):
         self.seed: int = seed
         self.pbar: Any = None
         self.last_update = 0
+        self.last_update_time = 0
 
     def run(self, time_range: float):
         """
@@ -91,17 +93,16 @@ class Environment(core.Environment):
         """
         super().run(until=until)
 
-    def request_process_of_resource(self, request: request.Request) -> None:
+    def update_progress_bar(self):
         """
-        Requests the process of a resource. Connects requests of products with controllers in the environment.
+        Updates the progress bar.
 
         Args:
-            request (request.Request): The request to process.
+            time (float): The time to update the progress bar to.
         """
         if VERBOSE == 1:
             now = round(self.now)
-            if now > self.last_update:
+            if now > self.last_update and time.perf_counter() - self.last_update_time > 0.1:
+                self.last_update_time = time.perf_counter()
                 self.pbar.update(now - self.last_update)
                 self.last_update = now
-        controller = request.get_resource().get_controller()
-        controller.request(request)

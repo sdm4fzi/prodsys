@@ -160,46 +160,54 @@
             "type": "TransportProcesses"
         }
     ],
-    "queue_data": [
+    "port_data": [
         {
             "ID": "IQ1",
             "description": "Input-queue 1 for R1",
-            "capacity": 10
+            "capacity": 10,
+            "location": [10.0, 10.0]
         },
         {
             "ID": "OQ1",
             "description": "Output-queue 1 for R1",
-            "capacity": 10
+            "capacity": 10,
+            "location": [10.0, 10.0]
         },
         {
             "ID": "OQ2",
             "description": "Output-queue 2 for R2",
-            "capacity": 20
+            "capacity": 20,
+            "location": [20.0, 10.0]
         },
         {
             "ID": "IQ2",
             "description": "Input-queue 2 for R3",
-            "capacity": 10
+            "capacity": 10,
+            "location": [20.0, 20.0]
         },
         {
             "ID": "OQ3",
             "description": "Output-queue 3 for R3",
-            "capacity": 10
+            "capacity": 10,
+            "location": [20.0, 20.0]
         },
         {
             "ID": "SourceQueue",
             "description": "Output-Queue for all sources",
-            "capacity": 0
+            "capacity": 0,
+            "location": [0.0, 0.0]
         },
         {
             "ID": "SinkQueue",
             "description": "Input-Queue for all sinks",
-            "capacity": 0
+            "capacity": 0,
+            "location": [50.0, 50.0]
         },
         {
             "ID": "IQ9",
             "description": "Input-queue 1 for R2",
-            "capacity": 20
+            "capacity": 20,
+            "location": [20.0, 10.0]
         }
     ],
     "resource_data": [
@@ -227,10 +235,8 @@
                 "Setup_State_2",
                 "ProcessBreakdownState_1"
             ],
-            "input_queues": [
-                "IQ1"
-            ],
-            "output_queues": [
+            "ports": [
+                "IQ1",
                 "OQ1"
             ]
         },
@@ -255,10 +261,8 @@
             "state_ids": [
                 "Breakdownstate_2"
             ],
-            "input_queues": [
-                "IQ9"
-            ],
-            "output_queues": [
+            "ports": [
+                "IQ9",
                 "OQ2"
             ]
         },
@@ -286,10 +290,8 @@
                 "Setup_State_3",
                 "Setup_State_4"
             ],
-            "input_queues": [
-                "IQ2"
-            ],
-            "output_queues": [
+            "ports": [
+                "IQ2",
                 "OQ3"
             ]
         },
@@ -316,10 +318,8 @@
                 "Setup_State_3",
                 "Setup_State_4"
             ],
-            "input_queues": [
-                "IQ2"
-            ],
-            "output_queues": [
+            "ports": [
+                "IQ2",
                 "OQ3"
             ]
         },
@@ -370,23 +370,22 @@
             "ID": "Product_1",
             "description": "Product 1",
             "product_type": "Product_1",
-            "processes": [
-                "P1",
-                "P2",
-                "P3"
-            ],
+            "processes": {
+                "P1": ["P2"],
+                "P2": ["P3"],
+                "P3": []
+            },
             "transport_process": "TP1"
         },
         {
             "ID": "Product_2",
             "description": "Product 2",
             "product_type": "Product_2",
-            "processes": [
-                "P1",
-                "P2",
-                "P3",
-                "P1"
-            ],
+            "processes": {
+                "P1": ["P2"],
+                "P2": ["P3"],
+                "P3": []
+            },
             "transport_process": "TP1"
         },
         {
@@ -413,7 +412,7 @@
                 50.0
             ],
             "product_type": "Product_1",
-            "input_queues": [
+            "ports": [
                 "SinkQueue"
             ]
         },
@@ -425,7 +424,7 @@
                 50.0
             ],
             "product_type": "Product_2",
-            "input_queues": [
+            "ports": [
                 "SinkQueue"
             ]
         },
@@ -437,7 +436,7 @@
                 50.0
             ],
             "product_type": "Product_3",
-            "input_queues": [
+            "ports": [
                 "SinkQueue"
             ]
         }
@@ -454,7 +453,7 @@
             "time_model_id": "function_time_model_4",
             "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
-            "output_queues": [
+            "ports": [
                 "SourceQueue"
             ]
         },
@@ -469,7 +468,7 @@
             "time_model_id": "function_time_model_4",
             "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
-            "output_queues": [
+            "ports": [
                 "SourceQueue"
             ]
         },
@@ -484,7 +483,7 @@
             "time_model_id": "function_time_model_4",
             "router": "SimpleRouter",
             "routing_heuristic": "shortest_queue",
-            "output_queues": [
+            "ports": [
                 "SourceQueue"
             ]
         }

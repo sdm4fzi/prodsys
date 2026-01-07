@@ -1,0 +1,385 @@
+{
+    "ID": "",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "tm_agv",
+            "description": "",
+            "speed": 60.0,
+            "reaction_time": 0.1,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "tm_machine1",
+            "description": "",
+            "distribution_function": "normal",
+            "location": 1.8,
+            "scale": 0.2,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_machine2",
+            "description": "",
+            "distribution_function": "normal",
+            "location": 2.2,
+            "scale": 0.7,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_machine3",
+            "description": "",
+            "distribution_function": "normal",
+            "location": 2.0,
+            "scale": 0.5,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_arrival",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 2.5,
+            "scale": 0.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [],
+    "process_data": [
+        {
+            "ID": "product_process_model",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "machine3_process": [
+                    "cell_process_model"
+                ],
+                "cell_process_model": []
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "agv_transport",
+            "description": "",
+            "time_model_id": "tm_agv",
+            "dependency_ids": [],
+            "type": "TransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null
+        },
+        {
+            "ID": "machine1_process",
+            "description": "",
+            "time_model_id": "tm_machine1",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "machine2_process",
+            "description": "",
+            "time_model_id": "tm_machine2",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "machine3_process",
+            "description": "",
+            "time_model_id": "tm_machine3",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "cell_process_model",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "machine1_process": [
+                    "machine2_process"
+                ],
+                "machine2_process": []
+            },
+            "dependency_ids": []
+        }
+    ],
+    "port_data": [
+        {
+            "ID": "source_default_output_queue",
+            "description": "",
+            "capacity": 0.0,
+            "location": [
+                0.0,
+                10.0
+            ],
+            "interface_type": "output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "sink_default_input_queue",
+            "description": "",
+            "capacity": 0.0,
+            "location": [
+                20.0,
+                10.0
+            ],
+            "interface_type": "input",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine1_default_queue",
+            "description": "Default queue of machine1",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                8.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine2_default_queue",
+            "description": "Default queue of machine2",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                12.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "machine3_default_queue",
+            "description": "Default queue of machine3",
+            "capacity": 0.0,
+            "location": [
+                12.0,
+                16.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "manufacturing_cell_default_queue",
+            "description": "Default queue of manufacturing_cell",
+            "capacity": 0.0,
+            "location": [
+                10.0,
+                10.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        }
+    ],
+    "node_data": [],
+    "resource_data": [
+        {
+            "location": [
+                12.0,
+                10.0
+            ],
+            "ID": "robot",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "agv_transport"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                12.0,
+                8.0
+            ],
+            "ID": "machine1",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "machine1_process"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "machine1_default_queue"
+            ],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                12.0,
+                12.0
+            ],
+            "ID": "machine2",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "machine2_process"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "machine2_default_queue"
+            ],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                12.0,
+                16.0
+            ],
+            "ID": "machine3",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "machine3_process"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "machine3_default_queue"
+            ],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                10.0,
+                10.0
+            ],
+            "ID": "manufacturing_cell",
+            "description": "",
+            "resource_type": "system",
+            "process_ids": [
+                "cell_process_model"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 5,
+            "process_capacities": [
+                5
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "manufacturing_cell_default_queue"
+            ],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                10.0
+            ],
+            "ID": "agv",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "agv_transport"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [],
+            "buffers": [],
+            "can_move": null,
+            "dependency_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "product",
+            "description": "",
+            "type": "product",
+            "transport_process": "agv_transport",
+            "processes": {
+                "machine3_process": [
+                    "cell_process_model"
+                ],
+                "cell_process_model": []
+            },
+            "dependency_ids": [],
+            "routing_heuristic": null,
+            "becomes_consumable": false
+        }
+    ],
+    "sink_data": [
+        {
+            "location": [
+                20.0,
+                10.0
+            ],
+            "ID": "sink",
+            "description": "",
+            "product_type": "product",
+            "ports": [
+                "sink_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "location": [
+                0.0,
+                10.0
+            ],
+            "ID": "source",
+            "description": "",
+            "product_type": "product",
+            "time_model_id": "tm_arrival",
+            "routing_heuristic": "random",
+            "ports": [
+                "source_default_output_queue"
+            ]
+        }
+    ],
+    "scenario_data": null,
+    "dependency_data": [],
+    "primitive_data": [],
+    "schedule": null,
+    "order_data": null,
+    "conwip_number": null,
+    "reference_time": null,
+    "time_unit": "min",
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
+}
