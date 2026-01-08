@@ -135,7 +135,8 @@ def test_initialize_simulation(simulation_adapter: ProductionSystemData):
 
 def test_hashing(simulation_adapter: ProductionSystemData):
     hash_str = simulation_adapter.hash()
-    assert hash_str == "ddeeaeb715319754daa6eddab0f938fb"
+    # Hash updated after fixing node link generation algorithm (hardcoded boundary values fix)
+    assert hash_str == "9e8437549f9e4cd1daf40e9ea1dd93a4"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

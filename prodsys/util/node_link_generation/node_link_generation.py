@@ -147,10 +147,19 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
     # Determine table configuration based on area or production system layout.
     if area is None:
         min_x, min_y, max_x, max_y = find_borders(productionsystem)
-        tableXMax=max(1.1*max_x,50+max_x)
-        tableYMax=max(1.1*max_y,50+max_y)
-        tableXMin=min(1.1*min_x,min_x-50)
-        tableYMin=min(1.1*min_y,min_y-50)
+        # Calculate proportional margins based on production system size
+        # Use 10% of range, but clamp between 1.0 and 10.0 units
+        range_x = max_x - min_x
+        range_y = max_y - min_y
+        margin_x = max(range_x * 0.1, 1.0)
+        margin_x = min(margin_x, 10.0)
+        margin_y = max(range_y * 0.1, 1.0)
+        margin_y = min(margin_y, 10.0)
+        
+        tableXMax = max_x + margin_x
+        tableYMax = max_y + margin_y
+        tableXMin = min_x - margin_x
+        tableYMin = min_y - margin_y
         tables = {
             "corner_nodes": [
                 {"pose": [tableXMin, tableYMin, 0]}, 
@@ -162,8 +171,11 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
                 {"pose": [((tableXMin + tableXMax)/2), ((tableYMin + tableYMax)/2), 0]}
             ]
         }
-        # Get the dimensions of the production layout.
-        dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
+        # Get the dimensions of the TABLE layout (after adding margins), not the production system
+        # This is important for calculating proper node spacing
+        table_dim_x = tableXMax - tableXMin
+        table_dim_y = tableYMax - tableYMin
+        dim_x, dim_y = table_dim_x, table_dim_y
     else:
         tables = area
         min_x, min_y, _ = tables[0]['corner_nodes'][0]['pose']
@@ -179,12 +191,42 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
                     min_x = corner['pose'][0]
                 if corner['pose'][1] < min_y:
                     min_y = corner['pose'][1]
-        dim_x, dim_y = abs(min_x) + abs(max_x), abs(min_y) + abs(max_y)
+        # Get the dimensions of the table layout (correct calculation: range, not sum of absolutes)
+        dim_x, dim_y = max_x - min_x, max_y - min_y
     
     # Set the dimensions of the layout.
     config = Configuration()
     config.set(Configuration.Dim_X, int(dim_x))
     config.set(Configuration.Dim_Y, int(dim_y))
+    
+    # CRITICAL FIX: Make hardcoded boundary/distance values proportional to table size
+    # The default values (32, 24, 16) are designed for large tables (~100x50 units)
+    # For small tables, these values prevent node generation. Scale them DOWN only for small tables.
+    tablesize = min(dim_x, dim_y)
+    
+    # Store original values to restore later (Configuration is a singleton)
+    original_min_node_dist = config.get(Configuration.Min_Node_Distance)
+    original_min_edge_dist = config.get(Configuration.Min_Node_Edge_Distance)
+    original_trajectory_dist = config.get(Configuration.Trajectory_Node_Distance)
+    original_buffer_dist = config.get(Configuration.Buffer_Node_Distance)
+    
+    # Only scale DOWN for small tables (< 50 units). For large tables, use original values.
+    # The original values work fine for large systems, but are too large for small systems.
+    if tablesize < 50.0:
+        # Scale down proportionally for small tables, but don't go below minimums
+        scale_factor = max(tablesize / 50.0, 0.1)  # Scale based on 50 units as reference, minimum 0.1
+        
+        scaled_min_node_dist = max(int(original_min_node_dist * scale_factor), 1)  # At least 1 unit
+        scaled_min_edge_dist = max(int(original_min_edge_dist * scale_factor), 1)
+        scaled_trajectory_dist = max(int(original_trajectory_dist * scale_factor), 1)
+        scaled_buffer_dist = max(int(original_buffer_dist * scale_factor), 1)
+        
+        config.set(Configuration.Min_Node_Distance, scaled_min_node_dist)
+        config.set(Configuration.Min_Node_Edge_Distance, scaled_min_edge_dist)
+        config.set(Configuration.Trajectory_Node_Distance, scaled_trajectory_dist)
+        config.set(Configuration.Buffer_Node_Distance, scaled_buffer_dist)
+    # For large tables (>= 50 units), keep original values - no scaling needed
+    
     table_config = TableConfiguration(config)
     station_config = StationConfiguration(config, table_config)
     # Add tables and define corner nodes of the table configuration.
@@ -232,9 +274,23 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
         min_node_distance = max(0.1*tablesize, 10)
         max_node_distance = 0.2*tablesize
     else:
-        min_node_distance = tablesize
-        max_node_distance = tablesize
-    if any(resource.can_move for resource in productionsystem.resource_data if isinstance(resource.control_policy, resource_data.TransportControlPolicy)):
+        # For simple_connection, use proportional spacing but ensure enough nodes are generated
+        # For very small tables (< 10 units), use a fixed small spacing to ensure multiple nodes
+        # For larger tables, use proportional spacing
+        if tablesize < 10.0:
+            # Use spacing that ensures at least 4-5 nodes fit in each dimension
+            min_node_distance = max(tablesize / 5.0, 0.3)  # At least 0.3, but aim for 5 nodes per dimension
+            max_node_distance = max(tablesize / 4.0, 0.5)   # At least 0.5, but aim for 4 nodes per dimension
+        else:
+            min_node_distance = max(0.1*tablesize, 0.5)  # At least 0.5 units, typically 10% of table size
+            max_node_distance = max(0.15*tablesize, 1.0)  # At least 1.0 units, typically 15% of table size
+    # Check if we need to add outer nodes: either resources can move, or there are LinkTransportProcesses
+    has_movable_resources = any(resource.can_move for resource in productionsystem.resource_data if isinstance(resource.control_policy, resource_data.TransportControlPolicy))
+    # Check for LinkTransportProcessData - need to import it
+    from prodsys.models import processes_data
+    has_link_transport = any(isinstance(process, processes_data.LinkTransportProcessData) for process in productionsystem.process_data)
+    
+    if has_movable_resources or has_link_transport:
         node_edge_generator.add_outer_nodes_and_edges(edge_directionality, add_nodes_between=add_nodes_between, max_node_distance=max_node_distance, min_node_distance=min_node_distance, add_edges=add_edges)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
@@ -247,6 +303,41 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
     # Connect nodes by edges using the Delaunay triangulation.
+    # Check if we have enough nodes (need at least 4 for Delaunay triangulation)
+    num_nodes = len(node_edge_generator.graph.nodes)
+    smaller_spacing = min_node_distance  # Initialize for error message
+    if num_nodes < 4:
+        # If we don't have enough nodes, try generating with progressively smaller spacing
+        # This can happen with very small tables or when grid generation filters out too many nodes
+        for attempt in range(3):  # Try up to 3 times with smaller spacing
+            smaller_spacing = min_node_distance / (2 ** (attempt + 1))
+            smaller_spacing = max(smaller_spacing, 0.1)  # Don't go below 0.1 units
+            if style == "grid":
+                node_edge_generator.define_global_grid(grid_spacing=smaller_spacing, adjust_spacing=False, add_corner_nodes_first=False)
+            elif style == "random":
+                node_edge_generator.define_random_nodes(min_node_distance=smaller_spacing)
+            num_nodes = len(node_edge_generator.graph.nodes)
+            if num_nodes >= 4:
+                break
+    
+    if num_nodes < 4:
+        # Last resort: try with very small fixed spacing
+        if num_nodes < 4:
+            very_small_spacing = 0.2  # Very small fixed spacing
+            if style == "grid":
+                node_edge_generator.define_global_grid(grid_spacing=very_small_spacing, adjust_spacing=True, add_corner_nodes_first=True)
+            elif style == "random":
+                node_edge_generator.define_random_nodes(min_node_distance=very_small_spacing)
+            num_nodes = len(node_edge_generator.graph.nodes)
+    
+    if num_nodes < 4:
+        raise ValueError(f"Not enough nodes generated ({num_nodes}) for Delaunay triangulation (need at least 4). "
+                        f"Table size: {tablesize:.2f}, initial spacing: {min_node_distance:.2f}, final spacing tried: {smaller_spacing:.2f}. "
+                        f"This may indicate an issue with the table configuration or node generation algorithm. "
+                        f"Table bounds: X=[{tableXMin if 'tableXMin' in locals() else 'N/A':.2f}, {tableXMax if 'tableXMax' in locals() else 'N/A':.2f}], "
+                        f"Y=[{tableYMin if 'tableYMin' in locals() else 'N/A':.2f}, {tableYMax if 'tableYMax' in locals() else 'N/A':.2f}]. "
+                        f"Try using a larger table area, different style ('random' instead of 'grid'), or disabling simple_connection.")
+    
     node_edge_generator.delaunay_triangulation(nodes=node_edge_generator.graph.nodes, without_distance_check=False)
     #visualization.show_table_configuration(table_configuration=False, boundary=False, stations=True, station_nodes=True, nodes=True, edges=True)
 
@@ -263,6 +354,14 @@ def generator(productionsystem: production_system_data, area=None, visualize=Fal
     # Generate networkx graph. Bidirectional graph and mixed-directional graph are generated.
     # The graph can be visualized. 
     G, DiG = networkx_formater.generate_nx_graph(plot=False) #G: undirected graph, DiG: directed graph
+
+    # Restore original Configuration values (Configuration is a singleton, so we need to restore)
+    # to prevent test pollution when tests run in sequence
+    if tablesize < 50.0:
+        config.set(Configuration.Min_Node_Distance, original_min_node_dist)
+        config.set(Configuration.Min_Node_Edge_Distance, original_min_edge_dist)
+        config.set(Configuration.Trajectory_Node_Distance, original_trajectory_dist)
+        config.set(Configuration.Buffer_Node_Distance, original_buffer_dist)
 
     return G
 
