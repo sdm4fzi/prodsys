@@ -920,7 +920,7 @@ class ProductionSystemData(BaseModel):
             ('product_data', self.product_data, 'Product'),
             ('sink_data', self.sink_data, 'Sink'),
             ('source_data', self.source_data, 'Source'),
-            ('depdendency_data', self.dependency_data or [], 'Dependency'),
+            ('dependency_data', self.dependency_data or [], 'Dependency'),
             ('primitive_data', self.primitive_data or [], 'Primitive'),
         ]
         

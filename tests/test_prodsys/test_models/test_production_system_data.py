@@ -2026,3 +2026,251 @@ class TestDefaultQueueCreation:
         assert f"{resource1.ID}_default_queue" in port_ids
         assert f"{resource2.ID}_default_queue" in port_ids
 
+
+class TestDependencySerialization:
+    """Tests for dependency data serialization and deserialization."""
+
+    def test_dependency_serialization_deserialization(self):
+        """Test that dependency data is correctly serialized and deserialized."""
+        import json
+        import tempfile
+        import os
+        import prodsys.express as psx
+        from prodsys.models.dependency_data import ProcessDependencyData, ResourceDependencyData
+
+        # Create time models
+        t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
+        t2 = psx.FunctionTimeModel("normal", 2, 0.2, "t2")
+        t3 = psx.DistanceTimeModel(speed=180, reaction_time=0.1, ID="t3")
+
+        # Create processes
+        p1 = psx.ProductionProcess(t1, "p1")
+        p2 = psx.ProductionProcess(t2, "p2")
+        tp = psx.TransportProcess(t3, "tp")
+        move_p = psx.TransportProcess(t3, "move")
+        assembly_process = psx.ProductionProcess(
+            psx.FunctionTimeModel("exponential", 0.1, ID="assembly_time"),
+            "assembly_process"
+        )
+
+        # Create setup states
+        s1 = psx.FunctionTimeModel("exponential", 0.5, ID="s1")
+        setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
+        setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
+
+        # Create resources
+        worker = psx.Resource([move_p, assembly_process], [2, 0], 1, ID="worker")
+        worker2 = psx.Resource([move_p, assembly_process], [3, 0], 1, ID="worker2")
+        transport = psx.Resource([tp], [2, 2], 1, ID="transport")
+
+        # Create interaction nodes
+        interaction_node_assembly = psx.Node(location=[5, 6], ID="interaction_node_assembly")
+        interaction_node_resource_2 = psx.Node(location=[7, 4], ID="interaction_node_resource_2")
+
+        # Create dependencies
+        assembly_dependency = psx.ProcessDependency(
+            ID="assembly_dependency",
+            required_process=assembly_process,
+            interaction_node=interaction_node_assembly,
+        )
+        resource_2_dependency = psx.ResourceDependency(
+            ID="resource_2_dependency",
+            required_resource=worker2,
+            interaction_node=interaction_node_resource_2,
+        )
+
+        # Create resources with dependencies
+        machine = psx.Resource(
+            [p1, p2],
+            [5, 5],
+            1,
+            states=[setup_state_1, setup_state_2],
+            ID="machine",
+            dependencies=[assembly_dependency],
+        )
+        machine2 = psx.Resource(
+            [p1, p2],
+            [7, 2],
+            3,
+            states=[setup_state_1, setup_state_2],
+            ID="machine2",
+            dependencies=[resource_2_dependency],
+        )
+
+        # Create products
+        product1 = psx.Product(process=[p1], transport_process=tp, ID="product1")
+        product2 = psx.Product(process=[p2], transport_process=tp, ID="product2")
+
+        # Create sources and sinks
+        arrival_model_1 = psx.FunctionTimeModel("exponential", 2, ID="arrival_model_1")
+        arrival_model_2 = psx.FunctionTimeModel("exponential", 4, ID="arrival_model_2")
+        source1 = psx.Source(product1, arrival_model_1, [0, 0], ID="source_1")
+        source2 = psx.Source(product2, arrival_model_2, [0, 0], ID="source_2")
+        sink1 = psx.Sink(product1, [10, 0], "sink1")
+        sink2 = psx.Sink(product2, [10, 0], "sink2")
+
+        # Create production system
+        system = psx.ProductionSystem(
+            [machine, machine2, transport, worker, worker2],
+            [source1, source2],
+            [sink1, sink2],
+        )
+
+        # Convert to ProductionSystemData model
+        model = system.to_model()
+
+        # Verify original dependency data
+        assert len(model.dependency_data) == 2
+        original_dependency_ids = {dep.ID for dep in model.dependency_data}
+        assert "assembly_dependency" in original_dependency_ids
+        assert "resource_2_dependency" in original_dependency_ids
+
+        # Check that dependencies are present in resource data
+        machine_resource = next(r for r in model.resource_data if r.ID == "machine")
+        assert machine_resource.dependency_ids == ["assembly_dependency"]
+        machine2_resource = next(r for r in model.resource_data if r.ID == "machine2")
+        assert machine2_resource.dependency_ids == ["resource_2_dependency"]
+
+        # Serialize to JSON
+        json_str = model.model_dump_json(indent=2)
+        json_dict = json.loads(json_str)
+        assert len(json_dict.get("dependency_data", [])) == 2
+
+        # Deserialize from JSON
+        deserialized_model = ProductionSystemData.model_validate(json_dict)
+
+        # Verify deserialized dependency data
+        assert len(deserialized_model.dependency_data) == 2
+        deserialized_dependency_ids = {dep.ID for dep in deserialized_model.dependency_data}
+        assert deserialized_dependency_ids == original_dependency_ids
+
+        # Verify each dependency in detail
+        for orig_dep in model.dependency_data:
+            deser_dep = next(
+                (d for d in deserialized_model.dependency_data if d.ID == orig_dep.ID),
+                None
+            )
+            assert deser_dep is not None, f"Dependency '{orig_dep.ID}' not found in deserialized data"
+            assert orig_dep.dependency_type == deser_dep.dependency_type
+
+            # Verify dependency-specific fields
+            if isinstance(orig_dep, ProcessDependencyData):
+                assert orig_dep.required_process == deser_dep.required_process
+                assert orig_dep.interaction_node == deser_dep.interaction_node
+            elif isinstance(orig_dep, ResourceDependencyData):
+                assert orig_dep.required_resource == deser_dep.required_resource
+                assert orig_dep.interaction_node == deser_dep.interaction_node
+
+        # Verify resource dependency references are preserved
+        deserialized_machine = next(r for r in deserialized_model.resource_data if r.ID == "machine")
+        assert deserialized_machine.dependency_ids == machine_resource.dependency_ids
+        deserialized_machine2 = next(r for r in deserialized_model.resource_data if r.ID == "machine2")
+        assert deserialized_machine2.dependency_ids == machine2_resource.dependency_ids
+
+    def test_dependency_file_io(self):
+        """Test that dependency data is correctly preserved when writing to and reading from file."""
+        import tempfile
+        import os
+        import prodsys.express as psx
+
+        # Create a simple system with dependencies
+        t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
+        p1 = psx.ProductionProcess(t1, "p1")
+        tp = psx.TransportProcess(psx.DistanceTimeModel(speed=180, reaction_time=0.1, ID="t3"), "tp")
+        assembly_process = psx.ProductionProcess(
+            psx.FunctionTimeModel("exponential", 0.1, ID="assembly_time"),
+            "assembly_process"
+        )
+        worker = psx.Resource([assembly_process], [2, 0], 1, ID="worker")
+        interaction_node = psx.Node(location=[5, 6], ID="interaction_node_assembly")
+        assembly_dependency = psx.ProcessDependency(
+            ID="assembly_dependency",
+            required_process=assembly_process,
+            interaction_node=interaction_node,
+        )
+        machine = psx.Resource(
+            [p1],
+            [5, 5],
+            1,
+            ID="machine",
+            dependencies=[assembly_dependency],
+        )
+        transport = psx.Resource([tp], [2, 2], 1, ID="transport")
+        product1 = psx.Product(process=[p1], transport_process=tp, ID="product1")
+        source1 = psx.Source(
+            product1,
+            psx.FunctionTimeModel("exponential", 2, ID="arrival_model_1"),
+            [0, 0],
+            ID="source_1"
+        )
+        sink1 = psx.Sink(product1, [10, 0], "sink1")
+
+        system = psx.ProductionSystem(
+            [machine, transport, worker],
+            [source1],
+            [sink1],
+        )
+
+        model = system.to_model()
+        original_dependency_count = len(model.dependency_data)
+
+        # Write to file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+
+        try:
+            model.write(tmp_path)
+
+            # Read from file
+            loaded_model = ProductionSystemData.read(tmp_path)
+
+            # Verify loaded dependency data
+            assert len(loaded_model.dependency_data) == original_dependency_count
+            loaded_dependency_ids = {dep.ID for dep in loaded_model.dependency_data}
+            original_dependency_ids = {dep.ID for dep in model.dependency_data}
+            assert loaded_dependency_ids == original_dependency_ids
+
+            # Verify resource dependencies are preserved
+            for orig_resource in model.resource_data:
+                if orig_resource.dependency_ids:
+                    loaded_resource = next(
+                        (r for r in loaded_model.resource_data if r.ID == orig_resource.ID),
+                        None
+                    )
+                    assert loaded_resource is not None
+                    assert orig_resource.dependency_ids == loaded_resource.dependency_ids
+
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+    def test_none_dependency_data_handling(self):
+        """Test that None dependency_data is handled correctly."""
+        import prodsys.express as psx
+
+        # Create a simple system
+        t1 = psx.FunctionTimeModel("normal", 1, 0.1, "t1")
+        p1 = psx.ProductionProcess(t1, "p1")
+        tp = psx.TransportProcess(psx.DistanceTimeModel(speed=180, reaction_time=0.1, ID="t3"), "tp")
+        transport = psx.Resource([tp], [2, 2], 1, ID="transport")
+        machine = psx.Resource([p1], [5, 5], 1, ID="machine")  # Resource that provides p1
+        product1 = psx.Product(process=[p1], transport_process=tp, ID="product1")
+        source1 = psx.Source(
+            product1,
+            psx.FunctionTimeModel("exponential", 2, ID="arrival_model_1"),
+            [0, 0],
+            ID="source_1"
+        )
+        sink1 = psx.Sink(product1, [10, 0], "sink1")
+
+        system = psx.ProductionSystem([machine, transport], [source1], [sink1])
+        model = system.to_model()
+
+        # Test with None dependency_data
+        model_dict = model.model_dump()
+        model_dict['dependency_data'] = None
+        model_with_none = ProductionSystemData.model_validate(model_dict)
+
+        # Should default to empty list or None
+        assert model_with_none.dependency_data is None or len(model_with_none.dependency_data) == 0
+

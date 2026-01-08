@@ -4,9 +4,9 @@
 
 ![Build-sucess](https://img.shields.io/badge/build-success-green)
 ![PyPI](https://img.shields.io/pypi/v/prodsys)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/prodsys)
+![Python Version](https://img.shields.io/badge/python-%3E%3D3.10-blue)
 ![Docu](https://img.shields.io/badge/docu-full-green)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10995273.svg)](https://doi.org/10.5281/zenodo.10995273)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18177268.svg)](https://doi.org/10.5281/zenodo.18177268)
 
 prodsys is a python package for modeling, simulating and optimizing production systems based on the product, process and resource (PPR) modelling principle. For more information, have a look at the [documentation](https://sdm4fzi.github.io/prodsys/).
 
