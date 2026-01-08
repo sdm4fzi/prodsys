@@ -1670,7 +1670,7 @@ def get_required_process_ids(
 
     dependency_entries = getattr(configuration, "dependency_data", None)
     if dependency_entries is None:
-        dependency_entries = getattr(configuration, "depdendency_data", []) or []
+        dependency_entries = []
     dependency_processes = [
         dependency.required_process
         for dependency in dependency_entries
