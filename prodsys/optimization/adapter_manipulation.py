@@ -987,6 +987,11 @@ def mutation(individual):
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
     sync_resource_dependencies(adapter_object)
+    
+    # Regenerate network for conveyor processes to ensure old links are cleared
+    if any(isinstance(process, LinkTransportProcessData) and not process.can_move 
+           for process in adapter_object.process_data):
+        node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
 
     return (individual,)
 

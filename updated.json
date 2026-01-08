@@ -1,0 +1,830 @@
+{
+    "ID": "EKx_SKx_SplittedV24_partial",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "tm_PstGlue6Point_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 6.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstGlue6Point_auto",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 26.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstSolderingEc_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 28.2,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcLoadProg_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 8.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcLoadProg_auto",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 16.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcFirstTrack_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 20.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcFirstTrack_auto",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 24.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcSecondTrack_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 14.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstAlignEcSecondTrack_auto",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 70.0,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstGlueCaterpillar_manual",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 3.8,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_PstGlueCaterpillar_auto",
+            "description": "",
+            "distribution_function": "constant",
+            "location": 80.2,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "tm_link",
+            "description": "",
+            "speed": 1.0,
+            "reaction_time": 0.016666666666666666,
+            "metric": "manhattan"
+        },
+        {
+            "ID": "tm_arrival",
+            "description": "",
+            "distribution_function": "exponential",
+            "location": 28.8,
+            "scale": 0.0,
+            "batch_size": 100
+        }
+    ],
+    "state_data": [],
+    "process_data": [
+        {
+            "ID": "product_process_model",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "pm_align": [
+                    "pm_glue_cater"
+                ],
+                "pm_glue6": [
+                    "pm_solder"
+                ],
+                "pm_solder": [
+                    "pm_align"
+                ],
+                "pm_glue_cater": []
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "pm_glue6",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "PstGlue6Point_auto": [],
+                "PstGlue6Point_manual": [
+                    "PstGlue6Point_auto"
+                ]
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "PstGlue6Point_manual",
+            "description": "",
+            "time_model_id": "tm_PstGlue6Point_manual",
+            "dependency_ids": [
+                "dep_PstGlue6Point_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstGlue6Point_auto",
+            "description": "",
+            "time_model_id": "tm_PstGlue6Point_auto",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "pm_solder",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "PstSolderingEc_manual": []
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "PstSolderingEc_manual",
+            "description": "",
+            "time_model_id": "tm_PstSolderingEc_manual",
+            "dependency_ids": [
+                "dep_PstSolderingEc_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "pm_align",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "PstAlignEcLoadProg_auto": [
+                    "PstAlignEcFirstTrack_manual"
+                ],
+                "PstAlignEcFirstTrack_auto": [
+                    "PstAlignEcSecondTrack_manual"
+                ],
+                "PstAlignEcLoadProg_manual": [
+                    "PstAlignEcLoadProg_auto"
+                ],
+                "PstAlignEcSecondTrack_auto": [],
+                "PstAlignEcFirstTrack_manual": [
+                    "PstAlignEcFirstTrack_auto"
+                ],
+                "PstAlignEcSecondTrack_manual": [
+                    "PstAlignEcSecondTrack_auto"
+                ]
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "PstAlignEcLoadProg_manual",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcLoadProg_manual",
+            "dependency_ids": [
+                "dep_PstAlignEcLoadProg_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstAlignEcLoadProg_auto",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcLoadProg_auto",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstAlignEcFirstTrack_manual",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcFirstTrack_manual",
+            "dependency_ids": [
+                "dep_PstAlignEcFirstTrack_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstAlignEcFirstTrack_auto",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcFirstTrack_auto",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstAlignEcSecondTrack_manual",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcSecondTrack_manual",
+            "dependency_ids": [
+                "dep_PstAlignEcSecondTrack_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstAlignEcSecondTrack_auto",
+            "description": "",
+            "time_model_id": "tm_PstAlignEcSecondTrack_auto",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "pm_glue_cater",
+            "description": "",
+            "type": "ProcessModels",
+            "adjacency_matrix": {
+                "PstGlueCaterpillar_auto": [],
+                "PstGlueCaterpillar_manual": [
+                    "PstGlueCaterpillar_auto"
+                ]
+            },
+            "dependency_ids": []
+        },
+        {
+            "ID": "PstGlueCaterpillar_manual",
+            "description": "",
+            "time_model_id": "tm_PstGlueCaterpillar_manual",
+            "dependency_ids": [
+                "dep_PstGlueCaterpillar_worker"
+            ],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "PstGlueCaterpillar_auto",
+            "description": "",
+            "time_model_id": "tm_PstGlueCaterpillar_auto",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": null
+        },
+        {
+            "ID": "ltp_worker1",
+            "description": "",
+            "time_model_id": "tm_link",
+            "dependency_ids": [
+                "batch_transport_dependency_worker1"
+            ],
+            "type": "TransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null,
+            "can_move": true
+        },
+        {
+            "ID": "worker_link_transport",
+            "description": "s",
+            "time_model_id": "tm_link",
+            "dependency_ids": [],
+            "type": "LinkTransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null,
+            "can_move": true,
+            "links": [
+                [
+                    "WcGlue6Point",
+                    "Workers_Part1"
+                ],
+                [
+                    "WcGlue6Point",
+                    "WcSolderingEc"
+                ],
+                [
+                    "WcGlue6Point",
+                    "node_4"
+                ],
+                [
+                    "WcSolderingEc",
+                    "Workers_Part1"
+                ],
+                [
+                    "Workers_Part1",
+                    "node_4"
+                ],
+                [
+                    "WcAlignEc",
+                    "Workers_Part1"
+                ],
+                [
+                    "Workers_Part1",
+                    "WcAlignEc"
+                ],
+                [
+                    "Source",
+                    "Workers_Part1"
+                ],
+                [
+                    "Workers_Part1",
+                    "Source"
+                ],
+                [
+                    "WcGlueCaterpillar",
+                    "WcSolderingEc"
+                ],
+                [
+                    "WcSolderingEc",
+                    "WcGlueCaterpillar"
+                ],
+                [
+                    "Sink",
+                    "Workers_Part1"
+                ],
+                [
+                    "Workers_Part1",
+                    "Sink"
+                ]
+            ],
+            "capability": "transport"
+        }
+    ],
+    "port_data": [
+        {
+            "ID": "Source_default_output_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                3.528,
+                0.8
+            ],
+            "interface_type": "output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "WcGlue6Point_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                4.268,
+                1.762
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "WcSolderingEc_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                4.115,
+                2.452
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "WcAlignEc_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                4.16,
+                3.36
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "WcGlueCaterpillar_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                4.094,
+                4.249
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "Workers_Part1_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                3.528,
+                1.5
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "Sink_default_input_queue",
+            "description": "",
+            "capacity": 0,
+            "location": [
+                2.135,
+                0.6
+            ],
+            "interface_type": "input",
+            "port_type": "queue",
+            "dependency_ids": []
+        }
+    ],
+    "node_data": [
+        {
+            "location": [
+                22.0,
+                -2.34
+            ],
+            "ID": "node_4",
+            "description": ""
+        }
+    ],
+    "resource_data": [
+        {
+            "location": [
+                20.0,
+                20.0
+            ],
+            "ID": "WcGlue6Point",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "pm_glue6"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "WcGlue6Point_default_input_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                30.0
+            ],
+            "ID": "WcSolderingEc",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "pm_solder"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "WcSolderingEc_default_input_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                10.0,
+                10.0
+            ],
+            "ID": "WcAlignEc",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "pm_align"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 2,
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "WcAlignEc_default_input_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                20.0
+            ],
+            "ID": "WcGlueCaterpillar",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "pm_glue_cater"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "WcGlueCaterpillar_default_input_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                10.0
+            ],
+            "ID": "Workers_Part1",
+            "description": "",
+            "resource_type": "resource",
+            "process_ids": [
+                "worker_link_transport"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 2,
+            "process_capacities": [
+                2
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "Workers_Part1_default_input_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "dependency_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "SICK_Product",
+            "description": "x",
+            "type": "SICK_Product",
+            "transport_process": "worker_link_transport",
+            "processes": {
+                "pm_align": [
+                    "pm_glue6"
+                ],
+                "pm_glue6": [
+                    "pm_solder"
+                ],
+                "pm_solder": [
+                    "pm_glue_cater"
+                ],
+                "pm_glue_cater": []
+            },
+            "dependency_ids": [],
+            "routing_heuristic": null,
+            "becomes_consumable": false
+        }
+    ],
+    "sink_data": [
+        {
+            "location": [
+                2.135,
+                0.6
+            ],
+            "ID": "Sink",
+            "description": "",
+            "product_type": "SICK_Product",
+            "ports": [
+                "Sink_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "location": [
+                3.528,
+                0.8
+            ],
+            "ID": "Source",
+            "description": "",
+            "product_type": "SICK_Product",
+            "time_model_id": "tm_arrival",
+            "routing_heuristic": "random",
+            "ports": [
+                "Source_default_output_queue"
+            ]
+        }
+    ],
+    "scenario_data": {
+        "constraints": {
+            "max_reconfiguration_cost": 100000.0,
+            "max_num_machines": 10,
+            "max_num_processes_per_machine": 2,
+            "max_num_transport_resources": 3,
+            "target_product_count": {
+                "Product_1": 120,
+                "Product_2": 200
+            }
+        },
+        "options": {
+            "transformations": [
+                "production_capacity",
+                "transport_capacity",
+                "layout",
+                "sequencing_logic",
+                "routing_logic"
+            ],
+            "machine_controllers": [
+                "FIFO",
+                "SPT"
+            ],
+            "transport_controllers": [
+                "FIFO",
+                "SPT_transport"
+            ],
+            "routing_heuristics": [
+                "shortest_queue",
+                "random"
+            ],
+            "positions": [
+                [
+                    3.528,
+                    1.5
+                ],
+                [
+                    3.528,
+                    2.463
+                ],
+                [
+                    3.528,
+                    3.36
+                ],
+                [
+                    3.528,
+                    4.249
+                ],
+                [
+                    3.528,
+                    0.8
+                ],
+                [
+                    2.135,
+                    0.6
+                ],
+                [
+                    4.268,
+                    1.762
+                ],
+                [
+                    4.115,
+                    2.452
+                ],
+                [
+                    4.16,
+                    3.36
+                ],
+                [
+                    4.094,
+                    4.249
+                ],
+                [
+                    4.268,
+                    0.6
+                ],
+                [
+                    4.115,
+                    0.6
+                ],
+                [
+                    4.16,
+                    0.6
+                ],
+                [
+                    4.094,
+                    0.6
+                ]
+            ]
+        },
+        "info": {
+            "machine_cost": 1000.0,
+            "transport_resource_cost": 1000.0,
+            "process_module_cost": 1000.0,
+            "primitive_cost": 1000.0,
+            "selling_machines": false,
+            "selling_transport_resources": false,
+            "selling_process_modules": false,
+            "selling_primitives": false,
+            "breakdown_cost": null,
+            "time_range": 72000,
+            "maximum_breakdown_time": null
+        },
+        "objectives": [
+            {
+                "name": "cost",
+                "weight": 0.6
+            },
+            {
+                "name": "throughput",
+                "weight": 0.1
+            },
+            {
+                "name": "WIP",
+                "weight": 0.5
+            }
+        ]
+    },
+    "dependency_data": [
+        {
+            "ID": "dep_PstGlue6Point_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "dep_PstSolderingEc_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "dep_PstAlignEcLoadProg_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "dep_PstAlignEcFirstTrack_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "dep_PstAlignEcSecondTrack_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "dep_PstGlueCaterpillar_worker",
+            "description": "transport_resource",
+            "dependency_type": "resource",
+            "required_resource": "Workers_Part1",
+            "interaction_node": null,
+            "position_type": "absolute",
+            "per_lot": true
+        },
+        {
+            "ID": "batch_transport_dependency_worker1",
+            "description": "",
+            "dependency_type": "lot",
+            "min_lot_size": 1,
+            "max_lot_size": 2,
+            "input_output": "input_output"
+        }
+    ],
+    "primitive_data": [],
+    "schedule": null,
+    "order_data": [],
+    "conwip_number": null,
+    "reference_time": null,
+    "time_unit": "min",
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
+}

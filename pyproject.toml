@@ -1,6 +1,6 @@
 [project]
 name = "prodsys"
-version = "1.0.3"
+version = "1.0.4"
 description = "A useful module for production system simulation and optimization"
 authors = [
     {name = "Sebastian Behrendt", email = "sebastian.behrendt@kit.edu"}

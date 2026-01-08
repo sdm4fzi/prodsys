@@ -372,7 +372,11 @@ def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
     #all_relevant_resources.extend([sink.ID for sink in productionsystem.sink_data])
     #all_relevant_resources.extend([source.ID for source in productionsystem.source_data])
 
+    # Include ALL resources (production + transport), not just production resources
+    # This ensures transport resources like Workers_Part1 are also included in the network
+    from prodsys.models.production_system_data import get_transport_resources
     all_locations = [(prodres.ID, prodres.location) for prodres in get_production_resources(adapter)]
+    all_locations.extend([(tres.ID, tres.location) for tres in get_transport_resources(adapter)])
     all_locations.extend([(sink.ID, sink.location) for sink in adapter.sink_data])
     all_locations.extend([(source.ID, source.location) for source in adapter.source_data])
 
@@ -384,6 +388,8 @@ def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
 
     nx_to_location = {}
     # Map GML node id (int) to matched resource ID
+    # Also track which nodes will be added to node_data (for validation)
+    node_id_to_name = {}  # Maps NetworkX node ID -> node name that will be in node_data
     new_nodes = [] #nodes that where generated and not previously existing in the production system
     node_blocks = G.nodes
     for block in node_blocks: #extract the newly generated nodes from the networkx graph
@@ -395,8 +401,16 @@ def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
             raise ValueError(f"Node {block} position is not two-dimensional: {pos}") #Generator can only handle 2D positions
 
         nx_to_location[block] = pos
+        node_name = f"node_{block}"
         if pos not in location_to_resources:
-            new_nodes.append([f"node_{block}", (x, y)])
+            # This node will be added to node_data
+            new_nodes.append([node_name, (x, y)])
+            node_id_to_name[block] = node_name
+        else:
+            # This node is at a resource location, so it won't be added as a separate node
+            # But we still need to track it for linking purposes
+            # In this case, links should use the resource ID, not the node ID
+            node_id_to_name[block] = None  # Mark as not a separate node
 
 
     new_links = []
@@ -409,17 +423,126 @@ def convert_nx_to_prodsys(adapter: production_system_data, G: nx.Graph):
                 for tgt_resource in location_to_resources[tgt_loc]:
                     new_links.append([src_resource, tgt_resource])
         elif src_loc in location_to_resources:
-            tgt = f"node_{tgt_id}"
-            for src_resource in location_to_resources[src_loc]:
-                new_links.append([src_resource, tgt])
+            # Source is a resource, target might be a node or resource
+            if tgt_loc in location_to_resources:
+                # Both are resources - should have been handled above
+                pass
+            else:
+                # Target is a node - use node name if it will be in node_data
+                tgt_name = node_id_to_name.get(tgt_id)
+                if tgt_name:
+                    for src_resource in location_to_resources[src_loc]:
+                        new_links.append([src_resource, tgt_name])
+                # If tgt_name is None, the node is at a resource location, so we should link to that resource
+                if not tgt_name and tgt_loc in location_to_resources:
+                    for src_resource in location_to_resources[src_loc]:
+                        for tgt_resource in location_to_resources[tgt_loc]:
+                            new_links.append([src_resource, tgt_resource])
         elif tgt_loc in location_to_resources:
-            src = f"node_{src_id}"
-            for tgt_resource in location_to_resources[tgt_loc]:
-                new_links.append([src, tgt_resource])                
+            # Target is a resource, source might be a node or resource
+            src_name = node_id_to_name.get(src_id)
+            if src_name:
+                for tgt_resource in location_to_resources[tgt_loc]:
+                    new_links.append([src_name, tgt_resource])
+            # If src_name is None, the node is at a resource location, so we should link to that resource
+            if not src_name and src_loc in location_to_resources:
+                for src_resource in location_to_resources[src_loc]:
+                    for tgt_resource in location_to_resources[tgt_loc]:
+                        new_links.append([src_resource, tgt_resource])
         else:
-            src = f"node_{src_id}"
-            tgt = f"node_{tgt_id}"
-            new_links.append([src, tgt])
+            # Both are nodes - create links appropriately
+            src_name = node_id_to_name.get(src_id)
+            tgt_name = node_id_to_name.get(tgt_id)
+            
+            if src_name and tgt_name:
+                # Both nodes will be in node_data
+                new_links.append([src_name, tgt_name])
+            elif src_name and not tgt_name:
+                # Source is a node, target is at a resource location
+                if tgt_loc in location_to_resources:
+                    for tgt_resource in location_to_resources[tgt_loc]:
+                        new_links.append([src_name, tgt_resource])
+            elif not src_name and tgt_name:
+                # Source is at a resource location, target is a node
+                if src_loc in location_to_resources:
+                    for src_resource in location_to_resources[src_loc]:
+                        new_links.append([src_resource, tgt_name])
+            elif not src_name and not tgt_name:
+                # Both nodes are at resource locations - link the resources
+                if src_loc in location_to_resources and tgt_loc in location_to_resources:
+                    for src_resource in location_to_resources[src_loc]:
+                        for tgt_resource in location_to_resources[tgt_loc]:
+                            new_links.append([src_resource, tgt_resource])
+
+    # CRITICAL FIX: Ensure ALL resources/sources/sinks are connected
+    # Some stations may not get nodes in the graph due to station configuration limitations
+    # Connect any unconnected resources to the nearest node in the graph
+    connected_resources = set()
+    for link in new_links:
+        connected_resources.add(link[0])
+        connected_resources.add(link[1])
+    
+    # Find resources that aren't connected
+    all_resource_ids = {r[0] for r in all_locations}
+    unconnected_resources = {rid for rid in all_resource_ids if rid not in connected_resources}
+    
+    if unconnected_resources and nx_to_location:
+        # Helper function to find nearest node
+        def find_nearest_node_id(resource_loc):
+            """Find the ID of the nearest node to the given location."""
+            min_dist = float('inf')
+            nearest_id = None
+            for node_id, node_loc in nx_to_location.items():
+                if len(node_loc) >= 2 and len(resource_loc) >= 2:
+                    dx = node_loc[0] - resource_loc[0]
+                    dy = node_loc[1] - resource_loc[1]
+                    dist = (dx*dx + dy*dy) ** 0.5
+                    if dist < min_dist:
+                        min_dist = dist
+                        nearest_id = node_id
+            return nearest_id
+        
+        # Connect each unconnected resource to its nearest connected location
+        # IMPORTANT: Only create links with IDs that will be valid (in node_data, resource_data, etc.)
+        for resource_id in unconnected_resources:
+            resource_loc = next((r[1] for r in all_locations if r[0] == resource_id), None)
+            if resource_loc:
+                # Find nearest connected resource first (preferred)
+                nearest_connected_resource = None
+                min_dist_to_resource = float('inf')
+                for link in new_links:
+                    for target in [link[0], link[1]]:
+                        if target in all_resource_ids and target in connected_resources:
+                            target_loc = next((r[1] for r in all_locations if r[0] == target), None)
+                            if target_loc and len(target_loc) >= 2 and len(resource_loc) >= 2:
+                                dx = target_loc[0] - resource_loc[0]
+                                dy = target_loc[1] - resource_loc[1]
+                                dist = (dx*dx + dy*dy) ** 0.5
+                                if dist < min_dist_to_resource:
+                                    min_dist_to_resource = dist
+                                    nearest_connected_resource = target
+                
+                # If we found a connected resource, link to it
+                if nearest_connected_resource:
+                    new_links.append([resource_id, nearest_connected_resource])
+                    new_links.append([nearest_connected_resource, resource_id])
+                else:
+                    # Fallback: find nearest node that will be in node_data
+                    nearest_node_id = find_nearest_node_id(resource_loc)
+                    if nearest_node_id is not None:
+                        nearest_node_name = node_id_to_name.get(nearest_node_id)
+                        if nearest_node_name:
+                            # Node will be in node_data, so we can link to it
+                            new_links.append([resource_id, nearest_node_name])
+                            new_links.append([nearest_node_name, resource_id])
+                        else:
+                            # Node is at a resource location - link to that resource instead
+                            nearest_node_loc = nx_to_location.get(nearest_node_id)
+                            if nearest_node_loc and tuple(nearest_node_loc) in location_to_resources:
+                                nearest_resource = location_to_resources[tuple(nearest_node_loc)][0]
+                                if nearest_resource in connected_resources:
+                                    new_links.append([resource_id, nearest_resource])
+                                    new_links.append([nearest_resource, resource_id])
 
     return new_nodes, new_links
 
@@ -432,11 +555,14 @@ def apply_nodes_links(adapter: production_system_data, nodes, links) -> None:
         adapter.node_data.append(node_data.NodeData(ID=str(node[0]), description="", location=node[1]))
 
     # Replace links inside LinkTransportProcesses in the Productionsystem
+    # Update links for ALL LinkTransportProcesses to ensure old links are cleared
+    # For conveyors (can_move=False), we update all of them to handle multiple conveyor processes
     for LinkTransportProcess in adapter.process_data:
         if isinstance(LinkTransportProcess, prodsys.processes_data.LinkTransportProcessData):
+            # Update links for all processes to clear any old/stale links
             LinkTransportProcess.links = links
-            if not LinkTransportProcess.can_move:
-                break  # Stop after the first one
+            # Note: Original code broke after first conveyor, but we now update all conveyors
+            # to handle cases with multiple conveyor processes in evolutionary algorithm
 
 def generate_and_apply_network(adapter: production_system_data, xml_path = None, visualize=False, style="grid", simple_connection=True) -> None:
     if xml_path:
