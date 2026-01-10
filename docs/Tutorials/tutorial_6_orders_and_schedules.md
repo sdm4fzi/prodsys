@@ -61,13 +61,13 @@ order_source = psx.OrderSource(
 )
 
 # Create resources
-machine = psx.ProductionResource(
+machine = psx.Resource(
     processes=[p1, p2],
     location=[5, 0],
     capacity=2,
     ID="machine",
 )
-transport = psx.TransportResource(
+transport = psx.Resource(
     processes=[tp],
     location=[2, 0],
     capacity=1,
@@ -227,21 +227,21 @@ setup_state_1 = psx.SetupState(s1, p1, p2, "S1")
 setup_state_2 = psx.SetupState(s1, p2, p1, "S2")
 
 # Create resources
-machine = psx.ProductionResource(
+machine = psx.Resource(
     processes=[p1, p2],
     location=[5, 0],
     capacity=2,
     states=[setup_state_1, setup_state_2],
     ID="machine",
 )
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     processes=[p1, p2],
     location=[7, 0],
     capacity=2,
     states=[setup_state_1, setup_state_2],
     ID="machine2",
 )
-transport = psx.TransportResource(
+transport = psx.Resource(
     processes=[tp],
     location=[2, 0],
     capacity=1,

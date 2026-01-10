@@ -30,14 +30,14 @@ machine2_process = psx.ProductionProcess(time_model=tm_machine2, ID="machine2_pr
 transport_process = psx.TransportProcess(time_model=tm_transport, ID="transport_process")
 
 # Create individual machine resources
-machine1 = psx.ProductionResource(
+machine1 = psx.Resource(
     processes=[machine1_process],
     location=[12, 8],
     capacity=1,
     ID="machine1"
 )
 
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     processes=[machine2_process],
     location=[12, 12],
     capacity=1,
@@ -134,7 +134,7 @@ robot_handling_process = psx.TransportProcess(
 )
 
 # Create robot resource
-robot = psx.ProductionResource(
+robot = psx.Resource(
     processes=[transport_process],  # Robot can also transport
     location=[12, 10],
     capacity=1,
@@ -246,7 +246,7 @@ def main():
     
     # ========== RESOURCES ==========
     # Robot resource
-    robot = psx.ProductionResource(
+    robot = psx.Resource(
         processes=[agv_transport],
         location=[12, 10],
         capacity=1,
@@ -254,13 +254,13 @@ def main():
     )
     
     # Machine resources
-    machine1 = psx.ProductionResource(
+    machine1 = psx.Resource(
         processes=[machine1_process],
         location=[12, 8],
         capacity=1,
         ID="machine1"
     )
-    machine2 = psx.ProductionResource(
+    machine2 = psx.Resource(
         processes=[machine2_process],
         location=[12, 12],
         capacity=1,
@@ -268,7 +268,7 @@ def main():
     )
     
     # AGV for global transport
-    agv = psx.TransportResource(
+    agv = psx.Resource(
         processes=[agv_transport],
         location=[0, 10],
         capacity=1,

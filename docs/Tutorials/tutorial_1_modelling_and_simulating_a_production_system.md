@@ -59,13 +59,13 @@ transport_process = psx.TransportProcess(transport_time, ID="transport_process")
 
 ## Resources
 
-With this, we can create our resources. The milling machine and turning lath can perform their associated processes and the worker can perform the transport process. However, the work center can perform milling and turning. Milling machine, turning lath and work center are `ProductionResource`s and the worker is a `TransportResource`:
+With this, we can create our resources. The milling machine and turning lath can perform their associated processes and the worker can perform the transport process. However, the work center can perform milling and turning. Milling machine, turning lath and work center are `Resource`s and the worker is also a `Resource`:
 
 ```python
-milling_machine = psx.ProductionResource([milling_process], location=[5, 5], ID="milling_machine")
-turning_lath = psx.ProductionResource([turning_process], location=[10, 10], ID="turning_machine")
-work_center = psx.ProductionResource([milling_process, turning_process], location=[5, 10], ID="work_center")
-worker = psx.TransportResource([transport_process], location=[0, 0], ID="worker")
+milling_machine = psx.Resource([milling_process], location=[5, 5], ID="milling_machine")
+turning_lath = psx.Resource([turning_process], location=[10, 10], ID="turning_machine")
+work_center = psx.Resource([milling_process, turning_process], location=[5, 10], ID="work_center")
+worker = psx.Resource([transport_process], location=[0, 0], ID="worker")
 ```
 
 ## Product
@@ -198,7 +198,7 @@ time_model_agv = psx.DistanceTimeModel(speed=90, reaction_time=0.2, ID="time_mod
 transport_process = psx.TransportProcess(
     time_model=time_model_agv, ID="transport_process"
 )
-agv = psx.TransportResource(ID="agv", processes=[transport_process], location=[5, 5])
+agv = psx.Resource(ID="agv", processes=[transport_process], location=[5, 5])
 
 time_model_turning_fast = psx.FunctionTimeModel(
     distribution_function="constant", location=6, ID="time_model_turning_fast"
@@ -214,10 +214,10 @@ capability_process_turning_slow = psx.CapabilityProcess(
     time_model=time_model_turning_slow, capability="turning", ID="cp_turning_slow"
 )
 
-resource_fast = psx.ProductionResource(
+resource_fast = psx.Resource(
     ID="resource_fast", processes=[capability_process_turning_fast], location=[5, 0]
 )
-resource_slow = psx.ProductionResource(
+resource_slow = psx.Resource(
     ID="resource_slow", processes=[capability_process_turning_slow], location=[5, 10]
 )
 
@@ -266,7 +266,7 @@ product = psx.Product(
 
 Of course, we could extend the process sequence of the product with other processes, both CapabilityProcesses and normal processes.
 
-To specify that two resources can perform this process with different speed, we define two time models, two `CapabilityProcess` with the capability "turning" and two `ProductionResource`s with the processes:
+To specify that two resources can perform this process with different speed, we define two time models, two `CapabilityProcess` with the capability "turning" and two `Resource`s with the processes:
 
 ```python
 time_model_turning_fast = psx.FunctionTimeModel(
@@ -282,10 +282,10 @@ capability_process_turning_slow = psx.CapabilityProcess(
     time_model=time_model_turning_slow, capability="turning", ID="cp_turning_slow"
 )
 
-resource_fast = psx.ProductionResource(
+resource_fast = psx.Resource(
     ID="resource_fast", processes=[capability_process_turning_fast], location=[5, 0]
 )
-resource_slow = psx.ProductionResource(
+resource_slow = psx.Resource(
     ID="resource_slow", processes=[capability_process_turning_slow], location=[5, 10]
 )
 ```

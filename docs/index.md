@@ -46,8 +46,8 @@ transport_process = psx.TransportProcess(transport_time, ID="transport_process")
 With the processes defined, we can now create the production and transport resources:
 
 ```python
-milling_machine = psx.ProductionResource([milling_process], location=[5, 5], ID="milling_machine")
-worker = psx.TransportResource([transport_process], location=[0, 0], ID="worker")
+milling_machine = psx.Resource([milling_process], location=[5, 5], ID="milling_machine")
+worker = psx.Resource([transport_process], location=[0, 0], ID="worker")
 ```
 
 Now we define our product, the housing, that is produced in the system. For this example it requires only a single processsing step:

@@ -39,7 +39,7 @@ assembly_process = psx.ProductionProcess(
 )
 
 # Create worker resource that can perform assembly
-worker = psx.ProductionResource(
+worker = psx.Resource(
     processes=[move_p, assembly_process],
     location=[2, 0],
     capacity=1,
@@ -57,7 +57,7 @@ assembly_dependency = psx.ProcessDependency(
 )
 
 # Create machine with the dependency
-machine = psx.ProductionResource(
+machine = psx.Resource(
     processes=[p1, p2],
     location=[5, 5],
     capacity=1,
@@ -72,7 +72,7 @@ A `ResourceDependency` models situations where a resource requires another resou
 
 ```python
 # Create worker resource
-worker2 = psx.ProductionResource(
+worker2 = psx.Resource(
     processes=[move_p, assembly_process],
     location=[3, 0],
     capacity=1,
@@ -90,7 +90,7 @@ resource_2_dependency = psx.ResourceDependency(
 )
 
 # Create machine with resource dependency
-machine2 = psx.ProductionResource(
+machine2 = psx.Resource(
     processes=[p1, p2],
     location=[7, 2],
     capacity=3,
@@ -210,7 +210,7 @@ lot_dependency = psx.LotDependency(
 )
 
 # Create machine with lot dependency
-machine = psx.ProductionResource(
+machine = psx.Resource(
     processes=[p1],
     location=[5, 0],
     capacity=5,
@@ -284,7 +284,7 @@ worker_process = psx.ProductionProcess(
 )
 worker_transport = psx.TransportProcess(t_transport, "worker_transport")
 from prodsys.models.resource_data import TransportControlPolicy
-worker = psx.ProductionResource(
+worker = psx.Resource(
     processes=[worker_transport, worker_process, tp],
     location=[1, 1],
     capacity=1,
@@ -301,7 +301,7 @@ worker_dependency = psx.ResourceDependency(
 )
 
 # Assembly station with worker dependency
-assembly_station = psx.ProductionResource(
+assembly_station = psx.Resource(
     processes=[p_subassembly, p_main_assembly, p_screw, p_bolt, p_washer],
     location=[5, 5],
     capacity=1,
