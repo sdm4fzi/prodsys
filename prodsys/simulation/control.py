@@ -457,38 +457,139 @@ def agent_control_policy(
     gym_env.interrupt_simulation_event.succeed()
 
 def scheduled_control_policy(
-    product_sequence_indices: dict[str, str], fallback_policy: Callable, requests: List[request_module.Request]
+    schedule_sequence: List[tuple[str, str, int]], fallback_policy: Callable, requests: List[request_module.Request]
 ) -> None:
     """
     A control policy that sequences products based on their scheduled index in the sequence. 
-    If the request contains any product which is not in the schedule, the fallback policy is also 
-    considered if it would be processed next. 
+    Matches requests based on both product ID and process ID to handle cases where the same
+    product visits the resource multiple times with different processes.
+    
+    Matches each request to the next occurrence in the schedule sequence, ensuring that
+    products are processed in the correct order even when they appear multiple times.
+    
+    If the request contains any product+process combination which is not in the schedule, 
+    the fallback policy is also considered if it would be processed next. 
 
     Args:
-        product_sequence_indices (dict[str, str]): indices in the scheduled sequence of the product ids
+        schedule_sequence (List[tuple[str, str, int]]): Ordered list of (product_id, process_id, index) 
+            tuples representing the scheduled sequence
         fallback_policy (Callable): fallback control policy
         requests (List[request_module.Request]): list of requests to sequence
     """
-    non_scheduled_products = []
-    request_sequence_indices = {}
+
+    # Track which schedule entries have been matched in this call
+    matched_schedule_indices = set()
+    request_to_priority = {}
+    non_scheduled_requests = []
+    
+    # Debug: Print incoming requests
+    for i, request_instance in enumerate(requests):
+        product_id = request_instance.entity.data.ID if request_instance.entity else "None"
+        process_id = request_instance.process.data.ID if request_instance.process else "None"
+    
+    # Track which schedule entries have been matched and which products have been seen
+    # We need to match requests optimally, considering all requests together
+    # Strategy: For each product, track the next expected schedule index
+    product_next_expected_index = {}
+    
+    # First pass: Build a map of all possible matches for each request
+    request_matches = {}  # request -> list of (schedule_index, product_id, process_id) tuples
     for request_instance in requests:
         product_id = request_instance.entity.data.ID
-        if product_id not in product_sequence_indices:
-            non_scheduled_products.append(request_instance)
+        process_id = request_instance.process.data.ID if request_instance.process else None
+        
+        if not process_id:
+            # print(f"[SCHEDULED_CONTROL] Request for {product_id} has no process ID - adding to non-scheduled")
+            non_scheduled_requests.append(request_instance)
             continue
-        request_priority = product_sequence_indices[product_id]
-        request_sequence_indices[request_priority] = request_instance
-
-    if non_scheduled_products:
-        request_list_copy = requests[::]
-        fallback_policy(request_list_copy)
-        if request_list_copy[0].entity.data.ID not in product_sequence_indices:
-            fallback_policy(requests)
-            return
-
-    sorted_indices = sorted(request_sequence_indices.keys())
+        
+        # Find all possible matches for this request
+        possible_matches = []
+        for sched_product_id, sched_process_id, sched_index in schedule_sequence:
+            if product_id == sched_product_id and process_id == sched_process_id:
+                possible_matches.append((sched_index, sched_product_id, sched_process_id))
+        
+        if possible_matches:
+            request_matches[request_instance] = possible_matches
+            # print(f"[SCHEDULED_CONTROL] Request {product_id}->{process_id} has {len(possible_matches)} possible schedule matches: {[m[0] for m in possible_matches]}")
+        else:
+            non_scheduled_requests.append(request_instance)
+    
+    # Second pass: Match requests to schedule entries optimally
+    # Strategy: Process schedule entries in order, and match requests as we go
+    # This ensures that earlier schedule entries are matched first, maintaining correct order
+    
+    # Create a list of (request, possible_matches) sorted by earliest possible schedule index
+    request_match_list = []
+    for request_instance, possible_matches in request_matches.items():
+        if possible_matches:
+            earliest_index = min(m[0] for m in possible_matches)
+            request_match_list.append((earliest_index, request_instance, possible_matches))
+    
+    # Sort by earliest possible schedule index
+    request_match_list.sort(key=lambda x: x[0])
+    
+    # Now match requests in order of their earliest possible schedule index
+    for earliest_index, request_instance, possible_matches in request_match_list:
+        product_id = request_instance.entity.data.ID
+        process_id = request_instance.process.data.ID
+        
+        # Get the next expected index for this product
+        next_expected = product_next_expected_index.get(product_id, 0)
+        
+        # Find the earliest match that is >= next_expected and not already matched
+        best_match = None
+        for sched_index, sched_product_id, sched_process_id in possible_matches:
+            if sched_index >= next_expected and sched_index not in matched_schedule_indices:
+                if best_match is None or sched_index < best_match[0]:
+                    best_match = (sched_index, sched_product_id, sched_process_id)
+        
+        if best_match:
+            sched_index, _, _ = best_match
+            request_to_priority[request_instance] = sched_index
+            matched_schedule_indices.add(sched_index)
+            # Update next expected index for this product
+            product_next_expected_index[product_id] = sched_index + 1
+        else:
+            # No valid match found - this shouldn't happen if schedule is correct
+            non_scheduled_requests.append(request_instance)
+    
+    # Debug: Print priorities assigned
+    for request_instance, priority in sorted(request_to_priority.items(), key=lambda x: x[1]):
+        product_id = request_instance.entity.data.ID
+        process_id = request_instance.process.data.ID if request_instance.process else "None"
+    
+    # If all requests are scheduled, sort by priority
+    if len(non_scheduled_requests) == 0:
+        # All requests are in schedule - sort by their schedule priority
+        requests.sort(key=lambda r: request_to_priority.get(r, float('inf')))
+        for i, r in enumerate(requests):
+            product_id = r.entity.data.ID
+            process_id = r.process.data.ID if r.process else "None"
+            priority = request_to_priority.get(r, "N/A")
+        return
+    
+    # Some requests are not scheduled - check if fallback would help
+    request_list_copy = requests[::]
+    fallback_policy(request_list_copy)
+    # If fallback would select a non-scheduled request, use fallback for all
+    if request_list_copy[0] in non_scheduled_requests:
+        fallback_policy(requests)
+        return
+    
+    # Mix scheduled and non-scheduled: prioritize scheduled ones
+    scheduled_requests = [r for r in requests if r in request_to_priority]
+    scheduled_requests.sort(key=lambda r: request_to_priority[r])
+    
+    # Put scheduled requests first, then non-scheduled (sorted by fallback)
     requests.clear()
-    requests.extend([request_sequence_indices[index] for index in sorted_indices])
+    requests.extend(scheduled_requests)
+    requests.extend(non_scheduled_requests)
+    
+    for i, r in enumerate(requests):
+        product_id = r.entity.data.ID
+        process_id = r.process.data.ID if r.process else "None"
+        priority = request_to_priority.get(r, "N/A (non-scheduled)")
 
 
 # TODO: add a Controller which starts processes with delays...

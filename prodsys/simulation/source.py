@@ -105,12 +105,13 @@ class Source:
                     continue
                 inter_arrival_time = self.schedule[self.release_index].time - self.env.now
                 if inter_arrival_time <= 0:
-                    inter_arrival_time = 1
+                    inter_arrival_time = 0
             else:
                 inter_arrival_time = self.time_model.get_next_time()
                 if inter_arrival_time <= 0:
                     break
-            yield self.env.timeout(inter_arrival_time)
+            if inter_arrival_time > 0:
+                yield self.env.timeout(inter_arrival_time)
             if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
                 continue
             if self.schedule:

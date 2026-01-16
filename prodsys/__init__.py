@@ -20,6 +20,7 @@ from prodsys.models.production_system_data import ProductionSystemData
 from prodsys import adapters
 from prodsys.util import post_processing  # , optimization_util
 from prodsys.simulation import runner
+from prodsys.simulation.runner import Runner
 
 logger = logging.getLogger(__name__)
 

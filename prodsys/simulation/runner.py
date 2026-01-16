@@ -162,6 +162,7 @@ class Runner:
                 state_factory=self.state_factory,
                 queue_factory=self.queue_factory,
                 process_factory=self.process_factory,
+                schedule=self.production_system_data.schedule,
             )
             self.resource_factory.create_resources(self.production_system_data)
 

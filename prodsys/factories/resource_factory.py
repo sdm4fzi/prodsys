@@ -45,12 +45,25 @@ CONTROL_POLICY_DICT: Dict = {
 def get_scheduled_control_policy(
     schedule: List[performance_data.Event], fallback_policy: Callable
 ) -> Callable:
-    product_sequence_indices = {}
+    """
+    Creates a scheduled control policy that sequences products based on their scheduled order.
+    
+    Tracks (product_id, process_id) pairs in order to handle cases where the same product
+    visits the resource multiple times with different processes. Creates a list of all
+    schedule entries in order, so requests can be matched to the next occurrence.
+    """
+    # Create ordered list of (product_id, process_id, index) tuples
+    # This allows matching to the next occurrence of a (product, process) pair
+    schedule_sequence = []
     for index, event in enumerate(schedule):
-        product_sequence_indices[event.product] = index
+        product_id = event.product
+        # Get process ID from event - use state if process is not available
+        process_id = event.process if event.process else event.state
+        if process_id and product_id:
+            schedule_sequence.append((product_id, process_id, index))
 
     return partial(
-        control.scheduled_control_policy, product_sequence_indices, fallback_policy
+        control.scheduled_control_policy, schedule_sequence, fallback_policy
     )
 
 
@@ -326,9 +339,38 @@ class ResourceFactory:
         controller_class = get_class_from_str(
             name=resource_data.controller, cls_dict=CONTROLLER_DICT
         )
-        control_policy = get_class_from_str(
-            name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
-        )
+        
+        # Check if schedule exists and filter events for this resource
+        if self.schedule is not None:
+            # Filter schedule events for this specific resource
+            resource_schedule = [
+                event for event in self.schedule
+                if event.resource == resource_data.ID 
+                and event.state_type == "Production"
+                and event.activity == "start state"
+            ]
+            
+            if resource_schedule:
+                # Get fallback policy
+                fallback_policy = get_class_from_str(
+                    name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
+                )
+                # Create scheduled control policy
+                control_policy = get_scheduled_control_policy(
+                    schedule=resource_schedule,
+                    fallback_policy=fallback_policy
+                )
+            else:
+                # No schedule for this resource, use regular policy
+                control_policy = get_class_from_str(
+                    name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
+                )
+        else:
+            # No schedule provided, use regular policy
+            control_policy = get_class_from_str(
+                name=resource_data.control_policy, cls_dict=CONTROL_POLICY_DICT
+            )
+        
         controller: Union[
             control.Controller,
         ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
