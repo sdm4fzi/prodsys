@@ -346,7 +346,7 @@ class ResourceFactory:
             resource_schedule = [
                 event for event in self.schedule
                 if event.resource == resource_data.ID 
-                and event.state_type == "Production"
+                and (event.state_type == "Production" or event.state_type == "Transport")
                 and event.activity == "start state"
             ]
             
