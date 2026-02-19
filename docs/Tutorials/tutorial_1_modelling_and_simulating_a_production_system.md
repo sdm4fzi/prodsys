@@ -33,7 +33,7 @@ sim.VERBOSE = 0
 - **FunctionTimeModel**: A time model that is based on a distribution function. Either constant, normal, lognormal or exponential.
 - **SampleTimeModel**: A time model that is based on a sequence of time values that are randomly sampled.
 - **ScheduledTimeModel**: A time model that is based on a schedule of time values. The schedule can contain relative or absolute time values. Also the schedule can be executed once or multiple times in a cycle.
-- **DistanceTimeModel**: A time model that is based on the distance between two locations and a constant speed and reaction time. Manhattan distance or Euclidian distance can be used as distance metrics between the points.
+- **DistanceTimeModel**: A time model that is based on the distance between two locations and a constant speed and reaction time. Manhattan distance or Euclidean distance can be used as distance metrics between the points.
 
 We will use the `FunctionTimeModel` to model the time required for milling and turning processes and model the time needed for transport with the `DistanceTimeModel`. We will also model the arrival of housings with the `ScheduledTimeModel`, which could, e.g. be observed inter-arrival times:
 

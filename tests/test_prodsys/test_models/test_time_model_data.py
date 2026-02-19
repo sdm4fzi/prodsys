@@ -231,16 +231,16 @@ class TestDistanceTimeModelData:
         )
         assert time_model.metric == "manhattan"
 
-    def test_euclidian_metric(self):
-        """Test creating with euclidian metric."""
+    def test_euclidean_metric(self):
+        """Test creating with euclidean metric."""
         time_model = DistanceTimeModelData(
             ID="distance_tm1",
             description="Distance time model",
             speed=180.0,
             reaction_time=0.15,
-            metric="euclidian",
+            metric="euclidean",
         )
-        assert time_model.metric == "euclidian"
+        assert time_model.metric == "euclidean"
 
     def test_hash(self):
         """Test hash method considers speed, reaction_time, and metric."""
@@ -270,7 +270,7 @@ class TestDistanceTimeModelData:
             description="Test 4",
             speed=180.0,
             reaction_time=0.15,
-            metric="euclidian",  # different metric
+            metric="euclidean",  # different metric
         )
         
         # Same parameters should produce same hash

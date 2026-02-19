@@ -8,9 +8,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     TypeAdapter,
-    field_validator,
     model_validator,
-    ValidationInfo,
 )
 
 import logging
@@ -41,6 +39,7 @@ from prodsys.models import dependency_data as dependency_data_module
 from prodsys.models import primitives_data as primitives_data_module
 from prodsys.util import util
 from prodsys.models.processes_data import LinkTransportProcessData
+from prodsys.models.source_data import OrderSourceData
 
 def get_production_resources(
     adapter: ProductionSystemData,
@@ -955,27 +954,29 @@ class ProductionSystemData(BaseModel):
         
         return self
 
-    @field_validator("state_data")
-    def check_states(
-        cls, states: List[state_data_module.STATE_DATA_UNION], info: ValidationInfo
-    ):
-        values = info.data
-        for state in states:
-            time_models = get_set_of_IDs(values["time_model_data"])
+    @model_validator(mode='after')
+    def check_cross_field_references(self) -> 'ProductionSystemData':
+        """
+        Validates cross-field references (states, processes, resources, products,
+        sinks, sources, schedule) using the fully validated instance. This avoids
+        sequence-dependent validation issues that can occur with field validators
+        and info.data.
+        """
+        time_models = get_set_of_IDs(self.time_model_data)
+        process_ids = get_set_of_IDs(self.process_data)
+        state_ids = get_set_of_IDs(self.state_data)
+        port_data_ids = get_set_of_IDs(self.port_data)
+        product_types = set(p.type for p in self.product_data)
+
+        # Check states: time_model_id must exist in time_model_data
+        for state in self.state_data:
             if state.time_model_id not in time_models:
                 raise ValueError(
                     f"The time model {state.time_model_id} of state {state.ID} is not a valid time model of {time_models}."
                 )
-        return states
 
-    @field_validator("process_data")
-    def check_processes(
-        cls,
-        processes: List[processes_data_module.PROCESS_DATA_UNION],
-        info: ValidationInfo,
-    ):
-        values = info.data
-        for process in processes:
+        # Check processes: time_model_id must exist (skip compound/capability/model)
+        for process in self.process_data:
             if isinstance(
                 process, processes_data_module.CompoundProcessData
             ) or isinstance(
@@ -984,44 +985,26 @@ class ProductionSystemData(BaseModel):
                 process, processes_data_module.ProcessModelData
             ):
                 continue
-            time_models = get_set_of_IDs(values["time_model_data"])
             if process.time_model_id not in time_models:
                 raise ValueError(
                     f"The time model {process.time_model_id} of process {process.ID} is not a valid time model of {time_models}."
                 )
-        return processes
 
-    @field_validator("resource_data")
-    def check_resources(
-        cls,
-        resources: List[resource_data_module.ResourceData],
-        info: ValidationInfo,
-    ):
-        values = info.data
-        for resource in resources:
-            processes = get_set_of_IDs(values["process_data"])
+        # Check resources: process_ids, state_ids, port_data; may add default queues
+        for resource in self.resource_data:
             for process in resource.process_ids:
-                if process not in processes:
+                if process not in process_ids:
                     raise ValueError(
-                        f"The process {process} of resource {resource.ID} is not a valid process of {processes}."
+                        f"The process {process} of resource {resource.ID} is not a valid process of {process_ids}."
                     )
-            states = get_set_of_IDs(values["state_data"])
             for state in resource.state_ids:
-                if state not in states:
+                if state not in state_ids:
                     raise ValueError(
-                        f"The state {state} of resource {resource.ID} is not a valid state of {states}."
+                        f"The state {state} of resource {resource.ID} is not a valid state of {state_ids}."
                     )
-            
-            # Check if resource only has transport processes
-            # If it does, no queues are required
-
-            available_processes = values["process_data"]
-            available_processes = TypeAdapter(List[processes_data_module.PROCESS_DATA_UNION]).validate_python(available_processes)
-
-            only_transport_processes = has_only_transport_processes(resource, available_processes)
-
-            
-            # If resource has no ports and doesn't only have transport processes, add default queues
+            only_transport_processes = has_only_transport_processes(
+                resource, self.process_data
+            )
             if not resource.ports and not only_transport_processes:
                 queue = queue_data_module.QueueData(
                     ID=resource.ID + "_default_queue",
@@ -1031,48 +1014,49 @@ class ProductionSystemData(BaseModel):
                     interface_type=port_data.PortInterfaceType.INPUT_OUTPUT,
                     port_type=port_data.PortType.QUEUE,
                 )
-                if "port_data" not in values:
-                    values["port_data"] = []
-                values["port_data"].append(queue)
+                self.port_data.append(queue)
                 resource.ports = [queue.ID]
-                
-            port_data_ids = get_set_of_IDs(values["port_data"])
-            
-            # Validate ports if they exist (skip validation for transport-only resources without ports)
+                port_data_ids = get_set_of_IDs(self.port_data)
             if resource.ports:
                 for port in resource.ports:
                     if port not in port_data_ids:
                         raise ValueError(
                             f"The port {port} of resource {resource.ID} is not a valid port of {port_data_ids}."
                         )
-                resource_ports: list[port_data.QueueData] = [port for port in values["port_data"] if port.ID in resource.ports]
+                resource_ports: list[port_data.QueueData] = [
+                    p for p in self.port_data if p.ID in resource.ports
+                ]
                 if not any(
-                    port.interface_type
+                    p.interface_type
                     in [
                         queue_data_module.PortInterfaceType.OUTPUT,
                         queue_data_module.PortInterfaceType.INPUT_OUTPUT,
                     ]
-                    for port in resource_ports
+                    for p in resource_ports
                 ):
                     raise ValueError(
                         f"The resource {resource.ID} has no output port. Resources must have at least one output port."
                     )
-                if not any(port.interface_type in [queue_data_module.PortInterfaceType.INPUT, queue_data_module.PortInterfaceType.INPUT_OUTPUT] for port in resource_ports):
+                if not any(
+                    p.interface_type
+                    in [
+                        queue_data_module.PortInterfaceType.INPUT,
+                        queue_data_module.PortInterfaceType.INPUT_OUTPUT,
+                    ]
+                    for p in resource_ports
+                ):
                     raise ValueError(
                         f"The resource {resource.ID} has no input port. Resources must have at least one input port."
                     )
-        return resources
 
-    @field_validator("product_data")
-    def check_products(
-        cls, products: List[product_data_module.ProductData], info: ValidationInfo
-    ):
-        values = info.data
-        for product in products:
-            all_processes = get_set_of_IDs(values["process_data"])
-            if product.transport_process not in all_processes:
+        # Refresh port_data_ids after possible resource default queues
+        port_data_ids = get_set_of_IDs(self.port_data)
+
+        # Check products: transport_process and processes must exist
+        for product in self.product_data:
+            if product.transport_process not in process_ids:
                 raise ValueError(
-                    f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {all_processes}."
+                    f"The transport process {product.transport_process} of product {product.ID} is not a valid process of {process_ids}."
                 )
             required_processes = set()
             if isinstance(product.processes, list) and isinstance(
@@ -1085,21 +1069,13 @@ class ProductionSystemData(BaseModel):
                 required_processes = set(util.flatten(product.processes))
             elif isinstance(product.processes, dict):
                 required_processes = set(product.processes.keys())
-            if required_processes - all_processes != set():
+            if required_processes - process_ids != set():
                 raise ValueError(
-                    f"The processes {required_processes - all_processes} of product {product.ID} are not a valid processes of {all_processes}."
+                    f"The processes {required_processes - process_ids} of product {product.ID} are not a valid processes of {process_ids}."
                 )
 
-        return products
-
-    @field_validator("sink_data")
-    def check_sinks(cls, sinks: List[sink_data_module.SinkData], info: ValidationInfo):
-        values = info.data
-        for sink in sinks:
-            try:
-                product_types = set([product.type for product in values["product_data"]])
-            except KeyError:
-                raise ValueError("Product data is missing or faulty.")
+        # Check sinks
+        for sink in self.sink_data:
             if sink.product_type not in product_types:
                 raise ValueError(
                     f"The product type {sink.product_type} of sink {sink.ID} is not a valid product type of {product_types}."
@@ -1107,56 +1083,53 @@ class ProductionSystemData(BaseModel):
             if not sink.ports:
                 input_queue = get_default_queue_for_sink(sink)
                 sink.ports = list(get_set_of_IDs([input_queue]))
-                values["port_data"] += [input_queue]
+                self.port_data.append(input_queue)
+                port_data_ids = get_set_of_IDs(self.port_data)
                 continue
-            ports = get_set_of_IDs(values["port_data"])
             for p in sink.ports:
-                if p not in ports:
+                if p not in port_data_ids:
                     raise ValueError(
-                        f"The port {p} of sink {sink.ID} is not a valid port of {ports}."
+                        f"The port {p} of sink {sink.ID} is not a valid port of {port_data_ids}."
                     )
-                for port in values["port_data"]:
-                    if port.ID == p:
-                        if port.capacity != 0:
-                            logger.warning(
-                                f"The capacity of the port {port.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
-                            )
-                            port.capacity = 0
-            sink_ports : list[queue_data_module.QueueData] = [port for port in values["port_data"] if port.ID in sink.ports]
-            if not any(port.interface_type in [queue_data_module.PortInterfaceType.INPUT, queue_data_module.PortInterfaceType.INPUT_OUTPUT] for port in sink_ports):
+                for port in self.port_data:
+                    if port.ID == p and port.capacity != 0:
+                        logger.warning(
+                            f"The capacity of the port {port.ID} of sink {sink.ID} is limited. This might lead to unexpected behavior so it was changed to infinity."
+                        )
+                        port.capacity = 0
+            sink_ports = [
+                p for p in self.port_data if p.ID in sink.ports
+            ]
+            if not any(
+                p.interface_type
+                in [
+                    queue_data_module.PortInterfaceType.INPUT,
+                    queue_data_module.PortInterfaceType.INPUT_OUTPUT,
+                ]
+                for p in sink_ports
+            ):
                 raise ValueError(
                     f"The sink {sink.ID} has no input port. Sinks must have at least one input port."
                 )
-        return sinks
 
-    @field_validator("source_data")
-    def check_sources(
-        cls, sources: List[source_data_module.SOURCE_DATA_UNION], info: ValidationInfo
-    ):
-        values = info.data
-        from prodsys.models.source_data import OrderSourceData
-        for source in sources:
-            # OrderSourceData doesn't have time_model_id or product_type
+        # Refresh after possible sink default queues
+        port_data_ids = get_set_of_IDs(self.port_data)
+
+        # Check sources
+        for source in self.source_data:
             if isinstance(source, OrderSourceData):
-                # Validate order_ids exist in order_data
-                if values.get("order_data"):
-                    order_ids = set([order.ID for order in values["order_data"]])
+                if self.order_data:
+                    order_ids = set(o.ID for o in self.order_data)
                     for order_id in source.order_ids:
                         if order_id not in order_ids:
                             raise ValueError(
                                 f"The order {order_id} of order source {source.ID} is not a valid order ID of {order_ids}."
                             )
             else:
-                # Regular SourceData validation
-                time_models = get_set_of_IDs(values["time_model_data"])
                 if source.time_model_id not in time_models:
                     raise ValueError(
                         f"The time model {source.time_model_id} of source {source.ID} is not a valid time model of {time_models}."
                     )
-                try:
-                    product_types = set([product.type for product in values["product_data"]])
-                except KeyError:
-                    raise ValueError("Product data is missing or faulty.")
                 if source.product_type not in product_types:
                     raise ValueError(
                         f"The product type {source.product_type} of source {source.ID} is not a valid product type of {product_types}."
@@ -1164,72 +1137,69 @@ class ProductionSystemData(BaseModel):
             if not source.ports:
                 output_queue = get_default_queue_for_source(source)
                 source.ports = list(get_set_of_IDs([output_queue]))
-                values["port_data"] += [output_queue]
+                self.port_data.append(output_queue)
+                port_data_ids = get_set_of_IDs(self.port_data)
                 continue
-            queues = get_set_of_IDs(values["port_data"])
             for q in source.ports:
-                if q not in queues:
+                if q not in port_data_ids:
                     raise ValueError(
-                        f"The queue {q} of source {source.ID} is not a valid queue of {queues}."
+                        f"The queue {q} of source {source.ID} is not a valid queue of {port_data_ids}."
                     )
-            source_ports: list[queue_data_module.QueueData] = [port for port in values["port_data"] if port.ID in source.ports]
+            source_ports = [
+                p for p in self.port_data if p.ID in source.ports
+            ]
             if not any(
-                port.interface_type
+                p.interface_type
                 in [
                     queue_data_module.PortInterfaceType.OUTPUT,
                     queue_data_module.PortInterfaceType.INPUT_OUTPUT,
                 ]
-                for port in source_ports
+                for p in source_ports
             ):
                 raise ValueError(
                     f"The source {source.ID} has no output port. Sources must have at least one output port."
                 )
-        return sources
 
-    @field_validator("schedule")
-    def check_schedule(
-        cls, schedule: Optional[List[performance_data.Event]], info: ValidationInfo
-    ):
-        if schedule is None:
-            return schedule
-        event_resources_ids = set()
-        event_process_ids = set()
-        event_product_ids = set()
-        schedule_to_consider = []
-        for event in schedule:
-            if not isinstance(event, performance_data.Event):
+        # Check schedule and replace with filtered "start state" events
+        if self.schedule is not None:
+            event_resources_ids = set()
+            event_process_ids_set = set()
+            event_product_ids = set()
+            schedule_to_consider = []
+            for event in self.schedule:
+                if not isinstance(event, performance_data.Event):
+                    raise ValueError(
+                        f"The event {event} is not a valid event of {self.schedule}."
+                    )
+                event_resources_ids.add(event.resource)
+                if event.product is not None:
+                    product_id = "_".join(event.product.split("_")[:-1])
+                    event_product_ids.add(product_id)
+                if event.process:
+                    event_process_ids_set.add(event.process)
+                if not event.activity == "start state":
+                    continue
+                schedule_to_consider.append(event)
+
+            resources_ids = get_set_of_IDs(self.resource_data)
+            processes_ids_set = get_set_of_IDs(self.process_data)
+            products_ids = get_set_of_IDs(self.product_data)
+
+            if event_resources_ids - resources_ids != set():
                 raise ValueError(
-                    f"The event {event} is not a valid event of {schedule}."
+                    f"The resources {event_resources_ids - resources_ids} of the schedule are not valid resources of {resources_ids}."
                 )
-            event_resources_ids.add(event.resource)
-            product_id = "_".join(event.product.split("_")[:-1])
-            event_product_ids.add(product_id)
-            if event.process:
-                event_process_ids.add(event.process)
-            if not event.activity == "start state":
-                continue
-            schedule_to_consider.append(event)
+            if event_process_ids_set - processes_ids_set != set():
+                raise ValueError(
+                    f"The processes {event_process_ids_set - processes_ids_set} of the schedule are not valid processes of {processes_ids_set}."
+                )
+            if event_product_ids - products_ids != set():
+                raise ValueError(
+                    f"The products {event_product_ids - products_ids} of the schedule are not valid products of {products_ids}."
+                )
+            object.__setattr__(self, 'schedule', schedule_to_consider)
 
-        values = info.data
-        resources_ids = get_set_of_IDs(values["resource_data"])
-        processes_ids = get_set_of_IDs(values["process_data"])
-        products_ids = get_set_of_IDs(values["product_data"])
-
-        if event_resources_ids - resources_ids != set():
-            raise ValueError(
-                f"The resources {event_resources_ids - resources_ids} of the schedule are not valid resources of {resources_ids}."
-            )
-        if event_process_ids - processes_ids != set():
-            raise ValueError(
-                f"The processes {event_process_ids - processes_ids} of the schedule are not valid processes of {processes_ids}."
-            )
-        
-        if event_product_ids - products_ids != set():
-            raise ValueError(
-                f"The products {event_product_ids - products_ids} of the schedule are not valid products of {products_ids}."
-            )
-
-        return schedule_to_consider
+        return self
 
     def read_scenario(self, scenario_file_path: str):
         scenario_data = json.load(open(scenario_file_path))

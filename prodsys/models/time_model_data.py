@@ -210,7 +210,7 @@ class DistanceTimeModelData(CoreAsset):
         description (str): Description of the time model.
         speed (float): Speed of the transport.
         reaction_time (float): Reaction time of the transport.
-        metric (Literal["manhattan", "euclidian"]): Metric to calculate the distance. Default is "manhattan".
+        metric (Literal["manhattan", "euclidean"]): Metric to calculate the distance. Default is "manhattan".
 
     Examples:
         Distance time model with speed 180 m/min = 3 m/s and reaction time 0.15 minutes:
@@ -227,7 +227,7 @@ class DistanceTimeModelData(CoreAsset):
 
     speed: float
     reaction_time: float
-    metric: Literal["manhattan", "euclidian"] = "manhattan"
+    metric: Literal["manhattan", "euclidean"] = "manhattan"
 
     def hash(self) -> str:
         """
