@@ -322,7 +322,7 @@ class Router:
         entity_dependencies = [dependency for dependency in executed_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
         # Resource dependencies can be either RESOURCE or PROCESS type (process dependencies can be on the resource)
         resource_dependencies = [dependency for dependency in executed_request.resource.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE or dependency.data.dependency_type == DependencyType.PROCESS]
-        process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.PROCESS]
+        process_dependencies = [dependency for dependency in executed_request.process.dependencies if dependency.data.dependency_type == DependencyType.RESOURCE or dependency.data.dependency_type == DependencyType.PROCESS]
         
         # For per_lot dependencies with a lot entity, use the lot as the requesting_item
         # Otherwise use the original requesting_item
