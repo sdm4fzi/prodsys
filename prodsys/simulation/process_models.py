@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
 import random
 
+from prodsys.models.processes_data import ProcessTypeEnum
 from prodsys.util.util import flatten
 
 
@@ -267,9 +268,19 @@ class PrecedenceGraphProcessModel(ProcessModel):
         return possible_processes
 
     def update_marking_from_transition(self, chosen_process: PROCESS_UNION) -> None:
-        chosen_node = [
-            node for node in self.nodes if node.process == chosen_process
-        ].pop()
+        if chosen_process.data.type in [ProcessTypeEnum.CapabilityProcesses, ProcessTypeEnum.RequiredCapabilityProcesses]:
+            for node in self.nodes:
+                if node.process.data.type not in [ProcessTypeEnum.CapabilityProcesses, ProcessTypeEnum.RequiredCapabilityProcesses]:
+                    continue
+                if node.process.data.capability == chosen_process.data.capability:
+                    chosen_node = node
+                    break
+        else:   
+            chosen_node = [
+                node for node in self.nodes if node.process == chosen_process
+            ].pop()
+        if not chosen_node:
+            raise ValueError(f"No node found for process {chosen_process.data.ID}")
         chosen_node.update_marking()
         self.current_marking = chosen_node
 
