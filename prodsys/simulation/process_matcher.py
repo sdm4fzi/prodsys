@@ -310,7 +310,7 @@ class ProcessMatcher:
         for requested_process in requested_processes:
             if isinstance(
                 requested_process,
-                (process.ProductionProcess, process.CapabilityProcess, process.ReworkProcess),
+                (process.ProductionProcess, process.RequiredCapabilityProcess, process.CapabilityProcess, process.ReworkProcess),
             ):
                 key = ResourceCompatibilityKey(
                     process_signature=requested_process.get_process_signature(),
