@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, TYPE_CHECKING, Optional, Tuple
 
-import numpy as np
-import heapq
+import math
 from pathfinding.core.graph import GraphNode
 
 from prodsys.util.dijkstra_all import DijkstraAllPaths
@@ -50,13 +49,28 @@ class RouteFinder:
     # Cache: (process_id, origin_id, target_id) -> List[Locatable]
     _route_cache: Dict[Tuple[str, str, str], List["Locatable"]] = {}
 
+    # Static graph per process_id: (edges, nodes_dict, locatable_per_id)
+    # Only populated for non-mobile origins (the graph is fixed for a given process).
+    _static_graph_cache: Dict[
+        str,
+        Tuple[
+            List[Tuple[GraphNode, GraphNode, float]],
+            Dict[str, GraphNode],
+            Dict[str, "Locatable"],
+        ],
+    ] = {}
+
+    # Persistent DijkstraAllPaths instance per process_id so its internal
+    # path-cache survives across RouteFinder instantiations.
+    _dijkstra_per_process: Dict[str, DijkstraAllPaths] = {}
+
     def __init__(self):
         """
         Initializes the route finder with empty node dictionary and Dijkstra path finder.
         """
         self.nodes: Dict[str, GraphNode] = {}
         self.dijkstra_finder = DijkstraAllPaths()
-    
+
     @classmethod
     def clear_cache(cls):
         """
@@ -64,6 +78,8 @@ class RouteFinder:
         to prevent route pollution from previous simulations.
         """
         cls._route_cache.clear()
+        cls._static_graph_cache.clear()
+        cls._dijkstra_per_process.clear()
 
     def find_route(
         self,
@@ -86,51 +102,75 @@ class RouteFinder:
         origin, target = self.get_route_origin_and_target_locatables(
             request=request, route_to_origin=find_route_to_origin
         )
-        
-        # Check route cache first
+
         route_cache_key = (process.data.ID, origin.data.ID, target.data.ID)
         if route_cache_key in self._route_cache:
             return self._route_cache[route_cache_key]
-        
-        # Build edges from links
-        edges = self.process_links_to_graph_edges(
-            links=process.links,
-            origin=origin,
-        )  # finding route to origin is always an empty transport, since material is picked up at the origin
 
-        # TODO: also add functionality to make directional edges for conveyors, where backwards routing is not possible.
+        process_id = process.data.ID
+        origin_is_mobile = hasattr(origin, "can_move") and origin.can_move
+
+        if not origin_is_mobile and process_id in self._static_graph_cache:
+            # Reuse the already-built static graph so process_links_to_graph_edges
+            # is never called more than once per process.
+            edges, self.nodes, locatable_per_id = self._static_graph_cache[process_id]
+        else:
+            edges = self.process_links_to_graph_edges(
+                links=process.links,
+                origin=origin,
+            )
+            locatable_per_id = {
+                locatable.data.ID: locatable
+                for locatable in [link[0] for link in process.links]
+                + [link[1] for link in process.links]
+            }
+            if not origin_is_mobile:
+                self._static_graph_cache[process_id] = (edges, self.nodes, locatable_per_id)
+
         origin_node, target_node = self.get_route_origin_and_target(
             request=request, route_to_origin=find_route_to_origin
         )
 
         if not origin_node or not target_node:
+            # Cache the failure so we never rebuild the graph for this pair again.
+            self._route_cache[route_cache_key] = []
             return []
-        
-        # Use DijkstraAllPaths to get the path (will use cache if available)
-        graph_node_paths = self.dijkstra_finder.get_all_paths_from_origin(
+
+        # Use a persistent DijkstraAllPaths per process for static graphs so its
+        # internal path-cache is not discarded between RouteFinder instantiations.
+        if not origin_is_mobile:
+            if process_id not in self._dijkstra_per_process:
+                self._dijkstra_per_process[process_id] = DijkstraAllPaths()
+            dijkstra = self._dijkstra_per_process[process_id]
+        else:
+            dijkstra = self.dijkstra_finder
+
+        graph_node_paths = dijkstra.get_all_paths_from_origin(
             origin=origin_node,
             edges=edges,
-            process_id=process.data.ID,
+            process_id=process_id,
         )
 
         route_to_return = []
-        locatable_per_id = {locatable.data.ID: locatable for locatable in [link[0] for link in process.links] + [link[1] for link in process.links]}
         for graph_node_path in graph_node_paths.values():
-            
             route = self.convert_node_path_to_locatable_route(
                 graph_node_path=graph_node_path, locatable_per_id=locatable_per_id
             )
 
-            if hasattr(origin, 'can_move') and origin.can_move:
+            if origin_is_mobile:
                 route = route[1:]
             if not route:
                 continue
             route_target = route[-1]
             if route_target.data.ID == target.data.ID:
                 route_to_return = route
-            route_cache_key = (process.data.ID, origin.data.ID, route_target.data.ID)
-            # Cache the route
-            self._route_cache[route_cache_key] = route
+            self._route_cache[(process_id, origin.data.ID, route_target.data.ID)] = route
+
+        # If the requested target was not reachable, cache [] so the next lookup
+        # for this pair returns immediately without rebuilding the graph.
+        if route_cache_key not in self._route_cache:
+            self._route_cache[route_cache_key] = []
+
         return route_to_return
 
     def process_links_to_graph_edges(
@@ -144,19 +184,20 @@ class RouteFinder:
         Args:
             links (List[List[Locatable]]): The links as a list of lists of locatable objects.
             origin (Locatable): The origin locatable object.
-            target (Locatable): The target locatable object.
-            empty_transport (bool): Indicates whether the transport is empty or an entity is transported.
 
         Returns:
             List[Tuple[GraphNode, GraphNode, float]]: The edges as a list of tuples (with a start_node, end_node and related costs).
         """
         pathfinder_edges = []
 
-        if hasattr(origin, 'can_move') and origin.can_move:
+        # Work on a shallow copy so we never mutate the process's own links list.
+        working_links = list(links)
+
+        if hasattr(origin, "can_move") and origin.can_move:
             # this is necessary since a transport resource can be initialized with a random location, so a link is needed for the first drive
             origin_location = origin.get_location()
             closest_locatable = None
-            for link in links:
+            for link in working_links:
                 for locatable in link:
                     if closest_locatable is None:
                         closest_locatable = locatable
@@ -166,9 +207,9 @@ class RouteFinder:
                         origin_location, closest_locatable.get_location()
                     ):
                         closest_locatable = locatable
-            links.append([origin, closest_locatable])
+            working_links.append([origin, closest_locatable])
 
-        for link in links:
+        for link in working_links:
             link_origin = link[0]
             link_target = link[1]
             origin_location = link_origin.get_location()
@@ -255,7 +296,7 @@ class RouteFinder:
             float: The cost.
         """
         # TODO: maybe use here the time model feature to weight the distance with the time it takes to travel it to optimize for fastest paths and not shortest paths
-        return np.sqrt((node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2)
+        return math.hypot(node1[0] - node2[0], node1[1] - node2[1])
 
     def get_route_origin_and_target_locatables(
         self, request: request.Request, route_to_origin: bool
