@@ -389,6 +389,8 @@ class Runner:
         df_raw["Requesting Item"] = df_raw.get("Requesting Item", pd.Series([None] * len(df_raw))).fillna(value="")
         df_raw["Dependency"] = df_raw.get("Dependency", pd.Series([None] * len(df_raw))).fillna(value="")
         df_raw["process"] = df_raw.get("process", pd.Series([None] * len(df_raw))).fillna(value="")
+        if "process_ok" not in df_raw.columns:
+            df_raw["process_ok"] = None
         
         for index, row in df_raw.iterrows():
             events.append(
@@ -406,6 +408,7 @@ class Runner:
                     requesting_item=row["Requesting Item"] if row["Requesting Item"] else None,
                     dependency=row["Dependency"] if row["Dependency"] else None,
                     process=row["process"] if row["process"] else None,
+                    process_ok=bool(row["process_ok"]) if pd.notna(row["process_ok"]) else None,
                 )
             )
         return events

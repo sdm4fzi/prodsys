@@ -26,6 +26,7 @@ class Event(BaseModel):
         requesting_item (Optional[str], optional): ID of the item requesting a dependency. Defaults to None.
         dependency (Optional[str], optional): ID of the dependency. Defaults to None.
         order_id (Optional[str], optional): ID of the order that this product belongs to. Defaults to None.
+        process_ok (Optional[bool], optional): Whether the production process succeeded. False indicates scrap/failed process. Defaults to None (not applicable for non-production events).
     """
 
     time: float = Field(alias="Time")
@@ -42,6 +43,7 @@ class Event(BaseModel):
     dependency: Optional[str] = Field(default=None, alias="Dependency")
     process: Optional[str] = Field(default=None, alias="process")
     order_id: Optional[str] = Field(default=None, alias="Order ID")
+    process_ok: Optional[bool] = Field(default=None, alias="process_ok")
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -75,6 +77,7 @@ class Event(BaseModel):
                     "Empty Transport": None,
                     "Requesting Item": None,
                     "Dependency": None,
+                    "process_ok": True,
                 },
             ]
         }
