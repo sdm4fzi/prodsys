@@ -48,6 +48,11 @@ class DataPreparation:
             pd.DataFrame: Data frame with the simulation results and the added columns.
         """
         df = self.context.df_raw.copy()
+        # Arrow-backed / StringDtype columns don't dispatch enum __eq__ correctly in
+        # element-wise pandas comparisons. Convert to object dtype so all downstream
+        # comparisons (e.g. df["State Type"] == StateTypeEnum.production) work correctly.
+        if "State Type" in df.columns:
+            df["State Type"] = df["State Type"].astype(object)
         df["DateTime"] = pd.to_datetime(df["Time"], unit="m")
         df["Combined_activity"] = df["State"] + " " + df["Activity"]
         df["Product_type"] = df["Product"].str.rsplit("_", n=1).str[0]
