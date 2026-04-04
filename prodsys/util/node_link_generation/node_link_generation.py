@@ -1,6 +1,6 @@
 import prodsys
 from prodsys.models import production_system_data, resource_data, sink_data, source_data, node_data, port_data
-from prodsys.models.production_system_data import get_production_resources
+from prodsys.models.production_system_data import get_production_resources, get_transport_resources
 from prodsys.models.layout_data import LayoutAreaData, ObstacleData
 from prodsys.util.node_link_generation.table_configuration import TableConfiguration
 from prodsys.util.node_link_generation.table_configuration import StationConfiguration
@@ -10,7 +10,195 @@ from prodsys.util.node_link_generation.edge_directionality import EdgeDirectiona
 from prodsys.util.node_link_generation.configuration import Configuration 
 import networkx as nx
 import prodsys.util.node_link_generation.format_to_networkx as format_to_networkx
-from typing import List, Any, Set, Optional, Tuple, Union
+from typing import Iterable, List, Any, Set, Optional, Tuple, Union
+
+
+# ---------------------------------------------------------------------------
+# Footprint / link geometry helpers
+# ---------------------------------------------------------------------------
+
+def _norm_xy_pair(xy: Tuple[float, ...] | list) -> Tuple[float, float]:
+    """Stable dict keys for coordinates (avoids float drift in port lookups)."""
+    return (round(float(xy[0]), 6), round(float(xy[1]), 6))
+
+
+def iter_link_transport_pairs(
+    links: Union[List[List[str]], dict],
+) -> Iterable[Tuple[str, str]]:
+    """
+    Iterate ``(src, tgt)`` pairs whether ``links`` is a list of pairs or an
+    adjacency dict (same convention as :func:`validate_link_transport_locations`).
+    """
+    if isinstance(links, dict):
+        for src, targets in links.items():
+            for tgt in targets:
+                yield src, tgt
+    else:
+        for pair in links:
+            yield pair[0], pair[1]
+
+
+def _filter_expanded_links_for_footprint_penetration(
+    adapter: production_system_data.ProductionSystemData,
+    expanded_links: list,
+    *,
+    node_positions: Optional[dict] = None,
+) -> list:
+    """
+    Drop link-transport edges whose straight segment penetrates another resource's
+    footprint.  NX post-processing already removes many bad edges; this catches
+    remaining cases (e.g. fallback links, float key mismatches) at port resolution.
+
+    ``node_positions`` maps ``node_*`` IDs to ``(x, y)`` because ``adapter.node_data``
+    is not yet updated when this runs inside ``convert_nx_to_prodsys``.
+    """
+    import shapely.geometry as _sg
+    from shapely.geometry import LineString
+
+    port_lookup = {p.ID: p for p in adapter.port_data}
+    node_lookup = {n.ID: n for n in adapter.node_data}
+    node_positions = node_positions or {}
+
+    def _endpoint_loc(id_: str):
+        if id_ in node_positions:
+            p = node_positions[id_]
+            return (float(p[0]), float(p[1]))
+        if id_ in port_lookup and port_lookup[id_].location:
+            loc = port_lookup[id_].location
+            return (float(loc[0]), float(loc[1]))
+        if id_ in node_lookup:
+            loc = node_lookup[id_].location
+            return (float(loc[0]), float(loc[1]))
+        for obj in (*adapter.resource_data, *adapter.source_data, *adapter.sink_data):
+            if obj.ID == id_:
+                loc = obj.location
+                return (float(loc[0]), float(loc[1]))
+        return None
+
+    footprint_polys: list = []
+    footprint_ids: list = []
+    for _r in adapter.resource_data:
+        if _r.footprint is not None:
+            cx, cy = float(_r.location[0]), float(_r.location[1])
+            hw = _r.footprint.width / 2.0
+            hh = _r.footprint.height / 2.0
+            footprint_polys.append(_sg.box(cx - hw, cy - hh, cx + hw, cy + hh))
+            footprint_ids.append(_r.ID)
+
+    if not footprint_polys:
+        return expanded_links
+
+    kept: list = []
+    for src_id, tgt_id in expanded_links:
+        a = _endpoint_loc(src_id)
+        b = _endpoint_loc(tgt_id)
+        if a is None or b is None or a == b:
+            kept.append([src_id, tgt_id])
+            continue
+        seg = LineString([a, b])
+        drop = False
+        for _, fp in zip(footprint_ids, footprint_polys):
+            if not _segment_penetrates_footprint_box(seg, fp):
+                continue
+            # No exemption for the footprint that belongs to an endpoint: a chord
+            # from a boundary port into/out of the machine interior is still invalid.
+            drop = True
+            break
+        if not drop:
+            kept.append([src_id, tgt_id])
+
+    return kept
+
+
+def _segment_penetrates_footprint_box(line, footprint_poly) -> bool:
+    """
+    Return True if a line segment passes through the *interior* of a rectangular
+    footprint (not merely touching the boundary).
+
+    GEOS ``crosses`` / ``touches`` / bare ``intersection.length`` miss cases that
+    are still visibly “through the box”.  We therefore require at least one
+    **strictly interior** point of the segment (sampled along the chord) to lie
+    inside the filled polygon — ``polygon.contains(point)`` is False on the
+    boundary, True in the interior.
+    """
+    from shapely.geometry import Point
+
+    if not line.intersects(footprint_poly) or line.is_empty:
+        return False
+    length = line.length
+    if length < 1e-15:
+        return False
+    # Dense sampling along the open segment (exclude exact endpoints).
+    for k in range(1, 64):
+        t = k / 64.0
+        pt = line.interpolate(t, normalized=True)
+        p = Point(pt.x, pt.y)
+        if footprint_poly.contains(p):
+            return True
+    # Fallback: chord passes through very thin diagonal — use intersection body.
+    inter = line.intersection(footprint_poly)
+    if inter.is_empty:
+        return False
+    if inter.geom_type in ("LineString", "MultiLineString") and inter.length > 1e-9:
+        mid = inter.interpolate(0.5, normalized=True)
+        pm = Point(mid.x, mid.y)
+        if footprint_poly.contains(pm):
+            return True
+    return False
+
+
+def _segment_exterior_transverse_chord(line, footprint_poly) -> bool:
+    """
+    True if the segment **enters** the footprint interior from outside and **leaves**
+    again (a chord through the box), i.e. both endpoints lie in the closure minus
+    the interior (exterior ∪ boundary in the planar sense).
+
+    In Shapely, ``Polygon.contains`` is False for points on the boundary, so a
+    port on the footprint edge counts as “not interior” here — use together with
+    endpoint **ID** exemption for own-machine boundary ports.
+
+    If an endpoint lies strictly **inside** the polygon, this returns False
+    (that pattern is “starts/ends inside the machine”, not a pure exterior traverse).
+    """
+    from shapely.geometry import Point
+
+    if line.is_empty or line.length < 1e-15:
+        return False
+    if not _segment_penetrates_footprint_box(line, footprint_poly):
+        return False
+    coords = list(line.coords)
+    a, b = coords[0], coords[-1]
+    pa, pb = Point(a[0], a[1]), Point(b[0], b[1])
+    if footprint_poly.contains(pa) or footprint_poly.contains(pb):
+        return False
+    return True
+
+
+def _footprint_penetration_metrics(line, footprint_poly):
+    """
+    Diagnostics for a segment vs one footprint box: interior hit count on samples,
+    intersection length, and whether the intersection midpoint lies in interior.
+    """
+    from shapely.geometry import Point
+
+    interior_hits = 0
+    if not line.is_empty and line.length > 1e-15:
+        for k in range(1, 64):
+            t = k / 64.0
+            pt = line.interpolate(t, normalized=True)
+            if footprint_poly.contains(Point(pt.x, pt.y)):
+                interior_hits += 1
+    inter = line.intersection(footprint_poly)
+    inter_len = float(getattr(inter, "length", 0.0) or 0.0) if not inter.is_empty else 0.0
+    mid_in = False
+    if inter_len > 1e-9 and inter.geom_type in ("LineString", "MultiLineString"):
+        mid = inter.interpolate(0.5, normalized=True)
+        mid_in = bool(footprint_poly.contains(Point(mid.x, mid.y)))
+    return {
+        "interior_sample_hits": interior_hits,
+        "intersection_length": inter_len,
+        "intersection_midpoint_in_interior": mid_in,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -484,24 +672,9 @@ def generator(
     G.remove_nodes_from(nodes_inside_footprint)
 
     # Remove any Delaunay edges whose straight-line segment crosses through the
-    # interior of a resource footprint.  Even with internal nodes removed, some
-    # outside-to-outside connections can still cut diagonally through a machine.
-    #
-    # Exception: a link whose endpoint sits exactly on the footprint boundary
-    # (i.e. it is the machine's own relocated port) is allowed to exit through
-    # the machine body – that crossing is by construction, not a routing error.
+    # interior of a resource footprint (including chords that start at a port on
+    # the boundary and cut through the machine to reach the outside).
     import shapely.geometry as _sg
-
-    # Build a lookup: graph-node position → set of resource IDs whose port
-    # sits at that position.  Used to allow "own-footprint" exits.
-    _port_lookup_fp = {p.ID: p for p in productionsystem.port_data}
-    _pos_to_res_id: dict = {}
-    for _r in productionsystem.resource_data:
-        for _pid in (_r.ports or []):
-            _p = _port_lookup_fp.get(_pid)
-            if _p is not None and _p.location is not None:
-                _pk = tuple(_p.location)
-                _pos_to_res_id.setdefault(_pk, set()).add(_r.ID)
 
     footprint_polys_gen: list = []
     footprint_res_ids: list = []
@@ -522,18 +695,9 @@ def generator(
             pos_v = G.nodes[v].get("pos")
             if pos_u is None or pos_v is None:
                 continue
-            key_u = tuple(pos_u)
-            key_v = tuple(pos_v)
             seg = _sg.LineString([pos_u, pos_v])
             for _res_id, _fp in zip(footprint_res_ids, footprint_polys_gen):
-                if seg.crosses(_fp):
-                    # Allow the crossing if one endpoint is this machine's own
-                    # port (port relocated to the footprint boundary exits
-                    # through the machine body by construction).
-                    own_u = _res_id in _pos_to_res_id.get(key_u, set())
-                    own_v = _res_id in _pos_to_res_id.get(key_v, set())
-                    if own_u or own_v:
-                        continue
+                if _segment_penetrates_footprint_box(seg, _fp):
                     edges_crossing_footprint.append((u, v))
                     break
         G.remove_edges_from(edges_crossing_footprint)
@@ -749,6 +913,11 @@ def convert_nx_to_prodsys(adapter: production_system_data.ProductionSystemData, 
                     seen.add(key)
                     expanded_links.append([si, ti])
 
+    node_positions = {str(n[0]): n[1] for n in new_nodes}
+    expanded_links = _filter_expanded_links_for_footprint_penetration(
+        adapter, expanded_links, node_positions=node_positions
+    )
+
     return new_nodes, expanded_links
 
 
@@ -957,8 +1126,166 @@ def relocate_ports_to_footprint_boundary(
 # Layout validation
 # ---------------------------------------------------------------------------
 
+def _link_endpoint_xy(
+    ps: production_system_data.ProductionSystemData, id_: str
+) -> Optional[Tuple[float, float]]:
+    """Resolve a link endpoint (port, node, or locatable ID) to ``(x, y)``."""
+    port_lookup = {p.ID: p for p in ps.port_data}
+    node_lookup = {n.ID: n for n in ps.node_data}
+    if id_ in port_lookup and port_lookup[id_].location:
+        loc = port_lookup[id_].location
+        return (float(loc[0]), float(loc[1]))
+    if id_ in node_lookup:
+        loc = node_lookup[id_].location
+        return (float(loc[0]), float(loc[1]))
+    for obj in (*ps.resource_data, *ps.source_data, *ps.sink_data):
+        if obj.ID == id_:
+            loc = obj.location
+            return (float(loc[0]), float(loc[1]))
+    return None
+
+
+def collect_link_footprint_crossings(
+    ps: production_system_data.ProductionSystemData,
+    *,
+    include_own_footprint_exits: bool = False,
+) -> Tuple[list, list]:
+    """
+    Classify every link–footprint pair for footprinted resources.
+
+    Returns:
+        ``(violations, own_exits)`` where each entry is a dict with keys:
+
+        - ``process_id``, ``src_id``, ``tgt_id``
+        - ``src_xy``, ``tgt_xy`` — segment endpoints
+        - ``footprint_resource_id`` — resource whose box is tested
+        - ``box_bounds`` — ``(x_min, y_min, x_max, y_max)``
+        - ``penetrates`` — result of :func:`_segment_penetrates_footprint_box`
+        - ``metrics`` — from :func:`_footprint_penetration_metrics`
+        - ``exempt_own`` — always ``False`` (kept for stable output shape); own-port
+          chords through the same machine's interior are **not** allowed.
+        - ``exterior_transverse_chord`` — True if the segment enters the footprint
+          interior from outside and exits again (neither endpoint strictly inside the
+          box).
+
+    ``violations`` lists every interior penetration (these fail validation).
+    ``own_exits`` is always empty (legacy parameter ``include_own_footprint_exits``).
+
+    Args:
+        include_own_footprint_exits: Ignored; always empty.
+    """
+    from shapely.geometry import LineString
+    from shapely.geometry import box as _shapely_box
+    from prodsys.models import processes_data as _proc
+
+    footprint_boxes: list = []
+    for r in ps.resource_data:
+        if r.footprint:
+            cx, cy = float(r.location[0]), float(r.location[1])
+            hw, hh = r.footprint.width / 2.0, r.footprint.height / 2.0
+            x_min, x_max = cx - hw, cx + hw
+            y_min, y_max = cy - hh, cy + hh
+            footprint_boxes.append(
+                (r.ID, _shapely_box(x_min, y_min, x_max, y_max), (x_min, y_min, x_max, y_max))
+            )
+
+    violations: list = []
+    own_exits: list = []
+
+    for proc in ps.process_data:
+        if not isinstance(proc, _proc.LinkTransportProcessData):
+            continue
+        proc_id = proc.ID
+        for src_id, tgt_id in iter_link_transport_pairs(proc.links):
+            a = _link_endpoint_xy(ps, src_id)
+            b = _link_endpoint_xy(ps, tgt_id)
+            if a is None or b is None or a == b:
+                continue
+            seg = LineString([a, b])
+            for res_id, fp_box, bounds in footprint_boxes:
+                penetrates = _segment_penetrates_footprint_box(seg, fp_box)
+                if not penetrates:
+                    continue
+                exterior_transverse = _segment_exterior_transverse_chord(seg, fp_box)
+                entry = {
+                    "process_id": proc_id,
+                    "src_id": src_id,
+                    "tgt_id": tgt_id,
+                    "src_xy": a,
+                    "tgt_xy": b,
+                    "footprint_resource_id": res_id,
+                    "box_bounds": bounds,
+                    "penetrates": penetrates,
+                    "metrics": _footprint_penetration_metrics(seg, fp_box),
+                    "exempt_own": False,
+                    "exterior_transverse_chord": exterior_transverse,
+                }
+                violations.append(entry)
+
+    return violations, own_exits
+
+
+def print_link_footprint_audit(
+    ps: production_system_data.ProductionSystemData,
+    *,
+    resource_ids: Optional[Set[str]] = None,
+    include_allowed_own_exits: bool = False,
+) -> None:
+    """
+    Print a human-readable audit of link segments vs resource footprint boxes.
+
+    By default lists **violations only** (same as validation).  Pass
+    ``resource_ids={'P1', 'W2'}`` to restrict output to those machines’ boxes.
+
+    ``include_allowed_own_exits=True`` is retained for API compatibility; the
+    second section is always empty because own-footprint interior chords are not
+    treated as allowed.
+    """
+    violations, own_exits = collect_link_footprint_crossings(
+        ps, include_own_footprint_exits=include_allowed_own_exits
+    )
+
+    def _fmt(entry: dict) -> str:
+        m = entry["metrics"]
+        b = entry["box_bounds"]
+        xt = entry.get("exterior_transverse_chord", False)
+        return (
+            f"  [{entry['src_id']} → {entry['tgt_id']}]  proc={entry['process_id']}\n"
+            f"      segment: ({entry['src_xy'][0]:.4f},{entry['src_xy'][1]:.4f}) "
+            f"→ ({entry['tgt_xy'][0]:.4f},{entry['tgt_xy'][1]:.4f})\n"
+            f"      footprint: {entry['footprint_resource_id']}  "
+            f"box=[{b[0]:.4f},{b[1]:.4f}]—[{b[2]:.4f},{b[3]:.4f}]\n"
+            f"      interior_sample_hits={m['interior_sample_hits']}  "
+            f"intersection_length={m['intersection_length']:.6f}  "
+            f"mid_in_interior={m['intersection_midpoint_in_interior']}  "
+            f"exempt_own={entry['exempt_own']}  "
+            f"exterior_transverse_chord={xt}"
+        )
+
+    rows = violations
+    if resource_ids is not None:
+        rows = [e for e in violations if e["footprint_resource_id"] in resource_ids]
+
+    print("\n--- Link vs footprint audit (violations) ---")
+    if not rows:
+        print("  (none)")
+    else:
+        for e in rows:
+            print(_fmt(e))
+
+    if include_allowed_own_exits and own_exits:
+        orows = own_exits
+        if resource_ids is not None:
+            orows = [e for e in own_exits if e["footprint_resource_id"] in resource_ids]
+        print("\n--- Own-footprint exits (allowed; shown for plot debugging) ---")
+        for e in orows:
+            print(_fmt(e))
+
+
 def validate_no_links_cross_footprints(
     ps: production_system_data.ProductionSystemData,
+    *,
+    verbose: bool = False,
 ) -> None:
     """
     Assert that no link segment in any ``LinkTransportProcessData`` passes
@@ -967,75 +1294,53 @@ def validate_no_links_cross_footprints(
     Physically, a transport carrier must route *around* machines, not through
     them.  A link that crosses a footprint would represent a collision path.
 
+    Detection uses strict **interior** sampling along each segment (see
+    :func:`_segment_penetrates_footprint_box`).  Segments through the **same**
+    machine's footprint (e.g. from a boundary port into the interior) are invalid
+    as well.  Use
+    :func:`print_link_footprint_audit` or :func:`collect_link_footprint_crossings`
+    for full diagnostics.  Each violation records ``exterior_transverse_chord`` when
+    the segment **enters** the box interior from outside and **exits** again (both
+    endpoints strictly outside the interior).
+
+    Args:
+        verbose: If True, print each violation with segment coordinates and
+            intersection metrics before raising.
+
     Raises:
         AssertionError: Listing every violating link and the footprint it crosses.
     """
-    from shapely.geometry import LineString
-    from shapely.geometry import box as _shapely_box
     from prodsys.models import processes_data as _proc
 
-    port_lookup = {p.ID: p for p in ps.port_data}
-    node_lookup = {n.ID: n for n in ps.node_data}
-
-    def _loc(id_: str):
-        if id_ in port_lookup and port_lookup[id_].location:
-            return tuple(port_lookup[id_].location)
-        if id_ in node_lookup:
-            return tuple(node_lookup[id_].location)
-        for obj in (*ps.resource_data, *ps.source_data, *ps.sink_data):
-            if obj.ID == id_:
-                return tuple(obj.location)
-        return None
-
-    footprint_boxes = []
-    for r in ps.resource_data:
-        if r.footprint:
-            cx, cy = r.location
-            hw, hh = r.footprint.width / 2, r.footprint.height / 2
-            footprint_boxes.append(
-                (r.ID, _shapely_box(cx - hw, cy - hh, cx + hw, cy + hh))
-            )
-
-    # Build a lookup: location → resource IDs that own a port at that location.
-    # Links from a machine's own boundary port are allowed to exit through that
-    # machine's footprint (the crossing is by construction, not a routing error).
-    _port_lookup_val = {p.ID: p for p in ps.port_data}
-    _port_pos_to_res: dict = {}
-    for _r in ps.resource_data:
-        for _pid in (_r.ports or []):
-            _p = _port_lookup_val.get(_pid)
-            if _p is not None and _p.location is not None:
-                _pk = tuple(_p.location)
-                _port_pos_to_res.setdefault(_pk, set()).add(_r.ID)
+    violations, _ = collect_link_footprint_crossings(ps, include_own_footprint_exits=False)
 
     total_links = 0
-    violations: list = []
     for proc in ps.process_data:
-        if not isinstance(proc, _proc.LinkTransportProcessData):
-            continue
-        for src_id, tgt_id in proc.links:
-            total_links += 1
-            src_loc = _loc(src_id)
-            tgt_loc = _loc(tgt_id)
-            if src_loc is None or tgt_loc is None or src_loc == tgt_loc:
-                continue
-            seg = LineString([src_loc, tgt_loc])
-            for res_id, fp_box in footprint_boxes:
-                if seg.crosses(fp_box):
-                    # Allow own-footprint exits from boundary ports.
-                    own_src = res_id in _port_pos_to_res.get(src_loc, set())
-                    own_tgt = res_id in _port_pos_to_res.get(tgt_loc, set())
-                    if own_src or own_tgt:
-                        continue
-                    violations.append(
-                        f"  [{src_id} → {tgt_id}] crosses through footprint of {res_id}"
-                    )
+        if isinstance(proc, _proc.LinkTransportProcessData):
+            total_links += sum(1 for _ in iter_link_transport_pairs(proc.links))
 
     if violations:
+        lines = []
+        n_transverse = sum(1 for e in violations if e.get("exterior_transverse_chord"))
+        for e in violations:
+            m = e["metrics"]
+            b = e["box_bounds"]
+            xt = e.get("exterior_transverse_chord", False)
+            lines.append(
+                f"  [{e['src_id']} → {e['tgt_id']}] through footprint of {e['footprint_resource_id']} "
+                f"(interior_hits={m['interior_sample_hits']}, "
+                f"inter_len={m['intersection_length']:.4f}, "
+                f"exterior_transverse={xt}, "
+                f"box=[{b[0]:.3f},{b[1]:.3f}]—[{b[2]:.3f},{b[3]:.3f}])"
+            )
+        if verbose:
+            print("\nvalidate_no_links_cross_footprints — detail:")
+            print_link_footprint_audit(ps, resource_ids=None, include_allowed_own_exits=False)
         raise AssertionError(
             f"validate_no_links_cross_footprints FAILED "
-            f"({len(violations)} violation(s) in {total_links} links):\n"
-            + "\n".join(violations)
+            f"({len(violations)} violation(s) in {total_links} links; "
+            f"{n_transverse} exterior-transverse chord(s)):\n"
+            + "\n".join(lines)
         )
     print(
         f"  ✓ validate_no_links_cross_footprints  "
@@ -1047,8 +1352,12 @@ def validate_all_ports_connected(
     ps: production_system_data.ProductionSystemData,
 ) -> None:
     """
-    Assert that every port of every production resource, source, and sink
+    Assert that every port of every **non-transport** resource, source, and sink
     appears as an endpoint in at least one link of a ``LinkTransportProcessData``.
+
+    Ports on **transport** resources (e.g. AGVs) are skipped: they are not
+    relocated to footprint boundaries and are not required to participate in
+    the static link graph the same way as machines.
 
     A disconnected port means the resource is unreachable by transport, which
     will cause simulation deadlocks.
@@ -1058,16 +1367,20 @@ def validate_all_ports_connected(
     """
     from prodsys.models import processes_data as _proc
 
+    transport_resource_ids = {t.ID for t in get_transport_resources(ps)}
+
     ids_in_links: set = set()
     for proc in ps.process_data:
         if not isinstance(proc, _proc.LinkTransportProcessData):
             continue
-        for src_id, tgt_id in proc.links:
+        for src_id, tgt_id in iter_link_transport_pairs(proc.links):
             ids_in_links.add(src_id)
             ids_in_links.add(tgt_id)
 
     missing: list = []
     for r in ps.resource_data:
+        if r.ID in transport_resource_ids:
+            continue
         for port_id in (r.ports or []):
             if port_id not in ids_in_links:
                 missing.append(f"  Resource {r.ID}: port {port_id} not in any link")
@@ -1179,11 +1492,73 @@ def validate_ports_on_footprint_boundary(
 # Layout visualisation
 # ---------------------------------------------------------------------------
 
+def _all_resource_footprint_union(
+    ps: production_system_data.ProductionSystemData,
+):
+    """Union of axis-aligned footprint boxes for every resource that has a footprint."""
+    import shapely.geometry as sg
+    from shapely.ops import unary_union
+
+    polys: list = []
+    for r in ps.resource_data:
+        if r.footprint is None:
+            continue
+        cx, cy = float(r.location[0]), float(r.location[1])
+        hw = r.footprint.width / 2.0
+        hh = r.footprint.height / 2.0
+        polys.append(sg.box(cx - hw, cy - hh, cx + hw, cy + hh))
+    if not polys:
+        return None
+    u = unary_union(polys)
+    return None if u.is_empty else u
+
+
+def _iter_plot_line_parts(geom):
+    """Yield LineString geometries from a difference result."""
+    if geom is None or geom.is_empty:
+        return
+    gt = geom.geom_type
+    if gt == "LineString":
+        yield geom
+    elif gt == "MultiLineString":
+        for g in geom.geoms:
+            yield from _iter_plot_line_parts(g)
+    elif gt == "GeometryCollection":
+        for g in geom.geoms:
+            yield from _iter_plot_line_parts(g)
+
+
+def _plot_link_segment_clipped(
+    ax,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    foreign_union,
+    **plot_kw,
+) -> None:
+    """Plot a polyline from (x0,y0) to (x1,y1), subtracting ``foreign_union``."""
+    from shapely.geometry import LineString
+
+    line = LineString([(x0, y0), (x1, y1)])
+    if foreign_union is None:
+        ax.plot([x0, x1], [y0, y1], **plot_kw)
+        return
+    rest = line.difference(foreign_union)
+    for seg in _iter_plot_line_parts(rest):
+        if seg.length < 1e-12:
+            continue
+        xs, ys = zip(*seg.coords)
+        ax.plot(xs, ys, **plot_kw)
+
+
 def plot_layout(
     production_system: production_system_data.ProductionSystemData,
     title: str = "Production System Layout",
     show: bool = True,
     figsize: Tuple[float, float] = (12, 8),
+    footprint_fill_alpha: float = 0.22,
+    clip_links_at_foreign_footprints: bool = True,
 ):
     """
     Plot the production system layout using matplotlib.
@@ -1194,8 +1569,14 @@ def plot_layout(
     - **Obstacles** (``layout_data.obstacles``) – filled dark-gray rectangles.
     - **Path nodes** (``node_data``) – small gray dots.
     - **Path edges** (links from ``LinkTransportProcess``) – thin gray lines.
-    - **Production resources** – blue squares, sized by ``footprint`` when set.
-    - **Transport resources** – orange circles.
+      When ``clip_links_at_foreign_footprints`` is true (default), each segment
+      is drawn with the **union of all resource footprint boxes** subtracted, so
+      straight chords do not pass *visually* through any machine interior.
+    - **Production resources** – footprint **outlines** with **semi-transparent**
+      blue fill so path edges/nodes remain visible through the box (useful to
+      spot links cutting through machines).
+    - **Transport resources** – orange circles; optional footprint box with
+      transparent orange fill when ``footprint`` is set.
     - **Sources** – green upward triangles.
     - **Sinks** – red downward triangles.
 
@@ -1206,12 +1587,19 @@ def plot_layout(
         show: Call ``plt.show()`` at the end.  Set to ``False`` when embedding
             in a larger figure or saving programmatically.
         figsize: ``(width, height)`` in inches passed to ``plt.figure``.
+        footprint_fill_alpha: Opacity of the machine footprint **fill** (0–1).
+            Edges stay fully opaque.  Increase to make fills more visible;
+            decrease to see path geometry more clearly through the box.
+        clip_links_at_foreign_footprints: If true, clip straight link segments
+            against the union of all resource footprint boxes (including the
+            endpoints' machines) so grey lines do not draw through interiors.
 
     Returns:
         The ``matplotlib.figure.Figure`` instance.
     """
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    from matplotlib.colors import to_rgba
     from matplotlib.lines import Line2D
 
     from prodsys.models.production_system_data import get_production_resources, get_transport_resources
@@ -1299,22 +1687,29 @@ def plot_layout(
         if p.location is not None:
             all_location_objects[p.ID] = p.location
 
+    clip_union = (
+        _all_resource_footprint_union(production_system)
+        if clip_links_at_foreign_footprints
+        else None
+    )
     for process in production_system.process_data:
         if not isinstance(process, processes_data_module.LinkTransportProcessData):
             continue
-        links = process.links
-        if isinstance(links, dict):
-            link_pairs = [(s, t) for s, targets in links.items() for t in targets]
-        else:
-            link_pairs = [(s, t) for s, t in links]
-        for src_id, tgt_id in link_pairs:
+        for src_id, tgt_id in iter_link_transport_pairs(process.links):
             src_loc = all_location_objects.get(src_id)
             tgt_loc = all_location_objects.get(tgt_id)
             if src_loc is not None and tgt_loc is not None:
-                ax.plot(
-                    [src_loc[0], tgt_loc[0]],
-                    [src_loc[1], tgt_loc[1]],
-                    color="#aaaaaa", linewidth=0.8, alpha=0.7, zorder=5,
+                _plot_link_segment_clipped(
+                    ax,
+                    float(src_loc[0]),
+                    float(src_loc[1]),
+                    float(tgt_loc[0]),
+                    float(tgt_loc[1]),
+                    clip_union,
+                    color="#aaaaaa",
+                    linewidth=0.8,
+                    alpha=0.7,
+                    zorder=5,
                 )
 
     # --- path nodes ---------------------------------------------------------
@@ -1333,10 +1728,9 @@ def plot_layout(
                 (res.location[0] - fp.width / 2, res.location[1] - fp.height / 2),
                 fp.width, fp.height,
                 boxstyle="square,pad=0",
-                linewidth=1.5,
+                linewidth=1.8,
                 edgecolor="#1a56a0",
-                facecolor="#4a90d9",
-                alpha=1.0,
+                facecolor=to_rgba("#4a90d9", footprint_fill_alpha),
                 zorder=7,
             )
             ax.add_patch(rect)
@@ -1362,9 +1756,9 @@ def plot_layout(
 
         # Draw port positions when they have been relocated off-centre.
         # A dashed connector runs from the resource centre to the port so the
-        # boundary access-point is visually linked to the machine body.  The
-        # segment inside the machine is hidden by the blue footprint box (drawn
-        # at the same zorder); only the endpoint diamond is visible above it.
+        # boundary access-point is visually linked to the machine body.  With
+        # a semi-transparent footprint fill, path edges and this segment may
+        # show through the box for easier debugging.
         if res.ports:
             for port_id in res.ports:
                 port = port_lookup.get(port_id)
@@ -1389,6 +1783,18 @@ def plot_layout(
     # --- transport resources ------------------------------------------------
     transport_resources = get_transport_resources(production_system)
     for res in transport_resources:
+        tfp = res.footprint
+        if tfp is not None:
+            trect = mpatches.FancyBboxPatch(
+                (res.location[0] - tfp.width / 2, res.location[1] - tfp.height / 2),
+                tfp.width, tfp.height,
+                boxstyle="square,pad=0",
+                linewidth=1.5,
+                edgecolor="#c07800",
+                facecolor=to_rgba("#f5a623", footprint_fill_alpha * 0.9),
+                zorder=7,
+            )
+            ax.add_patch(trect)
         ax.scatter(
             res.location[0], res.location[1],
             s=100, marker="o", color="#f5a623", edgecolors="#c07800",
@@ -1436,7 +1842,12 @@ def plot_layout(
         Line2D([0], [0], color="#aaaaaa", linewidth=1, label="Path edge"),
         Line2D([0], [0], marker=".", color="#aaaaaa", markersize=6,
                linestyle="None", label="Path node"),
-        mpatches.Patch(facecolor="#4a90d9", edgecolor="#1a56a0", label="Machine (footprint)"),
+        mpatches.Patch(
+            facecolor=to_rgba("#4a90d9", footprint_fill_alpha),
+            edgecolor="#1a56a0",
+            linewidth=1.5,
+            label="Machine (footprint)",
+        ),
         Line2D([0], [0], marker="D", color="#ffffff", markersize=7,
                markeredgecolor="#1a56a0", markeredgewidth=1.5,
                linestyle="None", label="Machine port (boundary)"),
