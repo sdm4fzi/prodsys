@@ -319,6 +319,23 @@ def generator(
 
     tablesize = min(dim_x, dim_y)
 
+    # Compute the actual grid spacing first so we can sync it with the
+    # Configuration clearance values.  The original Configuration was designed
+    # for centimetre-scale layouts (dim ~100–1000 cm); when coordinates are in
+    # metres the raw scale-factor reduction produces a clearance that is far
+    # larger than the grid spacing, causing almost every candidate node to fail
+    # the distance check.
+    if not simple_connection:
+        min_node_distance = max(0.1 * tablesize, 10)
+        max_node_distance = 0.2 * tablesize
+    else:
+        if tablesize < 10.0:
+            min_node_distance = max(tablesize / 5.0, 0.3)
+            max_node_distance = max(tablesize / 4.0, 0.5)
+        else:
+            min_node_distance = max(0.1 * tablesize, 0.5)
+            max_node_distance = max(0.15 * tablesize, 1.0)
+
     original_min_node_dist = config.get(Configuration.Min_Node_Distance)
     original_min_edge_dist = config.get(Configuration.Min_Node_Edge_Distance)
     original_trajectory_dist = config.get(Configuration.Trajectory_Node_Distance)
@@ -326,8 +343,22 @@ def generator(
 
     if tablesize < 50.0:
         scale_factor = max(tablesize / 50.0, 0.1)
-        config.set(Configuration.Min_Node_Distance, max(int(original_min_node_dist * scale_factor), 1))
-        config.set(Configuration.Min_Node_Edge_Distance, max(int(original_min_edge_dist * scale_factor), 1))
+        # Use the computed grid spacing as Min_Node_Distance so that the
+        # internal clearance checks in get_station_nodes_in_cfree and
+        # define_global_grid are consistent with the grid we will generate.
+        # The scale-factor formula (32 * scale_factor) produces values that
+        # are orders of magnitude too large for metre-scale layouts.
+        config.set(Configuration.Min_Node_Distance, max(int(min_node_distance), 1))
+        # For small layouts the grid spacing is often < 2 units, so integer
+        # rounding cannot represent the sub-unit edge-clearance needed to let
+        # Delaunay connect neighbouring grid nodes.  Setting it to 0 disables
+        # the node-proximity veto for edges; the footprint post-processing
+        # step still removes any edge that crosses a machine body.
+        scaled_edge_dist = int(original_min_edge_dist * scale_factor)
+        # If the scaled edge-clearance equals or exceeds the node spacing, every
+        # candidate Delaunay edge would be vetoed.  Use 0 in that case so edges
+        # are judged only by the footprint post-processing step.
+        config.set(Configuration.Min_Node_Edge_Distance, 0 if scaled_edge_dist >= int(min_node_distance) else scaled_edge_dist)
         config.set(Configuration.Trajectory_Node_Distance, max(int(original_trajectory_dist * scale_factor), 1))
         config.set(Configuration.Buffer_Node_Distance, max(int(original_buffer_dist * scale_factor), 1))
 
@@ -358,18 +389,6 @@ def generator(
     node_edge_generator.add_station_nodes_and_edges(add_edges=add_edges, buffer_nodes=False)
 
     add_nodes_between = True
-    tablesize = min(dim_x, dim_y)
-
-    if not simple_connection:
-        min_node_distance = max(0.1 * tablesize, 10)
-        max_node_distance = 0.2 * tablesize
-    else:
-        if tablesize < 10.0:
-            min_node_distance = max(tablesize / 5.0, 0.3)
-            max_node_distance = max(tablesize / 4.0, 0.5)
-        else:
-            min_node_distance = max(0.1 * tablesize, 0.5)
-            max_node_distance = max(0.15 * tablesize, 1.0)
 
     has_movable_resources = any(
         resource.can_move
@@ -467,16 +486,34 @@ def generator(
     # Remove any Delaunay edges whose straight-line segment crosses through the
     # interior of a resource footprint.  Even with internal nodes removed, some
     # outside-to-outside connections can still cut diagonally through a machine.
-    footprint_polys_gen = []
+    #
+    # Exception: a link whose endpoint sits exactly on the footprint boundary
+    # (i.e. it is the machine's own relocated port) is allowed to exit through
+    # the machine body – that crossing is by construction, not a routing error.
+    import shapely.geometry as _sg
+
+    # Build a lookup: graph-node position → set of resource IDs whose port
+    # sits at that position.  Used to allow "own-footprint" exits.
+    _port_lookup_fp = {p.ID: p for p in productionsystem.port_data}
+    _pos_to_res_id: dict = {}
+    for _r in productionsystem.resource_data:
+        for _pid in (_r.ports or []):
+            _p = _port_lookup_fp.get(_pid)
+            if _p is not None and _p.location is not None:
+                _pk = tuple(_p.location)
+                _pos_to_res_id.setdefault(_pk, set()).add(_r.ID)
+
+    footprint_polys_gen: list = []
+    footprint_res_ids: list = []
     for _res in productionsystem.resource_data:
         if _res.footprint is not None:
-            import shapely.geometry as _sg
             _cx, _cy = _res.location[0], _res.location[1]
             _hw = _res.footprint.width / 2.0
             _hh = _res.footprint.height / 2.0
             footprint_polys_gen.append(
                 _sg.box(_cx - _hw, _cy - _hh, _cx + _hw, _cy + _hh)
             )
+            footprint_res_ids.append(_res.ID)
 
     if footprint_polys_gen:
         edges_crossing_footprint = []
@@ -485,9 +522,18 @@ def generator(
             pos_v = G.nodes[v].get("pos")
             if pos_u is None or pos_v is None:
                 continue
+            key_u = tuple(pos_u)
+            key_v = tuple(pos_v)
             seg = _sg.LineString([pos_u, pos_v])
-            for _fp in footprint_polys_gen:
+            for _res_id, _fp in zip(footprint_res_ids, footprint_polys_gen):
                 if seg.crosses(_fp):
+                    # Allow the crossing if one endpoint is this machine's own
+                    # port (port relocated to the footprint boundary exits
+                    # through the machine body by construction).
+                    own_u = _res_id in _pos_to_res_id.get(key_u, set())
+                    own_v = _res_id in _pos_to_res_id.get(key_v, set())
+                    if own_u or own_v:
+                        continue
                     edges_crossing_footprint.append((u, v))
                     break
         G.remove_edges_from(edges_crossing_footprint)
@@ -950,6 +996,18 @@ def validate_no_links_cross_footprints(
                 (r.ID, _shapely_box(cx - hw, cy - hh, cx + hw, cy + hh))
             )
 
+    # Build a lookup: location → resource IDs that own a port at that location.
+    # Links from a machine's own boundary port are allowed to exit through that
+    # machine's footprint (the crossing is by construction, not a routing error).
+    _port_lookup_val = {p.ID: p for p in ps.port_data}
+    _port_pos_to_res: dict = {}
+    for _r in ps.resource_data:
+        for _pid in (_r.ports or []):
+            _p = _port_lookup_val.get(_pid)
+            if _p is not None and _p.location is not None:
+                _pk = tuple(_p.location)
+                _port_pos_to_res.setdefault(_pk, set()).add(_r.ID)
+
     total_links = 0
     violations: list = []
     for proc in ps.process_data:
@@ -964,6 +1022,11 @@ def validate_no_links_cross_footprints(
             seg = LineString([src_loc, tgt_loc])
             for res_id, fp_box in footprint_boxes:
                 if seg.crosses(fp_box):
+                    # Allow own-footprint exits from boundary ports.
+                    own_src = res_id in _port_pos_to_res.get(src_loc, set())
+                    own_tgt = res_id in _port_pos_to_res.get(tgt_loc, set())
+                    if own_src or own_tgt:
+                        continue
                     violations.append(
                         f"  [{src_id} → {tgt_id}] crosses through footprint of {res_id}"
                     )
@@ -1051,11 +1114,24 @@ def validate_ports_on_footprint_boundary(
     Raises:
         AssertionError: Listing every port that violates the boundary constraint.
     """
+    from prodsys.models import processes_data as _proc_val
+
+    transport_process_ids_val: set = {
+        p.ID
+        for p in ps.process_data
+        if isinstance(p, (_proc_val.TransportProcessData, _proc_val.LinkTransportProcessData))
+    }
+
     port_lookup = {p.ID: p for p in ps.port_data}
     violations: list = []
 
     for r in ps.resource_data:
         if r.footprint is None or not r.ports:
+            continue
+        # Skip transport resources – their ports are not relocated by
+        # relocate_ports_to_footprint_boundary, so checking them here would
+        # produce false positives.
+        if r.process_ids and all(pid in transport_process_ids_val for pid in r.process_ids):
             continue
         cx, cy = float(r.location[0]), float(r.location[1])
         hw, hh = r.footprint.width / 2.0, r.footprint.height / 2.0
@@ -1088,10 +1164,14 @@ def validate_ports_on_footprint_boundary(
             f"validate_ports_on_footprint_boundary FAILED "
             f"({len(violations)} violation(s)):\n" + "\n".join(violations)
         )
-    checked = sum(1 for r in ps.resource_data if r.footprint and r.ports)
+    checked = sum(
+        1 for r in ps.resource_data
+        if r.footprint and r.ports
+        and not (r.process_ids and all(pid in transport_process_ids_val for pid in r.process_ids))
+    )
     print(
         f"  ✓ validate_ports_on_footprint_boundary  "
-        f"({checked} footprinted resource(s) checked, tolerance={tolerance})"
+        f"({checked} production resource(s) checked, tolerance={tolerance})"
     )
 
 

@@ -185,8 +185,11 @@ class StationConfiguration:
         rotation_matrix = [[math.cos(theta), -math.sin(theta)], [math.sin(theta), math.cos(theta)]]
 
         # Rotate the corners and translate them to the global coordinate system.
-        station_corners = [(round(station["pose"][0] + rotation_matrix[0][0] * node[0] + rotation_matrix[0][1] * node[1]),
-                            round(station["pose"][1] + rotation_matrix[1][0] * node[0] + rotation_matrix[1][1] * node[1]))
+        # Note: do NOT round here – for fractional-coordinate layouts (e.g. metre
+        # units) rounding shifts trajectory nodes away from the declared port
+        # positions, causing incorrect graph-to-resource mapping downstream.
+        station_corners = [(station["pose"][0] + rotation_matrix[0][0] * node[0] + rotation_matrix[0][1] * node[1],
+                            station["pose"][1] + rotation_matrix[1][0] * node[0] + rotation_matrix[1][1] * node[1])
                            for node in local_nodes]
 
         return station_corners
