@@ -37,6 +37,7 @@ from prodsys.models import node_data as node_data_module
 from prodsys.models import scenario_data as scenario_data_module
 from prodsys.models import dependency_data as dependency_data_module
 from prodsys.models import primitives_data as primitives_data_module
+from prodsys.models.layout_data import LayoutData
 from prodsys.util import util
 from prodsys.models.processes_data import LinkTransportProcessData
 from prodsys.models.source_data import OrderSourceData
@@ -415,6 +416,8 @@ class ProductionSystemData(BaseModel):
     conwip_number: Optional[int] = None
     reference_time: Optional[datetime.datetime] = None
     time_unit: Literal["s", "min", "h", "d"] = "min"
+
+    layout_data: Optional[LayoutData] = None
 
     valid_configuration: bool = True
     reconfiguration_cost: float = 0

@@ -20,6 +20,7 @@ from pydantic import (
     conlist,
 )
 from prodsys.models.core_asset import CoreAsset, Locatable
+from prodsys.models.layout_data import ResourceFootprint
 
 if TYPE_CHECKING:
     from prodsys.models.production_system_data import ProductionSystemData
@@ -112,6 +113,7 @@ class ResourceData(CoreAsset, Locatable):
     ports: Optional[List[str]] = None
     buffers: Optional[List[str]] = None
     can_move: Optional[bool] = None
+    footprint: Optional[ResourceFootprint] = None
 
     dependency_ids: List[str] = []
 

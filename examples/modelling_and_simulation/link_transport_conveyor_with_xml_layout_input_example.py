@@ -1,3 +1,13 @@
+"""
+Link-transport (conveyor) simulation using a draw.io XML file for layout input.
+
+.. note::
+    This is the legacy XML-driven approach.  For the modern, fully model-driven
+    equivalent see ``link_transport_conveyor_with_model_layout_example.py``, which
+    uses ``LayoutData`` / ``LayoutAreaData`` / ``ObstacleData`` directly in the
+    ``ProductionSystemData`` without any external file.
+"""
+
 import prodsys
 import os
 from prodsys.models.production_system_data import ProductionSystemData, add_default_queues_to_production_system
@@ -135,7 +145,8 @@ def main():
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(BASE_DIR, "simulation_example_data", "FreeSpace.drawio.xml")
-    node_link_generation.generate_and_apply_network(production_system_instance, path, visualize=False, style="random", simple_connection=False)
+    node_link_generation.generate_and_apply_network(production_system_instance, path, style="grid", simple_connection=True)
+    node_link_generation.plot_layout(production_system_instance, title="Conveyor Layout – XML-defined areas")
     prodsys.set_logging("DEBUG")
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()

@@ -115,6 +115,7 @@ adapter = productionsystem.to_model()
 
 #add_default_queues_to_production_system(adapter, reset=False)
 node_link_generation.generate_and_apply_network(adapter)
+node_link_generation.plot_layout(adapter, title="Production System Layout")
 runner = prodsys.runner.Runner(production_system_data=adapter)
 runner.initialize_simulation()
 runner.run(1000)

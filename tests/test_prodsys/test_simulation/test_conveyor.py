@@ -233,7 +233,7 @@ def test_hashing(simulation_adapter: ProductionSystemData):
     # Hash updated after fixing node link generation:
     # - Include transport resources in network generation
     # - Connect all unconnected resources to nearest nodes/resources
-    assert hash_str == "0afac4f33579b12ae20a5f8ebb4ddaf2"
+    assert hash_str == "86e8d3f44fa3a2039cc146fc56be3e9c"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

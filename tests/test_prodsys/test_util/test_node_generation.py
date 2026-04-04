@@ -139,7 +139,7 @@ def test_hashing(simulation_adapter: ProductionSystemData):
     # - Fixed hardcoded boundary values (proportional scaling)
     # - Include transport resources in network generation
     # - Connect all unconnected resources to nearest nodes/resources
-    assert hash_str == "c5d893e1c621265ed5e8c9366e76b119"
+    assert hash_str == "c715decb5144224abdbb36a5dfa20d21"
 
 
 def test_run_simulation(simulation_adapter: ProductionSystemData):

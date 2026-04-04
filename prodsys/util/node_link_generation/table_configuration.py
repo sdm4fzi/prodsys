@@ -77,19 +77,20 @@ class StationConfiguration:
             station_object.station_node = tuple(station["pose"][:2])
             station_object.station_orientation = station["pose"][2]
 
-            trajectory_nodes = self.get_trajectory_node_position(station)
-            trajectory_nodes_cfree = self.check_station_nodes_cfree(trajectory_nodes)
-            if len(trajectory_nodes_cfree) != len(trajectory_nodes):
-                raise ValueError(str(len(trajectory_nodes) - len(trajectory_nodes_cfree)) + " trajectory nodes are not in cfree. \
-                      Station number: " + str(station_nr) + " " + str(self.station_nodes[-1]))
-            self.station_trajectory_nodes.extend([*trajectory_nodes_cfree])
-            station_object.station_trajectory_nodes.extend([*trajectory_nodes_cfree])
+            if station.get("poi"):
+                trajectory_nodes = self.get_trajectory_node_position(station)
+                trajectory_nodes_cfree = self.check_station_nodes_cfree(trajectory_nodes)
+                if len(trajectory_nodes_cfree) != len(trajectory_nodes):
+                    raise ValueError(str(len(trajectory_nodes) - len(trajectory_nodes_cfree)) + " trajectory nodes are not in cfree. \
+                          Station number: " + str(station_nr) + " " + str(self.station_nodes[-1]))
+                self.station_trajectory_nodes.extend([*trajectory_nodes_cfree])
+                station_object.station_trajectory_nodes.extend([*trajectory_nodes_cfree])
 
-            buffer_nodes = self.get_buffer_node_position(station, number_trajectory_nodes=len(trajectory_nodes_cfree),
-                                                         buffer_distance=self.buffer_node_distance)
-            buffer_nodes = self.check_station_nodes_cfree(buffer_nodes)
-            self.station_buffer_nodes.extend([*buffer_nodes])
-            station_object.station_buffer_nodes.extend([*buffer_nodes])
+                buffer_nodes = self.get_buffer_node_position(station, number_trajectory_nodes=len(trajectory_nodes_cfree),
+                                                             buffer_distance=self.buffer_node_distance)
+                buffer_nodes = self.check_station_nodes_cfree(buffer_nodes)
+                self.station_buffer_nodes.extend([*buffer_nodes])
+                station_object.station_buffer_nodes.extend([*buffer_nodes])
 
             if "stations_layer" not in visualization.occupancy_matrices.keys():
                 visualization.add_free_layer("stations_layer")

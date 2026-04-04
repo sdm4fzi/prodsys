@@ -1,0 +1,2286 @@
+{
+    "ID": "",
+    "seed": 0,
+    "time_model_data": [
+        {
+            "ID": "ftmp1",
+            "description": "process 1 time model",
+            "distribution_function": "normal",
+            "location": 0.833,
+            "scale": 0.0833,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftmp2",
+            "description": "process 2 time model",
+            "distribution_function": "normal",
+            "location": 4.167,
+            "scale": 0.4167,
+            "batch_size": 100
+        },
+        {
+            "ID": "ftm1",
+            "description": "inter-arrival time model",
+            "distribution_function": "exponential",
+            "location": 10.05,
+            "scale": 0.0,
+            "batch_size": 100
+        },
+        {
+            "ID": "md1",
+            "description": "Conveyor travel time model",
+            "speed": 60.0,
+            "reaction_time": 0.033,
+            "metric": "manhattan"
+        }
+    ],
+    "state_data": [],
+    "process_data": [
+        {
+            "ID": "P1",
+            "description": "Process 1",
+            "time_model_id": "ftmp1",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": 0.0
+        },
+        {
+            "ID": "P2",
+            "description": "Process 2",
+            "time_model_id": "ftmp2",
+            "dependency_ids": [],
+            "type": "ProductionProcesses",
+            "failure_rate": 0.0
+        },
+        {
+            "ID": "TP1",
+            "description": "Conveyor transport process",
+            "time_model_id": "md1",
+            "dependency_ids": [],
+            "type": "LinkTransportProcesses",
+            "loading_time_model_id": null,
+            "unloading_time_model_id": null,
+            "can_move": false,
+            "links": [
+                [
+                    "R1_default_queue",
+                    "node_6"
+                ],
+                [
+                    "R1_default_queue",
+                    "node_81"
+                ],
+                [
+                    "R1_default_queue",
+                    "node_74"
+                ],
+                [
+                    "R2_default_queue",
+                    "node_101"
+                ],
+                [
+                    "R2_default_queue",
+                    "node_94"
+                ],
+                [
+                    "R2_default_queue",
+                    "node_93"
+                ],
+                [
+                    "R2_default_queue",
+                    "node_100"
+                ],
+                [
+                    "TR1",
+                    "node_95"
+                ],
+                [
+                    "TR1",
+                    "node_89"
+                ],
+                [
+                    "TR1",
+                    "node_90"
+                ],
+                [
+                    "TR1",
+                    "node_96"
+                ],
+                [
+                    "TR1",
+                    "node_83"
+                ],
+                [
+                    "TR1",
+                    "node_104"
+                ],
+                [
+                    "TR1",
+                    "node_82"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_59"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_53"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_49"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_60"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_52"
+                ],
+                [
+                    "S1_default_output_queue",
+                    "node_50"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_115"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_114"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_29"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_28"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_31"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_122"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_32"
+                ],
+                [
+                    "K1_default_input_queue",
+                    "node_129"
+                ],
+                [
+                    "node_6",
+                    "node_81"
+                ],
+                [
+                    "node_6",
+                    "node_75"
+                ],
+                [
+                    "node_6",
+                    "node_68"
+                ],
+                [
+                    "node_7",
+                    "node_75"
+                ],
+                [
+                    "node_7",
+                    "node_82"
+                ],
+                [
+                    "node_8",
+                    "node_51"
+                ],
+                [
+                    "node_8",
+                    "node_9"
+                ],
+                [
+                    "node_9",
+                    "node_10"
+                ],
+                [
+                    "node_9",
+                    "node_59"
+                ],
+                [
+                    "node_9",
+                    "node_52"
+                ],
+                [
+                    "node_10",
+                    "node_59"
+                ],
+                [
+                    "node_10",
+                    "node_66"
+                ],
+                [
+                    "node_10",
+                    "node_11"
+                ],
+                [
+                    "node_11",
+                    "node_66"
+                ],
+                [
+                    "node_11",
+                    "node_12"
+                ],
+                [
+                    "node_12",
+                    "node_80"
+                ],
+                [
+                    "node_12",
+                    "node_13"
+                ],
+                [
+                    "node_12",
+                    "node_74"
+                ],
+                [
+                    "node_13",
+                    "node_86"
+                ],
+                [
+                    "node_13",
+                    "node_14"
+                ],
+                [
+                    "node_13",
+                    "node_80"
+                ],
+                [
+                    "node_14",
+                    "node_86"
+                ],
+                [
+                    "node_14",
+                    "node_92"
+                ],
+                [
+                    "node_14",
+                    "node_15"
+                ],
+                [
+                    "node_15",
+                    "node_92"
+                ],
+                [
+                    "node_15",
+                    "node_98"
+                ],
+                [
+                    "node_15",
+                    "node_16"
+                ],
+                [
+                    "node_16",
+                    "node_107"
+                ],
+                [
+                    "node_16",
+                    "node_17"
+                ],
+                [
+                    "node_16",
+                    "node_98"
+                ],
+                [
+                    "node_17",
+                    "node_107"
+                ],
+                [
+                    "node_17",
+                    "node_116"
+                ],
+                [
+                    "node_17",
+                    "node_18"
+                ],
+                [
+                    "node_18",
+                    "node_116"
+                ],
+                [
+                    "node_18",
+                    "node_19"
+                ],
+                [
+                    "node_18",
+                    "node_123"
+                ],
+                [
+                    "node_19",
+                    "node_20"
+                ],
+                [
+                    "node_19",
+                    "node_123"
+                ],
+                [
+                    "node_20",
+                    "node_21"
+                ],
+                [
+                    "node_21",
+                    "node_123"
+                ],
+                [
+                    "node_21",
+                    "node_22"
+                ],
+                [
+                    "node_22",
+                    "node_125"
+                ],
+                [
+                    "node_22",
+                    "node_23"
+                ],
+                [
+                    "node_22",
+                    "node_124"
+                ],
+                [
+                    "node_22",
+                    "node_123"
+                ],
+                [
+                    "node_23",
+                    "node_126"
+                ],
+                [
+                    "node_23",
+                    "node_24"
+                ],
+                [
+                    "node_23",
+                    "node_125"
+                ],
+                [
+                    "node_24",
+                    "node_126"
+                ],
+                [
+                    "node_24",
+                    "node_25"
+                ],
+                [
+                    "node_25",
+                    "node_126"
+                ],
+                [
+                    "node_25",
+                    "node_127"
+                ],
+                [
+                    "node_25",
+                    "node_26"
+                ],
+                [
+                    "node_26",
+                    "node_127"
+                ],
+                [
+                    "node_26",
+                    "node_128"
+                ],
+                [
+                    "node_26",
+                    "node_129"
+                ],
+                [
+                    "node_26",
+                    "node_27"
+                ],
+                [
+                    "node_27",
+                    "node_129"
+                ],
+                [
+                    "node_27",
+                    "node_28"
+                ],
+                [
+                    "node_28",
+                    "node_29"
+                ],
+                [
+                    "node_28",
+                    "node_129"
+                ],
+                [
+                    "node_29",
+                    "node_30"
+                ],
+                [
+                    "node_30",
+                    "node_31"
+                ],
+                [
+                    "node_31",
+                    "node_32"
+                ],
+                [
+                    "node_32",
+                    "node_33"
+                ],
+                [
+                    "node_33",
+                    "node_115"
+                ],
+                [
+                    "node_33",
+                    "node_34"
+                ],
+                [
+                    "node_34",
+                    "node_115"
+                ],
+                [
+                    "node_34",
+                    "node_106"
+                ],
+                [
+                    "node_34",
+                    "node_35"
+                ],
+                [
+                    "node_35",
+                    "node_106"
+                ],
+                [
+                    "node_35",
+                    "node_97"
+                ],
+                [
+                    "node_35",
+                    "node_36"
+                ],
+                [
+                    "node_36",
+                    "node_97"
+                ],
+                [
+                    "node_36",
+                    "node_91"
+                ],
+                [
+                    "node_36",
+                    "node_37"
+                ],
+                [
+                    "node_37",
+                    "node_38"
+                ],
+                [
+                    "node_37",
+                    "node_85"
+                ],
+                [
+                    "node_37",
+                    "node_91"
+                ],
+                [
+                    "node_38",
+                    "node_85"
+                ],
+                [
+                    "node_38",
+                    "node_79"
+                ],
+                [
+                    "node_38",
+                    "node_39"
+                ],
+                [
+                    "node_39",
+                    "node_73"
+                ],
+                [
+                    "node_39",
+                    "node_40"
+                ],
+                [
+                    "node_40",
+                    "node_65"
+                ],
+                [
+                    "node_40",
+                    "node_41"
+                ],
+                [
+                    "node_41",
+                    "node_58"
+                ],
+                [
+                    "node_41",
+                    "node_42"
+                ],
+                [
+                    "node_42",
+                    "node_43"
+                ],
+                [
+                    "node_43",
+                    "node_44"
+                ],
+                [
+                    "node_43",
+                    "node_58"
+                ],
+                [
+                    "node_44",
+                    "node_57"
+                ],
+                [
+                    "node_44",
+                    "node_45"
+                ],
+                [
+                    "node_45",
+                    "node_56"
+                ],
+                [
+                    "node_45",
+                    "node_46"
+                ],
+                [
+                    "node_46",
+                    "node_55"
+                ],
+                [
+                    "node_46",
+                    "node_47"
+                ],
+                [
+                    "node_47",
+                    "node_48"
+                ],
+                [
+                    "node_47",
+                    "node_54"
+                ],
+                [
+                    "node_48",
+                    "node_53"
+                ],
+                [
+                    "node_48",
+                    "node_49"
+                ],
+                [
+                    "node_49",
+                    "node_50"
+                ],
+                [
+                    "node_50",
+                    "node_51"
+                ],
+                [
+                    "node_51",
+                    "node_52"
+                ],
+                [
+                    "node_52",
+                    "node_59"
+                ],
+                [
+                    "node_53",
+                    "node_60"
+                ],
+                [
+                    "node_53",
+                    "node_54"
+                ],
+                [
+                    "node_54",
+                    "node_61"
+                ],
+                [
+                    "node_54",
+                    "node_55"
+                ],
+                [
+                    "node_55",
+                    "node_62"
+                ],
+                [
+                    "node_55",
+                    "node_56"
+                ],
+                [
+                    "node_56",
+                    "node_57"
+                ],
+                [
+                    "node_56",
+                    "node_63"
+                ],
+                [
+                    "node_57",
+                    "node_58"
+                ],
+                [
+                    "node_57",
+                    "node_64"
+                ],
+                [
+                    "node_58",
+                    "node_65"
+                ],
+                [
+                    "node_59",
+                    "node_66"
+                ],
+                [
+                    "node_60",
+                    "node_68"
+                ],
+                [
+                    "node_60",
+                    "node_61"
+                ],
+                [
+                    "node_61",
+                    "node_69"
+                ],
+                [
+                    "node_61",
+                    "node_62"
+                ],
+                [
+                    "node_62",
+                    "node_70"
+                ],
+                [
+                    "node_62",
+                    "node_63"
+                ],
+                [
+                    "node_63",
+                    "node_64"
+                ],
+                [
+                    "node_63",
+                    "node_71"
+                ],
+                [
+                    "node_64",
+                    "node_65"
+                ],
+                [
+                    "node_64",
+                    "node_72"
+                ],
+                [
+                    "node_65",
+                    "node_73"
+                ],
+                [
+                    "node_66",
+                    "node_74"
+                ],
+                [
+                    "node_68",
+                    "node_69"
+                ],
+                [
+                    "node_69",
+                    "node_75"
+                ],
+                [
+                    "node_69",
+                    "node_70"
+                ],
+                [
+                    "node_70",
+                    "node_76"
+                ],
+                [
+                    "node_70",
+                    "node_71"
+                ],
+                [
+                    "node_71",
+                    "node_72"
+                ],
+                [
+                    "node_71",
+                    "node_77"
+                ],
+                [
+                    "node_72",
+                    "node_73"
+                ],
+                [
+                    "node_72",
+                    "node_78"
+                ],
+                [
+                    "node_73",
+                    "node_79"
+                ],
+                [
+                    "node_74",
+                    "node_80"
+                ],
+                [
+                    "node_75",
+                    "node_76"
+                ],
+                [
+                    "node_76",
+                    "node_82"
+                ],
+                [
+                    "node_76",
+                    "node_77"
+                ],
+                [
+                    "node_77",
+                    "node_83"
+                ],
+                [
+                    "node_77",
+                    "node_78"
+                ],
+                [
+                    "node_78",
+                    "node_79"
+                ],
+                [
+                    "node_78",
+                    "node_84"
+                ],
+                [
+                    "node_79",
+                    "node_85"
+                ],
+                [
+                    "node_80",
+                    "node_86"
+                ],
+                [
+                    "node_80",
+                    "node_81"
+                ],
+                [
+                    "node_81",
+                    "node_87"
+                ],
+                [
+                    "node_82",
+                    "node_89"
+                ],
+                [
+                    "node_82",
+                    "node_83"
+                ],
+                [
+                    "node_83",
+                    "node_84"
+                ],
+                [
+                    "node_84",
+                    "node_90"
+                ],
+                [
+                    "node_84",
+                    "node_85"
+                ],
+                [
+                    "node_85",
+                    "node_91"
+                ],
+                [
+                    "node_86",
+                    "node_92"
+                ],
+                [
+                    "node_86",
+                    "node_87"
+                ],
+                [
+                    "node_87",
+                    "node_88"
+                ],
+                [
+                    "node_87",
+                    "node_93"
+                ],
+                [
+                    "node_89",
+                    "node_94"
+                ],
+                [
+                    "node_90",
+                    "node_96"
+                ],
+                [
+                    "node_90",
+                    "node_91"
+                ],
+                [
+                    "node_91",
+                    "node_97"
+                ],
+                [
+                    "node_92",
+                    "node_98"
+                ],
+                [
+                    "node_92",
+                    "node_93"
+                ],
+                [
+                    "node_93",
+                    "node_99"
+                ],
+                [
+                    "node_94",
+                    "node_95"
+                ],
+                [
+                    "node_94",
+                    "node_102"
+                ],
+                [
+                    "node_95",
+                    "node_103"
+                ],
+                [
+                    "node_96",
+                    "node_105"
+                ],
+                [
+                    "node_96",
+                    "node_97"
+                ],
+                [
+                    "node_97",
+                    "node_106"
+                ],
+                [
+                    "node_98",
+                    "node_107"
+                ],
+                [
+                    "node_98",
+                    "node_99"
+                ],
+                [
+                    "node_99",
+                    "node_100"
+                ],
+                [
+                    "node_99",
+                    "node_108"
+                ],
+                [
+                    "node_100",
+                    "node_101"
+                ],
+                [
+                    "node_100",
+                    "node_109"
+                ],
+                [
+                    "node_101",
+                    "node_102"
+                ],
+                [
+                    "node_101",
+                    "node_110"
+                ],
+                [
+                    "node_102",
+                    "node_103"
+                ],
+                [
+                    "node_102",
+                    "node_111"
+                ],
+                [
+                    "node_103",
+                    "node_104"
+                ],
+                [
+                    "node_103",
+                    "node_112"
+                ],
+                [
+                    "node_104",
+                    "node_105"
+                ],
+                [
+                    "node_104",
+                    "node_113"
+                ],
+                [
+                    "node_105",
+                    "node_106"
+                ],
+                [
+                    "node_105",
+                    "node_114"
+                ],
+                [
+                    "node_106",
+                    "node_115"
+                ],
+                [
+                    "node_107",
+                    "node_116"
+                ],
+                [
+                    "node_107",
+                    "node_108"
+                ],
+                [
+                    "node_108",
+                    "node_117"
+                ],
+                [
+                    "node_108",
+                    "node_109"
+                ],
+                [
+                    "node_109",
+                    "node_118"
+                ],
+                [
+                    "node_109",
+                    "node_110"
+                ],
+                [
+                    "node_110",
+                    "node_111"
+                ],
+                [
+                    "node_110",
+                    "node_119"
+                ],
+                [
+                    "node_111",
+                    "node_120"
+                ],
+                [
+                    "node_111",
+                    "node_112"
+                ],
+                [
+                    "node_112",
+                    "node_113"
+                ],
+                [
+                    "node_112",
+                    "node_121"
+                ],
+                [
+                    "node_113",
+                    "node_122"
+                ],
+                [
+                    "node_113",
+                    "node_114"
+                ],
+                [
+                    "node_114",
+                    "node_115"
+                ],
+                [
+                    "node_116",
+                    "node_123"
+                ],
+                [
+                    "node_116",
+                    "node_117"
+                ],
+                [
+                    "node_117",
+                    "node_124"
+                ],
+                [
+                    "node_117",
+                    "node_118"
+                ],
+                [
+                    "node_118",
+                    "node_125"
+                ],
+                [
+                    "node_118",
+                    "node_119"
+                ],
+                [
+                    "node_119",
+                    "node_120"
+                ],
+                [
+                    "node_119",
+                    "node_126"
+                ],
+                [
+                    "node_120",
+                    "node_127"
+                ],
+                [
+                    "node_120",
+                    "node_121"
+                ],
+                [
+                    "node_121",
+                    "node_122"
+                ],
+                [
+                    "node_121",
+                    "node_128"
+                ],
+                [
+                    "node_122",
+                    "node_129"
+                ],
+                [
+                    "node_123",
+                    "node_124"
+                ],
+                [
+                    "node_124",
+                    "node_125"
+                ],
+                [
+                    "node_125",
+                    "node_126"
+                ],
+                [
+                    "node_126",
+                    "node_127"
+                ],
+                [
+                    "node_127",
+                    "node_128"
+                ],
+                [
+                    "node_128",
+                    "node_129"
+                ]
+            ],
+            "capability": "TP1"
+        }
+    ],
+    "port_data": [
+        {
+            "ID": "R1_default_queue",
+            "description": "Default queue of R1",
+            "capacity": 0.0,
+            "location": [
+                -75.0,
+                -100.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "R2_default_queue",
+            "description": "Default queue of R2",
+            "capacity": 0.0,
+            "location": [
+                25.0,
+                -50.0
+            ],
+            "interface_type": "input_output",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "K1_default_input_queue",
+            "description": "Default input queue of K1",
+            "capacity": 0.0,
+            "location": [
+                150.0,
+                100.0
+            ],
+            "interface_type": "input",
+            "port_type": "queue",
+            "dependency_ids": []
+        },
+        {
+            "ID": "S1_default_output_queue",
+            "description": "Default output queue of S1",
+            "capacity": 0.0,
+            "location": [
+                -150.0,
+                -100.0
+            ],
+            "interface_type": "output",
+            "port_type": "queue",
+            "dependency_ids": []
+        }
+    ],
+    "node_data": [
+        {
+            "location": [
+                -65.0,
+                -65.0
+            ],
+            "ID": "node_6",
+            "description": ""
+        },
+        {
+            "location": [
+                -35.0,
+                -35.0
+            ],
+            "ID": "node_7",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -175.0
+            ],
+            "ID": "node_8",
+            "description": ""
+        },
+        {
+            "location": [
+                -166.0,
+                -175.0
+            ],
+            "ID": "node_9",
+            "description": ""
+        },
+        {
+            "location": [
+                -133.0,
+                -175.0
+            ],
+            "ID": "node_10",
+            "description": ""
+        },
+        {
+            "location": [
+                -100.0,
+                -175.0
+            ],
+            "ID": "node_11",
+            "description": ""
+        },
+        {
+            "location": [
+                -66.0,
+                -175.0
+            ],
+            "ID": "node_12",
+            "description": ""
+        },
+        {
+            "location": [
+                -33.0,
+                -175.0
+            ],
+            "ID": "node_13",
+            "description": ""
+        },
+        {
+            "location": [
+                0.0,
+                -175.0
+            ],
+            "ID": "node_14",
+            "description": ""
+        },
+        {
+            "location": [
+                33.0,
+                -175.0
+            ],
+            "ID": "node_15",
+            "description": ""
+        },
+        {
+            "location": [
+                66.0,
+                -175.0
+            ],
+            "ID": "node_16",
+            "description": ""
+        },
+        {
+            "location": [
+                100.0,
+                -175.0
+            ],
+            "ID": "node_17",
+            "description": ""
+        },
+        {
+            "location": [
+                133.0,
+                -175.0
+            ],
+            "ID": "node_18",
+            "description": ""
+        },
+        {
+            "location": [
+                166.0,
+                -175.0
+            ],
+            "ID": "node_19",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -175.0
+            ],
+            "ID": "node_20",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -142.0
+            ],
+            "ID": "node_21",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -110.0
+            ],
+            "ID": "node_22",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -77.0
+            ],
+            "ID": "node_23",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -45.0
+            ],
+            "ID": "node_24",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                -12.0
+            ],
+            "ID": "node_25",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                20.0
+            ],
+            "ID": "node_26",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                52.0
+            ],
+            "ID": "node_27",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                85.0
+            ],
+            "ID": "node_28",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                117.0
+            ],
+            "ID": "node_29",
+            "description": ""
+        },
+        {
+            "location": [
+                200.0,
+                150.0
+            ],
+            "ID": "node_30",
+            "description": ""
+        },
+        {
+            "location": [
+                166.0,
+                150.0
+            ],
+            "ID": "node_31",
+            "description": ""
+        },
+        {
+            "location": [
+                133.0,
+                150.0
+            ],
+            "ID": "node_32",
+            "description": ""
+        },
+        {
+            "location": [
+                100.0,
+                150.0
+            ],
+            "ID": "node_33",
+            "description": ""
+        },
+        {
+            "location": [
+                66.0,
+                150.0
+            ],
+            "ID": "node_34",
+            "description": ""
+        },
+        {
+            "location": [
+                33.0,
+                150.0
+            ],
+            "ID": "node_35",
+            "description": ""
+        },
+        {
+            "location": [
+                0.0,
+                150.0
+            ],
+            "ID": "node_36",
+            "description": ""
+        },
+        {
+            "location": [
+                -33.0,
+                150.0
+            ],
+            "ID": "node_37",
+            "description": ""
+        },
+        {
+            "location": [
+                -66.0,
+                150.0
+            ],
+            "ID": "node_38",
+            "description": ""
+        },
+        {
+            "location": [
+                -100.0,
+                150.0
+            ],
+            "ID": "node_39",
+            "description": ""
+        },
+        {
+            "location": [
+                -133.0,
+                150.0
+            ],
+            "ID": "node_40",
+            "description": ""
+        },
+        {
+            "location": [
+                -166.0,
+                150.0
+            ],
+            "ID": "node_41",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                150.0
+            ],
+            "ID": "node_42",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                117.0
+            ],
+            "ID": "node_43",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                85.0
+            ],
+            "ID": "node_44",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                52.0
+            ],
+            "ID": "node_45",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                20.0
+            ],
+            "ID": "node_46",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -12.0
+            ],
+            "ID": "node_47",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -45.0
+            ],
+            "ID": "node_48",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -77.0
+            ],
+            "ID": "node_49",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -110.0
+            ],
+            "ID": "node_50",
+            "description": ""
+        },
+        {
+            "location": [
+                -200.0,
+                -142.0
+            ],
+            "ID": "node_51",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                -142.0
+            ],
+            "ID": "node_52",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                -45.0
+            ],
+            "ID": "node_53",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                -12.0
+            ],
+            "ID": "node_54",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                20.0
+            ],
+            "ID": "node_55",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                52.0
+            ],
+            "ID": "node_56",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                85.0
+            ],
+            "ID": "node_57",
+            "description": ""
+        },
+        {
+            "location": [
+                -168.0,
+                118.0
+            ],
+            "ID": "node_58",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                -142.0
+            ],
+            "ID": "node_59",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                -45.0
+            ],
+            "ID": "node_60",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                -12.0
+            ],
+            "ID": "node_61",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                20.0
+            ],
+            "ID": "node_62",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                52.0
+            ],
+            "ID": "node_63",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                85.0
+            ],
+            "ID": "node_64",
+            "description": ""
+        },
+        {
+            "location": [
+                -135.0,
+                118.0
+            ],
+            "ID": "node_65",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                -142.0
+            ],
+            "ID": "node_66",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                -45.0
+            ],
+            "ID": "node_68",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                -12.0
+            ],
+            "ID": "node_69",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                20.0
+            ],
+            "ID": "node_70",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                52.0
+            ],
+            "ID": "node_71",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                85.0
+            ],
+            "ID": "node_72",
+            "description": ""
+        },
+        {
+            "location": [
+                -102.0,
+                118.0
+            ],
+            "ID": "node_73",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                -142.0
+            ],
+            "ID": "node_74",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                -12.0
+            ],
+            "ID": "node_75",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                20.0
+            ],
+            "ID": "node_76",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                52.0
+            ],
+            "ID": "node_77",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                85.0
+            ],
+            "ID": "node_78",
+            "description": ""
+        },
+        {
+            "location": [
+                -70.0,
+                118.0
+            ],
+            "ID": "node_79",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                -142.0
+            ],
+            "ID": "node_80",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                -110.0
+            ],
+            "ID": "node_81",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                20.0
+            ],
+            "ID": "node_82",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                52.0
+            ],
+            "ID": "node_83",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                85.0
+            ],
+            "ID": "node_84",
+            "description": ""
+        },
+        {
+            "location": [
+                -38.0,
+                118.0
+            ],
+            "ID": "node_85",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                -142.0
+            ],
+            "ID": "node_86",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                -110.0
+            ],
+            "ID": "node_87",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                -78.0
+            ],
+            "ID": "node_88",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                -12.0
+            ],
+            "ID": "node_89",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                85.0
+            ],
+            "ID": "node_90",
+            "description": ""
+        },
+        {
+            "location": [
+                -5.0,
+                118.0
+            ],
+            "ID": "node_91",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                -142.0
+            ],
+            "ID": "node_92",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                -110.0
+            ],
+            "ID": "node_93",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                -12.0
+            ],
+            "ID": "node_94",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                20.0
+            ],
+            "ID": "node_95",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                85.0
+            ],
+            "ID": "node_96",
+            "description": ""
+        },
+        {
+            "location": [
+                28.0,
+                118.0
+            ],
+            "ID": "node_97",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                -142.0
+            ],
+            "ID": "node_98",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                -110.0
+            ],
+            "ID": "node_99",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                -78.0
+            ],
+            "ID": "node_100",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                -45.0
+            ],
+            "ID": "node_101",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                -12.0
+            ],
+            "ID": "node_102",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                20.0
+            ],
+            "ID": "node_103",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                52.0
+            ],
+            "ID": "node_104",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                85.0
+            ],
+            "ID": "node_105",
+            "description": ""
+        },
+        {
+            "location": [
+                60.0,
+                118.0
+            ],
+            "ID": "node_106",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                -142.0
+            ],
+            "ID": "node_107",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                -110.0
+            ],
+            "ID": "node_108",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                -78.0
+            ],
+            "ID": "node_109",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                -45.0
+            ],
+            "ID": "node_110",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                -12.0
+            ],
+            "ID": "node_111",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                20.0
+            ],
+            "ID": "node_112",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                52.0
+            ],
+            "ID": "node_113",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                85.0
+            ],
+            "ID": "node_114",
+            "description": ""
+        },
+        {
+            "location": [
+                92.0,
+                118.0
+            ],
+            "ID": "node_115",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                -142.0
+            ],
+            "ID": "node_116",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                -110.0
+            ],
+            "ID": "node_117",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                -78.0
+            ],
+            "ID": "node_118",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                -45.0
+            ],
+            "ID": "node_119",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                -12.0
+            ],
+            "ID": "node_120",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                20.0
+            ],
+            "ID": "node_121",
+            "description": ""
+        },
+        {
+            "location": [
+                125.0,
+                52.0
+            ],
+            "ID": "node_122",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                -142.0
+            ],
+            "ID": "node_123",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                -110.0
+            ],
+            "ID": "node_124",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                -78.0
+            ],
+            "ID": "node_125",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                -45.0
+            ],
+            "ID": "node_126",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                -12.0
+            ],
+            "ID": "node_127",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                20.0
+            ],
+            "ID": "node_128",
+            "description": ""
+        },
+        {
+            "location": [
+                158.0,
+                52.0
+            ],
+            "ID": "node_129",
+            "description": ""
+        }
+    ],
+    "resource_data": [
+        {
+            "location": [
+                -100.0,
+                -100.0
+            ],
+            "ID": "R1",
+            "description": "Machine 1",
+            "resource_type": "resource",
+            "process_ids": [
+                "P1",
+                "P2"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 2,
+            "process_capacities": [
+                2,
+                2
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "R1_default_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "footprint": {
+                "width": 50.0,
+                "height": 50.0
+            },
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                -50.0
+            ],
+            "ID": "R2",
+            "description": "Machine 2",
+            "resource_type": "resource",
+            "process_ids": [
+                "P1",
+                "P2"
+            ],
+            "control_policy": "FIFO",
+            "capacity": 2,
+            "process_capacities": [
+                2,
+                2
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": [
+                "R2_default_queue"
+            ],
+            "buffers": null,
+            "can_move": null,
+            "footprint": {
+                "width": 50.0,
+                "height": 50.0
+            },
+            "dependency_ids": []
+        },
+        {
+            "location": [
+                0.0,
+                50.0
+            ],
+            "ID": "TR1",
+            "description": "Conveyor carrier",
+            "resource_type": "resource",
+            "process_ids": [
+                "TP1"
+            ],
+            "control_policy": "SPT_transport",
+            "capacity": 1,
+            "process_capacities": [
+                1
+            ],
+            "state_ids": [],
+            "controller": "PipelineController",
+            "ports": null,
+            "buffers": null,
+            "can_move": false,
+            "footprint": null,
+            "dependency_ids": []
+        }
+    ],
+    "product_data": [
+        {
+            "ID": "Product_1",
+            "description": "",
+            "type": "Product_1",
+            "transport_process": "TP1",
+            "processes": {
+                "P1": [
+                    "P2"
+                ],
+                "P2": []
+            },
+            "dependency_ids": [],
+            "routing_heuristic": null,
+            "becomes_consumable": false
+        }
+    ],
+    "sink_data": [
+        {
+            "location": [
+                150.0,
+                100.0
+            ],
+            "ID": "K1",
+            "description": "Sink 1",
+            "product_type": "Product_1",
+            "ports": [
+                "K1_default_input_queue"
+            ]
+        }
+    ],
+    "source_data": [
+        {
+            "location": [
+                -150.0,
+                -100.0
+            ],
+            "ID": "S1",
+            "description": "Source 1",
+            "product_type": "Product_1",
+            "time_model_id": "ftm1",
+            "routing_heuristic": "shortest_queue",
+            "ports": [
+                "S1_default_output_queue"
+            ]
+        }
+    ],
+    "scenario_data": null,
+    "dependency_data": [],
+    "primitive_data": [],
+    "schedule": null,
+    "order_data": null,
+    "conwip_number": null,
+    "reference_time": null,
+    "time_unit": "min",
+    "layout_data": {
+        "areas": [
+            {
+                "ID": "production_floor",
+                "description": "Main production bay",
+                "x_min": -200.0,
+                "y_min": -175.0,
+                "x_max": 200.0,
+                "y_max": 150.0
+            }
+        ],
+        "obstacles": [
+            {
+                "ID": "Column_A",
+                "description": "Structural column in the centre aisle",
+                "location": [
+                    -50.0,
+                    -50.0
+                ],
+                "width": 30.0,
+                "height": 30.0
+            }
+        ]
+    },
+    "valid_configuration": true,
+    "reconfiguration_cost": 0.0
+}
