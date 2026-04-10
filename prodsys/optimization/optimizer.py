@@ -8,6 +8,7 @@ from typing import Any, Callable, Optional
 import pandas as pd
 from pydantic import TypeAdapter
 from prodsys.models.production_system_data import ProductionSystemData
+from prodsys.optimization.optimization import BaseValidationMode, validate_base_configuration
 from prodsys.optimization.optimization_data import (
     FitnessData,
     OptimizationProgress,
@@ -69,11 +70,32 @@ class Optimizer(ABC):
         initial_solutions: Optional[list[ProductionSystemData]] = None,
         smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
+        base_validation: BaseValidationMode = "strict",
     ) -> None:
+        """
+        Args:
+            adapter: The base production-system configuration to optimise from.
+            hyperparameters: Algorithm-specific hyper-parameters.
+            initial_solutions: Optional list of hand-crafted starting solutions.
+            smart_initial_solutions: Generate smart initial solutions automatically.
+            full_save: If True, full event logs are stored for every evaluated solution.
+            base_validation: Controls how known start-up constraint violations are handled
+                before the optimisation begins.
+
+                * ``"strict"`` *(default)* — raise a ``ValueError`` and abort if the base
+                  configuration violates any resolvable constraint (too many processes per
+                  machine, machine positions outside the allowed set).
+                * ``"loose"`` — emit ``WARNING`` log messages for each violation and
+                  auto-correct the base configuration in-place before optimising.
+                * ``"none"`` — skip base-configuration validation entirely.
+        """
         if initial_solutions and smart_initial_solutions:
             raise ValueError(
                 "Cannot use both initial_solutions and smart_initial_solutions at the same time."
             )
+
+        validate_base_configuration(adapter, mode=base_validation)
+
         self.adapter = adapter
         self.hyperparameters = hyperparameters
         self.initial_solutions = initial_solutions

@@ -350,55 +350,40 @@ class AnalyticsStore:
         Resolve overlap between NonScheduled and Breakdown intervals.
         UD takes priority: NS duration is reduced by any UD overlap.
         Non-NS/UD states have their duration reduced by any NS overlap.
+
+        Vectorized: uses a cross-join within each resource group instead of
+        row-by-row Python iteration, eliminating O(N × resources) Python overhead.
         """
         ns_mask = df["Time_type"] == "NS"
-        ud_mask = df["Time_type"] == "UD"
 
         if not ns_mask.any():
             return df
 
         resources_with_ns = df.loc[ns_mask, "entity_id"].unique()
+        has_ns_mask = df["entity_id"].isin(resources_with_ns)
 
-        adjusted_rows = []
-        pass_through = df[~df["entity_id"].isin(resources_with_ns)].copy()
+        pass_through = df[~has_ns_mask].copy()
+        res_df = df[has_ns_mask].copy()
 
-        for resource in resources_with_ns:
-            res_df = df[df["entity_id"] == resource].copy()
-            ns_intervals = res_df[res_df["Time_type"] == "NS"][["clipped_start", "clipped_end"]].values.tolist()
-            ud_intervals = res_df[res_df["Time_type"] == "UD"][["clipped_start", "clipped_end"]].values.tolist()
+        if len(res_df) == 0:
+            return pass_through
 
-            if not ns_intervals:
-                adjusted_rows.append(res_df)
-                continue
+        ns_rows = res_df[res_df["Time_type"] == "NS"].copy()
+        ud_rows = res_df[res_df["Time_type"] == "UD"].copy()
+        other_rows = res_df[(res_df["Time_type"] != "NS") & (res_df["Time_type"] != "UD")].copy()
 
-            # Merge NS intervals
-            ns_merged = _merge_intervals(ns_intervals)
-            ud_merged = _merge_intervals(ud_intervals) if ud_intervals else []
+        # NS rows: subtract overlap with (merged) UD intervals of same resource
+        if len(ns_rows) > 0 and len(ud_rows) > 0:
+            overlap = _compute_row_overlap_vectorized(ns_rows, ud_rows)
+            ns_rows["clipped_duration"] = (ns_rows["clipped_duration"] - overlap).clip(lower=0.0)
 
-            # For NS rows: subtract UD overlap
-            for idx, row in res_df[res_df["Time_type"] == "NS"].iterrows():
-                rs, re_ = row["clipped_start"], row["clipped_end"]
-                ud_overlap = _overlap_duration([(rs, re_)], ud_merged)
-                new_row = row.copy()
-                new_row["clipped_duration"] = max(0.0, row["clipped_duration"] - ud_overlap)
-                adjusted_rows.append(pd.DataFrame([new_row]))
+        # Other rows: subtract overlap with (merged) NS intervals of same resource
+        if len(other_rows) > 0 and len(ns_rows) > 0:
+            overlap = _compute_row_overlap_vectorized(other_rows, ns_rows)
+            other_rows["clipped_duration"] = (other_rows["clipped_duration"] - overlap).clip(lower=0.0)
 
-            # UD rows pass through unchanged
-            ud_rows = res_df[res_df["Time_type"] == "UD"]
-            if len(ud_rows) > 0:
-                adjusted_rows.append(ud_rows)
-
-            # For non-NS, non-UD rows: subtract NS overlap
-            other_mask = (res_df["Time_type"] != "NS") & (res_df["Time_type"] != "UD")
-            for idx, row in res_df[other_mask].iterrows():
-                rs, re_ = row["clipped_start"], row["clipped_end"]
-                ns_overlap = _overlap_duration([(rs, re_)], ns_merged)
-                new_row = row.copy()
-                new_row["clipped_duration"] = max(0.0, row["clipped_duration"] - ns_overlap)
-                adjusted_rows.append(pd.DataFrame([new_row]))
-
-        parts = [pass_through] + adjusted_rows
-        non_empty = [p for p in parts if isinstance(p, pd.DataFrame) and len(p) > 0]
+        parts = [pass_through, ns_rows, ud_rows, other_rows]
+        non_empty = [p for p in parts if len(p) > 0]
         if not non_empty:
             return df.iloc[0:0]
         return pd.concat(non_empty, ignore_index=True)
@@ -1062,6 +1047,49 @@ class AnalyticsStore:
 
 
 # ── Helper functions ─────────────────────────────────────────────────────
+
+def _compute_row_overlap_vectorized(rows: pd.DataFrame, ref: pd.DataFrame) -> pd.Series:
+    """
+    For each row in `rows`, compute the total overlap duration with all intervals
+    in `ref` (merged per entity_id to avoid double-counting) sharing the same
+    entity_id.
+
+    Uses a NumPy cross-join within entity groups — fully vectorised, no Python
+    row iteration.  Returns a Series with the same index as `rows`.
+    """
+    if len(rows) == 0 or len(ref) == 0:
+        return pd.Series(0.0, index=rows.index)
+
+    # Merge ref intervals per resource so overlapping ref intervals are not
+    # double-counted (e.g. two UD intervals that overlap each other).
+    merged_ref_list: list[dict] = []
+    for resource, group in ref.groupby("entity_id", sort=False):
+        for s, e in _merge_intervals(group[["clipped_start", "clipped_end"]].values.tolist()):
+            merged_ref_list.append({"entity_id": resource, "ref_start": s, "ref_end": e})
+
+    if not merged_ref_list:
+        return pd.Series(0.0, index=rows.index)
+
+    ref_merged = pd.DataFrame(merged_ref_list)
+
+    # Attach a positional key so we can group-sum back to the original rows.
+    rows_keyed = rows[["entity_id", "clipped_start", "clipped_end"]].copy()
+    rows_keyed["_pos"] = np.arange(len(rows_keyed))
+
+    # Cross-join within entity_id
+    joined = rows_keyed.merge(ref_merged, on="entity_id")
+
+    # Vectorised overlap arithmetic
+    ol_start = np.maximum(joined["clipped_start"].values, joined["ref_start"].values)
+    ol_end = np.minimum(joined["clipped_end"].values, joined["ref_end"].values)
+    joined["_ol"] = np.maximum(0.0, ol_end - ol_start)
+
+    overlap_sums = joined.groupby("_pos")["_ol"].sum()
+
+    result = pd.Series(0.0, index=rows.index)
+    result.iloc[overlap_sums.index.to_numpy()] = overlap_sums.to_numpy()
+    return result
+
 
 def _merge_intervals(intervals: list[list | tuple]) -> list[tuple[float, float]]:
     """Merge overlapping intervals into non-overlapping set."""

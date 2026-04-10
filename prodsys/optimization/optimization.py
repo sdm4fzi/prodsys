@@ -1,5 +1,7 @@
-from typing import Dict, List, Optional, Tuple, Union
+from enum import Enum
+from typing import Dict, List, Literal, Optional, Tuple, Union
 import logging
+import math
 from prodsys import adapters, runner
 from prodsys.models.production_system_data import (
     assert_no_redundant_locations,
@@ -157,6 +159,198 @@ def valid_positions(configuration: adapters.ProductionSystemData) -> bool:
     if possible_positions and any(position not in possible_positions for position in positions):
         return False
     return True
+
+
+def resolve_process_overload(
+    configuration: adapters.ProductionSystemData,
+) -> None:
+    """
+    Resolves process-per-machine constraint violations in the base configuration by removing
+    excess process groups from machines that exceed ``max_num_processes_per_machine``.
+
+    Groups are removed in order (last-assigned groups are dropped first), and
+    ``process_capacities`` is trimmed to stay in sync with ``process_ids``.
+
+    Args:
+        configuration (adapters.ProductionSystemData): Base configuration to fix in-place.
+    """
+    constraints = configuration.scenario_data.constraints
+    max_per_machine = constraints.max_num_processes_per_machine
+    possible_processes = get_possible_production_processes_IDs(configuration)
+
+    for resource in configuration.resource_data:
+        grouped = get_grouped_processes_of_machine(resource, possible_processes)
+        if len(grouped) <= max_per_machine:
+            continue
+
+        groups_to_keep = set(map(tuple, grouped[:max_per_machine]))
+        groups_to_remove = [g for g in grouped[max_per_machine:]]
+        ids_to_remove = {pid for group in groups_to_remove for pid in group}
+
+        old_count = len(resource.process_ids)
+        resource.process_ids = [pid for pid in resource.process_ids if pid not in ids_to_remove]
+        new_count = len(resource.process_ids)
+
+        if resource.process_capacities and len(resource.process_capacities) > new_count:
+            resource.process_capacities = resource.process_capacities[:new_count]
+
+        removed_groups = [list(g) for g in groups_to_remove]
+        logging.warning(
+            f"[resolve_process_overload] Machine '{resource.ID}': removed {old_count - new_count} "
+            f"process ID(s) from {old_count} to {new_count} to satisfy "
+            f"max_num_processes_per_machine={max_per_machine}. "
+            f"Dropped groups: {removed_groups}"
+        )
+
+
+def resolve_invalid_positions(
+    configuration: adapters.ProductionSystemData,
+) -> None:
+    """
+    Resolves position constraint violations in the base configuration by snapping each
+    machine that sits outside ``scenario_data.options.positions`` to the nearest available
+    valid position (Euclidean distance). Co-located ports are updated to match.
+
+    Machines already at a valid position keep their location; machines with invalid
+    positions are processed in ascending order of their distance to the nearest free
+    valid position so that closer machines get first pick.
+
+    Args:
+        configuration (adapters.ProductionSystemData): Base configuration to fix in-place.
+    """
+    possible_positions = configuration.scenario_data.options.positions
+    if not possible_positions:
+        return
+
+    production_resources = adapters.get_production_resources(configuration)
+    possible_set = {tuple(p) for p in possible_positions}
+
+    taken: set[tuple] = {
+        tuple(r.location)
+        for r in production_resources
+        if tuple(r.location) in possible_set
+    }
+
+    def _dist(a: list, b: list) -> float:
+        return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
+
+    invalid_resources = [r for r in production_resources if tuple(r.location) not in possible_set]
+
+    # Sort so the machine closest to any valid position gets first pick
+    invalid_resources.sort(
+        key=lambda r: min(_dist(r.location, p) for p in possible_positions)
+    )
+
+    for resource in invalid_resources:
+        old_location = list(resource.location)
+        available = [p for p in possible_positions if tuple(p) not in taken]
+        if not available:
+            logging.warning(
+                f"[resolve_invalid_positions] Machine '{resource.ID}': no free valid position "
+                f"remaining — skipping (current location {old_location} stays invalid)."
+            )
+            continue
+
+        nearest = min(available, key=lambda p: _dist(old_location, p))
+        resource.location = list(nearest)
+        taken.add(tuple(nearest))
+
+        for port in configuration.port_data:
+            if port.location == old_location:
+                port.location = list(nearest)
+
+        logging.warning(
+            f"[resolve_invalid_positions] Machine '{resource.ID}': moved from {old_location} "
+            f"to {list(nearest)} (nearest free valid position, distance "
+            f"{_dist(old_location, nearest):.2f})."
+        )
+
+
+BaseValidationMode = Literal["strict", "loose", "none"]
+
+
+def validate_base_configuration(
+    configuration: adapters.ProductionSystemData,
+    mode: BaseValidationMode = "strict",
+) -> None:
+    """
+    Validates the base configuration for known start-up constraint violations and
+    optionally auto-resolves them.
+
+    Two classes of issues are checked:
+
+    * **Process overload** — one or more machines have more process groups assigned than
+      ``scenario_data.constraints.max_num_processes_per_machine`` allows.
+    * **Invalid positions** — one or more machines sit outside the set of positions listed
+      in ``scenario_data.options.positions``.
+
+    Args:
+        configuration (adapters.ProductionSystemData): Base configuration to validate.
+        mode (BaseValidationMode): How to handle discovered violations:
+
+            * ``"strict"`` *(default)* — raise a ``ValueError`` describing every violation.
+              Nothing is modified.
+            * ``"loose"`` — log a ``WARNING`` for every violation and auto-resolve it in-place
+              via :func:`resolve_process_overload` and :func:`resolve_invalid_positions`.
+            * ``"none"`` — skip validation entirely (same as not calling this function).
+
+    Raises:
+        ValueError: In ``"strict"`` mode when any violation is found.
+    """
+    if mode == "none":
+        return
+
+    constraints = configuration.scenario_data.constraints
+    possible_processes = get_possible_production_processes_IDs(configuration)
+    issues: List[str] = []
+
+    # --- process overload ---
+    overloaded = {}
+    for resource in configuration.resource_data:
+        grouped = get_grouped_processes_of_machine(resource, possible_processes)
+        if len(grouped) > constraints.max_num_processes_per_machine:
+            overloaded[resource.ID] = len(grouped)
+
+    if overloaded:
+        issues.append(
+            f"Machines exceed max_num_processes_per_machine={constraints.max_num_processes_per_machine}: "
+            f"{overloaded}. "
+            f"In 'loose' mode excess groups are trimmed automatically (last-added groups first)."
+        )
+
+    # --- invalid positions ---
+    possible_positions = configuration.scenario_data.options.positions
+    if possible_positions:
+        possible_set = {tuple(p) for p in possible_positions}
+        production_resources = adapters.get_production_resources(configuration)
+        invalid_pos = {
+            r.ID: r.location
+            for r in production_resources
+            if tuple(r.location) not in possible_set
+        }
+        if invalid_pos:
+            issues.append(
+                f"Machines at positions not in scenario allowed positions: {invalid_pos}. "
+                f"In 'loose' mode each machine is snapped to the nearest free valid position."
+            )
+
+    if not issues:
+        return
+
+    if mode == "strict":
+        raise ValueError(
+            "Base configuration has constraint violations — cannot start optimization.\n"
+            + "\n".join(f"  • {issue}" for issue in issues)
+        )
+
+    # mode == "loose": warn and auto-fix
+    for issue in issues:
+        logging.warning(f"[validate_base_configuration] {issue}")
+
+    if overloaded:
+        resolve_process_overload(configuration)
+    if possible_positions and invalid_pos:
+        resolve_invalid_positions(configuration)
 
 
 def valid_reconfiguration_cost(
