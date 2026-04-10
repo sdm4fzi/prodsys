@@ -85,6 +85,8 @@ class AnalyticsStore:
         self._time_range = time_range
         self._exclude_resources: Set[str] = exclude_resources or set()
         self.production_system_data = production_system_data
+        self._ri_cache: Optional[pd.DataFrame] = None
+        self._ri_cache_key: Optional[tuple] = None
 
     @classmethod
     def from_raw(
@@ -121,6 +123,9 @@ class AnalyticsStore:
         ].dropna().unique()
         self._exclude_resources.update(source_sink)
 
+        self._ri_cache = None
+        self._ri_cache_key = None
+
         self.builder.ingest_dataframe(df_raw)
         new_intervals = self.builder.drain()
 
@@ -156,11 +161,16 @@ class AnalyticsStore:
         resource: Optional[str] = None,
     ) -> pd.DataFrame:
         """Resource intervals, optionally filtered by time range and resource."""
-        df = self.intervals
-        df = df[df["entity_kind"] == "resource"]
         if t_to is None:
             t_to = self.simulation_end_time
-        df = df[(df["t_end"] > t_from) & (df["t_start"] < t_to)]
+        cache_key = (t_from, t_to)
+        if self._ri_cache_key != cache_key:
+            df = self.intervals
+            df = df[df["entity_kind"] == "resource"]
+            df = df[(df["t_end"] > t_from) & (df["t_start"] < t_to)]
+            self._ri_cache = df
+            self._ri_cache_key = cache_key
+        df = self._ri_cache
         if resource is not None:
             df = df[df["entity_id"] == resource]
         return df

@@ -133,7 +133,7 @@ class IntervalBuilder:
         return product_id
 
     def feed(self, event: dict) -> None:
-        """Process a single raw event."""
+        """Process a single raw event (dict-based public API)."""
         activity = event.get("Activity", "")
         resource = event.get("Resource")
         state_id = event.get("State", "")
@@ -144,19 +144,25 @@ class IntervalBuilder:
         product_type = self.derive_product_type(product_id)
 
         if activity == "start state":
-            self._handle_start_state(resource, state_id, event, t, product_id, product_type)
+            self._handle_start_state(
+                resource, state_id, t, product_id, product_type,
+                event.get("State Type", ""),
+                event.get("Origin location"),
+                event.get("Target location"),
+            )
         elif activity == "end state":
-            self._handle_end_state(resource, state_id, t, event)
+            self._handle_end_state(resource, state_id, t, product_id,
+                                   event.get("process_ok", True))
         elif activity == "start interrupt":
             self._handle_start_interrupt(resource, state_id, t, product_id)
         elif activity == "end interrupt":
-            self._handle_end_interrupt(resource, state_id, t, product_id, product_type, event)
+            self._handle_end_interrupt(resource, state_id, t, product_id, product_type)
         elif activity == "created product":
-            self._handle_created_product(resource, t, product_id, product_type, event)
+            self._handle_created_product(resource, t, product_id, product_type)
         elif activity == "finished product":
-            self._handle_finished_product(resource, t, product_id, product_type, event)
+            self._handle_finished_product(resource, t, product_id, product_type)
         elif activity == "consumed product":
-            self._handle_consumed_product(resource, t, product_id, product_type, event)
+            self._handle_consumed_product(resource, t, product_id, product_type)
 
     def ingest_dataframe(self, df_raw: pd.DataFrame) -> None:
         """
@@ -180,9 +186,7 @@ class IntervalBuilder:
 
         order = np.lexsort((priorities, time_arr)).tolist()
 
-        # Pre-extract columns as Python lists — avoids the expensive
-        # DataFrame.to_dict("records") which boxes every cell via
-        # maybe_box_native (5.6M calls on 467K rows × 12 cols).
+        # Pre-extract columns as Python lists (avoids to_dict boxing).
         activities = df_raw["Activity"].fillna("").tolist()
         times = time_arr.tolist()
         resources = df_raw["Resource"].tolist()
@@ -194,23 +198,52 @@ class IntervalBuilder:
         ori = df_raw["Origin location"].tolist() if "Origin location" in df_raw.columns else None
         tgt = df_raw["Target location"].tolist() if "Target location" in df_raw.columns else None
 
-        _feed = self.feed
+        # Precompute: clean NaN product IDs and derive product types once,
+        # avoiding 467K derive_product_type + NaN-check calls inside feed().
+        product_types = [None] * n
+        for i in range(n):
+            p = products[i]
+            if p is None:
+                pass
+            elif isinstance(p, float) and p != p:
+                products[i] = None
+            else:
+                p_str = str(p) if not isinstance(p, str) else p
+                parts = p_str.rsplit("_", 1)
+                product_types[i] = parts[0] if len(parts) == 2 and parts[1].isdigit() else p_str
+
+        # Direct dispatch — bypasses dict construction (0.17s) and
+        # 3.5M dict.get calls (0.18s) that feed() would incur.
+        _start = self._handle_start_state
+        _end = self._handle_end_state
+        _si = self._handle_start_interrupt
+        _ei = self._handle_end_interrupt
+        _cp = self._handle_created_product
+        _fp = self._handle_finished_product
+        _consumed = self._handle_consumed_product
+
         for idx in order:
-            event = {
-                "Activity": activities[idx],
-                "Resource": resources[idx],
-                "State": state_ids[idx],
-                "Time": times[idx],
-                "Product": products[idx],
-                "State Type": state_types[idx],
-            }
-            if pok is not None:
-                event["process_ok"] = pok[idx]
-            if ori is not None:
-                event["Origin location"] = ori[idx]
-            if tgt is not None:
-                event["Target location"] = tgt[idx]
-            _feed(event)
+            act = activities[idx]
+            if act == "start state":
+                _start(resources[idx], state_ids[idx], times[idx],
+                       products[idx], product_types[idx], state_types[idx],
+                       ori[idx] if ori is not None else None,
+                       tgt[idx] if tgt is not None else None)
+            elif act == "end state":
+                _end(resources[idx], state_ids[idx], times[idx],
+                     products[idx],
+                     pok[idx] if pok is not None else True)
+            elif act == "start interrupt":
+                _si(resources[idx], state_ids[idx], times[idx], products[idx])
+            elif act == "end interrupt":
+                _ei(resources[idx], state_ids[idx], times[idx],
+                    products[idx], product_types[idx])
+            elif act == "created product":
+                _cp(resources[idx], times[idx], products[idx], product_types[idx])
+            elif act == "finished product":
+                _fp(resources[idx], times[idx], products[idx], product_types[idx])
+            elif act == "consumed product":
+                _consumed(resources[idx], times[idx], products[idx], product_types[idx])
 
     # ── State transitions ────────────────────────────────────────────────
 
@@ -227,13 +260,14 @@ class IntervalBuilder:
                 pass
         return s
 
-    def _handle_start_state(self, resource, state_id, event, t, product_id, product_type):
+    def _handle_start_state(self, resource, state_id, t, product_id, product_type,
+                            state_type_raw, origin_location, target_location):
         if resource is None:
             return
         key = self._make_key(resource, state_id, product_id)
         if key in self._open:
             logger.debug("Overwriting open interval for %s (defensive)", key)
-        state_type = self._normalize_state_type(event.get("State Type", ""))
+        state_type = self._normalize_state_type(state_type_raw)
         self._open[key] = _OpenInterval(
             t_start=t,
             entity_id=resource,
@@ -242,23 +276,20 @@ class IntervalBuilder:
             state_id=state_id,
             product_id=product_id,
             product_type=product_type,
-            origin_location=event.get("Origin location"),
-            target_location=event.get("Target location"),
+            origin_location=origin_location,
+            target_location=target_location,
         )
 
-    def _handle_end_state(self, resource, state_id, t, event):
+    def _handle_end_state(self, resource, state_id, t, product_id, process_ok=True):
         if resource is None:
             return
-        product_id = event.get("Product")
         key = self._make_key(resource, state_id, product_id)
         oi = self._open.pop(key, None)
         if oi is None:
-            # Fallback: try without product_id for interface states
             fallback_key = self._make_key(resource, state_id, None)
             oi = self._open.pop(fallback_key, None)
             if oi is None:
                 return
-        process_ok = event.get("process_ok", True)
         self._emit(oi, t, interrupted=False, process_ok=process_ok)
 
     def _handle_start_interrupt(self, resource, state_id, t, product_id=None):
@@ -288,7 +319,7 @@ class IntervalBuilder:
             target_location=oi.target_location,
         ))
 
-    def _handle_end_interrupt(self, resource, state_id, t, product_id, product_type, event):
+    def _handle_end_interrupt(self, resource, state_id, t, product_id, product_type):
         if resource is None:
             return
         key = self._make_key(resource, state_id, product_id)
@@ -308,7 +339,7 @@ class IntervalBuilder:
 
     # ── Product lifecycle ────────────────────────────────────────────────
 
-    def _handle_created_product(self, resource, t, product_id, product_type, event):
+    def _handle_created_product(self, resource, t, product_id, product_type):
         if not product_id:
             return
         self._product_creation[product_id] = (t, product_type)
@@ -325,7 +356,7 @@ class IntervalBuilder:
             "resource": resource,
         })
 
-    def _handle_finished_product(self, resource, t, product_id, product_type, event):
+    def _handle_finished_product(self, resource, t, product_id, product_type):
         if not product_id:
             return
         creation = self._product_creation.pop(product_id, None)
@@ -357,7 +388,7 @@ class IntervalBuilder:
             "resource": resource,
         })
 
-    def _handle_consumed_product(self, resource, t, product_id, product_type, event):
+    def _handle_consumed_product(self, resource, t, product_id, product_type):
         if not product_id:
             return
         creation = self._product_creation.pop(product_id, None)
