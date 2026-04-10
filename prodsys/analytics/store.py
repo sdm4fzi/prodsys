@@ -291,6 +291,7 @@ class AnalyticsStore:
             return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
 
         # Exclude source/sink/loading/unloading and configured exclusions
+        df = df[df["entity_id"].notna()]
         df = df[~df["entity_id"].isin(all_excluded)]
         df = df[~df["state_type"].isin(_EXCLUDED_STATE_TYPES)]
 

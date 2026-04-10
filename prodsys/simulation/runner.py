@@ -385,6 +385,7 @@ class Runner:
         df_raw = self.event_logger.get_data_as_dataframe()
         events = []
         # Fill NaN values for optional fields
+        df_raw["State"] = df_raw["State"].fillna(value="")
         df_raw["Expected End Time"] = df_raw["Expected End Time"].fillna(value=-1)
         df_raw["Origin location"] = df_raw.get("Origin location", pd.Series([None] * len(df_raw))).fillna(value="")
         df_raw["Target location"] = df_raw.get("Target location", pd.Series([None] * len(df_raw))).fillna(value="")

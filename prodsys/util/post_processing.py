@@ -217,6 +217,7 @@ class PostProcessor:
             return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
 
         excluded = set(self.store._exclude_resources)
+        df = df[df["entity_id"].notna()]
         df = df[~df["entity_id"].isin(excluded)]
         df = df[~df["state_type"].isin(_EXCLUDED)]
         if len(df) == 0:
