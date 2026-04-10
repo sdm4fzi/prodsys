@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import pandas as pd
+import numpy as np
 
 from prodsys.simulation.state import StateTypeEnum
 
@@ -40,6 +41,26 @@ INTERVAL_COLUMNS = [
     "origin_location", "target_location", "resource",
 ]
 
+_PRIORITY_MAP = {
+    ("finished product", False): 1,
+    ("finished product", True): 1,
+    ("created product", False): 2,
+    ("created product", True): 2,
+    ("consumed product", False): 2,
+    ("consumed product", True): 2,
+    ("end state", False): 3,
+    ("end interrupt", True): 4,
+    ("end state", True): 5,
+    ("start state", True): 6,
+    ("start interrupt", True): 7,
+    ("start state", False): 8,
+}
+
+_PROCESS_STATE_CHECK_SET = (
+    frozenset(PROCESS_STATE_TYPES)
+    | frozenset(st.value for st in PROCESS_STATE_TYPES)
+)
+
 
 def _event_sort_key(event: dict) -> tuple:
     """
@@ -59,21 +80,7 @@ def _event_sort_key(event: dict) -> tuple:
         except ValueError:
             is_process = False
 
-    priority_map = {
-        ("finished product", False): 1,
-        ("finished product", True): 1,
-        ("created product", False): 2,
-        ("created product", True): 2,
-        ("consumed product", False): 2,
-        ("consumed product", True): 2,
-        ("end state", False): 3,        # interface end state
-        ("end interrupt", True): 4,     # process end interrupt
-        ("end state", True): 5,         # process end state
-        ("start state", True): 6,       # process start state
-        ("start interrupt", True): 7,   # process start interrupt
-        ("start state", False): 8,      # interface start state
-    }
-    return (event.get("Time", 0.0), priority_map.get((activity, is_process), 9))
+    return (event.get("Time", 0.0), _PRIORITY_MAP.get((activity, is_process), 9))
 
 
 @dataclass
@@ -156,10 +163,54 @@ class IntervalBuilder:
         Ingest a complete raw event DataFrame, sorting events correctly
         before feeding them to the state machine.
         """
-        events = df_raw.to_dict("records")
-        events.sort(key=_event_sort_key)
-        for event in events:
-            self.feed(event)
+        n = len(df_raw)
+        if n == 0:
+            return
+
+        # Vectorized sort: compute priorities via numpy instead of
+        # per-element Python sort key (avoids 467K _event_sort_key calls).
+        act_arr = df_raw["Activity"].fillna("").values
+        time_arr = df_raw["Time"].fillna(0.0).values
+        is_process = df_raw["State Type"].isin(_PROCESS_STATE_CHECK_SET).values
+
+        priorities = np.full(n, 9, dtype=np.int8)
+        for (act, ip), prio in _PRIORITY_MAP.items():
+            mask = (act_arr == act) & (is_process == ip)
+            priorities[mask] = prio
+
+        order = np.lexsort((priorities, time_arr)).tolist()
+
+        # Pre-extract columns as Python lists — avoids the expensive
+        # DataFrame.to_dict("records") which boxes every cell via
+        # maybe_box_native (5.6M calls on 467K rows × 12 cols).
+        activities = df_raw["Activity"].fillna("").tolist()
+        times = time_arr.tolist()
+        resources = df_raw["Resource"].tolist()
+        state_ids = df_raw["State"].fillna("").tolist()
+        products = df_raw["Product"].tolist()
+        state_types = df_raw["State Type"].tolist()
+
+        pok = df_raw["process_ok"].tolist() if "process_ok" in df_raw.columns else None
+        ori = df_raw["Origin location"].tolist() if "Origin location" in df_raw.columns else None
+        tgt = df_raw["Target location"].tolist() if "Target location" in df_raw.columns else None
+
+        _feed = self.feed
+        for idx in order:
+            event = {
+                "Activity": activities[idx],
+                "Resource": resources[idx],
+                "State": state_ids[idx],
+                "Time": times[idx],
+                "Product": products[idx],
+                "State Type": state_types[idx],
+            }
+            if pok is not None:
+                event["process_ok"] = pok[idx]
+            if ori is not None:
+                event["Origin location"] = ori[idx]
+            if tgt is not None:
+                event["Target location"] = tgt[idx]
+            _feed(event)
 
     # ── State transitions ────────────────────────────────────────────────
 

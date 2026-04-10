@@ -1016,31 +1016,32 @@ class AnalyticsStore:
         resource_process_caps: dict,
     ) -> float:
         ri = self.resource_intervals(t_from, t_to, resource=resource)
-        prod_intervals = ri[
+        prod = ri[
             (ri["state_type"] == StateTypeEnum.production.value)
             & (~ri["interrupted"])
         ]
-        total_units = len(prod_intervals)
-        if total_units == 0:
+        if len(prod) == 0:
             return 0.0
 
         res_cap = resource_capacities.get(resource, 1)
         rpc = resource_process_caps.get(resource, {})
 
+        durations = prod["duration"].values
+        state_ids = prod["state_id"].values
+        valid = durations > 0
+        total_actual = float(durations[valid].sum())
+
         total_ideal = 0.0
-        total_actual = 0.0
-        for _, row in prod_intervals.iterrows():
-            state_id = row["state_id"]
-            actual = row["duration"]
-            if actual <= 0:
+        for i in range(len(state_ids)):
+            if not valid[i]:
                 continue
-            total_actual += actual
-            if state_id in process_ideal_times:
-                pc = rpc.get(state_id, res_cap)
-                ideal_per_unit = process_ideal_times[state_id] / pc if pc > 0 else process_ideal_times[state_id]
+            sid = state_ids[i]
+            if sid in process_ideal_times:
+                pc = rpc.get(sid, res_cap)
+                ideal_per_unit = process_ideal_times[sid] / pc if pc > 0 else process_ideal_times[sid]
                 total_ideal += ideal_per_unit * pc
             else:
-                total_ideal += actual
+                total_ideal += float(durations[i])
 
         if total_actual > 0 and total_ideal > 0:
             return total_ideal / total_actual
