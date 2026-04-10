@@ -63,7 +63,8 @@
             "dependency_ids": [],
             "type": "TransportProcesses",
             "loading_time_model_id": null,
-            "unloading_time_model_id": null
+            "unloading_time_model_id": null,
+            "can_move": true
         },
         {
             "ID": "machine1_process",
@@ -199,6 +200,7 @@
             "ports": [],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         },
         {
@@ -224,6 +226,7 @@
             ],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         },
         {
@@ -249,6 +252,7 @@
             ],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         },
         {
@@ -274,6 +278,7 @@
             ],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         },
         {
@@ -299,6 +304,7 @@
             ],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         },
         {
@@ -322,6 +328,7 @@
             "ports": [],
             "buffers": [],
             "can_move": null,
+            "footprint": null,
             "dependency_ids": []
         }
     ],
@@ -380,6 +387,7 @@
     "conwip_number": null,
     "reference_time": null,
     "time_unit": "min",
+    "layout_data": null,
     "valid_configuration": true,
     "reconfiguration_cost": 0.0
 }

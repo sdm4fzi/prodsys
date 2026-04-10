@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import math
+from collections import Counter
 from copy import deepcopy
 from dataclasses import dataclass
 import logging
-from typing import Callable, List
+from typing import Callable, List, Optional, Tuple
 import networkx as nx
 import pandas as pd
 from prodsys import adapters
@@ -1168,7 +1169,7 @@ def get_random_routing_logic(
 
 def random_configuration(
     baseline: adapters.ProductionSystemData,
-) -> adapters.ProductionSystemData:
+) -> Tuple[Optional[adapters.ProductionSystemData], List[str]]:
     """
     Function that creates a random configuration based on a baseline configuration.
 
@@ -1176,7 +1177,8 @@ def random_configuration(
         baseline (adapters.ProductionSystemAdapter): Baseline configuration.
 
     Returns:
-        adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
+        Tuple of (adapter or None, list of constraint violation reasons).
+        If valid the list is empty; if invalid the adapter is None.
     """
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
@@ -1207,9 +1209,11 @@ def random_configuration(
     adjust_process_capacities(adapter_object)
     sync_resource_dependencies(adapter_object)
 
-    if not check_valid_configuration(adapter_object, baseline):
-        return
-    return adapter_object
+    is_valid, reasons = check_valid_configuration(adapter_object, baseline)
+    if not is_valid:
+        logging.debug(f"Random configuration invalid: {'; '.join(reasons)}")
+        return None, reasons
+    return adapter_object, []
 
 
 def get_random_configuration_asserted(
@@ -1225,14 +1229,19 @@ def get_random_configuration_asserted(
         adapters.ProductionSystemAdapter: Random configuration based on a baseline configuration.
     """
     invalid_configuration_counter = 0
+    reason_counter: Counter = Counter()
     while True:
-        adapter_object = random_configuration(baseline)
-        if adapter_object:
+        adapter_object, reasons = random_configuration(baseline)
+        if adapter_object is not None:
             return adapter_object
+        for r in reasons:
+            reason_counter[r] += 1
         invalid_configuration_counter += 1
-        if invalid_configuration_counter % 50 == 0: 
+        if invalid_configuration_counter % 50 == 0:
             logging.info(
-                f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
+                f"More than {invalid_configuration_counter} invalid configurations were created in a row. "
+                f"Failure distribution: {dict(reason_counter)}. "
+                f"Are you sure that the constraints are correct and not too strict?"
             )
 
 
@@ -1256,14 +1265,17 @@ def random_configuration_with_initial_solution(
         adapters.ProductionSystemAdapter: A new configuration derived either by manipulation or by complete randomization.
     """
     invalid_configuration_counter = 0
+    reason_counter: Counter = Counter()
 
     while True:
         # Select a baseline adapter from the list.
         baseline = random.choice(initial_adapters)
         # With a given probability, generate a completely new random configuration.
         if random.random() < new_solution_probability:
-            adapter_object = random_configuration(baseline)
-            if not adapter_object:
+            adapter_object, reasons = random_configuration(baseline)
+            if adapter_object is None:
+                for r in reasons:
+                    reason_counter[r] += 1
                 invalid_configuration_counter += 1
                 continue
             return adapter_object
@@ -1289,15 +1301,21 @@ def random_configuration_with_initial_solution(
         adapter_object.ID = str(uuid1())
 
         # Fallback: if the manipulated configuration is not valid, generate a completely new one.
-        if successful_mutations == num_manipulations and check_valid_configuration(
-            adapter_object, baseline
-        ):
-            sync_resource_dependencies(adapter_object)
-            return adapter_object
+        if successful_mutations == num_manipulations:
+            is_valid, reasons = check_valid_configuration(adapter_object, baseline)
+            if is_valid:
+                sync_resource_dependencies(adapter_object)
+                return adapter_object
+            for r in reasons:
+                reason_counter[r] += 1
+        else:
+            reason_counter["insufficient successful mutations"] += 1
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 50 == 0:
             logging.warning(
-                f"More than {invalid_configuration_counter} invalid configurations were created in a row. Are you sure that the constraints are correct and not too strict?"
+                f"More than {invalid_configuration_counter} invalid configurations were created in a row. "
+                f"Failure distribution: {dict(reason_counter)}. "
+                f"Are you sure that the constraints are correct and not too strict?"
             )
 
 
@@ -1787,37 +1805,43 @@ def configuration_capacity_based_asserted(
         adapters.ProductionSystemData: Valid capacity-optimized configuration
     """
     invalid_configuration_counter = 0
-    max_attempts = 500  # Add maximum attempts to prevent infinite looping
+    max_attempts = 500
+    reason_counter: Counter = Counter()
     last_error = None
     while invalid_configuration_counter < max_attempts:
         try:
             adapter_object = configuration_capacity_based(baseline, cap_target)
-            # Use verbose logging for the first few attempts to debug
             verbose = invalid_configuration_counter < 3
-            if check_valid_configuration(adapter_object, baseline, verbose=verbose):
+            is_valid, reasons = check_valid_configuration(adapter_object, baseline, verbose=verbose)
+            if is_valid:
                 return adapter_object
             else:
-                last_error = "Configuration validation failed"
+                for r in reasons:
+                    reason_counter[r] += 1
+                last_error = f"Configuration validation failed: {'; '.join(reasons)}"
                 if verbose:
-                    logging.warning(f"Configuration validation failed on attempt {invalid_configuration_counter + 1}")
+                    logging.warning(f"Configuration validation failed on attempt {invalid_configuration_counter + 1}: {'; '.join(reasons)}")
         except Exception as e:
             last_error = str(e)
+            reason_counter[f"Exception: {type(e).__name__}"] += 1
             if invalid_configuration_counter < 3:
                 logging.warning(f"Error during configuration creation on attempt {invalid_configuration_counter + 1}: {e}")
 
         invalid_configuration_counter += 1
         if invalid_configuration_counter % 10 == 0:
-            # After 10 failed attempts, adjust capacity target
             cap_target *= 0.95
             logging.info(f"Adjusting capacity target to {cap_target}")
 
         if invalid_configuration_counter % 100 == 0:
             logging.warning(
-                f"Created {invalid_configuration_counter} invalid configurations based on capacity."
+                f"Created {invalid_configuration_counter} invalid configurations based on capacity. "
+                f"Failure distribution: {dict(reason_counter)}"
             )
     
-    # If we reach here, we've failed too many times - raise an error with diagnostic info
-    raise ValueError(f"Failed to create valid configuration after {max_attempts} attempts. Last error: {last_error}")
+    raise ValueError(
+        f"Failed to create valid configuration after {max_attempts} attempts. "
+        f"Last error: {last_error}. Failure distribution: {dict(reason_counter)}"
+    )
 
 
 def random_configuration_capacity_based(

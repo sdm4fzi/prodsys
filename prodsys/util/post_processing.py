@@ -11,19 +11,12 @@ from prodsys.models import performance_indicators
 from typing import List, Literal, Optional
 
 import pandas as pd
+import numpy as np
 
 import logging
 
-# Import analytics modules
-from prodsys.analytics.base import AnalyticsContext
-from prodsys.analytics.data_preparation import DataPreparation
-from prodsys.analytics.throughput import ThroughputAnalytics
-from prodsys.analytics.scrap import ScrapAnalytics
-from prodsys.analytics.resource_states import ResourceStatesAnalytics
-from prodsys.analytics.wip import WIPAnalytics
-from prodsys.analytics.oee import OEEAnalytics
-from prodsys.analytics.production_flow import ProductionFlowAnalytics
-from prodsys.analytics.kpi_generator import KPIGenerator
+from prodsys.analytics.store import AnalyticsStore
+from prodsys.analytics.warm_up import detect_warm_up
 
 logger = logging.getLogger(__name__)
 
@@ -60,461 +53,391 @@ class PostProcessor:
     _system_resource_mapping: Optional[dict] = field(default=None, init=False, repr=False)
     _sink_input_queues: Optional[set] = field(default=None, init=False, repr=False)
     _source_output_queues: Optional[set] = field(default=None, init=False, repr=False)
-    _analytics_context: Optional[AnalyticsContext] = field(default=None, init=False, repr=False)
-    _data_prep: Optional[DataPreparation] = field(default=None, init=False, repr=False)
-    _throughput_analytics: Optional[ThroughputAnalytics] = field(default=None, init=False, repr=False)
-    _scrap_analytics: Optional[ScrapAnalytics] = field(default=None, init=False, repr=False)
-    _resource_states_analytics: Optional[ResourceStatesAnalytics] = field(default=None, init=False, repr=False)
-    _wip_analytics: Optional[WIPAnalytics] = field(default=None, init=False, repr=False)
-    _oee_analytics: Optional[OEEAnalytics] = field(default=None, init=False, repr=False)
-    _production_flow_analytics: Optional[ProductionFlowAnalytics] = field(default=None, init=False, repr=False)
-    _kpi_generator: Optional[KPIGenerator] = field(default=None, init=False, repr=False)
+    _store: Optional[AnalyticsStore] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         if self.filepath:
             self.read_df_from_csv()
         self._initialize_analytics()
-    
+
     def _initialize_analytics(self):
-        """Initialize analytics modules."""
+        """Initialize the v2 AnalyticsStore."""
         if self.df_raw is not None:
-            self._analytics_context = AnalyticsContext(
-                df_raw=self.df_raw,
-                production_system_data=self.production_system_data,
+            exclude = set()
+            sink_queues, source_queues = self._get_sink_source_queue_names()
+            exclude.update(sink_queues)
+            exclude.update(source_queues)
+            self._store = AnalyticsStore(
                 time_range=self.time_range,
-                warm_up_cutoff=self.warm_up_cutoff,
-                cut_off_method=self.cut_off_method,
-                _system_resource_mapping=self._system_resource_mapping,
-                _sink_input_queues=self._sink_input_queues,
-                _source_output_queues=self._source_output_queues,
+                exclude_resources=exclude,
+                production_system_data=self.production_system_data,
             )
-            self._data_prep = DataPreparation(self._analytics_context)
-            self._throughput_analytics = ThroughputAnalytics(self._analytics_context, self._data_prep)
-            self._scrap_analytics = ScrapAnalytics(self._analytics_context, self._data_prep)
-            self._resource_states_analytics = ResourceStatesAnalytics(
-                self._analytics_context, self._data_prep, self._throughput_analytics
-            )
-            self._wip_analytics = WIPAnalytics(
-                self._analytics_context, self._data_prep, self._throughput_analytics
-            )
-            self._oee_analytics = OEEAnalytics(
-                self._analytics_context,
-                self._data_prep,
-                self._throughput_analytics,
-                self._scrap_analytics,
-                self._resource_states_analytics,
-            )
-            self._production_flow_analytics = ProductionFlowAnalytics(
-                self._analytics_context,
-                self._data_prep,
-                self._throughput_analytics,
-            )
-            self._kpi_generator = KPIGenerator(
-                self._analytics_context,
-                self._data_prep,
-                self._throughput_analytics,
-                self._resource_states_analytics,
-            )
-    
+            self._store.ingest_events(self.df_raw)
+
+    def _invalidate_cached_properties(self):
+        """Clear all cached_property caches so they recompute from the new store."""
+        cls = type(self)
+        for attr_name in list(vars(cls)):
+            if isinstance(getattr(cls, attr_name, None), cached_property):
+                self.__dict__.pop(attr_name, None)
+
+    @property
+    def store(self) -> AnalyticsStore:
+        """Access the v2 AnalyticsStore for interval-based queries."""
+        if self._store is None:
+            self._initialize_analytics()
+        return self._store
+
     def set_production_system_data(self, production_system_data: ProductionSystemData):
-        """
-        Set the production system data after initialization.
-        
-        This data is used to determine system resource / subresources mapping 
-        and sink / source IDs. It is optional and only needed for advanced features.
-        
-        Args:
-            production_system_data (ProductionSystemData): The production system data to set.
-        """
         self.production_system_data = production_system_data
-        # Clear manually set mappings when production_system_data is set
         self._system_resource_mapping = None
         self._sink_input_queues = None
         self._source_output_queues = None
-        # Update analytics context if it exists
-        if self._analytics_context is not None:
-            self._analytics_context.set_production_system_data(production_system_data)
-        # Reinitialize analytics to update context with new production_system_data
+        self._invalidate_cached_properties()
         self._initialize_analytics()
-    
+
     def set_system_resource_mapping(self, mapping: dict):
-        """
-        Set the system resource mapping directly.
-        
-        This mapping is used to aggregate subresource states into system resource states.
-        The mapping should be a dictionary where keys are system resource IDs and values 
-        are lists of subresource IDs.
-        
-        Args:
-            mapping (dict): Mapping from system resource ID to list of subresource IDs.
-        """
         self._system_resource_mapping = mapping
-        # Update analytics context if it exists
-        if self._analytics_context is not None:
-            self._analytics_context.set_system_resource_mapping(mapping)
-        # Reinitialize analytics to update context with new system resource mapping
+        self._invalidate_cached_properties()
         self._initialize_analytics()
-    
+
     def set_sink_source_queue_names(self, sink_input_queues: set, source_output_queues: set):
-        """
-        Set sink input queue names and source output queue names directly.
-        
-        These queue names are used to exclude sink/source queues from resource states calculation.
-        
-        Args:
-            sink_input_queues (set): Set of sink input queue names to exclude.
-            source_output_queues (set): Set of source output queue names to exclude.
-        """
         self._sink_input_queues = sink_input_queues
         self._source_output_queues = source_output_queues
-        # Update analytics context if it exists
-        if self._analytics_context is not None:
-            self._analytics_context.set_sink_source_queue_names(sink_input_queues, source_output_queues)
-        # Reinitialize analytics to update context with new sink/source queue names
+        self._invalidate_cached_properties()
         self._initialize_analytics()
 
     def _get_system_resource_mapping(self) -> dict:
-        """
-        Get mapping of system resource IDs to their subresource IDs.
-        
-        Returns:
-            dict: Mapping from system resource ID to list of subresource IDs.
-                  Returns empty dict if neither production_system_data nor manual mapping is set.
-        """
-        # Check if manual mapping is set
         if self._system_resource_mapping is not None:
             return self._system_resource_mapping
-        
-        # Otherwise, derive from production_system_data if available
         if self.production_system_data is None:
             return {}
-        
         system_resource_mapping = {}
         for resource_data in self.production_system_data.resource_data:
             if isinstance(resource_data, SystemResourceData):
                 system_resource_mapping[resource_data.ID] = resource_data.subresource_ids
-        
         return system_resource_mapping
-    
+
     def _get_sink_source_queue_names(self) -> tuple[set, set]:
-        """
-        Get names of sink input queues and source output queues.
-        
-        Returns:
-            tuple[set, set]: (sink_input_queues, source_output_queues)
-        """
-        # Check if manual queue names are set
         if self._sink_input_queues is not None and self._source_output_queues is not None:
             return self._sink_input_queues, self._source_output_queues
-        
         sink_input_queues = set()
         source_output_queues = set()
-        
-        # Otherwise, derive from production_system_data if available
         if self.production_system_data is None:
             return sink_input_queues, source_output_queues
-        
-        # Get sink input queues
         for sink_data in self.production_system_data.sink_data:
             if sink_data.ports:
                 sink_input_queues.update(sink_data.ports)
-        
-        # Get source output queues
         for source_data in self.production_system_data.source_data:
             if source_data.ports:
                 source_output_queues.update(source_data.ports)
-        
         return sink_input_queues, source_output_queues
 
     def read_df_from_csv(self, filepath_input: str = None):
-        """
-        Reads the simulation results from a csv file.
-
-        Args:
-            filepath_input (str, optional): Path to the csv file with the simulation results. Defaults to None and the at instantiation provided filepath is used.
-        """
         if filepath_input:
             self.filepath = filepath_input
         self.df_raw = pd.read_csv(self.filepath)
         self.df_raw.drop(columns=["Unnamed: 0"], inplace=True)
-        # Reinitialize analytics with new data
+        self._invalidate_cached_properties()
         self._initialize_analytics()
 
-    def get_conditions_for_interface_state(self, df: pd.DataFrame) -> pd.Series:
-        """Delegate to base module."""
-        from prodsys.analytics.base import get_conditions_for_interface_state
-        return get_conditions_for_interface_state(df)
-
-    def get_conditions_for_process_state(self, df: pd.DataFrame) -> pd.Series:
-        """Delegate to base module."""
-        from prodsys.analytics.base import get_conditions_for_process_state
-        return get_conditions_for_process_state(df)
-
     def get_total_simulation_time(self) -> float:
-        """Delegate to AnalyticsContext."""
-        if self._analytics_context is None:
-            self._initialize_analytics()
-        return self._analytics_context.get_total_simulation_time()
+        return self.store.simulation_end_time
 
-    @cached_property
-    def df_prepared(self) -> pd.DataFrame:
-        """Delegate to DataPreparation module."""
-        if self._data_prep is None:
-            self._initialize_analytics()
-        return self._data_prep.df_prepared
-
-    @cached_property
-    def df_finished_product(self) -> pd.DataFrame:
-        """Delegate to DataPreparation module."""
-        if self._data_prep is None:
-            self._initialize_analytics()
-        return self._data_prep.df_finished_product
-
-    def get_df_with_product_entries(self, input_df: pd.DataFrame) -> pd.DataFrame:
-        """Delegate to DataPreparation module."""
-        if self._data_prep is None:
-            self._initialize_analytics()
-        return self._data_prep.get_df_with_product_entries(input_df)
-    
-    def get_primitive_types(self) -> List[str]:
-        """Delegate to DataPreparation module."""
-        if self._data_prep is None:
-            self._initialize_analytics()
-        return self._data_prep.get_primitive_types()
+    # ── Throughput ────────────────────────────────────────────────────────
 
     @cached_property
     def df_throughput(self) -> pd.DataFrame:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.df_throughput
+        return self.store.throughput()
 
     @cached_property
     def warm_up_cutoff_time(self) -> float:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.warm_up_cutoff_time
+        if not self.warm_up_cutoff:
+            return 0.0
+        return detect_warm_up(self.store, self.cut_off_method)
 
     @cached_property
     def df_throughput_with_warum_up_cutoff(self) -> pd.DataFrame:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.df_throughput_with_warum_up_cutoff
+        return self.store.throughput(t_from=self.warm_up_cutoff_time)
 
     @cached_property
-    def dynamic_thoughput_time_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
-            self._initialize_analytics()
-        return self._kpi_generator.dynamic_thoughput_time_KPIs
-
-    @cached_property
-    def df_aggregated_throughput_time(self) -> pd.DataFrame:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.df_aggregated_throughput_time
-
-    @cached_property
-    def aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
-            self._initialize_analytics()
-        return self._kpi_generator.aggregated_throughput_time_KPIs
+    def df_aggregated_throughput_time(self) -> pd.Series:
+        return self.store.aggregated_throughput_time()
 
     @cached_property
     def df_aggregated_output_and_throughput(self) -> pd.DataFrame:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.df_aggregated_output_and_throughput
+        return self.store.aggregated_output_and_throughput()
 
     @cached_property
-    def throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
-            self._initialize_analytics()
-        return self._kpi_generator.throughput_and_output_KPIs
+    def df_aggregated_output(self) -> pd.Series:
+        return self.store.aggregated_output()
 
-    @cached_property
-    def df_aggregated_output(self) -> pd.DataFrame:
-        """Delegate to ThroughputAnalytics module."""
-        if self._throughput_analytics is None:
-            self._initialize_analytics()
-        return self._throughput_analytics.df_aggregated_output
+    # ── Resource states ──────────────────────────────────────────────────
 
     @cached_property
     def df_resource_states(self) -> pd.DataFrame:
-        """Delegate to ResourceStatesAnalytics module."""
-        if self._resource_states_analytics is None:
-            self._initialize_analytics()
-        return self._resource_states_analytics.df_resource_states
-    
-    def get_resource_states_by_interval(self, interval_minutes: float) -> pd.DataFrame:
-        """Delegate to ResourceStatesAnalytics module."""
-        if self._resource_states_analytics is None:
-            self._initialize_analytics()
-        return self._resource_states_analytics.get_resource_states_by_interval(interval_minutes)
-    
-    def get_aggregated_resource_states_by_interval(self, interval_minutes: float) -> pd.DataFrame:
-        """Delegate to ResourceStatesAnalytics module."""
-        if self._resource_states_analytics is None:
-            self._initialize_analytics()
-        return self._resource_states_analytics.get_aggregated_resource_states_by_interval(interval_minutes)
-    
-    def get_oee_per_resource_by_interval(self, interval_minutes: float) -> pd.DataFrame:
-        """Delegate to OEEAnalytics module."""
-        if self._oee_analytics is None:
-            self._initialize_analytics()
-        return self._oee_analytics.get_oee_per_resource_by_interval(interval_minutes)
+        """Raw resource intervals (replacement for the old event-based resource states)."""
+        return self.store.resource_intervals()
 
     @cached_property
     def df_aggregated_resource_states(self) -> pd.DataFrame:
-        """Delegate to ResourceStatesAnalytics module."""
-        if self._resource_states_analytics is None:
-            self._initialize_analytics()
-        return self._resource_states_analytics.df_aggregated_resource_states
+        df = self._compute_resource_states_merged()
+        system_mapping = self._get_system_resource_mapping()
+        if system_mapping:
+            df_system = self._compute_system_resource_states(system_mapping)
+            if len(df_system) > 0:
+                df = pd.concat([df, df_system], ignore_index=True)
+        return df
+
+    def _compute_resource_states_merged(self) -> pd.DataFrame:
+        """
+        Compute resource states with proper handling of overlapping intervals
+        for multi-capacity resources: merge overlapping intervals of the same
+        type before summing durations.
+        """
+        from prodsys.simulation.state import StateTypeEnum
+
+        _STATE_TO_TT = {
+            StateTypeEnum.production.value: "PR",
+            StateTypeEnum.transport.value: "PR",
+            StateTypeEnum.breakdown.value: "UD",
+            StateTypeEnum.setup.value: "ST",
+            StateTypeEnum.charging.value: "CR",
+            StateTypeEnum.dependency.value: "DP",
+            StateTypeEnum.non_scheduled.value: "NS",
+        }
+        _EXCLUDED = frozenset({
+            StateTypeEnum.loading.value, StateTypeEnum.unloading.value,
+            StateTypeEnum.source.value, StateTypeEnum.sink.value,
+        })
+
+        t_to = self.store.simulation_end_time
+        df = self.store.resource_intervals(0.0, t_to)
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+
+        excluded = set(self.store._exclude_resources)
+        df = df[~df["entity_id"].isin(excluded)]
+        df = df[~df["state_type"].isin(_EXCLUDED)]
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+
+        df = df.copy()
+        df["Time_type"] = df["state_type"].map(_STATE_TO_TT)
+        df = df[df["Time_type"].notna()]
+
+        resource_time = t_to
+        rows = []
+        for resource in df["entity_id"].unique():
+            res_df = df[df["entity_id"] == resource]
+            for tt in res_df["Time_type"].unique():
+                tt_df = res_df[res_df["Time_type"] == tt]
+                intervals = tt_df[["t_start", "t_end"]].values.tolist()
+                intervals.sort(key=lambda x: x[0])
+                # Merge overlapping intervals
+                merged = [[intervals[0][0], intervals[0][1]]]
+                for s, e in intervals[1:]:
+                    if s <= merged[-1][1]:
+                        merged[-1][1] = max(merged[-1][1], e)
+                    else:
+                        merged.append([s, e])
+                total = sum(min(e, t_to) - max(s, 0.0) for s, e in merged)
+                if total > 0:
+                    rows.append({
+                        "Resource": resource, "Time_type": tt,
+                        "time_increment": total, "resource_time": resource_time,
+                        "percentage": total / resource_time * 100,
+                    })
+            # Resolve NS/UD overlap: UD takes priority
+            res_rows = [r for r in rows if r["Resource"] == resource]
+            ns_time = sum(r["time_increment"] for r in res_rows if r["Time_type"] == "NS")
+            ud_time = sum(r["time_increment"] for r in res_rows if r["Time_type"] == "UD")
+            if ns_time > 0 and ud_time > 0:
+                ns_intervals = res_df[res_df["Time_type"] == "NS"][["t_start", "t_end"]].values.tolist()
+                ud_intervals = res_df[res_df["Time_type"] == "UD"][["t_start", "t_end"]].values.tolist()
+                ns_intervals.sort(key=lambda x: x[0])
+                ud_intervals.sort(key=lambda x: x[0])
+                ns_merged = self._merge_interval_list(ns_intervals)
+                ud_merged = self._merge_interval_list(ud_intervals)
+                overlap = self._overlap_duration(ns_merged, ud_merged)
+                if overlap > 0:
+                    for r in rows:
+                        if r["Resource"] == resource and r["Time_type"] == "NS":
+                            r["time_increment"] = max(0.0, r["time_increment"] - overlap)
+                            r["percentage"] = r["time_increment"] / resource_time * 100
+            # Subtract NS time from other non-UD states
+            if ns_time > 0:
+                ns_intervals = res_df[res_df["Time_type"] == "NS"][["t_start", "t_end"]].values.tolist()
+                ns_merged = self._merge_interval_list(ns_intervals)
+                for r in rows:
+                    if r["Resource"] == resource and r["Time_type"] not in ("NS", "UD"):
+                        other_intervals = res_df[res_df["Time_type"] == r["Time_type"]][["t_start", "t_end"]].values.tolist()
+                        other_merged = self._merge_interval_list(other_intervals)
+                        overlap = self._overlap_duration(other_merged, ns_merged)
+                        if overlap > 0:
+                            r["time_increment"] = max(0.0, r["time_increment"] - overlap)
+                            r["percentage"] = r["time_increment"] / resource_time * 100
+            # Add standby
+            total_active = sum(r["time_increment"] for r in rows if r["Resource"] == resource)
+            sb = max(0.0, resource_time - total_active)
+            if sb > 1e-10:
+                rows.append({
+                    "Resource": resource, "Time_type": "SB",
+                    "time_increment": sb, "resource_time": resource_time,
+                    "percentage": sb / resource_time * 100,
+                })
+
+        if not rows:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+        result = pd.DataFrame(rows)
+        result = result[result["time_increment"] > 1e-10].reset_index(drop=True)
+        return result
+
+    @staticmethod
+    def _merge_interval_list(intervals: list) -> list[tuple[float, float]]:
+        if not intervals:
+            return []
+        intervals = sorted(intervals, key=lambda x: x[0])
+        merged = [[intervals[0][0], intervals[0][1]]]
+        for s, e in intervals[1:]:
+            if s <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], e)
+            else:
+                merged.append([s, e])
+        return [(s, e) for s, e in merged]
+
+    @staticmethod
+    def _overlap_duration(a: list, b: list) -> float:
+        total = 0.0
+        for a_s, a_e in a:
+            for b_s, b_e in b:
+                o_s = max(a_s, b_s)
+                o_e = min(a_e, b_e)
+                if o_s < o_e:
+                    total += o_e - o_s
+        return total
+
+    def get_resource_states_by_interval(self, interval_minutes: float) -> pd.DataFrame:
+        return self.store.resource_states_by_interval(interval_minutes)
+
+    def get_aggregated_resource_states_by_interval(self, interval_minutes: float) -> pd.DataFrame:
+        return self.store.resource_states_by_interval(interval_minutes)
+
+    # ── OEE ──────────────────────────────────────────────────────────────
+
+    def get_oee_per_resource_by_interval(self, interval_minutes: float) -> pd.DataFrame:
+        return self.store.oee_per_resource_by_interval(interval_minutes)
 
     @cached_property
     def df_oee_production_system(self) -> pd.DataFrame:
-        """Delegate to OEEAnalytics module."""
-        if self._oee_analytics is None:
-            self._initialize_analytics()
-        return self._oee_analytics.df_oee_production_system
+        return self.store.oee_production_system()
 
     @cached_property
     def df_oee_per_resource(self) -> pd.DataFrame:
-        """Delegate to OEEAnalytics module."""
-        if self._oee_analytics is None:
-            self._initialize_analytics()
-        return self._oee_analytics.df_oee_per_resource
+        return self.store.oee_per_resource()
+
+    # ── Production flow ──────────────────────────────────────────────────
 
     @cached_property
     def df_production_flow_ratio(self) -> pd.DataFrame:
-        """Delegate to ProductionFlowAnalytics module."""
-        if self._production_flow_analytics is None:
-            self._initialize_analytics()
-        return self._production_flow_analytics.df_production_flow_ratio
+        return self.store.production_flow_ratio()
+
+    # ── Scrap ────────────────────────────────────────────────────────────
 
     @cached_property
-    def machine_state_KPIS(self) -> List[performance_indicators.KPI]:
-        """Delegate to KPIGenerator module."""
-        if self._kpi_generator is None:
-            self._initialize_analytics()
-        return self._kpi_generator.machine_state_KPIS
-
-    def get_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.get_WIP_KPI(df)
-
-    def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.get_primitive_WIP_KPI(df)
+    def df_scrap_per_product_type(self) -> pd.DataFrame:
+        return self.store.scrap_per_product_type(
+            primitive_types=set(self.get_primitive_types())
+        )
 
     @cached_property
-    def df_primitive_WIP(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_primitive_WIP
+    def df_scrap_per_resource(self) -> pd.DataFrame:
+        return self.store.scrap_per_resource()
 
-    @cached_property
-    def df_primitive_WIP_per_primitive_type(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_primitive_WIP_per_primitive_type
-
-    @cached_property
-    def df_aggregated_primitive_WIP(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_aggregated_primitive_WIP
+    # ── WIP ──────────────────────────────────────────────────────────────
 
     @cached_property
     def df_WIP(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_WIP
-
+        return self.store.wip()
 
     @cached_property
     def df_WIP_per_product(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_WIP_per_product
-
-    def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.get_WIP_per_resource_KPI(df)
+        df = self.store.wip()
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
+        result_dfs = []
+        for product_type in df["Product_type"].dropna().unique():
+            df_pt = df[df["Product_type"] == product_type].copy()
+            df_pt = df_pt.sort_values("Time").reset_index(drop=True)
+            df_pt["WIP"] = df_pt["WIP_Increment"].cumsum().clip(lower=0).astype(float)
+            result_dfs.append(df_pt)
+        if result_dfs:
+            return pd.concat(result_dfs, ignore_index=True)
+        return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
 
     @cached_property
     def df_WIP_per_resource(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_WIP_per_resource
+        """WIP per resource over time, computed from raw event data."""
+        if self.df_raw is None:
+            return pd.DataFrame(columns=["Time", "WIP", "WIP_resource", "WIP_Increment"])
+        return self._compute_wip_per_resource(self.df_raw)
 
     @cached_property
-    def dynamic_WIP_per_resource_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.dynamic_WIP_per_resource_KPIs
+    def df_aggregated_WIP(self) -> pd.Series:
+        return self.store.aggregated_wip()
+
+    # ── Primitive WIP ────────────────────────────────────────────────────
+
+    def get_primitive_types(self) -> List[str]:
+        if self.df_raw is None:
+            return []
+        if "Primitive_type" not in self.df_raw.columns:
+            return []
+        return self.df_raw["Primitive_type"].dropna().unique().tolist()
 
     @cached_property
-    def dynamic_system_WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.dynamic_system_WIP_KPIs
+    def df_primitive_WIP(self) -> pd.DataFrame:
+        return self._compute_primitive_wip(self.df_raw)
 
     @cached_property
-    def df_aggregated_WIP(self) -> pd.DataFrame:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.df_aggregated_WIP
+    def df_primitive_WIP_per_primitive_type(self) -> pd.DataFrame:
+        if self.df_raw is None:
+            return pd.DataFrame()
+        primitive_types = self.get_primitive_types()
+        if not primitive_types:
+            return pd.DataFrame()
+        result_dfs = []
+        for pt in primitive_types:
+            df_pt = self.df_raw[self.df_raw.get("Primitive_type") == pt].copy()
+            df_pt = self._compute_primitive_wip(df_pt)
+            if len(df_pt) > 0:
+                result_dfs.append(df_pt)
+        if result_dfs:
+            return pd.concat(result_dfs, ignore_index=True)
+        return pd.DataFrame()
 
     @cached_property
-    def WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.WIP_KPIs
+    def df_aggregated_primitive_WIP(self) -> pd.Series:
+        df = self.df_primitive_WIP_per_primitive_type.copy()
+        df_total = self.df_primitive_WIP.copy()
+        if len(df_total) == 0:
+            return pd.Series(dtype=float, name="primitive_WIP")
+        df_total["Primitive_type"] = "Total"
+        df = pd.concat([df, df_total])
+        if self.warm_up_cutoff:
+            df = df.loc[df["Time"] >= self.warm_up_cutoff_time]
+        return df.groupby("Primitive_type")["primitive_WIP"].mean()
 
-    @cached_property
-    def primitive_WIP_KPIs(self) -> List[performance_indicators.KPI]:
-        """Delegate to WIPAnalytics module."""
-        if self._wip_analytics is None:
-            self._initialize_analytics()
-        return self._wip_analytics.primitive_WIP_KPIs
+    # ── Aggregated data convenience ──────────────────────────────────────
 
     def get_aggregated_data(self) -> dict:
-        """
-        Returns a dictionary with the aggregated data for the simulation results.
-
-        Returns:
-            dict: Dictionary with the aggregated data for throughput, wip, throughput time and resource states.
-        """
         data = {}
         data["Throughput"] = (
             self.df_aggregated_output_and_throughput.copy().reset_index().to_dict()
         )
-        data["WIP"] = self.df_aggregated_WIP.copy().reset_index().to_dict()
+        data["WIP"] = self.df_aggregated_WIP.copy().reset_index().to_dict() if isinstance(self.df_aggregated_WIP, pd.DataFrame) else self.df_aggregated_WIP.to_frame().reset_index().to_dict()
         data["Throughput time"] = (
-            self.df_aggregated_throughput_time.copy().reset_index().to_dict()
+            self.df_aggregated_throughput_time.copy().reset_index().to_dict() if isinstance(self.df_aggregated_throughput_time, pd.DataFrame) else self.df_aggregated_throughput_time.to_frame().reset_index().to_dict()
         )
         data["Resource states"] = (
             self.df_aggregated_resource_states.copy()
@@ -522,166 +445,391 @@ class PostProcessor:
             .reset_index()
             .to_dict()
         )
-
         return data
 
     def get_aggregated_throughput_time_data(self) -> List[float]:
-        """
-        Returns a list of the aggregated throughput time data.
-
-        Returns:
-            List[float]: List of the aggregated throughput time data ordered alphabetically by product type.
-        """
-        return list(self.df_aggregated_throughput_time.values)
+        s = self.df_aggregated_throughput_time
+        return list(s.values) if len(s) > 0 else []
 
     def get_aggregated_throughput_data(self) -> List[float]:
-        """
-        Returns a list of the aggregated throughput data.
-
-        Returns:
-            List[float]: List of the aggregated throughput data ordered alphabetically by product type.
-        """
-        return list(self.df_aggregated_output.values)
+        s = self.df_aggregated_output
+        return list(s.values) if len(s) > 0 else []
 
     def get_aggregated_wip_data(self) -> List[float]:
-        """
-        Returns a list of the aggregated WIP data.
-
-        Returns:
-            List[float]: List of the aggregated WIP data ordered alphabetically by product type.
-        """
         s = self.df_aggregated_WIP.copy()
-        s = s.drop(labels=["Total"])
-        return list(s.values)
+        if isinstance(s, pd.Series):
+            s = s.drop(labels=["Total"], errors="ignore")
+            return list(s.values)
+        return []
+
+    # ── KPI generators ───────────────────────────────────────────────────
 
     @cached_property
-    def df_scrap_per_product_type(self) -> pd.DataFrame:
-        """Delegate to ScrapAnalytics module."""
-        if self._scrap_analytics is None:
-            self._initialize_analytics()
-        return self._scrap_analytics.df_scrap_per_product_type
-    
-    @cached_property
-    def df_scrap_per_product_type_original(self) -> pd.DataFrame:
-        """
-        Original implementation (kept for reference).
-        """
-        """
-        Returns a data frame with the scrap rate for each product type.
-        Scrap rate is calculated as: (Number of failed processes) / (Total number of processes) * 100
-        
-        Returns:
-            pd.DataFrame: Data frame with scrap rate per product type. Columns: Product_type, Scrap_count, Total_count, Scrap_rate
-        """
-        df = self.df_prepared.copy()
-        
-        # Filter for production process end states only (where process_ok is relevant)
-        production_end_condition = (
-            (df["State Type"] == state.StateTypeEnum.production)
-            & (df["Activity"] == "end state")
-            & (df["Product"].notna())
+    def dynamic_thoughput_time_KPIs(self) -> List[performance_indicators.KPI]:
+        df_tp = self.df_throughput.copy()
+        KPIs = []
+        context = (
+            performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.PRODUCT,
         )
-        df_production = df[production_end_condition].copy()
-        
-        if len(df_production) == 0:
-            # Return empty dataframe with expected structure
-            return pd.DataFrame(columns=["Product_type", "Scrap_count", "Total_count", "Scrap_rate"])
-        
-        # Get product types (filter out primitives)
-        primitive_types = self.get_primitive_types()
-        df_production = df_production[
-            ~df_production["Product_type"].isin(primitive_types)
-        ]
-        
-        if len(df_production) == 0:
-            return pd.DataFrame(columns=["Product_type", "Scrap_count", "Total_count", "Scrap_rate"])
-        
-        # Handle process_ok column - default to True if not present or NaN
-        if "process_ok" not in df_production.columns:
-            df_production["process_ok"] = True
-        else:
-            # Convert to boolean, handling NaN values without triggering downcast warning
-            # Use mask-based assignment to avoid fillna downcast warning
-            mask = df_production["process_ok"].isna()
-            df_production.loc[mask, "process_ok"] = True
-            df_production["process_ok"] = df_production["process_ok"].astype(bool)
-        
-        # Count failed processes (process_ok == False) per product type
-        df_failed = df_production[~df_production["process_ok"]].groupby("Product_type").size().reset_index(name="Scrap_count")
-        
-        # Count total processes per product type
-        df_total = df_production.groupby("Product_type").size().reset_index(name="Total_count")
-        
-        # Merge and calculate scrap rate
-        df_scrap = pd.merge(df_total, df_failed, on="Product_type", how="left")
-        df_scrap["Scrap_count"] = df_scrap["Scrap_count"].fillna(0).astype(int)
-        df_scrap["Scrap_rate"] = (df_scrap["Scrap_count"] / df_scrap["Total_count"] * 100).round(2)
-        
-        return df_scrap[["Product_type", "Scrap_count", "Total_count", "Scrap_rate"]]
+        for _, values in df_tp.iterrows():
+            KPIs.append(
+                performance_indicators.DynamicThroughputTime(
+                    name=performance_indicators.KPIEnum.DYNAMIC_THROUGHPUT_TIME,
+                    context=context,
+                    value=values["Throughput_time"],
+                    product=values["Product"],
+                    product_type=values["Product_type"],
+                    start_time=values["Start_time"],
+                    end_time=values["End_time"],
+                )
+            )
+        return KPIs
 
     @cached_property
-    def df_scrap_per_resource(self) -> pd.DataFrame:
-        """Delegate to ScrapAnalytics module."""
-        if self._scrap_analytics is None:
-            self._initialize_analytics()
-        return self._scrap_analytics.df_scrap_per_resource
-    
-    @cached_property
-    def df_scrap_per_resource_original(self) -> pd.DataFrame:
-        """
-        Original implementation (kept for reference).
-        """
-        """
-        Returns a data frame with the scrap rate for each resource.
-        Scrap rate is calculated as: (Number of failed processes) / (Total number of processes) * 100
-        
-        Returns:
-            pd.DataFrame: Data frame with scrap rate per resource. Columns: Resource, Scrap_count, Total_count, Scrap_rate
-        """
-        df = self.df_prepared.copy()
-        
-        # Filter for production process end states only (where process_ok is relevant)
-        production_end_condition = (
-            (df["State Type"] == state.StateTypeEnum.production)
-            & (df["Activity"] == "end state")
-            & (df["Resource"].notna())
+    def aggregated_throughput_time_KPIs(self) -> List[performance_indicators.KPI]:
+        ser = self.df_aggregated_throughput_time.copy()
+        KPIs = []
+        context = (
+            performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.PRODUCT_TYPE,
         )
-        df_production = df[production_end_condition].copy()
-        
-        if len(df_production) == 0:
-            # Return empty dataframe with expected structure
-            return pd.DataFrame(columns=["Resource", "Scrap_count", "Total_count", "Scrap_rate"])
-        
-        # Exclude sink and source resources
-        sink_source_resources = df.loc[
-            (df["State Type"] == state.StateTypeEnum.source)
-            | (df["State Type"] == state.StateTypeEnum.sink),
-            "Resource"
-        ].unique()
-        df_production = df_production[~df_production["Resource"].isin(sink_source_resources)]
-        
-        if len(df_production) == 0:
-            return pd.DataFrame(columns=["Resource", "Scrap_count", "Total_count", "Scrap_rate"])
-        
-        # Handle process_ok column - default to True if not present or NaN
-        if "process_ok" not in df_production.columns:
-            df_production["process_ok"] = True
-        else:
-            # Convert to boolean, handling NaN values without triggering downcast warning
-            # Use mask-based assignment to avoid fillna downcast warning
-            mask = df_production["process_ok"].isna()
-            df_production.loc[mask, "process_ok"] = True
-            df_production["process_ok"] = df_production["process_ok"].astype(bool)
-        
-        # Count failed processes (process_ok == False) per resource
-        df_failed = df_production[~df_production["process_ok"]].groupby("Resource").size().reset_index(name="Scrap_count")
-        
-        # Count total processes per resource
-        df_total = df_production.groupby("Resource").size().reset_index(name="Total_count")
-        
-        # Merge and calculate scrap rate
-        df_scrap = pd.merge(df_total, df_failed, on="Resource", how="left")
-        df_scrap["Scrap_count"] = df_scrap["Scrap_count"].fillna(0).astype(int)
-        df_scrap["Scrap_rate"] = (df_scrap["Scrap_count"] / df_scrap["Total_count"] * 100).round(2)
-        
-        return df_scrap[["Resource", "Scrap_count", "Total_count", "Scrap_rate"]]
+        for index, value in ser.items():
+            KPIs.append(
+                performance_indicators.ThroughputTime(
+                    name=performance_indicators.KPIEnum.TRHOUGHPUT_TIME,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def throughput_and_output_KPIs(self) -> List[performance_indicators.KPI]:
+        df = self.df_aggregated_output_and_throughput.copy()
+        KPIs = []
+        context = (
+            performance_indicators.KPILevelEnum.SYSTEM,
+            performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+        )
+        for index, values in df.iterrows():
+            KPIs.append(
+                performance_indicators.Throughput(
+                    name=performance_indicators.KPIEnum.THROUGHPUT,
+                    value=values["Throughput"],
+                    context=context,
+                    product_type=index,
+                )
+            )
+            KPIs.append(
+                performance_indicators.Output(
+                    name=performance_indicators.KPIEnum.OUTPUT,
+                    value=values["Output"],
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def machine_state_KPIS(self) -> List[performance_indicators.KPI]:
+        df = self.df_aggregated_resource_states.copy()
+        KPIs = []
+        context = (performance_indicators.KPILevelEnum.RESOURCE,)
+        class_dict = {
+            "SB": (performance_indicators.StandbyTime, performance_indicators.KPIEnum.STANDBY_TIME),
+            "PR": (performance_indicators.ProductiveTime, performance_indicators.KPIEnum.PRODUCTIVE_TIME),
+            "UD": (performance_indicators.UnscheduledDowntime, performance_indicators.KPIEnum.UNSCHEDULED_DOWNTIME),
+            "ST": (performance_indicators.SetupTime, performance_indicators.KPIEnum.SETUP_TIME),
+            "CR": (performance_indicators.ChargingTime, performance_indicators.KPIEnum.CHARGING_TIME),
+            "DP": (performance_indicators.DependencyTime, performance_indicators.KPIEnum.DEPENDENCY_TIME),
+        }
+        for _, values in df.iterrows():
+            tt = values["Time_type"]
+            if tt not in class_dict:
+                continue
+            KPIs.append(
+                class_dict[tt][0](
+                    name=class_dict[tt][1],
+                    value=values["percentage"],
+                    context=context,
+                    resource=values["Resource"],
+                )
+            )
+        return KPIs
+
+    def get_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Kept for backward compatibility."""
+        return self.df_WIP
+
+    def get_primitive_WIP_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Kept for backward compatibility."""
+        return self.df_primitive_WIP
+
+    @cached_property
+    def dynamic_WIP_per_resource_KPIs(self) -> List[performance_indicators.KPI]:
+        df = self.df_WIP_per_resource.copy()
+        df = df.loc[df["WIP_Increment"] != 0]
+        KPIs = []
+        df["next_Time"] = df.groupby("WIP_resource")["Time"].shift(-1)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
+        for _, row in df.iterrows():
+            KPIs.append(
+                performance_indicators.DynamicWIP(
+                    name=performance_indicators.KPIEnum.DYNAMIC_WIP,
+                    value=row["WIP"],
+                    context=(
+                        performance_indicators.KPILevelEnum.RESOURCE,
+                        performance_indicators.KPILevelEnum.ALL_PRODUCTS,
+                    ),
+                    product_type="Total",
+                    resource=row["WIP_resource"],
+                    start_time=row["Time"],
+                    end_time=row["next_Time"],
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def dynamic_system_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        df = self.df_WIP.copy()
+        df["Product_type"] = "Total"
+        df_per_product = self.df_WIP_per_product.copy()
+        df = pd.concat([df, df_per_product])
+        df = df.loc[~df["WIP_Increment"].isnull()]
+        KPIs = []
+        df["next_Time"] = df.groupby("Product_type")["Time"].shift(-1)
+        df["next_Time"] = df["next_Time"].fillna(df["Time"])
+        for _, row in df.iterrows():
+            if row["Product_type"] == "Total":
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.ALL_PRODUCTS,
+                )
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.DynamicWIP(
+                    name=performance_indicators.KPIEnum.DYNAMIC_WIP,
+                    value=row["WIP"],
+                    context=context,
+                    product_type=row["Product_type"],
+                    start_time=row["Time"],
+                    end_time=row["next_Time"],
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        ser = self.df_aggregated_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.ALL_PRODUCTS,
+                )
+                index = performance_indicators.KPILevelEnum.ALL_PRODUCTS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.WIP(
+                    name=performance_indicators.KPIEnum.WIP,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+
+    @cached_property
+    def primitive_WIP_KPIs(self) -> List[performance_indicators.KPI]:
+        ser = self.df_aggregated_primitive_WIP.copy()
+        KPIs = []
+        for index, value in ser.items():
+            if index == "Total":
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.ALL_PRODUCTS,
+                )
+                index = performance_indicators.KPILevelEnum.ALL_PRODUCTS
+            else:
+                context = (
+                    performance_indicators.KPILevelEnum.SYSTEM,
+                    performance_indicators.KPILevelEnum.PRODUCT_TYPE,
+                )
+            KPIs.append(
+                performance_indicators.PrimitiveWIP(
+                    name=performance_indicators.KPIEnum.PRIMITIVE_WIP,
+                    value=value,
+                    context=context,
+                    product_type=index,
+                )
+            )
+        return KPIs
+
+    # ── Internal helpers ─────────────────────────────────────────────────
+
+    def _compute_wip_per_resource(self, df_raw: pd.DataFrame) -> pd.DataFrame:
+        """Compute WIP per resource from raw event data."""
+        df = df_raw.copy()
+        df = df.loc[df["Time"] != 0].copy()
+        df["WIP_Increment"] = 0
+        df["WIP_resource"] = None
+
+        sink_resources = df[df["State Type"].isin([state.StateTypeEnum.sink, state.StateTypeEnum.sink.value])]["Resource"].unique()
+        sink_resources_set = set(sink_resources)
+        sink_queues = set()
+
+        unloading_types = {state.StateTypeEnum.unloading, state.StateTypeEnum.unloading.value, "Unloading"}
+        loading_types = {state.StateTypeEnum.loading, state.StateTypeEnum.loading.value, "Loading"}
+
+        unloading_to_sinks = df[
+            (df["State Type"].isin(unloading_types))
+            & (df["Resource"].isin(sink_resources_set))
+            & (df["Target location"].notna())
+        ]["Target location"].unique()
+        sink_queues.update(unloading_to_sinks)
+
+        if self._sink_input_queues:
+            sink_queues.update(self._sink_input_queues)
+
+        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
+        created_mask = CREATED_CONDITION & ~df["Resource"].isin(sink_resources_set)
+        df.loc[created_mask, "WIP_Increment"] = 1
+        df.loc[created_mask, "WIP_resource"] = df.loc[created_mask, "Resource"]
+
+        CONSUMED_CONDITION = df["Activity"] == state.StateEnum.consumed_product
+        consumed_mask = CONSUMED_CONDITION & ~df["Resource"].isin(sink_resources_set)
+        df.loc[consumed_mask, "WIP_Increment"] = -1
+        df.loc[consumed_mask, "WIP_resource"] = df.loc[consumed_mask, "Resource"]
+
+        end_loading = (df["State Type"].isin(loading_types)) & (df["Activity"] == "end state")
+        end_loading_valid = end_loading & ~df["Resource"].isin(sink_resources_set)
+
+        parts = [df]
+
+        if end_loading_valid.any():
+            el_res = df[end_loading_valid].copy()
+            el_res["WIP_Increment"] = 1
+            el_res["WIP_resource"] = el_res["Resource"]
+            parts.append(el_res)
+
+            el_queue = df[end_loading_valid].copy()
+            el_queue = el_queue[~el_queue["Origin location"].isin(sink_queues)]
+            if len(el_queue) > 0:
+                el_queue["WIP_Increment"] = -1
+                el_queue["WIP_resource"] = el_queue["Origin location"]
+                parts.append(el_queue)
+
+        end_unloading = (df["State Type"].isin(unloading_types)) & (df["Activity"] == "end state")
+        end_unloading_valid = end_unloading & ~df["Resource"].isin(sink_resources_set)
+
+        if end_unloading_valid.any():
+            eu_res = df[end_unloading_valid].copy()
+            eu_res["WIP_Increment"] = -1
+            eu_res["WIP_resource"] = eu_res["Resource"]
+            parts.append(eu_res)
+
+            eu_queue = df[end_unloading_valid].copy()
+            eu_queue = eu_queue[~eu_queue["Target location"].isin(sink_queues)]
+            if len(eu_queue) > 0:
+                eu_queue["WIP_Increment"] = 1
+                eu_queue["WIP_resource"] = eu_queue["Target location"]
+                parts.append(eu_queue)
+
+        df = pd.concat(parts, ignore_index=True)
+        df = df.sort_values(by=["Time", "WIP_Increment"], ascending=[True, False], ignore_index=True)
+        df = df[df["WIP_resource"].notna()]
+        df = df[~df["WIP_resource"].isin(sink_resources_set)]
+        df = df[~df["WIP_resource"].isin(sink_queues)]
+        df = df.sort_values(by=["WIP_resource", "Time"]).reset_index(drop=True)
+        df["WIP"] = df.groupby("WIP_resource")["WIP_Increment"].cumsum().clip(lower=0)
+        return df
+
+    @staticmethod
+    def _compute_primitive_wip(df_raw: pd.DataFrame) -> pd.DataFrame:
+        """Compute primitive WIP from raw event data."""
+        if df_raw is None or len(df_raw) == 0:
+            return pd.DataFrame(columns=["Time", "primitive_WIP", "Primitive_type"])
+        if "Primitive_type" not in df_raw.columns:
+            return pd.DataFrame(columns=["Time", "primitive_WIP", "Primitive_type"])
+
+        df = df_raw.copy()
+        dep_type_vals = {state.StateTypeEnum.dependency, state.StateTypeEnum.dependency.value, "Dependency"}
+        start_cond = (df["Activity"] == "start state") & (df["State Type"].isin(dep_type_vals)) & (df["Primitive_type"].notna())
+        end_cond = (df["Activity"] == "end state") & (df["State Type"].isin(dep_type_vals)) & (df["Primitive_type"].notna())
+
+        df["primitive_WIP_Increment"] = 0
+        df.loc[start_cond, "primitive_WIP_Increment"] = 1
+        df.loc[end_cond, "primitive_WIP_Increment"] = -1
+        df["primitive_WIP"] = df["primitive_WIP_Increment"].cumsum()
+        return df
+
+    def _compute_system_resource_states(self, system_mapping: dict) -> pd.DataFrame:
+        """
+        Aggregate subresource intervals into system-level resource states.
+        A system resource is PR if any subresource has an active production/transport interval.
+        """
+        from prodsys.simulation.state import StateTypeEnum
+
+        t_end = self.store.simulation_end_time
+        productive_types = frozenset({
+            StateTypeEnum.production.value,
+            StateTypeEnum.transport.value,
+        })
+        rows = []
+        for sys_id, sub_ids in system_mapping.items():
+            ri = self.store.resource_intervals(0.0, t_end)
+            sub_ri = ri[
+                (ri["entity_id"].isin(sub_ids))
+                & (ri["state_type"].isin(productive_types))
+                & (~ri["interrupted"])
+            ]
+            if len(sub_ri) == 0:
+                rows.append({
+                    "Resource": sys_id, "Time_type": "SB",
+                    "time_increment": t_end, "resource_time": t_end,
+                    "percentage": 100.0,
+                })
+                continue
+
+            # Merge overlapping productive intervals across subresources
+            intervals = sub_ri[["t_start", "t_end"]].values.tolist()
+            intervals.sort(key=lambda x: x[0])
+            merged = [[intervals[0][0], intervals[0][1]]]
+            for s, e in intervals[1:]:
+                if s <= merged[-1][1]:
+                    merged[-1][1] = max(merged[-1][1], e)
+                else:
+                    merged.append([s, e])
+            pr_time = sum(e - s for s, e in merged)
+            sb_time = max(0.0, t_end - pr_time)
+
+            if pr_time > 0:
+                rows.append({
+                    "Resource": sys_id, "Time_type": "PR",
+                    "time_increment": pr_time, "resource_time": t_end,
+                    "percentage": pr_time / t_end * 100,
+                })
+            if sb_time > 0:
+                rows.append({
+                    "Resource": sys_id, "Time_type": "SB",
+                    "time_increment": sb_time, "resource_time": t_end,
+                    "percentage": sb_time / t_end * 100,
+                })
+        if not rows:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+        return pd.DataFrame(rows)
+
+    def get_WIP_per_resource_KPI(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Kept for backward compatibility."""
+        return self.df_WIP_per_resource

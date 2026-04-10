@@ -230,10 +230,11 @@ def tabu_search_optimization(
             for _ in range(self.neighborhood_size):
                 while True:
                     configuration = mutation(individual=[deepcopy(self.current)])[0][0]
-                    if check_valid_configuration(
+                    is_valid, _reasons = check_valid_configuration(
                         configuration=configuration,
                         base_configuration=base_configuration,
-                    ):
+                    )
+                    if is_valid:
                         neighboarhood.append(configuration)
                         break
             return neighboarhood

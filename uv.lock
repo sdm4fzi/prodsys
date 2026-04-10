@@ -2035,7 +2035,7 @@ wheels = [
 
 [[package]]
 name = "prodsys"
-version = "1.1.0"
+version = "1.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "deap" },
@@ -2071,7 +2071,6 @@ dev = [
     { name = "mkdocstrings-python" },
     { name = "nbformat" },
     { name = "pytest" },
-    { name = "snakeviz" },
 ]
 rl-control = [
     { name = "gymnasium" },
@@ -2082,6 +2081,7 @@ rl-control = [
 [package.dev-dependencies]
 dev = [
     { name = "mkdocstrings", extra = ["python"] },
+    { name = "snakeviz" },
 ]
 
 [package.metadata]
@@ -2113,7 +2113,6 @@ requires-dist = [
     { name = "shapely", specifier = "==2.0.2" },
     { name = "simanneal", specifier = ">=0.5.0" },
     { name = "simpy", specifier = ">=4.1.1" },
-    { name = "snakeviz", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "stable-baselines3", marker = "extra == 'rl-control'", specifier = ">=2.0.0" },
     { name = "tensorboard", marker = "extra == 'rl-control'", specifier = ">=2.11.0" },
     { name = "toml", specifier = ">=0.10.2" },
@@ -2122,7 +2121,10 @@ requires-dist = [
 provides-extras = ["dev", "rl-control"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.0" }]
+dev = [
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.0" },
+    { name = "snakeviz", specifier = ">=2.2.2" },
+]
 
 [[package]]
 name = "prompt-toolkit"

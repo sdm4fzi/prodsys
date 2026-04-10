@@ -74,10 +74,11 @@ class ProductionSystemOptimization(ThreadSafeAnnealer):
     def move(self):
         while True:
             configuration = mutation(individual=[deepcopy(self.state)])[0][0]
-            if check_valid_configuration(
+            is_valid, _reasons = check_valid_configuration(
                 configuration=configuration,
                 base_configuration=self.base_configuration,
-            ):
+            )
+            if is_valid:
                 self.state: adapters.ProductionSystemData = configuration
                 break
 

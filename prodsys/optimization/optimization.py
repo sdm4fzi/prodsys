@@ -181,9 +181,11 @@ def check_valid_configuration(
     configuration: adapters.ProductionSystemData,
     base_configuration: adapters.ProductionSystemData,
     verbose: bool = False,
-) -> bool:
+) -> Tuple[bool, List[str]]:
     """
-    Function that checks if a configuration is valid.
+    Function that checks if a configuration is valid. All constraints are
+    evaluated so that the returned list contains every violated constraint,
+    not just the first one.
 
     Args:
         configuration (adapters.ProductionSystemAdapter): Configuration to be checked.
@@ -191,39 +193,59 @@ def check_valid_configuration(
         verbose (bool): If True, use warning-level logging instead of debug-level.
 
     Returns:
-        bool: True if the configuration is valid, False otherwise.
+        Tuple[bool, List[str]]: (True, []) if valid, or (False, [reason, ...]) listing every violated constraint.
     """
     log_func = logging.warning if verbose else logging.debug
-    
-    if not valid_num_machines(configuration):
-        log_func("Failed valid_num_machines")
-        return False
-    if not valid_transport_capacity(configuration):
-        log_func("Failed valid_transport_capacity")
-        return False
+    constraints = configuration.scenario_data.constraints
+    reasons: List[str] = []
+
+    num_production = len(adapters.get_production_resources(configuration))
+    if num_production > constraints.max_num_machines:
+        reasons.append(f"Too many production resources: {num_production} > max {constraints.max_num_machines}")
+
+    num_transport = len(adapters.get_transport_resources(configuration))
+    if num_transport > constraints.max_num_transport_resources or num_transport == 0:
+        reasons.append(f"Invalid transport resource count: {num_transport} (max: {constraints.max_num_transport_resources}, min: 1)")
+
     if not valid_num_process_modules(configuration):
-        log_func("Failed valid_num_process_modules")
-        return False
+        process_counts = {
+            resource.ID: len(get_grouped_processes_of_machine(resource, get_possible_production_processes_IDs(configuration)))
+            for resource in configuration.resource_data
+        }
+        over_limit = {rid: cnt for rid, cnt in process_counts.items() if cnt > constraints.max_num_processes_per_machine}
+        reasons.append(f"Too many process modules per machine (max {constraints.max_num_processes_per_machine}): {over_limit}")
+
     try:
         # assert_required_primitives_available(configuration)
         # FIXME: this has to be resolved by asserting dependencies and primitives
         pass
     except ValueError as e:
-        log_func(f"Failed assert_required_primitives_available: {e}")
-        return False
+        reasons.append(f"Required primitives not available: {e}")
+
     try:
         assert_required_processes_in_resources_available(configuration)
     except ValueError as e:
-        log_func(f"Failed assert_required_processes_in_resources_available: {e}")
-        return False
+        reasons.append(f"Required processes not in resources: {e}")
+
     if not valid_positions(configuration):
-        log_func("Failed valid_positions")
-        # TODO: raise error if the positions cannot be changed (no production capacity or layout in transformations of scenario)
-        return False
-    if not valid_reconfiguration_cost(configuration, base_configuration):
-        log_func("Failed valid_reconfiguration_cost")
-        return False
-    return True
+        positions = [m.location for m in adapters.get_production_resources(configuration)]
+        possible = configuration.scenario_data.options.positions
+        reasons.append(f"Invalid positions: resource positions {positions} not all in allowed positions {possible}")
+
+    reconfiguration_cost = get_reconfiguration_cost(
+        adapter_object=configuration,
+        baseline=base_configuration,
+    )
+    configuration.reconfiguration_cost = reconfiguration_cost
+    if reconfiguration_cost > constraints.max_reconfiguration_cost:
+        reasons.append(f"Reconfiguration cost too high: {reconfiguration_cost} > max {constraints.max_reconfiguration_cost}")
+
+    if reasons:
+        for reason in reasons:
+            log_func(reason)
+        return False, reasons
+
+    return True, []
 
 
 def assert_required_primitives_available(
@@ -307,7 +329,9 @@ def evaluate(
             None,
             None,
         )  # fitness and event log dict is obtained in optimizer from cache
-    if not check_valid_configuration(adapter_object, base_scenario):
+    is_valid, reasons = check_valid_configuration(adapter_object, base_scenario)
+    if not is_valid:
+        logging.debug(f"Configuration invalid during evaluation: {'; '.join(reasons)}")
         return [-100000 / weight for weight in get_weights(base_scenario, "max")], None
 
     fitness_values = []

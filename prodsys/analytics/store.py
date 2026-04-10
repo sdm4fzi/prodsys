@@ -1,0 +1,1080 @@
+"""
+AnalyticsStore: the public query surface for the interval-based analytics pipeline.
+
+Wraps IntervalBuilder, resolves interval overlaps, and computes KPIs
+directly from the interval representation.
+"""
+
+from __future__ import annotations
+
+from typing import Optional, Literal, Set
+
+import pandas as pd
+import numpy as np
+
+from prodsys.simulation.state import StateTypeEnum
+from prodsys.analytics.intervals import IntervalBuilder
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from prodsys.models.production_system_data import ProductionSystemData
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Map StateTypeEnum values to the resource-state time-type codes used in output
+_STATE_TO_TIME_TYPE: dict[str, str] = {
+    StateTypeEnum.production.value: "PR",
+    StateTypeEnum.transport.value: "PR",
+    StateTypeEnum.breakdown.value: "UD",
+    StateTypeEnum.setup.value: "ST",
+    StateTypeEnum.charging.value: "CR",
+    StateTypeEnum.dependency.value: "DP",
+    StateTypeEnum.non_scheduled.value: "NS",
+}
+
+# State types that represent productive work (used for resource states)
+_PRODUCTIVE_STATE_TYPES = frozenset({
+    StateTypeEnum.production.value,
+    StateTypeEnum.transport.value,
+})
+
+# State types that are tracked as resource states (non-standby)
+_RESOURCE_STATE_TYPES = frozenset({
+    StateTypeEnum.production.value,
+    StateTypeEnum.transport.value,
+    StateTypeEnum.breakdown.value,
+    StateTypeEnum.setup.value,
+    StateTypeEnum.charging.value,
+    StateTypeEnum.dependency.value,
+    StateTypeEnum.non_scheduled.value,
+})
+
+# State types to exclude from resource state calculations
+_EXCLUDED_STATE_TYPES = frozenset({
+    StateTypeEnum.loading.value,
+    StateTypeEnum.unloading.value,
+    StateTypeEnum.source.value,
+    StateTypeEnum.sink.value,
+})
+
+
+class AnalyticsStore:
+    """
+    Central analytics store that ingests raw simulation events, builds intervals,
+    and provides KPI query methods.
+
+    Usage::
+
+        store = AnalyticsStore()
+        store.ingest_events(df_raw)
+        print(store.throughput())
+        print(store.resource_states())
+    """
+
+    def __init__(
+        self,
+        time_range: Optional[float] = None,
+        exclude_resources: Optional[Set[str]] = None,
+        production_system_data: Optional["ProductionSystemData"] = None,
+    ):
+        self.builder = IntervalBuilder()
+        self._intervals: Optional[pd.DataFrame] = None
+        self._t_max: float = 0.0
+        self._time_range = time_range
+        self._exclude_resources: Set[str] = exclude_resources or set()
+        self.production_system_data = production_system_data
+
+    @classmethod
+    def from_raw(
+        cls,
+        df_raw: pd.DataFrame,
+        time_range: Optional[float] = None,
+        exclude_resources: Optional[Set[str]] = None,
+        production_system_data: Optional["ProductionSystemData"] = None,
+    ) -> "AnalyticsStore":
+        store = cls(
+            time_range=time_range,
+            exclude_resources=exclude_resources,
+            production_system_data=production_system_data,
+        )
+        store.ingest_events(df_raw)
+        return store
+
+    # ── Ingest ───────────────────────────────────────────────────────────
+
+    def ingest_events(self, df_raw: pd.DataFrame) -> None:
+        """Ingest a batch of raw simulation events."""
+        if df_raw is None or len(df_raw) == 0:
+            return
+
+        self._t_max = max(self._t_max, df_raw["Time"].max())
+
+        # Auto-detect source/sink resources to exclude
+        source_sink = df_raw.loc[
+            df_raw["State Type"].isin([
+                StateTypeEnum.source, StateTypeEnum.sink,
+                StateTypeEnum.source.value, StateTypeEnum.sink.value,
+            ]),
+            "Resource",
+        ].dropna().unique()
+        self._exclude_resources.update(source_sink)
+
+        self.builder.ingest_dataframe(df_raw)
+        new_intervals = self.builder.drain()
+
+        if self._intervals is None or len(self._intervals) == 0:
+            self._intervals = new_intervals
+        elif len(new_intervals) > 0:
+            self._intervals = pd.concat([self._intervals, new_intervals], ignore_index=True)
+
+    def append_events(self, df_raw: pd.DataFrame) -> None:
+        """Alias for ingest_events, for incremental append."""
+        self.ingest_events(df_raw)
+
+    # ── Interval access ──────────────────────────────────────────────────
+
+    @property
+    def simulation_end_time(self) -> float:
+        if self._time_range is not None:
+            return self._time_range
+        return self._t_max
+
+    @property
+    def intervals(self) -> pd.DataFrame:
+        """All closed intervals."""
+        if self._intervals is None:
+            from prodsys.analytics.intervals import INTERVAL_COLUMNS
+            return pd.DataFrame(columns=INTERVAL_COLUMNS)
+        return self._intervals
+
+    def resource_intervals(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+        resource: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Resource intervals, optionally filtered by time range and resource."""
+        df = self.intervals
+        df = df[df["entity_kind"] == "resource"]
+        if t_to is None:
+            t_to = self.simulation_end_time
+        df = df[(df["t_end"] > t_from) & (df["t_start"] < t_to)]
+        if resource is not None:
+            df = df[df["entity_id"] == resource]
+        return df
+
+    def product_intervals(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """Product lifecycle intervals."""
+        df = self.intervals
+        df = df[df["entity_kind"] == "product"]
+        if t_to is None:
+            t_to = self.simulation_end_time
+        df = df[(df["t_end"] >= t_from) & (df["t_start"] <= t_to)]
+        return df
+
+    # ── KPI: Throughput ──────────────────────────────────────────────────
+
+    def throughput(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        Per-finished-product throughput time.
+
+        Returns DataFrame with columns:
+            Product, Product_type, Throughput_time, Start_time, End_time
+        """
+        df = self.product_intervals(t_from, t_to)
+        df_in_system = df[df["state_type"] == "in_system"].copy()
+        if len(df_in_system) == 0:
+            return pd.DataFrame(columns=["Product", "Product_type", "Throughput_time", "Start_time", "End_time"])
+
+        # Check which products actually finished (have a finished_product marker)
+        finished_products = set(
+            df[df["state_type"] == "finished_product"]["product_id"].dropna().unique()
+        )
+        df_in_system = df_in_system[df_in_system["product_id"].isin(finished_products)]
+
+        if len(df_in_system) == 0:
+            return pd.DataFrame(columns=["Product", "Product_type", "Throughput_time", "Start_time", "End_time"])
+
+        result = pd.DataFrame({
+            "Product": df_in_system["product_id"].values,
+            "Product_type": df_in_system["product_type"].values,
+            "Throughput_time": df_in_system["duration"].values,
+            "Start_time": df_in_system["t_start"].values,
+            "End_time": df_in_system["t_end"].values,
+        })
+        return result.reset_index(drop=True)
+
+    def aggregated_throughput_time(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.Series:
+        """Mean throughput time per product type."""
+        df = self.throughput(t_from, t_to)
+        if len(df) == 0:
+            return pd.Series(dtype=float, name="Throughput_time")
+        return df.groupby("Product_type")["Throughput_time"].mean()
+
+    def aggregated_output_and_throughput(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """Output count and throughput rate per product type."""
+        df = self.throughput(t_from, t_to)
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Output", "Throughput"])
+
+        available_time = df["End_time"].max() - df["Start_time"].min()
+        df_tp = df.groupby("Product_type")["Product"].count().to_frame()
+        df_tp.rename(columns={"Product": "Output"}, inplace=True)
+        if available_time > 0:
+            df_tp["Throughput"] = df_tp["Output"] / available_time
+        else:
+            df_tp["Throughput"] = 0.0
+        return df_tp
+
+    def aggregated_output(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.Series:
+        """Total output per product type."""
+        df = self.throughput(t_from, t_to)
+        if len(df) == 0:
+            return pd.Series(dtype=int, name="Output")
+        return df.groupby("Product_type")["Product"].count()
+
+    # ── KPI: Resource states ─────────────────────────────────────────────
+
+    def resource_states(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+        exclude_resources: Optional[Set[str]] = None,
+    ) -> pd.DataFrame:
+        """
+        Aggregated resource states as percentages.
+
+        Returns DataFrame with columns:
+            Resource, Time_type, time_increment, resource_time, percentage
+        """
+        if t_to is None:
+            t_to = self.simulation_end_time
+
+        all_excluded = set(self._exclude_resources)
+        if exclude_resources:
+            all_excluded.update(exclude_resources)
+
+        df = self.resource_intervals(t_from, t_to)
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+
+        # Exclude source/sink/loading/unloading and configured exclusions
+        df = df[~df["entity_id"].isin(all_excluded)]
+        df = df[~df["state_type"].isin(_EXCLUDED_STATE_TYPES)]
+
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
+
+        # Clip intervals to the query window
+        df = df.copy()
+        df["clipped_start"] = df["t_start"].clip(lower=t_from)
+        df["clipped_end"] = df["t_end"].clip(upper=t_to)
+        df["clipped_duration"] = (df["clipped_end"] - df["clipped_start"]).clip(lower=0.0)
+
+        # Map state_type → Time_type
+        df["Time_type"] = df["state_type"].map(_STATE_TO_TIME_TYPE)
+        df = df[df["Time_type"].notna()]
+
+        # Handle NS/UD overlap: UD takes priority over NS
+        df = self._resolve_ns_ud_overlap(df, t_from, t_to)
+
+        # Sum duration per (resource, time_type)
+        resource_time = t_to - t_from
+        grouped = (
+            df.groupby(["entity_id", "Time_type"])["clipped_duration"]
+            .sum()
+            .reset_index()
+            .rename(columns={"entity_id": "Resource", "clipped_duration": "time_increment"})
+        )
+
+        # Add standby: resource_time minus sum of all other states
+        all_resources = df["entity_id"].unique()
+        rows = []
+        for res in all_resources:
+            res_data = grouped[grouped["Resource"] == res]
+            total_active = res_data["time_increment"].sum()
+            standby_time = max(0.0, resource_time - total_active)
+            rows.append({
+                "Resource": res,
+                "Time_type": "SB",
+                "time_increment": standby_time,
+            })
+
+        if rows:
+            df_sb = pd.DataFrame(rows)
+            grouped = pd.concat([grouped, df_sb], ignore_index=True)
+
+        # Remove zero-duration rows
+        grouped = grouped[grouped["time_increment"] > 1e-10].copy()
+
+        grouped["resource_time"] = resource_time
+        grouped["percentage"] = (grouped["time_increment"] / resource_time * 100)
+
+        return grouped[["Resource", "Time_type", "time_increment", "resource_time", "percentage"]].reset_index(drop=True)
+
+    def _resolve_ns_ud_overlap(self, df: pd.DataFrame, t_from: float, t_to: float) -> pd.DataFrame:
+        """
+        Resolve overlap between NonScheduled and Breakdown intervals.
+        UD takes priority: NS duration is reduced by any UD overlap.
+        Non-NS/UD states have their duration reduced by any NS overlap.
+        """
+        ns_mask = df["Time_type"] == "NS"
+        ud_mask = df["Time_type"] == "UD"
+
+        if not ns_mask.any():
+            return df
+
+        resources_with_ns = df.loc[ns_mask, "entity_id"].unique()
+
+        adjusted_rows = []
+        pass_through = df[~df["entity_id"].isin(resources_with_ns)].copy()
+
+        for resource in resources_with_ns:
+            res_df = df[df["entity_id"] == resource].copy()
+            ns_intervals = res_df[res_df["Time_type"] == "NS"][["clipped_start", "clipped_end"]].values.tolist()
+            ud_intervals = res_df[res_df["Time_type"] == "UD"][["clipped_start", "clipped_end"]].values.tolist()
+
+            if not ns_intervals:
+                adjusted_rows.append(res_df)
+                continue
+
+            # Merge NS intervals
+            ns_merged = _merge_intervals(ns_intervals)
+            ud_merged = _merge_intervals(ud_intervals) if ud_intervals else []
+
+            # For NS rows: subtract UD overlap
+            for idx, row in res_df[res_df["Time_type"] == "NS"].iterrows():
+                rs, re_ = row["clipped_start"], row["clipped_end"]
+                ud_overlap = _overlap_duration([(rs, re_)], ud_merged)
+                new_row = row.copy()
+                new_row["clipped_duration"] = max(0.0, row["clipped_duration"] - ud_overlap)
+                adjusted_rows.append(pd.DataFrame([new_row]))
+
+            # UD rows pass through unchanged
+            ud_rows = res_df[res_df["Time_type"] == "UD"]
+            if len(ud_rows) > 0:
+                adjusted_rows.append(ud_rows)
+
+            # For non-NS, non-UD rows: subtract NS overlap
+            other_mask = (res_df["Time_type"] != "NS") & (res_df["Time_type"] != "UD")
+            for idx, row in res_df[other_mask].iterrows():
+                rs, re_ = row["clipped_start"], row["clipped_end"]
+                ns_overlap = _overlap_duration([(rs, re_)], ns_merged)
+                new_row = row.copy()
+                new_row["clipped_duration"] = max(0.0, row["clipped_duration"] - ns_overlap)
+                adjusted_rows.append(pd.DataFrame([new_row]))
+
+        parts = [pass_through] + adjusted_rows
+        non_empty = [p for p in parts if isinstance(p, pd.DataFrame) and len(p) > 0]
+        if not non_empty:
+            return df.iloc[0:0]
+        return pd.concat(non_empty, ignore_index=True)
+
+    def resource_states_by_interval(
+        self,
+        interval_minutes: float,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+        exclude_resources: Optional[Set[str]] = None,
+    ) -> pd.DataFrame:
+        """
+        Resource states aggregated by time intervals.
+
+        Returns DataFrame with columns:
+            Resource, Interval_start, Interval_end, Time_type,
+            time_increment, interval_time, percentage
+        """
+        if t_to is None:
+            t_to = self.simulation_end_time
+
+        all_excluded = set(self._exclude_resources)
+        if exclude_resources:
+            all_excluded.update(exclude_resources)
+
+        df = self.resource_intervals(t_from, t_to)
+        if len(df) == 0:
+            return pd.DataFrame(columns=[
+                "Resource", "Interval_start", "Interval_end", "Time_type",
+                "time_increment", "interval_time", "percentage",
+            ])
+
+        df = df[~df["entity_id"].isin(all_excluded)]
+        df = df[~df["state_type"].isin(_EXCLUDED_STATE_TYPES)]
+
+        if len(df) == 0:
+            return pd.DataFrame(columns=[
+                "Resource", "Interval_start", "Interval_end", "Time_type",
+                "time_increment", "interval_time", "percentage",
+            ])
+
+        df = df.copy()
+        df["Time_type"] = df["state_type"].map(_STATE_TO_TIME_TYPE)
+        df = df[df["Time_type"].notna()]
+
+        # Split intervals at bucket boundaries
+        result_rows = []
+        for _, row in df.iterrows():
+            rs, re_ = row["t_start"], row["t_end"]
+            first_bucket = int((max(rs, t_from) - t_from) // interval_minutes)
+            last_bucket = int(np.ceil((min(re_, t_to) - t_from) / interval_minutes))
+
+            for b in range(first_bucket, last_bucket):
+                b_start = t_from + b * interval_minutes
+                b_end = min(t_from + (b + 1) * interval_minutes, t_to)
+                seg_start = max(rs, b_start)
+                seg_end = min(re_, b_end)
+                seg_dur = max(0.0, seg_end - seg_start)
+                if seg_dur > 0:
+                    result_rows.append({
+                        "Resource": row["entity_id"],
+                        "Interval_start": b_start,
+                        "Interval_end": b_end,
+                        "Time_type": row["Time_type"],
+                        "time_increment": seg_dur,
+                    })
+
+        if not result_rows:
+            return pd.DataFrame(columns=[
+                "Resource", "Interval_start", "Interval_end", "Time_type",
+                "time_increment", "interval_time", "percentage",
+            ])
+
+        result = pd.DataFrame(result_rows)
+        result = result.groupby(
+            ["Resource", "Interval_start", "Interval_end", "Time_type"],
+            as_index=False,
+        )["time_increment"].sum()
+
+        result["interval_time"] = result["Interval_end"] - result["Interval_start"]
+        result["percentage"] = (result["time_increment"] / result["interval_time"] * 100).clip(0, 100)
+
+        return result.reset_index(drop=True)
+
+    # ── KPI: Scrap ───────────────────────────────────────────────────────
+
+    def scrap_per_product_type(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+        primitive_types: Optional[Set[str]] = None,
+    ) -> pd.DataFrame:
+        """
+        Scrap rate per product type.
+
+        Returns DataFrame with columns:
+            Product_type, Scrap_count, Total_count, Scrap_rate
+        """
+        df = self.resource_intervals(t_from, t_to)
+        prod_end = df[
+            (df["state_type"] == StateTypeEnum.production.value)
+            & (~df["interrupted"])
+            & (df["product_id"].notna())
+        ].copy()
+
+        if primitive_types:
+            prod_end = prod_end[~prod_end["product_type"].isin(primitive_types)]
+
+        if len(prod_end) == 0:
+            return pd.DataFrame(columns=["Product_type", "Scrap_count", "Total_count", "Scrap_rate"])
+
+        ok_col = prod_end["process_ok"].copy()
+        ok_col = ok_col.where(ok_col.notna(), True)
+        prod_end["_ok"] = ok_col.astype(bool)
+
+        total = prod_end.groupby("product_type").size().reset_index(name="Total_count")
+        failed = prod_end[~prod_end["_ok"]].groupby("product_type").size().reset_index(name="Scrap_count")
+
+        result = pd.merge(total, failed, on="product_type", how="left")
+        result["Scrap_count"] = result["Scrap_count"].fillna(0).astype(int)
+        result["Scrap_rate"] = (result["Scrap_count"] / result["Total_count"] * 100).round(2)
+        result = result.rename(columns={"product_type": "Product_type"})
+
+        return result[["Product_type", "Scrap_count", "Total_count", "Scrap_rate"]].reset_index(drop=True)
+
+    def scrap_per_resource(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        Scrap rate per resource.
+
+        Returns DataFrame with columns:
+            Resource, Scrap_count, Total_count, Scrap_rate
+        """
+        df = self.resource_intervals(t_from, t_to)
+        prod_end = df[
+            (df["state_type"] == StateTypeEnum.production.value)
+            & (~df["interrupted"])
+            & (df["entity_id"].notna())
+            & (~df["entity_id"].isin(self._exclude_resources))
+        ].copy()
+
+        if len(prod_end) == 0:
+            return pd.DataFrame(columns=["Resource", "Scrap_count", "Total_count", "Scrap_rate"])
+
+        ok_col = prod_end["process_ok"].copy()
+        ok_col = ok_col.where(ok_col.notna(), True)
+        prod_end["_ok"] = ok_col.astype(bool)
+
+        total = prod_end.groupby("entity_id").size().reset_index(name="Total_count")
+        failed = prod_end[~prod_end["_ok"]].groupby("entity_id").size().reset_index(name="Scrap_count")
+
+        result = pd.merge(total, failed, on="entity_id", how="left")
+        result["Scrap_count"] = result["Scrap_count"].fillna(0).astype(int)
+        result["Scrap_rate"] = (result["Scrap_count"] / result["Total_count"] * 100).round(2)
+        result = result.rename(columns={"entity_id": "Resource"})
+
+        return result[["Resource", "Scrap_count", "Total_count", "Scrap_rate"]].reset_index(drop=True)
+
+    # ── KPI: Production flow ratio ───────────────────────────────────────
+
+    def production_flow_ratio(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        Production flow ratio per product type.
+
+        Returns DataFrame with columns:
+            Product_type, Production, Transport, Idle
+        (values as percentages of throughput time)
+        """
+        df_tpt = self.throughput(t_from, t_to)
+        if len(df_tpt) == 0:
+            return pd.DataFrame(columns=["Product_type", "Production ", "Transport ", "Idle "])
+
+        ri = self.resource_intervals(t_from, t_to)
+
+        # Get finished products
+        finished_products = set(df_tpt["Product"].unique())
+
+        # Production time per product
+        prod_intervals = ri[
+            (ri["state_type"] == StateTypeEnum.production.value)
+            & (ri["product_id"].isin(finished_products))
+            & (~ri["interrupted"])
+        ]
+        prod_time = prod_intervals.groupby("product_id")["duration"].sum().reset_index()
+        prod_time.columns = ["Product", "Production Time"]
+
+        # Transport time per product
+        trans_intervals = ri[
+            (ri["state_type"] == StateTypeEnum.transport.value)
+            & (ri["product_id"].isin(finished_products))
+            & (~ri["interrupted"])
+        ]
+        trans_time = trans_intervals.groupby("product_id")["duration"].sum().reset_index()
+        trans_time.columns = ["Product", "Transport Time"]
+
+        # Also add interrupted segments back (their net productive time)
+        prod_interrupted = ri[
+            (ri["state_type"] == StateTypeEnum.production.value)
+            & (ri["product_id"].isin(finished_products))
+            & (ri["interrupted"])
+        ]
+        if len(prod_interrupted) > 0:
+            prod_int_time = prod_interrupted.groupby("product_id")["duration"].sum().reset_index()
+            prod_int_time.columns = ["Product", "Production Time"]
+            prod_time = pd.concat([prod_time, prod_int_time]).groupby("Product", as_index=False).sum()
+
+        trans_interrupted = ri[
+            (ri["state_type"] == StateTypeEnum.transport.value)
+            & (ri["product_id"].isin(finished_products))
+            & (ri["interrupted"])
+        ]
+        if len(trans_interrupted) > 0:
+            trans_int_time = trans_interrupted.groupby("product_id")["duration"].sum().reset_index()
+            trans_int_time.columns = ["Product", "Transport Time"]
+            trans_time = pd.concat([trans_time, trans_int_time]).groupby("Product", as_index=False).sum()
+
+        # Merge with throughput data
+        merged = df_tpt[["Product", "Product_type", "Throughput_time"]].copy()
+        merged = pd.merge(merged, prod_time, on="Product", how="left")
+        merged = pd.merge(merged, trans_time, on="Product", how="left")
+        merged["Production Time"] = merged["Production Time"].fillna(0)
+        merged["Transport Time"] = merged["Transport Time"].fillna(0)
+        merged["Idle Time"] = merged["Throughput_time"] - merged["Production Time"] - merged["Transport Time"]
+
+        # Aggregate by product type (mean)
+        agg = merged.groupby("Product_type")[["Production Time", "Transport Time", "Idle Time", "Throughput_time"]].mean()
+
+        result = pd.DataFrame({
+            "Product_type": agg.index,
+            "Production ": (agg["Production Time"] / agg["Throughput_time"] * 100).values,
+            "Transport ": (agg["Transport Time"] / agg["Throughput_time"] * 100).values,
+            "Idle ": (agg["Idle Time"] / agg["Throughput_time"] * 100).values,
+        })
+
+        return result.reset_index(drop=True)
+
+    # ── KPI: WIP ─────────────────────────────────────────────────────────
+
+    def wip(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        System WIP over time.
+
+        Returns DataFrame with columns: Time, WIP, WIP_Increment, Product_type
+        """
+        df = self.product_intervals(t_from, t_to)
+
+        created = df[df["state_type"] == "created_product"][["product_id", "product_type", "t_start"]].copy()
+        created.columns = ["Product", "Product_type", "Time"]
+        created["WIP_Increment"] = 1
+
+        finished = df[df["state_type"].isin(["finished_product", "consumed_product"])][["product_id", "product_type", "t_start"]].copy()
+        finished.columns = ["Product", "Product_type", "Time"]
+        finished["WIP_Increment"] = -1
+
+        events = pd.concat([created, finished], ignore_index=True)
+        events = events.sort_values("Time").reset_index(drop=True)
+
+        if len(events) == 0:
+            return pd.DataFrame(columns=["Time", "WIP", "WIP_Increment", "Product_type"])
+
+        events["WIP"] = events["WIP_Increment"].cumsum().clip(lower=0).astype(float)
+        return events[["Time", "WIP", "WIP_Increment", "Product_type", "Product"]].reset_index(drop=True)
+
+    def aggregated_wip(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.Series:
+        """Mean WIP per product type (plus Total)."""
+        df = self.wip(t_from, t_to)
+        if len(df) == 0:
+            return pd.Series(dtype=float, name="WIP")
+
+        # Per product type
+        results = {}
+        for pt in df["Product_type"].dropna().unique():
+            pt_df = df[df["Product_type"] == pt].copy()
+            pt_df["WIP_pt"] = pt_df["WIP_Increment"].cumsum().clip(lower=0).astype(float)
+            results[pt] = pt_df["WIP_pt"].mean()
+
+        # Total
+        results["Total"] = df["WIP"].mean()
+
+        return pd.Series(results, name="WIP")
+
+    # ── KPI: OEE ─────────────────────────────────────────────────────────
+
+    def oee_per_resource(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        OEE per resource: Availability × Performance × Quality.
+
+        Availability = (PR + ST + DP) / (Total - NS)
+          For transport resources: includes SB in numerator.
+        Performance = Total Ideal Time / Total Actual Time
+          Requires production_system_data for ideal cycle times.
+          Transport resources default to 100%.
+        Quality = 1 - (scrap_rate / 100)
+
+        Returns DataFrame with columns:
+            Resource, Availability, Performance, Quality, OEE
+        """
+        rs = self.resource_states(t_from, t_to)
+        if len(rs) == 0:
+            return pd.DataFrame(columns=["Resource", "Availability", "Performance", "Quality", "OEE"])
+
+        transport_ids = self._get_transport_resource_ids()
+        process_ideal_times, resource_capacities, resource_process_caps = self._get_process_metadata()
+
+        scrap_df = self.scrap_per_resource(t_from, t_to)
+        scrap_rates = dict(zip(scrap_df["Resource"], scrap_df["Scrap_rate"])) if len(scrap_df) > 0 else {}
+
+        results = []
+        for resource in rs["Resource"].unique():
+            res_data = rs[rs["Resource"] == resource].set_index("Time_type")
+            time_by_type = res_data["time_increment"].to_dict()
+            resource_time = res_data["resource_time"].iloc[0]
+
+            pr_time = time_by_type.get("PR", 0)
+            st_time = time_by_type.get("ST", 0)
+            dp_time = time_by_type.get("DP", 0)
+            sb_time = time_by_type.get("SB", 0)
+            ns_time = time_by_type.get("NS", 0)
+            is_transport = resource in transport_ids
+
+            scheduled_time = resource_time - ns_time
+            if scheduled_time > 0:
+                if is_transport:
+                    availability = (pr_time + st_time + dp_time + sb_time) / scheduled_time
+                else:
+                    availability = (pr_time + st_time + dp_time) / scheduled_time
+            else:
+                availability = 0.0
+
+            if is_transport or self.production_system_data is None:
+                performance = 1.0
+            else:
+                performance = self._compute_performance(
+                    resource, t_from, t_to, pr_time,
+                    process_ideal_times, resource_capacities, resource_process_caps,
+                )
+
+            scrap_rate = scrap_rates.get(resource, 0)
+            quality = 1 - (scrap_rate / 100)
+
+            oee = availability * performance * quality
+            results.append({
+                "Resource": resource,
+                "Availability": round(availability * 100, 2),
+                "Performance": round(performance * 100, 2),
+                "Quality": round(quality * 100, 2),
+                "OEE": round(oee * 100, 2),
+            })
+
+        return pd.DataFrame(results)
+
+    def oee_production_system(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        System-level OEE as weighted average of resource-level OEEs.
+
+        Returns DataFrame with columns: KPI, Value
+        """
+        df_oee = self.oee_per_resource(t_from, t_to)
+        if len(df_oee) == 0:
+            return pd.DataFrame({
+                "KPI": ["Availability", "Performance", "Quality", "OEE"],
+                "Value": [100.0, 100.0, 100.0, 100.0],
+            })
+
+        rs = self.resource_states(t_from, t_to)
+        resource_weights = {}
+        for resource in rs["Resource"].unique():
+            res_data = rs[rs["Resource"] == resource].set_index("Time_type")
+            resource_time = res_data["resource_time"].iloc[0]
+            ns_time = res_data["time_increment"].to_dict().get("NS", 0)
+            resource_weights[resource] = resource_time - ns_time
+
+        total_weight = sum(resource_weights.values())
+        if total_weight > 0:
+            availability = sum(
+                (row["Availability"] / 100.0) * resource_weights.get(row["Resource"], 0)
+                for _, row in df_oee.iterrows()
+            ) / total_weight
+        else:
+            availability = df_oee["Availability"].mean() / 100.0
+
+        if self.production_system_data is None:
+            performance = 1.0
+        else:
+            total_time = self.simulation_end_time
+            from prodsys.factories.time_model_factory import TimeModelFactory
+            time_model_factory = TimeModelFactory()
+            time_model_factory.create_time_models(self.production_system_data)
+
+            expected_output = 0.0
+            for source_data in self.production_system_data.source_data:
+                try:
+                    time_model = time_model_factory.get_time_model(source_data.time_model_id)
+                    from prodsys.simulation.time_model import ScheduledTimeModel
+                    if isinstance(time_model, ScheduledTimeModel):
+                        schedule = time_model.data.schedule
+                        if time_model.data.absolute:
+                            expected_output += len([t for t in schedule if t <= total_time])
+                        else:
+                            cumulative = 0.0
+                            for interval in schedule:
+                                cumulative += interval
+                                if cumulative <= total_time:
+                                    expected_output += 1
+                                else:
+                                    break
+                    else:
+                        eit = time_model.get_expected_time()
+                        if eit > 0:
+                            expected_output += total_time / eit
+                except (ValueError, TypeError, AttributeError):
+                    continue
+
+            actual_output = self.aggregated_output(t_from, t_to).sum()
+            performance = (actual_output / expected_output) if expected_output > 0 else 1.0
+
+        df_output = self.aggregated_output_and_throughput(t_from, t_to)
+        total_units = df_output["Output"].sum() if len(df_output) > 0 else 0
+        if total_units > 0:
+            scrap = self.scrap_per_product_type(t_from, t_to)
+            if len(scrap) > 0:
+                total_scrap = (scrap["Scrap_count"]).sum()
+                quality = (total_units - total_scrap) / total_units
+            else:
+                quality = 1.0
+        else:
+            quality = 1.0
+
+        oee = availability * performance * quality
+        return pd.DataFrame({
+            "KPI": ["Availability", "Performance", "Quality", "OEE"],
+            "Value": [
+                round(availability * 100, 2),
+                round(performance * 100, 2),
+                round(quality * 100, 2),
+                round(oee * 100, 2),
+            ],
+        })
+
+    def _get_transport_resource_ids(self) -> set:
+        if self.production_system_data is None:
+            return set()
+        try:
+            from prodsys.models.production_system_data import get_transport_resources
+            return {r.ID for r in get_transport_resources(self.production_system_data)}
+        except (ImportError, AttributeError):
+            return set()
+
+    def _get_process_metadata(self) -> tuple[dict, dict, dict]:
+        """Returns (process_ideal_times, resource_capacities, resource_process_capacities)."""
+        process_ideal_times: dict[str, float] = {}
+        resource_capacities: dict[str, int] = {}
+        resource_process_caps: dict[str, dict[str, int]] = {}
+
+        if self.production_system_data is None:
+            return process_ideal_times, resource_capacities, resource_process_caps
+
+        from prodsys.factories.time_model_factory import TimeModelFactory
+        tmf = TimeModelFactory()
+        tmf.create_time_models(self.production_system_data)
+
+        for proc in self.production_system_data.process_data:
+            if hasattr(proc, "time_model_id"):
+                try:
+                    tm = tmf.get_time_model(proc.time_model_id)
+                    ict = tm.get_expected_time()
+                    if ict > 0:
+                        process_ideal_times[proc.ID] = ict
+                except (ValueError, TypeError):
+                    pass
+
+        for res in self.production_system_data.resource_data:
+            resource_capacities[res.ID] = getattr(res, "capacity", 1) or 1
+            if hasattr(res, "process_capacities") and res.process_capacities and hasattr(res, "process_ids"):
+                rpc = {}
+                for i, pid in enumerate(res.process_ids):
+                    if i < len(res.process_capacities):
+                        rpc[pid] = res.process_capacities[i]
+                resource_process_caps[res.ID] = rpc
+
+        return process_ideal_times, resource_capacities, resource_process_caps
+
+    def oee_per_resource_by_interval(
+        self,
+        interval_minutes: float,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        OEE per resource aggregated by time intervals.
+
+        Returns DataFrame with columns:
+            Resource, Interval_start, Interval_end, Availability,
+            Performance, Quality, OEE
+        """
+        rs = self.resource_states_by_interval(interval_minutes, t_from, t_to)
+        if len(rs) == 0:
+            return pd.DataFrame(columns=[
+                "Resource", "Interval_start", "Interval_end",
+                "Availability", "Performance", "Quality", "OEE",
+            ])
+
+        transport_ids = self._get_transport_resource_ids()
+        process_ideal_times, resource_capacities, resource_process_caps = self._get_process_metadata()
+
+        scrap_df = self.scrap_per_resource(t_from, t_to)
+        scrap_rates = dict(zip(scrap_df["Resource"], scrap_df["Scrap_rate"])) if len(scrap_df) > 0 else {}
+
+        pivot = rs.pivot_table(
+            index=["Resource", "Interval_start", "Interval_end"],
+            columns="Time_type",
+            values="time_increment",
+            fill_value=0,
+        ).reset_index()
+
+        for col in ("PR", "ST", "DP", "SB", "NS", "UD", "CR"):
+            if col not in pivot.columns:
+                pivot[col] = 0.0
+
+        pivot["interval_time"] = pivot["Interval_end"] - pivot["Interval_start"]
+        pivot["scheduled_time"] = pivot["interval_time"] - pivot["NS"]
+
+        is_transport = pivot["Resource"].isin(transport_ids)
+        avail_num = np.where(
+            is_transport,
+            pivot["PR"] + pivot["ST"] + pivot["DP"] + pivot["SB"],
+            pivot["PR"] + pivot["ST"] + pivot["DP"],
+        )
+        pivot["availability"] = np.where(
+            pivot["scheduled_time"] > 0,
+            avail_num / pivot["scheduled_time"],
+            0.0,
+        )
+
+        # Performance per interval
+        if self.production_system_data is not None and len(process_ideal_times) > 0:
+            perf_values = []
+            for _, row in pivot.iterrows():
+                res = row["Resource"]
+                if res in transport_ids:
+                    perf_values.append(1.0)
+                    continue
+                i_start = row["Interval_start"]
+                i_end = row["Interval_end"]
+                ri = self.resource_intervals(i_start, i_end, resource=res)
+                prod = ri[
+                    (ri["state_type"] == StateTypeEnum.production.value)
+                    & (~ri["interrupted"])
+                ]
+                if len(prod) == 0:
+                    perf_values.append(1.0)
+                    continue
+                res_cap = resource_capacities.get(res, 1)
+                rpc = resource_process_caps.get(res, {})
+                total_ideal = 0.0
+                total_actual = 0.0
+                for _, p_row in prod.iterrows():
+                    actual = p_row["duration"]
+                    if actual <= 0:
+                        continue
+                    clipped = min(p_row["t_end"], i_end) - max(p_row["t_start"], i_start)
+                    if clipped <= 0:
+                        continue
+                    total_actual += clipped
+                    sid = p_row["state_id"]
+                    if sid in process_ideal_times:
+                        pc = rpc.get(sid, res_cap)
+                        ideal_per = process_ideal_times[sid] / pc if pc > 0 else process_ideal_times[sid]
+                        proportion = clipped / actual if actual > 0 else 0
+                        total_ideal += ideal_per * pc * proportion
+                    else:
+                        total_ideal += clipped
+                if total_actual > 0 and total_ideal > 0:
+                    perf_values.append(total_ideal / total_actual)
+                else:
+                    perf_values.append(1.0)
+            pivot["performance"] = perf_values
+        else:
+            pivot["performance"] = 1.0
+
+        pivot["scrap_rate"] = pivot["Resource"].map(scrap_rates).fillna(0)
+        pivot["quality"] = 1 - (pivot["scrap_rate"] / 100)
+        pivot["oee"] = pivot["availability"] * pivot["performance"] * pivot["quality"]
+
+        return pd.DataFrame({
+            "Resource": pivot["Resource"],
+            "Interval_start": pivot["Interval_start"],
+            "Interval_end": pivot["Interval_end"],
+            "Availability": (pivot["availability"] * 100).round(2),
+            "Performance": (pivot["performance"] * 100).round(2),
+            "Quality": (pivot["quality"] * 100).round(2),
+            "OEE": (pivot["oee"] * 100).round(2),
+        }).reset_index(drop=True)
+
+    def _compute_performance(
+        self,
+        resource: str,
+        t_from: float,
+        t_to: Optional[float],
+        pr_time: float,
+        process_ideal_times: dict,
+        resource_capacities: dict,
+        resource_process_caps: dict,
+    ) -> float:
+        ri = self.resource_intervals(t_from, t_to, resource=resource)
+        prod_intervals = ri[
+            (ri["state_type"] == StateTypeEnum.production.value)
+            & (~ri["interrupted"])
+        ]
+        total_units = len(prod_intervals)
+        if total_units == 0:
+            return 0.0
+
+        res_cap = resource_capacities.get(resource, 1)
+        rpc = resource_process_caps.get(resource, {})
+
+        total_ideal = 0.0
+        total_actual = 0.0
+        for _, row in prod_intervals.iterrows():
+            state_id = row["state_id"]
+            actual = row["duration"]
+            if actual <= 0:
+                continue
+            total_actual += actual
+            if state_id in process_ideal_times:
+                pc = rpc.get(state_id, res_cap)
+                ideal_per_unit = process_ideal_times[state_id] / pc if pc > 0 else process_ideal_times[state_id]
+                total_ideal += ideal_per_unit * pc
+            else:
+                total_ideal += actual
+
+        if total_actual > 0 and total_ideal > 0:
+            return total_ideal / total_actual
+        elif pr_time > 0 and total_ideal > 0:
+            return total_ideal / pr_time
+        return 0.0
+
+
+# ── Helper functions ─────────────────────────────────────────────────────
+
+def _merge_intervals(intervals: list[list | tuple]) -> list[tuple[float, float]]:
+    """Merge overlapping intervals into non-overlapping set."""
+    if not intervals:
+        return []
+    sorted_iv = sorted(intervals, key=lambda x: x[0])
+    merged = [list(sorted_iv[0])]
+    for start, end in sorted_iv[1:]:
+        if start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return [(s, e) for s, e in merged]
+
+
+def _overlap_duration(
+    intervals_a: list[list | tuple],
+    intervals_b: list[tuple[float, float]],
+) -> float:
+    """Calculate total overlap duration between two sets of intervals."""
+    total = 0.0
+    for a_start, a_end in intervals_a:
+        for b_start, b_end in intervals_b:
+            overlap_start = max(a_start, b_start)
+            overlap_end = min(a_end, b_end)
+            if overlap_start < overlap_end:
+                total += overlap_end - overlap_start
+    return total
