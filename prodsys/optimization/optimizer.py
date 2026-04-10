@@ -452,8 +452,9 @@ class FileSystemSaveOptimizer(Optimizer):
         initial_solutions: Optional[list[ProductionSystemData]] = None,
         smart_initial_solutions: Optional[bool] = False,
         full_save: bool = False,
+        base_validation: BaseValidationMode = "strict",
     ) -> None:
-        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save)
+        super().__init__(adapter, hyperparameters, initial_solutions, smart_initial_solutions, full_save, base_validation)
         self.save_folder = save_folder
         self.configuration_cache: dict[str, ProductionSystemData] = {}
         util.prepare_save_folder(self.save_folder + "/")

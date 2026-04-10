@@ -535,7 +535,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                     next_process = process_sequence[0]
                     possible_current_resources = [
                         source for source in adapter_object.source_data
-                        if source.product_type == product.ID
+                        if hasattr(source, "product_type") and source.product_type == product.ID
                     ]
                     possible_next_resources = [
                         resource for resource in adapter_object.resource_data
@@ -585,7 +585,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
         else: #only one process in sequence
             possible_sources = [
                 source for source in adapter_object.source_data
-                if source.product_type == product.ID
+                if hasattr(source, "product_type") and source.product_type == product.ID
             ]
             possible_resources = [
                 resource for resource in adapter_object.resource_data
@@ -1351,16 +1351,43 @@ def configuration_capacity_based(
 
     # Calculate product arrival rates from sources
     product_arrival_rates = {}
+    orders_per_id = {o.ID: o for o in adapter_object.order_data}
     for source in adapter_object.source_data:
-        time_model_data = time_models_per_id.get(source.time_model_id)
-        product_id = source.product_type
-        if time_model_data:
-            # Use mean of interarrival time model
-            mean_interarrival = time_model_data.location
-            rate = 1.0 / mean_interarrival if mean_interarrival > 0 else 0
-            product_arrival_rates[product_id] = (
-                product_arrival_rates.get(product_id, 0) + rate
-            )
+        if hasattr(source, "time_model_id") and hasattr(source, "product_type"):
+            # Standard SourceData: arrival rate from the interarrival time model
+            time_model_data = time_models_per_id.get(source.time_model_id)
+            product_id = source.product_type
+            if time_model_data:
+                mean_interarrival = time_model_data.location
+                rate = 1.0 / mean_interarrival if mean_interarrival > 0 else 0
+                product_arrival_rates[product_id] = (
+                    product_arrival_rates.get(product_id, 0) + rate
+                )
+        elif hasattr(source, "order_ids"):
+            # OrderSourceData: derive arrival rate from order release times
+            product_order_times: dict = {}
+            for order_id in source.order_ids:
+                order = orders_per_id.get(order_id)
+                if order is None:
+                    continue
+                for ordered_product in order.ordered_products:
+                    pt = ordered_product.product_type
+                    t = order.order_time
+                    product_order_times.setdefault(pt, []).append(t)
+            for product_type, times in product_order_times.items():
+                times_sorted = sorted(times)
+                if len(times_sorted) > 1:
+                    interarrivals = [
+                        times_sorted[i + 1] - times_sorted[i]
+                        for i in range(len(times_sorted) - 1)
+                    ]
+                    mean_ia = sum(interarrivals) / len(interarrivals)
+                    rate = 1.0 / mean_ia if mean_ia > 0 else 0.0
+                else:
+                    rate = 0.0
+                product_arrival_rates[product_type] = (
+                    product_arrival_rates.get(product_type, 0) + rate
+                )
 
     # Helper function for transport time calculation (simplified - no runner needed)
     def estimate_transport_time(time_model_data: TIME_MODEL_DATA) -> float:
@@ -1442,6 +1469,11 @@ def configuration_capacity_based(
 
     # Combine requirements
     all_requirements = {**process_requirements, **transport_requirements}
+    if not all_requirements:
+        raise ValueError(
+            "No process requirements could be derived from the baseline configuration. "
+            "Ensure products have matching processes and sources supply valid arrival rates."
+        )
     requirements_df = pd.DataFrame(all_requirements.values())
     requirements_df["requested_rate"] = (
         requirements_df["num_instances"] * requirements_df["product_arrival_rate"]

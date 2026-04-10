@@ -723,7 +723,8 @@ class AnalyticsStore:
             ns_time = time_by_type.get("NS", 0)
             is_transport = resource in transport_ids
 
-            scheduled_time = resource_time - ns_time
+            capacity = resource_capacities.get(resource, 1)
+            scheduled_time = (resource_time - ns_time) * capacity
             if scheduled_time > 0:
                 if is_transport:
                     availability = (pr_time + st_time + dp_time + sb_time) / scheduled_time
@@ -772,12 +773,14 @@ class AnalyticsStore:
             })
 
         rs = self.resource_states(t_from, t_to)
+        _, resource_capacities, _ = self._get_process_metadata()
         resource_weights = {}
         for resource in rs["Resource"].unique():
             res_data = rs[rs["Resource"] == resource].set_index("Time_type")
             resource_time = res_data["resource_time"].iloc[0]
             ns_time = res_data["time_increment"].to_dict().get("NS", 0)
-            resource_weights[resource] = resource_time - ns_time
+            capacity = resource_capacities.get(resource, 1)
+            resource_weights[resource] = (resource_time - ns_time) * capacity
 
         total_weight = sum(resource_weights.values())
         if total_weight > 0:
@@ -927,7 +930,8 @@ class AnalyticsStore:
                 pivot[col] = 0.0
 
         pivot["interval_time"] = pivot["Interval_end"] - pivot["Interval_start"]
-        pivot["scheduled_time"] = pivot["interval_time"] - pivot["NS"]
+        pivot["_capacity"] = pivot["Resource"].map(resource_capacities).fillna(1).astype(int)
+        pivot["scheduled_time"] = (pivot["interval_time"] - pivot["NS"]) * pivot["_capacity"]
 
         is_transport = pivot["Resource"].isin(transport_ids)
         avail_num = np.where(
