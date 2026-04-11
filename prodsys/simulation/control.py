@@ -207,6 +207,12 @@ class Controller:
                     continue
                 selected_request = lot_request
                 
+            # Re-check capacity with live computation: a spawned handler may have
+            # called reserve_setup between iterations, reducing capacity_current_setup.
+            if selected_request.capacity_required > self.resource.get_free_capacity():
+                self.requests.append(selected_request)
+                continue
+
             # Reserve output queue for transport requests (production requests reserve in their handler)
             if selected_request.request_type == request_module.RequestType.TRANSPORT:
                 self.reserve_output_queue(selected_request)

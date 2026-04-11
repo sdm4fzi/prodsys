@@ -455,37 +455,33 @@ class AnalyticsStore:
 
         df = df.copy()
         df["Time_type"] = df["state_type"].map(_STATE_TO_TIME_TYPE)
-        df = df[df["Time_type"].notna()]
+        df = df[df["Time_type"].notna()].reset_index(drop=True)
 
-        # Split intervals at bucket boundaries
-        result_rows = []
-        for _, row in df.iterrows():
-            rs, re_ = row["t_start"], row["t_end"]
-            first_bucket = int((max(rs, t_from) - t_from) // interval_minutes)
-            last_bucket = int(np.ceil((min(re_, t_to) - t_from) / interval_minutes))
-
-            for b in range(first_bucket, last_bucket):
-                b_start = t_from + b * interval_minutes
-                b_end = min(t_from + (b + 1) * interval_minutes, t_to)
-                seg_start = max(rs, b_start)
-                seg_end = min(re_, b_end)
-                seg_dur = max(0.0, seg_end - seg_start)
-                if seg_dur > 0:
-                    result_rows.append({
-                        "Resource": row["entity_id"],
-                        "Interval_start": b_start,
-                        "Interval_end": b_end,
-                        "Time_type": row["Time_type"],
-                        "time_increment": seg_dur,
-                    })
-
-        if not result_rows:
+        if len(df) == 0:
             return pd.DataFrame(columns=[
                 "Resource", "Interval_start", "Interval_end", "Time_type",
                 "time_increment", "interval_time", "percentage",
             ])
 
-        result = pd.DataFrame(result_rows)
+        # Vectorised interval-to-bucket splitting (replaces Python iterrows loop).
+        iv_idx, bucket_nums, b_start, b_end, clipped = _split_intervals_to_buckets(
+            df["t_start"].values, df["t_end"].values, t_from, t_to, interval_minutes
+        )
+
+        if len(iv_idx) == 0:
+            return pd.DataFrame(columns=[
+                "Resource", "Interval_start", "Interval_end", "Time_type",
+                "time_increment", "interval_time", "percentage",
+            ])
+
+        result = pd.DataFrame({
+            "Resource":       df["entity_id"].values[iv_idx],
+            "Interval_start": b_start,
+            "Interval_end":   b_end,
+            "Time_type":      df["Time_type"].values[iv_idx],
+            "time_increment": clipped,
+        })
+
         result = result.groupby(
             ["Resource", "Interval_start", "Interval_end", "Time_type"],
             as_index=False,
@@ -973,70 +969,91 @@ class AnalyticsStore:
             0.0,
         )
 
-        # Performance per interval
+        # Performance per interval — fully vectorised (no Python loop per bucket).
+        #
+        # Strategy:
+        #   1. Pull all non-transport production intervals once from the full window.
+        #   2. Split each interval across bucket boundaries (same numpy ragged-repeat
+        #      technique used by resource_states_by_interval).
+        #   3. Compute ideal-time contribution for every segment in bulk:
+        #        • state_id unknown           → neutral credit (clipped duration)
+        #        • resumed-tail (actual < 80% of ideal lot time) → neutral credit
+        #        • genuine lot               → full_lot_ideal × (clipped / actual)
+        #      Note: full_lot_ideal = process_ideal_times[sid] because the capacity
+        #      factor pc cancels: ideal_per_unit = ideal/pc, full = ideal_per_unit×pc.
+        #   4. groupby(resource, bucket) → total_actual and total_ideal per bucket.
+        #   5. performance = total_ideal / total_actual; default 1.0 where no data.
         if self.production_system_data is not None and len(process_ideal_times) > 0:
-            perf_values = []
-            for _, row in pivot.iterrows():
-                res = row["Resource"]
-                if res in transport_ids:
-                    perf_values.append(1.0)
-                    continue
-                i_start = row["Interval_start"]
-                i_end = row["Interval_end"]
-                ri = self.resource_intervals(i_start, i_end, resource=res)
-                prod = ri[
-                    (ri["state_type"] == StateTypeEnum.production.value)
-                    & (~ri["interrupted"])
-                ]
-                if len(prod) == 0:
-                    perf_values.append(1.0)
-                    continue
-                res_cap = resource_capacities.get(res, 1)
-                rpc = resource_process_caps.get(res, {})
-                total_ideal = 0.0
-                total_actual = 0.0
-                for _, p_row in prod.iterrows():
-                    actual = p_row["duration"]
-                    if actual <= 0:
-                        continue
-                    clipped = min(p_row["t_end"], i_end) - max(p_row["t_start"], i_start)
-                    if clipped <= 0:
-                        continue
-                    total_actual += clipped
-                    sid = p_row["state_id"]
-                    if sid in process_ideal_times:
-                        pc = rpc.get(sid, res_cap)
-                        ideal_per = process_ideal_times[sid] / pc if pc > 0 else process_ideal_times[sid]
-                        full_lot_ideal = ideal_per * pc
-                        # Resumed-tail detection: after a breakdown the interrupted portion
-                        # is emitted with interrupted=True (filtered out) while the short
-                        # resumed tail is emitted with interrupted=False and a duration that
-                        # is only a fraction of the lot time.  If actual is less than half
-                        # the ideal lot time it is almost certainly such a tail, not a
-                        # genuinely fast complete lot.  For tails we credit proportional
-                        # ideal time (= clipped) so they contribute 100 % performance and
-                        # don't distort the bucket.  For genuine lots we use the original
-                        # clipped/actual proportion so fast machines show Performance > 100 %.
-                        # Resumed-tail threshold: 80 % of ideal lot time.
-                        # Normal-distribution time models have std ≈ 5 % of mean,
-                        # so a genuine lot is always within ~15 % of ideal (3 σ).
-                        # Anything shorter than 80 % of ideal is statistically
-                        # impossible as a genuine run and must be a tail after a
-                        # breakdown interruption.  Such tails get neutral credit
-                        # (performance = 1.0) to avoid inflating the bucket.
-                        if full_lot_ideal > 0 and actual < full_lot_ideal * 0.80:
-                            # Resumed tail: neutral credit (performance = 1.0 contribution)
-                            total_ideal += clipped
-                        else:
-                            proportion = clipped / actual
-                            total_ideal += full_lot_ideal * proportion
-                    else:
-                        total_ideal += clipped
-                if total_actual > 0 and total_ideal > 0:
-                    perf_values.append(total_ideal / total_actual)
+            ri_all = self.resource_intervals(t_from, t_to)
+            prod_all = ri_all[
+                (ri_all["state_type"] == StateTypeEnum.production.value)
+                & (~ri_all["interrupted"])
+                & (~ri_all["entity_id"].isin(transport_ids))
+            ].reset_index(drop=True)
+
+            if len(prod_all) > 0:
+                p_t_s   = prod_all["t_start"].values
+                p_t_e   = prod_all["t_end"].values
+                p_dur   = prod_all["duration"].values
+                p_res   = prod_all["entity_id"].values
+                p_sid   = prod_all["state_id"].values
+
+                # Lookup ideal lot time per row (0.0 when state_id not known)
+                p_ideal = np.array([process_ideal_times.get(s, 0.0) for s in p_sid])
+                # Resumed-tail flag: actual duration < 80 % of ideal lot time
+                p_tail  = (p_ideal > 0) & (p_dur < p_ideal * 0.80)
+
+                # Vectorised bucket splitting
+                iv_idx, bucket_nums, b_start_p, _, clipped_p = _split_intervals_to_buckets(
+                    p_t_s, p_t_e, t_from, t_to if t_to is not None else self.simulation_end_time, interval_minutes
+                )
+
+                if len(iv_idx) > 0:
+                    dur_seg   = p_dur[iv_idx]
+                    ideal_seg = p_ideal[iv_idx]
+                    tail_seg  = p_tail[iv_idx]
+
+                    # Proportional ideal contribution per segment:
+                    #   unknown state → neutral (clipped)
+                    #   resumed tail  → neutral (clipped)
+                    #   genuine lot   → full_lot_ideal × clipped / actual
+                    proportion = np.where(dur_seg > 0, clipped_p / dur_seg, 0.0)
+                    ideal_contrib = np.where(
+                        ideal_seg <= 0,
+                        clipped_p,                      # state_id not in model
+                        np.where(
+                            tail_seg,
+                            clipped_p,                  # resumed-tail: neutral credit
+                            ideal_seg * proportion,     # genuine lot: proportional
+                        ),
+                    )
+
+                    perf_df = pd.DataFrame({
+                        "Resource":       p_res[iv_idx],
+                        "Interval_start": b_start_p,
+                        "actual":         clipped_p,
+                        "ideal":          ideal_contrib,
+                    })
+                    perf_grouped = (
+                        perf_df
+                        .groupby(["Resource", "Interval_start"], as_index=False)
+                        .agg(total_actual=("actual", "sum"), total_ideal=("ideal", "sum"))
+                    )
+                    perf_grouped["performance"] = np.where(
+                        (perf_grouped["total_actual"] > 0) & (perf_grouped["total_ideal"] > 0),
+                        perf_grouped["total_ideal"] / perf_grouped["total_actual"],
+                        1.0,
+                    )
+                    pivot = pivot.merge(
+                        perf_grouped[["Resource", "Interval_start", "performance"]],
+                        on=["Resource", "Interval_start"],
+                        how="left",
+                    )
+                    pivot["performance"] = pivot["performance"].fillna(1.0)
                 else:
-                    perf_values.append(1.0)
-            pivot["performance"] = perf_values
+                    pivot["performance"] = 1.0
+            else:
+                pivot["performance"] = 1.0
         else:
             pivot["performance"] = 1.0
 
@@ -1072,25 +1089,18 @@ class AnalyticsStore:
         if len(prod) == 0:
             return 0.0
 
-        res_cap = resource_capacities.get(resource, 1)
-        rpc = resource_process_caps.get(resource, {})
-
-        durations = prod["duration"].values
-        state_ids = prod["state_id"].values
-        valid = durations > 0
+        durations  = prod["duration"].values
+        state_ids  = prod["state_id"].values
+        valid      = durations > 0
         total_actual = float(durations[valid].sum())
 
-        total_ideal = 0.0
-        for i in range(len(state_ids)):
-            if not valid[i]:
-                continue
-            sid = state_ids[i]
-            if sid in process_ideal_times:
-                pc = rpc.get(sid, res_cap)
-                ideal_per_unit = process_ideal_times[sid] / pc if pc > 0 else process_ideal_times[sid]
-                total_ideal += ideal_per_unit * pc
-            else:
-                total_ideal += float(durations[i])
+        # Vectorised ideal-time sum.
+        # full_lot_ideal = process_ideal_times[sid] because pc cancels:
+        #   ideal_per_unit = ideal/pc  →  ideal_per_unit × pc = ideal.
+        # When state_id is unknown, fall back to the actual duration (neutral).
+        ideal_times = np.array([process_ideal_times.get(s, 0.0) for s in state_ids[valid]])
+        dur_valid   = durations[valid]
+        total_ideal = float(np.where(ideal_times > 0, ideal_times, dur_valid).sum())
 
         if total_actual > 0 and total_ideal > 0:
             return total_ideal / total_actual
@@ -1100,6 +1110,85 @@ class AnalyticsStore:
 
 
 # ── Helper functions ─────────────────────────────────────────────────────
+
+def _split_intervals_to_buckets(
+    t_start: np.ndarray,
+    t_end: np.ndarray,
+    t_from: float,
+    t_to: float,
+    bucket_size: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Vectorised interval-to-fixed-bucket splitting using the numpy ragged-repeat
+    pattern.  No Python loops — O(total_segments) in pure numpy.
+
+    For every input interval that overlaps the query window [t_from, t_to] and
+    at least one bucket boundary, emits one output row per overlapping bucket.
+
+    Parameters
+    ----------
+    t_start, t_end : numpy arrays of interval start / end times.
+    t_from, t_to   : query window boundaries.
+    bucket_size    : width of each bucket in the same time unit.
+
+    Returns
+    -------
+    iv_idx      : index into the *input* arrays for each output segment.
+    bucket_nums : zero-based bucket index for each output segment.
+    b_start     : bucket start time for each output segment.
+    b_end       : bucket end time  for each output segment (capped at t_to).
+    clipped     : duration of the segment's overlap with its bucket (> 0 always).
+    """
+    n = len(t_start)
+    if n == 0:
+        empty_i = np.empty(0, dtype=np.int64)
+        empty_f = np.empty(0, dtype=np.float64)
+        return empty_i, empty_i, empty_f, empty_f, empty_f
+
+    eff_start = np.maximum(t_start, t_from)
+    eff_end   = np.minimum(t_end,   t_to)
+
+    first_bkt = np.floor((eff_start - t_from) / bucket_size).astype(np.int64)
+    last_bkt  = np.ceil((eff_end    - t_from) / bucket_size).astype(np.int64)  # exclusive
+    n_segs    = np.maximum(last_bkt - first_bkt, 0)
+
+    valid = n_segs > 0
+    if not valid.any():
+        empty_i = np.empty(0, dtype=np.int64)
+        empty_f = np.empty(0, dtype=np.float64)
+        return empty_i, empty_i, empty_f, empty_f, empty_f
+
+    orig_idx    = np.where(valid)[0]          # positions in the input arrays
+    n_segs_v    = n_segs[valid]
+    first_bkt_v = first_bkt[valid]
+    t_s_v       = t_start[valid]
+    t_e_v       = t_end[valid]
+
+    total = int(n_segs_v.sum())
+
+    # Ragged-repeat trick: generate local offsets [0..n_segs[i]-1] for every i
+    # without any Python-level loop.
+    cumsum_v   = np.concatenate([[0], np.cumsum(n_segs_v[:-1])])
+    row_idx    = np.arange(total)
+    resets     = np.repeat(cumsum_v, n_segs_v)
+    local_off  = row_idx - resets                              # offset within each interval's range
+
+    bucket_nums  = np.repeat(first_bkt_v, n_segs_v) + local_off
+    iv_local_idx = np.repeat(np.arange(len(orig_idx)), n_segs_v)  # index into valid subset
+
+    b_start = t_from + bucket_nums * bucket_size
+    b_end   = np.minimum(t_from + (bucket_nums + 1) * bucket_size, t_to)
+
+    seg_start = np.maximum(t_s_v[iv_local_idx], b_start)
+    seg_end   = np.minimum(t_e_v[iv_local_idx], b_end)
+    clipped   = np.maximum(0.0, seg_end - seg_start)
+
+    # Discard zero-duration segments (rare, but possible at exact boundaries)
+    pos = clipped > 0
+    iv_idx = orig_idx[iv_local_idx[pos]]  # map back to original input indices
+
+    return iv_idx, bucket_nums[pos], b_start[pos], b_end[pos], clipped[pos]
+
 
 def _compute_row_overlap_vectorized(rows: pd.DataFrame, ref: pd.DataFrame) -> pd.Series:
     """
