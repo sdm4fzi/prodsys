@@ -138,6 +138,34 @@ class AnalyticsStore:
         """Alias for ingest_events, for incremental append."""
         self.ingest_events(df_raw)
 
+    def finalize_at(self, t: float) -> None:
+        """Snapshot still-open intervals at time ``t`` and merge them into the
+        closed-interval store for KPI computation.
+
+        Use this when comparing a partial store (built from a truncated event
+        log) against a full store queried at a split boundary.  The builder
+        only closes resource intervals when their matching "end state" event
+        arrives; intervals that straddle the split point are therefore absent
+        from a standalone partial store.  ``finalize_at`` materialises those
+        intervals so both stores see the same resource time in [0, t].
+
+        .. warning::
+            Do **not** call this on a store that will receive further events.
+            The builder state is unchanged: if a real "end state" event later
+            arrives the interval will be emitted a second time, causing
+            double-counting.
+        """
+        snapshot = self.builder.snapshot_open(t)
+        if len(snapshot) == 0:
+            return
+        self._t_max = max(self._t_max, t)
+        if self._intervals is None or len(self._intervals) == 0:
+            self._intervals = snapshot
+        else:
+            self._intervals = pd.concat([self._intervals, snapshot], ignore_index=True)
+        self._ri_cache = None
+        self._ri_cache_key = None
+
     # ── Interval access ──────────────────────────────────────────────────
 
     @property
@@ -979,8 +1007,29 @@ class AnalyticsStore:
                     if sid in process_ideal_times:
                         pc = rpc.get(sid, res_cap)
                         ideal_per = process_ideal_times[sid] / pc if pc > 0 else process_ideal_times[sid]
-                        proportion = clipped / actual if actual > 0 else 0
-                        total_ideal += ideal_per * pc * proportion
+                        full_lot_ideal = ideal_per * pc
+                        # Resumed-tail detection: after a breakdown the interrupted portion
+                        # is emitted with interrupted=True (filtered out) while the short
+                        # resumed tail is emitted with interrupted=False and a duration that
+                        # is only a fraction of the lot time.  If actual is less than half
+                        # the ideal lot time it is almost certainly such a tail, not a
+                        # genuinely fast complete lot.  For tails we credit proportional
+                        # ideal time (= clipped) so they contribute 100 % performance and
+                        # don't distort the bucket.  For genuine lots we use the original
+                        # clipped/actual proportion so fast machines show Performance > 100 %.
+                        # Resumed-tail threshold: 80 % of ideal lot time.
+                        # Normal-distribution time models have std ≈ 5 % of mean,
+                        # so a genuine lot is always within ~15 % of ideal (3 σ).
+                        # Anything shorter than 80 % of ideal is statistically
+                        # impossible as a genuine run and must be a tail after a
+                        # breakdown interruption.  Such tails get neutral credit
+                        # (performance = 1.0) to avoid inflating the bucket.
+                        if full_lot_ideal > 0 and actual < full_lot_ideal * 0.80:
+                            # Resumed tail: neutral credit (performance = 1.0 contribution)
+                            total_ideal += clipped
+                        else:
+                            proportion = clipped / actual
+                            total_ideal += full_lot_ideal * proportion
                     else:
                         total_ideal += clipped
                 if total_actual > 0 and total_ideal > 0:

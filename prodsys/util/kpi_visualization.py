@@ -394,14 +394,19 @@ def plot_oee_over_time(
             col=2,
         )
     
-    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=1)
-    fig.update_xaxes(title_text="Time [Minutes]", row=2, col=2)
+    fig.update_xaxes(title_text="Time", row=2, col=1)
+    fig.update_xaxes(title_text="Time", row=2, col=2)
     fig.update_yaxes(title_text="Percentage [%]", row=1, col=1)
     fig.update_yaxes(title_text="Percentage [%]", row=1, col=2)
     fig.update_yaxes(title_text="Percentage [%]", row=2, col=1)
     fig.update_yaxes(title_text="Percentage [%]", row=2, col=2)
-    fig.update_yaxes(range=[0, 100])
-    
+    # Availability, Quality, and OEE are bounded to [0, 100]; Performance can
+    # legitimately exceed 100 % when machines run faster than their ideal time.
+    fig.update_yaxes(range=[0, 100], row=1, col=1)
+    fig.update_yaxes(range=[0, 125], row=1, col=2)  # Performance
+    fig.update_yaxes(range=[0, 100], row=2, col=1)
+    fig.update_yaxes(range=[0, 100], row=2, col=2)
+
     fig.update_layout(
         title_text="OEE Over Time",
         height=800,

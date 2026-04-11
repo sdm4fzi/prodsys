@@ -1351,7 +1351,7 @@ def configuration_capacity_based(
 
     # Calculate product arrival rates from sources
     product_arrival_rates = {}
-    orders_per_id = {o.ID: o for o in adapter_object.order_data}
+    orders_per_id = {o.ID: o for o in (adapter_object.order_data or [])}
     for source in adapter_object.source_data:
         if hasattr(source, "time_model_id") and hasattr(source, "product_type"):
             # Standard SourceData: arrival rate from the interarrival time model

@@ -335,7 +335,7 @@ class Runner:
 
     def plot_results(self):
         """
-        Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution and the time per state of the resources.
+        Plots the aggregated simulation results, comprising the throughput time over time, WIP over time, throughput time distribution, the time per state of the resources, and OEE over time.
         """
         p = self.get_post_processor()
         from prodsys.util import kpi_visualization
@@ -369,7 +369,6 @@ class Runner:
         )
         kpi_visualization.plot_WIP_resource_boxplots(p)
         kpi_visualization.plot_oee(p)
-        # Plot OEE and resource states over time
         kpi_visualization.plot_oee_over_time(p)
         kpi_visualization.plot_oee_system_over_time(p)
         kpi_visualization.plot_resource_states_over_time(p)
