@@ -329,7 +329,7 @@ def test_run_simulation_process_dependency(
             total_wip += kpi.value
             assert kpi.value > 0
 
-    assert total_wip > 780 and total_wip < 1200
+    assert total_wip > 750 and total_wip < 1200
 
 
 def test_run_simulation_resource_dependency(

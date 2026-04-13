@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import copy
 import itertools
 from typing import Callable, Iterator, List, Optional, Tuple, Union
 from typing_extensions import deprecated
@@ -113,6 +114,15 @@ class FunctionTimeModel(TimeModel):
     def _fill_buffer(self):
         distribution_function = FUNCTION_DICT[self.data.distribution_function]
         self.statistics_buffer = distribution_function(self.data)
+
+    def __deepcopy__(self, memo: dict) -> "FunctionTimeModel":
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        result._fill_buffer()
+        return result
 
     def get_expected_time(
         self,
