@@ -5,8 +5,8 @@ if TYPE_CHECKING:
 from prodsys.optimization.util import (
     check_breakdown_states_available,
     create_default_breakdown_states,
+    replace_optimization_configuration_id,
 )
-from uuid import uuid1
 import scipy.stats
 import datetime
 from copy import deepcopy
@@ -474,7 +474,7 @@ class MathOptimizer(BaseModel):
 
         for result_counter in range(nSolutions):
             new_adapter = self.adapter.model_copy(deep=True)
-            new_adapter.ID = str(uuid1())
+            replace_optimization_configuration_id(new_adapter)
             new_adapter.resource_data = [
                 resource
                 for resource in self.adapter.resource_data

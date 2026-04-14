@@ -30,27 +30,23 @@ from prodsys.optimization.optimization import check_valid_configuration
 from prodsys.optimization.util import (
     add_setup_states_to_machine,
     adjust_process_capacities,
+    allocate_sequential_id,
     clean_out_breakdown_states_of_resources,
+    collect_all_entity_ids,
     get_grouped_processes_of_machine,
     get_required_primitives,
+    replace_optimization_configuration_id,
 )
 from prodsys.util.node_link_generation import node_link_generation
 from prodsys.models.primitives_data import StoredPrimitive
 from prodsys.simulation.route_finder import find_route
 from prodsys.simulation import request
 import random
-from uuid import uuid1
 
 from prodsys.simulation import process, request, runner
 from prodsys.util.util import flatten
-
-
 
 from prodsys.models.primitives_data import StoredPrimitive
-import random
-from uuid import uuid1
-from prodsys.simulation import process, request, runner
-from prodsys.util.util import flatten
 from prodsys.models.dependency_data import DependencyType
 
 
@@ -313,8 +309,8 @@ def sync_resource_dependencies(adapter_object: adapters.ProductionSystemData) ->
         dependency.required_resource = fallback_id
 
 def crossover(ind1, ind2):
-    ind1[0].ID = str(uuid1())
-    ind2[0].ID = str(uuid1())
+    replace_optimization_configuration_id(ind1[0])
+    replace_optimization_configuration_id(ind2[0])
 
     crossover_type = random.choice(["machine", "partial_machine", "transport_resource"])
     adapter1: adapters.ProductionSystemData = ind1[0]
@@ -446,7 +442,8 @@ def add_machine(adapter_object: adapters.ProductionSystemData) -> bool:
     if not possible_positions:
         return False
     machine_location = random.choice(possible_positions)
-    machine_id = f"resource_{uuid1().hex}"
+    used_ids = collect_all_entity_ids(adapter_object)
+    machine_id = allocate_sequential_id(used_ids, "opt_machine")
 
     adapter_object.resource_data.append(
         resource_data.ResourceData(
@@ -501,7 +498,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
     transport_process = random.choice(possible_processes)
     transport_process_data = next(process for process in adapter_object.process_data if process.ID == transport_process)
     if transport_process_data.can_move:
-        transport_resource_id = f"AGV_{uuid1().hex}"
+        used_ids = collect_all_entity_ids(adapter_object)
+        transport_resource_id = allocate_sequential_id(used_ids, "opt_agv")
         adapter_object.resource_data.append(
             resource_data.ResourceData(
                 ID=transport_resource_id,
@@ -616,7 +614,8 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
                         new_links.append((path[i], path[i+1]))
         
         new_transport_process = transport_process_data.model_copy(deep=True)
-        new_transport_process.ID = f"conveyor_process_{uuid1().hex}"
+        used_ids = collect_all_entity_ids(adapter_object)
+        new_transport_process.ID = allocate_sequential_id(used_ids, "opt_conveyor_process")
         new_transport_process.links = new_links
         adapter_object.process_data.append(new_transport_process)
 
@@ -635,7 +634,7 @@ def add_transport_resource(adapter_object: adapters.ProductionSystemData) -> boo
             new_object_capacity = random.choice(new_object_capacities)
         else:
             new_object_capacity = 1
-        transport_resource_id = f"conveyor_{uuid1().hex}"
+        transport_resource_id = allocate_sequential_id(used_ids, "opt_conveyor")
         new_transport_resource = resource_data.ResourceData(
                 ID=transport_resource_id,
                 description="",
@@ -986,7 +985,7 @@ def mutation(individual):
     mutation_operation = random.choice(get_mutation_operations(individual[0]))
     adapter_object = individual[0]
     if mutation_operation(adapter_object):
-        individual[0].ID = str(uuid1())
+        replace_optimization_configuration_id(adapter_object)
     add_default_queues_to_resources(adapter_object, reset=False)
     clean_out_breakdown_states_of_resources(adapter_object)
     adjust_process_capacities(adapter_object)
@@ -1187,7 +1186,7 @@ def random_configuration(
     """
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
-    adapter_object.ID = str(uuid1())
+    replace_optimization_configuration_id(adapter_object)
     adapter_object.schedule = None
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
@@ -1305,7 +1304,7 @@ def random_configuration_with_initial_solution(
             sync_resource_dependencies(adapter_object)
 
         # Update the adapter's ID to mark the change.
-        adapter_object.ID = str(uuid1())
+        replace_optimization_configuration_id(adapter_object)
 
         # Fallback: if the manipulated configuration is not valid, generate a completely new one.
         if successful_mutations == num_manipulations:
@@ -1347,7 +1346,7 @@ def configuration_capacity_based(
     """
     # Create a copy of the baseline configuration
     adapter_object = baseline.model_copy(deep=True)
-    adapter_object.ID = str(uuid1())
+    replace_optimization_configuration_id(adapter_object)
     adapter_object.schedule = None
 
     # Get mapping of processes and time models
@@ -1682,6 +1681,7 @@ def configuration_capacity_based(
 
     # Create resources based on the combined process groups
     adapter_object.resource_data = []
+    used_resource_ids = collect_all_entity_ids(adapter_object)
     all_possible_positions = adapter_object.scenario_data.options.positions.copy()
     possible_positions = all_possible_positions.copy()
     
@@ -1712,7 +1712,7 @@ def configuration_capacity_based(
             # Create transport resource
             resource = resource_data.ResourceData(
                 location=[0, 0],
-                ID=str(uuid1()),
+                ID=allocate_sequential_id(used_resource_ids, "opt_transport"),
                 description="",
                 capacity=1,
                 can_move=True, #TODO: adapt to the given production system
@@ -1747,7 +1747,7 @@ def configuration_capacity_based(
             )
 
             resource = resource_data.ResourceData(
-                ID=str(uuid1()),
+                ID=allocate_sequential_id(used_resource_ids, "opt_machine"),
                 description="",
                 process_ids=updated_process_data,
                 location=position,
@@ -1777,7 +1777,7 @@ def configuration_capacity_based(
                 # Create transport resource
                 resource = resource_data.ResourceData(
                     location=[0, 0],
-                    ID=str(uuid1()),
+                    ID=allocate_sequential_id(used_resource_ids, "opt_transport"),
                     description="",
                     capacity=1,
                     can_move=True, #TODO: adapt to the given production system
@@ -1811,7 +1811,7 @@ def configuration_capacity_based(
                 )
 
                 resource = resource_data.ResourceData(
-                    ID=str(uuid1()),
+                    ID=allocate_sequential_id(used_resource_ids, "opt_machine"),
                     description="",
                     process_ids=updated_process_data,
                     location=position,

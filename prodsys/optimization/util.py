@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 from pydantic import TypeAdapter
 
 from prodsys import adapters
-from prodsys.models.production_system_data import get_possible_production_processes_IDs
+from prodsys.models.production_system_data import (
+    get_possible_production_processes_IDs,
+    get_set_of_IDs,
+)
 from prodsys.models import (
     processes_data,
     resource_data,
@@ -30,6 +33,57 @@ class BreakdownStateNamingConvention(str, Enum):
     MACHINE_BREAKDOWN_STATE = "BSM"
     TRANSPORT_RESOURCE_BREAKDOWN_STATE = "BST"
     PROCESS_MODULE_BREAKDOWN_STATE = "BSP"
+
+
+def collect_all_entity_ids(adapter_object: adapters.ProductionSystemData) -> set[str]:
+    """
+    Return every ID currently used anywhere in the configuration.
+    Production system IDs must be unique across all entity collections.
+    """
+    ids: set[str] = set()
+    sys_id = getattr(adapter_object, "ID", None)
+    if sys_id:
+        ids.add(sys_id)
+    for field in (
+        "time_model_data",
+        "state_data",
+        "process_data",
+        "port_data",
+        "node_data",
+        "resource_data",
+        "product_data",
+        "sink_data",
+        "source_data",
+    ):
+        items = getattr(adapter_object, field, None) or []
+        ids.update(get_set_of_IDs(items))
+    for field in ("dependency_data", "primitive_data"):
+        items = getattr(adapter_object, field, None) or []
+        ids.update(get_set_of_IDs(items))
+    return ids
+
+
+def allocate_sequential_id(used_ids: set[str], prefix: str) -> str:
+    """
+    Return ``{prefix}_{n}`` with the smallest positive integer *n* not already in
+    ``used_ids``, then register the new id in ``used_ids``.
+    """
+    n = 1
+    while True:
+        candidate = f"{prefix}_{n}"
+        if candidate not in used_ids:
+            used_ids.add(candidate)
+            return candidate
+        n += 1
+
+
+def replace_optimization_configuration_id(
+    adapter_object: adapters.ProductionSystemData,
+) -> None:
+    """Assign a new readable configuration id (``opt_system_<n>``), avoiding collisions."""
+    used_ids = collect_all_entity_ids(adapter_object)
+    used_ids.discard(adapter_object.ID)
+    adapter_object.ID = allocate_sequential_id(used_ids, "opt_system")
 
 
 def get_breakdown_state_ids_of_machine_with_processes(

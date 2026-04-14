@@ -10,7 +10,7 @@ from prodsys.util.node_link_generation.edge_directionality import EdgeDirectiona
 from prodsys.util.node_link_generation.configuration import Configuration 
 import networkx as nx
 import prodsys.util.node_link_generation.format_to_networkx as format_to_networkx
-from typing import Iterable, List, Any, Set, Optional, Tuple, Union
+from typing import Iterable, List, Any, Set, Optional, Tuple, Union, Literal
 
 
 # ---------------------------------------------------------------------------
@@ -1044,9 +1044,132 @@ parse_drawio_rectangles = _parse_drawio_rectangles
 # Port relocation
 # ---------------------------------------------------------------------------
 
+# ``side`` argument of :func:`relocate_ports_to_footprint_boundary`
+FootprintBoundaryPortSide = Literal["right", "left", "top", "bottom", "auto"]
+# Resolved edge after ``auto`` is expanded (four cardinal sides only)
+FootprintEdgeSide = Literal["right", "left", "top", "bottom"]
+
+
+def _obstacle_data_to_polygon(obstacle: ObstacleData):
+    """Axis-aligned rectangle for a layout obstacle (centre ``location``, width × height)."""
+    import shapely.geometry as sg
+
+    cx, cy = float(obstacle.location[0]), float(obstacle.location[1])
+    hw = obstacle.width / 2.0
+    hh = obstacle.height / 2.0
+    return sg.box(cx - hw, cy - hh, cx + hw, cy + hh)
+
+
+def _shop_boundary_geom(ps: production_system_data.ProductionSystemData):
+    """
+    Boundary of the shop floor: union of ``layout_data.areas`` if present, else
+    the same auto-derived padded box as :func:`generator` uses.
+    """
+    import shapely.geometry as sg
+    from shapely.ops import unary_union
+
+    if ps.layout_data and ps.layout_data.areas:
+        polys = [
+            sg.box(float(a.x_min), float(a.y_min), float(a.x_max), float(a.y_max))
+            for a in ps.layout_data.areas
+        ]
+        floor = unary_union(polys)
+        if floor.is_empty:
+            return None
+        return floor.boundary
+
+    min_x, min_y, max_x, max_y = find_borders(ps)
+    range_x = max_x - min_x
+    range_y = max_y - min_y
+    margin_x = max(min(range_x * 0.1, 10.0), 1.0)
+    margin_y = max(min(range_y * 0.1, 10.0), 1.0)
+    table_x_min = min_x - margin_x
+    table_y_min = min_y - margin_y
+    table_x_max = max_x + margin_x
+    table_y_max = max_y + margin_y
+    return sg.box(table_x_min, table_y_min, table_x_max, table_y_max).boundary
+
+
+def _interior_obstacle_union(
+    ps: production_system_data.ProductionSystemData,
+    exclude_resource_id: str,
+):
+    """Union of all resource footprint boxes (except *exclude_resource_id*) and layout obstacles."""
+    import shapely.geometry as sg
+    from shapely.ops import unary_union
+
+    polys: list = []
+    for r in ps.resource_data:
+        if r.ID == exclude_resource_id or r.footprint is None:
+            continue
+        cx, cy = float(r.location[0]), float(r.location[1])
+        hw = r.footprint.width / 2.0
+        hh = r.footprint.height / 2.0
+        polys.append(sg.box(cx - hw, cy - hh, cx + hw, cy + hh))
+    if ps.layout_data:
+        for o in ps.layout_data.obstacles:
+            polys.append(_obstacle_data_to_polygon(o))
+    if not polys:
+        return None
+    u = unary_union(polys)
+    return None if u.is_empty else u
+
+
+def _clearance_at_point(
+    px: float,
+    py: float,
+    interior_union,
+    shop_boundary,
+) -> float:
+    """Minimum distance from ``(px, py)`` to interior obstacles or shop walls."""
+    import shapely.geometry as sg
+
+    p = sg.Point(px, py)
+    dists: list = []
+    if interior_union is not None and not interior_union.is_empty:
+        dists.append(p.distance(interior_union))
+    if shop_boundary is not None and not shop_boundary.is_empty:
+        dists.append(p.distance(shop_boundary))
+    if not dists:
+        return float("inf")
+    return min(dists)
+
+
+def _best_footprint_side_by_clearance(
+    adapter: production_system_data.ProductionSystemData,
+    resource_id: str,
+    cx: float,
+    cy: float,
+    hw: float,
+    hh: float,
+) -> FootprintEdgeSide:
+    """
+    Pick the footprint side whose edge midpoint has the largest clearance
+    (nearest distance to other footprints, layout obstacles, or shop boundary).
+    """
+    interior = _interior_obstacle_union(adapter, exclude_resource_id=resource_id)
+    shop_b = _shop_boundary_geom(adapter)
+    mids = {
+        "right": (cx + hw, cy),
+        "left": (cx - hw, cy),
+        "top": (cx, cy + hh),
+        "bottom": (cx, cy - hh),
+    }
+    order = ("right", "left", "top", "bottom")
+    best_side = "right"
+    best_clear = -1.0
+    for name in order:
+        x, y = mids[name]
+        c = _clearance_at_point(x, y, interior, shop_b)
+        if c > best_clear:
+            best_clear = c
+            best_side = name
+    return best_side
+
+
 def relocate_ports_to_footprint_boundary(
     adapter: production_system_data.ProductionSystemData,
-    side: str = "right",
+    side: FootprintBoundaryPortSide = "right",
 ) -> production_system_data.ProductionSystemData:
     """
     Move the ports of footprinted production resources from the resource centre
@@ -1068,6 +1191,10 @@ def relocate_ports_to_footprint_boundary(
               - ``"left"``   (-x).
               - ``"top"``    (+y).
               - ``"bottom"`` (-y).
+              - ``"auto"``   choose per resource the side whose edge midpoint has
+                the largest clearance to the nearest other footprint, layout
+                obstacle, or shop boundary (same padded / explicit areas as node
+                generation).
 
     Returns:
         The same adapter object (modified in-place).
@@ -1101,17 +1228,24 @@ def relocate_ports_to_footprint_boundary(
         hw = resource.footprint.width / 2.0
         hh = resource.footprint.height / 2.0
 
-        if side == "right":
+        if side == "auto":
+            chosen = _best_footprint_side_by_clearance(
+                adapter, resource.ID, cx, cy, hw, hh
+            )
+        else:
+            chosen = side
+
+        if chosen == "right":
             port_loc = [cx + hw, cy]
-        elif side == "left":
+        elif chosen == "left":
             port_loc = [cx - hw, cy]
-        elif side == "top":
+        elif chosen == "top":
             port_loc = [cx, cy + hh]
-        elif side == "bottom":
+        elif chosen == "bottom":
             port_loc = [cx, cy - hh]
         else:
             raise ValueError(
-                f"Unknown side {side!r}. Use 'right', 'left', 'top', or 'bottom'."
+                f"Unknown side {side!r}. Use 'right', 'left', 'top', 'bottom', or 'auto'."
             )
 
         for port_id in resource.ports:

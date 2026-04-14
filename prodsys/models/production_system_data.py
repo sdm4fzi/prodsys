@@ -1206,7 +1206,7 @@ class ProductionSystemData(BaseModel):
 
     def read_scenario(self, scenario_file_path: str):
         scenario_data = json.load(open(scenario_file_path))
-        self.scenario_data = scenario_data_module.ScenarioData.model_validate_json(scenario_data)
+        self.scenario_data = scenario_data_module.ScenarioData.model_validate(scenario_data)
 
     def validate_proceses_available(self):
         required_processes = set(
