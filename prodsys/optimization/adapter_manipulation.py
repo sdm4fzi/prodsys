@@ -388,6 +388,9 @@ def crossover(ind1, ind2):
     sync_resource_dependencies(adapter1)
     sync_resource_dependencies(adapter2)
 
+    adapter1.schedule = None
+    adapter2.schedule = None
+
     return ind1, ind2
 
 
@@ -994,6 +997,8 @@ def mutation(individual):
            for process in adapter_object.process_data):
         node_link_generation.generate_and_apply_network(adapter_object, simple_connection=True)
 
+    adapter_object.schedule = None
+
     return (individual,)
 
 
@@ -1183,6 +1188,7 @@ def random_configuration(
     transformations = baseline.scenario_data.options.transformations
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
+    adapter_object.schedule = None
     if scenario_data.ReconfigurationEnum.PRODUCTION_CAPACITY in transformations:
         get_random_production_capacity(adapter_object)
     if scenario_data.ReconfigurationEnum.TRANSPORT_CAPACITY in transformations:
@@ -1282,6 +1288,7 @@ def random_configuration_with_initial_solution(
 
         # Otherwise, start with a deep copy of the baseline and apply random manipulations.
         adapter_object = baseline.model_copy(deep=True)
+        adapter_object.schedule = None
         num_manipulations = random.randint(0, max_manipulations)
 
         mutation_ops = get_mutation_operations(adapter_object)
@@ -1341,6 +1348,7 @@ def configuration_capacity_based(
     # Create a copy of the baseline configuration
     adapter_object = baseline.model_copy(deep=True)
     adapter_object.ID = str(uuid1())
+    adapter_object.schedule = None
 
     # Get mapping of processes and time models
     # NOTE: We do NOT initialize a runner here because it would validate the configuration,

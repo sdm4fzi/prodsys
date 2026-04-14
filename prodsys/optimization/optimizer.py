@@ -146,6 +146,10 @@ class Optimizer(ABC):
             raise ValueError("No hyperparameters provided for the optimizer.")
         if not self.adapter:
             raise ValueError("No adapter provided for the optimizer.")
+        # A stored schedule is an execution trace for a fixed layout. Optimization
+        # explores new resource IDs/topologies; keeping schedule would break validation
+        # and is unused for evaluation (simulation uses sources/time models).
+        self.adapter.schedule = None
         self.progress = OptimizationProgress()
         self.optimization_cache_first_found_hashes = OptimizationSolutions()
         self.performances_cache = get_empty_optimization_results()
