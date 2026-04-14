@@ -17,6 +17,7 @@ from prodsys.optimization.capacity_based_optimization import (
     CapacityBasedHyperparameters,
 )
 from prodsys.optimization.optimizer import FileSystemSaveOptimizer
+from prodsys.optimization.util import clean_out_breakdown_states_of_resources
 
 
 def main():
@@ -37,12 +38,15 @@ def main():
         "examples/optimization/optimization_example/scenario.json",
     )
 
+    clean_out_breakdown_states_of_resources(base_configuration)
+
     # Create optimizer with file system persistence
     optimizer = FileSystemSaveOptimizer(
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
         save_folder=f"data/capacity_opt_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=False,  # Set to True to save event logs
+        base_validation="loose",
     )
 
     # Run the optimization

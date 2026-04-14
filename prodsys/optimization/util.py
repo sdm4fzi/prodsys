@@ -278,8 +278,12 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemDat
         if not check_states_for_heterogenous_time_models(
             machine_breakdown_states, adapter_object
         ):
-            raise ValueError(
-                f"The machine breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct machine breakdown state called {BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value}."
+            logger.warning(
+                "Machine breakdown states do not share one provably equivalent "
+                "FunctionTimeModelData pair (breakdown/repair). Using the first "
+                "machine breakdown state as %s. For full control, add that state "
+                "explicitly to state_data.",
+                BreakdownStateNamingConvention.MACHINE_BREAKDOWN_STATE.value,
             )
         machine_breakdown_state = machine_breakdown_states[0].model_copy(deep=True)
         machine_breakdown_state.ID = (
@@ -296,8 +300,11 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemDat
         if not check_states_for_heterogenous_time_models(
             transport_resource_breakdown_states, adapter_object
         ):
-            raise ValueError(
-                f"The transport resource breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct transport resource breakdown state called {BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value}."
+            logger.warning(
+                "Transport breakdown states do not share one provably equivalent "
+                "FunctionTimeModelData pair (breakdown/repair). Using the first "
+                "transport breakdown state as %s.",
+                BreakdownStateNamingConvention.TRANSPORT_RESOURCE_BREAKDOWN_STATE.value,
             )
         transport_resource_breakdown_state = transport_resource_breakdown_states[
             0
@@ -328,8 +335,13 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemDat
             if not check_states_for_heterogenous_time_models(
                 process_breakdown_states_for_process, adapter_object
             ):
-                raise ValueError(
-                    f"The process breakdown states are not heterogenous and it is not ambiguous which state should be the Breakdownstate. Please check the time models or define a distinct process breakdown state called {BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE}."
+                logger.warning(
+                    "Process breakdown states for process %s do not share one "
+                    "provably equivalent FunctionTimeModelData pair (breakdown/repair). "
+                    "Using the first state as %s_%s.",
+                    process_id,
+                    BreakdownStateNamingConvention.PROCESS_MODULE_BREAKDOWN_STATE.value,
+                    process_id,
                 )
             process_breakdown_state: ProcessBreakdownState = (
                 process_breakdown_states_for_process[0].model_copy()
@@ -339,6 +351,8 @@ def create_default_breakdown_states(adapter_object: adapters.ProductionSystemDat
             logger.info(
                 f"Added default breakdown state for process modules to the production system."
             )
+
+    clean_out_breakdown_states_of_resources(adapter_object)
 
 
 def clean_out_breakdown_states_of_resources(

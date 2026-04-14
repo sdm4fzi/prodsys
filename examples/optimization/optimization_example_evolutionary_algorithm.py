@@ -6,16 +6,17 @@ from prodsys.optimization.evolutionary_algorithm import (
     EvolutionaryAlgorithmHyperparameters,
 )
 from prodsys.optimization.optimizer import FileSystemSaveOptimizer
+from prodsys.optimization.util import clean_out_breakdown_states_of_resources
 
 
 def main():
     hyper_parameters = EvolutionaryAlgorithmHyperparameters(
         seed=0,
-        number_of_generations=40,
+        number_of_generations=10,
         population_size=8,
         mutation_rate=0.15,
         crossover_rate=0.1,
-        number_of_seeds=2,
+        number_of_seeds=1,
         number_of_processes=4,
     )
 
@@ -34,13 +35,16 @@ def main():
                 "examples/optimization/optimization_example/scenario.json",
     )
 
+    clean_out_breakdown_states_of_resources(base_configuration)
+
     optimizer = FileSystemSaveOptimizer(
         adapter=base_configuration,
         hyperparameters=hyper_parameters,
         save_folder=f"data/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}",
         full_save=True,
         smart_initial_solutions=True,
-        # initial_solutions=[base_configuration]
+        # initial_solutions=[base_configuration],
+        base_validation="loose",
     )
     # optimizer = InMemoryOptimizer(
     #     adapter=base_configuration,
