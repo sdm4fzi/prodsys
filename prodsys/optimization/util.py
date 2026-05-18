@@ -77,13 +77,22 @@ def allocate_sequential_id(used_ids: set[str], prefix: str) -> str:
         n += 1
 
 
+_assigned_optimization_system_ids: set[str] = set()
+
+
 def replace_optimization_configuration_id(
     adapter_object: adapters.ProductionSystemData,
 ) -> None:
     """Assign a new readable configuration id (``opt_system_<n>``), avoiding collisions."""
     used_ids = collect_all_entity_ids(adapter_object)
-    used_ids.discard(adapter_object.ID)
-    adapter_object.ID = allocate_sequential_id(used_ids, "opt_system")
+    old_id = adapter_object.ID
+    if old_id:
+        used_ids.discard(old_id)
+        _assigned_optimization_system_ids.discard(old_id)
+    used_ids.update(_assigned_optimization_system_ids)
+    new_id = allocate_sequential_id(used_ids, "opt_system")
+    adapter_object.ID = new_id
+    _assigned_optimization_system_ids.add(new_id)
 
 
 def get_breakdown_state_ids_of_machine_with_processes(
