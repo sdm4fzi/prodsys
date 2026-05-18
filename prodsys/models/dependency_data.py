@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 from hashlib import md5
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, Union
 
+from pydantic import BaseModel, ConfigDict
 
 from prodsys.models.core_asset import CoreAsset
 
@@ -176,11 +177,114 @@ class LotDependencyData(DependencyData):
         ).hexdigest()
 
 
+class LinkLotEntry(BaseModel):
+    """One per-link override of the lot size on a :class:`LinkLotDependencyData`.
+
+    Attributes:
+        origin (str): Origin node ID of the link (must match the link in the
+            attached :class:`LinkTransportProcessData`).
+        target (str): Target node ID of the link.
+        min_lot_size (int): Minimum number of items the lot handler must
+            collect for *this specific link* before dispatching.
+        max_lot_size (int): Maximum number of items that may be bundled
+            into a single dispatch on this link.
+    """
+
+    origin: str
+    target: str
+    min_lot_size: int = 1
+    max_lot_size: int = 1
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "origin": "StationA",
+                    "target": "StationB",
+                    "min_lot_size": 1,
+                    "max_lot_size": 34,
+                }
+            ]
+        }
+    )
+
+
+class LinkLotDependencyData(LotDependencyData):
+    """Lot dependency where the (min, max) lot sizes vary per link.
+
+    The base :class:`LotDependencyData` enforces a *single* (min, max)
+    lot size for every dispatch of the process it is attached to.  In
+    real shopfloors this is often too coarse — a worker can carry trays
+    of up to N products between stations but only ever shuttles a
+    single product on the loading-zone shuffle inside one station, even
+    though both moves use the same physical worker process.
+
+    :class:`LinkLotDependencyData` lifts that constraint: it inherits
+    the base ``min_lot_size`` / ``max_lot_size`` (used as a fallback
+    for any link not explicitly listed) and adds a list of
+    :class:`LinkLotEntry` overrides.  At request time
+    :class:`prodsys.simulation.lot_handler.LotHandler` looks up the
+    request's ``(origin, target)`` and, if it finds a matching entry,
+    bundles requests using *that* entry's sizes.
+
+    Args:
+        ID (str): Dependency ID.
+        description (str): Description.
+        min_lot_size (int): Default minimum lot size for unmapped links.
+        max_lot_size (int): Default maximum lot size for unmapped links.
+        link_lot_sizes (List[LinkLotEntry]): Per-link overrides.
+
+    Examples:
+        Tray of up to 34 products between stations, single piece
+        on intra-station shuffles::
+
+            LinkLotDependencyData(
+                ID="dep_lot_worker",
+                description="Worker tray bundling per link",
+                min_lot_size=1,
+                max_lot_size=1,
+                link_lot_sizes=[
+                    LinkLotEntry(
+                        origin="StationA", target="StationB",
+                        min_lot_size=1, max_lot_size=34,
+                    ),
+                    LinkLotEntry(
+                        origin="StationA", target="StationA",
+                        min_lot_size=1, max_lot_size=1,
+                    ),
+                ],
+            )
+    """
+
+    link_lot_sizes: List[LinkLotEntry] = []
+
+    def get_link_lot_sizes(self, origin_id: str, target_id: str) -> Tuple[int, int]:
+        """Return ``(min_lot_size, max_lot_size)`` for the given link.
+
+        Falls back to the inherited base values when no entry matches.
+        """
+        for entry in self.link_lot_sizes:
+            if entry.origin == origin_id and entry.target == target_id:
+                return entry.min_lot_size, entry.max_lot_size
+        return self.min_lot_size, self.max_lot_size
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        base = super().hash(adapter)
+        link_repr = "|".join(
+            sorted(
+                f"{e.origin}->{e.target}:{e.min_lot_size}-{e.max_lot_size}"
+                for e in self.link_lot_sizes
+            )
+        )
+        return md5((base + link_repr).encode("utf-8")).hexdigest()
+
+
 DEPENDENCY_TYPES = Union[
     ProcessDependencyData,
     ResourceDependencyData,
     ToolDependencyData,
     AssemblyDependencyData,
     DisassemblyDependencyData,
+    LinkLotDependencyData,
     LotDependencyData,
 ]

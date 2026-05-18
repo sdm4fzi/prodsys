@@ -232,7 +232,7 @@ class RequestHandler:
             origin,
             target,
         )
-        
+
         transport_process_signature = item.transport_process.get_process_signature()
         logger.debug(
             f"Looking for transport: {origin.data.ID} -> {target.data.ID} "

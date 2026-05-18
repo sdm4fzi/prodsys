@@ -1,5 +1,9 @@
 from prodsys.simulation import request
-from prodsys.models.dependency_data import DependencyType, LotDependencyData
+from prodsys.models.dependency_data import (
+    DependencyType,
+    LinkLotDependencyData,
+    LotDependencyData,
+)
 from prodsys.simulation.dependency import Dependency
 from prodsys.models.resource_data import ResourceType
 from prodsys.simulation.entities.lot import Lot
@@ -12,11 +16,58 @@ class LotHandler:
                 return dependency
         return None
 
+    @staticmethod
+    def _resolve_link_lot_dependency(
+        dep_data: LotDependencyData,
+        process_request: request.Request,
+    ) -> LotDependencyData:
+        """Specialise a :class:`LinkLotDependencyData` to the request's link.
+
+        For a transport request, look up the (origin, target) node IDs and
+        return a plain :class:`LotDependencyData` carrying the link-specific
+        ``(min_lot_size, max_lot_size)``.  For non-transport requests (or
+        when the request has no resolvable origin/target), fall back to the
+        inherited base values so the behaviour collapses to the original
+        per-process lot size.
+        """
+        if not isinstance(dep_data, LinkLotDependencyData):
+            return dep_data
+
+        origin_id = None
+        target_id = None
+        if process_request.request_type == request.RequestType.TRANSPORT:
+            origin = getattr(process_request, "origin", None)
+            target = getattr(process_request, "target", None)
+            origin_id = getattr(getattr(origin, "data", None), "ID", None)
+            target_id = getattr(getattr(target, "data", None), "ID", None)
+        if origin_id is None or target_id is None:
+            min_size, max_size = dep_data.min_lot_size, dep_data.max_lot_size
+        else:
+            min_size, max_size = dep_data.get_link_lot_sizes(origin_id, target_id)
+
+        return LotDependencyData(
+            ID=f"{dep_data.ID}__{origin_id}->{target_id}",
+            description=(
+                f"Link-resolved lot dependency for {origin_id}->{target_id}"
+                if origin_id and target_id
+                else f"Link-resolved lot dependency (fallback) for {dep_data.ID}"
+            ),
+            dependency_type=DependencyType.LOT,
+            min_lot_size=min_size,
+            max_lot_size=max_size,
+            input_output=dep_data.input_output,
+        )
+
     def _get_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
         lot_dependencies = []
         for dependency in process_request.required_dependencies:
             if dependency.data.dependency_type == DependencyType.LOT:
-                lot_dependencies.append(dependency.data)
+                # ``LinkLotDependencyData`` declares a different lot size per
+                # link; resolve to that link's (min, max) before any feasibility
+                # / bundling logic runs.
+                lot_dependencies.append(
+                    self._resolve_link_lot_dependency(dependency.data, process_request)
+                )
         if len(lot_dependencies) == 0:
             return None
         if len(lot_dependencies) == 1:

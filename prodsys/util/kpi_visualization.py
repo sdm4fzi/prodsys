@@ -84,11 +84,20 @@ def plot_throughput_time_distribution(
     df_tp = post_processor.df_throughput
     grouped = df_tp.groupby(by="Product_type")["Throughput_time"].apply(list)
 
-    values = grouped.values
+    # ``ff.create_distplot`` runs ``scipy.stats.gaussian_kde`` per group, which
+    # raises ``ValueError`` when a group has fewer than two samples and a
+    # ``LinAlgError`` (singular covariance) when all samples in a group are
+    # identical. Drop those groups so a single sparse product type doesn't kill
+    # the whole plot.
+    valid_mask = [
+        len(v) >= 2 and float(np.var(v)) > 0.0 for v in grouped.values
+    ]
+    grouped = grouped[valid_mask]
 
-    group_labels = grouped.index
+    values = list(grouped.values)
+    group_labels = list(grouped.index)
 
-    if len(values) < 30:
+    if len(values) == 0:
         return None
 
     # Create distplot with custom bin_size

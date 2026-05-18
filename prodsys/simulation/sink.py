@@ -83,8 +83,15 @@ class Sink:
                         resource.controller.state_changed.succeed()
                 if not router.got_primitive_request.triggered:
                     router.got_primitive_request.succeed()
-                    
+
         self.product_factory.register_finished_product(product)
+        # Notify the schedule-completion tracker (if any) so the runner
+        # can terminate the moment the planned workload has drained.
+        # Wrapped in a getattr to keep older callers that build a
+        # ProductFactory without going through the Runner working.
+        tracker = getattr(self.product_factory, "completion_tracker", None)
+        if tracker is not None:
+            tracker.record_finished(product, sink_id=self.data.ID)
 
 
 from prodsys.factories import product_factory

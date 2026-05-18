@@ -100,7 +100,7 @@ class Environment(core.Environment):
         Args:
             time (float): The time to update the progress bar to.
         """
-        if VERBOSE == 1:
+        if VERBOSE == 1 and self.pbar is not None:
             now = round(self.now)
             if now > self.last_update and time.perf_counter() - self.last_update_time > 0.1:
                 self.last_update_time = time.perf_counter()

@@ -10,6 +10,9 @@ import time
 
 from prodsys.models import production_system_data
 from prodsys.simulation import sim, logger
+from prodsys.simulation.schedule_completion import ScheduleCompletionTracker
+
+import logging as _logging
 from prodsys.factories import (
     dependency_factory,
     link_transport_process_updater,
@@ -128,6 +131,11 @@ class Runner:
         self.post_processor: PostProcessor = None
         self.warm_up_cutoff = warm_up_cutoff
         self.cut_off_method = cut_off_method
+        #: Set in :meth:`initialize_simulation` once the schedule (if any)
+        #: is known.  Sinks notify this tracker on every finished product
+        #: so :meth:`run_until_complete` can terminate the moment the
+        #: scheduled workload is done.
+        self.completion_tracker: Optional[ScheduleCompletionTracker] = None
 
     def initialize_simulation(self):
         """
@@ -247,6 +255,16 @@ class Runner:
             self.primitive_factory.set_router(global_router)
             self.product_factory.set_router(global_router)
 
+            # Build the schedule-completion tracker before resources/
+            # sources start producing. Sinks reach the tracker through
+            # ``product_factory`` so the wiring stays one level deep
+            # (Sink -> ProductFactory.completion_tracker).
+            self.completion_tracker = ScheduleCompletionTracker(
+                env=self.env,
+                ps_data=self.production_system_data,
+            )
+            self.product_factory.completion_tracker = self.completion_tracker
+
             self.resource_factory.start_resources()
             self.source_factory.start_sources()
             self.env.process(self.primitive_factory.place_primitives_in_queues())
@@ -262,6 +280,96 @@ class Runner:
         self.time_range = time_range
         self.env.run(time_range)
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
+
+    def run_until_complete(
+        self,
+        time_range_max: float,
+        progress_log_interval: float = 600.0,
+    ) -> dict:
+        """Run the simulation until the schedule is satisfied or until ``time_range_max``.
+
+        Behaviour:
+
+        * If the model carries a schedule (``ps_data.schedule``), the
+          :class:`ScheduleCompletionTracker` set up in
+          :meth:`initialize_simulation` exposes a SimPy event that
+          succeeds once every scheduled product has reached its sink.
+          We race that event against an upper-bound timeout — whichever
+          fires first ends the run.
+        * If there is no schedule, the tracker is inert and we fall
+          back to plain :meth:`run` semantics.
+
+        ``progress_log_interval`` controls how often a process logs the
+        current ``finished/expected`` state to the standard ``prodsys``
+        logger.  Set to ``0`` or a non-positive value to suppress the
+        progress logger.
+
+        Returns a dict with ``actual_end_time``, ``early_exit`` and the
+        tracker's progress snapshot — the SICK runner persists this
+        next to ``simulation_summary.json`` so downstream tools can
+        tell at a glance whether the run drained the schedule.
+        """
+        self.time_range = time_range_max
+
+        tracker = self.completion_tracker
+        if tracker is None or tracker.completion_event is None:
+            self.run(int(time_range_max))
+            return {
+                "actual_end_time": self.env.now,
+                "early_exit": False,
+                "progress": (
+                    tracker.progress_summary() if tracker is not None else {}
+                ),
+            }
+
+        prodsys_logger = _logging.getLogger("prodsys.simulation.runner")
+
+        def _progress_logger():
+            interval = float(progress_log_interval)
+            if interval <= 0:
+                return
+            while not tracker.completion_event.triggered:
+                yield self.env.timeout(interval)
+                if tracker.completion_event.triggered:
+                    return
+                prodsys_logger.info(
+                    "Sim progress: %d / %d products finished at t=%.0f s",
+                    tracker.finished, tracker.expected, self.env.now,
+                )
+
+        if progress_log_interval and progress_log_interval > 0:
+            self.env.process(_progress_logger())
+
+        from simpy.events import AnyOf
+        # Local import keeps tqdm optional for non-interactive callers
+        from prodsys.util import util as _util
+
+        if _util.run_from_ipython():
+            from tqdm.notebook import tqdm
+        else:
+            from tqdm import tqdm
+
+        timeout_event = self.env.timeout(time_range_max)
+        any_done = AnyOf(self.env, [tracker.completion_event, timeout_event])
+        # Mirror Environment.run setup so the same progress-bar / seed
+        # contract holds for run_until_complete as for plain run().
+        with temp_seed(self.env.seed):
+            if sim.VERBOSE == 1:
+                self.env.pbar = tqdm(total=time_range_max)
+            self.env.run_until(any_done)
+            if sim.VERBOSE == 1 and self.env.pbar is not None:
+                self.env.pbar.update(
+                    max(0.0, self.env.now - self.env.last_update)
+                )
+                self.env.pbar.close()
+                self.env.pbar = None
+        self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
+        early_exit = tracker.completion_event.triggered
+        return {
+            "actual_end_time": self.env.now,
+            "early_exit": early_exit,
+            "progress": tracker.progress_summary(),
+        }
 
     def get_post_processor(self) -> PostProcessor:
         """

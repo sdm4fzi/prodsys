@@ -54,30 +54,62 @@ class SourceFactory:
         self.resource_factory = resource_factory
         self.sink_factory = sink_factory
         self.conwip = conwip
-        self.schedule_per_product = self._schedule_per_product(schedule)
+        # ``schedule_per_product`` is partitioned by product type.  The type
+        # extraction depends on knowing the valid product types, which only
+        # become available in ``create_sources(adapter)``.  We therefore keep
+        # the raw schedule here and partition it lazily once the adapter is
+        # known.  We still call ``_schedule_per_product`` once so callers that
+        # access the attribute right after construction (mostly tests) keep
+        # working with the simple ``Type_index`` ID convention.
+        self._raw_schedule = schedule
+        self.schedule_per_product = self._schedule_per_product(schedule, valid_types=None)
 
         self.sources: Dict[str, source.Source] = {}
 
 
-    def _get_product_type(self, product_id: str) -> str:
+    def _get_product_type(
+        self,
+        product_id: str,
+        valid_types: Optional[set[str]] = None,
+    ) -> str:
         """
-        Extracts product type from product ID.
-        Product IDs are in format: ProductType_index (e.g., "Product_A_1" -> "Product_A")
-        We need to get everything except the last part (the index).
+        Extracts product type from a product instance ID.
+
+        Two ID conventions are supported:
+
+        * ``ProductType_index``                       — the simple convention
+          used by all internal examples.
+        * ``ProductType_{order_id}_index`` (or any
+          number of additional suffix segments)        — used by the
+          ``prodsys_scheduler`` and the SICK runner when multiple orders
+          produce instances of the same product type.
+
+        When ``valid_types`` is provided we match the longest prefix that is a
+        registered product type, which correctly handles both conventions.
+        Otherwise we fall back to the legacy "drop the last underscore segment"
+        heuristic.
         """
+        if valid_types:
+            # Longest-prefix match against the registered product types.
+            for type_id in sorted(valid_types, key=len, reverse=True):
+                if product_id == type_id or product_id.startswith(type_id + "_"):
+                    return type_id
         parts = product_id.split("_")
         if len(parts) > 1:
-            # Return all parts except the last one (which is the index)
             return "_".join(parts[:-1])
         return parts[0]
 
-    def _schedule_per_product(self, schedule: Optional[List[performance_data.Event]]) -> Optional[Dict[str, List[performance_data.Event]]]:
-        schedule_per_product = {}
+    def _schedule_per_product(
+        self,
+        schedule: Optional[List[performance_data.Event]],
+        valid_types: Optional[set[str]] = None,
+    ) -> Dict[str, List[performance_data.Event]]:
+        schedule_per_product: Dict[str, List[performance_data.Event]] = {}
         if not schedule:
             return schedule_per_product
 
         for event in schedule:
-            product_type = self._get_product_type(event.product)
+            product_type = self._get_product_type(event.product, valid_types=valid_types)
             if product_type not in schedule_per_product:
                 schedule_per_product[product_type] = []
             schedule_per_product[product_type].append(event)
@@ -90,6 +122,14 @@ class SourceFactory:
         Args:
             adapter (adapter.ProductionSystemAdapter): Adapter that contains the source data.
         """
+        # Re-partition the schedule using the now-known valid product types so
+        # product IDs like ``Product_J8_VFS_WR024_9`` get routed to the
+        # ``Product_J8_VFS`` source instead of being misclassified as a
+        # ``Product_J8_VFS_WR024`` type that does not exist.
+        valid_types = {p.type for p in adapter.product_data}
+        self.schedule_per_product = self._schedule_per_product(
+            self._raw_schedule, valid_types=valid_types
+        )
         for values in adapter.source_data:
             if isinstance(values, OrderSourceData):
                 # Handle OrderSource

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from prodsys.simulation.entities import product
     from prodsys.simulation import logger
     from prodsys.factories.dependency_factory import DependencyFactory
+    from prodsys.simulation.schedule_completion import ScheduleCompletionTracker
 
 
 class ProductFactory:
@@ -45,6 +46,13 @@ class ProductFactory:
         self.routing_heuristic_override: Optional[Callable] = None
         self.dependency_factory: DependencyFactory = None
         self.products_init: Dict[str, product.Product] = {}
+        # Set by :class:`prodsys.simulation.runner.Runner` when the model
+        # ships with a schedule.  Sinks consult this on every finished
+        # product so the runner can terminate as soon as the scheduled
+        # workload has drained.  ``None`` ⇒ run to nominal horizon.
+        self.completion_tracker: Optional[
+            "ScheduleCompletionTracker"
+        ] = None
         
     def set_router(self, router: router_module.Router) -> None:
         """

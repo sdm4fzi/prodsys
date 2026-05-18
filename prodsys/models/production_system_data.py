@@ -1165,6 +1165,27 @@ class ProductionSystemData(BaseModel):
 
         # Check schedule and replace with filtered "start state" events
         if self.schedule is not None:
+            resources_ids = get_set_of_IDs(self.resource_data)
+            processes_ids_set = get_set_of_IDs(self.process_data)
+            products_ids = get_set_of_IDs(self.product_data)
+            products_ids_by_length = sorted(products_ids, key=len, reverse=True)
+
+            def _product_type_from_instance(product_inst_id: str) -> str:
+                """Map a product instance ID back to a registered product type.
+
+                Two ID conventions are accepted:
+                    * ``ProductType_index`` (legacy / examples)
+                    * ``ProductType_{order_id}_{index}`` (prodsys_scheduler
+                      / SICK xFx, where multiple orders produce the same
+                      product type).
+                We do a longest-prefix match against the registered product
+                types and fall back to the legacy ``rsplit('_', 1)`` heuristic.
+                """
+                for type_id in products_ids_by_length:
+                    if product_inst_id == type_id or product_inst_id.startswith(type_id + "_"):
+                        return type_id
+                return "_".join(product_inst_id.split("_")[:-1])
+
             event_resources_ids = set()
             event_process_ids_set = set()
             event_product_ids = set()
@@ -1176,17 +1197,12 @@ class ProductionSystemData(BaseModel):
                     )
                 event_resources_ids.add(event.resource)
                 if event.product is not None:
-                    product_id = "_".join(event.product.split("_")[:-1])
-                    event_product_ids.add(product_id)
+                    event_product_ids.add(_product_type_from_instance(event.product))
                 if event.process:
                     event_process_ids_set.add(event.process)
                 if not event.activity == "start state":
                     continue
                 schedule_to_consider.append(event)
-
-            resources_ids = get_set_of_IDs(self.resource_data)
-            processes_ids_set = get_set_of_IDs(self.process_data)
-            products_ids = get_set_of_IDs(self.product_data)
 
             if event_resources_ids - resources_ids != set():
                 raise ValueError(

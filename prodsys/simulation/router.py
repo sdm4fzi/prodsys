@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from collections import defaultdict, deque
 from typing import (
     List,
     TYPE_CHECKING,
@@ -115,8 +116,13 @@ class Router:
         self.request_handler = RequestHandler(self.process_matcher)
         self.interaction_handler = InteractionHandler()
 
-        # Initialize schedule-based routing if schedule exists
-        self.schedule_routing_map: Dict[Tuple[str, str], str] = {}
+        # Initialize schedule-based routing if schedule exists.
+        # The map is keyed on (product_id, process_id); the value is a FIFO
+        # deque of (planned_time, resource_id) entries — one per scheduled
+        # occurrence of that (product, process) pair. The dispatcher pops
+        # the head of the deque on each request so multi-tp chains route
+        # to the right worker in chronological order.
+        self.schedule_routing_map: Dict[Tuple[str, str], deque[Tuple[float, str]]] = {}
         self.schedule_routing_heuristic: Optional[Callable] = None
         if self.production_system_data and self.production_system_data.schedule:
             self._build_schedule_routing_map()
@@ -498,119 +504,172 @@ class Router:
     
     def _build_schedule_routing_map(self):
         """
-        Pre-processes the schedule into a fast lookup dictionary.
-        Creates mapping: (product_id, process_id) -> resource_id
+        Pre-process the schedule into a per-(product, process) FIFO of
+        scheduled resources.
+
+        A single product traverses the same process id many times when its
+        chain contains multiple transports (e.g. ``ltp_workers_shared`` for
+        every move between stations).  The previous implementation kept a
+        flat ``dict`` keyed on ``(product_id, process_id)`` and overwrote
+        the entry on every iteration, so only the *last* scheduled
+        occurrence survived — every earlier transport request ended up on
+        the fallback heuristic and the simulator's resource choice
+        diverged from the plan, dragging the plan-vs-sim match-rate down.
+
+        We now keep a ``deque[(time, resource)]`` per key, sorted by
+        ``planned_start``.  ``schedule_based_routing_heuristic`` consumes
+        the deque head-first when a request fires, so concurrent
+        occurrences are routed in chronological order.
         """
         if not self.production_system_data or not self.production_system_data.schedule:
             return
-        
+
+        buckets: Dict[Tuple[str, str], List[Tuple[float, str]]] = defaultdict(list)
         for event in self.production_system_data.schedule:
-            if event.activity == "start state" and event.process:
-                schedule_key = (event.product, event.process)
-                self.schedule_routing_map[schedule_key] = event.resource
-        
-        logger.debug(f"Built schedule routing map with {len(self.schedule_routing_map)} entries")
+            if event.activity != "start state" or not event.process:
+                continue
+            buckets[(event.product, event.process)].append(
+                (float(event.time or 0.0), event.resource)
+            )
+
+        for key, entries in buckets.items():
+            entries.sort(key=lambda e: e[0])
+            self.schedule_routing_map[key] = deque(entries)
+
+        total_entries = sum(len(v) for v in self.schedule_routing_map.values())
+        logger.debug(
+            "Built schedule routing map with %d unique (product, process) keys "
+            "/ %d total scheduled occurrences",
+            len(self.schedule_routing_map), total_entries,
+        )
         if logger.isEnabledFor(logging.DEBUG):
-            for key, resource in list(self.schedule_routing_map.items())[:5]:
-                logger.debug(f"  Schedule routing: {key} -> {resource}")
+            for key, dq in list(self.schedule_routing_map.items())[:5]:
+                logger.debug("  Schedule routing: %s -> %s", key, list(dq))
     
     def _create_schedule_based_routing_heuristic(
         self, fallback_heuristic: Callable
     ) -> Callable:
         """
-        Creates a schedule-based routing heuristic that routes products according to the schedule.
-        Falls back to the provided heuristic if product is not in schedule or scheduled resource is not available.
-        
+        Creates a schedule-based routing heuristic that routes products according
+        to the schedule.
+
+        The heuristic prefers the resource the scheduler picked.  We pop the
+        head of the per-(product, process) deque to honour multi-occurrence
+        chains in chronological order — a single product visiting
+        ``ltp_workers_shared`` six times is now routed to the six different
+        worker resources in the order the solver planned, instead of all
+        sticking to whatever resource happened to be the *last* one written
+        to a flat dict.
+
+        If the scheduled resource is currently saturated **and** a sister
+        resource is free, we fall back to ``fallback_heuristic`` on the full
+        candidate set.  This breaks deadlocks like "every product pinned to
+        paAlign03 while paAlign04/05 sit idle" without having to remove
+        plan-following entirely.  When the scheduled resource is reachable
+        we strictly route to it: alternative requests are *dropped* from
+        ``possible_requests`` so the simulator never picks a different
+        worker just because its queue happens to be shorter.
+
         Args:
-            fallback_heuristic: The fallback routing heuristic to use when schedule doesn't apply.
-            
+            fallback_heuristic: Fallback to use when the schedule does not apply
+                or when the scheduled resource is saturated.
+
         Returns:
-            A routing heuristic function that can be used by the router.
+            A routing heuristic compatible with the router's ``route_request``.
         """
         schedule_map = self.schedule_routing_map
-        
-        def schedule_based_routing_heuristic(possible_requests: list[request.Request]):
-            """
-            Routing heuristic that routes products to resources according to the schedule.
-            """
+
+        def _resource_input_full(req: "request.Request") -> bool:
+            """Return ``True`` when the candidate's input ports cannot accept a new product."""
+            res = getattr(req, "resource", None)
+            if res is None:
+                return False
+            ports = getattr(res, "ports", None) or []
+            input_ports = [
+                p
+                for p in ports
+                if getattr(p, "data", None) is not None
+                and getattr(p.data, "interface_type", None)
+                in (
+                    port_data.PortInterfaceType.INPUT,
+                    port_data.PortInterfaceType.INPUT_OUTPUT,
+                )
+            ]
+            if not input_ports:
+                # No declared input ports → fall back to "resource is full".
+                return bool(getattr(res, "full", False))
+            return all(getattr(p, "is_full", False) for p in input_ports)
+
+        def schedule_based_routing_heuristic(possible_requests: list["request.Request"]):
             if not schedule_map or not possible_requests:
-                # No schedule or no requests, use fallback
                 fallback_heuristic(possible_requests)
                 return
-            
-            # Get the requesting product and process
+
             requesting_item = possible_requests[0].requesting_item
             process_id = (
                 possible_requests[0].process.data.ID
                 if hasattr(possible_requests[0].process, "data")
                 else None
             )
-            
             if not requesting_item or not process_id:
-                logger.debug("Schedule routing: No requesting item or process ID, using fallback")
                 fallback_heuristic(possible_requests)
                 return
-            
+
             product_id = requesting_item.data.ID
             schedule_key = (product_id, process_id)
-            
-            logger.debug(
-                "Schedule routing: Product %s, Process %s, Schedule key: %s",
-                product_id, process_id, schedule_key
-            )
-            
-            # Check if this product+process combination is in the schedule
-            if schedule_key in schedule_map:
-                scheduled_resource_id = schedule_map[schedule_key]
+            scheduled_dq = schedule_map.get(schedule_key)
+            if not scheduled_dq:
+                fallback_heuristic(possible_requests)
+                return
+
+            scheduled_resource_id = scheduled_dq[0][1]  # peek; pop on success
+            scheduled_requests = [
+                r for r in possible_requests if r.resource.data.ID == scheduled_resource_id
+            ]
+            other_requests = [
+                r for r in possible_requests if r.resource.data.ID != scheduled_resource_id
+            ]
+
+            if not scheduled_requests:
                 logger.debug(
-                    f"Schedule routing: Found schedule match for {schedule_key} -> "
-                    f"Resource {scheduled_resource_id}"
-                )
-                
-                # Find requests for the scheduled resource
-                scheduled_requests = [
-                    r
-                    for r in possible_requests
-                    if r.resource.data.ID == scheduled_resource_id
-                ]
-                other_requests = [
-                    r
-                    for r in possible_requests
-                    if r.resource.data.ID != scheduled_resource_id
-                ]
-                
-                if scheduled_requests:
-                    # Put scheduled resource first, then others sorted by fallback heuristic
-                    possible_requests.clear()
-                    possible_requests.extend(scheduled_requests)
-                    # Sort others by fallback heuristic
-                    if other_requests:
-                        fallback_heuristic(other_requests)
-                        possible_requests.extend(other_requests)
-                    logger.debug(
-                        f"Schedule routing: Routed {product_id} to scheduled resource "
-                        f"{scheduled_resource_id}"
-                    )
-                    return
-                else:
-                    # Scheduled resource not available in possible requests
-                    logger.warning(
-                        f"Schedule routing: Product {product_id} scheduled for resource "
-                        f"{scheduled_resource_id} (process {process_id}), but resource not "
-                        f"available. Available resources: "
-                        f"{[r.resource.data.ID for r in possible_requests]}. "
-                        f"Using fallback heuristic."
-                    )
-                    fallback_heuristic(possible_requests)
-                    return
-            else:
-                # Product not in schedule, use fallback
-                logger.debug(
-                    f"Schedule routing: No schedule match for {schedule_key}, using fallback"
+                    "Schedule routing: %s scheduled for %s but resource not in "
+                    "possible_requests; using fallback over alternatives.",
+                    product_id, scheduled_resource_id,
                 )
                 fallback_heuristic(possible_requests)
                 return
-        
+
+            scheduled_full = all(_resource_input_full(r) for r in scheduled_requests)
+            free_alternatives = [
+                r for r in other_requests if not _resource_input_full(r)
+            ]
+
+            if scheduled_full and free_alternatives:
+                # Scheduled resource is saturated but at least one capable
+                # alternative is free → load-balance via the fallback heuristic
+                # across the full candidate set.  This breaks the deadlock that
+                # otherwise forms when every product is pinned to a single
+                # scheduled resource whose input queue is full.  Don't pop the
+                # deque entry here: the scheduled occurrence has not been
+                # consumed yet from the plan's perspective.
+                logger.debug(
+                    "Schedule routing: scheduled resource %s for %s is full; "
+                    "rerouting via fallback heuristic across %d alternatives.",
+                    scheduled_resource_id, product_id, len(other_requests),
+                )
+                possible_requests.clear()
+                possible_requests.extend(scheduled_requests + other_requests)
+                fallback_heuristic(possible_requests)
+                return
+
+            # Strict-plan branch: only the scheduled requests survive.
+            # Dropping ``other_requests`` is what fixes the match-rate — the
+            # router can no longer divert to a sister resource purely on
+            # queue-length grounds when the planned one is reachable.
+            scheduled_dq.popleft()
+            possible_requests.clear()
+            possible_requests.extend(scheduled_requests)
+
         return schedule_based_routing_heuristic
 
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
