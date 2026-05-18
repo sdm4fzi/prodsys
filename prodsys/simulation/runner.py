@@ -332,10 +332,6 @@ class Runner:
                 yield self.env.timeout(interval)
                 if tracker.completion_event.triggered:
                     return
-                prodsys_logger.info(
-                    "Sim progress: %d / %d products finished at t=%.0f s",
-                    tracker.finished, tracker.expected, self.env.now,
-                )
 
         if progress_log_interval and progress_log_interval > 0:
             self.env.process(_progress_logger())
