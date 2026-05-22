@@ -336,11 +336,25 @@ class Router:
         if executed_request.entity.type == EntityType.LOT:
             requesting_item_for_dependencies = executed_request.entity
         
+        # ``processing_finished`` fires the moment the resource is done
+        # running its process_time on the entity but BEFORE the unload phase
+        # pushes the entity onto the (potentially full) target queue.
+        # Resource / process / primitive dependencies (worker pools, tools,
+        # carriers) are released against this event so a worker is not
+        # pinned to a station while it merely waits for downstream buffer
+        # space — the cascade-fill deadlock the SICK 288-order workload
+        # exhibited at ~13 h sim time.  ``executed_request.completed`` is
+        # only used as a defensive fallback for legacy requests built
+        # before this attribute existed.
+        prod_release_event = getattr(
+            executed_request, "processing_finished", None
+        ) or executed_request.completed
+
         dependency_ready_events = self.get_dependencies_for_execution(
             resource=executed_request.resource,
             relevant_dependencies=entity_dependencies,
             requesting_item=requesting_item_for_dependencies,
-            dependency_release_event=executed_request.completed,
+            dependency_release_event=prod_release_event,
             parent_origin_queue=executed_request.origin_queue,
             parent_target_queue=executed_request.target_queue,
         )
@@ -352,7 +366,7 @@ class Router:
             resource=executed_request.resource,
             relevant_dependencies=resource_dependencies + process_dependencies,
             requesting_item=executed_request.requesting_item,
-            dependency_release_event=executed_request.completed,
+            dependency_release_event=prod_release_event,
         )
         for dependency_ready_event in dependency_ready_events:
             yield dependency_ready_event

@@ -113,6 +113,20 @@ class Request:
         self.lot_process_time: Optional[float] = None
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
+        # Signals the moment the actual processing time has elapsed for this
+        # request, BEFORE the unloading step pushes the entity onto the target
+        # queue. Worker dependencies attached via ``dependency_release_event``
+        # are released on this event so a worker is no longer pinned to a
+        # station while the station is merely waiting for downstream buffer
+        # space — the cascade-fill deadlock that otherwise emerges when a
+        # ``cap=1`` input queue / a tight output queue blocks the unload and
+        # holds the manual-step worker forever.
+        if requesting_item is not None:
+            self.processing_finished: Optional[simpy.Event] = simpy.Event(
+                self.requesting_item.env
+            )
+        else:
+            self.processing_finished: Optional[simpy.Event] = None
 
     
     @property
