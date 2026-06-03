@@ -575,14 +575,11 @@ class Router:
         sticking to whatever resource happened to be the *last* one written
         to a flat dict.
 
-        If the scheduled resource is currently saturated **and** a sister
-        resource is free, we fall back to ``fallback_heuristic`` on the full
-        candidate set.  This breaks deadlocks like "every product pinned to
-        paAlign03 while paAlign04/05 sit idle" without having to remove
-        plan-following entirely.  When the scheduled resource is reachable
-        we strictly route to it: alternative requests are *dropped* from
-        ``possible_requests`` so the simulator never picks a different
-        worker just because its queue happens to be shorter.
+        When the scheduled resource is listed in ``possible_requests`` we
+        always route to it (strict plan).  Alternative sister resources are
+        dropped from ``possible_requests`` even when the planned asset's
+        input queue is saturated, so the simulator follows the Excel plan's
+        physical-asset binding.
 
         Args:
             fallback_heuristic: Fallback to use when the schedule does not apply
@@ -653,30 +650,12 @@ class Router:
                 fallback_heuristic(possible_requests)
                 return
 
-            scheduled_full = all(_resource_input_full(r) for r in scheduled_requests)
-            free_alternatives = [
-                r for r in other_requests if not _resource_input_full(r)
-            ]
-
-            if scheduled_full and free_alternatives:
-                # Scheduled resource is saturated but at least one capable
-                # alternative is free → load-balance via the fallback heuristic
-                # across the full candidate set.  This breaks the deadlock that
-                # otherwise forms when every product is pinned to a single
-                # scheduled resource whose input queue is full.  Don't pop the
-                # deque entry here: the scheduled occurrence has not been
-                # consumed yet from the plan's perspective.
-                logger.debug(
-                    "Schedule routing: scheduled resource %s for %s is full; "
-                    "rerouting via fallback heuristic across %d alternatives.",
-                    scheduled_resource_id, product_id, len(other_requests),
-                )
-                possible_requests.clear()
-                possible_requests.extend(scheduled_requests + other_requests)
-                fallback_heuristic(possible_requests)
-                return
-
             # Strict-plan branch: only the scheduled requests survive.
+            # We no longer fall back to a sister resource when the planned
+            # asset's input is saturated — SICK SuTray plans bind an entire
+            # work request to one physical asset per parallel family, and
+            # diverting to paAlign04 while the plan says paAlign03 makes the
+            # run unreproducible for Thomas' execution test.
             # Dropping ``other_requests`` is what fixes the match-rate — the
             # router can no longer divert to a sister resource purely on
             # queue-length grounds when the planned one is reachable.
