@@ -32,6 +32,7 @@ from prodsys.express.time_model import (
 from prodsys.express.state import (
     SetupState,
     BreakDownState,
+    MaintenanceState,
     ProcessBreakdownState,
     ChargingState,
     NonScheduledState,

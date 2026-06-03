@@ -452,6 +452,14 @@ class Resource(resource.Resource):
             return
         if any(
             [
+                state_instance.active_maintenance
+                for state_instance in self.states
+                if isinstance(state_instance, state.MaintenanceState)
+            ]
+        ):
+            return
+        if any(
+            [
                 state_instance.active_non_scheduled
                 for state_instance in self.states
                 if isinstance(state_instance, state.NonScheduledState)

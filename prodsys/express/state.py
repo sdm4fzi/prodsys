@@ -5,6 +5,7 @@ can be in during a simulation, besides processing and standby.
 The following states are possible:
 
 - `Breakdown`: A state that makes a resource unavailable for a certain time.
+- `Maintenance`: A state that makes a resource unavailable for planned maintenance.
 - `ProcessBreakdown`: A state that makes a process unavailable for a certain time but other processes can still be performed.
 - `Setup`: A state that represents the time needed to change the process of a resource.
 - `NonScheduled`: A state that models shift availability by alternating between scheduled (available) and non-scheduled (unavailable) time intervals.	    
@@ -85,6 +86,42 @@ class BreakDownState(State, core.ExpressObject):
             state_data.BreakDownStateData: Data object of the express object.
         """
         return state_data.BreakDownStateData(
+            ID=self.ID,
+            description="",
+            time_model_id=self.time_model.ID,
+            type=self.type,
+            repair_time_model_id=self.repair_time_model.ID,
+        )
+
+
+@dataclass
+class MaintenanceState(State, core.ExpressObject):
+    """
+    Class that represents a maintenance state.
+
+    Args:
+        time_model (time_model.TIME_MODEL_UNION): Maintenance occurrence time model of the state.
+        repair_time_model (time_model.TIME_MODEL_UNION): Maintenance duration time model of the state.
+        ID (str): ID of the state.
+
+    Attributes:
+        type (state_data.StateTypeEnum): Type of the state. Equals to state_data.StateTypeEnum.MaintenanceState.
+    """
+
+    repair_time_model: time_model.TIME_MODEL_UNION
+    ID: Optional[str] = Field(default_factory=lambda: str(uuid1()))
+    type: state_data.StateTypeEnum = Field(
+        default=state_data.StateTypeEnum.MaintenanceState, init=False
+    )
+
+    def to_model(self) -> state_data.MaintenanceStateData:
+        """
+        Converts the `prodsys.express` object to a data object from `prodsys.models`.
+
+        Returns:
+            state_data.MaintenanceStateData: Data object of the express object.
+        """
+        return state_data.MaintenanceStateData(
             ID=self.ID,
             description="",
             time_model_id=self.time_model.ID,
@@ -319,5 +356,12 @@ class NonScheduledState(State, core.ExpressObject):
         )
 
 
-STATE_UNION = Union[BreakDownState, ProcessBreakdownState, SetupState, ChargingState, NonScheduledState]
+STATE_UNION = Union[
+    BreakDownState,
+    MaintenanceState,
+    ProcessBreakdownState,
+    SetupState,
+    ChargingState,
+    NonScheduledState,
+]
 from prodsys.express import process

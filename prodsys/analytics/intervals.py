@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 INTERFACE_STATE_TYPES = frozenset({
     StateTypeEnum.source, StateTypeEnum.sink,
-    StateTypeEnum.breakdown, StateTypeEnum.setup,
+    StateTypeEnum.breakdown, StateTypeEnum.maintenance, StateTypeEnum.setup,
     StateTypeEnum.charging, StateTypeEnum.loading,
     StateTypeEnum.unloading, StateTypeEnum.assembly,
     StateTypeEnum.non_scheduled,

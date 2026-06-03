@@ -6,6 +6,7 @@ import pytest
 from prodsys.models.state_data import (
     StateData,
     BreakDownStateData,
+    MaintenanceStateData,
     ProcessBreakDownStateData,
     ProductionStateData,
     TransportStateData,
@@ -125,6 +126,41 @@ class TestBreakDownStateData:
         
         # Same parameters should produce same hash
         assert hash1 == hash2
+
+
+class TestMaintenanceStateData:
+    """Tests for MaintenanceStateData."""
+
+    def test_creation_with_required_fields(self):
+        """Test creating MaintenanceStateData with required fields."""
+        state = MaintenanceStateData(
+            ID="MaintenanceState_1",
+            description="Maintenance state 1",
+            time_model_id="tm1",
+            type=StateTypeEnum.MaintenanceState,
+            repair_time_model_id="tm_repair",
+        )
+        assert state.ID == "MaintenanceState_1"
+        assert state.type == StateTypeEnum.MaintenanceState
+        assert state.repair_time_model_id == "tm_repair"
+
+    def test_hash(self, sample_production_system, sample_time_model, sample_repair_time_model):
+        """Test hash method."""
+        state1 = MaintenanceStateData(
+            ID="MaintenanceState_1",
+            description="Maintenance state 1",
+            time_model_id="tm1",
+            type=StateTypeEnum.MaintenanceState,
+            repair_time_model_id="tm_repair",
+        )
+        state2 = MaintenanceStateData(
+            ID="MaintenanceState_2",
+            description="Maintenance state 2",
+            time_model_id="tm1",
+            type=StateTypeEnum.MaintenanceState,
+            repair_time_model_id="tm_repair",
+        )
+        assert state1.hash(sample_production_system) == state2.hash(sample_production_system)
 
 
 class TestProcessBreakDownStateData:

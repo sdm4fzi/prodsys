@@ -5,6 +5,7 @@ can be in during a simulation.
 The following states are possible:
 
 - `BreakDownStateData`: A state that makes a resource unavailable for a certain time.
+- `MaintenanceStateData`: A state that makes a resource unavailable for planned maintenance.
 - `ProcessBreakDownStateData`: A state that makes a process unavailable for a certain time but other processes can still be performed.
 - `SetupStateData`: A state that represents the time needed to change the process of a resource.
 - `ProductionStateData`: A state that represents the time needed to process a product.
@@ -31,6 +32,7 @@ class StateTypeEnum(str, Enum):
     Enum that represents the different kind of states.
 
     - BreakDownState: A state that makes a resource unavailable for a certain time.
+    - MaintenanceState: A state that makes a resource unavailable for planned maintenance.
     - ProductionState: A state that represents the time needed to process a product.
     - TransportState: A state that represents the time needed to transport a product.
     - SetupState: A state that represents the time needed to change the process of a resource.
@@ -39,6 +41,7 @@ class StateTypeEnum(str, Enum):
     """
 
     BreakDownState = "BreakDownState"
+    MaintenanceState = "MaintenanceState"
     ProductionState = "ProductionState"
     TransportState = "TransportState"
     SetupState = "SetupState"
@@ -168,6 +171,78 @@ class BreakDownStateData(StateData):
                     "description": "Breakdown state machine 1",
                     "time_model_id": "function_time_model_5",
                     "type": "BreakDownState",
+                    "repair_time_model_id": "function_time_model_8",
+                }
+            ]
+        }
+    )
+
+
+class MaintenanceStateData(StateData):
+    """
+    Class that represents a maintenance state. During maintenance, the resource is unavailable
+    for production, transport, and setup — analogous to a breakdown state, but for planned maintenance.
+
+    Args:
+        ID (str): ID of the state.
+        description (str): Description of the state.
+        time_model_id (str): Time model ID of the state. Specifies the time interval between maintenance events.
+        type (StateTypeEnum): Type of the state.
+        repair_time_model_id (str): Time model ID of the maintenance duration.
+
+    Examples:
+        Maintenance state with a function time model:
+        ``` py
+        import prodsys
+        prodsys.state_data.MaintenanceStateData(
+            ID="MaintenanceState_1",
+            description="Maintenance state machine 1",
+            time_model_id="function_time_model_5",
+            repair_time_model_id="function_time_model_8",
+        )
+        ```
+    """
+
+    type: Literal[StateTypeEnum.MaintenanceState]
+    repair_time_model_id: str
+
+    def hash(self, adapter: ProductionSystemData) -> str:
+        """
+        Returns a unique hash of the state considering the time model and the maintenance duration time model.
+
+        Args:
+            adapter (ProductionSystemAdapter): Adapter to access the data of the state.
+
+        Raises:
+            ValueError: if the maintenance duration time model is not found.
+
+        Returns:
+            str: hash of the state.
+        """
+        base_class_hash = super().hash(adapter)
+        repair_time_model_hash = ""
+
+        for repair_time_model in adapter.time_model_data:
+            if repair_time_model.ID == self.repair_time_model_id:
+                repair_time_model_hash = repair_time_model.hash()
+                break
+        else:
+            raise ValueError(
+                f"Maintenance duration time model with ID {self.repair_time_model_id} not found for state {self.ID}."
+            )
+
+        return md5(
+            ("".join([base_class_hash, repair_time_model_hash])).encode("utf-8")
+        ).hexdigest()
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "ID": "MaintenanceState_1",
+                    "description": "Maintenance state machine 1",
+                    "time_model_id": "function_time_model_5",
+                    "type": "MaintenanceState",
                     "repair_time_model_id": "function_time_model_8",
                 }
             ]
@@ -544,6 +619,7 @@ class NonScheduledStateData(StateData):
 
 STATE_DATA_UNION = Union[
     BreakDownStateData,
+    MaintenanceStateData,
     ChargingStateData,
     ProductionStateData,
     TransportStateData,
