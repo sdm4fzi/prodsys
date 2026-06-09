@@ -157,6 +157,23 @@ class ProductionProcessHandler:
                     entity.last_process_failed = not production_state.state_info._process_ok
             production_state.process = None
 
+        # Release worker / resource dependencies (e.g. ``dep_..._worker``)
+        # AS SOON AS the processing time has elapsed.  Holding them through
+        # the unload phase — the legacy behaviour — pins the worker to the
+        # station whenever the output queue is full, which produced the
+        # cascade-fill deadlock observed on the SICK 288-order workload at
+        # ~13 h sim time (paPreAssembly02_output / paSwing_input go 34/34,
+        # the manual-step worker on Workers_Part1 stays stuck on the
+        # ``dep_JobPreAssembly__VFS_Prog_worker`` start state, no further
+        # transports happen and the simulator wedges).  Mirrors the
+        # ProcessModel handler which already triggers the same event right
+        # after its per-step processing completes.
+        if (
+            process_request.processing_finished is not None
+            and not process_request.processing_finished.triggered
+        ):
+            process_request.processing_finished.succeed()
+
         for resource_request in resource_requests:
             resource.release(resource_request)
         yield from self.put_entities_of_request(process_request)

@@ -13,6 +13,7 @@ from simpy import exceptions
 from prodsys.models.state_data import (
     StateData,
     BreakDownStateData,
+    MaintenanceStateData,
     ProductionStateData,
     TransportStateData,
     SetupStateData,
@@ -57,6 +58,7 @@ class StateTypeEnum(str, Enum):
     production = "Production"
     transport = "Transport"
     breakdown = "Breakdown"
+    maintenance = "Maintenance"
     process_breakdown = "ProcessBreakdown"
     setup = "Setup"
     source = "Source"
@@ -582,6 +584,54 @@ class BreakDownState(State):
         pass
 
 
+class MaintenanceState(State):
+    """
+    Represents a maintenance state of a resource in the simulation. A maintenance state has a process
+    that simulates planned maintenance of a resource. All other running production, transport or setup
+    states get interrupted — analogous to BreakDownState.
+
+    Args:
+        data (MaintenanceStateData): The data of the state.
+        time_model (time_model.TimeModel): The time model of the state.
+        env (sim.Environment): The simulation environment.
+        repair_time_model (time_model.TimeModel, optional): The time model of the maintenance duration.
+    """
+
+    def __init__(
+        self,
+        data: MaintenanceStateData,
+        time_model: time_model.TimeModel,
+        env: sim.Environment,
+        repair_time_model: Optional[time_model.TimeModel] = None,
+    ):
+        super().__init__(data, time_model, env)
+        self.repair_time_model = repair_time_model
+        self.active_maintenance = False
+        self.active = events.Event(self.env)
+
+    def process_state(self) -> Generator:
+        while True:
+            yield self.env.process(self.wait_for_maintenance())
+            self.active_maintenance = True
+            self.resource.interrupt_states()
+            maintenance_time = self.repair_time_model.get_next_time()
+            self.state_info.log_start_state(
+                self.env.now,
+                self.env.now + maintenance_time,
+                StateTypeEnum.maintenance,
+            )
+            yield self.env.timeout(maintenance_time)
+            self.active_maintenance = False
+            self.resource.activate()
+            self.state_info.log_end_state(self.env.now, StateTypeEnum.maintenance)
+
+    def wait_for_maintenance(self):
+        yield self.env.timeout(self.time_model.get_next_time())
+
+    def interrupt_process(self):
+        pass
+
+
 class NonScheduledState(State):
     """
     Represents a non-scheduled state of a resource in the simulation. This state models shift availability
@@ -892,10 +942,12 @@ class ChargingState(State):
 STATE_UNION = Union[
     ChargingState,
     BreakDownState,
+    MaintenanceState,
     ProductionState,
     TransportState,
     SetupState,
     ProcessBreakDownState,
+    NonScheduledState,
 ]
 """
 Union Type of all states.

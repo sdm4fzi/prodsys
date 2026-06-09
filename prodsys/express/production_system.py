@@ -321,6 +321,7 @@ class ProductionSystem(core.ExpressObject):
             s.repair_time_model
             for s in states
             if isinstance(s, state.BreakDownState)
+            or isinstance(s, state.MaintenanceState)
             or isinstance(s, state.ProcessBreakdownState)
         ]
         time_models += [

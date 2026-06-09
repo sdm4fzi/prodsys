@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 STATE_MAP = {
     state_data.StateTypeEnum.SetupState: state.SetupState,
     state_data.StateTypeEnum.BreakDownState: state.BreakDownState,
+    state_data.StateTypeEnum.MaintenanceState: state.MaintenanceState,
     state_data.StateTypeEnum.TransportState: state.TransportState,
     state_data.StateTypeEnum.ProductionState: state.ProductionState,
     state_data.StateTypeEnum.ProcessBreakDownState: state.ProcessBreakDownState,

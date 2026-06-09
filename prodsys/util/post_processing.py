@@ -201,6 +201,7 @@ class PostProcessor:
             StateTypeEnum.production.value: "PR",
             StateTypeEnum.transport.value: "PR",
             StateTypeEnum.breakdown.value: "UD",
+            StateTypeEnum.maintenance.value: "MT",
             StateTypeEnum.setup.value: "ST",
             StateTypeEnum.charging.value: "CR",
             StateTypeEnum.dependency.value: "DP",
