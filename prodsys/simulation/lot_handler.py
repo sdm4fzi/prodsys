@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import re
+
 from prodsys.simulation import request
 from prodsys.models.dependency_data import (
     DependencyType,
@@ -7,6 +11,23 @@ from prodsys.models.dependency_data import (
 from prodsys.simulation.dependency import Dependency
 from prodsys.models.resource_data import ResourceType
 from prodsys.simulation.entities.lot import Lot
+
+_WR_ORDER_RE = re.compile(r"_WR(\d{3})_")
+
+
+def _work_request_order_id(entity) -> str | None:
+    """Parse ``WR###`` from a product entity id (SICK naming)."""
+    if entity is None:
+        return None
+    data = getattr(entity, "data", None)
+    pid = getattr(data, "ID", None) if data is not None else None
+    if not pid:
+        return None
+    match = _WR_ORDER_RE.search(str(pid))
+    if not match:
+        return None
+    return f"WR{match.group(1)}"
+
 
 class LotHandler:
 
@@ -101,31 +122,86 @@ class LotHandler:
         else:
             return False
 
+    def _work_request_piece_count(self, process_request: request.Request) -> int | None:
+        """How many products belong to this work request (SuTray size cap 34)."""
+        wr_id = _work_request_order_id(process_request.requesting_item)
+        if not wr_id:
+            return None
+        item = process_request.requesting_item
+        router = getattr(item, "router", None)
+        if router is None:
+            return None
+        ps = getattr(router, "production_system_data", None)
+        if ps is not None and getattr(ps, "order_data", None):
+            for order in ps.order_data:
+                oid = str(getattr(order, "ID", ""))
+                if oid in (wr_id, wr_id.removeprefix("WR")) or f"WR{oid}" == wr_id:
+                    total = sum(
+                        int(getattr(op, "quantity", 1) or 1)
+                        for op in order.ordered_products
+                    )
+                    if total > 0:
+                        return total
+        product_factory = getattr(router, "product_factory", None)
+        if product_factory is not None:
+            count = sum(
+                1
+                for product in getattr(product_factory, "products", []) or []
+                if _work_request_order_id(product) == wr_id
+            )
+            if count > 0:
+                return count
+        return None
+
     def _get_possible_requests_for_lot(self, process_request: request.Request) -> list[request.Request]:
+        order_id = _work_request_order_id(process_request.requesting_item)
         possible_requests_for_lot = []
         for open_request in process_request.resource.controller.requests:
             if open_request is process_request:
                 continue
-            if self._request_matches(process_request, open_request):
-                possible_requests_for_lot.append(open_request)
+            if not self._request_matches(process_request, open_request):
+                continue
+            if order_id is not None:
+                other_order = _work_request_order_id(open_request.requesting_item)
+                if other_order != order_id:
+                    continue
+            possible_requests_for_lot.append(open_request)
         return possible_requests_for_lot
-    
+
+    def _effective_min_lot_size(
+        self,
+        lot_dependency: LotDependencyData,
+        process_request: request.Request,
+    ) -> int:
+        """Target batch size for a SuTray move (full WR, capped by link min)."""
+        configured = int(lot_dependency.min_lot_size)
+        if configured <= 1:
+            return 1
+        wr_pieces = self._work_request_piece_count(process_request)
+        if wr_pieces is not None and wr_pieces > 0:
+            return min(configured, wr_pieces)
+        return configured
+
     def is_lot_feasible(self, process_request: request.Request) -> bool:
         lot_dependency = self._get_lot_dependency_data(process_request)
         if lot_dependency is None:
             return True
-        if process_request.resource.data.capacity < lot_dependency.min_lot_size:
-            raise ValueError(f"The capacity of the resource {process_request.resource.data.ID} is smaller than the min lot size {lot_dependency.min_lot_size}")
-        if process_request.resource.get_free_capacity() < lot_dependency.min_lot_size:
-            return False
-        # if process_request.target_queue.is_full or process_request.target_queue.free_space() < lot_dependency.min_lot_size: # avoids that reservations don't go through
-        #     return False
-        if process_request.request_type == request.RequestType.TRANSPORT:
-            if process_request.target_queue.is_full or process_request.target_queue.free_space() < lot_dependency.min_lot_size:
-                return False
         possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
-        num_possible = len(possible_requests_for_lot)
-        return num_possible >= lot_dependency.min_lot_size - 1
+        effective_min = self._effective_min_lot_size(lot_dependency, process_request)
+        if process_request.resource.data.capacity < effective_min:
+            raise ValueError(
+                f"The capacity of the resource {process_request.resource.data.ID} "
+                f"is smaller than the effective min lot size {effective_min}"
+            )
+        if process_request.resource.get_free_capacity() < effective_min:
+            return False
+        if process_request.request_type == request.RequestType.TRANSPORT:
+            if (
+                process_request.target_queue.is_full
+                or process_request.target_queue.free_space() < effective_min
+            ):
+                return False
+        return len(possible_requests_for_lot) >= effective_min - 1
 
 
     def _get_requests_to_fill_lot(self, process_request: request.Request, lot_dependency: LotDependencyData, possible_requests_for_lot: list[request.Request]) -> list[request.Request]:

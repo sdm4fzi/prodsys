@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from collections import defaultdict
 from functools import partial
 from typing import Callable, Dict, List, Optional, Union, Tuple, TYPE_CHECKING
 
@@ -52,18 +53,19 @@ def get_scheduled_control_policy(
     visits the resource multiple times with different processes. Creates a list of all
     schedule entries in order, so requests can be matched to the next occurrence.
     """
-    # Create ordered list of (product_id, process_id, index) tuples
-    # This allows matching to the next occurrence of a (product, process) pair
-    schedule_sequence = []
+    # Index schedule indices by (product_id, process_id) for O(1) lookups in
+    # scheduled_control_policy instead of scanning the full sequence per request.
+    schedule_matches_by_key: dict[tuple[str, str], list[int]] = defaultdict(list)
     for index, event in enumerate(schedule):
         product_id = event.product
-        # Get process ID from event - use state if process is not available
         process_id = event.process if event.process else event.state
         if process_id and product_id:
-            schedule_sequence.append((product_id, process_id, index))
+            schedule_matches_by_key[(product_id, process_id)].append(index)
 
     return partial(
-        control.scheduled_control_policy, schedule_sequence, fallback_policy
+        control.scheduled_control_policy,
+        dict(schedule_matches_by_key),
+        fallback_policy,
     )
 
 

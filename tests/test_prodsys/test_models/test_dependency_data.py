@@ -137,3 +137,56 @@ def test_lot_handler_passes_through_plain_lot_dependency() -> None:
     resolved = handler._get_lot_dependency_data(req)
     assert resolved is plain
     assert (resolved.min_lot_size, resolved.max_lot_size) == (3, 8)
+
+
+def test_effective_min_lot_size_uses_work_request_quantity_not_queue_depth() -> None:
+    """SuTray min must not drop to 1 just because only one request is queued."""
+    from prodsys.models import order_data as order_data_module
+
+    handler = LotHandler()
+    dep = LotDependencyData(
+        ID="dep_tray",
+        description="tray",
+        dependency_type=DependencyType.LOT,
+        min_lot_size=34,
+        max_lot_size=34,
+        input_output="input_output",
+    )
+
+    order = order_data_module.OrderData(
+        ID="WR024",
+        ordered_products=[
+            order_data_module.OrderedProductData(product_type="Product_J8_VFS", quantity=10)
+        ],
+        order_time=0.0,
+        release_time=0.0,
+        priority=1,
+    )
+    ps = MagicMock()
+    ps.order_data = [order]
+    router = MagicMock()
+    router.production_system_data = ps
+
+    product = MagicMock()
+    product.router = router
+    product.data.ID = "Product_J8_VFS_WR024_0"
+
+    req = MagicMock(spec=request_module.Request)
+    req.request_type = request_module.RequestType.TRANSPORT
+    req.requesting_item = product
+    req.resource = MagicMock()
+    req.resource.controller = MagicMock()
+    req.resource.controller.requests = [req]
+    req.origin_queue = MagicMock()
+    req.target_queue = MagicMock()
+    req.target_queue.is_full = False
+    req.target_queue.free_space = MagicMock(return_value=34)
+    req.resource.data.capacity = 68
+    req.resource.get_free_capacity = MagicMock(return_value=68)
+
+    sim_dep = MagicMock(spec=Dependency)
+    sim_dep.data = dep
+    req.required_dependencies = [sim_dep]
+
+    assert handler._effective_min_lot_size(dep, req) == 10
+    assert handler.is_lot_feasible(req) is False
