@@ -265,8 +265,8 @@ class IntervalBuilder:
         if resource is None:
             return
         key = self._make_key(resource, state_id, product_id)
-        if key in self._open:
-            logger.debug("Overwriting open interval for %s (defensive)", key)
+        # if key in self._open:
+        #     logger.debug("Overwriting open interval for %s (defensive)", key)
         state_type = self._normalize_state_type(state_type_raw)
         self._open[key] = _OpenInterval(
             t_start=t,

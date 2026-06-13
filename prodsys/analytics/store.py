@@ -201,6 +201,19 @@ class AnalyticsStore:
             self._ri_cache = df
             self._ri_cache_key = cache_key
         df = self._ri_cache
+        # Still-open intervals are not in ``_intervals`` until an end-state event
+        # arrives.  For windowed KPI queries (e.g. current shift) we must include
+        # the state that was active at t_from when it started before the window.
+        open_df = self.builder.snapshot_open(t_to)
+        if len(open_df) > 0:
+            open_df = open_df[
+                (open_df["t_end"] > t_from) & (open_df["t_start"] < t_to)
+            ]
+            if len(open_df) > 0:
+                if df is None or len(df) == 0:
+                    df = open_df
+                else:
+                    df = pd.concat([df, open_df], ignore_index=True)
         if resource is not None:
             df = df[df["entity_id"] == resource]
         return df
