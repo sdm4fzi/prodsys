@@ -1,6 +1,15 @@
+import re
 from typing import Optional
 
 from prodsys.simulation.entities.product import Product
+
+_ORDER_ID_IN_PRODUCT_RE = re.compile(r"_(WR\d+)_")
+
+
+def extract_order_id_from_product_id(product_id: str) -> Optional[str]:
+    """Parse ``WR###`` work-request id embedded in scheduler product ids."""
+    match = _ORDER_ID_IN_PRODUCT_RE.search(product_id)
+    return match.group(1) if match else None
 
 from prodsys.simulation.state import StateTypeEnum, StateEnum
 from prodsys.simulation.locatable import Locatable
@@ -48,6 +57,7 @@ class ProductInfo:
         resource: Locatable,
         _product: Product,
         event_time: float,
+        order_ID: Optional[str] = None,
     ):
         """
         Logs the finish of a product.
@@ -56,12 +66,18 @@ class ProductInfo:
             resource (Union[resources.Resource, sink.Sink, source.Source]): New resource of the product.
             _product (Product): Product that is finished.
             event_time (float): Time of the event.
+            order_ID (Optional[str]): Order id for analytics; defaults to the
+                value stored at creation or parsed from the product id.
         """
         self.resource_ID = resource.data.ID
         self.event_time = event_time
         self.product_ID = _product.data.ID
         self.activity = StateEnum.finished_product
         self.state_type = StateTypeEnum.sink
+        if order_ID is not None:
+            self.order_ID = order_ID
+        elif self.order_ID is None:
+            self.order_ID = extract_order_id_from_product_id(_product.data.ID)
 
     def log_create_product(
         self,

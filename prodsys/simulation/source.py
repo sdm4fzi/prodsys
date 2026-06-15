@@ -12,6 +12,7 @@ from prodsys.simulation import router as router_module
 from prodsys.models import source_data, product_data, performance_data
 
 from prodsys.simulation import product_processor
+from prodsys.simulation.product_info import extract_order_id_from_product_id
 
 if TYPE_CHECKING:
     from prodsys.factories import product_factory
@@ -114,9 +115,14 @@ class Source:
                 yield self.env.timeout(inter_arrival_time)
             if self.conwip is not None and len(self.product_factory.products.values()) >= self.conwip:
                 continue
+            order_id: Optional[str] = None
             if self.schedule:
-                scheduled_product_id = self.schedule[self.release_index].product
+                release_event = self.schedule[self.release_index]
+                scheduled_product_id = release_event.product
                 self.released_product_ids.add(scheduled_product_id)
+                order_id = release_event.order_id
+                if order_id is None:
+                    order_id = extract_order_id_from_product_id(scheduled_product_id)
                 # Pass the scheduled product ID directly to create_product
                 product = self.product_factory.create_product(
                     self.product_data, self.data.routing_heuristic, product_id=scheduled_product_id
@@ -130,7 +136,9 @@ class Source:
             for queue in self.ports:
                 yield from queue.put(product.data)
                 product.update_location(queue)
-            self.env.process(self.product_processor.process_product(product))
+            self.env.process(
+                self.product_processor.process_product(product, order_ID=order_id)
+            )
             self.release_index += 1
 
     def get_location(self) -> List[float]:

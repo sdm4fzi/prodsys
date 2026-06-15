@@ -27,6 +27,9 @@ class ProductProcessor:
         processing_request = product.router.request_processing(product)
         yield processing_request.completed
         product.info.log_finish_product(
-            resource=product.current_locatable, _product=product, event_time=self.env.now
+            resource=product.current_locatable,
+            _product=product,
+            event_time=self.env.now,
+            order_ID=order_ID or product.info.order_ID,
         )
         processing_request.target.register_finished_product(product)
