@@ -279,6 +279,8 @@ class Runner:
         """
         self.time_range = time_range
         self.env.run(time_range)
+        # KPIs/plots should use the time the simulation actually reached.
+        self.time_range = self.env.now
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
 
     def run_until_complete(
@@ -361,6 +363,9 @@ class Runner:
                 self.env.pbar = None
         self.time_stamp = time.strftime("%Y%m%d-%H%M%S")
         early_exit = tracker.completion_event.triggered
+        # PostProcessor uses ``time_range`` as the analysis window; align it
+        # with the clock so early schedule completion does not pad SB%.
+        self.time_range = self.env.now
         return {
             "actual_end_time": self.env.now,
             "early_exit": early_exit,

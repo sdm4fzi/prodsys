@@ -172,7 +172,16 @@ class AnalyticsStore:
 
     @property
     def simulation_end_time(self) -> float:
+        """End of the analysis window for KPI denominators and plots.
+
+        When a nominal ``time_range`` cap exceeds the last event timestamp by
+        more than a minute (e.g. schedule-driven early exit before the runner's
+        upper bound), the effective window ends at the last observed event so
+        standby time is not inflated after the simulation stopped.
+        """
         if self._time_range is not None:
+            if self._t_max > 0 and self._time_range > self._t_max + 60.0:
+                return self._t_max
             return self._time_range
         return self._t_max
 
