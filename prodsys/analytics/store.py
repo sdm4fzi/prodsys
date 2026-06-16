@@ -7,7 +7,7 @@ directly from the interval representation.
 
 from __future__ import annotations
 
-from typing import Optional, Literal, Set
+from typing import Optional, Set
 
 import pandas as pd
 import numpy as np

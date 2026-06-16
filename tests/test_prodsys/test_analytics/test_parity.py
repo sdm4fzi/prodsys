@@ -750,3 +750,115 @@ class TestSimulationParity:
         for resource in rs["Resource"].unique():
             pct_sum = rs[rs["Resource"] == resource]["percentage"].sum()
             assert abs(pct_sum - 100.0) < 1.0
+
+
+# ── Categorical-dtype parity tests (event-log rebuild Phase 2) ───────────
+
+# Low-cardinality columns the backend casts to ``category`` to shrink the
+# retained event-log frame. AnalyticsStore must produce identical KPIs whether
+# these arrive as ``object`` or ``category`` dtype.
+_CATEGORICAL_PARITY_COLUMNS = (
+    "Resource",
+    "State",
+    "State Type",
+    "Activity",
+    "process",
+    "Order ID",
+    "process_ok",
+    "Origin location",
+    "Target location",
+    "Empty Transport",
+    "Dependency",
+)
+
+
+def _categoricalize(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    for col in _CATEGORICAL_PARITY_COLUMNS:
+        if col in out.columns:
+            out[col] = out[col].astype("category")
+    return out
+
+
+class TestCategoricalParity:
+    """Object vs category input must yield byte-identical KPIs (Phase 2)."""
+
+    def test_resource_states_categorical_parity(self, comprehensive_event_log):
+        obj = AnalyticsStore.from_raw(comprehensive_event_log)
+        cat = AnalyticsStore.from_raw(_categoricalize(comprehensive_event_log))
+        pd.testing.assert_frame_equal(
+            obj.resource_states().reset_index(drop=True),
+            cat.resource_states().reset_index(drop=True),
+            check_dtype=False,
+            check_categorical=False,
+        )
+
+    def test_throughput_categorical_parity(self, comprehensive_event_log):
+        obj = AnalyticsStore.from_raw(comprehensive_event_log)
+        cat = AnalyticsStore.from_raw(_categoricalize(comprehensive_event_log))
+        pd.testing.assert_frame_equal(
+            obj.throughput().sort_values("Product").reset_index(drop=True),
+            cat.throughput().sort_values("Product").reset_index(drop=True),
+            check_dtype=False,
+            check_categorical=False,
+        )
+
+    def test_scrap_categorical_parity(self):
+        data = {
+            "Time": [5.0, 10.0, 20.0, 25.0, 35.0, 40.0, 50.0, 50.0],
+            "Resource": [
+                "source1", "Machine1", "Machine1", "Machine1",
+                "Machine1", "Machine1", "Machine1", "sink1",
+            ],
+            "State": [
+                "src_s", "prod_s", "prod_s", "prod_s",
+                "prod_s", "prod_s", "prod_s", "sink_s",
+            ],
+            "State Type": [
+                "Source", "Production", "Production", "Production",
+                "Production", "Production", "Production", "Sink",
+            ],
+            "Activity": [
+                "created product", "start state", "end state", "start state",
+                "end state", "start state", "end state", "finished product",
+            ],
+            "Product": ["product1_1"] * 8,
+            "process_ok": [None, None, True, None, False, None, True, None],
+            "Expected End Time": [None] * 8,
+            "Origin location": [None] * 8,
+            "Target location": [None] * 8,
+            "Empty Transport": [None] * 8,
+            "Requesting Item": [None] * 8,
+            "Dependency": [None] * 8,
+            "process": [None] * 8,
+        }
+        df = pd.DataFrame(data)
+        obj = AnalyticsStore.from_raw(df).scrap_per_product_type()
+        cat = AnalyticsStore.from_raw(_categoricalize(df)).scrap_per_product_type()
+        pd.testing.assert_frame_equal(
+            obj.reset_index(drop=True),
+            cat.reset_index(drop=True),
+            check_dtype=False,
+            check_categorical=False,
+        )
+
+    def test_incremental_append_categorical_parity(self, comprehensive_event_log):
+        """A category-typed append batch must match a single full ingest."""
+        df = comprehensive_event_log.sort_values("Time").reset_index(drop=True)
+        split = len(df) // 2
+
+        full = AnalyticsStore.from_raw(df)
+
+        incremental = AnalyticsStore()
+        # New resources/categories can appear in the second batch — each batch is
+        # categoricalised independently (different code spaces), which the
+        # dtype-agnostic ingest path must tolerate.
+        incremental.ingest_events(_categoricalize(df.iloc[:split]))
+        incremental.ingest_events(_categoricalize(df.iloc[split:]))
+
+        pd.testing.assert_frame_equal(
+            full.resource_states().reset_index(drop=True),
+            incremental.resource_states().reset_index(drop=True),
+            check_dtype=False,
+            check_categorical=False,
+        )

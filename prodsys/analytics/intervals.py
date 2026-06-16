@@ -62,6 +62,62 @@ _PROCESS_STATE_CHECK_SET = (
 )
 
 
+def _without_instant_state_pairs(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """Drop same-timestamp start+end for ``breakdown_large`` (zero-duration MQTT flip-flop)."""
+    if df_raw is None or df_raw.empty or "Activity" not in df_raw.columns:
+        return df_raw
+
+    activity = _decategorize(df_raw["Activity"]).fillna("")
+    state_type = df_raw["State Type"].astype(str).str.lower()
+    state = _decategorize(df_raw["State"]).fillna("").astype(str)
+    state_mask = (
+        activity.isin(["start state", "end state"])
+        & state_type.isin({"breakdown", "ud"})
+        & (state == "breakdown_large")
+    )
+    if not state_mask.any():
+        return df_raw
+
+    sub = df_raw.loc[state_mask, ["Resource", "State", "Time", "Activity"]].copy()
+    starts = sub.groupby(["Resource", "State", "Time"])["Activity"].apply(
+        lambda s: (s == "start state").any()
+    )
+    ends = sub.groupby(["Resource", "State", "Time"])["Activity"].apply(
+        lambda s: (s == "end state").any()
+    )
+    instant_keys = set(starts[starts & ends].index)
+    if not instant_keys:
+        return df_raw
+
+    def _is_instant(row: pd.Series) -> bool:
+        if row["Activity"] not in ("start state", "end state"):
+            return False
+        if str(row.get("State Type", "")).lower() not in {"breakdown", "ud"}:
+            return False
+        if str(row.get("State", "")) != "breakdown_large":
+            return False
+        return (row.get("Resource"), row.get("State"), row.get("Time")) in instant_keys
+
+    drop_mask = df_raw.apply(_is_instant, axis=1)
+    if not drop_mask.any():
+        return df_raw
+    return df_raw.loc[~drop_mask].reset_index(drop=True)
+
+
+def _decategorize(series: pd.Series) -> pd.Series:
+    """Return ``series`` as plain ``object`` dtype if it is a Categorical.
+
+    Categorical columns are an analytics-layer RAM optimisation; the interval
+    state machine works on plain Python values and uses ``fillna`` with a value
+    that need not be an existing category. Casting to ``object`` here keeps the
+    ingest path dtype-agnostic without changing behaviour for non-categorical
+    input (the same Series is returned untouched).
+    """
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        return series.astype(object)
+    return series
+
+
 def _event_sort_key(event: dict) -> tuple:
     """
     Sorting key for events at the same simulation time.
@@ -173,9 +229,23 @@ class IntervalBuilder:
         if n == 0:
             return
 
+        df_raw = _without_instant_state_pairs(df_raw)
+        n = len(df_raw)
+        if n == 0:
+            return
+
+        # ``Activity`` / ``State`` may arrive as pandas ``category`` dtype when the
+        # caller categoricalises the event log to save RAM. ``Series.fillna("")``
+        # raises on a Categorical unless ``""`` is already a category, and
+        # ``.values`` yields a Categorical (not an ndarray). Decategorise the two
+        # text columns we ``fillna`` here so the rest of the routine is dtype-
+        # agnostic. Behaviour is identical for plain ``object`` input.
+        activity_series = _decategorize(df_raw["Activity"]).fillna("")
+        state_series = _decategorize(df_raw["State"]).fillna("")
+
         # Vectorized sort: compute priorities via numpy instead of
         # per-element Python sort key (avoids 467K _event_sort_key calls).
-        act_arr = df_raw["Activity"].fillna("").values
+        act_arr = activity_series.values
         time_arr = df_raw["Time"].fillna(0.0).values
         is_process = df_raw["State Type"].isin(_PROCESS_STATE_CHECK_SET).values
 
@@ -187,10 +257,10 @@ class IntervalBuilder:
         order = np.lexsort((priorities, time_arr)).tolist()
 
         # Pre-extract columns as Python lists (avoids to_dict boxing).
-        activities = df_raw["Activity"].fillna("").tolist()
+        activities = activity_series.tolist()
         times = time_arr.tolist()
         resources = df_raw["Resource"].tolist()
-        state_ids = df_raw["State"].fillna("").tolist()
+        state_ids = state_series.tolist()
         products = df_raw["Product"].tolist()
         state_types = df_raw["State Type"].tolist()
 
