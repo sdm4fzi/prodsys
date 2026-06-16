@@ -37,6 +37,39 @@ def simulation_event_log():
     return post_processor.df_raw, post_processor.time_range
 
 
+class TestIngestChunkBuffering:
+    """A8: ingest buffers interval batches and compacts lazily on read."""
+
+    def test_buffer_compacts_on_read(self, simulation_event_log):
+        df_raw, time_range = simulation_event_log
+        df_raw = df_raw.sort_values("Time").reset_index(drop=True)
+        n = len(df_raw)
+        bounds = [round(n * i / 5) for i in range(6)]
+
+        store = AnalyticsStore(time_range=time_range)
+        for lo, hi in zip(bounds[:-1], bounds[1:]):
+            store.ingest_events(df_raw.iloc[lo:hi].reset_index(drop=True))
+
+        # Before any read, ingest batches stay buffered (no O(N^2) concat).
+        assert len(store._interval_chunks) > 0
+        assert store._intervals is None
+
+        # Reading via the public surface compacts the buffer exactly once.
+        _ = store.intervals
+        assert store._interval_chunks == []
+        assert store._intervals is not None
+
+        # And the result equals a single-shot ingest.
+        batch_store = AnalyticsStore.from_raw(df_raw, time_range=time_range)
+        rs_inc = store.resource_states().sort_values(
+            ["Resource", "Time_type"]
+        ).reset_index(drop=True)
+        rs_batch = batch_store.resource_states().sort_values(
+            ["Resource", "Time_type"]
+        ).reset_index(drop=True)
+        pd.testing.assert_frame_equal(rs_inc, rs_batch, check_dtype=False)
+
+
 class TestMonoidAssociativity:
     """
     Test that ingesting the full stream at once produces the same KPIs

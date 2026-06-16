@@ -83,9 +83,22 @@ class AnalyticsStore:
     ):
         self.builder = IntervalBuilder()
         self._intervals: Optional[pd.DataFrame] = None
+        # A8: buffer per-ingest interval batches and concat lazily on read so a
+        # long live-ingest stream doesn't pay an O(N^2) full-frame copy on every
+        # batch. Compaction happens in the ``intervals`` property.
+        self._interval_chunks: list[pd.DataFrame] = []
         self._t_max: float = 0.0
         self._time_range = time_range
         self._exclude_resources: Set[str] = exclude_resources or set()
+        # Excludes derived from observed events (source/sink resources) are
+        # tracked separately so metadata-only updates (F3) can recompute the
+        # full exclude set as auto_excluded ∪ new_queue_excludes without a
+        # re-ingest.
+        self._auto_excluded: Set[str] = set()
+        self._metadata_queue_excludes: Set[str] = set(exclude_resources or set())
+        self._sink_resources: Set[str] = set()
+        self._wip_transfer_events: Optional[pd.DataFrame] = None
+        self._wip_transfer_chunks: list[pd.DataFrame] = []
         self.production_system_data = production_system_data
         self._ri_cache: Optional[pd.DataFrame] = None
         self._ri_cache_key: Optional[tuple] = None
@@ -124,6 +137,15 @@ class AnalyticsStore:
             "Resource",
         ].dropna().unique()
         self._exclude_resources.update(source_sink)
+        self._auto_excluded.update(source_sink)
+        sink_only = df_raw.loc[
+            df_raw["State Type"].isin([
+                StateTypeEnum.sink,
+                StateTypeEnum.sink.value,
+            ]),
+            "Resource",
+        ].dropna().unique()
+        self._sink_resources.update(sink_only)
 
         self._ri_cache = None
         self._ri_cache_key = None
@@ -131,10 +153,68 @@ class AnalyticsStore:
         self.builder.ingest_dataframe(df_raw)
         new_intervals = self.builder.drain()
 
-        if self._intervals is None or len(self._intervals) == 0:
-            self._intervals = new_intervals
-        elif len(new_intervals) > 0:
-            self._intervals = pd.concat([self._intervals, new_intervals], ignore_index=True)
+        if len(new_intervals) > 0:
+            self._interval_chunks.append(new_intervals)
+
+        self._accumulate_wip_transfer_events(df_raw)
+
+    def _accumulate_wip_transfer_events(self, df_raw: pd.DataFrame) -> None:
+        """Accumulate per-resource WIP increment rows from raw events (per ingest batch)."""
+        if df_raw is None or len(df_raw) == 0:
+            return
+
+        from prodsys.util.post_processing import PostProcessor
+
+        pp = PostProcessor(
+            production_system_data=self.production_system_data,
+            df_raw=None,
+        )
+        batch = pp._compute_wip_per_resource(df_raw)[
+            ["Time", "WIP_Increment", "WIP_resource"]
+        ].copy()
+        if len(batch) == 0:
+            return
+        # A8: buffer and concat lazily (see ``_wip_transfer_frame``).
+        self._wip_transfer_chunks.append(batch)
+
+    def _wip_transfer_frame(self) -> Optional[pd.DataFrame]:
+        """Compact buffered per-resource WIP increment batches on read (A8)."""
+        if self._wip_transfer_chunks:
+            frames: list[pd.DataFrame] = []
+            if self._wip_transfer_events is not None and len(self._wip_transfer_events) > 0:
+                frames.append(self._wip_transfer_events)
+            frames.extend(c for c in self._wip_transfer_chunks if len(c) > 0)
+            self._wip_transfer_chunks = []
+            if frames:
+                self._wip_transfer_events = (
+                    frames[0]
+                    if len(frames) == 1
+                    else pd.concat(frames, ignore_index=True)
+                )
+        return self._wip_transfer_events
+
+    def update_metadata(
+        self,
+        production_system_data: Optional["ProductionSystemData"] = None,
+        queue_excludes: Optional[Set[str]] = None,
+    ) -> None:
+        """Update metadata-derived state without re-ingesting events (F3).
+
+        Resource intervals depend only on the raw event stream, so a change to
+        the production-system model or the sink/source queue names can reuse the
+        already-built intervals. We only refresh the model reference, rebuild the
+        exclude set (auto-detected source/sink ∪ new queue excludes), and drop
+        the windowed resource-interval cache.
+        """
+        if production_system_data is not None:
+            self.production_system_data = production_system_data
+        if queue_excludes is not None:
+            self._metadata_queue_excludes = set(queue_excludes)
+        self._exclude_resources = set(self._auto_excluded) | set(
+            self._metadata_queue_excludes
+        )
+        self._ri_cache = None
+        self._ri_cache_key = None
 
     def append_events(self, df_raw: pd.DataFrame) -> None:
         """Alias for ingest_events, for incremental append."""
@@ -161,10 +241,7 @@ class AnalyticsStore:
         if len(snapshot) == 0:
             return
         self._t_max = max(self._t_max, t)
-        if self._intervals is None or len(self._intervals) == 0:
-            self._intervals = snapshot
-        else:
-            self._intervals = pd.concat([self._intervals, snapshot], ignore_index=True)
+        self._interval_chunks.append(snapshot)
         self._ri_cache = None
         self._ri_cache_key = None
 
@@ -185,9 +262,27 @@ class AnalyticsStore:
             return self._time_range
         return self._t_max
 
+    def _compact_intervals(self) -> None:
+        """Merge buffered ingest batches into the canonical interval frame (A8)."""
+        if not self._interval_chunks:
+            return
+        frames: list[pd.DataFrame] = []
+        if self._intervals is not None and len(self._intervals) > 0:
+            frames.append(self._intervals)
+        frames.extend(c for c in self._interval_chunks if len(c) > 0)
+        self._interval_chunks = []
+        if not frames:
+            return
+        self._intervals = (
+            frames[0]
+            if len(frames) == 1
+            else pd.concat(frames, ignore_index=True)
+        )
+
     @property
     def intervals(self) -> pd.DataFrame:
         """All closed intervals."""
+        self._compact_intervals()
         if self._intervals is None:
             from prodsys.analytics.intervals import INTERVAL_COLUMNS
             return pd.DataFrame(columns=INTERVAL_COLUMNS)
@@ -359,6 +454,13 @@ class AnalyticsStore:
         # Map state_type → Time_type
         df["Time_type"] = df["state_type"].map(_STATE_TO_TIME_TYPE)
         df = df[df["Time_type"].notna()]
+
+        # Merge overlapping intervals of the same (resource, Time_type) before
+        # summing. Multi-capacity resources can run several intervals of the same
+        # state type in parallel; summing their raw clipped durations would
+        # over-count busy time. Collapsing them to their union first makes the
+        # store match the merged PostProcessor semantics (F1).
+        df = _merge_same_type_intervals(df)
 
         # Handle NS/UD overlap: UD takes priority over NS
         df = self._resolve_ns_ud_overlap(df, t_from, t_to)
@@ -705,6 +807,72 @@ class AnalyticsStore:
 
         events["WIP"] = events["WIP_Increment"].cumsum().clip(lower=0).astype(float)
         return events[["Time", "WIP", "WIP_Increment", "Product_type", "Product"]].reset_index(drop=True)
+
+    def _wip_sink_queues(self, sink_resources: Set[str]) -> Set[str]:
+        """Queue resource ids in front of sinks (exclude from per-resource WIP)."""
+        queues: Set[str] = set()
+        if self.production_system_data is not None:
+            for sink_data in self.production_system_data.sink_data:
+                if sink_data.ports:
+                    queues.update(sink_data.ports)
+        unloading_types = frozenset({
+            StateTypeEnum.unloading,
+            StateTypeEnum.unloading.value,
+            "Unloading",
+        })
+        ri = self.intervals
+        if ri is None or len(ri) == 0:
+            return queues
+        ri = ri[ri["entity_kind"] == "resource"]
+        unloading_at_sink = ri[
+            ri["state_type"].isin(unloading_types)
+            & ri["entity_id"].isin(sink_resources)
+            & ri["target_location"].notna()
+        ]
+        queues.update(unloading_at_sink["target_location"].dropna().unique())
+        return queues
+
+    def wip_per_resource(
+        self,
+        t_from: float = 0.0,
+        t_to: Optional[float] = None,
+    ) -> pd.DataFrame:
+        """
+        WIP per resource over time (interval-store path).
+
+        Returns DataFrame with columns: Time, WIP, WIP_resource, WIP_Increment
+        """
+        empty = pd.DataFrame(columns=["Time", "WIP", "WIP_resource", "WIP_Increment"])
+        if t_to is None:
+            t_to = self.simulation_end_time
+
+        events = self._wip_transfer_frame()
+        if events is None or len(events) == 0:
+            return empty
+
+        df = events
+        df = df[(df["Time"] > t_from) & (df["Time"] <= t_to)].copy()
+        if len(df) == 0:
+            return empty
+
+        sink_resources = set(self._sink_resources)
+        sink_queues = self._wip_sink_queues(sink_resources)
+        df = df.loc[df["Time"] != 0]
+        df = df.sort_values(
+            by=["Time", "WIP_Increment"],
+            ascending=[True, False],
+            ignore_index=True,
+        )
+        df = df[df["WIP_resource"].notna()]
+        df = df[~df["WIP_resource"].isin(sink_resources)]
+        df = df[~df["WIP_resource"].isin(sink_queues)]
+        if len(df) == 0:
+            return empty
+        df = df.sort_values(by=["WIP_resource", "Time"]).reset_index(drop=True)
+        df["WIP"] = (
+            df.groupby("WIP_resource")["WIP_Increment"].cumsum().clip(lower=0)
+        )
+        return df[["Time", "WIP", "WIP_resource", "WIP_Increment"]]
 
     def aggregated_wip(
         self,
@@ -1255,6 +1423,42 @@ def _compute_row_overlap_vectorized(rows: pd.DataFrame, ref: pd.DataFrame) -> pd
     result = pd.Series(0.0, index=rows.index)
     result.iloc[overlap_sums.index.to_numpy()] = overlap_sums.to_numpy()
     return result
+
+
+def _merge_same_type_intervals(df: pd.DataFrame) -> pd.DataFrame:
+    """Collapse overlapping intervals within each (entity_id, Time_type) group.
+
+    Expects a frame with at least ``entity_id``, ``Time_type``, ``clipped_start``
+    and ``clipped_end`` columns. Returns one row per non-overlapping merged
+    interval with a recomputed ``clipped_duration``. This is the multi-capacity
+    correctness step (F1): without it, parallel same-type intervals are summed
+    and busy time is over-counted.
+    """
+    if len(df) == 0:
+        return df
+
+    merged_rows: list[dict] = []
+    for (entity_id, time_type), group in df.groupby(
+        ["entity_id", "Time_type"], sort=False
+    ):
+        state_type = group["state_type"].iloc[0]
+        for s, e in _merge_intervals(
+            group[["clipped_start", "clipped_end"]].values.tolist()
+        ):
+            merged_rows.append(
+                {
+                    "entity_id": entity_id,
+                    "Time_type": time_type,
+                    "state_type": state_type,
+                    "clipped_start": s,
+                    "clipped_end": e,
+                    "clipped_duration": max(0.0, e - s),
+                }
+            )
+
+    if not merged_rows:
+        return df.iloc[0:0]
+    return pd.DataFrame(merged_rows)
 
 
 def _merge_intervals(intervals: list[list | tuple]) -> list[tuple[float, float]]:

@@ -373,6 +373,99 @@ class TestResourceStatesParity:
             )
 
 
+class TestResourceStatesMergedParity:
+    """F1: store.resource_states() must equal the merged PostProcessor logic."""
+
+    def _assert_per_type_parity(self, df_raw, time_range, tol=1e-6):
+        pp = PostProcessor(df_raw=df_raw, time_range=time_range)
+        legacy = (
+            pp._compute_resource_states_merged()
+            .sort_values(["Resource", "Time_type"])
+            .reset_index(drop=True)
+        )
+        store_df = (
+            pp.store.resource_states()
+            .sort_values(["Resource", "Time_type"])
+            .reset_index(drop=True)
+        )
+
+        legacy_map = {
+            (r["Resource"], r["Time_type"]): r["time_increment"]
+            for _, r in legacy.iterrows()
+        }
+        store_map = {
+            (r["Resource"], r["Time_type"]): r["time_increment"]
+            for _, r in store_df.iterrows()
+        }
+        keys = set(legacy_map) | set(store_map)
+        for key in keys:
+            old_v = legacy_map.get(key, 0.0)
+            new_v = store_map.get(key, 0.0)
+            assert abs(old_v - new_v) < tol, (
+                f"time_increment mismatch for {key}: legacy={old_v}, store={new_v}"
+            )
+
+    def test_comprehensive_per_type_parity(self, comprehensive_event_log):
+        self._assert_per_type_parity(comprehensive_event_log, time_range=55.0)
+
+    def test_metadata_update_reuses_store(self, comprehensive_event_log):
+        """F3: changing metadata must not rebuild/re-ingest the store."""
+        pp = PostProcessor(df_raw=comprehensive_event_log, time_range=55.0)
+        store_before = pp.store
+        rs_before = (
+            pp.df_aggregated_resource_states.sort_values(["Resource", "Time_type"])
+            .reset_index(drop=True)
+        )
+
+        pp.set_system_resource_mapping({})
+        assert pp.store is store_before, "system mapping change should reuse store"
+
+        pp.set_sink_source_queue_names(set(), set())
+        assert pp.store is store_before, "queue-name change should reuse store"
+
+        pp.set_production_system_data(None)
+        assert pp.store is store_before, "psd change should reuse store"
+
+        rs_after = (
+            pp.df_aggregated_resource_states.sort_values(["Resource", "Time_type"])
+            .reset_index(drop=True)
+        )
+        pd.testing.assert_frame_equal(rs_before, rs_after, check_dtype=False)
+
+    def test_multi_capacity_overlap_not_double_counted(self):
+        """Two overlapping production intervals on one (multi-capacity) resource
+        must merge to their union, not be summed.
+
+        prod_a runs [0,10], prod_b runs [5,15]. Union = [0,15] = 15 minutes busy.
+        Naive summing would yield 10 + 10 = 20 (over-counted).
+        """
+        data = {
+            "Time": [0.0, 5.0, 10.0, 15.0],
+            "Resource": ["Machine1"] * 4,
+            "State": ["prod_a", "prod_b", "prod_a", "prod_b"],
+            "State Type": ["Production"] * 4,
+            "Activity": ["start state", "start state", "end state", "end state"],
+            "Product": ["p_1", "p_2", "p_1", "p_2"],
+            "Expected End Time": [None] * 4,
+            "Origin location": [None] * 4,
+            "Target location": [None] * 4,
+            "Empty Transport": [None] * 4,
+            "Requesting Item": [None] * 4,
+            "Dependency": [None] * 4,
+            "process": [None] * 4,
+            "Initial Transport Step": [None] * 4,
+            "Last Transport Step": [None] * 4,
+        }
+        df = pd.DataFrame(data)
+        store = AnalyticsStore.from_raw(df, time_range=100.0)
+        states = store.resource_states()
+        m1 = states[states["Resource"] == "Machine1"]
+        pr = m1[m1["Time_type"] == "PR"]["time_increment"].sum()
+        assert abs(pr - 15.0) < 1e-6, f"PR busy time should be merged 15, got {pr}"
+        total = m1["percentage"].sum()
+        assert abs(total - 100.0) < 1e-6, f"percentages should sum to 100, got {total}"
+
+
 # ── Scrap parity tests ──────────────────────────────────────────────────
 
 class TestScrapParity:
@@ -516,6 +609,16 @@ class TestSimulationParity:
 
         return post_processor
 
+    def test_wip_per_resource_parity(self, simulation_data):
+        """Store-backed wip_per_resource must match legacy raw computation."""
+        pp = simulation_data
+        legacy = pp._compute_wip_per_resource(pp.df_raw)
+        store_df = pp.store.wip_per_resource()
+        key_cols = ["Time", "WIP", "WIP_resource", "WIP_Increment"]
+        legacy = legacy[key_cols].sort_values(["WIP_resource", "Time"]).reset_index(drop=True)
+        store_df = store_df[key_cols].sort_values(["WIP_resource", "Time"]).reset_index(drop=True)
+        pd.testing.assert_frame_equal(legacy, store_df, check_dtype=False)
+
     def test_throughput_parity_simulation(self, simulation_data):
         """Test throughput parity on actual simulation data."""
         old = simulation_data
@@ -578,10 +681,11 @@ class TestSimulationParity:
                 f"Resource {resource}: percentages sum to {new_total}"
             )
 
-            # Check PR time is in the same ballpark
+            # Check PR time matches tightly now that the store merges
+            # overlapping same-type intervals (F1).
             old_pr = old_res[old_res["Time_type"] == "PR"]["percentage"].sum()
             new_pr = new_res[new_res["Time_type"] == "PR"]["percentage"].sum()
-            assert abs(old_pr - new_pr) < 5.0, (
+            assert abs(old_pr - new_pr) < 1.0, (
                 f"Resource {resource} PR: old={old_pr:.1f}%, new={new_pr:.1f}%"
             )
 

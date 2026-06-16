@@ -81,6 +81,22 @@ class PostProcessor:
             if isinstance(getattr(cls, attr_name, None), cached_property):
                 self.__dict__.pop(attr_name, None)
 
+    def release_caches(self, *, drop_df_raw: bool = False) -> None:
+        """Free cached DataFrame properties to cap peak RAM (A3).
+
+        Every ``@cached_property`` on this PostProcessor (``df_WIP``,
+        ``df_resource_states``, ``df_throughput`` …) materialises a DataFrame and
+        keeps it alive for the lifetime of the instance. When many metrics are
+        computed for one response, those frames accumulate. Call this once the
+        response has been emitted to drop them; the underlying AnalyticsStore is
+        retained, so any later access recomputes cheaply from the intervals.
+
+        Set ``drop_df_raw=True`` to also release the raw event log reference.
+        """
+        self._invalidate_cached_properties()
+        if drop_df_raw:
+            self.df_raw = None
+
     @property
     def store(self) -> AnalyticsStore:
         """Access the v2 AnalyticsStore for interval-based queries."""
@@ -94,18 +110,38 @@ class PostProcessor:
         self._sink_input_queues = None
         self._source_output_queues = None
         self._invalidate_cached_properties()
-        self._initialize_analytics()
+        # F3: reuse the already-ingested store; only metadata-derived state
+        # (model reference + queue excludes) changes. Fall back to a full build
+        # if the store has not been created yet.
+        if self._store is not None and self.df_raw is not None:
+            sink_queues, source_queues = self._get_sink_source_queue_names()
+            self._store.update_metadata(
+                production_system_data=production_system_data,
+                queue_excludes=set(sink_queues) | set(source_queues),
+            )
+        else:
+            self._initialize_analytics()
 
     def set_system_resource_mapping(self, mapping: dict):
+        # The system-resource mapping is consumed at the PostProcessor level
+        # (df_aggregated_resource_states), not by the store, so no re-ingest is
+        # needed (F3) — just drop the dependent cached properties.
         self._system_resource_mapping = mapping
         self._invalidate_cached_properties()
-        self._initialize_analytics()
+        if self._store is None:
+            self._initialize_analytics()
 
     def set_sink_source_queue_names(self, sink_input_queues: set, source_output_queues: set):
         self._sink_input_queues = sink_input_queues
         self._source_output_queues = source_output_queues
         self._invalidate_cached_properties()
-        self._initialize_analytics()
+        # F3: queue names only affect the exclude set; reuse the ingested store.
+        if self._store is not None and self.df_raw is not None:
+            self._store.update_metadata(
+                queue_excludes=set(sink_input_queues) | set(source_output_queues),
+            )
+        else:
+            self._initialize_analytics()
 
     def _get_system_resource_mapping(self) -> dict:
         if self._system_resource_mapping is not None:
@@ -181,7 +217,10 @@ class PostProcessor:
 
     @cached_property
     def df_aggregated_resource_states(self) -> pd.DataFrame:
-        df = self._compute_resource_states_merged()
+        # F1: the merged per-resource computation now lives in the store
+        # (AnalyticsStore.resource_states merges overlapping same-type intervals).
+        # _compute_resource_states_merged is kept for parity/regression tests.
+        df = self.store.resource_states()
         system_mapping = self._get_system_resource_mapping()
         if system_mapping:
             df_system = self._compute_system_resource_states(system_mapping)
@@ -379,10 +418,14 @@ class PostProcessor:
 
     @cached_property
     def df_WIP_per_resource(self) -> pd.DataFrame:
-        """WIP per resource over time, computed from raw event data."""
-        if self.df_raw is None:
-            return pd.DataFrame(columns=["Time", "WIP", "WIP_resource", "WIP_Increment"])
-        return self._compute_wip_per_resource(self.df_raw)
+        """WIP per resource over time, computed from the interval store.
+
+        F2: fully store-backed. The per-resource WIP increments are accumulated
+        during ingest (``_wip_transfer_events``), so this no longer needs the raw
+        event log to be loaded — callers can build a PostProcessor without a
+        carry-in ``df_raw`` window.
+        """
+        return self.store.wip_per_resource()
 
     @cached_property
     def df_aggregated_WIP(self) -> pd.Series:
@@ -683,6 +726,12 @@ class PostProcessor:
     def _compute_wip_per_resource(self, df_raw: pd.DataFrame) -> pd.DataFrame:
         """Compute WIP per resource from raw event data."""
         df = df_raw.copy()
+        # Optional transport columns may be absent on minimal/synthetic event
+        # logs (and on logs from runs without transport). Normalise them so the
+        # loading/unloading WIP logic below can reference them unconditionally.
+        for _optional_col in ("Target location", "Origin location"):
+            if _optional_col not in df.columns:
+                df[_optional_col] = None
         df = df.loc[df["Time"] != 0].copy()
         df["WIP_Increment"] = 0
         df["WIP_resource"] = None
