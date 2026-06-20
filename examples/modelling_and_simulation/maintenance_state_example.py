@@ -154,7 +154,7 @@ def main() -> None:
     print("All checks passed.\n")
 
     runner.print_results()
-    runner.plot_results()
+    # runner.plot_results()
 
 
 if __name__ == "__main__":

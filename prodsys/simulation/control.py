@@ -90,6 +90,7 @@ class Controller:
             process_request (Request): The request to be processed.
         """
         self.requests.append(process_request)
+        self.resource.update_idle_logging()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
 
@@ -112,6 +113,7 @@ class Controller:
                 yield self.env.process(self.resource.charge())
             yield self.state_changed
             self.state_changed = events.Event(self.env)
+            self.resource.update_idle_logging()
             if (
                 self.resource.full
                 or self.resource.in_setup
@@ -279,6 +281,7 @@ class Controller:
         """
         self.unreserve_resource_capacity(num_processes)
         self.num_running_processes += num_processes
+        self.resource.update_idle_logging()
 
     def mark_finished_process(self, num_processes: int = 1) -> None:
         """
@@ -289,6 +292,7 @@ class Controller:
         """
         self.num_running_processes -= num_processes
         self.resource.update_full()
+        self.resource.update_idle_logging()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
             

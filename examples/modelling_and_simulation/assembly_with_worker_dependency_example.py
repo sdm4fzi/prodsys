@@ -131,6 +131,6 @@ runner_instance = runner.Runner(production_system_data=model)
 runner_instance.initialize_simulation()
 runner_instance.run(1000)
 runner_instance.print_results()
-runner_instance.plot_results()
+# runner_instance.plot_results()
 runner_instance.save_results_as_csv()
 

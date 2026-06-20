@@ -234,22 +234,12 @@ class PostProcessor:
         for multi-capacity resources: merge overlapping intervals of the same
         type before summing durations.
         """
-        from prodsys.simulation.state import StateTypeEnum
-
-        _STATE_TO_TT = {
-            StateTypeEnum.production.value: "PR",
-            StateTypeEnum.transport.value: "PR",
-            StateTypeEnum.breakdown.value: "UD",
-            StateTypeEnum.maintenance.value: "MT",
-            StateTypeEnum.setup.value: "ST",
-            StateTypeEnum.charging.value: "CR",
-            StateTypeEnum.dependency.value: "DP",
-            StateTypeEnum.non_scheduled.value: "NS",
-        }
-        _EXCLUDED = frozenset({
-            StateTypeEnum.loading.value, StateTypeEnum.unloading.value,
-            StateTypeEnum.source.value, StateTypeEnum.sink.value,
-        })
+        from prodsys.analytics.store import (
+            _EXCLUDED_STATE_TYPES as _STORE_EXCLUDED,
+            _STATE_TO_TIME_TYPE,
+            _merge_same_type_intervals,
+            _resolve_priority_overlaps,
+        )
 
         t_to = self.store.simulation_end_time
         df = self.store.resource_intervals(0.0, t_to)
@@ -259,80 +249,48 @@ class PostProcessor:
         excluded = set(self.store._exclude_resources)
         df = df[df["entity_id"].notna()]
         df = df[~df["entity_id"].isin(excluded)]
-        df = df[~df["state_type"].isin(_EXCLUDED)]
+        df = df[~df["state_type"].isin(_STORE_EXCLUDED)]
         if len(df) == 0:
             return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
 
         df = df.copy()
-        df["Time_type"] = df["state_type"].map(_STATE_TO_TT)
+        df["clipped_start"] = df["t_start"].clip(lower=0.0)
+        df["clipped_end"] = df["t_end"].clip(upper=t_to)
+        df["Time_type"] = df["state_type"].map(_STATE_TO_TIME_TYPE)
         df = df[df["Time_type"].notna()]
 
+        df = _merge_same_type_intervals(df)
+        df = _resolve_priority_overlaps(df)
+
         resource_time = t_to
+        grouped = (
+            df.groupby(["entity_id", "Time_type"])["clipped_duration"]
+            .sum()
+            .reset_index()
+            .rename(columns={"entity_id": "Resource", "clipped_duration": "time_increment"})
+        )
+
         rows = []
-        for resource in df["entity_id"].unique():
-            res_df = df[df["entity_id"] == resource]
-            for tt in res_df["Time_type"].unique():
-                tt_df = res_df[res_df["Time_type"] == tt]
-                intervals = tt_df[["t_start", "t_end"]].values.tolist()
-                intervals.sort(key=lambda x: x[0])
-                # Merge overlapping intervals
-                merged = [[intervals[0][0], intervals[0][1]]]
-                for s, e in intervals[1:]:
-                    if s <= merged[-1][1]:
-                        merged[-1][1] = max(merged[-1][1], e)
-                    else:
-                        merged.append([s, e])
-                total = sum(min(e, t_to) - max(s, 0.0) for s, e in merged)
-                if total > 0:
-                    rows.append({
-                        "Resource": resource, "Time_type": tt,
-                        "time_increment": total, "resource_time": resource_time,
-                        "percentage": total / resource_time * 100,
-                    })
-            # Resolve NS/UD overlap: UD takes priority
-            res_rows = [r for r in rows if r["Resource"] == resource]
-            ns_time = sum(r["time_increment"] for r in res_rows if r["Time_type"] == "NS")
-            ud_time = sum(r["time_increment"] for r in res_rows if r["Time_type"] == "UD")
-            if ns_time > 0 and ud_time > 0:
-                ns_intervals = res_df[res_df["Time_type"] == "NS"][["t_start", "t_end"]].values.tolist()
-                ud_intervals = res_df[res_df["Time_type"] == "UD"][["t_start", "t_end"]].values.tolist()
-                ns_intervals.sort(key=lambda x: x[0])
-                ud_intervals.sort(key=lambda x: x[0])
-                ns_merged = self._merge_interval_list(ns_intervals)
-                ud_merged = self._merge_interval_list(ud_intervals)
-                overlap = self._overlap_duration(ns_merged, ud_merged)
-                if overlap > 0:
-                    for r in rows:
-                        if r["Resource"] == resource and r["Time_type"] == "NS":
-                            r["time_increment"] = max(0.0, r["time_increment"] - overlap)
-                            r["percentage"] = r["time_increment"] / resource_time * 100
-            # Subtract NS time from other non-UD states
-            if ns_time > 0:
-                ns_intervals = res_df[res_df["Time_type"] == "NS"][["t_start", "t_end"]].values.tolist()
-                ns_merged = self._merge_interval_list(ns_intervals)
-                for r in rows:
-                    if r["Resource"] == resource and r["Time_type"] not in ("NS", "UD"):
-                        other_intervals = res_df[res_df["Time_type"] == r["Time_type"]][["t_start", "t_end"]].values.tolist()
-                        other_merged = self._merge_interval_list(other_intervals)
-                        overlap = self._overlap_duration(other_merged, ns_merged)
-                        if overlap > 0:
-                            r["time_increment"] = max(0.0, r["time_increment"] - overlap)
-                            r["percentage"] = r["time_increment"] / resource_time * 100
-            # Add standby
-            total_active = sum(r["time_increment"] for r in rows if r["Resource"] == resource)
+        for resource in grouped["Resource"].unique():
+            res_data = grouped[grouped["Resource"] == resource]
+            total_active = res_data["time_increment"].sum()
             sb = max(0.0, resource_time - total_active)
             if sb > 1e-10:
                 rows.append({
-                    "Resource": resource, "Time_type": "SB",
-                    "time_increment": sb, "resource_time": resource_time,
+                    "Resource": resource,
+                    "Time_type": "SB",
+                    "time_increment": sb,
+                    "resource_time": resource_time,
                     "percentage": sb / resource_time * 100,
                 })
 
-        if not rows:
-            return pd.DataFrame(columns=["Resource", "Time_type", "time_increment", "resource_time", "percentage"])
-        result = pd.DataFrame(rows)
-        result = result[result["time_increment"] > 1e-10].reset_index(drop=True)
-        return result
+        if rows:
+            grouped = pd.concat([grouped, pd.DataFrame(rows)], ignore_index=True)
+
+        grouped["resource_time"] = resource_time
+        grouped["percentage"] = grouped["time_increment"] / resource_time * 100
+        grouped = grouped[grouped["time_increment"] > 1e-10].reset_index(drop=True)
+        return grouped
 
     @staticmethod
     def _merge_interval_list(intervals: list) -> list[tuple[float, float]]:
@@ -584,6 +542,10 @@ class PostProcessor:
         context = (performance_indicators.KPILevelEnum.RESOURCE,)
         class_dict = {
             "SB": (performance_indicators.StandbyTime, performance_indicators.KPIEnum.STANDBY_TIME),
+            "BL": (performance_indicators.BlockedTime, performance_indicators.KPIEnum.BLOCKED_TIME),
+            "SV": (performance_indicators.StarvedTime, performance_indicators.KPIEnum.STARVED_TIME),
+            "ID": (performance_indicators.IdleTime, performance_indicators.KPIEnum.IDLE_TIME),
+            "WT": (performance_indicators.WaitingForTransportTime, performance_indicators.KPIEnum.WAITING_FOR_TRANSPORT_TIME),
             "PR": (performance_indicators.ProductiveTime, performance_indicators.KPIEnum.PRODUCTIVE_TIME),
             "UD": (performance_indicators.UnscheduledDowntime, performance_indicators.KPIEnum.UNSCHEDULED_DOWNTIME),
             "ST": (performance_indicators.SetupTime, performance_indicators.KPIEnum.SETUP_TIME),
@@ -753,12 +715,16 @@ class PostProcessor:
         if self._sink_input_queues:
             sink_queues.update(self._sink_input_queues)
 
-        CREATED_CONDITION = df["Activity"] == state.StateEnum.created_product
+        CREATED_CONDITION = df["Activity"].isin(
+            [state.StateEnum.created_product, state.StateEnum.created_product.value]
+        )
         created_mask = CREATED_CONDITION & ~df["Resource"].isin(sink_resources_set)
         df.loc[created_mask, "WIP_Increment"] = 1
         df.loc[created_mask, "WIP_resource"] = df.loc[created_mask, "Resource"]
 
-        CONSUMED_CONDITION = df["Activity"] == state.StateEnum.consumed_product
+        CONSUMED_CONDITION = df["Activity"].isin(
+            [state.StateEnum.consumed_product, state.StateEnum.consumed_product.value]
+        )
         consumed_mask = CONSUMED_CONDITION & ~df["Resource"].isin(sink_resources_set)
         df.loc[consumed_mask, "WIP_Increment"] = -1
         df.loc[consumed_mask, "WIP_resource"] = df.loc[consumed_mask, "Resource"]

@@ -10,6 +10,7 @@ from prodsys.simulation import (
     sim,
     process,
     state,
+    standby_logging,
 )
 
 from prodsys.simulation.process import (
@@ -65,14 +66,18 @@ class ResourceProcessModelHandler:
         """
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
-            yield from process_request.origin_queue.get(entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                process_request.resource, process_request.origin_queue, entity.data.ID
+            )
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
         for dependant_entity in process_request.entity.depended_entities:
             if dependant_entity.data.type not in required_assembly_types:
                 continue
             dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
-            yield from process_request.origin_queue.get(dependant_entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                process_request.resource, process_request.origin_queue, dependant_entity.data.ID
+            )
             dependant_entity.current_locatable = process_request.resource
             dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
@@ -90,7 +95,9 @@ class ResourceProcessModelHandler:
         """
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
-            yield from process_request.target_queue.put(entity.data)
+            yield from standby_logging.log_blocked_around_put(
+                process_request.resource, process_request.target_queue, entity.data
+            )
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
         for dependant_entity in process_request.entity.depended_entities:

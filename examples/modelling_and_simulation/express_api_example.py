@@ -45,6 +45,7 @@ ps = psx.ProductionSystem([r1, r2], [s1, s2], [sk1, sk2])
 ps.run(7 * 24 * 60)
 
 ps.runner.print_results()
+# ps.runner.plot_results()
 
 print("Example Results data:\n")
 print(ps.post_processor.df_WIP.head())

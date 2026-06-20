@@ -288,12 +288,27 @@ class EventLogger(Logger):
         """
         for r in resource_factory.all_resources.values():
             all_states = (
-                r.states + r.production_states + r.setup_states + r.charging_states
+                r.states
+                + r.production_states
+                + r.setup_states
+                + r.charging_states
             )
             for __state in all_states:
                 self.register_patch(
                     self.event_data,
                     __state.state_info,
+                    attr=[
+                        "log_start_state",
+                        "log_start_interrupt_state",
+                        "log_end_interrupt_state",
+                        "log_end_state",
+                    ],
+                    post=post_monitor_resource_states,
+                )
+            for state_info in r.standby_states.all_state_infos():
+                self.register_patch(
+                    self.event_data,
+                    state_info,
                     attr=[
                         "log_start_state",
                         "log_start_interrupt_state",

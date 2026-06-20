@@ -52,7 +52,7 @@ transport = psx.Resource([tp], [2, 0], 1, ID="transport")
 
 
 machine = psx.Resource(
-    [process_model],
+    [process_model, p1, p2],
     [5, 0],
     2,
     ID="machine",
@@ -85,5 +85,5 @@ system.run(100)
 runner_instance = system.runner
 
 runner_instance.print_results()
-runner_instance.plot_results()
+# runner_instance.plot_results()
 runner_instance.save_results_as_csv()

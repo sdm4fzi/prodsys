@@ -33,6 +33,10 @@ _STATE_TO_TIME_TYPE: dict[str, str] = {
     StateTypeEnum.charging.value: "CR",
     StateTypeEnum.dependency.value: "DP",
     StateTypeEnum.non_scheduled.value: "NS",
+    StateTypeEnum.blocked.value: "BL",
+    StateTypeEnum.starved.value: "SV",
+    StateTypeEnum.idle.value: "ID",
+    StateTypeEnum.waiting_for_transport.value: "WT",
 }
 
 # State types that represent productive work (used for resource states)
@@ -51,6 +55,10 @@ _RESOURCE_STATE_TYPES = frozenset({
     StateTypeEnum.charging.value,
     StateTypeEnum.dependency.value,
     StateTypeEnum.non_scheduled.value,
+    StateTypeEnum.blocked.value,
+    StateTypeEnum.starved.value,
+    StateTypeEnum.idle.value,
+    StateTypeEnum.waiting_for_transport.value,
 })
 
 # State types to exclude from resource state calculations
@@ -60,6 +68,21 @@ _EXCLUDED_STATE_TYPES = frozenset({
     StateTypeEnum.source.value,
     StateTypeEnum.sink.value,
 })
+
+# Higher-priority time types suppress overlapping duration from lower-priority types.
+_TIME_TYPE_OVERLAP_PRIORITY: tuple[str, ...] = (
+    "UD",
+    "MT",
+    "NS",
+    "DP",
+    "PR",
+    "ST",
+    "CR",
+    "BL",
+    "SV",
+    "ID",
+    "WT",
+)
 
 
 class AnalyticsStore:
@@ -462,8 +485,8 @@ class AnalyticsStore:
         # store match the merged PostProcessor semantics (F1).
         df = _merge_same_type_intervals(df)
 
-        # Handle NS/UD overlap: UD takes priority over NS
-        df = self._resolve_ns_ud_overlap(df, t_from, t_to)
+        # Resolve cross-type overlaps so percentages sum to ~100% per resource.
+        df = _resolve_priority_overlaps(df)
 
         # Sum duration per (resource, time_type)
         resource_time = t_to - t_from
@@ -936,6 +959,8 @@ class AnalyticsStore:
             st_time = time_by_type.get("ST", 0)
             dp_time = time_by_type.get("DP", 0)
             sb_time = time_by_type.get("SB", 0)
+            wt_time = time_by_type.get("WT", 0)
+            id_time = time_by_type.get("ID", 0)
             ns_time = time_by_type.get("NS", 0)
             is_transport = resource in transport_ids
 
@@ -943,7 +968,9 @@ class AnalyticsStore:
             scheduled_time = (resource_time - ns_time) * capacity
             if scheduled_time > 0:
                 if is_transport:
-                    availability = (pr_time + st_time + dp_time + sb_time) / scheduled_time
+                    availability = (
+                        pr_time + st_time + dp_time + sb_time + wt_time + id_time
+                    ) / scheduled_time
                 else:
                     availability = (pr_time + st_time + dp_time) / scheduled_time
             else:
@@ -1141,7 +1168,7 @@ class AnalyticsStore:
             fill_value=0,
         ).reset_index()
 
-        for col in ("PR", "ST", "DP", "SB", "NS", "UD", "CR"):
+        for col in ("PR", "ST", "DP", "SB", "WT", "ID", "NS", "UD", "CR"):
             if col not in pivot.columns:
                 pivot[col] = 0.0
 
@@ -1152,7 +1179,7 @@ class AnalyticsStore:
         is_transport = pivot["Resource"].isin(transport_ids)
         avail_num = np.where(
             is_transport,
-            pivot["PR"] + pivot["ST"] + pivot["DP"] + pivot["SB"],
+            pivot["PR"] + pivot["ST"] + pivot["DP"] + pivot["SB"] + pivot["WT"] + pivot["ID"],
             pivot["PR"] + pivot["ST"] + pivot["DP"],
         )
         pivot["availability"] = np.where(
@@ -1423,6 +1450,67 @@ def _compute_row_overlap_vectorized(rows: pd.DataFrame, ref: pd.DataFrame) -> pd
     result = pd.Series(0.0, index=rows.index)
     result.iloc[overlap_sums.index.to_numpy()] = overlap_sums.to_numpy()
     return result
+
+
+def _resolve_priority_overlaps(df: pd.DataFrame) -> pd.DataFrame:
+    """Subtract higher-priority state time from overlapping lower-priority states."""
+    if len(df) == 0:
+        return df
+
+    result_rows: list[dict] = []
+    for resource, res_df in df.groupby("entity_id", sort=False):
+        merged_by_type: dict[str, list[tuple[float, float]]] = {}
+        state_type_by_tt: dict[str, object] = {}
+        for time_type, group in res_df.groupby("Time_type", sort=False):
+            merged_by_type[time_type] = _merge_intervals(
+                group[["clipped_start", "clipped_end"]].values.tolist()
+            )
+            state_type_by_tt[time_type] = group["state_type"].iloc[0]
+
+        blocking_union: list[tuple[float, float]] = []
+        seen_types: set[str] = set()
+        for time_type in _TIME_TYPE_OVERLAP_PRIORITY:
+            seen_types.add(time_type)
+            current = merged_by_type.get(time_type)
+            if not current:
+                continue
+            overlap = _overlap_duration(current, blocking_union)
+            total = sum(e - s for s, e in current)
+            net = max(0.0, total - overlap)
+            if net > 1e-10:
+                result_rows.append(
+                    {
+                        "entity_id": resource,
+                        "Time_type": time_type,
+                        "state_type": state_type_by_tt[time_type],
+                        "clipped_start": 0.0,
+                        "clipped_end": net,
+                        "clipped_duration": net,
+                    }
+                )
+            blocking_union = _merge_intervals(blocking_union + current)
+
+        for time_type, current in merged_by_type.items():
+            if time_type in seen_types or not current:
+                continue
+            overlap = _overlap_duration(current, blocking_union)
+            total = sum(e - s for s, e in current)
+            net = max(0.0, total - overlap)
+            if net > 1e-10:
+                result_rows.append(
+                    {
+                        "entity_id": resource,
+                        "Time_type": time_type,
+                        "state_type": state_type_by_tt[time_type],
+                        "clipped_start": 0.0,
+                        "clipped_end": net,
+                        "clipped_duration": net,
+                    }
+                )
+
+    if not result_rows:
+        return df.iloc[0:0]
+    return pd.DataFrame(result_rows)
 
 
 def _merge_same_type_intervals(df: pd.DataFrame) -> pd.DataFrame:

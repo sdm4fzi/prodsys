@@ -11,6 +11,8 @@ from prodsys.simulation import (
 )
 from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation.entities.entity import EntityType
+from prodsys.simulation import standby_logging
+from prodsys.simulation import port as port_module
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -65,14 +67,22 @@ class ProductionProcessHandler:
         """
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
-            yield from process_request.origin_queue.get(entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                process_request.resource, process_request.origin_queue, entity.data.ID
+            )
             entity.info.log_end_loading(process_request.resource, entity, self.env.now, process_request.origin_queue)
         required_primitive_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.TOOL or dependency.data.dependency_type == DependencyType.ASSEMBLY]
         for dependant_entity in process_request.entity.depended_entities:
             if dependant_entity.data.type not in required_primitive_types:
                 continue
             dependant_entity.info.log_start_loading(process_request.resource, dependant_entity, self.env.now, process_request.origin_queue)
-            yield from dependant_entity.current_locatable.get(dependant_entity.data.ID)
+            locatable = dependant_entity.current_locatable
+            if isinstance(locatable, port_module.Queue):
+                yield from standby_logging.log_starved_around_get(
+                    process_request.resource, locatable, dependant_entity.data.ID
+                )
+            else:
+                yield from locatable.get(dependant_entity.data.ID)
             dependant_entity.update_location(process_request.resource)
             dependant_entity.info.log_end_loading(process_request.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
@@ -90,7 +100,9 @@ class ProductionProcessHandler:
         """
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
-            yield from process_request.target_queue.put(entity.data)
+            yield from standby_logging.log_blocked_around_put(
+                process_request.resource, process_request.target_queue, entity.data
+            )
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
         for dependant_entity in process_request.entity.depended_entities:
@@ -103,7 +115,13 @@ class ProductionProcessHandler:
                 continue
             dependant_entity.current_locatable = process_request.entity._current_locatable
             dependant_entity.info.log_start_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
-            yield from dependant_entity.current_locatable.put(dependant_entity.data)
+            locatable = dependant_entity.current_locatable
+            if isinstance(locatable, port_module.Queue):
+                yield from standby_logging.log_blocked_around_put(
+                    process_request.resource, locatable, dependant_entity.data
+                )
+            else:
+                yield from locatable.put(dependant_entity.data)
             dependant_entity.info.log_end_unloading(dependant_entity.current_locatable.resource, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
     def handle_request(self, process_request: request_module.Request) -> Generator:

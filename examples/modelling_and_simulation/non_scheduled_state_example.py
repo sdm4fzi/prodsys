@@ -107,7 +107,7 @@ runner_instance = system.runner
 
 # Print and plot results
 runner_instance.print_results()
-runner_instance.plot_results()
+# runner_instance.plot_results()
 runner_instance.save_results_as_csv()
 
 print("\n" + "="*60)

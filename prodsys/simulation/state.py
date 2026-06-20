@@ -71,6 +71,10 @@ class StateTypeEnum(str, Enum):
     loading = "Loading"
     unloading = "Unloading"
     non_scheduled = "NonScheduled"
+    blocked = "Blocked"
+    starved = "Starved"
+    idle = "Idle"
+    waiting_for_transport = "WaitingForTransport"
 
 
 class StateInfo:

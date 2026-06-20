@@ -31,6 +31,8 @@ from prodsys.models.resource_data import (
     SystemResourceData,
 )
 from prodsys.util import util
+from prodsys.simulation.standby_states import StandbyStates
+from prodsys.simulation.state import StateTypeEnum
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +98,7 @@ class Resource(resource.Resource):
         self.current_locatable = self
 
         self.full = False
+        self.standby_states = StandbyStates(env, data.ID)
 
     def bind_to_dependant(self, dependant: Resource) -> None:
         """
@@ -311,6 +314,41 @@ class Resource(resource.Resource):
             actual_state.activate_state()
         for actual_state in self.states:
             actual_state.process = self.env.process(actual_state.process_state())
+
+    def _should_log_idle(self) -> bool:
+        if not self.active.triggered:
+            return False
+        if self.in_setup or self.bound or self.full:
+            return False
+        if self.controller.requests:
+            return False
+        return True
+
+    def update_idle_logging(self) -> None:
+        """Start/end Idle or WaitingForTransport based on controller state."""
+        should_idle = self._should_log_idle()
+        target_type = (
+            StateTypeEnum.waiting_for_transport
+            if self.can_move
+            else StateTypeEnum.idle
+        )
+        active_type = self.standby_states._idle_active_type
+
+        if should_idle:
+            if active_type is None:
+                info = self.standby_states.info_for(target_type)
+                info.log_start_state(self.env.now, self.env.now, target_type)
+                self.standby_states._idle_active_type = target_type
+            elif active_type != target_type:
+                prev_info = self.standby_states.info_for(active_type)
+                prev_info.log_end_state(self.env.now, active_type)
+                info = self.standby_states.info_for(target_type)
+                info.log_start_state(self.env.now, self.env.now, target_type)
+                self.standby_states._idle_active_type = target_type
+        elif active_type is not None:
+            info = self.standby_states.info_for(active_type)
+            info.log_end_state(self.env.now, active_type)
+            self.standby_states._idle_active_type = None
 
     def get_process(self, process: PROCESS_UNION) -> state.State:
         """

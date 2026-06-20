@@ -487,6 +487,10 @@ def plot_resource_states_over_time(
     color_map = {
         "PR": "green",
         "SB": "yellow",
+        "BL": "orange",
+        "SV": "gold",
+        "ID": "lightyellow",
+        "WT": "wheat",
         "UD": "red",
         "ST": "blue",
         "CR": "grey",
@@ -946,6 +950,10 @@ def plot_time_per_state_of_resources(
         color_discrete_map={
             "PR": "green",
             "SB": "yellow",
+            "BL": "orange",
+            "SV": "gold",
+            "ID": "lightyellow",
+            "WT": "wheat",
             "UD": "red",
             "ST": "blue",
             "CR": "grey",
@@ -953,11 +961,15 @@ def plot_time_per_state_of_resources(
             "NS": "grey",
         },
         category_orders={
-            "Time_type": ["UD", "NS", "PR", "DP", "ST", "SB", "CR"]
+            "Time_type": ["UD", "NS", "PR", "DP", "ST", "BL", "SV", "WT", "ID", "SB", "CR"]
         },
     )
     fig.update_traces(name="Productive", selector=dict(name="PR"))
     fig.update_traces(name="Standby", selector=dict(name="SB"))
+    fig.update_traces(name="Blocked", selector=dict(name="BL"))
+    fig.update_traces(name="Starved", selector=dict(name="SV"))
+    fig.update_traces(name="Idle", selector=dict(name="ID"))
+    fig.update_traces(name="Waiting for transport", selector=dict(name="WT"))
     fig.update_traces(name="Unscheduled Downtime", selector=dict(name="UD"))
     fig.update_traces(name="Non-Scheduled", selector=dict(name="NS"))
     fig.update_traces(name="Setup", selector=dict(name="ST"))

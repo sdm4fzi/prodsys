@@ -27,6 +27,7 @@ from prodsys.simulation import (
     sim,
     state,
     process,
+    standby_logging,
 )
 
 from prodsys.simulation.process import (
@@ -90,7 +91,9 @@ class DisassemblyProcessHandler:
             Generator: The generator yields when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
         for entity in process_request.get_atomic_entities():
-            yield from process_request.origin_queue.get(entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                process_request.resource, process_request.origin_queue, entity.data.ID
+            )
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -105,7 +108,9 @@ class DisassemblyProcessHandler:
             Generator: The generator yields when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
         for entity in process_request.get_atomic_entities():
-            yield from process_request.target_queue.put(entity.data)
+            yield from standby_logging.log_blocked_around_put(
+                process_request.resource, process_request.target_queue, entity.data
+            )
 
 
     def set_process_time(self, process_time: float) -> None:
@@ -132,7 +137,9 @@ class DisassemblyProcessHandler:
             List[events.Event]: The event that is triggered when the product is taken from the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
       
-        yield from queue.get(product.data.ID)
+        yield from standby_logging.log_starved_around_get(
+            self.resource, queue, product.data.ID
+        )
 
     def put_product_to_output_queue(
         self, queue: port.Queue, product: product.Product
@@ -147,7 +154,9 @@ class DisassemblyProcessHandler:
         Returns:
             List[events.Event]: The event that is triggered when the product is placed in the queue (multiple events for multiple products, e.g. for a batch process or an assembly).
         """
-        yield from queue.put(product.data)
+        yield from standby_logging.log_blocked_around_put(
+            self.resource, queue, product.data
+        )
         
     def get_disassembled_product_sink_port(self,product: product.Product ) -> List[float]:
         product_sink = product.router.sink_factory.sinks[product.type]
@@ -255,7 +264,9 @@ class DisassemblyProcessHandler:
             return
         buffer_placement_events = []
         for prod in disassembled_products: 
-            yield from target_queue.put(prod.data)
+            yield from standby_logging.log_blocked_around_put(
+                self.resource, target_queue, prod.data
+            )
             prod.update_location(target_queue)
             if (prod == product):
                 self.no_sink_transport = True

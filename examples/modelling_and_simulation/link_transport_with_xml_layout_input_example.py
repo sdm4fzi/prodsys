@@ -146,7 +146,7 @@ def main():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(BASE_DIR, "simulation_example_data", "FreeSpace.drawio.xml")
     node_link_generation.generate_and_apply_network(production_system_instance, path, style="grid", simple_connection=True)
-    node_link_generation.plot_layout(production_system_instance, title="AGV Layout – XML-defined areas")
+    # node_link_generation.plot_layout(production_system_instance, title="AGV Layout – XML-defined areas")
     prodsys.set_logging("DEBUG")
     runner = prodsys.runner.Runner(production_system_data=production_system_instance)
     runner.initialize_simulation()

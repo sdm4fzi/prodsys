@@ -9,6 +9,7 @@ import numpy as np
 from prodsys.simulation import (
     sim,
     process,
+    standby_logging,
 )
 
 from prodsys.simulation.process import (
@@ -53,7 +54,9 @@ class ProcessModelHandler:
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
         """
         for lot_request in lot_requests:
-            yield from lot_request.origin_queue.get(lot_request.entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                self.resource, lot_request.origin_queue, lot_request.entity.data.ID
+            )
 
     def handle_request(self, process_request: request_module.Request) -> Generator:
         """

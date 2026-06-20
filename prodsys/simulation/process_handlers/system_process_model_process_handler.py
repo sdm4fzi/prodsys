@@ -8,6 +8,7 @@ import logging
 from prodsys.simulation import (
     sim,
     process,
+    standby_logging,
 )
 
 from prodsys.simulation.process import (
@@ -53,7 +54,9 @@ class SystemProcessModelHandler:
         Get the next product for a process. The product is removed (get) from the input queues of the resource.
         """
         for lot_request in lot_requests:
-            yield from lot_request.origin_queue.get(lot_request.entity.data.ID)
+            yield from standby_logging.log_starved_around_get(
+                self.resource, lot_request.origin_queue, lot_request.entity.data.ID
+            )
 
     def put_entities_of_request(
         self, process_request: request_module.Request
@@ -78,7 +81,13 @@ class SystemProcessModelHandler:
                 continue
             dependant_entity.update_location(process_request.entity._current_locatable)
             dependant_entity.info.log_start_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
-            yield from dependant_entity.current_locatable.put(dependant_entity.data)
+            locatable = dependant_entity.current_locatable
+            if hasattr(locatable, "is_full"):
+                yield from standby_logging.log_blocked_around_put(
+                    self.resource, locatable, dependant_entity.data
+                )
+            else:
+                yield from locatable.put(dependant_entity.data)
             dependant_entity.info.log_end_unloading(dependant_entity.current_locatable, dependant_entity, self.env.now, dependant_entity.current_locatable)
 
 

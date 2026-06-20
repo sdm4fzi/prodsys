@@ -20,6 +20,10 @@ class KPIEnum(str, Enum):
 
     PRODUCTIVE_TIME = "productive_time"
     STANDBY_TIME = "standby_time"
+    BLOCKED_TIME = "blocked_time"
+    STARVED_TIME = "starved_time"
+    IDLE_TIME = "idle_time"
+    WAITING_FOR_TRANSPORT_TIME = "waiting_for_transport_time"
     SETUP_TIME = "setup_time"
     CHARGING_TIME = "charging_time"
     UNSCHEDULED_DOWNTIME = "unscheduled_downtime"
@@ -305,6 +309,26 @@ class StandbyTime(KPI):
     )
 
 
+class BlockedTime(KPI):
+    name: Literal[KPIEnum.BLOCKED_TIME]
+    target: Literal["min"] = "min"
+
+
+class StarvedTime(KPI):
+    name: Literal[KPIEnum.STARVED_TIME]
+    target: Literal["min"] = "min"
+
+
+class IdleTime(KPI):
+    name: Literal[KPIEnum.IDLE_TIME]
+    target: Literal["min"] = "min"
+
+
+class WaitingForTransportTime(KPI):
+    name: Literal[KPIEnum.WAITING_FOR_TRANSPORT_TIME]
+    target: Literal["min"] = "min"
+
+
 class SetupTime(KPI):
     name: Literal[KPIEnum.SETUP_TIME]
     target: Literal["min"] = "min"
@@ -394,6 +418,10 @@ KPI_UNION = Union[
     ProcessingTime,
     ProductiveTime,
     StandbyTime,
+    BlockedTime,
+    StarvedTime,
+    IdleTime,
+    WaitingForTransportTime,
     SetupTime,
     ChargingTime,
     UnscheduledDowntime,

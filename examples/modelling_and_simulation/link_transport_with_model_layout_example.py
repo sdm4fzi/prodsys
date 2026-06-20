@@ -210,12 +210,12 @@ def main():
     )
 
     # ------------------------------------------------------------------
-    # Visualise with plot_layout
+    # Visualise with plot_layout (disabled for non-interactive runs)
     # ------------------------------------------------------------------
-    node_link_generation.plot_layout(
-        production_system,
-        title="AGV Layout – model-driven (area + obstacle + footprints)",
-    )
+    # node_link_generation.plot_layout(
+    #     production_system,
+    #     title="AGV Layout – model-driven (area + obstacle + footprints)",
+    # )
 
     # ------------------------------------------------------------------
     # Simulate
