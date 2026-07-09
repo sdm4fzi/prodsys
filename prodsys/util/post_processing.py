@@ -375,6 +375,25 @@ class PostProcessor:
         return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
 
     @cached_property
+    def df_planned_WIP(self) -> pd.DataFrame:
+        return self.store.planned_wip()
+
+    @cached_property
+    def df_planned_WIP_per_product(self) -> pd.DataFrame:
+        df = self.store.planned_wip()
+        if len(df) == 0:
+            return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
+        result_dfs = []
+        for product_type in df["Product_type"].dropna().unique():
+            df_pt = df[df["Product_type"] == product_type].copy()
+            df_pt = df_pt.sort_values("Time").reset_index(drop=True)
+            df_pt["WIP"] = df_pt["WIP_Increment"].cumsum().clip(lower=0).astype(float)
+            result_dfs.append(df_pt)
+        if result_dfs:
+            return pd.concat(result_dfs, ignore_index=True)
+        return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
+
+    @cached_property
     def df_WIP_per_resource(self) -> pd.DataFrame:
         """WIP per resource over time, computed from the interval store.
 

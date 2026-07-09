@@ -23,6 +23,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def _product_type_from_instance(product_inst_id: str, product_type_ids: list[str]) -> str:
+    for type_id in sorted(product_type_ids, key=len, reverse=True):
+        if product_inst_id == type_id or product_inst_id.startswith(type_id + "_"):
+            return type_id
+    return "_".join(product_inst_id.split("_")[:-1])
+
+
+def _order_id_from_product(product_id: str, order_ids: list[str]) -> Optional[str]:
+    for order_id in sorted(order_ids, key=len, reverse=True):
+        if f"_{order_id}_" in product_id:
+            return order_id
+    return None
+
+
 # Map StateTypeEnum values to the resource-state time-type codes used in output
 _STATE_TO_TIME_TYPE: dict[str, str] = {
     StateTypeEnum.production.value: "PR",
@@ -918,6 +933,90 @@ class AnalyticsStore:
         results["Total"] = df["WIP"].mean()
 
         return pd.Series(results, name="WIP")
+
+    def planned_wip(self) -> pd.DataFrame:
+        """
+        Planned system WIP over time derived from ``production_system_data.schedule``.
+
+        Each scheduled product instance contributes a +1 at its release time and
+        a -1 at the planned end of its last scheduled step.  Release times come
+        from matching ``order_data`` when available, otherwise from the first
+        scheduled step start.
+
+        Returns DataFrame with columns: Time, WIP, WIP_Increment, Product_type, Product
+        """
+        empty = pd.DataFrame(
+            columns=["Time", "WIP", "WIP_Increment", "Product_type", "Product"]
+        )
+        ps = self.production_system_data
+        if ps is None or not ps.schedule:
+            return empty
+
+        product_type_ids = [p.ID for p in ps.product_data]
+        order_ids = [o.ID for o in ps.order_data] if ps.order_data else []
+        release_by_order = {}
+        if ps.order_data:
+            for order in ps.order_data:
+                release_by_order[order.ID] = (
+                    order.release_time
+                    if order.release_time is not None
+                    else order.order_time
+                )
+
+        steps_by_product: dict[str, list] = {}
+        for event in ps.schedule:
+            if not event.product:
+                continue
+            steps_by_product.setdefault(event.product, []).append(event)
+
+        increments = []
+        for product_id, steps in steps_by_product.items():
+            ends = [
+                step.expected_end_time
+                for step in steps
+                if step.expected_end_time is not None
+            ]
+            if not ends:
+                continue
+
+            product_type = _product_type_from_instance(product_id, product_type_ids)
+            order_id = _order_id_from_product(product_id, order_ids)
+            if order_id is not None and order_id in release_by_order:
+                entry_time = release_by_order[order_id]
+            else:
+                entry_time = min(step.time for step in steps)
+
+            exit_time = max(ends)
+            increments.append(
+                {
+                    "Time": entry_time,
+                    "WIP_Increment": 1,
+                    "Product_type": product_type,
+                    "Product": product_id,
+                }
+            )
+            increments.append(
+                {
+                    "Time": exit_time,
+                    "WIP_Increment": -1,
+                    "Product_type": product_type,
+                    "Product": product_id,
+                }
+            )
+
+        if not increments:
+            return empty
+
+        events = pd.DataFrame(increments)
+        events = events.sort_values(
+            by=["Time", "WIP_Increment"],
+            ascending=[True, False],
+            ignore_index=True,
+        )
+        events["WIP"] = events["WIP_Increment"].cumsum().clip(lower=0).astype(float)
+        return events[
+            ["Time", "WIP", "WIP_Increment", "Product_type", "Product"]
+        ].reset_index(drop=True)
 
     # ── KPI: OEE ─────────────────────────────────────────────────────────
 

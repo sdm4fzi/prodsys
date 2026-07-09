@@ -1199,11 +1199,14 @@ def plot_WIP(
     """
     Plots the WIP of the production system over time of the simulation.
 
+    When a production schedule is available on the post processor's
+    ``production_system_data``, planned WIP trajectories are overlaid as dashed
+    lines using the same colours as the simulated WIP curves.
+
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
     df = post_processor.df_WIP.copy()
-    fig = px.scatter(df, x="Time", y="WIP")
     df["Product_type"] = "Total"
 
     df_per_product = post_processor.df_WIP_per_product.copy()
@@ -1217,6 +1220,33 @@ def plot_WIP(
         line_shape="vh"
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
+
+    df_planned = post_processor.df_planned_WIP.copy()
+    if len(df_planned) > 0:
+        df_planned_total = df_planned.copy()
+        df_planned_total["Product_type"] = "Total"
+        df_planned = pd.concat(
+            [df_planned_total, post_processor.df_planned_WIP_per_product.copy()]
+        )
+        color_by_product_type = {
+            trace.name: trace.line.color for trace in fig.data if trace.name
+        }
+        for product_type, df_product_type in df_planned.groupby("Product_type"):
+            color = color_by_product_type.get(product_type)
+            line_style = dict(dash="dash", shape="vh")
+            if color is not None:
+                line_style["color"] = color
+            fig.add_trace(
+                go.Scatter(
+                    x=df_product_type["Time"],
+                    y=df_product_type["WIP"],
+                    mode="lines",
+                    name=f"{product_type} (planned)",
+                    line=line_style,
+                    showlegend=True,
+                )
+            )
+
     fig.update_traces(showlegend=True)
     fig.update_layout(
         xaxis_title="Time [Minutes]",
