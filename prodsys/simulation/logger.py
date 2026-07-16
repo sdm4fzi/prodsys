@@ -208,7 +208,7 @@ def post_monitor_primitive_dependency(
         "State": dependency_info.state_ID,
         "State Type": dependency_info.state_type,
         "Activity": dependency_info.activity,
-        "Product": None,
+        "Product": dependency_info.product_ID,
         "Expected End Time": None,
         "Origin location": None,
         "Target location": None,
@@ -216,6 +216,7 @@ def post_monitor_primitive_dependency(
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
         "process": None,
+        "Order ID": dependency_info.order_ID,
     }
     data.append(item)
 
@@ -237,7 +238,7 @@ def post_monitor_resource_dependency(
         "State": dependency_info.state_ID,
         "State Type": dependency_info.state_type,
         "Activity": dependency_info.activity,
-        "Product": None,
+        "Product": dependency_info.product_ID,
         "Expected End Time": None,
         "Origin location": None,
         "Target location": None,
@@ -245,6 +246,7 @@ def post_monitor_resource_dependency(
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
         "process": None,
+        "Order ID": dependency_info.order_ID,
     }
     data.append(item)
 

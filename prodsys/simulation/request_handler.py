@@ -59,6 +59,8 @@ class RequestInfo:
 
     #: WIP product instance driving a resource/process dependency (schedule key).
     dependent_product_id: Optional[str] = None
+    #: Order containing the product that drives the dependency.
+    dependent_order_id: Optional[str] = None
     #: Resource that declared the dependency (prodsys ``Requesting Item``).
     requiring_resource_id: Optional[str] = None
 
@@ -350,7 +352,10 @@ class RequestHandler:
             requiring_dependency, dependency, requesting_item
         )
 
-        from prodsys.simulation.schedule_dependency import resolve_dependent_product_id
+        from prodsys.simulation.schedule_dependency import (
+            resolve_dependent_order_id,
+            resolve_dependent_product_id,
+        )
 
         requiring_resource_id = None
         if hasattr(requiring_dependency, "data") and hasattr(
@@ -371,6 +376,7 @@ class RequestHandler:
             origin=None,
             target=parent_origin_queue,  # Store parent origin_queue as target for dependency routing (where to transport dependency to)
             dependent_product_id=resolve_dependent_product_id(requesting_item),
+            dependent_order_id=resolve_dependent_order_id(requesting_item),
             requiring_resource_id=requiring_resource_id,
         )
         # Store parent_target_queue separately so we can access it later
@@ -498,6 +504,7 @@ class RequestHandler:
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,
             dependent_product_id=request_info.dependent_product_id,
+            dependent_order_id=request_info.dependent_order_id,
             requiring_resource_id=request_info.requiring_resource_id,
             schedule_dependency_move_process_id=schedule_move_pid,
         )

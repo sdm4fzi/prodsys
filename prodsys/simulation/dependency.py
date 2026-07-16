@@ -69,12 +69,16 @@ class DependencyInfo:
         # self.state_type: state.StateTypeEnum = state.StateTypeEnum.production
         self.requesting_item_ID: str = None
         self.dependency_ID: str = None
+        self.product_ID: Optional[str] = None
+        self.order_ID: Optional[str] = None
 
     def log_start_dependency(
         self,
         event_time: float,
         requesting_item_id: str,
         dependency_id: str,
+        product_id: Optional[str] = None,
+        order_id: Optional[str] = None,
     ) -> None:
         """
         Logs the start of a dependency.
@@ -88,12 +92,16 @@ class DependencyInfo:
         self.activity = state.StateEnum.start_state
         self.requesting_item_ID = requesting_item_id
         self.dependency_ID = dependency_id
+        self.product_ID = product_id
+        self.order_ID = order_id
 
     def log_end_dependency(
         self,
         event_time: float,
         requesting_item_id: str,
         dependency_id: str,
+        product_id: Optional[str] = None,
+        order_id: Optional[str] = None,
     ) -> None:
         """
         Logs the end of a dependency.
@@ -107,6 +115,8 @@ class DependencyInfo:
         self.activity = state.StateEnum.end_state
         self.requesting_item_ID = requesting_item_id
         self.dependency_ID = dependency_id
+        self.product_ID = product_id
+        self.order_ID = order_id
 
 
 class Dependency:

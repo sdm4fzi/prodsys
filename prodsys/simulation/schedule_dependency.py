@@ -129,6 +129,24 @@ def resolve_dependent_product_id(
     return None
 
 
+def resolve_dependent_order_id(
+    requesting_item,
+) -> str | None:
+    """Return the order that owns the product driving a dependency request."""
+    from prodsys.simulation.entities.entity import EntityType
+
+    if requesting_item is None:
+        return None
+    entity_type = getattr(requesting_item, "type", None)
+    if entity_type == EntityType.PRODUCT:
+        return getattr(requesting_item.info, "order_ID", None)
+    if entity_type == EntityType.LOT:
+        primary = requesting_item.get_primary_entity()
+        if primary is not None:
+            return getattr(primary.info, "order_ID", None)
+    return None
+
+
 def apply_dependency_move_log_metadata(
     state_info,
     process_request: request_module.Request,

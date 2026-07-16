@@ -112,12 +112,16 @@ class DependencyProcessHandler:
             event_time=self.env.now,
             requesting_item_id=process_request.requesting_item.data.ID,
             dependency_id=process_request.resolved_dependency.data.ID,
+            product_id=process_request.dependent_product_id,
+            order_id=process_request.dependent_order_id,
         )
         yield process_request.dependency_release_event
         self.resource.dependency_info.log_end_dependency(
             event_time=self.env.now,
             requesting_item_id=process_request.requesting_item.data.ID,
             dependency_id=process_request.resolved_dependency.data.ID,
+            product_id=process_request.dependent_product_id,
+            order_id=process_request.dependent_order_id,
         )
         self.resource.release_from_dependant()
         self.resource.controller.mark_finished_process()
