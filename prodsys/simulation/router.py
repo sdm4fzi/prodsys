@@ -831,8 +831,7 @@ class Router:
     def request_processing(self, product_instance: product.Product) -> request.Request:
         origin = product_instance.current_locatable
         origin_queue = product_instance.current_locatable
-        target = self._determine_sink_for_product(product_instance)
-        target_queue = target.ports[0]
+        target, target_queue = self._resolve_sink_target_for_product(product_instance)
 
         processing_request, request_info = self.request_handler.add_process_model_request(
             entity=product_instance,
@@ -911,6 +910,50 @@ class Router:
         if not self.got_requested.triggered:
             self.got_requested.succeed()
         return request_info.request_completion_event
+
+    def _scheduled_sink_port_for_product(self, product_instance: product.Product) -> Optional[str]:
+        schedule = (
+            self.production_system_data.schedule
+            if self.production_system_data is not None
+            else None
+        )
+        if not schedule:
+            return None
+
+        sink_port_ids = {
+            port.data.ID
+            for sink_obj in self.sink_factory.get_sinks_with_product_type(
+                product_instance.data.type
+            )
+            for port in sink_obj.ports
+        }
+        if not sink_port_ids:
+            return None
+
+        matches = [
+            event.target_location
+            for event in schedule
+            if event.product == product_instance.data.ID
+            and event.state_type == "Transport"
+            and event.activity == "start state"
+            and event.target_location in sink_port_ids
+        ]
+        return matches[-1] if matches else None
+
+    def _resolve_sink_target_for_product(
+        self, product_instance: product.Product
+    ) -> tuple["sink.Sink", "port.Queue"]:
+        scheduled_port_id = self._scheduled_sink_port_for_product(product_instance)
+        if scheduled_port_id is not None:
+            for sink_obj in self.sink_factory.get_sinks_with_product_type(
+                product_instance.data.type
+            ):
+                for port_obj in sink_obj.ports:
+                    if port_obj.data.ID == scheduled_port_id:
+                        return sink_obj, port_obj
+
+        target = self._determine_sink_for_product(product_instance)
+        return target, target.ports[0]
 
     def _determine_sink_for_product(self, product: product.Product) -> sink.Sink:
         """
