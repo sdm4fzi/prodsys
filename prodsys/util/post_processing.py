@@ -73,6 +73,11 @@ class PostProcessor:
                 production_system_data=self.production_system_data,
             )
             self._store.ingest_events(self.df_raw)
+        elif self.production_system_data is not None:
+            self._store = AnalyticsStore(
+                time_range=self.time_range,
+                production_system_data=self.production_system_data,
+            )
 
     def _invalidate_cached_properties(self):
         """Clear all cached_property caches so they recompute from the new store."""
@@ -392,6 +397,14 @@ class PostProcessor:
         if result_dfs:
             return pd.concat(result_dfs, ignore_index=True)
         return pd.DataFrame(columns=["Product_type", "Time", "WIP", "WIP_Increment"])
+
+    @cached_property
+    def df_planned_WIP_per_resource(self) -> pd.DataFrame:
+        return self.store.planned_wip_per_resource()
+
+    @cached_property
+    def df_planned_output(self) -> pd.DataFrame:
+        return self.store.planned_output()
 
     @cached_property
     def df_WIP_per_resource(self) -> pd.DataFrame:

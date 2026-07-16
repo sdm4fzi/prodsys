@@ -1018,6 +1018,167 @@ class AnalyticsStore:
             ["Time", "WIP", "WIP_Increment", "Product_type", "Product"]
         ].reset_index(drop=True)
 
+    def _planned_sink_resource_ids(self) -> Set[str]:
+        sinks = set(self._sink_resources)
+        ps = self.production_system_data
+        if ps is not None and ps.sink_data:
+            sinks.update(sink.ID for sink in ps.sink_data)
+        return sinks
+
+    def _planned_schedule_steps_by_product(self) -> dict[str, list]:
+        ps = self.production_system_data
+        if ps is None or not ps.schedule:
+            return {}
+        steps_by_product: dict[str, list] = {}
+        for event in ps.schedule:
+            if not event.product:
+                continue
+            steps_by_product.setdefault(event.product, []).append(event)
+        return steps_by_product
+
+    def planned_wip_per_resource(self) -> pd.DataFrame:
+        """
+        Planned WIP per resource over time derived from ``production_system_data.schedule``.
+
+        Each scheduled step contributes a +1 at its start and a -1 at its planned
+        end on the step resource.  When source metadata is available, a product is
+        counted at its source from release (or first step) until its first
+        scheduled step begins.
+
+        Returns DataFrame with columns: Time, WIP, WIP_resource, WIP_Increment
+        """
+        empty = pd.DataFrame(columns=["Time", "WIP", "WIP_resource", "WIP_Increment"])
+        ps = self.production_system_data
+        if ps is None or not ps.schedule:
+            return empty
+
+        product_type_ids = [p.ID for p in ps.product_data]
+        order_ids = [o.ID for o in ps.order_data] if ps.order_data else []
+        release_by_order = {}
+        if ps.order_data:
+            for order in ps.order_data:
+                release_by_order[order.ID] = (
+                    order.release_time
+                    if order.release_time is not None
+                    else order.order_time
+                )
+
+        source_by_product_type: dict[str, str] = {}
+        if ps.source_data:
+            for source in ps.source_data:
+                source_by_product_type[source.product_type] = source.ID
+
+        sink_resources = self._planned_sink_resource_ids()
+        sink_queues = self._wip_sink_queues(sink_resources)
+
+        increments = []
+        for product_id, steps in self._planned_schedule_steps_by_product().items():
+            sorted_steps = sorted(steps, key=lambda step: step.time)
+            first_step = sorted_steps[0]
+            product_type = _product_type_from_instance(product_id, product_type_ids)
+            order_id = _order_id_from_product(product_id, order_ids)
+            if order_id is not None and order_id in release_by_order:
+                entry_time = release_by_order[order_id]
+            else:
+                entry_time = first_step.time
+
+            source_id = source_by_product_type.get(product_type)
+            if (
+                source_id
+                and source_id not in sink_resources
+                and source_id not in sink_queues
+                and first_step.time > entry_time
+            ):
+                increments.append(
+                    {
+                        "Time": entry_time,
+                        "WIP_Increment": 1,
+                        "WIP_resource": source_id,
+                    }
+                )
+                increments.append(
+                    {
+                        "Time": first_step.time,
+                        "WIP_Increment": -1,
+                        "WIP_resource": source_id,
+                    }
+                )
+
+            for step in sorted_steps:
+                if step.expected_end_time is None:
+                    continue
+                resource = step.resource
+                if resource in sink_resources or resource in sink_queues:
+                    continue
+                increments.append(
+                    {
+                        "Time": step.time,
+                        "WIP_Increment": 1,
+                        "WIP_resource": resource,
+                    }
+                )
+                increments.append(
+                    {
+                        "Time": step.expected_end_time,
+                        "WIP_Increment": -1,
+                        "WIP_resource": resource,
+                    }
+                )
+
+        if not increments:
+            return empty
+
+        df = pd.DataFrame(increments)
+        df = df.sort_values(
+            by=["Time", "WIP_Increment"],
+            ascending=[True, False],
+            ignore_index=True,
+        )
+        df = df[df["WIP_resource"].notna()]
+        df = df.sort_values(by=["WIP_resource", "Time"]).reset_index(drop=True)
+        df["WIP"] = (
+            df.groupby("WIP_resource")["WIP_Increment"].cumsum().clip(lower=0)
+        )
+        return df[["Time", "WIP", "WIP_resource", "WIP_Increment"]]
+
+    def planned_output(self) -> pd.DataFrame:
+        """
+        Planned finished products derived from ``production_system_data.schedule``.
+
+        Each scheduled product instance is counted as output at the planned end of
+        its last scheduled step.
+
+        Returns DataFrame with columns: Product, Product_type, End_time
+        """
+        empty = pd.DataFrame(columns=["Product", "Product_type", "End_time"])
+        ps = self.production_system_data
+        if ps is None or not ps.schedule:
+            return empty
+
+        product_type_ids = [p.ID for p in ps.product_data]
+        rows = []
+        for product_id, steps in self._planned_schedule_steps_by_product().items():
+            ends = [
+                step.expected_end_time
+                for step in steps
+                if step.expected_end_time is not None
+            ]
+            if not ends:
+                continue
+            rows.append(
+                {
+                    "Product": product_id,
+                    "Product_type": _product_type_from_instance(
+                        product_id, product_type_ids
+                    ),
+                    "End_time": max(ends),
+                }
+            )
+
+        if not rows:
+            return empty
+        return pd.DataFrame(rows).reset_index(drop=True)
+
     # ── KPI: OEE ─────────────────────────────────────────────────────────
 
     def oee_per_resource(

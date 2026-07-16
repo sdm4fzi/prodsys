@@ -23,6 +23,10 @@ def plot_output_over_time(
     """
     Plots the output of the production system over time of the simulation.
 
+    When a production schedule is available on the post processor's
+    ``production_system_data``, planned output trajectories are overlaid as dashed
+    lines using the same colours as the simulated output curves.
+
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
@@ -39,7 +43,33 @@ def plot_output_over_time(
         line_shape="hv"
         # opacity=0.01,
     )
-    # fig.data = [t for t in fig.data if t.mode == "lines"]
+    fig.data = [t for t in fig.data if t.mode == "lines"]
+
+    df_planned = post_processor.df_planned_output.copy()
+    if len(df_planned) > 0:
+        df_planned = df_planned.sort_values(by="End_time").reset_index(drop=True)
+        df_planned["Output"] = (
+            df_planned.groupby("Product_type")["Product"].cumcount() + 1
+        )
+        color_by_product_type = {
+            trace.name: trace.line.color for trace in fig.data if trace.name
+        }
+        for product_type, df_product_type in df_planned.groupby("Product_type"):
+            color = color_by_product_type.get(product_type)
+            line_style = dict(dash="dash", shape="hv")
+            if color is not None:
+                line_style["color"] = color
+            fig.add_trace(
+                go.Scatter(
+                    x=df_product_type["End_time"],
+                    y=df_product_type["Output"],
+                    mode="lines",
+                    name=f"{product_type} (planned)",
+                    line=line_style,
+                    showlegend=True,
+                )
+            )
+
     fig.update_traces(showlegend=True)
     fig.update_layout(
         xaxis_title="Time [Minutes]",
@@ -1321,6 +1351,10 @@ def plot_WIP_per_resource(
     """
     Plots the WIP of the production system and the resources in the production system over time of the simulation.
 
+    When a production schedule is available on the post processor's
+    ``production_system_data``, planned WIP trajectories are overlaid as dashed
+    lines using the same colours as the simulated WIP curves.
+
     Args:
         post_processor (post_processing.PostProcessor): Post processor of the simulation.
     """
@@ -1340,6 +1374,39 @@ def plot_WIP_per_resource(
         line_shape="vh",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
+
+    df_planned = post_processor.df_planned_WIP_per_resource.copy()
+    if len(df_planned) > 0:
+        planned_frames = []
+        df_planned_total = post_processor.df_planned_WIP.copy()
+        if len(df_planned_total) > 0:
+            df_planned_total = df_planned_total.copy()
+            df_planned_total["Resource"] = "Total"
+            planned_frames.append(df_planned_total[["Time", "WIP", "Resource"]])
+        df_planned_resources = df_planned.copy()
+        df_planned_resources["Resource"] = df_planned_resources["WIP_resource"]
+        planned_frames.append(df_planned_resources[["Time", "WIP", "Resource"]])
+        df_planned_all = pd.concat(planned_frames, ignore_index=True)
+
+        color_by_resource = {
+            trace.name: trace.line.color for trace in fig.data if trace.name
+        }
+        for resource, df_resource in df_planned_all.groupby("Resource"):
+            color = color_by_resource.get(resource)
+            line_style = dict(dash="dash", shape="vh")
+            if color is not None:
+                line_style["color"] = color
+            fig.add_trace(
+                go.Scatter(
+                    x=df_resource["Time"],
+                    y=df_resource["WIP"],
+                    mode="lines",
+                    name=f"{resource} (planned)",
+                    line=line_style,
+                    showlegend=True,
+                )
+            )
+
     fig.update_traces(showlegend=True)
     fig.update_layout(
         legend=dict(
