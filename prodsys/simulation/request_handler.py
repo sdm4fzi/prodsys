@@ -57,6 +57,11 @@ class RequestInfo:
 
     dependency_release_event: Optional[simpy.Event] = None
 
+    #: WIP product instance driving a resource/process dependency (schedule key).
+    dependent_product_id: Optional[str] = None
+    #: Resource that declared the dependency (prodsys ``Requesting Item``).
+    requiring_resource_id: Optional[str] = None
+
 
 def get_request_info_key(item: Union[product.Product, primitive.Primitive]):
     item_id = item.data.ID
@@ -345,6 +350,15 @@ class RequestHandler:
             requiring_dependency, dependency, requesting_item
         )
 
+        from prodsys.simulation.schedule_dependency import resolve_dependent_product_id
+
+        requiring_resource_id = None
+        if hasattr(requiring_dependency, "data") and hasattr(
+            requiring_dependency.data, "ID"
+        ):
+            if isinstance(requiring_dependency, resources.Resource):
+                requiring_resource_id = requiring_dependency.data.ID
+
         request_info = RequestInfo(
             key=request_info_key,
             item=requiring_dependency,
@@ -356,6 +370,8 @@ class RequestHandler:
             dependency_release_event=dependency_release_event,
             origin=None,
             target=parent_origin_queue,  # Store parent origin_queue as target for dependency routing (where to transport dependency to)
+            dependent_product_id=resolve_dependent_product_id(requesting_item),
+            requiring_resource_id=requiring_resource_id,
         )
         # Store parent_target_queue separately so we can access it later
         request_info.parent_target_queue = parent_target_queue
@@ -460,6 +476,15 @@ class RequestHandler:
             # also consider dependencies of contained processes with lots!
             for contained_process in process.contained_processes:
                 dependencies.extend(contained_process.dependencies)
+        from prodsys.simulation.schedule_dependency import worker_move_process_id
+
+        schedule_move_pid = None
+        if request_info.request_type in (
+            request.RequestType.PROCESS_DEPENDENCY,
+            request.RequestType.RESOURCE_DEPENDENCY,
+        ):
+            schedule_move_pid = worker_move_process_id(resource)
+
         request_instance = request.Request(
             requesting_item=request_info.item,
             entity=request_info.item,
@@ -472,6 +497,9 @@ class RequestHandler:
             resolved_dependency=request_info.dependency,
             dependency_release_event=request_info.dependency_release_event,
             required_dependencies=dependencies,
+            dependent_product_id=request_info.dependent_product_id,
+            requiring_resource_id=request_info.requiring_resource_id,
+            schedule_dependency_move_process_id=schedule_move_pid,
         )
         return request_instance
 

@@ -81,6 +81,9 @@ class Request:
         resolved_dependency: Optional[Dependency] = None,
         required_dependencies: Optional[list[Dependency]] = None,
         dependency_release_event: Optional[simpy.Event] = None,
+        dependent_product_id: Optional[str] = None,
+        requiring_resource_id: Optional[str] = None,
+        schedule_dependency_move_process_id: Optional[str] = None,
     ):
         self.request_type = request_type
         self.process = process
@@ -113,6 +116,10 @@ class Request:
         self.lot_process_time: Optional[float] = None
         self.route: Optional[List[Locatable]] = route
         self.dependency_release_event: Optional[simpy.Event] = dependency_release_event
+        self.dependent_product_id = dependent_product_id
+        self.requiring_resource_id = requiring_resource_id
+        self.schedule_dependency_move_process_id = schedule_dependency_move_process_id
+        self.matched_schedule_event = None
         # Signals the moment the actual processing time has elapsed for this
         # request, BEFORE the unloading step pushes the entity onto the target
         # queue. Worker dependencies attached via ``dependency_release_event``

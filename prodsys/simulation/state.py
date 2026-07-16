@@ -104,6 +104,7 @@ class StateInfo:
         _target_ID: str = "",
         _origin_ID: str = "",
         _dependency_ID: str = "",
+        _requesting_item_ID: str = "",
         _empty_transport: Optional[bool] = None,
         _initial_transport_step: bool = False,
         _last_transport_step: bool = False,
@@ -118,6 +119,7 @@ class StateInfo:
         self._target_ID = _target_ID
         self._origin_ID = _origin_ID
         self._dependency_ID = _dependency_ID
+        self._requesting_item_ID = _requesting_item_ID
         self._empty_transport = _empty_transport
         self._initial_transport_step = _initial_transport_step
         self._last_transport_step = _last_transport_step

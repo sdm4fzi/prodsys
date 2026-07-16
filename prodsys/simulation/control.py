@@ -496,6 +496,14 @@ def scheduled_control_policy(
     
     request_matches = {}
     for request_instance in requests:
+        request_type = getattr(request_instance, "request_type", None)
+        if request_type in (
+            request_module.RequestType.PROCESS_DEPENDENCY,
+            request_module.RequestType.RESOURCE_DEPENDENCY,
+        ):
+            non_scheduled_requests.append(request_instance)
+            continue
+
         product_id = request_instance.entity.data.ID
         process_id = request_instance.process.data.ID if request_instance.process else None
         

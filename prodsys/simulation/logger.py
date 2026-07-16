@@ -134,7 +134,7 @@ def post_monitor_resource_states(data: List[dict], state_info: state.StateInfo):
         "Empty Transport": state_info._empty_transport,
         "Initial Transport Step": state_info._initial_transport_step,
         "Last Transport Step": state_info._last_transport_step,
-        "Requesting Item": None,
+        "Requesting Item": getattr(state_info, "_requesting_item_ID", None) or None,
         "Dependency": state_info._dependency_ID,
         "process": None,
         "process_ok": getattr(state_info, '_process_ok', True),  # Default to True if not set

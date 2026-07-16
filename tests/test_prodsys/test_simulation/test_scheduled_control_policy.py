@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 from prodsys.factories.resource_factory import get_scheduled_control_policy
 from prodsys.models import performance_data

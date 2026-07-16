@@ -33,6 +33,7 @@ class DependencyProcessHandler:
     def __init__(self, env: sim.Environment) -> None:
         self.env = env
         self.resource = None
+        self._active_process_request = None
 
     def update_location(
         self, locatable: locatable.Locatable, location: list[float]
@@ -58,6 +59,7 @@ class DependencyProcessHandler:
             Generator: The generator yields when the process is finished.
         """
         requesting_item = process_request.requesting_item
+        self._active_process_request = process_request
         self.resource = process_request.get_resource()
 
         process = [
@@ -119,6 +121,7 @@ class DependencyProcessHandler:
         )
         self.resource.release_from_dependant()
         self.resource.controller.mark_finished_process()
+        self._active_process_request = None
 
     def run_transport(
         self,
@@ -139,7 +142,6 @@ class DependencyProcessHandler:
         Yields:
             Generator: The generator yields when the transport is over.
         """
-        transport_state.state_info._dependency_ID = None
         for link_index, (location, next_location) in enumerate(zip(route, route[1:])):
             if link_index == 0:
                 initial_transport_step = True
@@ -202,10 +204,12 @@ class DependencyProcessHandler:
             last_transport_step (bool): If this is the last transport step.
         """
         # TODO: update logs here to consider dependencies
-        # if not hasattr(product, "product_info"):
-        #     input_state.state_info.log_Primitive(product, state.StateTypeEnum.transport)
-        # else:
-        #     input_state.state_info.log_product(product, state.StateTypeEnum.transport)
+        from prodsys.simulation.schedule_dependency import apply_dependency_move_log_metadata
+
+        if self._active_process_request is not None:
+            apply_dependency_move_log_metadata(
+                input_state.state_info, self._active_process_request
+            )
 
         origin = self.resource.current_locatable
         input_state.state_info.log_transport(

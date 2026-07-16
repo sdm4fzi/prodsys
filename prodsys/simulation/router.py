@@ -24,6 +24,10 @@ from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
 from prodsys.simulation.request_handler import RequestHandler
+from prodsys.simulation.schedule_dependency import (
+    build_dependency_move_schedule_index,
+    dependency_schedule_lookup_keys,
+)
 from prodsys.simulation.entities.entity import EntityType
 
 
@@ -123,9 +127,14 @@ class Router:
         # the head of the deque on each request so multi-tp chains route
         # to the right worker in chronological order.
         self.schedule_routing_map: Dict[Tuple[str, str], deque[Tuple[float, str]]] = {}
+        self.dependency_move_routing_map: Dict[
+            Tuple[str, str, str | None, str | None], deque[Tuple[float, str]]
+        ] = {}
         self.schedule_routing_heuristic: Optional[Callable] = None
+        self.dependency_move_routing_heuristic: Optional[Callable] = None
         if self.production_system_data and self.production_system_data.schedule:
             self._build_schedule_routing_map()
+            self._build_dependency_move_routing_map()
             if self.schedule_routing_map:
                 self.schedule_routing_heuristic = self._create_schedule_based_routing_heuristic(
                     shortest_queue_routing_heuristic
@@ -133,6 +142,16 @@ class Router:
                 logger.info(
                     f"Initialized schedule-based routing heuristic with {len(self.schedule_routing_map)} "
                     f"schedule entries"
+                )
+            if self.dependency_move_routing_map:
+                self.dependency_move_routing_heuristic = (
+                    self._create_dependency_move_routing_heuristic(
+                        random_routing_heuristic
+                    )
+                )
+                logger.info(
+                    "Initialized dependency move routing heuristic with %d keys",
+                    len(self.dependency_move_routing_map),
                 )
 
         # Initialize compatibility tables
@@ -559,6 +578,54 @@ class Router:
         if logger.isEnabledFor(logging.DEBUG):
             for key, dq in list(self.schedule_routing_map.items())[:5]:
                 logger.debug("  Schedule routing: %s -> %s", key, list(dq))
+
+    def _build_dependency_move_routing_map(self) -> None:
+        if not self.production_system_data or not self.production_system_data.schedule:
+            return
+        _, _, _, routing_by_key = build_dependency_move_schedule_index(
+            self.production_system_data.schedule
+        )
+        for key, entries in routing_by_key.items():
+            sorted_entries = sorted(entries, key=lambda e: e[0])
+            self.dependency_move_routing_map[key] = deque(sorted_entries)
+
+    def _create_dependency_move_routing_heuristic(
+        self, fallback_heuristic: Callable
+    ) -> Callable:
+        routing_map = self.dependency_move_routing_map
+
+        def dependency_move_routing_heuristic(
+            possible_requests: list["request.Request"],
+        ) -> None:
+            if not routing_map or not possible_requests:
+                fallback_heuristic(possible_requests)
+                return
+
+            lookup_keys = dependency_schedule_lookup_keys(possible_requests[0])
+            scheduled_dq = None
+            for key in lookup_keys:
+                scheduled_dq = routing_map.get(key)
+                if scheduled_dq:
+                    break
+            if not scheduled_dq:
+                fallback_heuristic(possible_requests)
+                return
+
+            scheduled_resource_id = scheduled_dq[0][1]
+            scheduled_requests = [
+                r
+                for r in possible_requests
+                if r.resource.data.ID == scheduled_resource_id
+            ]
+            if not scheduled_requests:
+                fallback_heuristic(possible_requests)
+                return
+
+            scheduled_dq.popleft()
+            possible_requests.clear()
+            possible_requests.extend(scheduled_requests)
+
+        return dependency_move_routing_heuristic
     
     def _create_schedule_based_routing_heuristic(
         self, fallback_heuristic: Callable
@@ -676,8 +743,14 @@ class Router:
             request.Request: The allocated request.
         """
         try:
-            if free_requests[0].request_type in (request.RequestType.PROCESS_DEPENDENCY, request.RequestType.RESOURCE_DEPENDENCY):
-                routing_heuristic = random_routing_heuristic
+            if free_requests[0].request_type in (
+                request.RequestType.PROCESS_DEPENDENCY,
+                request.RequestType.RESOURCE_DEPENDENCY,
+            ):
+                if self.dependency_move_routing_heuristic:
+                    self.dependency_move_routing_heuristic(free_requests)
+                else:
+                    random_routing_heuristic(free_requests)
             else:
                 routing_heuristic = free_requests[0].requesting_item.routing_heuristic
                 # If schedule-based routing heuristic is available, use it instead
