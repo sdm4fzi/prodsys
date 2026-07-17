@@ -1247,7 +1247,7 @@ def plot_WIP(
         x="Time",
         y="WIP",
         color="Product_type",
-        line_shape="vh"
+        line_shape="hv"
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
 
@@ -1263,7 +1263,7 @@ def plot_WIP(
         }
         for product_type, df_product_type in df_planned.groupby("Product_type"):
             color = color_by_product_type.get(product_type)
-            line_style = dict(dash="dash", shape="vh")
+            line_style = dict(dash="dash", shape="hv")
             if color is not None:
                 line_style["color"] = color
             fig.add_trace(
@@ -1320,7 +1320,7 @@ def plot_primitive_WIP(
         x="Time",
         y="primitive_WIP",
         color="Primitive_type",
-        line_shape="vh",
+        line_shape="hv",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
     fig.update_traces(showlegend=True)
@@ -1371,7 +1371,7 @@ def plot_WIP_per_resource(
         x="Time",
         y="WIP",
         color="Resource",
-        line_shape="vh",
+        line_shape="hv",
     )
     fig.data = [t for t in fig.data if t.mode == "lines"]
 
@@ -1393,7 +1393,7 @@ def plot_WIP_per_resource(
         }
         for resource, df_resource in df_planned_all.groupby("Resource"):
             color = color_by_resource.get(resource)
-            line_style = dict(dash="dash", shape="vh")
+            line_style = dict(dash="dash", shape="hv")
             if color is not None:
                 line_style["color"] = color
             fig.add_trace(
