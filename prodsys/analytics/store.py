@@ -32,10 +32,24 @@ def _product_type_from_instance(product_inst_id: str, product_type_ids: list[str
 
 
 def _order_id_from_product(product_id: str, order_ids: list[str]) -> Optional[str]:
+    """Legacy fallback: parse order id embedded in product instance ids."""
     for order_id in sorted(order_ids, key=len, reverse=True):
         if f"_{order_id}_" in product_id:
             return order_id
     return None
+
+
+def _resolve_order_id_for_product(
+    product_id: str,
+    steps: list,
+    order_ids: list[str],
+) -> Optional[str]:
+    """Resolve order id from schedule events, with legacy product-id fallback."""
+    for step in steps:
+        order_id = getattr(step, "order_id", None)
+        if order_id:
+            return order_id
+    return _order_id_from_product(product_id, order_ids)
 
 
 # Map StateTypeEnum values to the resource-state time-type codes used in output
@@ -938,10 +952,9 @@ class AnalyticsStore:
         """
         Planned system WIP over time derived from ``production_system_data.schedule``.
 
-        Each scheduled product instance contributes a +1 at its release time and
-        a -1 at the planned end of its last scheduled step.  Release times come
-        from matching ``order_data`` when available, otherwise from the first
-        scheduled step start.
+        Each scheduled product instance contributes a +1 at the start of its
+        first scheduled step and a -1 at the planned end of its last scheduled
+        step.
 
         Returns DataFrame with columns: Time, WIP, WIP_Increment, Product_type, Product
         """
@@ -953,21 +966,7 @@ class AnalyticsStore:
             return empty
 
         product_type_ids = [p.ID for p in ps.product_data]
-        order_ids = [o.ID for o in ps.order_data] if ps.order_data else []
-        release_by_order = {}
-        if ps.order_data:
-            for order in ps.order_data:
-                release_by_order[order.ID] = (
-                    order.release_time
-                    if order.release_time is not None
-                    else order.order_time
-                )
-
-        steps_by_product: dict[str, list] = {}
-        for event in ps.schedule:
-            if not event.product:
-                continue
-            steps_by_product.setdefault(event.product, []).append(event)
+        steps_by_product = self._planned_schedule_steps_by_product()
 
         increments = []
         for product_id, steps in steps_by_product.items():
@@ -980,12 +979,7 @@ class AnalyticsStore:
                 continue
 
             product_type = _product_type_from_instance(product_id, product_type_ids)
-            order_id = _order_id_from_product(product_id, order_ids)
-            if order_id is not None and order_id in release_by_order:
-                entry_time = release_by_order[order_id]
-            else:
-                entry_time = min(step.time for step in steps)
-
+            entry_time = min(step.time for step in steps)
             exit_time = max(ends)
             increments.append(
                 {
@@ -1041,9 +1035,7 @@ class AnalyticsStore:
         Planned WIP per resource over time derived from ``production_system_data.schedule``.
 
         Each scheduled step contributes a +1 at its start and a -1 at its planned
-        end on the step resource.  When source metadata is available, a product is
-        counted at its source from release (or first step) until its first
-        scheduled step begins.
+        end on the step resource.
 
         Returns DataFrame with columns: Time, WIP, WIP_resource, WIP_Increment
         """
@@ -1052,57 +1044,12 @@ class AnalyticsStore:
         if ps is None or not ps.schedule:
             return empty
 
-        product_type_ids = [p.ID for p in ps.product_data]
-        order_ids = [o.ID for o in ps.order_data] if ps.order_data else []
-        release_by_order = {}
-        if ps.order_data:
-            for order in ps.order_data:
-                release_by_order[order.ID] = (
-                    order.release_time
-                    if order.release_time is not None
-                    else order.order_time
-                )
-
-        source_by_product_type: dict[str, str] = {}
-        if ps.source_data:
-            for source in ps.source_data:
-                source_by_product_type[source.product_type] = source.ID
-
         sink_resources = self._planned_sink_resource_ids()
         sink_queues = self._wip_sink_queues(sink_resources)
 
         increments = []
-        for product_id, steps in self._planned_schedule_steps_by_product().items():
+        for _, steps in self._planned_schedule_steps_by_product().items():
             sorted_steps = sorted(steps, key=lambda step: step.time)
-            first_step = sorted_steps[0]
-            product_type = _product_type_from_instance(product_id, product_type_ids)
-            order_id = _order_id_from_product(product_id, order_ids)
-            if order_id is not None and order_id in release_by_order:
-                entry_time = release_by_order[order_id]
-            else:
-                entry_time = first_step.time
-
-            source_id = source_by_product_type.get(product_type)
-            if (
-                source_id
-                and source_id not in sink_resources
-                and source_id not in sink_queues
-                and first_step.time > entry_time
-            ):
-                increments.append(
-                    {
-                        "Time": entry_time,
-                        "WIP_Increment": 1,
-                        "WIP_resource": source_id,
-                    }
-                )
-                increments.append(
-                    {
-                        "Time": first_step.time,
-                        "WIP_Increment": -1,
-                        "WIP_resource": source_id,
-                    }
-                )
 
             for step in sorted_steps:
                 if step.expected_end_time is None:

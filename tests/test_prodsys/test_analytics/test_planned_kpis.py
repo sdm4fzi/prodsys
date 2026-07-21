@@ -2,7 +2,12 @@
 
 import pytest
 import prodsys.express as psx
-from prodsys.analytics.store import AnalyticsStore
+from prodsys.analytics.store import (
+    AnalyticsStore,
+    _order_id_from_product,
+    _resolve_order_id_for_product,
+)
+from prodsys.models.order_data import OrderData, OrderedProductData
 from prodsys.models.performance_data import Event
 from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.util.post_processing import PostProcessor
@@ -84,3 +89,71 @@ def test_post_processor_exposes_planned_trajectories(system_with_valid_schedule)
 
     assert len(pp.df_planned_WIP_per_resource) > 0
     assert len(pp.df_planned_output) == 3
+
+
+def test_resolve_order_id_prefers_schedule_event_order_id():
+    steps = [
+        Event(
+            time=5.0,
+            resource="R1",
+            state="P1",
+            state_type="Production",
+            activity="start state",
+            product="product1_3",
+            expected_end_time=10.0,
+            process="P1",
+            order_id="order_1",
+        )
+    ]
+    assert _resolve_order_id_for_product("product1_3", steps, ["order_1"]) == "order_1"
+    assert _order_id_from_product("product1_3", ["order_1"]) is None
+
+
+def test_resolve_order_id_legacy_product_id_fallback():
+    steps = [
+        Event(
+            time=5.0,
+            resource="R1",
+            state="P1",
+            state_type="Production",
+            activity="start state",
+            product="Product_J8_VFS_WR024_9",
+            expected_end_time=10.0,
+            process="P1",
+        )
+    ]
+    assert _resolve_order_id_for_product(
+        "Product_J8_VFS_WR024_9", steps, ["WR024"]
+    ) == "WR024"
+
+
+def test_planned_wip_entry_at_first_step_not_order_release_time(system_with_valid_schedule):
+    system = system_with_valid_schedule.model_copy(deep=True)
+    system.order_data = [
+        OrderData(
+            ID="order_1",
+            ordered_products=[OrderedProductData(product_type="Product_A", quantity=1)],
+            order_time=0.0,
+            release_time=0.0,
+            due_time=100.0,
+            priority=1,
+        )
+    ]
+    system.schedule = [
+        Event(
+            time=5.0,
+            resource="R1",
+            state="P1",
+            state_type="Production",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=10.0,
+            process="P1",
+            order_id="order_1",
+        )
+    ]
+
+    df = AnalyticsStore(production_system_data=system).planned_wip()
+    entry = df[df["WIP_Increment"] == 1].iloc[0]
+    assert entry["Time"] == 5.0
+    assert entry["Product"] == "Product_A_1"
