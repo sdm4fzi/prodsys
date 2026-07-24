@@ -11,6 +11,7 @@ from prodsys.simulation import request as request_module
 DependencyMoveKey = tuple[str, str, str | None, str | None]
 DependencyMoveRouteKey = tuple[str, str, str | None, str | None, str]
 DependencyMoveRoutingKey = DependencyMoveKey
+DependencyAttendanceKey = tuple[str, str, str | None]
 
 
 def _move_process_id(event: performance_data.Event) -> str | None:
@@ -169,3 +170,64 @@ def apply_dependency_move_log_metadata(
         state_info._requesting_item_ID = ev.requesting_item
     elif getattr(process_request, "requiring_resource_id", None):
         state_info._requesting_item_ID = process_request.requiring_resource_id
+
+
+def build_dependency_attendance_schedule_index(
+    schedule: list[performance_data.Event] | None,
+) -> dict[DependencyAttendanceKey, Deque[int]]:
+    """Index dependency attendance start events for worker control ordering."""
+    match_indices: dict[DependencyAttendanceKey, Deque[int]] = defaultdict(deque)
+    if not schedule:
+        return match_indices
+
+    for index, event in enumerate(schedule):
+        if event.activity != "start state":
+            continue
+        if event.state_type != "Dependency":
+            continue
+        if not event.product or not event.dependency:
+            continue
+        key: DependencyAttendanceKey = (
+            event.product,
+            event.dependency,
+            event.requesting_item or None,
+        )
+        match_indices[key].append(index)
+    return match_indices
+
+
+def dependency_attendance_lookup_key(
+    req: request_module.Request,
+) -> DependencyAttendanceKey | None:
+    product_id = getattr(req, "dependent_product_id", None)
+    if not product_id or req.resolved_dependency is None:
+        return None
+    dep_id = req.resolved_dependency.data.ID
+    requiring = getattr(req, "requiring_resource_id", None)
+    return (product_id, dep_id, requiring)
+
+
+def dependency_attendance_lookup_keys(
+    req: request_module.Request,
+) -> list[DependencyAttendanceKey]:
+    full = dependency_attendance_lookup_key(req)
+    if full is None:
+        return []
+    product_id, dep_id, requiring = full
+    keys = [full]
+    keys.append((product_id, dep_id, None))
+    return keys
+
+
+def locations_equivalent(
+    origin: list[float] | None,
+    target: list[float] | None,
+    *,
+    tol: float = 1e-9,
+) -> bool:
+    """Return True when two XY coordinates denote the same interaction point."""
+    if origin is None or target is None:
+        return origin is target
+    if len(origin) < 2 or len(target) < 2:
+        return False
+    return abs(origin[0] - target[0]) <= tol and abs(origin[1] - target[1]) <= tol

@@ -53,18 +53,26 @@ def get_scheduled_control_policy(
     visits the resource multiple times with different processes. Creates a list of all
     schedule entries in order, so requests can be matched to the next occurrence.
     """
+    from prodsys.simulation.schedule_dependency import (
+        build_dependency_attendance_schedule_index,
+    )
+
     # Index schedule indices by (product_id, process_id) for O(1) lookups in
     # scheduled_control_policy instead of scanning the full sequence per request.
     schedule_matches_by_key: dict[tuple[str, str], list[int]] = defaultdict(list)
     for index, event in enumerate(schedule):
         product_id = event.product
         process_id = event.process if event.process else event.state
-        if process_id and product_id:
+        if process_id and product_id and event.state_type in ("Production", "Transport"):
             schedule_matches_by_key[(product_id, process_id)].append(index)
+
+    dependency_attendance_matches = build_dependency_attendance_schedule_index(schedule)
 
     return partial(
         control.scheduled_control_policy,
         dict(schedule_matches_by_key),
+        dependency_attendance_matches,
+        list(schedule),
         fallback_policy,
     )
 
@@ -214,12 +222,15 @@ class ResourceFactory:
         state_factory: state_factory.StateFactory,
         queue_factory: port_factory.QueueFactory,
         schedule: Optional[List[performance_data.Event]] = None,
+        *,
+        strict_schedule_timing: bool = False,
     ):
         self.env = env
         self.process_factory = process_factory
         self.state_factory = state_factory
         self.queue_factory = queue_factory
         self.schedule = schedule
+        self.strict_schedule_timing = strict_schedule_timing
         self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
         self.system_resources: Dict[str, resources.SystemResource] = {}
@@ -281,7 +292,12 @@ class ResourceFactory:
         )
         controller: Union[
             control.Controller,
-        ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
+        ] = controller_class(
+            control_policy=control_policy,
+            env=self.env,
+            lot_handler=self.lot_handler,
+            strict_schedule_timing=self.strict_schedule_timing,
+        )
         self.global_system_resource = resources.SystemResource(
             env=self.env,
             data=resource_data,
@@ -347,9 +363,9 @@ class ResourceFactory:
             # Filter schedule events for this specific resource
             resource_schedule = [
                 event for event in self.schedule
-                if event.resource == resource_data.ID 
-                and (event.state_type == "Production" or event.state_type == "Transport")
+                if event.resource == resource_data.ID
                 and event.activity == "start state"
+                and event.state_type in ("Production", "Transport", "Dependency")
             ]
             
             if resource_schedule:
@@ -375,7 +391,12 @@ class ResourceFactory:
         
         controller: Union[
             control.Controller,
-        ] = controller_class(control_policy=control_policy, env=self.env, lot_handler=self.lot_handler)
+        ] = controller_class(
+            control_policy=control_policy,
+            env=self.env,
+            lot_handler=self.lot_handler,
+            strict_schedule_timing=self.strict_schedule_timing,
+        )
         self.controllers.append(controller)
         values.update({"controller": controller})
 

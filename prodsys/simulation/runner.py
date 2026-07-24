@@ -84,6 +84,9 @@ class Runner:
         adapter (adapter.ProductionSystemAdapter): The adapter containing the production system to simulate.
         warm_up_cutoff (bool, optional): Whether to use warm-up cutoff. Defaults to False.
         cut_off_method (Literal["mser5", "threshold_stabilization", "static_ratio"], optional): The method to use for warm-up cutoff. Defaults to "mser5".
+        strict_schedule_timing (bool, optional): When True, scheduled resources wait until
+            each matched request's planned start time before dispatch. Defaults to False
+            so the simulation may run ahead of the plan while still following schedule order.
 
 
     Attributes:
@@ -109,9 +112,12 @@ class Runner:
         cut_off_method: Optional[Literal[
             "mser5", "threshold_stabilization", "static_ratio"
         ]] = None,
+        *,
+        strict_schedule_timing: bool = False,
     ):
         """"""
         self.production_system_data = production_system_data
+        self.strict_schedule_timing = strict_schedule_timing
         self.env = sim.Environment(seed=self.production_system_data.seed)
         self.time_model_factory: time_model_factory.TimeModelFactory = None
         self.state_factory: state_factory.StateFactory = None
@@ -171,6 +177,7 @@ class Runner:
                 queue_factory=self.queue_factory,
                 process_factory=self.process_factory,
                 schedule=self.production_system_data.schedule,
+                strict_schedule_timing=self.strict_schedule_timing,
             )
             self.resource_factory.create_resources(self.production_system_data)
 

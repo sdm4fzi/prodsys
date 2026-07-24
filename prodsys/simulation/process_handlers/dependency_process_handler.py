@@ -80,10 +80,27 @@ class DependencyProcessHandler:
         yield from self.resource.setup(process)
         if not self.resource.current_locatable:
             self.resource.set_location(target)
+
+        scheduled_start = getattr(process_request, "scheduled_start_time", None)
+        controller = getattr(self.resource, "controller", None)
+        strict_timing = bool(
+            getattr(controller, "strict_schedule_timing", False)
+        )
+        if (
+            strict_timing
+            and scheduled_start is not None
+            and self.env.now + 1e-9 < scheduled_start
+        ):
+            yield self.env.timeout(scheduled_start - self.env.now)
+
         with self.resource.request() as req:
             yield req
             self.resource.controller.mark_started_process()
-            if target.get_location() != self.resource.get_location():
+            from prodsys.simulation.schedule_dependency import locations_equivalent
+
+            target_location = target.get_location()
+            worker_location = self.resource.get_location()
+            if not locations_equivalent(target_location, worker_location):
                 move_request = request_module.Request(
                     request_type=RequestType.TRANSPORT,
                     process=process,

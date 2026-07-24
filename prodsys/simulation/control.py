@@ -68,10 +68,13 @@ class Controller:
         ],
         env: sim.Environment,
         lot_handler: LotHandler,
+        *,
+        strict_schedule_timing: bool = False,
     ) -> None:
         self.control_policy = control_policy
         self.env = env
         self.lot_handler = lot_handler
+        self.strict_schedule_timing = strict_schedule_timing
         self.requests: List[request_module.Request] = []
         self.state_changed: events.Event = events.Event(env)
         self.resource: resources.Resource = None
@@ -200,6 +203,33 @@ class Controller:
                 # If there are requests waiting on full output queues, wait for space
                 # self.env.process(self.free_up_queue_check())
                 continue
+
+            scheduled_start = getattr(selected_request, "scheduled_start_time", None)
+            if (
+                self.strict_schedule_timing
+                and scheduled_start is not None
+                and selected_request.request_type
+                in (
+                    request_module.RequestType.PRODUCTION,
+                    request_module.RequestType.PROCESS_MODEL,
+                    request_module.RequestType.TRANSPORT,
+                    request_module.RequestType.PROCESS_DEPENDENCY,
+                    request_module.RequestType.RESOURCE_DEPENDENCY,
+                )
+                and self.env.now + 1e-9 < scheduled_start
+            ):
+                remaining = [r for r in possible_requests if r is not selected_request]
+                alternate = get_feasible_request(remaining) if remaining else None
+                if alternate is not None:
+                    selected_request = alternate
+                else:
+                    wait = scheduled_start - self.env.now
+                    if wait > 0:
+                        yield self.env.timeout(wait)
+                    if not self.state_changed.triggered:
+                        self.state_changed.succeed()
+                    continue
+
             self.requests.remove(selected_request)
             if self._should_form_lot(selected_request):
                 lot_request = self._form_lot(selected_request)
@@ -468,6 +498,8 @@ def agent_control_policy(
 
 def scheduled_control_policy(
     schedule_matches_by_key: dict[tuple[str, str], list[int]],
+    dependency_attendance_matches_by_key: dict,
+    schedule_events: list,
     fallback_policy: Callable,
     requests: List[request_module.Request],
 ) -> None:
@@ -493,15 +525,29 @@ def scheduled_control_policy(
     request_to_priority = {}
     non_scheduled_requests = []
     product_next_expected_index = {}
-    
+    dependency_next_expected_index: dict[tuple[str, str, str | None], int] = {}
+
+    from prodsys.simulation.schedule_dependency import (
+        dependency_attendance_lookup_keys,
+    )
+
     request_matches = {}
+    dependency_request_matches = {}
     for request_instance in requests:
         request_type = getattr(request_instance, "request_type", None)
         if request_type in (
             request_module.RequestType.PROCESS_DEPENDENCY,
             request_module.RequestType.RESOURCE_DEPENDENCY,
         ):
-            non_scheduled_requests.append(request_instance)
+            lookup_keys = dependency_attendance_lookup_keys(request_instance)
+            possible: list[tuple[int, tuple[str, str, str | None]]] = []
+            for key in lookup_keys:
+                for sched_index in dependency_attendance_matches_by_key.get(key, ()):
+                    possible.append((sched_index, key))
+            if possible:
+                dependency_request_matches[request_instance] = possible
+            else:
+                non_scheduled_requests.append(request_instance)
             continue
 
         product_id = request_instance.entity.data.ID
@@ -532,6 +578,37 @@ def scheduled_control_policy(
     
     # Sort by earliest possible schedule index
     request_match_list.sort(key=lambda x: x[0])
+
+    dependency_match_list = []
+    for request_instance, possible_matches in dependency_request_matches.items():
+        earliest_index = min(m[0] for m in possible_matches)
+        dependency_match_list.append(
+            (earliest_index, request_instance, possible_matches)
+        )
+    dependency_match_list.sort(key=lambda x: x[0])
+
+    for earliest_index, request_instance, possible_matches in dependency_match_list:
+        best_match = None
+        for sched_index, key in possible_matches:
+            if sched_index in matched_schedule_indices:
+                continue
+            next_expected = dependency_next_expected_index.get(key, 0)
+            if sched_index >= next_expected:
+                if best_match is None or sched_index < best_match[0]:
+                    best_match = (sched_index, key)
+        if best_match:
+            sched_index, key = best_match
+            request_to_priority[request_instance] = sched_index
+            matched_schedule_indices.add(sched_index)
+            dependency_next_expected_index[key] = sched_index + 1
+            request_instance.scheduled_control_index = sched_index
+            if sched_index < len(schedule_events):
+                request_instance.scheduled_start_time = schedule_events[
+                    sched_index
+                ].time
+                request_instance.matched_schedule_event = schedule_events[sched_index]
+        else:
+            non_scheduled_requests.append(request_instance)
     
     # Now match requests in order of their earliest possible schedule index
     for earliest_index, request_instance, possible_matches in request_match_list:
@@ -552,6 +629,10 @@ def scheduled_control_policy(
             sched_index, _, _ = best_match
             request_to_priority[request_instance] = sched_index
             matched_schedule_indices.add(sched_index)
+            request_instance.scheduled_control_index = sched_index
+            if sched_index < len(schedule_events):
+                request_instance.scheduled_start_time = schedule_events[sched_index].time
+                request_instance.matched_schedule_event = schedule_events[sched_index]
             # Update next expected index for this product
             product_next_expected_index[product_id] = sched_index + 1
         else:

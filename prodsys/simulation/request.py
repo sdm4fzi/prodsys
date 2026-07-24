@@ -122,6 +122,8 @@ class Request:
         self.requiring_resource_id = requiring_resource_id
         self.schedule_dependency_move_process_id = schedule_dependency_move_process_id
         self.matched_schedule_event = None
+        self.scheduled_control_index: Optional[int] = None
+        self.scheduled_start_time: Optional[float] = None
         # Signals the moment the actual processing time has elapsed for this
         # request, BEFORE the unloading step pushes the entity onto the target
         # queue. Worker dependencies attached via ``dependency_release_event``
