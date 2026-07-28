@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Generator, TYPE_CHECKING
 
 import logging
+from simpy import events
 
 from prodsys.simulation import (
     sim,
@@ -144,7 +145,21 @@ class ProductionProcessHandler:
         # Take only dependencies of the main request of the lot
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
-        yield from resource.setup(process)
+        controller = getattr(resource, "controller", None)
+        if controller is None or controller.should_allow_opportunistic_setup(
+            process_request
+        ):
+            yield from resource.setup(process)
+        else:
+            # Schedule-prefix still expects work on the current setup; wait until
+            # changeover is allowed (or setup already matches).
+            while not controller.should_allow_opportunistic_setup(process_request):
+                current = resource.reserved_setup or resource.current_setup
+                if current is not None and current.data.ID == process.data.ID:
+                    break
+                yield controller.state_changed
+                controller.state_changed = events.Event(self.env)
+            yield from resource.setup(process)
         resource_requests = []
         for _ in range(process_request.capacity_required):
             resource_request = resource.request()
@@ -157,7 +172,9 @@ class ProductionProcessHandler:
         yield from self.get_entities_of_request(process_request)
 
         process_time = get_process_time_for_lots(process_request)
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
         process_state_events = []
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.resource)

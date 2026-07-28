@@ -37,6 +37,7 @@ class RequestType(str, Enum):
         PROCESS_DEPENDENCY: Represents a process dependency request.
         RESOURCE_DEPENDENCY: Represents a resource dependency request.
         PROCESS_MODEL: Represents a process model request.
+        SETUP: Represents a scheduled resource changeover (SetupState).
     """
 
     TRANSPORT = "transport"
@@ -47,6 +48,7 @@ class RequestType(str, Enum):
     PROCESS_DEPENDENCY = "process_dependency"
     RESOURCE_DEPENDENCY = "resource_dependency"
     PROCESS_MODEL = "process_model"
+    SETUP = "setup"
 
 
 class Request:
@@ -85,6 +87,8 @@ class Request:
         dependent_order_id: Optional[str] = None,
         requiring_resource_id: Optional[str] = None,
         schedule_dependency_move_process_id: Optional[str] = None,
+        setup_state_id: Optional[str] = None,
+        parent_production_request: Optional["Request"] = None,
     ):
         self.request_type = request_type
         self.process = process
@@ -121,6 +125,11 @@ class Request:
         self.dependent_order_id = dependent_order_id
         self.requiring_resource_id = requiring_resource_id
         self.schedule_dependency_move_process_id = schedule_dependency_move_process_id
+        self.setup_state_id = setup_state_id
+        # SETUP requests point at the production/process-model request whose
+        # PROCESS/RESOURCE deps gate changeover on worker availability (free,
+        # not on-site). On-site attendance is requested only by production.
+        self.parent_production_request: Optional["Request"] = parent_production_request
         self.matched_schedule_event = None
         self.scheduled_control_index: Optional[int] = None
         self.scheduled_start_time: Optional[float] = None
@@ -148,7 +157,11 @@ class Request:
         For entity-based requests (PRODUCTION, TRANSPORT, etc.), returns the entity size.
         """
         # Dependency requests don't need entity size, they always require capacity of 1 but block the resource completely until finished.
-        if self.request_type in (RequestType.PROCESS_DEPENDENCY, RequestType.RESOURCE_DEPENDENCY):
+        if self.request_type in (
+            RequestType.PROCESS_DEPENDENCY,
+            RequestType.RESOURCE_DEPENDENCY,
+            RequestType.SETUP,
+        ):
             return 1
         return self.entity.size
     
@@ -249,8 +262,20 @@ class Request:
     def request_dependencies(self) -> simpy.Event:
         """
         Requests the dependencies of the request.
+
+        Idempotent: safe to call again after SETUP already triggered deps on
+        the same (parent) production request — returns ``dependencies_ready``
+        without re-succeeding ``dependencies_requested``.
         """
-        self.dependencies_requested.succeed()
+        if self.dependencies_ready is None or self.dependencies_requested is None:
+            raise RuntimeError(
+                "request_dependencies() requires requesting_item so dependency "
+                "events exist"
+            )
+        if self.dependencies_ready.triggered:
+            return self.dependencies_ready
+        if not self.dependencies_requested.triggered:
+            self.dependencies_requested.succeed()
         return self.dependencies_ready
 
     def bind_dependencies(self, dependencies: List[DependedEntity]) -> None:

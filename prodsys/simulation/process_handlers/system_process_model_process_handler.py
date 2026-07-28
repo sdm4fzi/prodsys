@@ -120,7 +120,9 @@ class SystemProcessModelHandler:
         
         yield from resource.setup(proc)
 
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
         # TODO: add logging to start and end of process model handling for product entity
         self.set_next_possible_production_processes()
         while self.next_possible_processes:

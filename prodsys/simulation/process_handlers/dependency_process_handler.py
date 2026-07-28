@@ -95,7 +95,7 @@ class DependencyProcessHandler:
 
         with self.resource.request() as req:
             yield req
-            self.resource.controller.mark_started_process()
+            self.resource.controller.mark_started_process(1, process_request)
             from prodsys.simulation.schedule_dependency import locations_equivalent
 
             target_location = target.get_location()

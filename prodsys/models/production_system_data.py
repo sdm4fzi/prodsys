@@ -1188,6 +1188,7 @@ class ProductionSystemData(BaseModel):
 
             event_resources_ids = set()
             event_process_ids_set = set()
+            event_setup_state_ids = set()
             event_product_ids = set()
             schedule_to_consider = []
             for event in self.schedule:
@@ -1199,10 +1200,20 @@ class ProductionSystemData(BaseModel):
                 if event.product is not None:
                     event_product_ids.add(_product_type_from_instance(event.product))
                 if event.process:
-                    event_process_ids_set.add(event.process)
+                    if event.state_type == "Setup":
+                        event_setup_state_ids.add(event.process)
+                    else:
+                        event_process_ids_set.add(event.process)
                 if not event.activity == "start state":
                     continue
                 schedule_to_consider.append(event)
+
+            setup_state_ids = {
+                str(getattr(st, "ID"))
+                for st in (self.state_data or [])
+                if getattr(st, "ID", None) is not None
+                and getattr(st, "type", None) == "SetupState"
+            }
 
             if event_resources_ids - resources_ids != set():
                 raise ValueError(
@@ -1211,6 +1222,11 @@ class ProductionSystemData(BaseModel):
             if event_process_ids_set - processes_ids_set != set():
                 raise ValueError(
                     f"The processes {event_process_ids_set - processes_ids_set} of the schedule are not valid processes of {processes_ids_set}."
+                )
+            if event_setup_state_ids - setup_state_ids != set():
+                raise ValueError(
+                    f"The setup states {event_setup_state_ids - setup_state_ids} of the schedule "
+                    f"are not valid SetupStates of {setup_state_ids}."
                 )
             if event_product_ids - products_ids != set():
                 raise ValueError(

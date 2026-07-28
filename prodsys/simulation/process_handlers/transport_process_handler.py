@@ -177,7 +177,9 @@ class TransportProcessHandler:
             resource_request = resource.request()
             yield resource_request
             resource_requests.append(resource_request)
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
         if origin_queue.get_location() != resource.get_location():
             route_to_origin = self.find_route_to_origin(process_request)
             transport_state_events = []
@@ -398,7 +400,9 @@ class ConveyorTransportProcessHandler(TransportProcessHandler):
             resource_request = resource.request()
             yield resource_request
             resource_requests.append(resource_request)
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
 
         transport_state_events = []
         for entity in process_request.get_atomic_entities():

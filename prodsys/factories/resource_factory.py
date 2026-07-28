@@ -63,7 +63,7 @@ def get_scheduled_control_policy(
     for index, event in enumerate(schedule):
         product_id = event.product
         process_id = event.process if event.process else event.state
-        if process_id and product_id and event.state_type in ("Production", "Transport"):
+        if process_id and product_id and event.state_type in ("Production", "Transport", "Setup"):
             schedule_matches_by_key[(product_id, process_id)].append(index)
 
     dependency_attendance_matches = build_dependency_attendance_schedule_index(schedule)
@@ -359,13 +359,14 @@ class ResourceFactory:
         )
         
         # Check if schedule exists and filter events for this resource
+        resource_schedule = []
         if self.schedule is not None:
             # Filter schedule events for this specific resource
             resource_schedule = [
                 event for event in self.schedule
                 if event.resource == resource_data.ID
                 and event.activity == "start state"
-                and event.state_type in ("Production", "Transport", "Dependency")
+                and event.state_type in ("Production", "Transport", "Dependency", "Setup")
             ]
             
             if resource_schedule:
@@ -397,6 +398,7 @@ class ResourceFactory:
             lot_handler=self.lot_handler,
             strict_schedule_timing=self.strict_schedule_timing,
         )
+        controller.resource_schedule = list(resource_schedule)
         self.controllers.append(controller)
         values.update({"controller": controller})
 

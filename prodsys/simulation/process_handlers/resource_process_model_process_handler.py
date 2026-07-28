@@ -155,7 +155,9 @@ class ResourceProcessModelHandler:
         yield from self.get_entities_of_request(process_request)
         process_request.entity.update_location(resource)
 
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
         
         # Execute all processes in the model sequentially on this resource
         # Pick up product from origin queue at the beginning (already done above)

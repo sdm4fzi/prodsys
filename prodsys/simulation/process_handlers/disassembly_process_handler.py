@@ -207,7 +207,9 @@ class DisassemblyProcessHandler:
         yield from self.get_entities_of_request(process_request)
 
         process_time = get_process_time_for_lots(process_request)
-        resource.controller.mark_started_process(process_request.capacity_required)
+        resource.controller.mark_started_process(
+            process_request.capacity_required, process_request
+        )
         process_state_events = []
         for entity in process_request.get_atomic_entities():
             entity.update_location(process_request.resource)

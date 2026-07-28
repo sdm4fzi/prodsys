@@ -21,6 +21,7 @@ from prodsys.simulation import (
 from prodsys.simulation.process_handlers.production_process_handler import ProductionProcessHandler
 from prodsys.simulation.process_handlers.transport_process_handler import TransportProcessHandler, ConveyorTransportProcessHandler
 from prodsys.simulation.process_handlers.dependency_process_handler import DependencyProcessHandler
+from prodsys.simulation.process_handlers.setup_process_handler import SetupProcessHandler
 from prodsys.simulation.process_handlers.system_process_model_process_handler import SystemProcessModelHandler
 from prodsys.simulation.process_handlers.resource_process_model_process_handler import ResourceProcessModelHandler
 from prodsys.models.resource_data import ResourceType
@@ -80,6 +81,11 @@ class Controller:
         self.resource: resources.Resource = None
         self.num_running_processes = 0
         self.reserved_requests_count = 0
+        # Resource-local schedule (Production/Transport/Dependency/Setup start events).
+        # Set by resource_factory when a scheduled control policy is used.
+        self.resource_schedule: list = []
+        # Schedule indices whose Production/Setup has already been started.
+        self.completed_schedule_indices: set[int] = set()
 
     def set_resource(self, resource: resources.Resource) -> None:
         self.resource = resource
@@ -96,6 +102,211 @@ class Controller:
         self.resource.update_idle_logging()
         if not self.state_changed.triggered:
             self.state_changed.succeed()
+
+    def _current_setup_process_id(self) -> str | None:
+        if self.resource is None:
+            return None
+        setup = self.resource.reserved_setup or self.resource.current_setup
+        if setup is None:
+            return None
+        return setup.data.ID
+
+    def _request_matches_current_setup(
+        self, process_request: request_module.Request
+    ) -> bool:
+        current = self._current_setup_process_id()
+        if current is None:
+            return False
+        if process_request.request_type not in (
+            request_module.RequestType.PRODUCTION,
+            request_module.RequestType.PROCESS_MODEL,
+        ):
+            return False
+        process = process_request.process
+        return process is not None and process.data.ID == current
+
+    def _request_needs_changeover(
+        self, process_request: request_module.Request
+    ) -> bool:
+        current = self._current_setup_process_id()
+        if current is None:
+            return False
+        if process_request.request_type == request_module.RequestType.SETUP:
+            return True
+        if process_request.request_type not in (
+            request_module.RequestType.PRODUCTION,
+            request_module.RequestType.PROCESS_MODEL,
+        ):
+            return False
+        process = process_request.process
+        return process is not None and process.data.ID != current
+
+    def _changeover_cutoff_index(
+        self, process_request: request_module.Request
+    ) -> int | None:
+        """Schedule index at which the changeover starts (Setup or Production)."""
+        schedule = self.resource_schedule
+        if not schedule:
+            return None
+
+        idx = getattr(process_request, "scheduled_control_index", None)
+        product = (
+            process_request.entity.data.ID if process_request.entity else None
+        )
+
+        if process_request.request_type == request_module.RequestType.SETUP:
+            if idx is not None:
+                return idx
+            setup_state_id = getattr(process_request, "setup_state_id", None)
+            if product and setup_state_id:
+                for i, ev in enumerate(schedule):
+                    if i in self.completed_schedule_indices:
+                        continue
+                    proc = getattr(ev, "process", None) or getattr(ev, "state", None)
+                    if (
+                        getattr(ev, "state_type", None) == "Setup"
+                        and getattr(ev, "product", None) == product
+                        and proc == setup_state_id
+                    ):
+                        return i
+            return None
+
+        if idx is not None and product is not None:
+            for i in range(idx - 1, -1, -1):
+                ev = schedule[i]
+                if (
+                    getattr(ev, "state_type", None) == "Setup"
+                    and getattr(ev, "product", None) == product
+                ):
+                    return i
+            return idx
+
+        process_id = (
+            process_request.process.data.ID if process_request.process else None
+        )
+        if not product:
+            return None
+        for i, ev in enumerate(schedule):
+            if i in self.completed_schedule_indices:
+                continue
+            if (
+                getattr(ev, "state_type", None) == "Setup"
+                and getattr(ev, "product", None) == product
+            ):
+                return i
+            proc = getattr(ev, "process", None) or getattr(ev, "state", None)
+            if (
+                getattr(ev, "state_type", None) == "Production"
+                and getattr(ev, "product", None) == product
+                and proc == process_id
+            ):
+                return i
+        return None
+
+    def _schedule_prefix_blocks_changeover(
+        self, process_request: request_module.Request
+    ) -> bool:
+        """True if earlier unconsumed schedule Production still needs current_setup."""
+        schedule = self.resource_schedule
+        if not schedule:
+            return False
+        current = self._current_setup_process_id()
+        if current is None:
+            return False
+        cutoff = self._changeover_cutoff_index(process_request)
+        if cutoff is None:
+            return False
+        for i in range(cutoff):
+            if i in self.completed_schedule_indices:
+                continue
+            ev = schedule[i]
+            if getattr(ev, "state_type", None) != "Production":
+                continue
+            proc = getattr(ev, "process", None) or getattr(ev, "state", None)
+            if proc == current:
+                return True
+        return False
+
+    def changeover_blocked(
+        self,
+        process_request: request_module.Request,
+        feasible_requests: List[request_module.Request] | None = None,
+        is_feasible: Callable[[request_module.Request], bool] | None = None,
+    ) -> bool:
+        """True if affinity or schedule-prefix should defer a changeover."""
+        if not self._request_needs_changeover(process_request):
+            return False
+        if feasible_requests is not None and is_feasible is not None:
+            for req in feasible_requests:
+                if req is process_request:
+                    continue
+                if is_feasible(req) and self._request_matches_current_setup(req):
+                    return True
+        return self._schedule_prefix_blocks_changeover(process_request)
+
+    def should_allow_opportunistic_setup(
+        self, process_request: request_module.Request
+    ) -> bool:
+        """Gate for opportunistic ``resource.setup()`` in production handlers."""
+        if not self._request_needs_changeover(process_request):
+            return True
+        # Affinity: pending queue work on current_setup must run before changeover.
+        for req in self.requests:
+            if self._request_matches_current_setup(req):
+                return False
+        return not self._schedule_prefix_blocks_changeover(process_request)
+
+    def _mark_schedule_index_started(
+        self, process_request: request_module.Request
+    ) -> None:
+        idx = getattr(process_request, "scheduled_control_index", None)
+        if idx is not None:
+            self.completed_schedule_indices.add(idx)
+
+    def _maybe_create_setup_request(
+        self, process_request: request_module.Request
+    ) -> request_module.Request | None:
+        """Create a SETUP request when production needs a changeover."""
+        if process_request.request_type not in (
+            request_module.RequestType.PRODUCTION,
+            request_module.RequestType.PROCESS_MODEL,
+        ):
+            return None
+        if getattr(process_request, "_setup_injected", False):
+            return None
+        resource = process_request.resource
+        process = process_request.process
+        if resource is None or process is None:
+            return None
+        setup_to_compare = resource.reserved_setup or resource.current_setup
+        if setup_to_compare is None:
+            return None
+        if setup_to_compare.data.ID == process.data.ID:
+            return None
+        setup_state_id = None
+        for setup_state in resource.setup_states:
+            if (
+                setup_state.data.origin_setup == setup_to_compare.data.ID
+                and setup_state.data.target_setup == process.data.ID
+            ):
+                setup_state_id = setup_state.data.ID
+                break
+        if setup_state_id is None:
+            return None
+        return request_module.Request(
+            request_type=request_module.RequestType.SETUP,
+            process=process,
+            resource=resource,
+            requesting_item=process_request.requesting_item,
+            entity=process_request.entity,
+            origin_queue=process_request.origin_queue,
+            target_queue=process_request.target_queue,
+            setup_state_id=setup_state_id,
+            # Reuse production deps so setup can gate on worker *availability*
+            # (free, not on-site). On-site attendance stays with production.
+            required_dependencies=list(process_request.required_dependencies or []),
+            parent_production_request=process_request,
+        )
 
     def free_up_queue_check(self) -> Generator:
         # generator that runs until one output queue is free again, getting to know it from a get from the output queue
@@ -184,24 +395,61 @@ class Controller:
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
-                for i, request in enumerate(requests):
-                    if is_request_feasible(request):
-                        return request # If request becomes infeasible (queue full), reroute it back to router
-                    # This allows it to be retried later when space becomes available
-                    # Only reroute transport requests - production requests should have been validated
-                    # before routing and if item is in INPUT_OUTPUT queue, it should be processable
-                    # if request.request_type == request_module.RequestType.TRANSPORT:
-                    #     self.requests.remove(request)
-                    #     request.requesting_item.router.request_handler.reroute_request(request)
-                    #     # Trigger router to check for new routing opportunities
-                    #     if not request.requesting_item.router.got_requested.triggered:
-                    #         request.requesting_item.router.got_requested.succeed()
+                # Setup affinity: prefer feasible work that already matches current_setup
+                # over any changeover / SETUP request.
+                current = self._current_setup_process_id()
+                if current is not None:
+                    for request in requests:
+                        if not is_request_feasible(request):
+                            continue
+                        if self._request_matches_current_setup(request):
+                            return request
+                for request in requests:
+                    if not is_request_feasible(request):
+                        continue
+                    if self._request_needs_changeover(request) and self.changeover_blocked(
+                        request, requests, is_request_feasible
+                    ):
+                        continue
+                    return request
                 return None
             
             selected_request = get_feasible_request(possible_requests)
             if not selected_request:
                 # If there are requests waiting on full output queues, wait for space
                 # self.env.process(self.free_up_queue_check())
+                continue
+
+            # Defer SETUP start when affinity or schedule-prefix still blocks changeover.
+            if (
+                selected_request.request_type == request_module.RequestType.SETUP
+                and self.changeover_blocked(
+                    selected_request, possible_requests, is_request_feasible
+                )
+            ):
+                continue
+
+            # Inject SETUP just before production runs so changeovers follow
+            # schedule order (same control_policy + fallback) instead of being
+            # created when the product first arrives.
+            setup_request = self._maybe_create_setup_request(selected_request)
+            if setup_request is not None:
+                if self.changeover_blocked(
+                    setup_request, possible_requests, is_request_feasible
+                ):
+                    # Same-setup work missing from queue but still planned, or
+                    # affinity already preferred another request — wait.
+                    continue
+                selected_request._setup_injected = True
+                # selected_request is still in possible_requests / self.requests
+                # until removed below — put production back and let the next
+                # loop iteration order setup vs other pending work.
+                if selected_request in self.requests:
+                    self.requests.remove(selected_request)
+                self.requests.append(setup_request)
+                self.requests.append(selected_request)
+                if not self.state_changed.triggered:
+                    self.state_changed.succeed()
                 continue
 
             scheduled_start = getattr(selected_request, "scheduled_start_time", None)
@@ -215,6 +463,7 @@ class Controller:
                     request_module.RequestType.TRANSPORT,
                     request_module.RequestType.PROCESS_DEPENDENCY,
                     request_module.RequestType.RESOURCE_DEPENDENCY,
+                    request_module.RequestType.SETUP,
                 )
                 and self.env.now + 1e-9 < scheduled_start
             ):
@@ -302,16 +551,24 @@ class Controller:
         if self.reserved_requests_count < 0:
             raise ValueError(f"Resource {self.resource.data.ID} has not enough reserved to unreserve {capacity}, current capacity: {self.resource.get_free_capacity()}, requested capacity: {capacity}")
 
-    def mark_started_process(self, num_processes: int = 1) -> None:
+    def mark_started_process(
+        self,
+        num_processes: int = 1,
+        process_request: request_module.Request | None = None,
+    ) -> None:
         """
         Mark the process as started.
 
         Args:
             num_processes (int): The number of processes that are being started.
+            process_request: When provided, the matched schedule index is marked
+                consumed for setup-prefix gating (only once work actually starts).
         """
         self.unreserve_resource_capacity(num_processes)
         self.num_running_processes += num_processes
         self.resource.update_idle_logging()
+        if process_request is not None:
+            self._mark_schedule_index_started(process_request)
 
     def mark_finished_process(self, num_processes: int = 1) -> None:
         """
@@ -343,7 +600,7 @@ class Controller:
 
 def get_requets_handler(
     request: request_module.Request,
-) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, SystemProcessModelHandler, ResourceProcessModelHandler]:
+) -> Union[ProductionProcessHandler, TransportProcessHandler, DependencyProcessHandler, SetupProcessHandler, SystemProcessModelHandler, ResourceProcessModelHandler]:
     """
     Get the process handler for a given process.
 
@@ -373,6 +630,8 @@ def get_requets_handler(
         or request.request_type == request_module.RequestType.RESOURCE_DEPENDENCY
     ):
         return DependencyProcessHandler(request.requesting_item.env)
+    elif request.request_type == request_module.RequestType.SETUP:
+        return SetupProcessHandler(request.requesting_item.env)
     elif request.request_type == request_module.RequestType.PROCESS_MODEL:
         # Route to SystemProcessModelHandler for system resources, ResourceProcessModelHandler for regular resources
         if request.resource.data.resource_type == ResourceType.SYSTEM:
@@ -546,6 +805,21 @@ def scheduled_control_policy(
                     possible.append((sched_index, key))
             if possible:
                 dependency_request_matches[request_instance] = possible
+            else:
+                non_scheduled_requests.append(request_instance)
+            continue
+
+        if request_type == request_module.RequestType.SETUP:
+            product_id = request_instance.entity.data.ID if request_instance.entity else None
+            setup_state_id = getattr(request_instance, "setup_state_id", None)
+            if not product_id or not setup_state_id:
+                non_scheduled_requests.append(request_instance)
+                continue
+            indices = schedule_matches_by_key.get((product_id, setup_state_id), ())
+            if indices:
+                request_matches[request_instance] = [
+                    (sched_index, product_id, setup_state_id) for sched_index in indices
+                ]
             else:
                 non_scheduled_requests.append(request_instance)
             continue
