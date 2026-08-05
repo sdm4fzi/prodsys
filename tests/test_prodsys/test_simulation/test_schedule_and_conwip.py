@@ -413,3 +413,98 @@ def test_schedule_and_conwip_mutual_exclusion():
     runner_instance.run(50)
     assert runner_instance.env.now == 50
 
+
+@pytest.fixture
+def system_with_setup_states() -> ProductionSystemData:
+    """Machine with p1/p2 and SetupStates S1 (p1->p2) and S2 (p2->p1)."""
+    t1 = psx.FunctionTimeModel("constant", 1.0, 0, "t1")
+    t2 = psx.FunctionTimeModel("constant", 1.0, 0, "t2")
+    p1 = psx.ProductionProcess(t1, "p1")
+    p2 = psx.ProductionProcess(t2, "p2")
+    t_transport = psx.FunctionTimeModel("constant", 0.5, 0, ID="t_transport")
+    tp = psx.TransportProcess(t_transport, "tp")
+    setup_tm = psx.FunctionTimeModel("constant", 2.0, ID="setup_tm")
+    setup_s1 = psx.SetupState(setup_tm, p1, p2, "S1")
+    setup_s2 = psx.SetupState(setup_tm, p2, p1, "S2")
+    machine = psx.Resource(
+        [p1, p2], [10, 0], 1, ID="machine", states=[setup_s1, setup_s2]
+    )
+    transport = psx.Resource([tp], [5, 0], 1, ID="transport")
+    product1 = psx.Product([p1], tp, "product1")
+    product2 = psx.Product([p2], tp, "product2")
+    sink1 = psx.Sink(product1, [20, 0], "sink1")
+    sink2 = psx.Sink(product2, [20, 0], "sink2")
+    arrival1 = psx.FunctionTimeModel("constant", 100.0, ID="arrival1")
+    arrival2 = psx.FunctionTimeModel("constant", 100.0, ID="arrival2")
+    source1 = psx.Source(product1, arrival1, [0, 0], ID="source1")
+    source2 = psx.Source(product2, arrival2, [0, 0], ID="source2")
+    system = psx.ProductionSystem(
+        [machine, transport], [source1, source2], [sink1, sink2]
+    )
+    return system.to_model()
+
+
+def test_schedule_validation_accepts_setup_state(
+    system_with_setup_states: ProductionSystemData,
+):
+    """SetupState IDs (S1) in schedule must not be validated as production processes."""
+    schedule = [
+        Event(
+            time=0.0,
+            resource="machine",
+            state="p1",
+            state_type="Production",
+            activity="start state",
+            product="product1_1",
+            expected_end_time=1.0,
+            process="p1",
+        ),
+        Event(
+            time=1.0,
+            resource="machine",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product="product2_1",
+            expected_end_time=3.0,
+            process="S1",
+        ),
+        Event(
+            time=3.0,
+            resource="machine",
+            state="p2",
+            state_type="Production",
+            activity="start state",
+            product="product2_1",
+            expected_end_time=4.0,
+            process="p2",
+        ),
+    ]
+    system_with_setup_states.schedule = schedule
+    assert system_with_setup_states.schedule is not None
+    assert len(system_with_setup_states.schedule) == 3
+    assert system_with_setup_states.schedule[1].process == "S1"
+    assert system_with_setup_states.schedule[1].state_type == "Setup"
+
+
+def test_schedule_validation_rejects_invalid_setup_state(
+    system_with_setup_states: ProductionSystemData,
+):
+    """Unknown setup state IDs in schedule must fail validation."""
+    invalid_schedule = [
+        Event(
+            time=0.0,
+            resource="machine",
+            state="UNKNOWN",
+            state_type="Setup",
+            activity="start state",
+            product="product1_1",
+            expected_end_time=2.0,
+            process="UNKNOWN",
+        ),
+    ]
+    with pytest.raises(ValidationError) as exc_info:
+        system_with_setup_states.schedule = invalid_schedule
+        ProductionSystemData.model_validate(system_with_setup_states)
+    assert "setup" in str(exc_info.value).lower()
+
