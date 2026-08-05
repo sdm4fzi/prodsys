@@ -142,14 +142,41 @@ class ProductionProcessHandler:
         self.resource = resource
         process = process_request.get_process()
 
+        controller = getattr(resource, "controller", None)
+
+        # When control injected a separate SETUP request, do not open on-site
+        # attendance (or run) until that changeover has finished. Otherwise
+        # production can bind the worker while SetupProcessHandler still waits
+        # for the worker to be free → deadlock (see dependency_example_release0).
+        if getattr(process_request, "_setup_injected", False) and controller is not None:
+            while True:
+                current = resource.reserved_setup or resource.current_setup
+                if current is not None and current.data.ID == process.data.ID:
+                    break
+                if not resource.in_setup and controller.should_allow_opportunistic_setup(
+                    process_request
+                ):
+                    # Setup request was skipped / never ran; fall through to
+                    # opportunistic setup below.
+                    break
+                yield controller.state_changed
+                controller.state_changed = events.Event(self.env)
+
         # Take only dependencies of the main request of the lot
         if process_request.required_dependencies:
             yield process_request.request_dependencies()
-        controller = getattr(resource, "controller", None)
         if controller is None or controller.should_allow_opportunistic_setup(
             process_request
         ):
-            yield from resource.setup(process)
+            # Skip opportunistic setup if a scheduled SETUP already put us on
+            # the target process (or is still the active changeover owner).
+            current = resource.reserved_setup or resource.current_setup
+            if not (
+                getattr(process_request, "_setup_injected", False)
+                and current is not None
+                and current.data.ID == process.data.ID
+            ):
+                yield from resource.setup(process)
         else:
             # Schedule-prefix still expects work on the current setup; wait until
             # changeover is allowed (or setup already matches).
@@ -159,7 +186,11 @@ class ProductionProcessHandler:
                     break
                 yield controller.state_changed
                 controller.state_changed = events.Event(self.env)
-            yield from resource.setup(process)
+            current = resource.reserved_setup or resource.current_setup
+            if not (
+                current is not None and current.data.ID == process.data.ID
+            ):
+                yield from resource.setup(process)
         resource_requests = []
         for _ in range(process_request.capacity_required):
             resource_request = resource.request()

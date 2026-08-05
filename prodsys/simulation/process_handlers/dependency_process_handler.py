@@ -125,12 +125,19 @@ class DependencyProcessHandler:
 
             # product.product_router.mark_finished_request(process_request)
         process_request.completed.succeed()
+        required_process = getattr(
+            process_request.resolved_dependency, "required_process", None
+        )
+        required_process_id = (
+            required_process.data.ID if required_process is not None else None
+        )
         self.resource.dependency_info.log_start_dependency(
             event_time=self.env.now,
             requesting_item_id=process_request.requesting_item.data.ID,
             dependency_id=process_request.resolved_dependency.data.ID,
             product_id=process_request.dependent_product_id,
             order_id=process_request.dependent_order_id,
+            process_id=required_process_id,
         )
         yield process_request.dependency_release_event
         self.resource.dependency_info.log_end_dependency(
@@ -139,6 +146,7 @@ class DependencyProcessHandler:
             dependency_id=process_request.resolved_dependency.data.ID,
             product_id=process_request.dependent_product_id,
             order_id=process_request.dependent_order_id,
+            process_id=required_process_id,
         )
         self.resource.release_from_dependant()
         self.resource.controller.mark_finished_process()

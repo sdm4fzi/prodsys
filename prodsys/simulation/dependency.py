@@ -71,6 +71,7 @@ class DependencyInfo:
         self.dependency_ID: str = None
         self.product_ID: Optional[str] = None
         self.order_ID: Optional[str] = None
+        self.process_ID: Optional[str] = None
 
     def log_start_dependency(
         self,
@@ -79,6 +80,7 @@ class DependencyInfo:
         dependency_id: str,
         product_id: Optional[str] = None,
         order_id: Optional[str] = None,
+        process_id: Optional[str] = None,
     ) -> None:
         """
         Logs the start of a dependency.
@@ -94,6 +96,7 @@ class DependencyInfo:
         self.dependency_ID = dependency_id
         self.product_ID = product_id
         self.order_ID = order_id
+        self.process_ID = process_id
 
     def log_end_dependency(
         self,
@@ -102,6 +105,7 @@ class DependencyInfo:
         dependency_id: str,
         product_id: Optional[str] = None,
         order_id: Optional[str] = None,
+        process_id: Optional[str] = None,
     ) -> None:
         """
         Logs the end of a dependency.
@@ -117,6 +121,7 @@ class DependencyInfo:
         self.dependency_ID = dependency_id
         self.product_ID = product_id
         self.order_ID = order_id
+        self.process_ID = process_id
 
 
 class Dependency:

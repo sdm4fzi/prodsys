@@ -215,7 +215,7 @@ def post_monitor_primitive_dependency(
         "Empty Transport": None,
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
-        "process": None,
+        "process": getattr(dependency_info, "process_ID", None),
         "Order ID": dependency_info.order_ID,
     }
     data.append(item)
@@ -245,7 +245,7 @@ def post_monitor_resource_dependency(
         "Empty Transport": None,
         "Requesting Item": dependency_info.requesting_item_ID,
         "Dependency": dependency_info.dependency_ID,
-        "process": None,
+        "process": getattr(dependency_info, "process_ID", None),
         "Order ID": dependency_info.order_ID,
     }
     data.append(item)

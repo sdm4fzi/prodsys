@@ -86,6 +86,10 @@ class Resource(resource.Resource):
         self.active = events.Event(self.env).succeed()
         self.current_setup: PROCESS_UNION = None
         self.reserved_setup: PROCESS_UNION = None
+        # Set when a SETUP request is accepted but resource.setup() has not
+        # called reserve_setup yet. Blocks other work from starting in the
+        # same instant (capacity>1 × ResourceDependency race).
+        self.pending_setup: bool = False
 
         self.can_move = can_move
         self.can_process = can_process
@@ -181,6 +185,14 @@ class Resource(resource.Resource):
                 return free_state
             yield self.controller.state_changed
 
+    def mark_pending_setup(self) -> None:
+        """Lock the resource for an accepted SETUP before setup() runs."""
+        self.pending_setup = True
+
+    def clear_pending_setup(self) -> None:
+        """Clear the pre-setup lock (after setup starts or finishes)."""
+        self.pending_setup = False
+
     def reserve_setup(self, process: PROCESS_UNION) -> None:
         """
         Reserves the setup of the resource for a process. This is used to prevent that capacity is wrong estimated during setup.
@@ -189,12 +201,14 @@ class Resource(resource.Resource):
             process (PROCESS_UNION): The process that wants to reserve the setup.
         """
         self.reserved_setup = process
+        self.pending_setup = False
 
     def unreserve_setup(self) -> None:
         """
         Unreserves the setup of the resource. This is used to prevent that the resource is used for another process while it is in a setup process.
         """
         self.reserved_setup = None
+        self.pending_setup = False
 
     @property
     def in_setup(self) -> bool:
@@ -204,7 +218,7 @@ class Resource(resource.Resource):
         Returns:
             bool: True if the resource is in a setup process, False otherwise.
         """
-        return self.reserved_setup is not None
+        return self.reserved_setup is not None or self.pending_setup
 
     def update_full(self) -> None:
         """

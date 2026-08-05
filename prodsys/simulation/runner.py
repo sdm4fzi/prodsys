@@ -189,6 +189,8 @@ class Runner:
                 process_factory=self.process_factory,
                 adapter=self.production_system_data,
             )
+            for controller in self.resource_factory.controllers:
+                controller.product_factory = self.product_factory
 
             self.sink_factory = sink_factory.SinkFactory(
                 env=self.env,

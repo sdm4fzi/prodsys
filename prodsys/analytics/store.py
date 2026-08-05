@@ -98,6 +98,21 @@ _EXCLUDED_STATE_TYPES = frozenset({
     StateTypeEnum.sink.value,
 })
 
+# Planned WIP-per-resource counts product presence on a resource, matching
+# simulated transfer-based WIP (load/unload/created). Setup and Dependency
+# occupy the resource but do not place a product there (ahead-of-product
+# setups; worker attendance), so including them creates overlay mismatches.
+_PLANNED_WIP_RESOURCE_STATE_TYPES = frozenset({
+    StateTypeEnum.production.value,
+    StateTypeEnum.transport.value,
+    StateTypeEnum.loading.value,
+    StateTypeEnum.unloading.value,
+})
+
+# Worker "move" transports are also StateType Transport but do not carry the
+# product (no Loading/Unloading). Only product transport processes count.
+_PRODUCT_TRANSPORT_STATE = StateTypeEnum.transport.value
+
 # Higher-priority time types suppress overlapping duration from lower-priority types.
 _TIME_TYPE_OVERLAP_PRIORITY: tuple[str, ...] = (
     "UD",
@@ -1034,8 +1049,13 @@ class AnalyticsStore:
         """
         Planned WIP per resource over time derived from ``production_system_data.schedule``.
 
-        Each scheduled step contributes a +1 at its start and a -1 at its planned
-        end on the step resource.
+        Each scheduled Production/Transport (and Loading/Unloading) step
+        contributes a +1 at its start and a -1 at its planned end on the step
+        resource. Setup and Dependency steps are excluded so the trajectory
+        matches simulated transfer-based WIP (product presence, not resource
+        occupancy during ahead-of-product setups or worker attendance).
+        Transport steps that are not a product's ``transport_process`` (e.g.
+        worker ``move``) are also excluded.
 
         Returns DataFrame with columns: Time, WIP, WIP_resource, WIP_Increment
         """
@@ -1046,6 +1066,11 @@ class AnalyticsStore:
 
         sink_resources = self._planned_sink_resource_ids()
         sink_queues = self._wip_sink_queues(sink_resources)
+        product_transport_processes = {
+            p.transport_process
+            for p in (ps.product_data or [])
+            if getattr(p, "transport_process", None)
+        }
 
         increments = []
         for _, steps in self._planned_schedule_steps_by_product().items():
@@ -1053,6 +1078,14 @@ class AnalyticsStore:
 
             for step in sorted_steps:
                 if step.expected_end_time is None:
+                    continue
+                if step.state_type not in _PLANNED_WIP_RESOURCE_STATE_TYPES:
+                    continue
+                if (
+                    step.state_type == _PRODUCT_TRANSPORT_STATE
+                    and product_transport_processes
+                    and step.process not in product_transport_processes
+                ):
                     continue
                 resource = step.resource
                 if resource in sink_resources or resource in sink_queues:

@@ -76,6 +76,74 @@ def test_planned_wip_per_resource_from_schedule(system_with_valid_schedule):
     assert list(r1["WIP"]) == [1.0, 0.0, 1.0, 0.0, 1.0, 0.0]
 
 
+def test_planned_wip_per_resource_excludes_setup_dependency_and_worker_move(
+    system_with_valid_schedule,
+):
+    """Setup/Dependency/worker-move are not product-presence WIP."""
+    system = system_with_valid_schedule.model_copy(deep=True)
+    # Bypass schedule process-ID validation so we can inject Setup/move labels.
+    system.__dict__["schedule"] = [
+        Event(
+            time=0.0,
+            resource="R1",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=10.0,
+            process="S1",
+        ),
+        Event(
+            time=10.0,
+            resource="R1",
+            state="P1",
+            state_type="Production",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=15.0,
+            process="P1",
+        ),
+        Event(
+            time=10.0,
+            resource="AGV1",
+            state="attend",
+            state_type="Dependency",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=15.0,
+            process="attend",
+        ),
+        Event(
+            time=8.0,
+            resource="AGV1",
+            state="move",
+            state_type="Transport",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=10.0,
+            process="move",
+        ),
+        Event(
+            time=0.0,
+            resource="AGV1",
+            state="TP",
+            state_type="Transport",
+            activity="start state",
+            product="Product_A_1",
+            expected_end_time=2.0,
+            process="TP",
+        ),
+    ]
+
+    df = AnalyticsStore(production_system_data=system).planned_wip_per_resource()
+    r1 = df[df["WIP_resource"] == "R1"].reset_index(drop=True)
+    assert list(r1["Time"]) == [10.0, 15.0]
+    assert list(r1["WIP"]) == [1.0, 0.0]
+    agv = df[df["WIP_resource"] == "AGV1"].reset_index(drop=True)
+    assert list(agv["Time"]) == [0.0, 2.0]
+    assert list(agv["WIP"]) == [1.0, 0.0]
+
+
 def test_planned_output_from_schedule(system_with_valid_schedule):
     store = AnalyticsStore(production_system_data=system_with_valid_schedule)
     df = store.planned_output().sort_values("End_time").reset_index(drop=True)

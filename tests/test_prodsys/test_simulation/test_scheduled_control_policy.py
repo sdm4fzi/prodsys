@@ -33,6 +33,48 @@ def _make_event(product: str, process: str, resource: str = "r1"):
     )
 
 
+def test_scheduled_control_policy_skips_completed_schedule_indices():
+    """Later visits of the same product+process must not rematch consumed indices."""
+    schedule = [
+        performance_data.Event(
+            time=0.0,
+            resource="tr",
+            state="tp",
+            state_type="Production",
+            activity="start state",
+            product="p1",
+            process="tp",
+        ),
+        performance_data.Event(
+            time=5.0,
+            resource="tr",
+            state="tp",
+            state_type="Production",
+            activity="start state",
+            product="p1",
+            process="tp",
+        ),
+    ]
+    policy = get_scheduled_control_policy(schedule, fallback_policy=lambda reqs: None)
+    controller = SimpleNamespace(completed_schedule_indices={0})
+    resource = SimpleNamespace(controller=controller)
+
+    class _Req:
+        def __init__(self):
+            self.request_type = request_module.RequestType.TRANSPORT
+            self.entity = SimpleNamespace(data=SimpleNamespace(ID="p1"))
+            self.process = SimpleNamespace(data=SimpleNamespace(ID="tp"))
+            self.resource = resource
+            self.scheduled_control_index = None
+            self.scheduled_start_time = None
+            self.matched_schedule_event = None
+
+    req = _Req()
+    policy([req])
+    assert req.scheduled_control_index == 1
+    assert req.scheduled_start_time == 5.0
+
+
 def test_scheduled_control_policy_sorts_by_schedule_index():
     schedule = [
         _make_event("p_b", "proc"),
@@ -247,8 +289,15 @@ def test_attendance_dependencies_have_free_resource_respects_bound():
         attendance_dependencies_have_free_resource,
     )
 
-    free_worker = SimpleNamespace(bound=False, full=False, controller=SimpleNamespace(num_running_processes=0))
-    busy_worker = SimpleNamespace(bound=True, full=False, controller=SimpleNamespace(num_running_processes=1))
+    machine = object()
+    free_worker = SimpleNamespace(bound=False, full=False, controller=SimpleNamespace(num_running_processes=0), current_dependant=None)
+    busy_worker = SimpleNamespace(bound=True, full=False, controller=SimpleNamespace(num_running_processes=1), current_dependant=object())
+    attending_worker = SimpleNamespace(
+        bound=True,
+        full=False,
+        controller=SimpleNamespace(num_running_processes=1),
+        current_dependant=machine,
+    )
     dep = SimpleNamespace(
         data=SimpleNamespace(dependency_type=DependencyType.PROCESS),
         required_process=SimpleNamespace(data=SimpleNamespace(ID="assembly_process")),
@@ -265,6 +314,13 @@ def test_attendance_dependencies_have_free_resource_respects_bound():
     assert not attendance_dependencies_have_free_resource([dep], _Matcher([busy_worker]))
     assert attendance_dependencies_have_free_resource(
         [dep], _Matcher([busy_worker, free_worker])
+    )
+    # Already attending at this machine is usable for setup (avoids deadlock).
+    assert attendance_dependencies_have_free_resource(
+        [dep], _Matcher([attending_worker]), requiring_machine=machine
+    )
+    assert not attendance_dependencies_have_free_resource(
+        [dep], _Matcher([attending_worker]), requiring_machine=object()
     )
 
 
@@ -373,6 +429,75 @@ def test_maybe_create_setup_request_links_parent_and_deps():
     assert setup_req.required_dependencies == [dep]
 
 
+def test_schedule_next_event_blocks_same_setup_affinity_jump():
+    """Same-setup work for product B must not jump ahead of scheduled Setup for A.
+
+    Regression: capacity>1 + ResourceDependency — product3_8 (p2) stole worker2
+    while machine2 still owed S2 for product3_9.
+    """
+    controller = _controller_with_setup("p2")
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=2.0,
+            resource="machine2",
+            state="p2",
+            state_type="Production",
+            activity="start state",
+            product="product2_2",
+            process="p2",
+        ),
+        performance_data.Event(
+            time=4.0,
+            resource="machine2",
+            state="S2",
+            state_type="Setup",
+            activity="start state",
+            product="product3_9",
+            process="S2",
+        ),
+        performance_data.Event(
+            time=14.0,
+            resource="machine2",
+            state="p1",
+            state_type="Production",
+            activity="start state",
+            product="product3_9",
+            process="p1",
+        ),
+        performance_data.Event(
+            time=23.0,
+            resource="machine2",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product="product3_8",
+            process="S1",
+        ),
+        performance_data.Event(
+            time=33.0,
+            resource="machine2",
+            state="p2",
+            state_type="Production",
+            activity="start state",
+            product="product3_8",
+            process="p2",
+        ),
+    ]
+    # product2_2 done → next event is S2 for product3_9
+    controller.completed_schedule_indices = {0}
+    early_same_setup = _FakeProductionRequest("product3_8", "p2")
+    next_setup_prod = _FakeProductionRequest("product3_9", "p1")
+    next_setup = _FakeSetupRequest("product3_9", "S2", "p1")
+
+    assert controller._schedule_next_event_blocks_request(early_same_setup)
+    assert not controller._schedule_next_event_blocks_request(next_setup_prod)
+    assert not controller._schedule_next_event_blocks_request(next_setup)
+    # Foreign same-setup in queue must not affinity-block the scheduled changeover
+    assert not controller.changeover_blocked(
+        next_setup, [early_same_setup, next_setup_prod], lambda r: True
+    )
+
+
 def test_setup_affinity_prefers_current_setup_over_changeover():
     """Queue has p1 and p2; current_setup=p1 → affinity keeps p1, blocks changeover."""
     controller = _controller_with_setup("p1")
@@ -432,9 +557,110 @@ def test_schedule_prefix_blocks_setup_while_earlier_same_setup_open():
     # After marking earlier p1 productions done, Setup is allowed.
     controller.completed_schedule_indices = {0, 1}
     assert not controller._schedule_prefix_blocks_changeover(setup_req)
-    assert controller.should_allow_opportunistic_setup(
-        _FakeProductionRequest("product2_0", "p2")
+    # With a schedule + matching Setup state, opportunistic changeovers are
+    # disabled — SETUP requests carry the planned start time instead.
+    setup_state = SimpleNamespace(
+        data=SimpleNamespace(ID="S1", origin_setup="p1", target_setup="p2")
     )
+    prod = _FakeProductionRequest("product2_0", "p2")
+    prod.resource = SimpleNamespace(
+        reserved_setup=None,
+        current_setup=SimpleNamespace(data=SimpleNamespace(ID="p1")),
+        setup_states=[setup_state],
+    )
+    assert not controller.should_allow_opportunistic_setup(prod)
+
+
+def test_opportunistic_setup_allowed_without_setup_states():
+    """Schedule alone must not block soft changeovers on resources without Setups."""
+    controller = _controller_with_setup("p_assembly")
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=0.0,
+            resource="ws2",
+            state="p_assembly",
+            state_type="Production",
+            activity="start state",
+            product="product_b_1",
+            process="p_assembly",
+        ),
+        performance_data.Event(
+            time=1.0,
+            resource="ws2",
+            state="p_finish",
+            state_type="Production",
+            activity="start state",
+            product="product_b_1",
+            process="p_finish",
+        ),
+    ]
+    controller.completed_schedule_indices = {0}
+    prod = _FakeProductionRequest("product_b_1", "p_finish")
+    prod.resource = SimpleNamespace(
+        reserved_setup=None,
+        current_setup=SimpleNamespace(data=SimpleNamespace(ID="p_assembly")),
+        setup_states=[],
+    )
+    assert controller.should_allow_opportunistic_setup(prod)
+
+
+def test_scheduled_setup_not_allowed_opportunistically_while_early():
+    """Even after prefix is free, opportunistic setup stays off when scheduled."""
+    import simpy
+
+    controller = _controller_with_setup("p1")
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=0.0,
+            resource="m",
+            state="p1",
+            state_type="Production",
+            activity="start state",
+            product="a",
+            process="p1",
+        ),
+        performance_data.Event(
+            time=10.0,
+            resource="m",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product="product2_0",
+            process="S1",
+        ),
+        performance_data.Event(
+            time=20.0,
+            resource="m",
+            state="p2",
+            state_type="Production",
+            activity="start state",
+            product="product2_0",
+            process="p2",
+        ),
+    ]
+    controller.completed_schedule_indices = {0}
+    setup_state = SimpleNamespace(
+        data=SimpleNamespace(ID="S1", origin_setup="p1", target_setup="p2")
+    )
+    process = SimpleNamespace(data=SimpleNamespace(ID="p2"))
+    resource = SimpleNamespace(
+        reserved_setup=SimpleNamespace(data=SimpleNamespace(ID="p1")),
+        current_setup=None,
+        setup_states=[setup_state],
+    )
+    env = simpy.Environment()
+    prod = request_module.Request(
+        request_type=request_module.RequestType.PRODUCTION,
+        process=process,
+        resource=resource,
+        requesting_item=SimpleNamespace(env=env),
+        entity=SimpleNamespace(data=SimpleNamespace(ID="product2_0"), size=1),
+    )
+    assert not controller.should_allow_opportunistic_setup(prod)
+    setup = controller._maybe_create_setup_request(prod)
+    assert setup is not None
+    assert setup.scheduled_start_time == 10.0
+    assert setup.scheduled_control_index == 1
 
 
 def test_schedule_prefix_releases_after_prefix_consumed():
@@ -480,3 +706,112 @@ def test_mark_started_process_consumes_schedule_index():
         1, SimpleNamespace(scheduled_control_index=2)
     )
     assert controller.completed_schedule_indices == {2}
+
+def test_maybe_inject_scheduled_setup_before_product_arrives():
+    """Plan setups that start before inbound transport must be injectable without a production request."""
+    import simpy
+    from simpy import events
+
+    controller = _controller_with_setup("p2")
+    env = simpy.Environment()
+    controller.env = env
+    controller.state_changed = events.Event(env)
+    setup_state = SimpleNamespace(
+        data=SimpleNamespace(ID="S2", origin_setup="p2", target_setup="p1")
+    )
+    p1 = SimpleNamespace(data=SimpleNamespace(ID="p1"))
+    controller.resource = SimpleNamespace(
+        reserved_setup=None,
+        current_setup=SimpleNamespace(data=SimpleNamespace(ID="p2")),
+        setup_states=[setup_state],
+        processes=[p1],
+        dependencies=[],
+        in_setup=False,
+        bound=False,
+        full=False,
+    )
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=84.467,
+            resource="machine2",
+            state="S2",
+            state_type="Setup",
+            activity="start state",
+            product="product1_2",
+            process="S2",
+        ),
+        performance_data.Event(
+            time=94.467,
+            resource="machine2",
+            state="p1",
+            state_type="Production",
+            activity="start state",
+            product="product1_2",
+            process="p1",
+        ),
+    ]
+    assert controller.requests == []
+    assert controller._maybe_inject_scheduled_setup()
+    assert len(controller.requests) == 1
+    setup_req = controller.requests[0]
+    assert setup_req.request_type == request_module.RequestType.SETUP
+    assert setup_req.setup_state_id == "S2"
+    assert setup_req.scheduled_start_time == 84.467
+    assert setup_req.scheduled_control_index == 0
+    # Idempotent while pending
+    assert not controller._maybe_inject_scheduled_setup()
+    assert len(controller.requests) == 1
+
+
+def test_maybe_create_setup_request_adopts_ahead_of_product_setup():
+    import simpy
+    from simpy import events
+
+    controller = _controller_with_setup("p2")
+    env = simpy.Environment()
+    controller.env = env
+    controller.state_changed = events.Event(env)
+    setup_state = SimpleNamespace(
+        data=SimpleNamespace(ID="S2", origin_setup="p2", target_setup="p1")
+    )
+    p1 = SimpleNamespace(data=SimpleNamespace(ID="p1"))
+    resource = SimpleNamespace(
+        reserved_setup=None,
+        current_setup=SimpleNamespace(data=SimpleNamespace(ID="p2")),
+        setup_states=[setup_state],
+        processes=[p1],
+        dependencies=[SimpleNamespace(data=SimpleNamespace(ID="dep_resource"))],
+        in_setup=False,
+        bound=False,
+        full=False,
+    )
+    controller.resource = resource
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=10.0,
+            resource="m",
+            state="S2",
+            state_type="Setup",
+            activity="start state",
+            product="product1_2",
+            process="S2",
+        ),
+    ]
+    assert controller._maybe_inject_scheduled_setup()
+    early = controller.requests[0]
+
+    env = simpy.Environment()
+    dep = SimpleNamespace(data=SimpleNamespace(ID="resource_2_dependency"))
+    parent = request_module.Request(
+        request_type=request_module.RequestType.PRODUCTION,
+        process=p1,
+        resource=resource,
+        requesting_item=SimpleNamespace(env=env),
+        entity=SimpleNamespace(data=SimpleNamespace(ID="product1_2"), size=1),
+        required_dependencies=[dep],
+    )
+    adopted = controller._maybe_create_setup_request(parent)
+    assert adopted is early
+    assert parent._setup_injected is True
+    assert early.parent_production_request is parent
+    assert early.required_dependencies == [dep]

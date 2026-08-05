@@ -219,6 +219,41 @@ def dependency_attendance_lookup_keys(
     return keys
 
 
+def preceding_dependency_move_start_time(
+    schedule: list[performance_data.Event] | None,
+    attendance_index: int,
+    *,
+    product_id: str | None,
+) -> float | None:
+    """Planned start of the worker ``move`` immediately before attendance.
+
+    Schedules place ``move`` then ``Dependency`` on the worker. Strict timing must
+    dispatch the dependency request at the move start (not attendance), otherwise
+    travel starts late and production/WIP drift by the move duration.
+    """
+    if not schedule or product_id is None:
+        return None
+    if attendance_index <= 0 or attendance_index >= len(schedule):
+        return None
+    attendance = schedule[attendance_index]
+    worker = getattr(attendance, "resource", None)
+    for i in range(attendance_index - 1, -1, -1):
+        ev = schedule[i]
+        if getattr(ev, "resource", None) != worker:
+            continue
+        if getattr(ev, "product", None) != product_id:
+            # Different product on this worker — stop looking further back.
+            break
+        st = getattr(ev, "state_type", None)
+        proc = getattr(ev, "process", None) or getattr(ev, "state", None)
+        if st in ("Transport", "Production") and proc == "move":
+            if getattr(ev, "activity", None) in (None, "start state"):
+                return float(ev.time) if ev.time is not None else None
+        if st == "Dependency":
+            break
+    return None
+
+
 def locations_equivalent(
     origin: list[float] | None,
     target: list[float] | None,
