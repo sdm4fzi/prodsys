@@ -307,6 +307,8 @@ class Controller:
         """Gate for opportunistic ``resource.setup()`` in production handlers."""
         if not self._request_needs_changeover(process_request):
             return True
+        if not self.resource_schedule:
+            return True
         # With a resource schedule, changeovers go through SETUP requests so
         # planned start times are honored. Soft switches (no setup_states)
         # still need ``resource.setup()`` or production stalls forever.
@@ -317,11 +319,6 @@ class Controller:
             if resource is not None and not getattr(resource, "setup_states", None):
                 return True
             return False
-        # Affinity: pending queue work on current_setup must run before changeover.
-        for req in self.requests:
-            if self._request_matches_current_setup(req):
-                return False
-        return not self._schedule_prefix_blocks_changeover(process_request)
 
     def _planned_setup_event(
         self,
@@ -496,6 +493,8 @@ class Controller:
         self, process_request: request_module.Request
     ) -> request_module.Request | None:
         """Create a SETUP request when production needs a changeover."""
+        if not self.resource_schedule:
+            return None
         if process_request.request_type not in (
             request_module.RequestType.PRODUCTION,
             request_module.RequestType.PROCESS_MODEL,
@@ -654,6 +653,12 @@ class Controller:
                 return True
 
             def get_feasible_request(requests: List[request_module.Request]) -> request_module.Request:
+                if not self.resource_schedule:
+                    for request in requests:
+                        if is_request_feasible(request):
+                            return request
+                    return None
+
                 # Setup affinity: prefer feasible work that already matches current_setup
                 # over any changeover / SETUP request — but never jump ahead of the
                 # next unconsumed schedule Setup/Production for another product.

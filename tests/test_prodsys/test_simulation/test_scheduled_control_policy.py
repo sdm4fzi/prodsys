@@ -401,6 +401,17 @@ def test_maybe_create_setup_request_links_parent_and_deps():
     import simpy
 
     controller = _controller_with_setup("p1")
+    controller.resource_schedule = [
+        performance_data.Event(
+            time=0.0,
+            resource="machine2",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product="product2_1",
+            process="S1",
+        ),
+    ]
     setup_state = SimpleNamespace(
         data=SimpleNamespace(ID="S1", origin_setup="p1", target_setup="p2")
     )
