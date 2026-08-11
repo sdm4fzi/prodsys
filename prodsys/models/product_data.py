@@ -1,7 +1,7 @@
 from __future__ import annotations
 from hashlib import md5
 
-from typing import Union, List, Dict, TYPE_CHECKING
+from typing import Any, Union, List, Dict, Optional, TYPE_CHECKING
 from pydantic import ConfigDict, model_validator, field_validator
 from prodsys.models.primitives_data import PrimitiveData
 from prodsys.models.source_data import RoutingHeuristic
@@ -29,7 +29,11 @@ class ProductData(PrimitiveData):
         processes (Union[List[str], List[List[str]], Dict[str, List[str]]]): Processes of the product. This can be a list of process IDs, a list of edges or an adjacency matrix.
         transport_process (str): Transport process of the product.
         dependency_ids (List[str]): IDs of the dependencies of the product.
-        
+        product_meta (Optional[Dict[str, Any]]): Free-form, source-system-derived attributes of the product
+            (e.g. variant/material/tooling data from an ERP integration). Not interpreted by prodsys itself;
+            consumers such as schedulers may read known keys (e.g. `variant.length_mm`, `variant.color`) to
+            inform setup-aware sequencing. Unknown keys are preserved as-is.
+
     Examples:
         Product with sequential process model:
         ``` py
@@ -81,6 +85,7 @@ class ProductData(PrimitiveData):
     dependency_ids: List[str] = []
     routing_heuristic: Union[RoutingHeuristic, None] = None
     becomes_consumable: bool = False
+    product_meta: Optional[Dict[str, Any]] = None
     
     @field_validator("processes", mode="before")
     def check_processes(cls, v):

@@ -256,3 +256,52 @@ class TestProductData:
         assert product.processes["P3"] == []
         assert len(product.processes) == 3
 
+    def test_default_product_meta(self):
+        """Test that product_meta defaults to None."""
+        product = ProductData(
+            ID="Product_1",
+            description="Product 1",
+            type="Product_1",
+            processes={"P1": []},
+            transport_process="TP1",
+        )
+        assert product.product_meta is None
+
+    def test_with_product_meta(self):
+        """Test creating ProductData with product_meta and that it round-trips."""
+        meta = {
+            "variant": {"laenge_mm": 270, "farbe": "violett"},
+            "material": {"grundmaterial_artnr": "RN1061", "schmelztemp_max_c": 280},
+            "tooling": {"einsatz_id": "48U"},
+            "source": {"system": "wincarat", "artnr": "KBEFM270VL"},
+        }
+        product = ProductData(
+            ID="Product_1",
+            description="Product 1",
+            type="Product_1",
+            processes={"P1": []},
+            transport_process="TP1",
+            product_meta=meta,
+        )
+        assert product.product_meta == meta
+
+        dumped = product.model_dump()
+        assert dumped["product_meta"] == meta
+
+        roundtripped = ProductData.model_validate(dumped)
+        assert roundtripped.product_meta == meta
+
+    def test_product_meta_unknown_keys_preserved(self):
+        """product_meta is a free-form dict: arbitrary/unknown keys must survive round-trip."""
+        meta = {"anything": {"nested": [1, 2, 3]}, "flag": True}
+        product = ProductData(
+            ID="Product_1",
+            description="Product 1",
+            type="Product_1",
+            processes={"P1": []},
+            transport_process="TP1",
+            product_meta=meta,
+        )
+        roundtripped = ProductData.model_validate(product.model_dump())
+        assert roundtripped.product_meta == meta
+
