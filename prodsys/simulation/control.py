@@ -624,23 +624,60 @@ class Controller:
             if not possible_requests:
                 continue
             self.control_policy(possible_requests)
+            # Transports of one order between the same queues share their
+            # verdict within a pass (same lot, same gate) — checking each
+            # waiting piece of a tray separately is quadratic.
+            transport_verdicts: dict[tuple, bool] = {}
+
+            def is_transport_feasible(request: request_module.Request) -> bool:
+                if request.target_queue.is_full:
+                    return False
+                if not self._transport_admissible(request):
+                    return False
+                # A transport whose lot cannot be formed yet (e.g. a tray
+                # still waiting for pieces of its order) must not be
+                # selected: selecting it only re-queues it and parks the
+                # control loop until the next state change, starving every
+                # other request of this resource (worker dependencies!).
+                if self.lot_handler.lot_required(
+                    request
+                ) and not self.lot_handler.is_lot_feasible(request):
+                    return False
+                return True
+
             def is_request_feasible(request: request_module.Request) -> bool:
                 # Check transport requests for target queue availability
 
                 if request.request_type == request_module.RequestType.TRANSPORT:
-                    if request.target_queue.is_full:
-                        return False
-                    if not self._transport_admissible(request):
-                        return False
-                    # A transport whose lot cannot be formed yet (e.g. a tray
-                    # still waiting for pieces of its order) must not be
-                    # selected: selecting it only re-queues it and parks the
-                    # control loop until the next state change, starving every
-                    # other request of this resource (worker dependencies!).
-                    if self.lot_handler.lot_required(
-                        request
-                    ) and not self.lot_handler.is_lot_feasible(request):
-                        return False
+                    entity = request.entity
+                    order_id = (
+                        entity_order_id(entity)
+                        if entity is not None and entity.type != EntityType.LOT
+                        else None
+                    )
+                    lot_dependency = (
+                        self.lot_handler._get_lot_dependency_data(request)
+                        if self.lot_handler.lot_required(request)
+                        else None
+                    )
+                    if (
+                        order_id is None
+                        or lot_dependency is None
+                        or int(lot_dependency.max_lot_size or 1) <= 1
+                    ):
+                        # Single-piece moves are gated piece by piece.
+                        return is_transport_feasible(request)
+                    key = (
+                        order_id,
+                        id(request.process),
+                        id(request.origin_queue),
+                        id(request.target_queue),
+                    )
+                    verdict = transport_verdicts.get(key)
+                    if verdict is None:
+                        verdict = is_transport_feasible(request)
+                        transport_verdicts[key] = verdict
+                    return verdict
                 # Check production requests for INPUT_OUTPUT queue deadlock prevention
                 elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
                     # For INPUT_OUTPUT queues, check if output space is available
@@ -926,9 +963,10 @@ class Controller:
         if with_lot_candidates and self.lot_handler.lot_required(process_request):
             lot_dependency = self.lot_handler._get_lot_dependency_data(process_request)
             max_lot = int(getattr(lot_dependency, "max_lot_size", 1) or 1)
-            others = self.lot_handler._get_possible_requests_for_lot(process_request)
-            for other in others[: max(0, max_lot - 1)]:
-                entities.extend(other.get_atomic_entities())
+            if max_lot > 1:
+                others = self.lot_handler._get_possible_requests_for_lot(process_request)
+                for other in others[: max_lot - 1]:
+                    entities.extend(other.get_atomic_entities())
         elif process_request.entity is not None and process_request.entity.type == EntityType.LOT:
             max_lot = max(len(entities), 1)
         return {e.data.ID: entity_order_id(e) for e in entities}, max_lot
@@ -938,6 +976,13 @@ class Controller:
         admission = admission_for_queue(process_request.target_queue)
         if admission is None:
             return True
+        head = process_request.entity
+        if head is not None and head.type != EntityType.LOT:
+            verdict = admission.quick_check(head.data.ID, entity_order_id(head))
+            if verdict is not None:
+                if not verdict:
+                    admission.add_waiter(self)
+                return verdict
         products, max_lot = self._transport_products(
             process_request, with_lot_candidates=True
         )

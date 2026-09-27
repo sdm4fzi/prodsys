@@ -63,12 +63,15 @@ class ScheduleAdmission:
         self.position: dict[str, int] = {}
         self.sequence: list[str] = []
         self.last_index: dict[str, int] = {}
+        #: product -> order id as planned (schedule ``Order ID``)
+        self._order_of: dict[str, Optional[str]] = {}
         for idx, event in enumerate(controller.resource_schedule or []):
             if getattr(event, "state_type", None) not in _PRODUCTION_STATE_TYPES:
                 continue
             product = getattr(event, "product", None)
             if not product:
                 continue
+            self._order_of.setdefault(product, getattr(event, "order_id", None))
             if product not in self.position:
                 self.position[product] = len(self.sequence)
                 self.sequence.append(product)
@@ -97,6 +100,27 @@ class ScheduleAdmission:
                 self._occupying[order_id] = pending
             else:
                 del self._occupying[order_id]
+
+    def quick_check(self, product_id: str, order_id: Optional[str]) -> Optional[bool]:
+        """Cheap verdict for a single-product request, ``None`` if undecided.
+
+        ``True``: not gated here.  ``False``: an earlier planned product of a
+        *different* order is still outstanding, so no lot of this product's
+        order can be admitted either.  Avoids scanning lot candidates for the
+        many requests that simply have to wait their turn.
+        """
+        pos = self.position.get(product_id)
+        if pos is None:
+            return True
+        if product_id in self.admitted:
+            return True
+        self._advance_cursor()
+        if self._cursor >= pos:
+            return None
+        blocker = self.sequence[self._cursor]
+        if order_id is None or self._order_of.get(blocker) in (None, order_id):
+            return None
+        return False
 
     def plans(self, product_ids: Iterable[str]) -> bool:
         return any(p in self.position for p in product_ids)

@@ -91,6 +91,25 @@ class LotHandler:
         )
 
     def _get_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
+        # Resolving a link lot builds a new pydantic object; controllers ask
+        # for it on every feasibility check of every waiting request.  The
+        # result only depends on the request's (fixed) origin/target.
+        key = (
+            id(getattr(process_request, "origin", None)),
+            id(getattr(process_request, "target", None)),
+            len(process_request.required_dependencies or ()),
+        )
+        cached = getattr(process_request, "_lot_dependency_cache", None)
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        resolved = self._compute_lot_dependency_data(process_request)
+        try:
+            process_request._lot_dependency_cache = (key, resolved)
+        except AttributeError:
+            pass
+        return resolved
+
+    def _compute_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
         lot_dependencies = []
         for dependency in process_request.required_dependencies:
             if dependency.data.dependency_type == DependencyType.LOT:
@@ -197,7 +216,6 @@ class LotHandler:
         lot_dependency = self._get_lot_dependency_data(process_request)
         if lot_dependency is None:
             return True
-        possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
         effective_min = self._effective_min_lot_size(lot_dependency, process_request)
         if process_request.resource.data.capacity < effective_min:
             raise ValueError(
@@ -212,6 +230,9 @@ class LotHandler:
                 or process_request.target_queue.free_space() < effective_min
             ):
                 return False
+        if effective_min <= 1:
+            return True
+        possible_requests_for_lot = self._get_possible_requests_for_lot(process_request)
         return len(possible_requests_for_lot) >= effective_min - 1
 
 

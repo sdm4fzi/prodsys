@@ -930,13 +930,24 @@ class Router:
         if not sink_port_ids:
             return None
 
+        # Index transport targets per product once (was a full schedule scan
+        # per finished product — quadratic on large plans).
+        index = getattr(self, "_schedule_transport_targets", None)
+        if index is None or index[0] is not schedule:
+            targets: Dict[str, List[str]] = defaultdict(list)
+            for event in schedule:
+                if (
+                    event.state_type == "Transport"
+                    and event.activity == "start state"
+                    and event.target_location is not None
+                ):
+                    targets[event.product].append(event.target_location)
+            index = (schedule, targets)
+            self._schedule_transport_targets = index
         matches = [
-            event.target_location
-            for event in schedule
-            if event.product == product_instance.data.ID
-            and event.state_type == "Transport"
-            and event.activity == "start state"
-            and event.target_location in sink_port_ids
+            target
+            for target in index[1].get(product_instance.data.ID, ())
+            if target in sink_port_ids
         ]
         return matches[-1] if matches else None
 
