@@ -16,9 +16,20 @@ _WR_ORDER_RE = re.compile(r"_WR(\d{3})_")
 
 
 def _work_request_order_id(entity) -> str | None:
-    """Parse ``WR###`` from a product entity id (SICK naming)."""
+    """Order (work request) of a product entity.
+
+    Prefers the order id the product was released with (``info.order_ID``);
+    falls back to parsing ``WR###`` from the product id (legacy SICK naming).
+    Scheduler instance ids are ``{product_type}_{n}`` and carry no order, so
+    the id alone must not be relied on — otherwise trays of different orders
+    are bundled and a tray never reaches its full-order lot size.
+    """
     if entity is None:
         return None
+    info = getattr(entity, "info", None)
+    order_id = getattr(info, "order_ID", None) if info is not None else None
+    if order_id:
+        return str(order_id)
     data = getattr(entity, "data", None)
     pid = getattr(data, "ID", None) if data is not None else None
     if not pid:

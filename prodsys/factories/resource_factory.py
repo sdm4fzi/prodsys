@@ -17,7 +17,7 @@ from prodsys.models.resource_data import (
     SystemResourceData,
     TransportControlPolicy,
 )
-from prodsys.models import performance_data, processes_data
+from prodsys.models import performance_data, port_data, processes_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
@@ -419,6 +419,15 @@ class ResourceFactory:
         else:
             resource_object = resources.Resource(**values)
         controller.set_resource(resource_object)
+        # Let transports find the scheduled resource that owns a target queue
+        # (see ``prodsys.simulation.schedule_admission``).
+        for port_obj in ports:
+            interface = getattr(port_obj.data, "interface_type", None)
+            port_obj.owner_resource = resource_object
+            port_obj.is_input = interface == port_data.PortInterfaceType.INPUT or (
+                interface == port_data.PortInterfaceType.INPUT_OUTPUT
+                and not getattr(resource_object, "can_move", False)
+            )
 
         states = self.state_factory.get_states(resource_data.state_ids)
         register_states(resource_object, states, self.env)
