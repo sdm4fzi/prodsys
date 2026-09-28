@@ -109,6 +109,10 @@ class SourceFactory:
             return schedule_per_product
 
         for event in schedule:
+            # Setup/changeover rows may omit ``product``; they are enforced on the
+            # resource schedule, not via order-source release timing.
+            if not event.product:
+                continue
             product_type = self._get_product_type(event.product, valid_types=valid_types)
             if product_type not in schedule_per_product:
                 schedule_per_product[product_type] = []
