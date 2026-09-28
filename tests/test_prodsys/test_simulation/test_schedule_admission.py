@@ -301,3 +301,25 @@ def test_later_planned_tray_waits_upstream_instead_of_deadlocking() -> None:
     info = sim.run_until_complete(time_range_max=5000)
     assert len(sim.product_factory.finished_products) == 3
     assert info.get("early_exit")
+
+
+def test_transport_without_route_link_releases_its_state() -> None:
+    """A route with no link (already at the target) must not leak a reserved slot.
+
+    Leaked reservations permanently shrank a worker's transport capacity; once
+    below the tray size a full tray lot could never start (line standstill).
+    """
+    from prodsys.simulation.process_handlers.dependency_process_handler import (
+        DependencyProcessHandler,
+    )
+    from prodsys.simulation.process_handlers.transport_process_handler import (
+        TransportProcessHandler,
+    )
+
+    state = SimpleNamespace(reserved=True, process=None)
+    list(TransportProcessHandler(env=None).run_transport(state, None, [object()], empty_transport=True))
+    assert state.reserved is False
+
+    state = SimpleNamespace(reserved=True, process=None)
+    list(DependencyProcessHandler(env=None).run_transport(state, [object()], True, None))
+    assert state.reserved is False
