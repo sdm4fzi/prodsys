@@ -103,4 +103,6 @@ def test_lot_line_runs_without_plan_order_admission() -> None:
     assert len(sim.product_factory.finished_products) == 3
     assert info.get("early_exit")
     b_input = next(q for q in sim.resource_factory.get_resource("B").ports if q.data.ID == "B_input")
-    assert getattr(b_input, "lot_slot_gate", None) is not None  # lot slots were enforced
+    gate = getattr(b_input, "lot_slot_gate", None)
+    assert gate is not None  # lot slots were enforced ...
+    assert gate.order_of_product.get("P_0") == "O1"  # ... and the bundled lot was admitted

@@ -1028,14 +1028,14 @@ class Controller:
     def _admit_transport(self, process_request: request_module.Request) -> None:
         admission = admission_for_queue(process_request.target_queue)
         if admission is None:
-            if self._lot_slots(process_request):
-                gate = lot_slot_gate_for(process_request.target_queue)
-                if gate is not None:
-                    products, _ = self._transport_products(
-                        process_request, with_lot_candidates=False
-                    )
-                    if len(products) > 1:
-                        gate.admit(products)
+            # The selected request may be the bundled lot request, whose lot
+            # dependency is not resolvable any more — the gate exists iff the
+            # admissibility check (on the single requests) asked for lot slots.
+            gate = getattr(process_request.target_queue, "lot_slot_gate", None)
+            if gate is not None:
+                products, _ = self._transport_products(process_request, with_lot_candidates=False)
+                if len(products) > 1:
+                    gate.admit(products)
             return
         products, _ = self._transport_products(process_request, with_lot_candidates=False)
         admission.admit(products)
