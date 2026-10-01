@@ -81,3 +81,44 @@ def test_scheduled_setup_runner_accepts_and_logs_setup():
     setup_rows = df[df["State Type"] == "Setup"]
     assert not setup_rows.empty, "expected Setup rows in simulation event log"
     assert "S1" in set(setup_rows["State"].dropna().astype(str))
+
+
+def test_scheduled_setup_without_product_does_not_break_source_factory():
+    """Setup events with ``product=None`` must not crash ``SourceFactory`` init."""
+    model = _system_with_setup_states()
+    schedule = [
+        Event(
+            time=0.0,
+            resource="machine",
+            state="p1",
+            state_type="Production",
+            activity="start state",
+            product="product1_1",
+            expected_end_time=1.0,
+            process="p1",
+        ),
+        Event(
+            time=1.0,
+            resource="machine",
+            state="S1",
+            state_type="Setup",
+            activity="start state",
+            product=None,
+            expected_end_time=3.0,
+            process="S1",
+        ),
+        Event(
+            time=3.0,
+            resource="machine",
+            state="p2",
+            state_type="Production",
+            activity="start state",
+            product="product2_1",
+            expected_end_time=4.0,
+            process="p2",
+        ),
+    ]
+    model.schedule = schedule
+
+    runner_instance = runner.Runner(production_system_data=model)
+    runner_instance.initialize_simulation()

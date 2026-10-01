@@ -77,6 +77,9 @@ class Queue:
         Put an item; if no prior reserve(), it will implicitly wait for space.
         If caller already reserved, this will consume that reservation.
         """
+        gate = getattr(self, "lot_slot_gate", None)
+        if gate is not None:
+            gate.on_put(item)
         # If caller did not reserve, wait for space now
         if self._pending_put == 0:
             while self._is_full():

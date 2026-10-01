@@ -17,7 +17,7 @@ from prodsys.models.resource_data import (
     SystemResourceData,
     TransportControlPolicy,
 )
-from prodsys.models import performance_data, processes_data
+from prodsys.models import performance_data, port_data, processes_data
 from prodsys.factories import port_factory, process_factory, state_factory
 
 from prodsys.simulation import control, resources
@@ -224,6 +224,7 @@ class ResourceFactory:
         schedule: Optional[List[performance_data.Event]] = None,
         *,
         strict_schedule_timing: bool = False,
+        strict_schedule_admission: bool = False,
     ):
         self.env = env
         self.process_factory = process_factory
@@ -231,6 +232,7 @@ class ResourceFactory:
         self.queue_factory = queue_factory
         self.schedule = schedule
         self.strict_schedule_timing = strict_schedule_timing
+        self.strict_schedule_admission = strict_schedule_admission
         self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
         self.system_resources: Dict[str, resources.SystemResource] = {}
@@ -297,6 +299,7 @@ class ResourceFactory:
             env=self.env,
             lot_handler=self.lot_handler,
             strict_schedule_timing=self.strict_schedule_timing,
+            strict_schedule_admission=self.strict_schedule_admission,
         )
         self.global_system_resource = resources.SystemResource(
             env=self.env,
@@ -397,6 +400,7 @@ class ResourceFactory:
             env=self.env,
             lot_handler=self.lot_handler,
             strict_schedule_timing=self.strict_schedule_timing,
+            strict_schedule_admission=self.strict_schedule_admission,
         )
         controller.resource_schedule = list(resource_schedule)
         self.controllers.append(controller)
@@ -419,6 +423,15 @@ class ResourceFactory:
         else:
             resource_object = resources.Resource(**values)
         controller.set_resource(resource_object)
+        # Let transports find the scheduled resource that owns a target queue
+        # (see ``prodsys.simulation.schedule_admission``).
+        for port_obj in ports:
+            interface = getattr(port_obj.data, "interface_type", None)
+            port_obj.owner_resource = resource_object
+            port_obj.is_input = interface == port_data.PortInterfaceType.INPUT or (
+                interface == port_data.PortInterfaceType.INPUT_OUTPUT
+                and not getattr(resource_object, "can_move", False)
+            )
 
         states = self.state_factory.get_states(resource_data.state_ids)
         register_states(resource_object, states, self.env)

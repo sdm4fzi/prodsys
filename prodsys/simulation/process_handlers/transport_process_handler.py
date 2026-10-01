@@ -267,6 +267,11 @@ class TransportProcessHandler:
             )
             transport_state.reserved = False
             yield transport_state.process
+        # A route without a link (the resource already stands at the target)
+        # never enters the loop; release the reservation anyway, otherwise the
+        # state stays reserved forever and the resource permanently loses one
+        # transport slot (a full-capacity lot can then never start).
+        transport_state.reserved = False
 
     def get_target_location(
         self,

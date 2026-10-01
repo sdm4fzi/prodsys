@@ -3,10 +3,10 @@ from typing import List
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.figure_factory as ff
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
+from scipy.stats import gaussian_kde
 
 from prodsys.util import post_processing
 
@@ -114,25 +114,51 @@ def plot_throughput_time_distribution(
     df_tp = post_processor.df_throughput
     grouped = df_tp.groupby(by="Product_type")["Throughput_time"].apply(list)
 
-    # ``ff.create_distplot`` runs ``scipy.stats.gaussian_kde`` per group, which
-    # raises ``ValueError`` when a group has fewer than two samples and a
-    # ``LinAlgError`` (singular covariance) when all samples in a group are
-    # identical. Drop those groups so a single sparse product type doesn't kill
-    # the whole plot.
+    # Kernel density per product type (plotly 7 removed
+    # ``figure_factory.create_distplot``).  ``gaussian_kde`` raises
+    # ``ValueError`` for fewer than two samples and ``LinAlgError`` (singular
+    # covariance) when all samples are identical, so such groups are dropped
+    # rather than failing the whole plot.
     valid_mask = [
         len(v) >= 2 and float(np.var(v)) > 0.0 for v in grouped.values
     ]
     grouped = grouped[valid_mask]
 
-    values = list(grouped.values)
-    group_labels = list(grouped.index)
-
-    if len(values) == 0:
+    if len(grouped) == 0:
         return None
 
-    # Create distplot with custom bin_size
-    fig = ff.create_distplot(
-        values, group_labels, bin_size=0.2, show_curve=True, show_hist=False
+    colors = px.colors.qualitative.Plotly
+    fig = go.Figure()
+    for i, (label, samples) in enumerate(grouped.items()):
+        samples = np.asarray(samples, dtype=float)
+        grid = np.linspace(samples.min(), samples.max(), 500)
+        color = colors[i % len(colors)]
+        fig.add_trace(
+            go.Scatter(
+                x=grid,
+                y=gaussian_kde(samples)(grid),
+                mode="lines",
+                name=str(label),
+                legendgroup=str(label),
+                line=dict(color=color),
+            )
+        )
+        # Rug of the individual samples, as create_distplot drew it.
+        fig.add_trace(
+            go.Scatter(
+                x=samples,
+                y=[str(label)] * len(samples),
+                mode="markers",
+                marker=dict(color=color, symbol="line-ns-open"),
+                legendgroup=str(label),
+                showlegend=False,
+                xaxis="x",
+                yaxis="y2",
+            )
+        )
+    fig.update_layout(
+        yaxis=dict(domain=[0.35, 1]),
+        yaxis2=dict(domain=[0, 0.25], anchor="x", dtick=1, showticklabels=False),
     )
     fig.update_layout(
         xaxis_title="Throughput Time [Minutes]",

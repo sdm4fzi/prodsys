@@ -23,6 +23,7 @@ from prodsys.simulation.dependency import Dependency
 from prodsys.models import port_data, production_system_data
 from prodsys.simulation.interaction_handler import InteractionHandler
 from prodsys.simulation.process_matcher import ProcessMatcher
+from prodsys.simulation.schedule_admission import entity_order_id
 from prodsys.simulation.request_handler import RequestHandler
 from prodsys.simulation.schedule_dependency import (
     build_dependency_move_schedule_index,
@@ -109,6 +110,18 @@ class Router:
 
         self.resources = resources
         self.process_matcher: ProcessMatcher = process_matcher
+
+        # Order-pure lots (``LotDependencyData.order_pure``): all products of
+        # an order follow the routing decision of its first product, per
+        # process and per transport hop, so that they meet at one resource.
+        # The table is shared by all routers of the simulation.
+        self.order_affinity: bool = any(
+            getattr(dep, "order_pure", False)
+            for dep in (getattr(production_system_data, "dependency_data", None) or [])
+        )
+        self._order_routes: Dict[tuple, str] = resource_factory.__dict__.setdefault(
+            "_order_routes", {}
+        )
 
         self.free_resources: Dict[str, resources.Resource] = {resource.data.ID: resource for resource in self.resources}
 
@@ -732,6 +745,25 @@ class Router:
 
         return schedule_based_routing_heuristic
 
+    def _order_route_key(self, free_requests: List[request.Request]) -> Optional[tuple]:
+        first = free_requests[0] if free_requests else None
+        rtype = getattr(first, "request_type", None)
+        if rtype not in (
+            request.RequestType.PRODUCTION,
+            request.RequestType.PROCESS_MODEL,
+            request.RequestType.TRANSPORT,
+        ):
+            return None
+        order_id = entity_order_id(first.requesting_item)
+        if order_id is None:
+            return None
+        if rtype == request.RequestType.TRANSPORT:
+            origin = getattr(getattr(first, "origin", None), "data", None)
+            target = getattr(getattr(first, "target", None), "data", None)
+            return ("hop", order_id, getattr(origin, "ID", None), getattr(target, "ID", None))
+        candidates = tuple(sorted({r.resource.data.ID for r in free_requests}))
+        return ("step", order_id, first.process.data.ID, candidates)
+
     def route_request(self, free_requests: List[request.Request]) -> request.Request:
         """
         Allocates a resource to a request.
@@ -742,6 +774,13 @@ class Router:
         Returns:
             request.Request: The allocated request.
         """
+        route_key = self._order_route_key(free_requests) if self.order_affinity else None
+        if route_key is not None:
+            chosen = self._order_routes.get(route_key)
+            if chosen is not None:
+                pinned = [r for r in free_requests if r.resource.data.ID == chosen]
+                if pinned:
+                    free_requests[:] = pinned
         try:
             if free_requests[0].request_type in (
                 request.RequestType.PROCESS_DEPENDENCY,
@@ -763,6 +802,8 @@ class Router:
                 return x[0]
             fallback_heuristic(free_requests)
         routed_request = free_requests.pop(0)
+        if route_key is not None:
+            self._order_routes.setdefault(route_key, routed_request.resource.data.ID)
         return routed_request
 
     def get_dependencies_for_execution(
@@ -930,13 +971,24 @@ class Router:
         if not sink_port_ids:
             return None
 
+        # Index transport targets per product once (was a full schedule scan
+        # per finished product — quadratic on large plans).
+        index = getattr(self, "_schedule_transport_targets", None)
+        if index is None or index[0] is not schedule:
+            targets: Dict[str, List[str]] = defaultdict(list)
+            for event in schedule:
+                if (
+                    event.state_type == "Transport"
+                    and event.activity == "start state"
+                    and event.target_location is not None
+                ):
+                    targets[event.product].append(event.target_location)
+            index = (schedule, targets)
+            self._schedule_transport_targets = index
         matches = [
-            event.target_location
-            for event in schedule
-            if event.product == product_instance.data.ID
-            and event.state_type == "Transport"
-            and event.activity == "start state"
-            and event.target_location in sink_port_ids
+            target
+            for target in index[1].get(product_instance.data.ID, ())
+            if target in sink_port_ids
         ]
         return matches[-1] if matches else None
 

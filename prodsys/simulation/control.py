@@ -12,7 +12,7 @@ from prodsys.models.resource_data import ResourceData
 from prodsys.models import port_data
 from prodsys.simulation.process_handlers.disassembly_process_handler import DisassemblyProcessHandler
 from prodsys.simulation.request import Request
-from prodsys.simulation.entities.entity import Entity
+from prodsys.simulation.entities.entity import Entity, EntityType
 from prodsys.models.dependency_data import DependencyType
 from prodsys.simulation import (
     sim,
@@ -26,6 +26,8 @@ from prodsys.simulation.process_handlers.system_process_model_process_handler im
 from prodsys.simulation.process_handlers.resource_process_model_process_handler import ResourceProcessModelHandler
 from prodsys.models.resource_data import ResourceType
 from prodsys.simulation import request as request_module
+from prodsys.simulation.lot_slots import lot_slot_gate_for
+from prodsys.simulation.schedule_admission import admission_for_queue, entity_order_id
 
 if TYPE_CHECKING:
     from prodsys.simulation import (
@@ -71,11 +73,14 @@ class Controller:
         lot_handler: LotHandler,
         *,
         strict_schedule_timing: bool = False,
+        strict_schedule_admission: bool = False,
     ) -> None:
         self.control_policy = control_policy
         self.env = env
         self.lot_handler = lot_handler
         self.strict_schedule_timing = strict_schedule_timing
+        #: transports into this (scheduled) resource only in plan order
+        self.strict_schedule_admission = strict_schedule_admission
         self.requests: List[request_module.Request] = []
         self.state_changed: events.Event = events.Event(env)
         self.resource: resources.Resource = None
@@ -623,12 +628,60 @@ class Controller:
             if not possible_requests:
                 continue
             self.control_policy(possible_requests)
+            # Transports of one order between the same queues share their
+            # verdict within a pass (same lot, same gate) — checking each
+            # waiting piece of a lot separately is quadratic.
+            transport_verdicts: dict[tuple, bool] = {}
+
+            def is_transport_feasible(request: request_module.Request) -> bool:
+                if request.target_queue.is_full:
+                    return False
+                if not self._transport_admissible(request):
+                    return False
+                # A transport whose lot cannot be formed yet (e.g. a lot
+                # still waiting for pieces of its order) must not be
+                # selected: selecting it only re-queues it and parks the
+                # control loop until the next state change, starving every
+                # other request of this resource (worker dependencies!).
+                if self.lot_handler.lot_required(
+                    request
+                ) and not self.lot_handler.is_lot_feasible(request):
+                    return False
+                return True
+
             def is_request_feasible(request: request_module.Request) -> bool:
                 # Check transport requests for target queue availability
 
                 if request.request_type == request_module.RequestType.TRANSPORT:
-                    if request.target_queue.is_full:
-                        return False
+                    entity = request.entity
+                    order_id = (
+                        entity_order_id(entity)
+                        if entity is not None and entity.type != EntityType.LOT
+                        else None
+                    )
+                    lot_dependency = (
+                        self.lot_handler._get_lot_dependency_data(request)
+                        if self.lot_handler.lot_required(request)
+                        else None
+                    )
+                    if (
+                        order_id is None
+                        or lot_dependency is None
+                        or int(lot_dependency.max_lot_size or 1) <= 1
+                    ):
+                        # Single-piece moves are gated piece by piece.
+                        return is_transport_feasible(request)
+                    key = (
+                        order_id,
+                        id(request.process),
+                        id(request.origin_queue),
+                        id(request.target_queue),
+                    )
+                    verdict = transport_verdicts.get(key)
+                    if verdict is None:
+                        verdict = is_transport_feasible(request)
+                        transport_verdicts[key] = verdict
+                    return verdict
                 # Check production requests for INPUT_OUTPUT queue deadlock prevention
                 elif request.request_type in (request_module.RequestType.PRODUCTION, request_module.RequestType.PROCESS_MODEL):
                     # For INPUT_OUTPUT queues, check if output space is available
@@ -876,6 +929,7 @@ class Controller:
 
             # Reserve output queue for transport requests (production requests reserve in their handler)
             if selected_request.request_type == request_module.RequestType.TRANSPORT:
+                self._admit_transport(selected_request)
                 self.reserve_output_queue(selected_request)
             
             self.reserve_resource_capacity(selected_request.capacity_required)
@@ -903,6 +957,88 @@ class Controller:
                 and not self.state_changed.triggered
             ):
                 self.state_changed.succeed()
+
+    def _transport_products(
+        self, process_request: request_module.Request, *, with_lot_candidates: bool
+    ) -> tuple[dict[str, str | None], int]:
+        """Products (-> order id) a transport would move, and its max lot size."""
+        entities = list(process_request.get_atomic_entities())
+        max_lot = 1
+        if with_lot_candidates and self.lot_handler.lot_required(process_request):
+            lot_dependency = self.lot_handler._get_lot_dependency_data(process_request)
+            max_lot = int(getattr(lot_dependency, "max_lot_size", 1) or 1)
+            if max_lot > 1:
+                others = self.lot_handler._get_possible_requests_for_lot(process_request)
+                for other in others[: max_lot - 1]:
+                    entities.extend(other.get_atomic_entities())
+        elif process_request.entity is not None and process_request.entity.type == EntityType.LOT:
+            max_lot = max(len(entities), 1)
+        return {e.data.ID: entity_order_id(e) for e in entities}, max_lot
+
+    def _lot_slots(self, process_request: request_module.Request) -> bool:
+        """Does the request's lot dependency count the target queue in lots?"""
+        if not self.lot_handler.lot_required(process_request):
+            return False
+        lot_dependency = self.lot_handler._get_lot_dependency_data(process_request)
+        return bool(getattr(lot_dependency, "lot_slots", False))
+
+    def _transport_admissible(self, process_request: request_module.Request) -> bool:
+        """Plan-order / lot-slot gate of the target queue.
+
+        * resources planned with ``strict_schedule_admission``:
+          :class:`~prodsys.simulation.schedule_admission.ScheduleAdmission`
+          (plan order, plus lot slots when the lot dependency sets ``lot_slots``);
+        * otherwise, for lot dependencies with ``lot_slots``:
+          :class:`~prodsys.simulation.lot_slots.LotSlotGate`.
+        """
+        admission = admission_for_queue(process_request.target_queue)
+        if admission is None:
+            return self._lot_slot_admissible(process_request)
+        head = process_request.entity
+        if head is not None and head.type != EntityType.LOT:
+            verdict = admission.quick_check(head.data.ID, entity_order_id(head))
+            if verdict is not None:
+                if not verdict:
+                    admission.add_waiter(self)
+                return verdict
+        products, max_lot = self._transport_products(
+            process_request, with_lot_candidates=True
+        )
+        if not admission.plans(products):
+            return True
+        if admission.is_admissible(
+            products,
+            process_request.target_queue,
+            max_lot,
+            lot_slots=self._lot_slots(process_request),
+        ):
+            return True
+        admission.add_waiter(self)
+        return False
+
+    def _lot_slot_admissible(self, process_request: request_module.Request) -> bool:
+        if not self._lot_slots(process_request):
+            return True
+        gate = lot_slot_gate_for(process_request.target_queue)
+        if gate is None:
+            return True
+        products, max_lot = self._transport_products(process_request, with_lot_candidates=True)
+        return gate.is_admissible(products, max_lot)
+
+    def _admit_transport(self, process_request: request_module.Request) -> None:
+        admission = admission_for_queue(process_request.target_queue)
+        if admission is None:
+            # The selected request may be the bundled lot request, whose lot
+            # dependency is not resolvable any more — the gate exists iff the
+            # admissibility check (on the single requests) asked for lot slots.
+            gate = getattr(process_request.target_queue, "lot_slot_gate", None)
+            if gate is not None:
+                products, _ = self._transport_products(process_request, with_lot_candidates=False)
+                if len(products) > 1:
+                    gate.admit(products)
+            return
+        products, _ = self._transport_products(process_request, with_lot_candidates=False)
+        admission.admit(products)
 
     def reserve_output_queue(self, process_request: request_module.Request) -> Generator:
         """
@@ -965,6 +1101,9 @@ class Controller:
         self.resource.update_idle_logging()
         if process_request is not None:
             self._mark_schedule_index_started(process_request)
+            admission = getattr(self, "admission", None)
+            if admission is not None:
+                admission.notify()
 
     def mark_finished_process(self, num_processes: int = 1) -> None:
         """
