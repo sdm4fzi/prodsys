@@ -48,7 +48,7 @@ def entity_order_id(entity) -> Optional[str]:
         return None
     info = getattr(entity, "info", None)
     order_id = getattr(info, "order_ID", None) if info is not None else None
-    if order_id:
+    if isinstance(order_id, (str, int)) and str(order_id):
         return str(order_id)
     data = getattr(entity, "data", None)
     pid = getattr(data, "ID", None) if data is not None else None
