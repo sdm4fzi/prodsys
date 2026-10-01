@@ -159,11 +159,27 @@ class DisassemblyDependencyData(DependencyData):
 class LotDependencyData(DependencyData):
     """
     Class that defines that processes need to be performed with a carrier, specifying also how many (max / min) products should be placed on this carrier
+
+    Args:
+        min_lot_size (int): Minimum number of items bundled into one lot.
+        max_lot_size (int): Maximum number of items bundled into one lot.
+        order_pure (bool): Lots never mix orders (e.g. an order-pure tray /
+            carrier).  A lot of an order is complete when it holds all of the
+            order's products (at most ``max_lot_size``), and all products of
+            an order are routed like its first product, per process and per
+            transport hop, so that they meet at one resource.  Default
+            ``False``: lots bundle any matching requests.
+        lot_slots (bool): Input queues fed through this dependency count in
+            whole lots: a queue with ``capacity`` places holds at most
+            ``capacity // max_lot_size`` orders at a time (a partly filled lot
+            still takes a full slot).  Default ``False``: queues count items.
     """
     min_lot_size: int = 1
     max_lot_size: int = 1
     input_output: Literal["input", "output", "input_output"] = "input_output"
     dependency_type: DependencyType = DependencyType.LOT
+    order_pure: bool = False
+    lot_slots: bool = False
 
     def hash(self, adapter: ProductionSystemData) -> str:
         """
@@ -172,9 +188,18 @@ class LotDependencyData(DependencyData):
         Returns:
             str: Hash of the lot dependency.
         """
-        return md5(
-            "".join([str(self.dependency_type.value), str(self.min_lot_size), str(self.max_lot_size), str(self.input_output)]).encode("utf-8")
-        ).hexdigest()
+        parts = [
+            str(self.dependency_type.value),
+            str(self.min_lot_size),
+            str(self.max_lot_size),
+            str(self.input_output),
+        ]
+        # Only when set, so hashes of existing models stay unchanged.
+        if self.order_pure:
+            parts.append("order_pure")
+        if self.lot_slots:
+            parts.append("lot_slots")
+        return md5("".join(parts).encode("utf-8")).hexdigest()
 
 
 class LinkLotEntry(BaseModel):

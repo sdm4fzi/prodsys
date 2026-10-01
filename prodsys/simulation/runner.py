@@ -87,6 +87,11 @@ class Runner:
         strict_schedule_timing (bool, optional): When True, scheduled resources wait until
             each matched request's planned start time before dispatch. Defaults to False
             so the simulation may run ahead of the plan while still following schedule order.
+        strict_schedule_admission (bool, optional): When True, transports into the input
+            queue of a scheduled resource are admitted only in plan order (and, for lot
+            dependencies with ``lot_slots``, only while a lot slot is free) — prevents
+            later-planned products from filling a bounded input buffer ahead of the plan.
+            Defaults to False.
 
 
     Attributes:
@@ -114,10 +119,12 @@ class Runner:
         ]] = None,
         *,
         strict_schedule_timing: bool = False,
+        strict_schedule_admission: bool = False,
     ):
         """"""
         self.production_system_data = production_system_data
         self.strict_schedule_timing = strict_schedule_timing
+        self.strict_schedule_admission = strict_schedule_admission
         self.env = sim.Environment(seed=self.production_system_data.seed)
         self.time_model_factory: time_model_factory.TimeModelFactory = None
         self.state_factory: state_factory.StateFactory = None
@@ -178,6 +185,7 @@ class Runner:
                 process_factory=self.process_factory,
                 schedule=self.production_system_data.schedule,
                 strict_schedule_timing=self.strict_schedule_timing,
+                strict_schedule_admission=self.strict_schedule_admission,
             )
             self.resource_factory.create_resources(self.production_system_data)
 

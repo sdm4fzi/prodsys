@@ -26,6 +26,7 @@ from prodsys.simulation.process_handlers.system_process_model_process_handler im
 from prodsys.simulation.process_handlers.resource_process_model_process_handler import ResourceProcessModelHandler
 from prodsys.models.resource_data import ResourceType
 from prodsys.simulation import request as request_module
+from prodsys.simulation.lot_slots import lot_slot_gate_for
 from prodsys.simulation.schedule_admission import admission_for_queue, entity_order_id
 
 if TYPE_CHECKING:
@@ -72,11 +73,14 @@ class Controller:
         lot_handler: LotHandler,
         *,
         strict_schedule_timing: bool = False,
+        strict_schedule_admission: bool = False,
     ) -> None:
         self.control_policy = control_policy
         self.env = env
         self.lot_handler = lot_handler
         self.strict_schedule_timing = strict_schedule_timing
+        #: transports into this (scheduled) resource only in plan order
+        self.strict_schedule_admission = strict_schedule_admission
         self.requests: List[request_module.Request] = []
         self.state_changed: events.Event = events.Event(env)
         self.resource: resources.Resource = None
@@ -626,7 +630,7 @@ class Controller:
             self.control_policy(possible_requests)
             # Transports of one order between the same queues share their
             # verdict within a pass (same lot, same gate) — checking each
-            # waiting piece of a tray separately is quadratic.
+            # waiting piece of a lot separately is quadratic.
             transport_verdicts: dict[tuple, bool] = {}
 
             def is_transport_feasible(request: request_module.Request) -> bool:
@@ -634,7 +638,7 @@ class Controller:
                     return False
                 if not self._transport_admissible(request):
                     return False
-                # A transport whose lot cannot be formed yet (e.g. a tray
+                # A transport whose lot cannot be formed yet (e.g. a lot
                 # still waiting for pieces of its order) must not be
                 # selected: selecting it only re-queues it and parks the
                 # control loop until the next state change, starving every
@@ -971,11 +975,25 @@ class Controller:
             max_lot = max(len(entities), 1)
         return {e.data.ID: entity_order_id(e) for e in entities}, max_lot
 
+    def _lot_slots(self, process_request: request_module.Request) -> bool:
+        """Does the request's lot dependency count the target queue in lots?"""
+        if not self.lot_handler.lot_required(process_request):
+            return False
+        lot_dependency = self.lot_handler._get_lot_dependency_data(process_request)
+        return bool(getattr(lot_dependency, "lot_slots", False))
+
     def _transport_admissible(self, process_request: request_module.Request) -> bool:
-        """Plan-order / tray-slot gate of the target resource (schedule only)."""
+        """Plan-order / lot-slot gate of the target queue.
+
+        * resources planned with ``strict_schedule_admission``:
+          :class:`~prodsys.simulation.schedule_admission.ScheduleAdmission`
+          (plan order, plus lot slots when the lot dependency sets ``lot_slots``);
+        * otherwise, for lot dependencies with ``lot_slots``:
+          :class:`~prodsys.simulation.lot_slots.LotSlotGate`.
+        """
         admission = admission_for_queue(process_request.target_queue)
         if admission is None:
-            return True
+            return self._lot_slot_admissible(process_request)
         head = process_request.entity
         if head is not None and head.type != EntityType.LOT:
             verdict = admission.quick_check(head.data.ID, entity_order_id(head))
@@ -988,14 +1006,36 @@ class Controller:
         )
         if not admission.plans(products):
             return True
-        if admission.is_admissible(products, process_request.target_queue, max_lot):
+        if admission.is_admissible(
+            products,
+            process_request.target_queue,
+            max_lot,
+            lot_slots=self._lot_slots(process_request),
+        ):
             return True
         admission.add_waiter(self)
         return False
 
+    def _lot_slot_admissible(self, process_request: request_module.Request) -> bool:
+        if not self._lot_slots(process_request):
+            return True
+        gate = lot_slot_gate_for(process_request.target_queue)
+        if gate is None:
+            return True
+        products, max_lot = self._transport_products(process_request, with_lot_candidates=True)
+        return gate.is_admissible(products, max_lot)
+
     def _admit_transport(self, process_request: request_module.Request) -> None:
         admission = admission_for_queue(process_request.target_queue)
         if admission is None:
+            if self._lot_slots(process_request):
+                gate = lot_slot_gate_for(process_request.target_queue)
+                if gate is not None:
+                    products, _ = self._transport_products(
+                        process_request, with_lot_candidates=False
+                    )
+                    if len(products) > 1:
+                        gate.admit(products)
             return
         products, _ = self._transport_products(process_request, with_lot_candidates=False)
         admission.admit(products)

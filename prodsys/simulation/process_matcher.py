@@ -741,8 +741,9 @@ class ProcessMatcher:
             original_locatable = item.current_locatable
             requested_process_id = requested_process.data.ID if hasattr(requested_process, 'data') else str(requested_process)
             requested_process_sig = requested_process.get_process_signature() if hasattr(requested_process, 'get_process_signature') else "unknown"
-            logger.info(f"Processing transport compatibility for item {item.data.ID} with requested process {requested_process_id} (signature: {requested_process_sig})")
+            logger.debug(f"Processing transport compatibility for item {item.data.ID} with requested process {requested_process_id} (signature: {requested_process_sig})")
             
+            process_matches = 0
             for transport_resource in movable_resources:
                 resource_processes = transport_resource.processes
                 logger.debug(f"  Checking resource {transport_resource.data.ID} with {len(resource_processes)} processes")
@@ -829,15 +830,25 @@ class ProcessMatcher:
                                 self._cache_route(dummy_transport_request, origin, target, offered_process, [])
                                 compatibility_count += 1
                     
+                    process_matches += matches_found
                     if matches_found > 0:
-                        logger.info(f"    Process {offered_process_id}: {matches_found} matches found, {routes_checked} routes checked")
+                        logger.debug(f"    Process {offered_process_id}: {matches_found} matches found, {routes_checked} routes checked")
                     else:
+                        # Expected for the non-transport processes of a
+                        # resource (e.g. a worker's manual production
+                        # processes); a requested transport no resource can
+                        # serve is reported once below.
                         total_combinations = len(all_locations) * (len(all_locations) - 1)  # excluding self-transports
-                        logger.warning(
+                        logger.debug(
                             f"    Process {offered_process_id} (type: {offered_process_type}, sig: {offered_process_sig}): "
                             f"No matches with requested process {requested_process_id} (sig: {requested_process_sig}). "
                             f"Tried {total_combinations} origin-target combinations, {match_failures} match failures"
                         )
+            if process_matches == 0:
+                logger.warning(
+                    f"No transport resource offers requested process {requested_process_id} "
+                    f"(sig: {requested_process_sig}) for {item.data.ID}"
+                )
             item.update_location(original_locatable)
         
         logger.info(f"Transport compatibility precomputation complete: {compatibility_count} entries created, {route_failure_count} route finding failures")

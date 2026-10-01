@@ -5,23 +5,26 @@ order (see :meth:`Controller._schedule_next_event_blocks_request`).  Transports
 into its input queue, however, used to run as soon as a product was routed and
 the queue had free space.  On lines with bounded input buffers this lets
 products that are planned *later* fill the queue while the product the
-resource waits for cannot get in — a deadlock (e.g. a tray of a later work
-request occupying all 34 places of a station whose next planned product is
-still upstream).
+resource waits for cannot get in — a deadlock (e.g. a lot of a later order
+occupying all places of a station whose next planned product is still
+upstream).
 
-:class:`ScheduleAdmission` closes that gap for every resource that has a
-schedule:
+:class:`ScheduleAdmission` closes that gap for a resource that has a schedule
+when the simulation runs with ``strict_schedule_admission`` (opt-in, see
+:class:`prodsys.simulation.runner.Runner`):
 
 * **Plan order** — a transport into the resource's input queue is admitted
   only when every product planned on the resource *before* the transported
   product(s) has already been admitted (in the queue, on its way, or started).
-* **Tray slots** — for lot transports (e.g. an order-pure tray moved via a
+* **Lot slots** — for lot transports whose lot dependency sets ``lot_slots``
+  (e.g. an order-pure carrier moved via a
   :class:`~prodsys.models.dependency_data.LinkLotDependencyData` link) the
   queue holds at most ``capacity // max_lot_size`` orders at a time.  An order
   occupies its slot from admission until each of its products has *started
   its last planned process* on the resource; returning products (output →
   input shuffles between two processes on the same resource) therefore never
-  compete with the next tray.
+  compete with the next lot.  Without a schedule the same rule is enforced by
+  :class:`prodsys.simulation.lot_slots.LotSlotGate`.
 
 Transport controllers blocked by a gate register as waiters and are woken
 whenever the gated resource starts a scheduled process or admits products.
@@ -56,7 +59,7 @@ def entity_order_id(entity) -> Optional[str]:
 
 
 class ScheduleAdmission:
-    """Plan-order / tray-slot gate for the input queue of one scheduled resource."""
+    """Plan-order / lot-slot gate for the input queue of one scheduled resource."""
 
     def __init__(self, controller: "Controller") -> None:
         self.controller = controller
@@ -130,8 +133,13 @@ class ScheduleAdmission:
         products: dict[str, Optional[str]],
         queue: "Queue",
         max_lot_size: int = 1,
+        lot_slots: bool = False,
     ) -> bool:
-        """``products`` maps product id -> order id of the (lot) transport."""
+        """``products`` maps product id -> order id of the (lot) transport.
+
+        ``lot_slots``: also enforce ``capacity // max_lot_size`` orders in the
+        queue (lot dependency with ``lot_slots``).
+        """
         indices = [self.position[p] for p in products if p in self.position]
         if not indices:
             return True
@@ -144,7 +152,7 @@ class ScheduleAdmission:
             if planned not in self.admitted and planned not in products:
                 return False
         capacity = getattr(queue, "capacity", math.inf)
-        if max_lot_size > 1 and capacity != math.inf:
+        if lot_slots and max_lot_size > 1 and capacity != math.inf:
             slots = int(capacity // max_lot_size)
             if slots >= 1:
                 self._prune_occupancy()
@@ -180,12 +188,18 @@ class ScheduleAdmission:
 
 
 def admission_for_queue(queue: "Queue") -> Optional[ScheduleAdmission]:
-    """Gate of the scheduled resource that owns ``queue`` as an input, if any."""
+    """Gate of the scheduled resource that owns ``queue`` as an input, if any.
+
+    Only with ``strict_schedule_admission`` (controller flag, set by the
+    runner) — otherwise transports keep running as soon as there is space.
+    """
     owner = getattr(queue, "owner_resource", None)
     if owner is None or not getattr(queue, "is_input", False):
         return None
     controller = getattr(owner, "controller", None)
     if controller is None or not getattr(controller, "resource_schedule", None):
+        return None
+    if not getattr(controller, "strict_schedule_admission", False):
         return None
     admission = getattr(controller, "admission", None)
     if admission is None:

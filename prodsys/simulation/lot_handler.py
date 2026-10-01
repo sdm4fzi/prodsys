@@ -15,21 +15,23 @@ from prodsys.simulation.entities.lot import Lot
 _WR_ORDER_RE = re.compile(r"_WR(\d{3})_")
 
 
-def _work_request_order_id(entity) -> str | None:
+def _work_request_order_id(entity, *, use_order_info: bool = False) -> str | None:
     """Order (work request) of a product entity.
 
-    Prefers the order id the product was released with (``info.order_ID``);
-    falls back to parsing ``WR###`` from the product id (legacy SICK naming).
-    Scheduler instance ids are ``{product_type}_{n}`` and carry no order, so
-    the id alone must not be relied on — otherwise trays of different orders
-    are bundled and a tray never reaches its full-order lot size.
+    With ``use_order_info`` (order-pure lots) the order id the product was
+    released with (``info.order_ID``) is used; otherwise — and as fallback —
+    ``WR###`` is parsed from the product id (legacy SICK naming).  Scheduler
+    instance ids are ``{product_type}_{n}`` and carry no order, so for
+    order-pure lots the id alone must not be relied on — otherwise lots of
+    different orders are bundled and never reach their full-order size.
     """
     if entity is None:
         return None
-    info = getattr(entity, "info", None)
-    order_id = getattr(info, "order_ID", None) if info is not None else None
-    if isinstance(order_id, (str, int)) and str(order_id):
-        return str(order_id)
+    if use_order_info:
+        info = getattr(entity, "info", None)
+        order_id = getattr(info, "order_ID", None) if info is not None else None
+        if isinstance(order_id, (str, int)) and str(order_id):
+            return str(order_id)
     data = getattr(entity, "data", None)
     pid = getattr(data, "ID", None) if data is not None else None
     if not pid:
@@ -88,6 +90,8 @@ class LotHandler:
             min_lot_size=min_size,
             max_lot_size=max_size,
             input_output=dep_data.input_output,
+            order_pure=dep_data.order_pure,
+            lot_slots=dep_data.lot_slots,
         )
 
     def _get_lot_dependency_data(self, process_request: request.Request) -> LotDependencyData:
@@ -152,9 +156,14 @@ class LotHandler:
         else:
             return False
 
+    def _uses_order_info(self, process_request: request.Request) -> bool:
+        lot_dependency = self._get_lot_dependency_data(process_request)
+        return bool(getattr(lot_dependency, "order_pure", False))
+
     def _work_request_piece_count(self, process_request: request.Request) -> int | None:
-        """How many products belong to this work request (SuTray size cap 34)."""
-        wr_id = _work_request_order_id(process_request.requesting_item)
+        """How many products belong to this order (caps an order-pure lot)."""
+        use_info = self._uses_order_info(process_request)
+        wr_id = _work_request_order_id(process_request.requesting_item, use_order_info=use_info)
         if not wr_id:
             return None
         item = process_request.requesting_item
@@ -177,14 +186,15 @@ class LotHandler:
             count = sum(
                 1
                 for product in getattr(product_factory, "products", []) or []
-                if _work_request_order_id(product) == wr_id
+                if _work_request_order_id(product, use_order_info=use_info) == wr_id
             )
             if count > 0:
                 return count
         return None
 
     def _get_possible_requests_for_lot(self, process_request: request.Request) -> list[request.Request]:
-        order_id = _work_request_order_id(process_request.requesting_item)
+        use_info = self._uses_order_info(process_request)
+        order_id = _work_request_order_id(process_request.requesting_item, use_order_info=use_info)
         possible_requests_for_lot = []
         for open_request in process_request.resource.controller.requests:
             if open_request is process_request:
@@ -192,7 +202,9 @@ class LotHandler:
             if not self._request_matches(process_request, open_request):
                 continue
             if order_id is not None:
-                other_order = _work_request_order_id(open_request.requesting_item)
+                other_order = _work_request_order_id(
+                    open_request.requesting_item, use_order_info=use_info
+                )
                 if other_order != order_id:
                     continue
             possible_requests_for_lot.append(open_request)
@@ -203,7 +215,7 @@ class LotHandler:
         lot_dependency: LotDependencyData,
         process_request: request.Request,
     ) -> int:
-        """Target batch size for a SuTray move (full WR, capped by link min)."""
+        """Target lot size: an order-pure lot is complete with all products of its order (capped by the min)."""
         configured = int(lot_dependency.min_lot_size)
         if configured <= 1:
             return 1

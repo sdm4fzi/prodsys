@@ -42,7 +42,10 @@ def test_entity_order_id_prefers_info_over_id() -> None:
         info=SimpleNamespace(order_ID="WR007"), data=SimpleNamespace(ID="Product_J5_AFx_Bus_3")
     )
     assert entity_order_id(entity) == "WR007"
-    assert _work_request_order_id(entity) == "WR007"
+    # Lots use the release order only when they are order-pure ...
+    assert _work_request_order_id(entity, use_order_info=True) == "WR007"
+    # ... otherwise only the legacy id pattern (unchanged behaviour of main).
+    assert _work_request_order_id(entity) is None
     legacy = SimpleNamespace(info=None, data=SimpleNamespace(ID="Product_J8_VFS_WR024_9"))
     assert entity_order_id(legacy) == "WR024"
     assert _work_request_order_id(legacy) == "WR024"
@@ -64,7 +67,7 @@ def test_unplanned_products_are_not_gated() -> None:
     assert adm.is_admissible({"x": "X"}, _queue(1))
 
 
-def test_tray_slot_held_until_last_process_started() -> None:
+def test_lot_slot_held_until_last_process_started() -> None:
     schedule = [
         _event("a0", "manual"),
         _event("a0", "auto"),
@@ -72,15 +75,17 @@ def test_tray_slot_held_until_last_process_started() -> None:
         _event("b0", "auto"),
     ]
     controller, adm = _admission(schedule)
-    q = _queue(2)  # one tray of size 2
+    q = _queue(2)  # one lot of size 2
     adm.admit({"a0": "A"})
-    assert not adm.is_admissible({"b0": "B"}, q, max_lot_size=2)
-    controller.completed_schedule_indices.add(0)  # a0 manual started
-    assert not adm.is_admissible({"b0": "B"}, q, max_lot_size=2)
-    controller.completed_schedule_indices.add(1)  # a0 auto (last) started
+    # without lot slots the queue counts items only
     assert adm.is_admissible({"b0": "B"}, q, max_lot_size=2)
+    assert not adm.is_admissible({"b0": "B"}, q, max_lot_size=2, lot_slots=True)
+    controller.completed_schedule_indices.add(0)  # a0 manual started
+    assert not adm.is_admissible({"b0": "B"}, q, max_lot_size=2, lot_slots=True)
+    controller.completed_schedule_indices.add(1)  # a0 auto (last) started
+    assert adm.is_admissible({"b0": "B"}, q, max_lot_size=2, lot_slots=True)
     # Returning pieces of an admitted order are always allowed.
-    assert adm.is_admissible({"a0": "A"}, q, max_lot_size=1)
+    assert adm.is_admissible({"a0": "A"}, q, max_lot_size=1, lot_slots=True)
 
 
 def test_waiters_are_woken() -> None:
@@ -198,6 +203,8 @@ def _tray_line() -> ProductionSystemData:
                 "dependency_type": "lot",
                 "min_lot_size": 1,
                 "max_lot_size": 1,
+                "order_pure": True,
+                "lot_slots": True,
                 "link_lot_sizes": [
                     {"origin": "A_output", "target": "B_input", "min_lot_size": TRAY, "max_lot_size": TRAY}
                 ],
@@ -296,11 +303,25 @@ def test_later_planned_tray_waits_upstream_instead_of_deadlocking() -> None:
         _ev(t, res, proc, pid, order[pid]) for pid, steps in plan.items() for t, res, proc in steps
     ]
     ps.schedule = sorted(events, key=lambda e: e.time)
-    sim = runner.Runner(production_system_data=ps)
+    sim = runner.Runner(production_system_data=ps, strict_schedule_admission=True)
     sim.initialize_simulation()
     info = sim.run_until_complete(time_range_max=5000)
     assert len(sim.product_factory.finished_products) == 3
     assert info.get("early_exit")
+
+
+def test_admission_is_opt_in() -> None:
+    """Without ``strict_schedule_admission`` no resource gets a plan-order gate."""
+    from prodsys.simulation.schedule_admission import admission_for_queue
+
+    ps = _tray_line()
+    ps.schedule = [_ev(0, "A", "a_manual", "P_0", "O1")]
+    sim = runner.Runner(production_system_data=ps)
+    sim.initialize_simulation()
+    resource = sim.resource_factory.get_resource("A")
+    assert resource.controller.strict_schedule_admission is False
+    for queue in resource.ports:
+        assert admission_for_queue(queue) is None
 
 
 def test_transport_without_route_link_releases_its_state() -> None:

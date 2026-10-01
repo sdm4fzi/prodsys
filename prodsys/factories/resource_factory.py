@@ -224,6 +224,7 @@ class ResourceFactory:
         schedule: Optional[List[performance_data.Event]] = None,
         *,
         strict_schedule_timing: bool = False,
+        strict_schedule_admission: bool = False,
     ):
         self.env = env
         self.process_factory = process_factory
@@ -231,6 +232,7 @@ class ResourceFactory:
         self.queue_factory = queue_factory
         self.schedule = schedule
         self.strict_schedule_timing = strict_schedule_timing
+        self.strict_schedule_admission = strict_schedule_admission
         self.global_system_resource: resources.SystemResource = None
         self.all_resources: Dict[str, resources.Resource] = {}
         self.system_resources: Dict[str, resources.SystemResource] = {}
@@ -297,6 +299,7 @@ class ResourceFactory:
             env=self.env,
             lot_handler=self.lot_handler,
             strict_schedule_timing=self.strict_schedule_timing,
+            strict_schedule_admission=self.strict_schedule_admission,
         )
         self.global_system_resource = resources.SystemResource(
             env=self.env,
@@ -397,6 +400,7 @@ class ResourceFactory:
             env=self.env,
             lot_handler=self.lot_handler,
             strict_schedule_timing=self.strict_schedule_timing,
+            strict_schedule_admission=self.strict_schedule_admission,
         )
         controller.resource_schedule = list(resource_schedule)
         self.controllers.append(controller)
