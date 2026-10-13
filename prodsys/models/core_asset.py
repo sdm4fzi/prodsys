@@ -1,5 +1,5 @@
 from hashlib import md5
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Dict, Optional
 from pydantic import BaseModel, ConfigDict, Field, conlist, model_validator
 
 
@@ -10,10 +10,21 @@ class CoreAsset(BaseModel):
     Args:
         ID (str): The unique ID of the core asset.
         description (str): The description of the core asset.
+        meta (Optional[Dict[str, Any]]): Free-form context from the source system
+            (e.g. original ERP keys such as an article or tool number that cannot
+            be used verbatim in IDs). Not interpreted by prodsys and never part of
+            an asset hash, so it does not change simulation or optimisation results.
     """
 
     ID: str
     description: str
+    meta: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description=(
+            "Free-form source-system context (original keys, links). "
+            "Not interpreted by prodsys and excluded from hashes."
+        ),
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
