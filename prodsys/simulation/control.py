@@ -976,7 +976,13 @@ class Controller:
         return {e.data.ID: entity_order_id(e) for e in entities}, max_lot
 
     def _lot_slots(self, process_request: request_module.Request) -> bool:
-        """Does the request's lot dependency count the target queue in lots?"""
+        """Does the target queue count in lots (``lot_slots`` of the queue or of the
+        request's lot dependency)?"""
+        target_queue = process_request.target_queue
+        if getattr(target_queue, "lot_slots", None) is not None:
+            # hops inside one resource (output -> input) never take a lot place
+            owner = getattr(target_queue, "owner_resource", None)
+            return owner is None or getattr(process_request.origin_queue, "owner_resource", None) is not owner
         if not self.lot_handler.lot_required(process_request):
             return False
         lot_dependency = self.lot_handler._get_lot_dependency_data(process_request)
@@ -1034,7 +1040,8 @@ class Controller:
             gate = getattr(process_request.target_queue, "lot_slot_gate", None)
             if gate is not None:
                 products, _ = self._transport_products(process_request, with_lot_candidates=False)
-                if len(products) > 1:
+                explicit = getattr(process_request.target_queue, "lot_slots", None) is not None
+                if len(products) > 1 or explicit:
                     gate.admit(products)
             return
         products, _ = self._transport_products(process_request, with_lot_candidates=False)

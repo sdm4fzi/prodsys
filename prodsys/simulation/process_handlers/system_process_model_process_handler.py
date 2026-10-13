@@ -108,6 +108,10 @@ class SystemProcessModelHandler:
         
         entity = process_request.get_entity()
         target_queue = process_request.target_queue
+        # Live process model of the product (read by lot slots, see
+        # prodsys.simulation.lot_slots.stays_at_resource)
+        outer_process_model_state = getattr(entity, "process_model_state", None)
+        entity.process_model_state = self.process_model
 
         super_system_router = process_request.entity.router
         system_router = resource.router
@@ -141,6 +145,8 @@ class SystemProcessModelHandler:
             entity.last_process_failed = None
             self.set_next_possible_production_processes()
         
+        entity.process_model_state = outer_process_model_state
+
         # After all internal processes are complete, set the entity's current_process to this ProcessModelProcess
         # This ensures that when control returns to a parent handler, it sees the ProcessModelProcess as completed,
         # not the last internal process that was executed

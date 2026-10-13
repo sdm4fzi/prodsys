@@ -96,7 +96,7 @@ class ResourceProcessModelHandler:
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from standby_logging.log_blocked_around_put(
-                process_request.resource, process_request.target_queue, entity.data
+                process_request.resource, process_request.target_queue, entity.data, entity
             )
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
