@@ -1029,7 +1029,10 @@ class Controller:
         if gate is None:
             return True
         products, max_lot = self._transport_products(process_request, with_lot_candidates=True)
-        return gate.is_admissible(products, max_lot)
+        if gate.is_admissible(products, max_lot):
+            return True
+        gate.add_waiter(self)
+        return False
 
     def _admit_transport(self, process_request: request_module.Request) -> None:
         admission = admission_for_queue(process_request.target_queue)
@@ -1107,10 +1110,30 @@ class Controller:
         self.num_running_processes += num_processes
         self.resource.update_idle_logging()
         if process_request is not None:
+            self._release_lot_slot_places(process_request)
             self._mark_schedule_index_started(process_request)
             admission = getattr(self, "admission", None)
             if admission is not None:
                 admission.notify()
+
+    def _release_lot_slot_places(self, process_request: request_module.Request) -> None:
+        """Pieces starting their last process here free their order's input place."""
+        gates = [
+            gate
+            for port in getattr(self.resource, "ports", None) or []
+            if getattr(port, "is_input", False)
+            and (gate := getattr(port, "lot_slot_gate", None)) is not None
+        ]
+        if not gates:
+            return
+        from prodsys.simulation.lot_slots import stays_at_resource
+
+        process = process_request.get_process()
+        for entity in process_request.get_atomic_entities():
+            if stays_at_resource(entity, self.resource, process):
+                continue
+            for gate in gates:
+                gate.started_last_process(entity.data.ID)
 
     def mark_finished_process(self, num_processes: int = 1) -> None:
         """

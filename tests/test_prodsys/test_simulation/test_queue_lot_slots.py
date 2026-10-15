@@ -16,6 +16,7 @@ import pytest
 import simpy
 
 from prodsys.models.port_data import QueueData
+from prodsys.models.production_system_data import ProductionSystemData
 from prodsys.simulation import runner
 from prodsys.simulation.lot_slots import lot_key_for_put, processes_after, stays_at_resource
 from prodsys.simulation.port import Queue
@@ -162,3 +163,52 @@ def test_station_output_with_one_tray_place_blocks_instead_of_holding_two_orders
     assert len(sim.product_factory.finished_products) == 4  # intra-station hop does not deadlock
     assert info.get("early_exit")
     assert peak == 1
+
+
+def test_input_place_held_until_last_process_started_without_plan() -> None:
+    """B runs b_auto then b_auto2; the piece passes B's output in between.
+
+    Without a plan (rules), a second order must not enter B's one-tray input
+    while the first order's piece is out for that intra-station hop — else B
+    interleaves orders and its one-tray output can block it for good.
+    """
+    from prodsys.models.order_data import OrderData
+    from tests.test_prodsys.test_simulation.test_schedule_admission import _tm
+
+    data = _tray_line().model_dump()
+    data["time_model_data"].append(_tm("tm_b_auto2", 30.0))
+    data["process_data"].append(
+        {"ID": "b_auto2", "description": "", "time_model_id": "tm_b_auto2", "type": "ProductionProcesses"}
+    )
+    for resource in data["resource_data"]:
+        if resource["ID"] == "B":
+            resource["process_ids"] = ["b_auto", "b_auto2"]
+            resource["process_capacities"] = [1, 1]
+    for port in data["port_data"]:
+        if port["ID"] in ("B_input", "B_output"):
+            port["lot_slots"] = 1
+    data["product_data"][0]["processes"] = {
+        "a_manual": ["a_auto"], "a_auto": ["b_auto"], "b_auto": ["b_auto2"], "b_auto2": []
+    }
+    data["order_data"] = [
+        OrderData(ID=f"O{i}", ordered_products=[{"product_type": "P", "quantity": 1}],
+                  order_time=0.0, release_time=0.0, due_time=1e5, priority=1)
+        for i in range(4)
+    ]
+    ps = ProductionSystemData(**data)
+    ps.schedule = [_ev(0, "A", "a_manual", f"P_{i}", f"O{i}") for i in range(4)]
+    sim = runner.Runner(production_system_data=ps)
+    sim.initialize_simulation()
+    b_input = next(q for q in sim.resource_factory.get_resource("B").ports if q.data.ID == "B_input")
+    peak = {"orders": 0}
+    original_put = b_input.put
+
+    def recording_put(item, *args, **kwargs):
+        yield from original_put(item, *args, **kwargs)
+        orders = {sim.product_factory.get_product(pid).info.order_ID for pid in b_input.items}
+        peak["orders"] = max(peak["orders"], len(orders))
+
+    b_input.put = recording_put
+    sim.run_until_complete(time_range_max=20000)
+    assert len(sim.product_factory.finished_products) == 4
+    assert peak["orders"] == 1

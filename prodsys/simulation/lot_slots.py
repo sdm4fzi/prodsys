@@ -46,12 +46,34 @@ class LotSlotGate:
         self.inflight: dict[str, int] = {}
         #: product id -> order id for products admitted through the gate
         self.order_of_product: dict[str, str] = {}
+        #: admitted products that have not started their last process at the
+        #: resource yet (SICK: a tray holds its input place until then — its
+        #: pieces may leave the input for a manual step and come back)
+        self.pending: dict[str, str] = {}
+        self._waiters: list = []
 
     def occupying(self) -> set[str]:
         orders = {self.order_of_product.get(pid) for pid in self.queue.items}
         orders.update(o for o, n in self.inflight.items() if n > 0)
+        orders.update(self.pending.values())
         orders.discard(None)
         return orders  # type: ignore[return-value]
+
+    def started_last_process(self, product_id: str) -> None:
+        """The product started its last process at the resource (frees its order's place
+        once no other piece of the order is pending)."""
+        if self.pending.pop(product_id, None) is not None:
+            self.notify()
+
+    def add_waiter(self, controller) -> None:
+        if controller not in self._waiters:
+            self._waiters.append(controller)
+
+    def notify(self) -> None:
+        waiters, self._waiters = self._waiters, []
+        for controller in waiters:
+            if not controller.state_changed.triggered:
+                controller.state_changed.succeed()
 
     def is_admissible(self, products: dict[str, Optional[str]], max_lot_size: int) -> bool:
         slots = input_lot_places(self.queue, max_lot_size)
@@ -67,6 +89,7 @@ class LotSlotGate:
                 continue
             self.order_of_product[product_id] = order_id
             self.inflight[order_id] = self.inflight.get(order_id, 0) + 1
+            self.pending[product_id] = order_id
 
     def on_put(self, item) -> None:
         order_id = self.order_of_product.get(getattr(item, "ID", None))
@@ -146,7 +169,7 @@ def processes_after(process_model_state, current_process) -> list:
     return []
 
 
-def stays_at_resource(entity, resource) -> bool:
+def stays_at_resource(entity, resource, current_process=None) -> bool:
     """Does the product's next process run on ``resource`` again?
 
     Such a product only passes through the resource's output on the way back
@@ -154,7 +177,7 @@ def stays_at_resource(entity, resource) -> bool:
     does not take a lot place there.
     """
     state = getattr(entity, "process_model_state", None)
-    current = getattr(entity, "current_process", None)
+    current = current_process if current_process is not None else getattr(entity, "current_process", None)
     if state is None or current is None:
         return False
     following = processes_after(state, current)
