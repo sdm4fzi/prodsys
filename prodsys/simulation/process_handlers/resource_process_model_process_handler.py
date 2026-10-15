@@ -134,7 +134,10 @@ class ResourceProcessModelHandler:
         resource: Resource = process_request.get_resource()
         self.resource = resource
         proc = process_request.get_process()
-        self.process_model = proc.precedence_graph.create_instance()
+        # A resource-specific variant (ProcessModelData.resource_variants) brings
+        # its own steps and times; the request keeps the requested process model.
+        executed = proc.variant_for(resource) if hasattr(proc, "variant_for") else proc
+        self.process_model = executed.precedence_graph.create_instance()
         
         entity = process_request.get_entity()
         origin_queue = process_request.origin_queue

@@ -587,6 +587,20 @@ class ProcessModelProcess(Process):
             )
         return requested_process.data.ID == self.data.ID
 
+    def variant_for(self, resource) -> "ProcessModelProcess":
+        """Process model that ``resource`` executes for this one (see
+        ``ProcessModelData.resource_variants``); ``self`` without a variant."""
+        variant_id = (getattr(self.data, "resource_variants", None) or {}).get(resource.data.ID)
+        if not variant_id or variant_id == self.data.ID:
+            return self
+        for offered in resource.processes:
+            if isinstance(offered, ProcessModelProcess) and offered.data.ID == variant_id:
+                return offered
+        raise ValueError(
+            f"Process model {self.data.ID}: variant {variant_id} for resource "
+            f"{resource.data.ID} is not offered by that resource"
+        )
+
     def get_expected_process_time(self) -> float:
         # For process models, we might need to calculate based on contained processes
         # For now, return the time model's expected time
