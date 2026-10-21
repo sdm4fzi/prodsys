@@ -43,13 +43,27 @@ def log_blocked_around_put(
     resource: resources.Resource,
     queue: port.Queue,
     item,
+    entity=None,
 ) -> Generator:
-    """Log Blocked while put() waits for free space on a full queue."""
+    """Log Blocked while put() waits for free space on a full queue.
+
+    With ``entity`` (the product being put) and a queue with ``lot_slots``, the
+    put also waits for a lot place of the product's order (see
+    :func:`prodsys.simulation.lot_slots.lot_key_for_put`).
+    """
+    from prodsys.simulation.lot_slots import lot_key_for_put
+
     info = resource.standby_states.info_for(StateTypeEnum.blocked)
-    will_wait = queue._pending_put == 0 and queue.is_full
+    lot_key = lot_key_for_put(resource, queue, entity)
+    will_wait = (queue._pending_put == 0 and queue.is_full) or (
+        lot_key is not None and not queue.has_lot_place(lot_key)
+    )
     if will_wait:
         info._target_ID = queue.data.ID
         info.log_start_state(resource.env.now, resource.env.now, StateTypeEnum.blocked)
-    yield from queue.put(item)
+    if lot_key is None:
+        yield from queue.put(item)
+    else:
+        yield from queue.put(item, lot_key=lot_key, wait_for_lot_place=True)
     if will_wait:
         info.log_end_state(resource.env.now, StateTypeEnum.blocked)

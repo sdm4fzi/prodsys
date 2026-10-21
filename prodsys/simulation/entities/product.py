@@ -73,6 +73,8 @@ class Product(Entity):
 
         self._current_locatable: locatable.Locatable = None
         self.current_process: Optional[process.PROCESS_UNION] = None
+        #: live process model instance of the running process model (set by its handler)
+        self.process_model_state = None
         self.no_transport_to_sink = no_transport_to_sink
         self.executed_production_processes: List = []
         self.got_free = events.Event(self.env)

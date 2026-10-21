@@ -32,7 +32,6 @@ whenever the gated resource starts a scheduled process or admits products.
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING, Iterable, Optional
 
 from prodsys.simulation.product_info import extract_order_id_from_product_id
@@ -138,7 +137,8 @@ class ScheduleAdmission:
         """``products`` maps product id -> order id of the (lot) transport.
 
         ``lot_slots``: also enforce ``capacity // max_lot_size`` orders in the
-        queue (lot dependency with ``lot_slots``).
+        queue (lot dependency with ``lot_slots``); a queue with
+        ``QueueData.lot_slots`` always holds at most that many orders.
         """
         indices = [self.position[p] for p in products if p in self.position]
         if not indices:
@@ -151,10 +151,11 @@ class ScheduleAdmission:
             planned = self.sequence[k]
             if planned not in self.admitted and planned not in products:
                 return False
-        capacity = getattr(queue, "capacity", math.inf)
-        if lot_slots and max_lot_size > 1 and capacity != math.inf:
-            slots = int(capacity // max_lot_size)
-            if slots >= 1:
+        if lot_slots or getattr(queue, "lot_slots", None) is not None:
+            from prodsys.simulation.lot_slots import input_lot_places
+
+            slots = input_lot_places(queue, max_lot_size)
+            if slots is not None:
                 self._prune_occupancy()
                 orders = set(self._occupying)
                 orders.update(o for o in products.values() if o is not None)

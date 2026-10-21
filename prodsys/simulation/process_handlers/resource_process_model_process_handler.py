@@ -96,7 +96,7 @@ class ResourceProcessModelHandler:
         for entity in process_request.get_atomic_entities():
             entity.info.log_start_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
             yield from standby_logging.log_blocked_around_put(
-                process_request.resource, process_request.target_queue, entity.data
+                process_request.resource, process_request.target_queue, entity.data, entity
             )
             entity.info.log_end_unloading(process_request.resource, entity, self.env.now, process_request.target_queue)
         required_assembly_types = [dependency.data.required_entity for dependency in process_request.required_dependencies if dependency.data.dependency_type == DependencyType.ASSEMBLY]
@@ -134,7 +134,10 @@ class ResourceProcessModelHandler:
         resource: Resource = process_request.get_resource()
         self.resource = resource
         proc = process_request.get_process()
-        self.process_model = proc.precedence_graph.create_instance()
+        # A resource-specific variant (ProcessModelData.resource_variants) brings
+        # its own steps and times; the request keeps the requested process model.
+        executed = proc.variant_for(resource) if hasattr(proc, "variant_for") else proc
+        self.process_model = executed.precedence_graph.create_instance()
         
         entity = process_request.get_entity()
         origin_queue = process_request.origin_queue

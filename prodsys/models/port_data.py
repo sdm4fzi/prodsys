@@ -33,6 +33,12 @@ class QueueData(CoreAsset):
         interface_type (PortInterfaceType): Type of the interface. Defaults to PortInterfaceType.INPUT_OUTPUT.
         port_type (PortType): Type of the port. Defaults to PortType.QUEUE.
         dependency_ids (List[str]): List of dependency IDs that are required by the queue.
+        lot_slots (Optional[int]): Number of lot places (e.g. trays) of the queue, checked in
+            addition to ``capacity``. Each place holds the products of one order, however many
+            of them there are. An output queue with lot slots blocks its resource when a
+            product of a new order finishes while all places are taken by other orders; an
+            input queue only admits transports of an order while a place is free. Defaults to
+            None (only ``capacity`` counts).
 
     Examples:
         A finite queue with ID "Q1", description "Queue 1" and capacity 10:
@@ -53,6 +59,16 @@ class QueueData(CoreAsset):
             capacity=0,
         )
         ```
+        An output buffer with two tray places of 34 products each:
+        ``` py
+        import prodsys
+        prodsys.queue_data.QueueData(
+            ID="Q1",
+            description="Queue 1",
+            capacity=68,
+            lot_slots=2,
+        )
+        ```
     """
     capacity: Union[int, float] = 0.0
     location: Optional[Location2D] = Field(
@@ -61,18 +77,22 @@ class QueueData(CoreAsset):
     interface_type: PortInterfaceType = PortInterfaceType.INPUT_OUTPUT
     port_type: PortType = Field(default=PortType.QUEUE, init=False, frozen=True)
     dependency_ids: list[str] = []
+    lot_slots: Optional[int] = Field(default=None, ge=1)
 
 
     def hash(self) -> str:
         """
-        Returns a unique hash for the queue considering its capacity.
+        Returns a unique hash for the queue considering its capacity and lot slots.
 
 
         Returns:
             str: Hash of the queue.
         """
         # TODO: consider dependencies
-        return md5((str(self.capacity)).encode("utf-8")).hexdigest()
+        key = str(self.capacity)
+        if self.lot_slots is not None:
+            key += f"|lot_slots={self.lot_slots}"
+        return md5(key.encode("utf-8")).hexdigest()
 
     model_config = ConfigDict(
         json_schema_extra={

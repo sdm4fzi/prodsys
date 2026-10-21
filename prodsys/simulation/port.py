@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Generator, List, Literal, Union
+from typing import Any, Generator, List, Literal, Optional, Union
 
 
 from simpy.resources import store
@@ -38,6 +38,10 @@ class Queue:
         self.capacity: float = float("inf") if getattr(data, "capacity", 0) == 0 else int(data.capacity)
         self._pending_put: int = 0                  # reserved slots not yet filled
         self.items: dict[str, Any] = {}
+        #: lot places of the queue (``QueueData.lot_slots``), None = only capacity counts
+        self.lot_slots: Optional[int] = getattr(data, "lot_slots", None)
+        #: item id -> lot key (order) of the items that occupy a lot place
+        self._lot_of: dict[str, str] = {}
         # Separate condition events
         self.on_item: events.Event = self.env.event()
         self.on_space: events.Event = self.env.event()
@@ -65,6 +69,26 @@ class Queue:
     def is_full(self) -> bool:
         return self._is_full()
 
+    def occupied_lots(self) -> set[str]:
+        """Lot keys (orders) that currently hold a lot place."""
+        return set(self._lot_of.values())
+
+    def has_lot_place(self, lot_key: Optional[str]) -> bool:
+        """Can an item of lot ``lot_key`` be put without exceeding the lot places?
+
+        Items without a lot key and queues without ``lot_slots`` are never limited;
+        an item joins the place of its lot if the lot already holds one.
+        """
+        if self.lot_slots is None or lot_key is None:
+            return True
+        occupied = self.occupied_lots()
+        return lot_key in occupied or len(occupied) < self.lot_slots
+
+    def _release_lot_place(self, item_id: str) -> None:
+        if self._lot_of.pop(item_id, None) is not None and self.capacity == float("inf"):
+            # bounded queues notify on every get anyway
+            self._notify("on_space")
+
 
     def reserve(self):
         """
@@ -72,11 +96,20 @@ class Queue:
         """
         self._pending_put += 1
 
-    def put(self, item) -> Generator:
+    def put(
+        self, item, lot_key: Optional[str] = None, wait_for_lot_place: bool = False
+    ) -> Generator:
         """
         Put an item; if no prior reserve(), it will implicitly wait for space.
         If caller already reserved, this will consume that reservation.
+
+        ``lot_key``: lot (order) of the item; with ``lot_slots`` the item occupies the
+        place of its lot until it is taken out again. ``wait_for_lot_place``: wait until
+        the lot has a place (blocking put of a producing resource into its output).
         """
+        if wait_for_lot_place:
+            while not self.has_lot_place(lot_key):
+                yield self.on_space
         gate = getattr(self, "lot_slot_gate", None)
         if gate is not None:
             gate.on_put(item)
@@ -91,6 +124,8 @@ class Queue:
 
         # Insert item
         self.items[item.ID] = item
+        if self.lot_slots is not None and lot_key is not None:
+            self._lot_of[item.ID] = lot_key
 
         # Notify getters that an item is available
         self._notify("on_item")
@@ -106,6 +141,7 @@ class Queue:
             yield ev
 
         item = self.items.pop(item_id)
+        self._release_lot_place(item_id)
 
         # Space has freed up (unless unbounded)
         if self.capacity != float("inf"):
@@ -138,6 +174,7 @@ class Queue:
         
         # Remove item (frees space)
         item = self.items.pop(item_id)
+        self._release_lot_place(item_id)
         
         # CRITICAL: Reserve BEFORE notifying on_space to minimize race window
         # After removing item, space is available. Reserve it immediately.
@@ -195,14 +232,21 @@ class StorePort(Queue):
         """
         yield from self.store.get(item_id)
 
-    def put(self, item) -> Generator:
+    def put(
+        self, item, lot_key: Optional[str] = None, wait_for_lot_place: bool = False
+    ) -> Generator:
         """
         Puts a product into the store port.
 
         Args:
             item (object): The product to be put into the store port.
+            lot_key (Optional[str]): Lot (order) of the product, see :meth:`Queue.put`.
+            wait_for_lot_place (bool): Wait for a lot place of the store, see :meth:`Queue.put`.
         """
-        yield from self.store.put(item)
+        yield from self.store.put(item, lot_key=lot_key, wait_for_lot_place=wait_for_lot_place)
+
+    def has_lot_place(self, lot_key: Optional[str]) -> bool:
+        return self.store.has_lot_place(lot_key)
 
     def get_location(self) -> List[float]:
         """

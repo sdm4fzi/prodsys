@@ -28,10 +28,16 @@ def test_lot_slot_gate_counts_orders_not_items() -> None:
     assert gate.is_admissible({"b0": "B"}, max_lot_size=2)  # second slot (partial lot)
     gate.admit({"b0": "B", "b1": "B"})
     assert not gate.is_admissible({"c0": "C"}, max_lot_size=2)  # both slots taken
-    # A's pieces arrive and leave again -> A's slot is free
+    # A's pieces arrive and leave the input again (e.g. for a manual step that
+    # returns them): A still holds its place ...
     for pid in ("a0", "a1"):
         gate.on_put(SimpleNamespace(ID=pid))
     queue.items = {"b0": object()}
+    assert not gate.is_admissible({"c0": "C"}, max_lot_size=2)
+    # ... until every piece of A started its last process at the resource
+    gate.started_last_process("a0")
+    assert not gate.is_admissible({"c0": "C"}, max_lot_size=2)
+    gate.started_last_process("a1")
     assert gate.is_admissible({"c0": "C"}, max_lot_size=2)
     # single-item transports and unbounded queues are never gated
     assert gate.is_admissible({"x": "X"}, max_lot_size=1)

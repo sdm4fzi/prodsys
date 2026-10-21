@@ -520,10 +520,17 @@ class ProcessModelData(CoreAsset):
         type (Literal[ProcessTypeEnum.ProcessModels]): Type of the process.
         process_ids (List[str]): List of process IDs that are part of this process model.
         adjacency_matrix (Dict[str, List[str]]): Adjacency matrix representing the DAG structure.
+        resource_variants (Dict[str, str]): Resource-specific variants of this process model,
+            ``resource ID -> process model ID``. A resource listed here executes the steps
+            (processes, times, dependencies) of its variant instead, e.g. when the same work
+            step runs with different cycle times or manual/automatic splits on parallel
+            stations. Matching, routing and schedules keep using this process model's ID.
+            The variant has to be a process model offered by that resource. Defaults to {}.
     """
     type: Literal[ProcessTypeEnum.ProcessModels]
     adjacency_matrix: Dict[str, List[str]]
     dependency_ids: list[str] = Field(default_factory=list)
+    resource_variants: Dict[str, str] = Field(default_factory=dict)
 
     @property
     def process_ids(self) -> List[str]:
@@ -555,6 +562,8 @@ class ProcessModelData(CoreAsset):
             str: hash of the process model data.
         """
         adjacency_hash = "".join([f"{k}:{','.join(sorted(v))}" for k, v in sorted(self.adjacency_matrix.items())])
+        if self.resource_variants:
+            adjacency_hash += "|" + ",".join(f"{r}={v}" for r, v in sorted(self.resource_variants.items()))
         return md5((adjacency_hash).encode("utf-8")).hexdigest()
 
 class LoadingProcessData(ProcessData):

@@ -480,7 +480,9 @@ class RequestHandler:
             raise ValueError(f"Process {process.data.ID} has no type")
         if process.data.type == ProcessTypeEnum.ProcessModels:
             # also consider dependencies of contained processes with lots!
-            for contained_process in process.contained_processes:
+            # (of the resource-specific variant the resource will execute)
+            executed = process.variant_for(resource) if hasattr(process, "variant_for") else process
+            for contained_process in executed.contained_processes:
                 dependencies.extend(contained_process.dependencies)
         from prodsys.simulation.schedule_dependency import worker_move_process_id
 
